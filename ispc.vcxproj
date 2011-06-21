@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -179,7 +179,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;LLVM_2_9</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624</DisableSpecificWarnings>
     </ClCompile>
@@ -197,7 +197,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NOMINMAX</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;LLVM_2_9</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624</DisableSpecificWarnings>
     </ClCompile>
