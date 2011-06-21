@@ -1,0 +1,21 @@
+
+export uniform int width() { return programCount; }
+
+
+
+struct Foo {
+    uniform float x, y;
+};
+
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    float a = aFOO[programIndex];
+    Foo f[3] = { { b, b }, { 2*b, 2*b }, { 3*b, 3*b } };
+    int index = (a <= 2) ? 1 : 2;
+    varying Foo g = f[index];
+    RET[programIndex] = g.x;
+}
+
+export void result(uniform float RET[4]) { 
+    RET[programIndex] = 15;
+    RET[0] = RET[1] = 10;
+}

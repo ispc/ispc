@@ -1,0 +1,18 @@
+
+export uniform int width() { return programCount; }
+
+
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    float a = aFOO[programIndex];
+    float x[40][40] = b;
+    uniform int index[4] = { 0, 1, 2, 4 };
+    float v = index[programIndex & 0x3];
+    x[a][v] = 0;
+    RET[programIndex] = x[v+1][v];
+}
+
+export void result(uniform float RET[]) { 
+    RET[programIndex] = 5;
+    RET[0] = RET[1] = RET[2] = 0;
+}
+

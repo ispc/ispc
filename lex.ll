@@ -1,0 +1,426 @@
+/*
+  Copyright (c) 2010-2011, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+*/
+
+%{
+
+#include "ispc.h"
+#include "decl.h"
+#include "parse.hh"
+#include "sym.h"
+#include "util.h"
+#include "module.h"
+
+static uint32_t lParseBinary(const char *ptr, SourcePos pos);
+static void lCComment(SourcePos *);
+static void lCppComment(SourcePos *);
+static void lHandleCppHash(SourcePos *);
+static void lStringConst(YYSTYPE *, SourcePos *);
+
+#define YY_USER_ACTION \
+    yylloc->first_line = yylloc->last_line; \
+    yylloc->first_column = yylloc->last_column; \
+    yylloc->last_column += yyleng;
+
+#ifdef ISPC_IS_WINDOWS
+inline int isatty(int) { return 0; }
+#endif // ISPC_IS_WINDOWS
+
+%}
+
+%option nounput
+%option noyywrap
+%option bison-bridge
+%option bison-locations
+%option nounistd
+
+WHITESPACE [ \t\r]+
+INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))
+FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)|([-]?0x[01]\.?[0-9a-fA-F]+p[-+]?[0-9]+[fF]?)
+
+IDENT [a-zA-Z_][a-zA-Z_0-9]*
+
+%%
+"/*"            { lCComment(yylloc); }
+"//"            { lCppComment(yylloc); }
+
+bool { return TOKEN_BOOL; }
+break { return TOKEN_BREAK; }
+case { return TOKEN_CASE; }
+cbreak { return TOKEN_CBREAK; }
+ccontinue { return TOKEN_CCONTINUE; }
+cdo { return TOKEN_CDO; }
+cfor { return TOKEN_CFOR; }
+char { return TOKEN_CHAR; }
+cif { return TOKEN_CIF; }
+cwhile { return TOKEN_CWHILE; }
+const { return TOKEN_CONST; }
+continue { return TOKEN_CONTINUE; }
+creturn { return TOKEN_CRETURN; }
+default { return TOKEN_DEFAULT; }
+do { return TOKEN_DO; }
+double { return TOKEN_DOUBLE; }
+else { return TOKEN_ELSE; }
+enum { return TOKEN_ENUM; }
+export { return TOKEN_EXPORT; }
+extern { return TOKEN_EXTERN; }
+false { return TOKEN_FALSE; }
+float { return TOKEN_FLOAT; }
+for { return TOKEN_FOR; }
+goto { return TOKEN_GOTO; }
+if { return TOKEN_IF; }
+inline { return TOKEN_INLINE; }
+int { return TOKEN_INT; }
+int32 { return TOKEN_INT; }
+int64 { return TOKEN_INT64; }
+launch { return TOKEN_LAUNCH; }
+print { return TOKEN_PRINT; }
+reference { return TOKEN_REFERENCE; }
+return { return TOKEN_RETURN; }
+soa { return TOKEN_SOA; }
+static { return TOKEN_STATIC; }
+struct { return TOKEN_STRUCT; }
+switch { return TOKEN_SWITCH; }
+sync { return TOKEN_SYNC; }
+task { return TOKEN_TASK; }
+true { return TOKEN_TRUE; }
+typedef { return TOKEN_TYPEDEF; }
+uniform { return TOKEN_UNIFORM; }
+unsigned { return TOKEN_UNSIGNED; }
+varying { return TOKEN_VARYING; }
+void { return TOKEN_VOID; }
+while { return TOKEN_WHILE; }
+
+L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL; }
+
+{IDENT} { 
+    /* We have an identifier--is it a type name or an identifier?
+       The symbol table will straighten us out... */
+    yylval->stringVal = new std::string(yytext);
+    if (m->symbolTable->LookupType(yytext) != NULL)
+        return TOKEN_TYPE_NAME;
+    else
+        return TOKEN_IDENTIFIER; 
+}
+
+{INT_NUMBER} { 
+    char *endPtr = NULL;
+#ifdef ISPC_IS_WINDOWS
+    unsigned long val;
+#else
+    unsigned long long val;
+#endif
+
+    if (yytext[0] == '0' && yytext[1] == 'b')
+        val = lParseBinary(yytext+2, *yylloc);
+    else {
+#ifdef ISPC_IS_WINDOWS
+        val = strtoul(yytext, &endPtr, 0);
+#else
+        val = strtoull(yytext, &endPtr, 0);
+#endif
+    }
+    yylval->int32Val = (int32_t)val;
+    if (val != (unsigned int)yylval->int32Val)
+        Warning(*yylloc, "32-bit integer has insufficient bits to represent value %s (%x %llx)",
+                yytext, yylval->int32Val, (unsigned long long)val);
+    return TOKEN_INT_CONSTANT; 
+}
+
+{INT_NUMBER}[uU] {
+    char *endPtr = NULL;
+#ifdef ISPC_IS_WINDOWS
+    unsigned long val;
+#else
+    unsigned long long val;
+#endif
+
+    if (yytext[0] == '0' && yytext[1] == 'b')
+        val = lParseBinary(yytext+2, *yylloc);
+    else {
+#ifdef ISPC_IS_WINDOWS
+        val = strtoul(yytext, &endPtr, 0);
+#else
+        val = strtoull(yytext, &endPtr, 0);
+#endif
+    }
+
+    yylval->int32Val = (int32_t)val;
+    if (val != (unsigned int)yylval->int32Val)
+        Warning(*yylloc, "32-bit integer has insufficient bits to represent value %s (%x %llx)",
+                yytext, yylval->int32Val, (unsigned long long)val);
+    return TOKEN_UINT_CONSTANT; 
+}
+
+{FLOAT_NUMBER} { 
+    /* FIXME: need to implement a hex float constant parser so that we can 
+       support them on Windows (which doesn't handle them in its atof()
+       implementation... */
+    yylval->floatVal = atof(yytext); 
+    return TOKEN_FLOAT_CONSTANT; 
+}
+
+"++" { return TOKEN_INC_OP; }
+"--" { return TOKEN_DEC_OP; }
+"<<" { return TOKEN_LEFT_OP; }
+">>" { return TOKEN_RIGHT_OP; }
+"<=" { return TOKEN_LE_OP; }
+">=" { return TOKEN_GE_OP; }
+"==" { return TOKEN_EQ_OP; }
+"!=" { return TOKEN_NE_OP; }
+"&&" { return TOKEN_AND_OP; }
+"||" { return TOKEN_OR_OP; }
+"*=" { return TOKEN_MUL_ASSIGN; }
+"/=" { return TOKEN_DIV_ASSIGN; }
+"%=" { return TOKEN_MOD_ASSIGN; }
+"+=" { return TOKEN_ADD_ASSIGN; }
+"-=" { return TOKEN_SUB_ASSIGN; }
+"<<=" { return TOKEN_LEFT_ASSIGN; }
+">>=" { return TOKEN_RIGHT_ASSIGN; }
+"&=" { return TOKEN_AND_ASSIGN; }
+"^=" { return TOKEN_XOR_ASSIGN; }
+"|=" { return TOKEN_OR_ASSIGN; }
+";"             { return ';'; }
+("{"|"<%")      { return '{'; }
+("}"|"%>")      { return '}'; }
+","             { return ','; }
+":"             { return ':'; }
+"="             { return '='; }
+"("             { return '('; }
+")"             { return ')'; }
+("["|"<:")      { return '['; }
+("]"|":>")      { return ']'; }
+"."             { return '.'; }
+"&"             { return '&'; }
+"!"             { return '!'; }
+"~"             { return '~'; }
+"-"             { return '-'; }
+"+"             { return '+'; }
+"*"             { return '*'; }
+"/"             { return '/'; }
+"%"             { return '%'; }
+"<"             { return '<'; }
+">"             { return '>'; }
+"^"             { return '^'; }
+"|"             { return '|'; }
+"?"             { return '?'; }
+
+{WHITESPACE} { }
+
+\n {
+    yylloc->last_line++; 
+    yylloc->last_column = 1; 
+}
+
+#(line)?[ ][0-9]+[ ]\"(\\.|[^\\"])*\"[^\n]* { 
+    lHandleCppHash(yylloc); 
+}
+
+. {
+    Error(*yylloc, "Illegal character: %c (0x%x)", yytext[0], int(yytext[0]));
+    YY_USER_ACTION 
+}
+
+%%
+
+/*sizeof { return TOKEN_SIZEOF; }*/
+/*"->" { return TOKEN_PTR_OP; }*/
+/*short { return TOKEN_SHORT; }*/
+/*long { return TOKEN_LONG; }*/
+/*signed { return TOKEN_SIGNED; }*/
+/*volatile { return TOKEN_VOLATILE; }*/
+/*"long"[ \t\v\f\n]+"long" { return TOKEN_LONGLONG; }*/
+/*union { return TOKEN_UNION; }*/
+/*"..." { return TOKEN_ELLIPSIS; }*/
+
+/** Return the integer version of a binary constant from a string.
+ */
+static uint32_t
+lParseBinary(const char *ptr, SourcePos pos) {
+    uint32_t val = 0;
+    bool warned = false;
+
+    while (*ptr != '\0') {
+        /* if this hits, the regexp for 0b... constants is broken */
+        assert(*ptr == '0' || *ptr == '1');
+
+        if ((val & (1<<31)) && warned == false) {
+            // We're about to shift out a set bit
+            // FIXME: 64-bit int constants...
+            Warning(pos, "Can't represent binary constant with 32-bit integer type");
+            warned = true;
+        }
+
+        val = (val << 1) | (*ptr == '0' ? 0 : 1);
+        ++ptr;
+    }
+    return val;
+}
+
+
+/** Handle a C-style comment in the source. 
+ */
+static void
+lCComment(SourcePos *pos) {
+    char c, prev = 0;
+  
+    while ((c = yyinput()) != 0) {
+        if (c == '\n') {
+            pos->last_line++;
+            pos->last_column = 1;
+        }
+        if (c == '/' && prev == '*')
+            return;
+        prev = c;
+    }
+    Error(*pos, "unterminated comment");
+}
+
+/** Handle a C++-style comment--eat everything up until the end of the line.
+ */
+static void
+lCppComment(SourcePos *pos) {
+    char c;
+    do {
+        c = yyinput();
+    } while (c != 0 && c != '\n');
+    if (c == '\n') {
+        pos->last_line++;
+        pos->last_column = 1;
+    }
+}
+
+/** Handle a line that starts with a # character; this should be something
+    left behind by the preprocessor indicating the source file/line
+    that our current position corresponds to.
+ */
+static void lHandleCppHash(SourcePos *pos) {
+    char *ptr, *src;
+
+    // Advance past the opening stuff on the line.
+    assert(yytext[0] == '#');
+    if (yytext[1] == ' ')
+        // On Linux/OSX, the preprocessor gives us lines like
+        // # 1234 "foo.c"
+        ptr = yytext + 2;
+    else {
+        // On windows, cl.exe's preprocessor gives us lines of the form:
+        // #line 1234 "foo.c"
+        assert(!strncmp(yytext+1, "line ", 5));
+        ptr = yytext + 6;
+    }
+
+    // Now we can set the line number based on the integer in the string
+    // that ptr is pointing at.
+    pos->last_line = strtol(ptr, &src, 10) - 1;
+    pos->last_column = 1;
+    // Make sure that the character after the integer is a space and that
+    // then we have open quotes
+    assert(src != ptr && src[0] == ' ' && src[1] == '"');
+    src += 2;
+
+    // And the filename is everything up until the closing quotes
+    std::string filename;
+    while (*src != '"') {
+        assert(*src && *src != '\n');
+        filename.push_back(*src);
+        ++src;
+    }
+    pos->name = strdup(filename.c_str());
+}
+
+
+/** Given a pointer to a position in a string, return the character that it
+    represents, accounting for the escape characters supported in string
+    constants.  (i.e. given the literal string "\\", return the character
+    '/').  The return value is the new position in the string and the
+    decoded character is returned in *pChar.
+*/
+static char *
+lEscapeChar(char *str, char *pChar, SourcePos *pos)
+{
+    if (*str != '\\') {
+        *pChar = *str;
+    }
+    else {
+        char *tail;
+        ++str;
+        switch (*str) {
+        case '\'': *pChar = '\''; break;
+        case '\"': *pChar = '\"'; break;
+        case '?':  *pChar = '\?'; break;
+        case '\\': *pChar = '\\'; break;
+        case 'a':  *pChar = '\a'; break;
+        case 'b':  *pChar = '\b'; break;
+        case 'f':  *pChar = '\f'; break;
+        case 'n':  *pChar = '\n'; break;
+        case 'r':  *pChar = '\r'; break;
+        case 't':  *pChar = '\t'; break;
+        case 'v':  *pChar = '\v'; break;
+        // octal constants \012
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7':
+            *pChar = strtol(str, &tail, 8);
+            str = tail - 1;
+            break;
+        // hexidecimal constant \xff
+        case 'x':
+            *pChar = strtol(str, &tail, 16);
+            str = tail - 1;
+            break;
+        default:
+            Error(*pos, "Bad character escape sequence: '%s'\n.", str);
+            break;
+        }
+    }
+    ++str;
+    return str;
+}
+
+
+/** Parse a string constant in the source file.  For each character in the
+    string, handle any escaped characters with lEscapeChar() and keep eating
+    characters until we come to the closing quote.
+*/
+static void
+lStringConst(YYSTYPE *yylval, SourcePos *pos)
+{
+    char *p;
+    std::string str;
+    p = strchr(yytext, '"') + 1;
+    while (*p != '\"') {
+       char cval;
+       p = lEscapeChar(p, &cval, pos);
+       str.push_back(cval);
+    } 
+    yylval->stringVal = new std::string(str);
+}

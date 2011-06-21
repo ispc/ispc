@@ -1,0 +1,1605 @@
+// -*- mode: c++ -*-
+/*
+  Copyright (c) 2010-2011, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+*/
+
+/** @file stdlib.ispc
+
+    @brief Portion of the ispc standard library implementation that's in
+           ispc code 
+*/
+
+///////////////////////////////////////////////////////////////////////////
+// Low level primitives
+
+static inline float floatbits(unsigned int a) {
+    return __floatbits_varying_int32(a);
+}
+
+static inline uniform float floatbits(uniform unsigned int a) {
+    return __floatbits_uniform_int32(a);
+}
+
+static inline float floatbits(int a) {
+    return __floatbits_varying_int32(a);
+}
+
+static inline uniform float floatbits(uniform int a) {
+    return __floatbits_uniform_int32(a);
+}
+
+static inline double doublebits(unsigned int64 a) {
+    return __doublebits_varying_int64(a);
+}
+
+static inline uniform double doublebits(uniform unsigned int64 a) {
+    return __doublebits_uniform_int64(a);
+}
+
+static inline unsigned int intbits(float a) {
+    return __intbits_varying_float(a);
+}
+
+static inline uniform unsigned int intbits(uniform float a) {
+    return __intbits_uniform_float(a);
+}
+
+static inline unsigned int64 intbits(double d) {
+    return __intbits_varying_double(d);
+}
+
+static inline uniform unsigned int64 intbits(uniform double d) {
+    return __intbits_uniform_double(d);
+}
+
+// x[i]
+static inline uniform float extract(float x, uniform int i) {
+    return __extract(x, i);
+}
+
+// x[i] = v
+static inline float insert(float x, uniform int i, uniform float v) {
+    return __insert(x, i, v);
+}
+
+static inline uniform int extract(int x, uniform int i) {
+    return intbits(extract(floatbits(x), i));
+}
+
+static inline int insert(int x, uniform int i, uniform int v) {
+    return intbits(insert(floatbits(x), i, floatbits(v)));
+}
+
+static inline uniform unsigned int extract(unsigned int x, uniform int i) {
+    return intbits(extract(floatbits(x), i));
+}
+
+static inline unsigned int insert(unsigned int x, uniform int i, uniform unsigned int v) {
+    return intbits(insert(floatbits(x), i, floatbits(v)));
+}
+
+static inline uniform bool any(bool v) {
+    // We only care about whether "any" is true for the active program instances,
+    // so we have to make v with the current program mask.
+    return __movmsk(v & __mask) != 0;
+}
+
+static inline uniform bool all(bool v) {
+    // As with any(), we need to explicitly mask v with the current program mask
+    // so we're only looking at the current lanes
+    bool match = ((v & __mask) == __mask);
+    return __movmsk(match) == (1 << programCount) - 1;
+}
+
+static inline uniform int popcnt(uniform int v) {
+    return __popcnt(v);
+}
+
+static inline int popcnt(int v) {
+    int r;
+    uniform int i;
+    for (i = 0; i < programCount; ++i)
+        r = insert(r, i, popcnt(extract(v, i)));
+    return (r & __mask);
+}
+
+static inline uniform int popcnt(bool v) {
+    // As with any() and all(), only count across the active lanes
+    return __popcnt(__movmsk(v & __mask));
+}
+
+static inline uniform int lanemask() {
+    return __movmsk(__mask);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Horizontal ops / reductions
+
+static inline uniform float reduce_add(float x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_float(__mask ? x : 0.);
+}
+
+
+static inline uniform float reduce_min(float v) {
+    // For the lanes where the mask is off, replace the given value with
+    // infinity, so that it doesn't affect the result.
+    int iflt_max = 0x7f800000; // infinity
+    // Must use __floatbits_varying_int32, not floatbits(), since with the
+    // latter the current mask enters into the returned result...
+    return __reduce_min_float(__mask ? v : __floatbits_varying_int32(iflt_max));
+}
+
+static inline uniform float reduce_max(float v) {
+    // For the lanes where the mask is off, replace the given value with
+    // negative infinity, so that it doesn't affect the result.
+    const uniform int iflt_neg_max = 0xff800000; // -infinity
+    // Must use __floatbits_varying_int32, not floatbits(), since with the
+    // latter the current mask enters into the returned result...
+    return __reduce_max_float(__mask ? v : __floatbits_varying_int32(iflt_neg_max));
+}
+
+static inline uniform int reduce_add(int x) {
+    // Zero out the values for lanes that aren't running
+    return __reduce_add_int32(x & (int)__mask);
+}
+
+static inline uniform int reduce_min(int v) {
+    // Set values for non-running lanes to the maximum integer value so
+    // they don't affect the result.
+    int int_max = 0x7fffffff;
+    return __reduce_min_int32(__mask ? v : int_max);
+}
+
+static inline uniform int reduce_max(int v) {
+    // Set values for non-running lanes to the minimum integer value so
+    // they don't affect the result.
+    int int_min = 0x80000000;
+    return __reduce_max_int32(__mask ? v : int_min);
+}
+
+static inline uniform unsigned int reduce_add(unsigned int x) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_add_uint32(x & (int)__mask);
+}
+
+static inline uniform unsigned int reduce_min(unsigned int v) {
+    // Set values for non-running lanes to the maximum unsigned integer
+    // value so they don't affect the result.
+    unsigned int uint_max = 0xffffffff;
+    return __reduce_min_uint32(__mask ? v : uint_max);
+}
+
+static inline uniform unsigned int reduce_max(unsigned int v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint32(__mask ? v : 0);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// packed load, store
+
+static inline uniform unsigned int packed_load_active(uniform int a[], uniform int start,
+                                               reference int vals) {
+    return __packed_load_active(a, start, vals, __mask);
+}
+
+static inline uniform unsigned int packed_store_active(uniform int a[], uniform int start,
+                                                int vals) {
+    return __packed_store_active(a, start, vals, __mask);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Load/store from/to 8/16-bit types
+
+static inline unsigned int load_from_int8(uniform int a[], uniform int offset) {
+    return __load_uint8(a, offset);
+}
+
+static inline void store_to_int8(uniform int a[], uniform int offset, 
+                          unsigned int val) {
+    __store_uint8(a, offset, val, __mask);
+}
+
+static inline unsigned int load_from_int16(uniform int a[], uniform int offset) {
+    return __load_uint16(a, offset);
+}
+
+static inline void store_to_int16(uniform int a[], uniform int offset, 
+                           unsigned int val) {
+    __store_uint16(a, offset, val, __mask);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Math
+
+static inline float abs(float a) {
+    // Floating-point hack: zeroing the high bit clears the sign
+    unsigned int i = intbits(a);
+    i &= 0x7fffffff;
+    return floatbits(i);
+}
+
+static inline uniform float abs(uniform float a) {
+    uniform unsigned int i = intbits(a);
+    i &= 0x7fffffff;
+    return floatbits(i);
+}
+
+static inline unsigned int signbits(float x) {
+    unsigned int i = intbits(x);
+    return (i & 0x80000000u);
+}
+
+static inline uniform unsigned int signbits(uniform float x) {
+    uniform unsigned int i = intbits(x);
+    return (i & 0x80000000u);
+}
+
+static inline float round(float x) {
+    return __round_varying_float(x);
+}
+
+static inline uniform float round(uniform float x) {
+    return __round_uniform_float(x);
+}
+
+static inline float floor(float x) {
+    return __floor_varying_float(x);
+}
+
+static inline uniform float floor(uniform float x) {
+    return __floor_uniform_float(x);
+}
+
+static inline float ceil(float x) {
+    return __ceil_varying_float(x);
+}
+
+static inline uniform float ceil(uniform float x) {
+    return __ceil_uniform_float(x);
+}
+
+static inline float rcp(float v) {
+    return __rcp_varying_float(v);
+}
+
+static inline uniform float rcp(uniform float v) {
+    return __rcp_uniform_float(v);
+}
+
+static inline float sqrt(float v) {
+    return __sqrt_varying_float(v);
+}
+
+static inline uniform float sqrt(uniform float v) {
+    return __sqrt_uniform_float(v);
+}
+
+static inline float min(float a, float b) {
+    return __min_varying_float(a, b);
+}
+
+static inline uniform float min(uniform float a, uniform float b) {
+    return __min_uniform_float(a, b);
+}
+
+static inline float max(float a, float b) {
+    return __max_varying_float(a, b);
+}
+
+static inline uniform float max(uniform float a, uniform float b) {
+    return __max_uniform_float(a, b);
+}
+
+static inline unsigned int min(unsigned int a, unsigned int b) {
+    return __min_varying_uint32(a, b);
+}
+
+static inline uniform unsigned int min(uniform unsigned int a, uniform unsigned int b) {
+    return __min_uniform_uint32(a, b);
+}
+
+static inline unsigned int max(unsigned int a, unsigned int b) {
+    return __max_varying_uint32(a, b);
+}
+
+static inline uniform unsigned int max(uniform unsigned int a, uniform unsigned int b) {
+    return __max_uniform_uint32(a, b);
+}
+
+static inline int min(int a, int b) {
+    return __min_varying_int32(a, b);
+}
+
+static inline uniform int min(uniform int a, uniform int b) {
+    return __min_uniform_int32(a, b);
+}
+
+static inline int max(int a, int b) {
+    return __max_varying_int32(a, b);
+}
+
+static inline uniform int max(uniform int a, uniform int b) {
+    return __max_uniform_int32(a, b);
+}
+
+static inline float clamp(float v, float low, float high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform float clamp(uniform float v, uniform float low, uniform float high) {
+    return min(max(v, low), high);
+}
+
+static inline unsigned int clamp(unsigned int v, unsigned int low, unsigned int high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low, 
+                                  uniform unsigned int high) {
+    return min(max(v, low), high);
+}
+
+static inline int clamp(int v, int low, int high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform int clamp(uniform int v, uniform int low, uniform int high) {
+    return min(max(v, low), high);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals
+
+static inline float rsqrt(float v) {
+    return __rsqrt_varying_float(v);
+}
+
+static inline uniform float rsqrt(uniform float v) {
+    return __rsqrt_uniform_float(v);
+}
+
+static inline float ldexp(float x, int n) {
+    unsigned int ex = 0x7F800000u;
+    unsigned int ix = intbits(x);
+    ex &= ix;              // extract old exponent;
+    ix = ix & ~0x7F800000u;  // clear exponent
+    n = (n << 23) + ex;
+    ix |= n; // insert new exponent
+    return floatbits(ix);
+}
+
+static inline uniform float ldexp(uniform float x, uniform int n) {
+    uniform unsigned int ex = 0x7F800000u;
+    uniform unsigned int ix = intbits(x);
+    ex &= ix;              // extract old exponent;
+    ix = ix & ~0x7F800000u;  // clear exponent
+    n = (n << 23) + ex;
+    ix |= n; // insert new exponent
+    return floatbits(ix);
+}
+
+static inline float frexp(float x, reference int pw2) {
+    unsigned int ex = 0x7F800000u;              // exponent mask
+    unsigned int ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7F800000u;  // clear exponent
+    pw2 = (int)(ex >> 23) - 126; // compute exponent
+    ix |= 0x3F000000u;         // insert exponent +1 in x
+    return floatbits(ix);
+}
+
+static inline uniform float frexp(uniform float x, reference uniform int pw2) {
+    uniform unsigned int ex = 0x7F800000u;              // exponent mask
+    uniform unsigned int ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7F800000u;  // clear exponent
+    pw2 = (uniform int)(ex >> 23) - 126; // compute exponent
+    ix |= 0x3F000000u;         // insert exponent +1 in x
+    return floatbits(ix);
+}
+
+// Most of the transcendental implementations in ispc code here come from
+// Solomon Boulos's "syrah": https://github.com/boulos/syrah/
+
+static inline float sin(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sin(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_sin(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        static const float pi_over_two_vec = 1.57079637050628662109375;
+        static const float two_over_pi_vec = 0.636619746685028076171875;
+        float scaled = x_full * two_over_pi_vec;
+        float k_real = floor(scaled);
+        int k = (int)k_real;
+
+        // Reduced range version of x
+        float x = x_full - k_real * pi_over_two_vec;
+        int k_mod4 = k & 3;
+        bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
+        bool flip_sign = (k_mod4 > 1);
+
+        // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
+        // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
+        static const float sin_c2 = -0.16666667163372039794921875;
+        static const float sin_c4 = 8.333347737789154052734375e-3;
+        static const float sin_c6 = -1.9842604524455964565277099609375e-4;
+        static const float sin_c8 = 2.760012648650445044040679931640625e-6;
+        static const float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        static const float cos_c2 = -0.5;
+        static const float cos_c4 = 4.166664183139801025390625e-2;
+        static const float cos_c6 = -1.388833043165504932403564453125e-3;
+        static const float cos_c8 = 2.47562347794882953166961669921875e-5;
+        static const float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        float outside = sin_usecos ? 1 : x;
+        float c2 = sin_usecos ? cos_c2 : sin_c2;
+        float c4 = sin_usecos ? cos_c4 : sin_c4;
+        float c6 = sin_usecos ? cos_c6 : sin_c6;
+        float c8 = sin_usecos ? cos_c8 : sin_c8;
+        float c10 = sin_usecos ? cos_c10 : sin_c10;
+
+        float x2 = x * x;
+        float formula = x2 * c10 + c8;
+        formula = x2 * formula + c6;
+        formula = x2 * formula + c4;
+        formula = x2 * formula + c2;
+        formula = x2 * formula + 1;
+        formula *= outside;
+
+        formula = flip_sign ? -formula : formula;
+        return formula;
+    }
+}
+
+
+static inline uniform float sin(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_sin(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        static const uniform float pi_over_two_vec = 1.57079637050628662109375;
+        static const uniform float two_over_pi_vec = 0.636619746685028076171875;
+        uniform float scaled = x_full * two_over_pi_vec;
+        uniform float k_real = floor(scaled);
+        uniform int k = (int)k_real;
+
+        // Reduced range version of x
+        uniform float x = x_full - k_real * pi_over_two_vec;
+        uniform int k_mod4 = k & 3;
+        uniform bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
+        uniform bool flip_sign = (k_mod4 > 1);
+
+        // These coefficients are from sollya with fpminimax(sin(x)/x, [|0, 2,
+        // 4, 6, 8, 10|], [|single...|], [0;Pi/2]);
+        static const uniform float sin_c2 = -0.16666667163372039794921875;
+        static const uniform float sin_c4 = 8.333347737789154052734375e-3;
+        static const uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
+        static const uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
+        static const uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        static const uniform float cos_c2 = -0.5;
+        static const uniform float cos_c4 = 4.166664183139801025390625e-2;
+        static const uniform float cos_c6 = -1.388833043165504932403564453125e-3;
+        static const uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
+        static const uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        uniform float outside, c2, c4, c6, c8, c10;
+        if (sin_usecos) {
+            outside = 1.;
+            c2 =  cos_c2;
+            c4 =  cos_c4;
+            c6 =  cos_c6;
+            c8 =  cos_c8;
+            c10 = cos_c10;
+        }
+        else {
+            outside = x;
+            c2 = sin_c2;
+            c4 = sin_c4;
+            c6 = sin_c6;
+            c8 = sin_c8;
+            c10 = sin_c10;
+        }
+
+        uniform float x2 = x * x;
+        uniform float formula = x2 * c10 + c8;
+        formula = x2 * formula + c6;
+        formula = x2 * formula + c4;
+        formula = x2 * formula + c2;
+        formula = x2 * formula + 1.;
+        formula *= outside;
+
+        formula = flip_sign ? -formula : formula;
+        return formula;
+    }
+}
+
+
+static inline float cos(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_cos(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_cos(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        static const float pi_over_two_vec = 1.57079637050628662109375;
+        static const float two_over_pi_vec = 0.636619746685028076171875;
+        float scaled = x_full * two_over_pi_vec;
+        float k_real = floor(scaled);
+        int k = (int)k_real;
+
+        // Reduced range version of x
+        float x = x_full - k_real * pi_over_two_vec;
+
+        int k_mod4 = k & 3;
+        bool cos_usecos = (k_mod4 == 0 || k_mod4 == 2);
+        bool flip_sign = (k_mod4 == 1 || k_mod4 == 2);
+
+        const float sin_c2 = -0.16666667163372039794921875;
+        const float sin_c4 = 8.333347737789154052734375e-3;
+        const float sin_c6 = -1.9842604524455964565277099609375e-4;
+        const float sin_c8 = 2.760012648650445044040679931640625e-6;
+        const float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        const float cos_c2 = -0.5;
+        const float cos_c4 = 4.166664183139801025390625e-2;
+        const float cos_c6 = -1.388833043165504932403564453125e-3;
+        const float cos_c8 = 2.47562347794882953166961669921875e-5;
+        const float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        float outside = cos_usecos ? 1. : x;
+        float c2 = cos_usecos ? cos_c2 : sin_c2;
+        float c4 = cos_usecos ? cos_c4 : sin_c4;
+        float c6 = cos_usecos ? cos_c6 : sin_c6;
+        float c8 = cos_usecos ? cos_c8 : sin_c8;
+        float c10 = cos_usecos ? cos_c10 : sin_c10;
+
+        float x2 = x * x;
+        float formula = x2 * c10 + c8;
+        formula = x2 * formula + c6;
+        formula = x2 * formula + c4;
+        formula = x2 * formula + c2;
+        formula = x2 * formula + 1.;
+        formula *= outside;
+
+        formula = flip_sign ? -formula : formula;
+        return formula;
+    }
+}
+
+
+static inline uniform float cos(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_cos(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        static const uniform float pi_over_two_vec = 1.57079637050628662109375;
+        static const uniform float two_over_pi_vec = 0.636619746685028076171875;
+        uniform float scaled = x_full * two_over_pi_vec;
+        uniform float k_real = floor(scaled);
+        uniform int k = (int)k_real;
+
+        // Reduced range version of x
+        uniform float x = x_full - k_real * pi_over_two_vec;
+
+        uniform int k_mod4 = k & 3;
+        uniform bool cos_usecos = (k_mod4 == 0 || k_mod4 == 2);
+        uniform bool flip_sign = (k_mod4 == 1 || k_mod4 == 2);
+
+        const uniform float sin_c2 = -0.16666667163372039794921875;
+        const uniform float sin_c4 = 8.333347737789154052734375e-3;
+        const uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
+        const uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
+        const uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        const uniform float cos_c2 = -0.5;
+        const uniform float cos_c4 = 4.166664183139801025390625e-2;
+        const uniform float cos_c6 = -1.388833043165504932403564453125e-3;
+        const uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
+        const uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        uniform float outside, c2, c4, c6, c8, c10;
+        if (cos_usecos) {
+            outside = 1.;
+            c2 = cos_c2;
+            c4 = cos_c4;
+            c6 = cos_c6;
+            c8 = cos_c8;
+            c10 = cos_c10;
+        }
+        else {
+            outside = x;
+            c2 = sin_c2;
+            c4 = sin_c4;
+            c6 = sin_c6;
+            c8 = sin_c8;
+            c10 = sin_c10;
+        }
+
+        uniform float x2 = x * x;
+        uniform float formula = x2 * c10 + c8;
+        formula = x2 * formula + c6;
+        formula = x2 * formula + c4;
+        formula = x2 * formula + c2;
+        formula = x2 * formula + 1.;
+        formula *= outside;
+
+        formula = flip_sign ? -formula : formula;
+        return formula;
+    }
+}
+
+
+static inline void sincos(float x_full, reference float sin_result, reference float cos_result) {
+    if (__math_lib == __math_lib_svml) {
+        __svml_sincos(x_full, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_system) {
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float s, c;
+            __stdlib_sincos(extract(x_full, i), s, c);
+            sin_result = insert(sin_result, i, s);
+            cos_result = insert(cos_result, i, c);
+        }
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const float pi_over_two_vec = 1.57079637050628662109375;
+        const float two_over_pi_vec = 0.636619746685028076171875;
+        float scaled = x_full * two_over_pi_vec;
+        float k_real = floor(scaled);
+        int k = (int)k_real;
+
+        // Reduced range version of x
+        float x = x_full - k_real * pi_over_two_vec;
+        int k_mod4 = k & 3;
+        bool cos_usecos = (k_mod4 == 0 || k_mod4 == 2);
+        bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
+        bool sin_flipsign = (k_mod4 > 1);
+        bool cos_flipsign = (k_mod4 == 1 || k_mod4 == 2);
+
+        const float one_vec = 1.;
+        const float sin_c2 = -0.16666667163372039794921875;
+        const float sin_c4 = 8.333347737789154052734375e-3;
+        const float sin_c6 = -1.9842604524455964565277099609375e-4;
+        const float sin_c8 = 2.760012648650445044040679931640625e-6;
+        const float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        const float cos_c2 = -0.5;
+        const float cos_c4 = 4.166664183139801025390625e-2;
+        const float cos_c6 = -1.388833043165504932403564453125e-3;
+        const float cos_c8 = 2.47562347794882953166961669921875e-5;
+        const float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        float x2 = x * x;
+
+        float sin_formula = x2 * sin_c10 + sin_c8;
+        float cos_formula = x2 * cos_c10 + cos_c8;
+        sin_formula = x2 * sin_formula + sin_c6;
+        cos_formula = x2 * cos_formula + cos_c6;
+
+        sin_formula = x2 * sin_formula + sin_c4;
+        cos_formula = x2 * cos_formula + cos_c4;
+
+        sin_formula = x2 * sin_formula + sin_c2;
+        cos_formula = x2 * cos_formula + cos_c2;
+
+        sin_formula = x2 * sin_formula + one_vec;
+        cos_formula = x2 * cos_formula + one_vec;
+
+        sin_formula *= x;
+
+        sin_result = sin_usecos ? cos_formula : sin_formula;
+        cos_result = cos_usecos ? cos_formula : sin_formula;
+
+        sin_result = sin_flipsign ? -sin_result : sin_result;
+        cos_result = cos_flipsign ? -cos_result : cos_result;
+    }
+}
+
+
+static inline void sincos(uniform float x_full, reference uniform float sin_result,
+                   reference uniform float cos_result) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        __stdlib_sincos(x_full, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const uniform float pi_over_two_vec = 1.57079637050628662109375;
+        const uniform float two_over_pi_vec = 0.636619746685028076171875;
+        uniform float scaled = x_full * two_over_pi_vec;
+        uniform float k_real = floor(scaled);
+        uniform int k = (uniform int)k_real;
+
+        // Reduced range version of x
+        uniform float x = x_full - k_real * pi_over_two_vec;
+        uniform int k_mod4 = k & 3;
+        uniform bool cos_usecos = (k_mod4 == 0 || k_mod4 == 2);
+        uniform bool sin_usecos = (k_mod4 == 1 || k_mod4 == 3);
+        uniform bool sin_flipsign = (k_mod4 > 1);
+        uniform bool cos_flipsign = (k_mod4 == 1 || k_mod4 == 2);
+
+        const uniform float one_vec = 1.;
+        const uniform float sin_c2 = -0.16666667163372039794921875;
+        const uniform float sin_c4 = 8.333347737789154052734375e-3;
+        const uniform float sin_c6 = -1.9842604524455964565277099609375e-4;
+        const uniform float sin_c8 = 2.760012648650445044040679931640625e-6;
+        const uniform float sin_c10 = -2.50293279435709337121807038784027099609375e-8;
+
+        const uniform float cos_c2 = -0.5;
+        const uniform float cos_c4 = 4.166664183139801025390625e-2;
+        const uniform float cos_c6 = -1.388833043165504932403564453125e-3;
+        const uniform float cos_c8 = 2.47562347794882953166961669921875e-5;
+        const uniform float cos_c10 = -2.59630184018533327616751194000244140625e-7;
+
+        uniform float x2 = x * x;
+
+        uniform float sin_formula = x2 * sin_c10 + sin_c8;
+        uniform float cos_formula = x2 * cos_c10 + cos_c8;
+        sin_formula = x2 * sin_formula + sin_c6;
+        cos_formula = x2 * cos_formula + cos_c6;
+
+        sin_formula = x2 * sin_formula + sin_c4;
+        cos_formula = x2 * cos_formula + cos_c4;
+
+        sin_formula = x2 * sin_formula + sin_c2;
+        cos_formula = x2 * cos_formula + cos_c2;
+
+        sin_formula = x2 * sin_formula + one_vec;
+        cos_formula = x2 * cos_formula + one_vec;
+
+        sin_formula *= x;
+
+        sin_result = sin_usecos ? cos_formula : sin_formula;
+        cos_result = cos_usecos ? cos_formula : sin_formula;
+
+        sin_result = sin_flipsign ? -sin_result : sin_result;
+        cos_result = cos_flipsign ? -cos_result : cos_result;
+    }
+}
+
+
+static inline float tan(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_tan(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_tan(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const float pi_over_four_vec = 0.785398185253143310546875;
+        const float four_over_pi_vec = 1.27323949337005615234375;
+
+        bool x_lt_0 = x_full < 0.;
+        float y = x_lt_0 ? -x_full : x_full;
+        float scaled = y * four_over_pi_vec;
+
+        float k_real = floor(scaled);
+        int k = (int)k_real;
+
+        float x = y - k_real * pi_over_four_vec;
+
+        // if k & 1, x -= Pi/4
+        bool need_offset = (k & 1) != 0;
+        x = need_offset ? x - pi_over_four_vec : x;
+
+        // if k & 3 == (0 or 3) let z = tan_In...(y) otherwise z = -cot_In0To...
+        int k_mod4 = k & 3;
+        bool use_cotan = (k_mod4 == 1) || (k_mod4 == 2);
+
+        const float one_vec = 1.0;
+
+        const float tan_c2 = 0.33333075046539306640625;
+        const float tan_c4 = 0.13339905440807342529296875;
+        const float tan_c6 = 5.3348250687122344970703125e-2;
+        const float tan_c8 = 2.46033705770969390869140625e-2;
+        const float tan_c10 = 2.892402000725269317626953125e-3;
+        const float tan_c12 = 9.500005282461643218994140625e-3;
+
+        const float cot_c2 = -0.3333333432674407958984375;
+        const float cot_c4 = -2.222204394638538360595703125e-2;
+        const float cot_c6 = -2.11752182804048061370849609375e-3;
+        const float cot_c8 = -2.0846328698098659515380859375e-4;
+        const float cot_c10 = -2.548247357481159269809722900390625e-5;
+        const float cot_c12 = -3.5257363606433500535786151885986328125e-7;
+
+        float x2 = x * x;
+        float z;
+        cif (use_cotan) {
+            float cot_val = x2 * cot_c12 + cot_c10;
+            cot_val = x2 * cot_val + cot_c8;
+            cot_val = x2 * cot_val + cot_c6;
+            cot_val = x2 * cot_val + cot_c4;
+            cot_val = x2 * cot_val + cot_c2;
+            cot_val = x2 * cot_val + one_vec;
+            // The equation is for x * cot(x) but we need -x * cot(x) for the tan part.
+            cot_val /= -x;
+            z = cot_val;
+        } else {
+            float tan_val = x2 * tan_c12 + tan_c10;
+            tan_val = x2 * tan_val + tan_c8;
+            tan_val = x2 * tan_val + tan_c6;
+            tan_val = x2 * tan_val + tan_c4;
+            tan_val = x2 * tan_val + tan_c2;
+            tan_val = x2 * tan_val + one_vec;
+            // Equation was for tan(x)/x
+            tan_val *= x;
+            z = tan_val;
+        }
+        return x_lt_0 ? -z : z;
+    }
+}
+
+
+static inline uniform float tan(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_tan(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const uniform float pi_over_four_vec = 0.785398185253143310546875;
+        const uniform float four_over_pi_vec = 1.27323949337005615234375;
+
+        uniform bool x_lt_0 = x_full < 0.;
+        uniform float y = x_lt_0 ? -x_full : x_full;
+        uniform float scaled = y * four_over_pi_vec;
+
+        uniform float k_real = floor(scaled);
+        uniform int k = (int)k_real;
+
+        uniform float x = y - k_real * pi_over_four_vec;
+
+        // if k & 1, x -= Pi/4
+        uniform bool need_offset = (k & 1) != 0;
+        x = need_offset ? x - pi_over_four_vec : x;
+
+        // if k & 3 == (0 or 3) let z = tan_In...(y) otherwise z = -cot_In0To...
+        uniform int k_mod4 = k & 3;
+        uniform bool use_cotan = (k_mod4 == 1) || (k_mod4 == 2);
+
+        const uniform float one_vec = 1.0;
+
+        const uniform float tan_c2 = 0.33333075046539306640625;
+        const uniform float tan_c4 = 0.13339905440807342529296875;
+        const uniform float tan_c6 = 5.3348250687122344970703125e-2;
+        const uniform float tan_c8 = 2.46033705770969390869140625e-2;
+        const uniform float tan_c10 = 2.892402000725269317626953125e-3;
+        const uniform float tan_c12 = 9.500005282461643218994140625e-3;
+
+        const uniform float cot_c2 = -0.3333333432674407958984375;
+        const uniform float cot_c4 = -2.222204394638538360595703125e-2;
+        const uniform float cot_c6 = -2.11752182804048061370849609375e-3;
+        const uniform float cot_c8 = -2.0846328698098659515380859375e-4;
+        const uniform float cot_c10 = -2.548247357481159269809722900390625e-5;
+        const uniform float cot_c12 = -3.5257363606433500535786151885986328125e-7;
+
+        uniform float x2 = x * x;
+        uniform float z;
+        if (use_cotan) {
+            uniform float cot_val = x2 * cot_c12 + cot_c10;
+            cot_val = x2 * cot_val + cot_c8;
+            cot_val = x2 * cot_val + cot_c6;
+            cot_val = x2 * cot_val + cot_c4;
+            cot_val = x2 * cot_val + cot_c2;
+            cot_val = x2 * cot_val + one_vec;
+            // The equation is for x * cot(x) but we need -x * cot(x) for the tan part.
+            cot_val /= -x;
+            z = cot_val;
+        } else {
+            uniform float tan_val = x2 * tan_c12 + tan_c10;
+            tan_val = x2 * tan_val + tan_c8;
+            tan_val = x2 * tan_val + tan_c6;
+            tan_val = x2 * tan_val + tan_c4;
+            tan_val = x2 * tan_val + tan_c2;
+            tan_val = x2 * tan_val + one_vec;
+            // Equation was for tan(x)/x
+            tan_val *= x;
+            z = tan_val;
+        }
+        return x_lt_0 ? -z : z;
+    }
+}
+
+
+static inline float atan(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_atan(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_atan(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const float pi_over_two_vec = 1.57079637050628662109375;
+        // atan(-x) = -atan(x) (so flip from negative to positive first)
+        // if x > 1 -> atan(x) = Pi/2 - atan(1/x)
+        bool x_neg = x_full < 0;
+        float x_flipped = x_neg ? -x_full : x_full;
+
+        bool x_gt_1 = x_flipped > 1.;
+        float x = x_gt_1 ? 1./x_flipped : x_flipped;
+
+        // These coefficients approximate atan(x)/x
+        const float atan_c0 = 0.99999988079071044921875;
+        const float atan_c2 = -0.3333191573619842529296875;
+        const float atan_c4 = 0.199689209461212158203125;
+        const float atan_c6 = -0.14015688002109527587890625;
+        const float atan_c8 = 9.905083477497100830078125e-2;
+        const float atan_c10 = -5.93664981424808502197265625e-2;
+        const float atan_c12 = 2.417283318936824798583984375e-2;
+        const float atan_c14 = -4.6721356920897960662841796875e-3;
+
+        float x2 = x * x;
+        float result = x2 * atan_c14 + atan_c12;
+        result = x2 * result + atan_c10;
+        result = x2 * result + atan_c8;
+        result = x2 * result + atan_c6;
+        result = x2 * result + atan_c4;
+        result = x2 * result + atan_c2;
+        result = x2 * result + atan_c0;
+        result *= x;
+
+        result = x_gt_1 ? pi_over_two_vec - result : result;
+        result = x_neg ? -result : result;
+        return result;
+    }
+}
+
+
+static inline uniform float atan(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_atan(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const uniform float pi_over_two_vec = 1.57079637050628662109375;
+        // atan(-x) = -atan(x) (so flip from negative to positive first)
+        // if x > 1 -> atan(x) = Pi/2 - atan(1/x)
+        uniform bool x_neg = x_full < 0;
+        uniform float x_flipped = x_neg ? -x_full : x_full;
+
+        uniform bool x_gt_1 = x_flipped > 1.;
+        uniform float x = x_gt_1 ? 1./x_flipped : x_flipped;
+
+        // These coefficients approximate atan(x)/x
+        const uniform float atan_c0 = 0.99999988079071044921875;
+        const uniform float atan_c2 = -0.3333191573619842529296875;
+        const uniform float atan_c4 = 0.199689209461212158203125;
+        const uniform float atan_c6 = -0.14015688002109527587890625;
+        const uniform float atan_c8 = 9.905083477497100830078125e-2;
+        const uniform float atan_c10 = -5.93664981424808502197265625e-2;
+        const uniform float atan_c12 = 2.417283318936824798583984375e-2;
+        const uniform float atan_c14 = -4.6721356920897960662841796875e-3;
+
+        uniform float x2 = x * x;
+        uniform float result = x2 * atan_c14 + atan_c12;
+        result = x2 * result + atan_c10;
+        result = x2 * result + atan_c8;
+        result = x2 * result + atan_c6;
+        result = x2 * result + atan_c4;
+        result = x2 * result + atan_c2;
+        result = x2 * result + atan_c0;
+        result *= x;
+
+        result = x_gt_1 ? pi_over_two_vec - result : result;
+        result = x_neg ? -result : result;
+        return result;
+    }
+}
+
+
+static inline float atan2(float y, float x) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_atan2(y, x);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_atan2(extract(y, i), extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const float pi_vec = 3.1415927410125732421875;
+        const float pi_over_two_vec = 1.57079637050628662109375;
+        // atan2(y, x) =
+        //
+        // atan2(y > 0, x = +-0) ->  Pi/2
+        // atan2(y < 0, x = +-0) -> -Pi/2
+        // atan2(y = +-0, x < +0) -> +-Pi
+        // atan2(y = +-0, x >= +0) -> +-0
+        //
+        // atan2(y >= 0, x < 0) ->  Pi + atan(y/x)
+        // atan2(y <  0, x < 0) -> -Pi + atan(y/x)
+        // atan2(y, x > 0) -> atan(y/x)
+        //
+        // and then a bunch of code for dealing with infinities.
+        float y_over_x = y/x;
+        float atan_arg = atan(y_over_x);
+        bool x_lt_0 = x < 0;
+        bool y_lt_0 = y < 0;
+        float offset = x_lt_0 ? (y_lt_0 ? -pi_vec : pi_vec) : 0;
+        return offset + atan_arg;
+    }
+}
+
+
+static inline uniform float atan2(uniform float y, uniform float x) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_atan2(y, x);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        const uniform float pi_vec = 3.1415927410125732421875;
+        const uniform float pi_over_two_vec = 1.57079637050628662109375;
+
+        uniform float y_over_x = y/x;
+        uniform float atan_arg = atan(y_over_x);
+        uniform bool x_lt_0 = x < 0;
+        uniform bool y_lt_0 = y < 0;
+        uniform float offset = x_lt_0 ? (y_lt_0 ? -pi_vec : pi_vec) : 0;
+        return offset + atan_arg;
+    }
+}
+
+
+static inline float exp(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_exp(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_exp(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc_fast) {
+        float z = floor(1.44269504088896341f * x_full + 0.5f); 
+        int n;
+        x_full -= z * 0.693359375f;
+        x_full -= z * -2.12194440e-4f;
+        n = (int)z;
+
+        z = x_full * x_full;
+        z = (((((1.9875691500E-4f  * x_full + 1.3981999507E-3f) * x_full +
+                8.3334519073E-3f) * x_full + 4.1665795894E-2f) * x_full +
+              1.6666665459E-1f) * x_full + 5.0000001201E-1f) * z + x_full + 1.f;
+        x_full = ldexp(z, n);
+        return x_full;
+    }
+    else if (__math_lib == __math_lib_ispc) {
+        const float ln2_part1 = 0.6931457519;
+        const float ln2_part2 = 1.4286067653e-6;
+        const float one_over_ln2 = 1.44269502162933349609375;
+
+        float scaled = x_full * one_over_ln2;
+        float k_real = floor(scaled);
+        int k = (int)k_real;
+
+        // Reduced range version of x
+        float x = x_full - k_real * ln2_part1;
+        x -= k_real * ln2_part2;
+
+        // These coefficients are for e^x in [0, ln(2)]
+        const float one = 1.;
+        const float c2 = 0.4999999105930328369140625;
+        const float c3 = 0.166668415069580078125;
+        const float c4 = 4.16539050638675689697265625e-2;
+        const float c5 = 8.378830738365650177001953125e-3;
+        const float c6 = 1.304379315115511417388916015625e-3;
+        const float c7 = 2.7555381529964506626129150390625e-4;
+
+        float result = x * c7 + c6;
+        result = x * result + c5;
+        result = x * result + c4;
+        result = x * result + c3;
+        result = x * result + c2;
+        result = x * result + one;
+        result = x * result + one;
+
+        // Compute 2^k (should differ for float and double, but I'll avoid
+        // it for now and just do floats)
+        const int fpbias = 127;
+        int biased_n = k + fpbias;
+        bool overflow = k > fpbias;
+        // Minimum exponent is -126, so if k is <= -127 (k + 127 <= 0)
+        // we've got underflow. -127 * ln(2) -> -88.02. So the most
+        // negative float input that doesn't result in zero is like -88.
+        bool underflow = (biased_n <= 0);
+        const int InfBits = 0x7f800000;
+        biased_n <<= 23;
+        // Reinterpret this thing as float
+        float two_to_the_n = floatbits(biased_n);
+        // Handle both doubles and floats (hopefully eliding the copy for float)
+        float elemtype_2n = two_to_the_n;
+        result *= elemtype_2n;
+        result = overflow ? floatbits(InfBits) : result;
+        result = underflow ? 0. : result;
+        return result;
+    }
+}
+
+static inline uniform float exp(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_exp(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc_fast) {
+        uniform float z = floor(1.44269504088896341f * x_full + 0.5f); 
+        uniform int n;
+        x_full -= z * 0.693359375f;
+        x_full -= z * -2.12194440e-4f;
+        n = (int)z;
+
+        z = x_full * x_full;
+        z = (((((1.9875691500E-4f  * x_full + 1.3981999507E-3f) * x_full +
+                8.3334519073E-3f) * x_full + 4.1665795894E-2f) * x_full +
+              1.6666665459E-1f) * x_full + 5.0000001201E-1f) * z + x_full + 1.f;
+        x_full = ldexp(z, n);
+        return x_full;
+    }
+    else if (__math_lib == __math_lib_ispc) {
+        const uniform float ln2_part1 = 0.6931457519;
+        const uniform float ln2_part2 = 1.4286067653e-6;
+        const uniform float one_over_ln2 = 1.44269502162933349609375;
+
+        uniform float scaled = x_full * one_over_ln2;
+        uniform float k_real = floor(scaled);
+        uniform int k = (uniform int)k_real;
+
+        // Reduced range version of x
+        uniform float x = x_full - k_real * ln2_part1;
+        x -= k_real * ln2_part2;
+
+        // These coefficients are for e^x in [0, ln(2)]
+        const uniform float one = 1.;
+        const uniform float c2 = 0.4999999105930328369140625;
+        const uniform float c3 = 0.166668415069580078125;
+        const uniform float c4 = 4.16539050638675689697265625e-2;
+        const uniform float c5 = 8.378830738365650177001953125e-3;
+        const uniform float c6 = 1.304379315115511417388916015625e-3;
+        const uniform float c7 = 2.7555381529964506626129150390625e-4;
+
+        uniform float result = x * c7 + c6;
+        result = x * result + c5;
+        result = x * result + c4;
+        result = x * result + c3;
+        result = x * result + c2;
+        result = x * result + one;
+        result = x * result + one;
+
+        // Compute 2^k (should differ for uniform float and double, but I'll avoid
+        // it for now and just do uniform floats)
+        const uniform int fpbias = 127;
+        uniform int biased_n = k + fpbias;
+        uniform bool overflow = k > fpbias;
+        // Minimum exponent is -126, so if k is <= -127 (k + 127 <= 0)
+        // we've got underflow. -127 * ln(2) -> -88.02. So the most
+        // negative uniform float input that doesn't result in zero is like -88.
+        uniform bool underflow = (biased_n <= 0);
+        const uniform int InfBits = 0x7f800000;
+        biased_n <<= 23;
+        // Reuniform interpret this thing as uniform float
+        uniform float two_to_the_n = floatbits(biased_n);
+        // Handle both doubles and uniform floats (hopefully eliding the copy for uniform float)
+        uniform float elemtype_2n = two_to_the_n;
+        result *= elemtype_2n;
+        result = overflow ? floatbits(InfBits) : result;
+        result = underflow ? 0. : result;
+        return result;
+    }
+}
+
+// Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
+// * log(2) + log(y) where y is the reduced range (usually in [1/2,
+// 1)).
+static inline void __range_reduce_log(float input, reference float reduced, reference int exponent) {
+    int int_version = intbits(input);
+    // single precision = SEEE EEEE EMMM MMMM MMMM MMMM MMMM MMMM
+    // exponent mask    = 0111 1111 1000 0000 0000 0000 0000 0000
+    //                    0x7  0xF  0x8  0x0  0x0  0x0  0x0  0x0
+    // non-exponent     = 1000 0000 0111 1111 1111 1111 1111 1111
+    //                  = 0x8  0x0  0x7  0xF  0xF  0xF  0xF  0xF
+
+    //const int exponent_mask(0x7F800000)
+    static const int nonexponent_mask = 0x807FFFFF;
+
+    // We want the reduced version to have an exponent of -1 which is -1 + 127 after biasing or 126
+    static const int exponent_neg1 = (126 << 23);
+    // NOTE(boulos): We don't need to mask anything out since we know
+    // the sign bit has to be 0. If it's 1, we need to return infinity/nan
+    // anyway (log(x), x = +-0 -> infinity, x < 0 -> NaN).
+    int biased_exponent = int_version >> 23; // This number is [0, 255] but it means [-127, 128]
+
+    int offset_exponent = biased_exponent + 1; // Treat the number as if it were 2^{e+1} * (1.m)/2
+    exponent = offset_exponent - 127; // get the real value
+
+    // Blend the offset_exponent with the original input (do this in
+    // int for now, until I decide if float can have & and &not)
+    int blended = (int_version & nonexponent_mask) | (exponent_neg1);
+    reduced = floatbits(blended);
+}
+
+
+
+static inline void __range_reduce_log(uniform float input, reference uniform float reduced, 
+                               reference uniform int exponent) {
+    uniform int int_version = intbits(input);
+    static const uniform int nonexponent_mask = 0x807FFFFF;
+
+    static const uniform int exponent_neg1 = (126 << 23);
+    uniform int biased_exponent = int_version >> 23;
+    uniform int offset_exponent = biased_exponent + 1;
+    exponent = offset_exponent - 127; // get the real value
+
+    uniform int blended = (int_version & nonexponent_mask) | (exponent_neg1);
+    reduced = floatbits(blended);
+}
+
+
+static inline float log(float x_full) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_log(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_log(extract(x_full, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc_fast) {
+        int e;
+        x_full = frexp(x_full, e);
+    
+        int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
+        e += x_smaller_SQRTHF;
+        int ix_add = intbits(x_full);
+        ix_add &= x_smaller_SQRTHF;
+        x_full += floatbits(ix_add) - 1.f;
+
+        float z = x_full * x_full;
+        float y =
+            ((((((((7.0376836292E-2f * x_full
+                    + -1.1514610310E-1f) * x_full
+                   + 1.1676998740E-1f) * x_full
+                  + -1.2420140846E-1f) * x_full
+                 + 1.4249322787E-1f) * x_full
+                + -1.6668057665E-1f) * x_full
+               + 2.0000714765E-1f) * x_full
+              + -2.4999993993E-1f) * x_full
+             + 3.3333331174E-1f) * x_full * z;
+
+        float fe = (float)e;
+        y += fe * -2.12194440e-4;
+        y -= 0.5f * z;
+        z  = x_full + y;
+        return z + 0.693359375 * fe;
+    } 
+    else if (__math_lib == __math_lib_ispc) {
+        float reduced;
+        int exponent;
+
+        const int NaN_bits = 0x7fc00000;
+        const int Neg_Inf_bits = 0xFF800000;
+        const float NaN = floatbits(NaN_bits);
+        const float neg_inf = floatbits(Neg_Inf_bits);
+        bool use_nan = x_full < 0.;
+        bool use_inf = x_full == 0.;
+        bool exceptional = use_nan || use_inf;
+        const float one = 1.0;
+
+        float patched = exceptional ? one : x_full;
+        __range_reduce_log(patched, reduced, exponent);
+
+        const float ln2 = 0.693147182464599609375;
+
+        float x1 = one - reduced;
+        const float c1 = 0.50000095367431640625;
+        const float c2 = 0.33326041698455810546875;
+        const float c3 = 0.2519190013408660888671875;
+        const float c4 = 0.17541764676570892333984375;
+        const float c5 = 0.3424419462680816650390625;
+        const float c6 = -0.599632322788238525390625;
+        const float c7 = +1.98442304134368896484375;
+        const float c8 = -2.4899270534515380859375;
+        const float c9 = +1.7491014003753662109375;
+
+        float result = x1 * c9 + c8;
+        result = x1 * result + c7;
+        result = x1 * result + c6;
+        result = x1 * result + c5;
+        result = x1 * result + c4;
+        result = x1 * result + c3;
+        result = x1 * result + c2;
+        result = x1 * result + c1;
+        result = x1 * result + one;
+
+        // Equation was for -(ln(red)/(1-red))
+        result *= -x1;
+        result += (float)(exponent) * ln2;
+
+        return exceptional ? (use_nan ? NaN : neg_inf) : result;
+    }
+}
+
+static inline uniform float log(uniform float x_full) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_log(x_full);
+    }
+    else if (__math_lib == __math_lib_ispc_fast) {
+        uniform int e;
+        x_full = frexp(x_full, e);
+    
+        uniform int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
+        e += x_smaller_SQRTHF;
+        uniform int ix_add = intbits(x_full);
+        ix_add &= x_smaller_SQRTHF;
+        x_full += floatbits(ix_add) - 1.f;
+
+        uniform float z = x_full * x_full;
+        uniform float y =
+            ((((((((7.0376836292E-2f * x_full
+                    + -1.1514610310E-1f) * x_full
+                   + 1.1676998740E-1f) * x_full
+                  + -1.2420140846E-1f) * x_full
+                 + 1.4249322787E-1f) * x_full
+                + -1.6668057665E-1f) * x_full
+               + 2.0000714765E-1f) * x_full
+              + -2.4999993993E-1f) * x_full
+             + 3.3333331174E-1f) * x_full * z;
+
+        uniform float fe = (uniform float)e;
+        y += fe * -2.12194440e-4;
+        y -= 0.5f * z;
+        z  = x_full + y;
+        return z + 0.693359375 * fe;
+    }
+    else if (__math_lib == __math_lib_ispc) {
+        uniform float reduced;
+        uniform int exponent;
+
+        const uniform int NaN_bits = 0x7fc00000;
+        const uniform int Neg_Inf_bits = 0xFF800000;
+        const uniform float NaN = floatbits(NaN_bits);
+        const uniform float neg_inf = floatbits(Neg_Inf_bits);
+        uniform bool use_nan = x_full < 0.;
+        uniform bool use_inf = x_full == 0.;
+        uniform bool exceptional = use_nan || use_inf;
+        const uniform float one = 1.0;
+
+        uniform float patched = exceptional ? one : x_full;
+        __range_reduce_log(patched, reduced, exponent);
+
+        const uniform float ln2 = 0.693147182464599609375;
+
+        uniform float x1 = one - reduced;
+        const uniform float c1 = 0.50000095367431640625;
+        const uniform float c2 = 0.33326041698455810546875;
+        const uniform float c3 = 0.2519190013408660888671875;
+        const uniform float c4 = 0.17541764676570892333984375;
+        const uniform float c5 = 0.3424419462680816650390625;
+        const uniform float c6 = -0.599632322788238525390625;
+        const uniform float c7 = +1.98442304134368896484375;
+        const uniform float c8 = -2.4899270534515380859375;
+        const uniform float c9 = +1.7491014003753662109375;
+
+        uniform float result = x1 * c9 + c8;
+        result = x1 * result + c7;
+        result = x1 * result + c6;
+        result = x1 * result + c5;
+        result = x1 * result + c4;
+        result = x1 * result + c3;
+        result = x1 * result + c2;
+        result = x1 * result + c1;
+        result = x1 * result + one;
+
+        // Equation was for -(ln(red)/(1-red))
+        result *= -x1;
+        result += (uniform float)(exponent) * ln2;
+
+        return exceptional ? (use_nan ? NaN : neg_inf) : result;
+    }
+}
+
+static inline float pow(float a, float b) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_pow(a, b);
+    }
+    else if (__math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_pow(extract(a, i), extract(b, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        return exp(b * log(a));
+    }
+}
+
+static inline uniform float pow(uniform float a, uniform float b) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
+        return __stdlib_pow(a, b);
+    }
+    else if (__math_lib == __math_lib_ispc || 
+             __math_lib == __math_lib_ispc_fast) {
+        return exp(b * log(a));
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// RNG stuff
+
+struct RNGState {
+    unsigned int z1, z2, z3, z4;
+};
+
+static inline unsigned int random(reference uniform RNGState state)
+{
+    unsigned int b;
+
+    b  = ((state.z1 << 6) ^ state.z1) >> 13;
+    state.z1 = ((state.z1 & 4294967294U) << 18) ^ b;
+    b  = ((state.z2 << 2) ^ state.z2) >> 27; 
+    state.z2 = ((state.z2 & 4294967288U) << 2) ^ b;
+    b  = ((state.z3 << 13) ^ state.z3) >> 21;
+    state.z3 = ((state.z3 & 4294967280U) << 7) ^ b;
+    b  = ((state.z4 << 3) ^ state.z4) >> 12;
+    state.z4 = ((state.z4 & 4294967168U) << 13) ^ b;
+    return (state.z1 ^ state.z2 ^ state.z3 ^ state.z4);
+}
+
+static inline float frandom(reference uniform RNGState state)
+{
+    return ((int)(random(state) & ((1<<24)-1))) / (float)(1 << 24);
+}
+
+static inline uniform unsigned int __seed4(reference uniform RNGState state, 
+                                    uniform int start,
+                                    uniform unsigned int seed) {
+    uniform unsigned int c1 = 0xf0f0f0f0;
+    uniform unsigned int c2 = 0x0f0f0f0f;
+
+    state.z1 = insert(state.z1, start + 0, seed);
+    state.z1 = insert(state.z1, start + 1, seed ^ c1);
+    state.z1 = insert(state.z1, start + 2, (seed << 3) ^ c1);
+    state.z1 = insert(state.z1, start + 3, (seed << 2) ^ c2);
+
+    seed += 131;
+    state.z2 = insert(state.z2, start + 0, seed);
+    state.z2 = insert(state.z2, start + 1, seed ^ c1);
+    state.z2 = insert(state.z2, start + 2, (seed << 3) ^ c1);
+    state.z2 = insert(state.z2, start + 3, (seed << 2) ^ c2);
+
+    seed ^= extract(state.z2, 2);
+    state.z3 = insert(state.z3, start + 0, seed);
+    state.z3 = insert(state.z3, start + 1, seed ^ c1);
+    state.z3 = insert(state.z3, start + 2, (seed << 3) ^ c1);
+    state.z3 = insert(state.z3, start + 3, (seed << 2) ^ c2);
+
+    seed <<= 4;
+    seed += 3;
+    seed ^= extract(state.z1, 3);
+    state.z4 = insert(state.z4, start + 0, seed);
+    state.z4 = insert(state.z4, start + 1, seed ^ c1);
+    state.z4 = insert(state.z4, start + 2, (seed << 3) ^ c1);
+    state.z4 = insert(state.z4, start + 3, (seed << 2) ^ c2);
+
+    return seed;
+}
+
+static inline void seed_rng(reference uniform RNGState state, uniform unsigned int seed) {
+    seed = __seed4(state, 0, seed);
+    if (programCount == 8)
+        __seed4(state, 4, seed ^ 0xbeeff00d);
+}
+
+static inline void fastmath() {
+    __fastmath();
+}
