@@ -184,7 +184,7 @@ Module::CompileFile() {
         FATAL("Need to implement code to run the preprocessor for windows"); 
 #else // ISPC_IS_WINDOWS
         char *cmd = NULL;
-        if (asprintf(&cmd, "/usr/bin/cpp -DISPC=1 -DPI=3.1415936535 %s %s", 
+        if (asprintf(&cmd, "/usr/bin/cpp -DISPC=1 -DPI=3.1415926536 %s %s", 
                      cppDefs.c_str(), filename ? filename : "-") == -1) {
             fprintf(stderr, "Unable to allocate memory in asprintf()?!\n");
             exit(1);
