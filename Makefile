@@ -83,11 +83,11 @@ objs/parse.o: objs/parse.cc $(HEADERS)
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/lex.cpp: lex.ll
+objs/lex.cpp: lex.ll 
 	@echo Running flex on $<
 	@$(LEX) -o $@ $<
 
-objs/lex.o: objs/lex.cpp $(HEADERS)
+objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
