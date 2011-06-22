@@ -1437,7 +1437,7 @@ FunctionEmitContext::addGSMetadata(llvm::Instruction *inst, SourcePos pos) {
 
     llvm::Value *line = LLVMInt32(pos.first_line);
 #ifdef LLVM_2_8
-    md = llvm::MDNode::get(*g->ctx, &first_line, 1);
+    md = llvm::MDNode::get(*g->ctx, &line, 1);
 #else
     md = llvm::MDNode::get(*g->ctx, line);
 #endif
@@ -1445,7 +1445,7 @@ FunctionEmitContext::addGSMetadata(llvm::Instruction *inst, SourcePos pos) {
 
     llvm::Value *column = LLVMInt32(pos.first_column);
 #ifdef LLVM_2_8
-    md = llvm::MDNode::get(*g->ctx, &first_column, 1);
+    md = llvm::MDNode::get(*g->ctx, &column, 1);
 #else
     md = llvm::MDNode::get(*g->ctx, column);
 #endif
