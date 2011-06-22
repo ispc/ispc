@@ -665,19 +665,12 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
                 lCopyInTaskParameter(i, structParamPtr, decl, ctx);
 
         // Copy in the mask as well.
-        // FIXME: we may probably to check the mask at runtime and emit an
-        // 'all on' code path if it is all on, since that should be a
-        // common case.
-#if 1
         int nArgs = decl->functionArgs ? decl->functionArgs->size() : 0;
         // The mask is the last parameter in the argument structure
         llvm::Value *ptr = ctx->GetElementPtrInst(structParamPtr, 0, nArgs,
                                                   "task_struct_mask");
         llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
         ctx->SetEntryMask(ptrval);
-#else
-        Warning(funSym->pos, "Running task with all-on mask to start.");
-#endif
 
         // Copy threadIndex and threadCount into stack-allocated storage so
         // that their symbols point to something reasonable.

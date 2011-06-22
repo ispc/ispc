@@ -3203,6 +3203,7 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
         break;
     case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_UINT64:
+        // For now, this should never be reached 
         FATAL("fixme; we need another constructor so that we're not trying to pass "
                "double values to init an int64 type...");
     default:
