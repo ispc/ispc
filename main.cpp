@@ -38,6 +38,7 @@
 #include "ispc.h"
 #include "module.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #ifdef LLVM_2_8
 #include <llvm/System/Signals.h>

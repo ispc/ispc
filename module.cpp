@@ -82,7 +82,9 @@
 #ifndef LLVM_2_8
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
-#endif // !LLVM_2_8
+#else // !LLVM_2_8
+#include <llvm/System/Host.h>
+#endif // LLVM_2_8
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
