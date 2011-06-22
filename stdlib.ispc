@@ -1087,8 +1087,8 @@ static inline float atan2(float y, float x) {
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
-        const float pi_vec = 3.1415927410125732421875;
-        const float pi_over_two_vec = 1.57079637050628662109375;
+        const float pi_vec = 3.1415926536;
+        const float pi_over_two_vec = 1.5707963267;
         // atan2(y, x) =
         //
         // atan2(y > 0, x = +-0) ->  Pi/2
