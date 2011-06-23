@@ -43,7 +43,7 @@ OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(STDLIB_SRC:.ll=.o) stdlib-c.o stdli
 
 default: ispc ispc_test
 
-.PHONY: dirs clean depend doxygen
+.PHONY: dirs clean depend doxygen print_llvm_src
 .PRECIOUS: objs/stdlib-%.cpp
 
 depend: $(CXX_SRC) $(HEADERS)
@@ -56,6 +56,9 @@ dirs:
 	@echo Creating objs/ directory
 	@/bin/mkdir -p objs
 
+print_llvm_src:
+	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
+
 clean:
 	/bin/rm -rf objs ispc ispc_test
 
@@ -63,7 +66,7 @@ doxygen:
 	/bin/rm -rf docs/doxygen
 	doxygen doxygen.cfg
 
-ispc: dirs $(OBJS)
+ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LLVM_LIBS)
 
