@@ -11,10 +11,10 @@ endif
 
 TASK_OBJ=$(addprefix objs/, $(TASK_CXX:.cpp=.o))
 
-CXX=g++
+CXX=g++ -m64
 CXXFLAGS=-Iobjs/ -O3 -Wall
 ISPC=ispc
-ISPCFLAGS=-O2 --target=sse4x2
+ISPCFLAGS=-O2 --target=sse4x2 --arch=x86-64
 
 default: mandelbrot
 

@@ -1,8 +1,8 @@
 
-CXX=g++
+CXX=g++ -m64
 CXXFLAGS=-Iobjs/ -g3 -Wall
 ISPC=ispc
-ISPCFLAGS=-O2 --fast-math --instrument
+ISPCFLAGS=-O2 --fast-math --instrument --arch=x86-64
 
 default: ao
 
