@@ -1,8 +1,8 @@
 
-CXX=g++
+CXX=g++ -m64
 CXXFLAGS=-Iobjs/ -g -Wall
 ISPC=ispc
-ISPCFLAGS=-O2 --target=sse4x2
+ISPCFLAGS=-O2 --target=sse4x2 --arch=x86-64
 
 default: options
 
