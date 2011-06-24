@@ -544,7 +544,7 @@ all_on:
   ;; vector load
   %vecptr = bitcast i32 *%startptr to <$1 x i32> *
   %vec_load = load <$1 x i32> *%vecptr, align 4
-  store <$1 x i32> %vec_load, <$1 x i32> * %val_ptr
+  store <$1 x i32> %vec_load, <$1 x i32> * %val_ptr, align 4
   ret i32 $1
 
 not_all_on:

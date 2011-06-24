@@ -584,7 +584,7 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
   %blend = shufflevector <4 x float> %blend_a, <4 x float> %blend_b,
                <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %blendAsInt = bitcast <8 x float> %blend to <8 x i32>
-  store <8 x i32> %blendAsInt, <8 x i32>* %0
+  store <8 x i32> %blendAsInt, <8 x i32>* %0, align 4
   ret void
 }
 
@@ -651,7 +651,7 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
        <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %final = shufflevector <4 x i64> %final0123, <4 x i64> %final4567,
        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  store <8 x i64> %final, <8 x i64> * %ptr
+  store <8 x i64> %final, <8 x i64> * %ptr, align 8
   ret void
 }
 

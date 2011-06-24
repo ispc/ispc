@@ -520,7 +520,7 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
                                                    <8 x float> %newAsFloat,
                                                    <8 x float> %mask_as_float)
   %blendAsInt = bitcast <8 x float> %blend to <8 x i32>
-  store <8 x i32> %blendAsInt, <8 x i32>* %0
+  store <8 x i32> %blendAsInt, <8 x i32>* %0, align 4
   ret void
 }
 
