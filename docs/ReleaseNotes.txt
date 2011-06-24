@@ -9,6 +9,6 @@ generated aligned load/store instructions in cases where the address wasn't
 actually aligned (even if the base address passed into ispc code was).
 
 
-=== v1.0 === (22 June 2011)
+=== v1.0 === (21 June 2011)
 
 Initial Release
