@@ -278,15 +278,15 @@ define internal float @__reduce_add_float(<4 x float> %v) nounwind readonly alwa
 
 define void @__masked_store_blend_32(<4 x i32>* nocapture, <4 x i32>, 
                                      <4 x i32> %mask) nounwind alwaysinline {
-  %val = load <4 x i32> * %0
+  %val = load <4 x i32> * %0, align 4
   %newval = call <4 x i32> @__vselect_i32(<4 x i32> %val, <4 x i32> %1, <4 x i32> %mask) 
-  store <4 x i32> %newval, <4 x i32> * %0
+  store <4 x i32> %newval, <4 x i32> * %0, align 4
   ret void
 }
 
 define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
                                      <4 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load <4 x i64>* %ptr
+  %oldValue = load <4 x i64>* %ptr, align 8
 
   ; Do 4x64-bit blends by doing two <4 x i32> blends, where the <4 x i32> values
   ; are actually bitcast <2 x i64> values
@@ -322,7 +322,7 @@ define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   ; reconstruct the final <4 x i64> vector
   %final = shufflevector <2 x i64> %result01, <2 x i64> %result23,
                          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i64> %final, <4 x i64> * %ptr
+  store <4 x i64> %final, <4 x i64> * %ptr, align 8
   ret void
 }
 
