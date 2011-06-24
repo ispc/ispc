@@ -1,10 +1,24 @@
 #!/bin/zsh
 
 surprises=0
+verbose=false
+number=$(ls -1 tests/*.ispc|wc -l)
+counter=1
+
+while getopts ":v" opt;do
+    case $opt in
+        v) verbose=true
+            ;;
+    esac
+done
 
 echo Running correctness tests
 
 for i in tests/*.ispc; do
+    if $verbose; then
+        echo -en "Running test $counter of $number.\r"
+    fi
+    (( counter++ ))
     bc=${i%%ispc}bc
     ispc -O2 $i -woff -o $bc --emit-llvm --target=sse4
     if [[ $? != 0 ]]; then
