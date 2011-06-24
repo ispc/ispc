@@ -1,0 +1,14 @@
+
+=== v1.0.1 === (24 June 2011)
+
+ispc no longer requires that pointers to memory that are passed in to ispc
+have alignment equal to the targets vector width; now alignment just has to
+be the regular element alignment (e.g. 4 bytes for floats, etc.)  This
+change also fixed a number of cases where it previously incorrectly
+generated aligned load/store instructions in cases where the address wasn't
+actually aligned (even if the base address passed into ispc code was).
+
+
+=== v1.0 === (22 June 2011)
+
+Initial Release
