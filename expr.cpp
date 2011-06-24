@@ -380,7 +380,7 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
         std::vector<llvm::Constant *> vals;
         for (unsigned int i = 0; i < lvt->getNumElements(); ++i)
             vals.push_back(constElement);
-        return llvm::ConstantVector::get(lvt, vals);
+	return llvm::ConstantVector::get(vals);
     }
     else {
         const llvm::ArrayType *lat = 
