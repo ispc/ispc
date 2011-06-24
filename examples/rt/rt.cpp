@@ -43,32 +43,12 @@
 #include <algorithm>
 #include <assert.h>
 #include <sys/types.h>
-#ifndef __APPLE__
-#include <malloc.h>
-#endif
 #include "../timing.h"
 #include "rt_ispc.h"
 
 using namespace ispc;
 
 typedef unsigned int uint;
-
-template <typename T> 
-T *AllocAligned(int count) {
-    int size = count * sizeof(T);
-#if defined(_WIN32) || defined(_WIN64)
-    return (T *)_aligned_malloc(size, 64);
-#elif defined (__APPLE__)
-    // Allocate excess memory to ensure an aligned pointer can be returned
-    void *mem = malloc(size + (64-1) + sizeof(void*));
-    char *amem = ((char*)mem) + sizeof(void*);
-    amem += 64 - (reinterpret_cast<uint64_t>(amem) & (64 - 1));
-    ((void**)amem)[-1] = mem;
-    return (T *)amem;
-#else
-    return (T *)memalign(64, size);
-#endif
-}
 
 extern void raytrace_serial(int width, int height, const float raster2camera[4][4], 
                             const float camera2world[4][4], float image[],
@@ -161,7 +141,7 @@ int main(int argc, char *argv[]) {
     uint nNodes;
     READ(nNodes, 1);
 
-    LinearBVHNode *nodes = AllocAligned<LinearBVHNode>(nNodes);
+    LinearBVHNode *nodes = new LinearBVHNode[nNodes];
     for (unsigned int i = 0; i < nNodes; ++i) {
         // Each node is 6x floats for a boox, then an integer for an offset
         // to the second child node, then an integer that encodes the type
@@ -181,7 +161,7 @@ int main(int argc, char *argv[]) {
     // And then read the triangles 
     uint nTris;
     READ(nTris, 1);
-    Triangle *triangles = AllocAligned<Triangle>(nTris);
+    Triangle *triangles = new Triangle[nTris];
     for (uint i = 0; i < nTris; ++i) {
         // 9x floats for the 3 vertices
         float v[9];

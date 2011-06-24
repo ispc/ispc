@@ -38,15 +38,7 @@
 using namespace ispc;
 
 int main() {
-    // Pointers passed to ispc-compiled code are currently required to have
-    // alignment equal to the target's native vector size.  Here we align
-    // to 32 bytes to be safe for both SSE and AVX targets.
-#ifdef _MSC_VER
-    __declspec(align(32)) float vin[16], vout[16];
-#else
-    float vin[16] __attribute__((aligned(32)));
-    float vout[16] __attribute__((aligned(32)));
-#endif
+    float vin[16], vout[16];
 
     // Initialize input buffer
     for (int i = 0; i < 16; ++i)

@@ -452,7 +452,7 @@ define internal <$1 x i32> @__load_uint16([0 x i32] *, i32 %offset) nounwind alw
   %ptr16 = bitcast [0 x i32] *%0 to i16 *
   %ptr = getelementptr i16 * %ptr16, i32 %offset
   %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
-  %val = load i`'eval(16*$1) * %ptr64, align 1
+  %val = load i`'eval(16*$1) * %ptr64, align 2
 
   %vval = bitcast i`'eval(16*$1) %val to <$1 x i16>
   ; unsigned, so use zero-extent...
@@ -479,7 +479,7 @@ define internal void @__store_uint8([0 x i32] *, i32 %offset, <$1 x i32> %val32,
   %oldmasked = and i`'eval(8*$1) %old, %notmask
   %newmasked = and i`'eval(8*$1) %val64, %mask64
   %final = or i`'eval(8*$1) %oldmasked, %newmasked
-  store i`'eval(8*$1) %final, i`'eval(8*$1) * %ptr64
+  store i`'eval(8*$1) %final, i`'eval(8*$1) * %ptr64, align 1
 
   ret void
 }
@@ -498,11 +498,11 @@ define internal void @__store_uint16([0 x i32] *, i32 %offset, <$1 x i32> %val32
   %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
 
   ;; as above, use mask to do blending with logical ops...
-  %old = load i`'eval(16*$1) * %ptr64, align 1
+  %old = load i`'eval(16*$1) * %ptr64, align 2
   %oldmasked = and i`'eval(16*$1) %old, %notmask
   %newmasked = and i`'eval(16*$1) %val64, %mask64
   %final = or i`'eval(16*$1) %oldmasked, %newmasked
-  store i`'eval(16*$1) %final, i`'eval(16*$1) * %ptr64
+  store i`'eval(16*$1) %final, i`'eval(16*$1) * %ptr64, align 2
 
   ret void
 }
@@ -544,7 +544,7 @@ all_on:
   ;; vector load
   %vecptr = bitcast i32 *%startptr to <$1 x i32> *
   %vec_load = load <$1 x i32> *%vecptr, align 4
-  store <$1 x i32> %vec_load, <$1 x i32> * %val_ptr
+  store <$1 x i32> %vec_load, <$1 x i32> * %val_ptr, align 4
   ret i32 $1
 
 not_all_on:

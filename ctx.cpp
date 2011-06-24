@@ -1315,8 +1315,21 @@ FunctionEmitContext::LoadInst(llvm::Value *lvalue, const Type *type,
 
     if (llvm::isa<const llvm::PointerType>(lvalue->getType())) {
         // If the lvalue is a straight up regular pointer, then just issue
-        // a regular load
-        llvm::Instruction *inst = new llvm::LoadInst(lvalue, name ? name : "load", bblock);
+        // a regular load.  First figure out the alignment; in general we
+        // can just assume the natural alignment (0 here), but for varying
+        // atomic types, we need to make sure that the compiler emits
+        // unaligned vector loads, so we specify a reduced alignment here.
+        int align = 0;
+        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(type);
+        if (atomicType != NULL && atomicType->IsVaryingType())
+            // We actually just want to align to the vector element
+            // alignment, but can't easily get that here, so just tell LLVM
+            // it's totally unaligned.  (This shouldn't make any difference
+            // vs the proper alignment in practice.)
+            align = 1;
+        llvm::Instruction *inst = new llvm::LoadInst(lvalue, name ? name : "load",
+                                                     false /* not volatile */,
+                                                     align, bblock);
         AddDebugPos(inst);
         return inst;
     }
@@ -1644,7 +1657,16 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
         return;
     }
 
-    llvm::Instruction *inst = new llvm::StoreInst(rvalue, lvalue, name, bblock);
+    llvm::Instruction *inst;
+    if (llvm::isa<llvm::VectorType>(rvalue->getType()))
+        // Specify an unaligned store, since we don't know that the lvalue
+        // will in fact be aligned to a vector width here.  (Actually
+        // should be aligned to the alignment of the vector elment type...)
+        inst = new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+                                   1, bblock);
+    else
+        inst = new llvm::StoreInst(rvalue, lvalue, bblock);
+
     AddDebugPos(inst);
 }
 
@@ -1661,8 +1683,8 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
 
     // Figure out what kind of store we're doing here
     if (rvalueType->IsUniformType()) {
-        // The easy case; a regular store
-        llvm::Instruction *si = new llvm::StoreInst(rvalue, lvalue, name, bblock);
+        // The easy case; a regular store, natural alignment is fine
+        llvm::Instruction *si = new llvm::StoreInst(rvalue, lvalue, bblock);
         AddDebugPos(si);
     }
     else if (llvm::isa<const llvm::ArrayType>(lvalue->getType()))
@@ -1672,9 +1694,7 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
     else if (storeMask == LLVMMaskAllOn) {
         // Otherwise it is a masked store unless we can determine that the
         // mask is all on...
-        llvm::Instruction *si = 
-            new llvm::StoreInst(rvalue, lvalue, name, bblock);
-        AddDebugPos(si);
+        StoreInst(rvalue, lvalue, name);
     }
     else
         maskedStore(rvalue, lvalue, rvalueType, storeMask);

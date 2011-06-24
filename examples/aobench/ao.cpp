@@ -103,24 +103,6 @@ savePPM(const char *fname, int w, int h)
 }
 
 
-// Allocate memory with 64-byte alignment.
-float *
-AllocAligned(int size) {
-#if defined(_WIN32) || defined(_WIN64)
-    return (float *)_aligned_malloc(size, 64);
-#elif defined (__APPLE__)
-    // Allocate excess memory to ensure an aligned pointer can be returned
-    void *mem = malloc(size + (64-1) + sizeof(void*));
-    char *amem = ((char*)mem) + sizeof(void*);
-    amem += 64 - (reinterpret_cast<uint64_t>(amem) & (64 - 1));
-    ((void**)amem)[-1] = mem;
-    return (float *)amem;
-#else
-    return (float *)memalign(64, size);
-#endif
-}
-
-
 int main(int argc, char **argv)
 {
     if (argc != 4) {
@@ -136,8 +118,8 @@ int main(int argc, char **argv)
     }
 
     // Allocate space for output images
-    img = (unsigned char *)AllocAligned(width * height * 3);
-    fimg = (float *)AllocAligned(sizeof(float) * width * height * 3);
+    img = new unsigned char[width * height * 3];
+    fimg = new float[width * height * 3];
 
     //
     // Run the ispc path, test_iterations times, and report the minimum

@@ -1970,7 +1970,7 @@ Data Layout
 
 In general, ``ispc`` tries to ensure that ``struct`` s and other complex
 datatypes are laid out in the same way in memory as they are in C/C++.
-Matching alignment is important for easy interoperability between C/C++
+Matching structure layout is important for easy interoperability between C/C++
 code and ``ispc`` code.
 
 The main complexity in sharing data between ``ispc`` and C/C++ often comes
@@ -2023,11 +2023,6 @@ It can pass ``array`` to a ``ispc`` function defined as:
 
    export void foo(uniform float array[], uniform int count)
 
-(Though the pointer must be aligned to the compilation target's natural
-vector width; see the discussion of alignment restrictions in `Data
-Alignment and Aliasing`_ and the aligned allocation routines in
-``examples/options/options.cpp`` for example.)
-
 Similarly, ``struct`` s from the application can have embedded pointers.
 This is handled with similar ``[]`` syntax:
 
@@ -2062,55 +2057,20 @@ vector types from C/C++ application code if possible.
 Data Alignment and Aliasing
 ---------------------------
 
-There are two important constraints that must be adhered to when passing
-pointers from the application to ``ispc`` programs.
+There are are two important constraints that must be adhered to when
+passing pointers from the application to ``ispc`` programs.
 
-The first constraint is alignment: any pointers from the host program that
-are passed to ``ispc`` must be aligned to natural vector alignment of
-system--for example, 16 byte alignment on a target that supports Intel®
-SSE, 32-byte on an Intel® AVX target.  If this constraint isn't met, the
-program may abort at runtime with an unaligned memory access error.
+The first is that it is required that it be valid to read memory at the
+first element of any array that is passed to ``ispc``.  In practice, this
+should just happen naturally, but it does mean that it is illegal to pass a
+``NULL`` pointer as a parameter to a ``ispc`` function called from the
+application.
 
-For example, in a ``ispc`` function with the following declaration:
-
-::
-
-    export void foo(uniform float in[], uniform float out[],
-                    int count);
-
-If the application is passing stack-allocated arrays for ``in`` and
-``out``, these C/C++ compiler must be told to align these arrays.
-
-::
-
-    // MSVC, SSE target
-    __declspec(align(16)) float in[16], out[16];
-    foo(in, out, 16);
-
-With the gcc/clang compilers, the syntax for providing alignment is
-slightly different:
-
-::
-
-    float x[16] __attribute__ ((__align__(16)));
-    foo(in, out, 16);
-
-If the data being passed is dynamically allocated, the appropriate system
-aligned memory allocation routine should be used to allocate it (for
-example, ``_aligned_malloc()`` with Windows\*, ``memalign()`` with
-Linux\*; see the ``AllocAligned()`` function in ``examples/rt/rt.cpp`` for
-an example.)
-
-It is also required that it be valid to read memory at the first element of
-any array that is passed to ``ispc``.  In practice, this should just
-happen naturally, but it does mean that it is illegal to pass a ``NULL``
-pointer as a parameter to a ``ispc`` function called from the application.
-
-The second key constraint is that pointers and references in ``ispc``
-programs must not alias.  The ``ispc`` compiler assumes that different
-pointers can't end up pointing to the same memory location, either due to
-having the same initial value, or through array indexing in the program as
-it executed.
+The second constraint is that pointers and references in ``ispc`` programs
+must not alias.  The ``ispc`` compiler assumes that different pointers
+can't end up pointing to the same memory location, either due to having the
+same initial value, or through array indexing in the program as it
+executed.
 
 This aliasing constraint also applies to ``reference`` parameters to
 functions.  Given a function like:
@@ -2127,8 +2087,8 @@ another case of aliasing, and if the caller calls the function as ``func(x,
 x)``, it's not guaranteed that the ``if`` test will evaluate to true, due
 to the compiler's requirement of no aliasing.
 
-(In the future, ``ispc`` will have the ability to work with unaligned
-memory as well as have a mechanism to indicate that pointers may alias.)
+(In the future, ``ispc`` will have a mechanism to indicate that pointers
+may alias.)
 
 Using ISPC Effectively
 ======================
