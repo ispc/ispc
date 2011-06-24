@@ -513,7 +513,7 @@ declare <8 x float> @llvm.x86.avx.blendvps(<8 x float>, <8 x float>,
 define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
                                            <8 x i32>) nounwind alwaysinline {
   %mask_as_float = bitcast <8 x i32> %2 to <8 x float>
-  %oldValue = load <8 x i32>* %0
+  %oldValue = load <8 x i32>* %0, align 4
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
   %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
   %blend = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %oldAsFloat,

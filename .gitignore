@@ -1,2 +1,6 @@
 *.pyc
 *~
+depend
+ispc
+ispc_test
+objs
