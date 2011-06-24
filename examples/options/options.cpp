@@ -54,8 +54,6 @@ extern void binomial_put_serial(float Sa[], float Xa[], float Ta[],
                                 float result[], int count);
 
 int main() {
-    // Pointers passed to ispc code must have alignment of the target's
-    // vector width at minimum.
     float *S = new float[N_OPTIONS];
     float *X = new float[N_OPTIONS];
     float *T = new float[N_OPTIONS];

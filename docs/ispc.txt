@@ -136,7 +136,7 @@ Linux\* and Mac OS\* available for download.  Alternatively, you can
 download the source code from that page and build it yourself; see see the
 `ispc wiki`_ for instructions about building ``ispc`` from source.
 
-.. _ispc downloads web page:downloads.html
+.. _ispc downloads web page: downloads.html
 .. _ispc wiki: http://github.com/ispc/ispc/wiki
 
 Once you have an executable for your system, copy it into a directory
