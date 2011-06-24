@@ -1131,10 +1131,17 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular store
-            const llvm::Type *ptrType = llvm::PointerType::get(rvalue->getType(), 0);
+            const llvm::Type *rvalueType = rvalue->getType();
+            const llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
+            // Need to update this when int8/int16 are added
+            int align = (called == pms32Func || called == pms64Func ||
+                         called == msb32Func) ? 4 : 8;
+
             lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
             lCopyMetadata(lvalue, callInst);
-            llvm::Instruction *store = new llvm::StoreInst(rvalue, lvalue);
+            llvm::Instruction *store = 
+                new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+                                    align);
             lCopyMetadata(store, callInst);
             llvm::ReplaceInstWithInst(callInst, store);
 

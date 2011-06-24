@@ -188,21 +188,21 @@ declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
 define void @__masked_store_blend_32(<4 x i32>* nocapture, <4 x i32>, 
                                      <4 x i32> %mask) nounwind alwaysinline {
   %mask_as_float = bitcast <4 x i32> %mask to <4 x float>
-  %oldValue = load <4 x i32>* %0
+  %oldValue = load <4 x i32>* %0, align 4
   %oldAsFloat = bitcast <4 x i32> %oldValue to <4 x float>
   %newAsFloat = bitcast <4 x i32> %1 to <4 x float>
   %blend = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %oldAsFloat,
                                                      <4 x float> %newAsFloat,
                                                      <4 x float> %mask_as_float)
   %blendAsInt = bitcast <4 x float> %blend to <4 x i32>
-  store <4 x i32> %blendAsInt, <4 x i32>* %0
+  store <4 x i32> %blendAsInt, <4 x i32>* %0, align 4
   ret void
 }
 
 
 define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
                                      <4 x i32> %i32mask) nounwind alwaysinline {
-  %oldValue = load <4 x i64>* %ptr
+  %oldValue = load <4 x i64>* %ptr, align 8
   %mask = bitcast <4 x i32> %i32mask to <4 x float>
 
   ; Do 4x64-bit blends by doing two <4 x i32> blends, where the <4 x i32> values
@@ -243,6 +243,6 @@ define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   ; reconstruct the final <4 x i64> vector
   %final = shufflevector <2 x i64> %result01, <2 x i64> %result23,
                          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x i64> %final, <4 x i64> * %ptr
+  store <4 x i64> %final, <4 x i64> * %ptr, align 8
   ret void
 }

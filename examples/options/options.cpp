@@ -37,9 +37,6 @@
 #include <assert.h>
 #include <math.h>
 #include <algorithm>
-#ifndef __APPLE__
-#include <malloc.h>
-#endif // !__APPLE__
 using std::max;
 
 #include "options_defs.h"
@@ -47,23 +44,6 @@ using std::max;
 
 #include "options_ispc.h"
 using namespace ispc;
-
-// Allocate memory with 64-byte alignment.
-float *AllocFloats(int count) {
-    int size = count * sizeof(float);
-#if defined(_WIN32) || defined(_WIN64)
-    return (float *)_aligned_malloc(size, 64);
-#elif defined (__APPLE__)
-    // Allocate excess memory to ensure an aligned pointer can be returned
-    void *mem = malloc(size + (64-1) + sizeof(void*));
-    char *amem = ((char*)mem) + sizeof(void*);
-    amem += 64 - (reinterpret_cast<uint64_t>(amem) & (64 - 1));
-    ((void**)amem)[-1] = mem;
-    return (float *)amem;
-#else
-    return (float *)memalign(64, size);
-#endif
-}
 
 extern void black_scholes_serial(float Sa[], float Xa[], float Ta[], 
                                  float ra[], float va[], 
@@ -76,12 +56,12 @@ extern void binomial_put_serial(float Sa[], float Xa[], float Ta[],
 int main() {
     // Pointers passed to ispc code must have alignment of the target's
     // vector width at minimum.
-    float *S = AllocFloats(N_OPTIONS);
-    float *X = AllocFloats(N_OPTIONS);
-    float *T = AllocFloats(N_OPTIONS);
-    float *r = AllocFloats(N_OPTIONS);
-    float *v = AllocFloats(N_OPTIONS);
-    float *result = AllocFloats(N_OPTIONS);
+    float *S = new float[N_OPTIONS];
+    float *X = new float[N_OPTIONS];
+    float *T = new float[N_OPTIONS];
+    float *r = new float[N_OPTIONS];
+    float *v = new float[N_OPTIONS];
+    float *result = new float[N_OPTIONS];
 
     for (int i = 0; i < N_OPTIONS; ++i) {
         S[i] = 100;  // stock price

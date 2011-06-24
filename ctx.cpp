@@ -1644,7 +1644,8 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
         return;
     }
 
-    llvm::Instruction *inst = new llvm::StoreInst(rvalue, lvalue, name, bblock);
+    llvm::Instruction *inst = new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+                                                  4, bblock);
     AddDebugPos(inst);
 }
 
@@ -1662,7 +1663,8 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
     // Figure out what kind of store we're doing here
     if (rvalueType->IsUniformType()) {
         // The easy case; a regular store
-        llvm::Instruction *si = new llvm::StoreInst(rvalue, lvalue, name, bblock);
+        llvm::Instruction *si = new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
+                                                    4, bblock);
         AddDebugPos(si);
     }
     else if (llvm::isa<const llvm::ArrayType>(lvalue->getType()))
@@ -1673,7 +1675,7 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
         // Otherwise it is a masked store unless we can determine that the
         // mask is all on...
         llvm::Instruction *si = 
-            new llvm::StoreInst(rvalue, lvalue, name, bblock);
+            new llvm::StoreInst(rvalue, lvalue, false /*not volatile*/, 4, bblock);
         AddDebugPos(si);
     }
     else
