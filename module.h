@@ -108,6 +108,8 @@ private:
 
     bool writeHeader(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
+    FILE* execPreprocessor(const char *infilename, const char* outfilename) const;
+
 };
 
 #endif // ISPC_MODULE_H
