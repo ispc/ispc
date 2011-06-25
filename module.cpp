@@ -79,6 +79,9 @@
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/Basic/TargetInfo.h>
 #ifndef LLVM_2_8
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
@@ -160,7 +163,8 @@ Module::CompileFile() {
     FILE *f;
 
     if (runPreprocessor) {
-        f = execPreprocessor(filename, filename);
+        std::string outfile = std::string(filename) + ".out";
+        f = execPreprocessor(filename, outfile.c_str());
     }
     else {
         // No preprocessor, just open up the file if it's not stdin..
@@ -1389,47 +1393,27 @@ Module::writeHeader(const char *fn) {
 FILE*
 Module::execPreprocessor(const char* infilename, const char* outfilename) const
 {
-    FILE* f;
-    // Before we run the preprocessor, make sure that file exists and
-    // we can read it since otherwise we get a pretty obscure/unhelpful
-    // error message from cpp
-    if (infilename) {
-        f = fopen(infilename, "r");
-        if (f == NULL) {
-            perror(infilename);
-            return NULL;
-        }
-        fclose(f);
-    }
+    clang::CompilerInstance inst;
+    std::string error;
+    llvm::tool_output_file *of = new llvm::tool_output_file(outfilename, error, 0);
 
-    // Go ahead and construct a command string to run the preprocessor.
-    // First, concatentate all of the -D statements from the original
-    // ispc command line so that we can pass them along to cpp.
-    std::string cppDefs;
-    for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
-        cppDefs += g->cppArgs[i];
-        cppDefs += ' ';
-    }
+    inst.createFileManager();
+    inst.createDiagnostics(0, NULL);
+    clang::TargetOptions& options = inst.getTargetOpts();
+    options.Triple = "i486-redhat-linux";
 
-#ifdef ISPC_IS_WINDOWS
-    // For now, this code should never be reached
-    FATAL("Need to implement code to run the preprocessor for windows"); 
-#else // ISPC_IS_WINDOWS
-    char *cmd = NULL;
-    if (asprintf(&cmd, "/usr/bin/cpp -DISPC=1 -DPI=3.1415926536 %s %s", 
-                 cppDefs.c_str(), infilename ? outfilename : "-") == -1) {
-        fprintf(stderr, "Unable to allocate memory in asprintf()?!\n");
-        exit(1);
-    }
+    clang::TargetInfo* target 
+        = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
 
-    f = popen(cmd, "r");
-    free(cmd);
+    inst.setTarget(target);
+    inst.createSourceManager(inst.getFileManager());
+    inst.InitializeSourceManager(infilename);
+    inst.createPreprocessor();
+    clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
+                                    &(of->os()), inst.getPreprocessorOutputOpts());
+    of->os().close();
+    of->keep();
 
-    if (f == NULL) {
-        perror(infilename ? infilename : "<stdin>");
-        return NULL;
-    }
-#endif // ISPC_IS_WINDOWS
-    return f;
+    return fopen(outfilename, "r");
 }
 
