@@ -1797,14 +1797,15 @@ and this conversion step are necessary because ``ispc`` doesn't have native
     void store_to_int16(uniform int a[], uniform int offset, 
                         unsigned int val)
 
-There are two things to note in these functions.  First, note that these
+There are three things to note in these functions.  First, note that these
 functions take ``unsigned int`` arrays as parameters; you need
 to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side to
 ``unsigned int`` when passing them to ``ispc`` code.  Second, although the
 arrays are passed as ``unsigned int``, in the array indexing calculation,
 with the ``offset`` parameter, they are treated as if they were ``int8`` or
 ``int16`` types.  (i.e. the offset treated as being in terms of number of 8
-or 16-bit elements.)
+or 16-bit elements.) Third, note that programIndex is implicitly added
+to offset.
 
 The ``intbits()`` and ``floatbits()`` functions can be used to implement
 low-level floating-point bit twiddling.  For example, ``intbits()`` returns
