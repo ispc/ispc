@@ -1161,10 +1161,17 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
         // FIXME: we should pass this actual file/line number for the
         // member, not the position of the struct declaration
+#ifdef LLVM_2_9
         llvm::DIType fieldType = 
             m->diBuilder->createMemberType(elementNames[i], diFile, pos.first_line,
                                            eltSize, eltAlign, currentSize, 0,
                                            eltType);
+#else
+        llvm::DIType fieldType = 
+            m->diBuilder->createMemberType(scope, elementNames[i], diFile, 
+                                           pos.first_line, eltSize, eltAlign, 
+                                           currentSize, 0, eltType);
+#endif // LLVM_2_9
         elementLLVMTypes.push_back(fieldType);
 
         currentSize += eltSize;
