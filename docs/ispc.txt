@@ -74,7 +74,8 @@ Contents:
 
   + `Math Functions`_
   + `Output Functions`_
-  + `Cross-Lane Operations`_
+  + `Cross-Program Instance Operations`_
+  + `Packed Load and Store Operations`_
   + `Low-Level Bits`_
 
 * `Interoperability with the Application`_
@@ -1659,14 +1660,14 @@ values for the inactive program instances aren't printed.  (In other cases,
 they may have garbage values or be otherwise undefined.)
 
 
-Cross-Lane Operations
----------------------
+Cross-Program Instance Operations
+---------------------------------
 
-Usually, ``ispc`` code expresses independent computation on separate data
-elements.  There are, however, a number of cases where it's useful for the
-program instances to be able to cooperate in computing results.  The
-cross-lane operations described in this section provide primitives for
-communication between the running program instances.
+Usually, ``ispc`` code expresses independent programs performing
+computation on separate data elements.  There are, however, a number of
+cases where it's useful for the program instances to be able to cooperate
+in computing results.  The cross-lane operations described in this section
+provide primitives for communication between the running program instances.
  
 A few routines that evaluate conditions across the running program
 instances.  For example, ``any()`` returns ``true`` if the given value
@@ -1677,6 +1678,47 @@ and ``all()`` returns ``true`` if it true for all of them.
 
     uniform bool any(bool v)
     uniform bool all(bool v)
+
+To broadcast a value from one program instance to all of the others, a
+``broadcast()`` function is available.  It broadcasts the value of the
+``value`` parameter for the program instance given by ``index`` to all of
+the running program instances.
+
+::
+
+    float broadcast(float value, uniform int index)
+    int32 broadcast(int32 value, uniform int index)
+    double broadcast(double value, uniform int index)
+    int64 broadcast(int64 value, uniform int index)
+
+The ``rotate()`` function allows each program instance to find the value of
+the given value that their neighbor ``offset`` steps away has.  For
+example, on an 8-wide target, if ``offset`` has the value (1, 2, 3, 4, 5,
+6, 7, 8) in each of the running program instances, then ``rotate(value,
+-1)`` causes the first program instance to get the value 8, the second
+program instance to get the value 1, the third 2, and so forth.  The
+provided offset value can be positive or negative, and may be greater than
+``programCount`` (it is masked to ensure valid offsets).
+
+::
+
+    float rotate(float value, uniform int offset)
+    int32 rotate(int32 value, uniform int offset)
+    double rotate(double value, uniform int offset)
+    int64 rotate(int64 value, uniform int offset)
+
+
+Finally, ``shuffle()`` allows fully general shuffling of values among the
+program instances.  Each program instance's value of permutation gives the
+program instance from which to get the value of ``value``.  The provided
+values for ``permutation`` must all be between 0 and ``programCount-1``.
+
+::
+
+    float shuffle(float value, int permutation)
+    int32 shuffle(int32 value, int permutation)
+    double shuffle(double value, int permutation)
+    int64 shuffle(int64 value, int permutation)
 
 The various variants of ``popcnt()`` return the population count--the
 number of bits set in the given value.
@@ -1719,8 +1761,12 @@ given value across all of the currently-executing vector lanes.
     uniform unsigned int reduce_max(unsigned int a, unsigned int b)
 
 
-Finally, there are routines for writing out and reading in values from
-linear memory locations for the active program instances.
+
+Packed Load and Store Operations
+--------------------------------
+
+The standard library also offers routines for writing out and reading in
+values from linear memory locations for the active program instances.
 ``packed_load_active()`` loads consecutive values from the given array,
 starting at ``a[offset]``, loading one value for each currently-executing
 program instance and storing it into that program instance's ``val``
@@ -2280,21 +2326,11 @@ elements to work with and then proceeds with the computation.
 Communicating Between SPMD Program Instances
 --------------------------------------------
 
-The ``programIndex`` built-in variable (see `Mapping Data To Program
-Instances`_) can be used to communicate between the set of executing
-program instances.  Consider the following code, which shows all of the
-program instances writing into unique locations in an array.
-
-::
-
-    float x = ...;
-    uniform float allX[programCount];
-    allX[programIndex] = x;
-
-In this code, a program instance that reads ``allX[0]`` finds the value of
-``x`` that was computed by the first of the running program instances, and
-so forth.  Program instances can communicate with their neighbor instances
-with indexing like ``allX[(programIndex+1)%programCount]``.
+The ``broadcast()``, ``rotate()``, and ``shuffle()`` standard library
+routiens provide a variety of mechanisms for the running program instances
+to communicate values to each other during execution.  See the section
+`Cross-Program Instance Operations`_ for more information about their
+operation.
 
 
 Gather and Scatter

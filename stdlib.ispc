@@ -81,6 +81,54 @@ static inline uniform unsigned int64 intbits(uniform double d) {
     return __intbits_uniform_double(d);
 }
 
+static inline float broadcast(float v, uniform int i) {
+    return __broadcast_float(v, i);
+}
+
+static inline int32 broadcast(int32 v, uniform int i) {
+    return __broadcast_int32(v, i);
+}
+
+static inline double broadcast(double v, uniform int i) {
+    return __broadcast_double(v, i);
+}
+
+static inline int64 broadcast(int64 v, uniform int i) {
+    return __broadcast_int64(v, i);
+}
+
+static inline float rotate(float v, uniform int i) {
+    return __rotate_float(v, i);
+}
+
+static inline int32 rotate(int32 v, uniform int i) {
+    return __rotate_int32(v, i);
+}
+
+static inline double rotate(double v, uniform int i) {
+    return __rotate_double(v, i);
+}
+
+static inline int64 rotate(int64 v, uniform int i) {
+    return __rotate_int64(v, i);
+}
+
+static inline float shuffle(float v, int i) {
+    return __shuffle_float(v, i);
+}
+
+static inline int32 shuffle(int32 v, int i) {
+    return __shuffle_int32(v, i);
+}
+
+static inline double shuffle(double v, int i) {
+    return __shuffle_double(v, i);
+}
+
+static inline int64 shuffle(int64 v, int i) {
+    return __shuffle_int64(v, i);
+}
+
 // x[i]
 static inline uniform float extract(float x, uniform int i) {
     return __extract(x, i);

@@ -34,6 +34,8 @@
 ;; builtins for various targets can use macros from this file to simplify
 ;; generating code for their implementations of those builtins.
 
+declare i1 @__is_compile_time_constant_int32(i32)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -285,13 +287,88 @@ ret <8 x float> %ret
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; forloop macro
+
+divert(`-1')
+# forloop(var, from, to, stmt) - improved version:
+#   works even if VAR is not a strict macro name
+#   performs sanity check that FROM is larger than TO
+#   allows complex numerical expressions in TO and FROM
+define(`forloop', `ifelse(eval(`($3) >= ($2)'), `1',
+  `pushdef(`$1', eval(`$2'))_$0(`$1',
+    eval(`$3'), `$4')popdef(`$1')')')
+define(`_forloop',
+  `$3`'ifelse(indir(`$1'), `$2', `',
+    `define(`$1', incr(indir(`$1')))$0($@)')')
+divert`'dnl
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib_core
 ;;
 ;; This macro defines a bunch of helper routines that only depend on the
 ;; target's vector width, which it takes as its first parameter.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+define(`shuffles', `
+define internal <$1 x $2> @__broadcast_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
+  %v = extractelement <$1 x $2> %0, i32 %1
+  %r_0 = insertelement <$1 x $2> undef, $2 %v, i32 0
+forloop(i, 1, eval($1-1), `  %r_`'i = insertelement <$1 x $2> %r_`'eval(i-1), $2 %v, i32 i
+')
+  ret <$1 x $2> %r_`'eval($1-1)
+}
+
+define internal <$1 x $2> @__rotate_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
+  %isc = call i1 @__is_compile_time_constant_int32(i32 %1)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  ; though verbose, this turms into tight code if %1 is a constant
+forloop(i, 0, eval($1-1), `  
+  %delta_`'i = add i32 %1, i
+  %delta_clamped_`'i = and i32 %delta_`'i, eval($1-1)
+  %v_`'i = extractelement <$1 x $2> %0, i32 %delta_clamped_`'i')
+
+  %ret_0 = insertelement <$1 x $2> undef, $2 %v_0, i32 0
+forloop(i, 1, eval($1-1), `  %ret_`'i = insertelement <$1 x $2> %ret_`'eval(i-1), $2 %v_`'i, i32 i
+')
+  ret <$1 x $2> %ret_`'eval($1-1)
+
+not_const:
+  ; store two instances of the vector into memory
+  %ptr = alloca <$1 x $2>, i32 2
+  %ptr0 = getelementptr <$1 x $2> * %ptr, i32 0
+  store <$1 x $2> %0, <$1 x $2> * %ptr0
+  %ptr1 = getelementptr <$1 x $2> * %ptr, i32 1
+  store <$1 x $2> %0, <$1 x $2> * %ptr1
+
+  ; compute offset in [0,vectorwidth-1], then index into the doubled-up vector
+  %offset = and i32 %1, eval($1-1)
+  %ptr_as_elt_array = bitcast <$1 x $2> * %ptr to [eval(2*$1) x $2] *
+  %load_ptr = getelementptr [eval(2*$1) x $2] * %ptr_as_elt_array, i32 0, i32 %offset
+  %load_ptr_vec = bitcast $2 * %load_ptr to <$1 x $2> *
+  %result = load <$1 x $2> * %load_ptr_vec, align $4
+  ret <$1 x $2> %result
+}
+
+define internal <$1 x $2> @__shuffle_$3(<$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
+forloop(i, 0, eval($1-1), `  
+  %index_`'i = extractelement <$1 x i32> %1, i32 i')
+forloop(i, 0, eval($1-1), `  
+  %v_`'i = extractelement <$1 x $2> %0, i32 %index_`'i')
+
+  %ret_0 = insertelement <$1 x $2> undef, $2 %v_0, i32 0
+forloop(i, 1, eval($1-1), `  %ret_`'i = insertelement <$1 x $2> %ret_`'eval(i-1), $2 %v_`'i, i32 i
+')
+  ret <$1 x $2> %ret_`'eval($1-1)
+}
+
+')
+
+
 define(`stdlib_core', `
+
+declare i1 @__is_compile_time_constant_mask(<$1 x i32> %mask)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
@@ -307,6 +384,10 @@ define internal <$1 x float> @__insert(<$1 x float>, i32,
   ret <$1 x float> %insert
 }
 
+shuffles($1, float, float, 4)
+shuffles($1, i32, int32, 4)
+shuffles($1, double, double, 8)
+shuffles($1, i64, int64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; various bitcasts from one type to another
@@ -524,7 +605,6 @@ define internal void @__store_uint16([0 x i32] *, i32 %offset, <$1 x i32> %val32
 ;; FIXME: use the per_lane macro, defined below, to implement these!
 
 define(`packed_load_and_store', `
-declare i1 @__is_compile_time_constant_mask(<$1 x i32> %mask)
 
 define i32 @__packed_load_active([0 x i32] *, i32 %start_offset, <$1 x i32> * %val_ptr,
                                  <$1 x i32> %full_mask) nounwind alwaysinline {
@@ -660,19 +740,6 @@ done:
 ;; $3: block of code to run for each lane that is on
 ;;       Inside this code, any instances of the text "LANE" are replaced
 ;;       with an i32 value that represents the current lane number
-
-divert(`-1')
-# forloop(var, from, to, stmt) - improved version:
-#   works even if VAR is not a strict macro name
-#   performs sanity check that FROM is larger than TO
-#   allows complex numerical expressions in TO and FROM
-define(`forloop', `ifelse(eval(`($3) >= ($2)'), `1',
-  `pushdef(`$1', eval(`$2'))_$0(`$1',
-    eval(`$3'), `$4')popdef(`$1')')')
-define(`_forloop',
-  `$3`'ifelse(indir(`$1'), `$2', `',
-    `define(`$1', incr(indir(`$1')))$0($@)')')
-divert`'dnl
 
 ; num lanes, mask, code block to do per lane
 define(`per_lane', `
