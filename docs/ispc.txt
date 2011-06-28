@@ -341,7 +341,7 @@ before it's compiled.  On Windows®, pre-processor definitions should be
 provided to the ``cl`` call.
 
 By default, the compiler generates x86-64 Intel® SSE4 code.  To generate
-32-bit code, you can use the the ``--arch=x86`` command-line flag.  To
+32-bit code, you can use the ``--arch=x86`` command-line flag.  To
 select Intel® SSE2, use ``--target=sse2``.
 
 ``ispc`` supports an alternative method for generating Intel® SSE4 code,
@@ -1247,7 +1247,7 @@ section.)
 For ``if`` statements where the different running SPMD program instances
 don't have coherent values for the boolean ``if`` test, using ``cif``
 introduces some additional overhead from the ``all`` and ``any`` tests as
-well as the corresponding branches.  For cases where the the program
+well as the corresponding branches.  For cases where the program
 instances often do compute the same boolean value, this overhead is
 worthwhile.  If the control flow is in fact usually incoherent, this
 overhead only costs performance.
