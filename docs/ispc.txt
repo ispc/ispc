@@ -2327,7 +2327,7 @@ Communicating Between SPMD Program Instances
 --------------------------------------------
 
 The ``broadcast()``, ``rotate()``, and ``shuffle()`` standard library
-routiens provide a variety of mechanisms for the running program instances
+routines provide a variety of mechanisms for the running program instances
 to communicate values to each other during execution.  See the section
 `Cross-Program Instance Operations`_ for more information about their
 operation.
