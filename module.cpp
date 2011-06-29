@@ -1408,6 +1408,15 @@ Module::execPreprocessor(const char* infilename, const char* outfilename) const
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
     inst.InitializeSourceManager(infilename);
+
+    clang::PreprocessorOptions& opts = inst.getPreprocessorOpts();
+
+    for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
+        //Sanity Check, should really begin with -D
+        if (g->cppArgs[i].substr(0,2) == "-D") {
+            opts.addMacroDef(g->cppArgs[i].substr(2));
+        }
+    }    
     inst.createPreprocessor();
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
                                     &(of->os()), inst.getPreprocessorOutputOpts());
