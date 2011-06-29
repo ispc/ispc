@@ -178,88 +178,59 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *type,
         return;
     }
 
-    // There are two cases for initializing arrays and vectors; either a single
-    // initializer may be provided (float foo[3] = 0;), in which case all
-    // of the array elements are initialized to the given value, or an
-    // initializer list may be provided (float foo[3] = { 1,2,3 }), in
-    // which case the array elements are initialized with the corresponding
+    // There are two cases for initializing structs, arrays and vectors;
+    // either a single initializer may be provided (float foo[3] = 0;), in
+    // which case all of the elements are initialized to the given value,
+    // or an initializer list may be provided (float foo[3] = { 1,2,3 }),
+    // in which case the elements are initialized with the corresponding
     // values.
-    const SequentialType *seqType = dynamic_cast<const SequentialType *>(type);
-    if (seqType != NULL) {
-        ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
-        if (exprList == NULL) {
-            // We have single expression; loop over the elements of the
-            // array/vector and initialize each of them with it
-            // individually.
-            for (int i = 0; i < seqType->GetElementCount(); ++i) {
-                llvm::Value *ptr = ctx->GetElementPtrInst(lvalue, 0, i, "offset");
-                lInitSymbol(ptr, symName, seqType->GetElementType(), initExpr, 
-                            ctx, pos);
-            }
-        }
-        else {
-            // Otherwise make sure that we have the same number of elements
-            // in the { } initializer expression as we have in the
-            // array/vector
-            int nInits = exprList->exprs.size();
-            if (nInits != seqType->GetElementCount()) {
-                const char *actualType = dynamic_cast<const ArrayType *>(type) ? 
-                    "Array" : "Vector";
-                Error(initExpr->pos, "%s initializer for variable \"%s\" requires "
-                      "%d values; %d provided.", actualType, symName, 
-                      seqType->GetElementCount(), nInits);
-            }
-            else {
-                // And initialize each of the array/vector elements with
-                // the corresponding expression from the ExprList
-                for (int i = 0; i < nInits; ++i) {
-                    llvm::Value *ptr = ctx->GetElementPtrInst(lvalue, 0, i, "offset");
-                    lInitSymbol(ptr, symName, seqType->GetElementType(), 
-                                exprList->exprs[i], ctx, pos);
-                }
-            }
-        }
-        return;
-    }
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(type);
+    if (collectionType != NULL) {
+        std::string name;
+        if (dynamic_cast<const StructType *>(type) != NULL)
+            name = "struct";
+        else if (dynamic_cast<const ArrayType *>(type) != NULL) 
+            name = "array";
+        else if (dynamic_cast<const VectorType *>(type) != NULL) 
+            name = "vector";
+        else 
+            FATAL("Unexpected CollectionType in lInitSymbol()");
 
-    // Structs can similarly be initialized in one of two ways; either with
-    // a list of expressions in braces, one expression per struct member,
-    // or with a single expression that is used to initialize all struct
-    // members.
-    const StructType *st = dynamic_cast<const StructType *>(type);
-    if (st) {
         ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
         if (exprList != NULL) {
             // The { ... } case; make sure we have the same number of
             // expressions in the ExprList as we have struct members
             int nInits = exprList->exprs.size();
-            if (nInits != st->GetElementCount())
-                Error(initExpr->pos, 
-                      "Initializer for struct \"%s\" requires %d values; %d provided.",
-                      symName, st->GetElementCount(), nInits);
-            else {
-                // Initialize each struct member with the corresponding
-                // value from the ExprList
-                for (int i = 0; i < nInits; ++i) {
-                    llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "structelement");
-                    lInitSymbol(ep, symName, st->GetElementType(i), exprList->exprs[i],
-                                ctx, pos);
-                }
+            if (nInits != collectionType->GetElementCount()) {
+                Error(initExpr->pos, "Initializer for %s \"%s\" requires "
+                      "%d values; %d provided.", name.c_str(), symName, 
+                      collectionType->GetElementCount(), nInits);
+                return;
+            }
+
+            // Initialize each element with the corresponding value from
+            // the ExprList
+            for (int i = 0; i < nInits; ++i) {
+                llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "element");
+                lInitSymbol(ep, symName, collectionType->GetElementType(i), 
+                            exprList->exprs[i], ctx, pos);
             }
         }
         else if (initExpr->GetType()->IsNumericType() ||
                  initExpr->GetType()->IsBoolType()) {
-            // Otherwise initialize all of the struct elements in turn with
-            // the initExpr.
-            for (int i = 0; i < st->GetElementCount(); ++i) {
-                llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "structelement");
-                lInitSymbol(ep, symName, st->GetElementType(i), initExpr, ctx, pos);
+            // Otherwise initialize all of the elements in turn with the
+            // initExpr.
+            for (int i = 0; i < collectionType->GetElementCount(); ++i) {
+                llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "element");
+                lInitSymbol(ep, symName, collectionType->GetElementType(i), 
+                            initExpr, ctx, pos);
             }
         }
         else {
             Error(initExpr->pos, "Can't assign type \"%s\" to \"%s\".",
                   initExpr->GetType()->GetString().c_str(),
-                  st->GetString().c_str());
+                  collectionType->GetString().c_str());
         }
         return;
     }

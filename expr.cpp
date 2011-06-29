@@ -2494,7 +2494,7 @@ ExprList::GetConstant(const Type *type) const {
     if (collectionType == NULL)
         return NULL;
 
-    std::string name = NULL;
+    std::string name;
     if (dynamic_cast<const StructType *>(type) != NULL)
         name = "struct";
     else if (dynamic_cast<const ArrayType *>(type) != NULL) 
@@ -3888,7 +3888,8 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
 
     // for structs/arrays/vectors, just recursively make their elements
     // varying (if needed) and populate the return value.
-    const CollectionType *collectionType = dynamic_cast<const StructType *>(type);
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(type);
     if (collectionType != NULL) {
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             llvm::Value *v = ctx->ExtractInst(value, i, "get_element");
