@@ -1482,6 +1482,16 @@ FunctionEmitContext::AllocaInst(const llvm::Type *llvmType, const char *name,
         // current basic block
         inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
 
+    // If no alignment was specified but we have an array of a uniform
+    // type, then align it to 4 * the native vector width; it's not
+    // unlikely that this array will be loaded into varying variables with
+    // what will be aligned accesses if the uniform -> varying load is done
+    // in regular chunks.
+    const llvm::ArrayType *arrayType = llvm::dyn_cast<const llvm::ArrayType>(llvmType);
+    if (align == 0 && arrayType != NULL && 
+        !llvm::isa<const llvm::VectorType>(arrayType->getElementType()))
+        align = 4 * g->target.nativeVectorWidth;
+
     if (align != 0)
         inst->setAlignment(align);
     // Don't add debugging info to alloca instructions
