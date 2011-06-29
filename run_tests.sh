@@ -1,54 +1,86 @@
-#!/bin/zsh
+#!/bin/bash
 
 surprises=0
 verbose=false
 number=$(ls -1 tests/*.ispc|wc -l)
 counter=1
+target=sse4
 
-while getopts ":v" opt;do
+while getopts ":vth" opt;do
     case $opt in
         v) verbose=true
             ;;
+        t) target=$OPTARG
+            ;;
+        h) cat <<EOF
+           usage: run_tests.sh [-v] [-t target] [filenames]
+                  -v           # verbose output
+                  -t           # specify compilation target (SSE4 is the default).
+                  [filenames]  # (optional) files to run through testing infrastructure
+                               # if none are provided, all in tests/ will be run.
+EOF
+            exit 1
     esac
 done
 
-echo Running correctness tests
+shift $(( $OPTIND - 1 ))
+if [[ "$1" > 0 ]]; then
+    while [[ "$1" > 0 ]]; do
+        i=$1
+        shift
+        echo Running test $i
 
-for i in tests/*.ispc; do
-    if $verbose; then
-        echo -en "Running test $counter of $number.\r"
-    fi
-    (( counter++ ))
-    bc=${i%%ispc}bc
-    ispc -O2 $i -woff -o $bc --emit-llvm --target=sse4
-    if [[ $? != 0 ]]; then
-        surprises=1
-        echo Test $i FAILED ispc compile
-        echo
-    else
-        ispc_test $bc
+        bc=${i%%ispc}bc
+        ispc -O2 $i -woff -o $bc --emit-llvm --target=$target
         if [[ $? != 0 ]]; then
             surprises=1
-            echo Test $i FAILED ispc_test
+            echo Test $i FAILED ispc compile
+            echo
+        else
+            ispc_test $bc
+            if [[ $? != 0 ]]; then
+                surprises=1
+                echo Test $i FAILED ispc_test
+                echo
+            fi
+        fi
+        /bin/rm $bc
+    done
+else
+    echo Running all correctness tests
+
+    for i in tests/*.ispc; do
+        if $verbose; then
+            echo -en "Running test $counter of $number.\r"
+    fi
+        (( counter++ ))
+        bc=${i%%ispc}bc
+        ispc -O2 $i -woff -o $bc --emit-llvm --target=$target
+        if [[ $? != 0 ]]; then
+            surprises=1
+            echo Test $i FAILED ispc compile
+            echo
+        else
+            ispc_test $bc
+            if [[ $? != 0 ]]; then
+                surprises=1
+                echo Test $i FAILED ispc_test
+                echo
+            fi
+        fi
+        /bin/rm $bc
+    done
+
+    echo Running failing tests
+    for i in failing_tests/*.ispc; do
+        (ispc -O2 $i -woff -o - --emit-llvm | ispc_test -) 2>/dev/null 1>/dev/null
+        if [[ $? == 0 ]]; then
+            surprises=1
+            echo Test $i UNEXPECTEDLY PASSED
             echo
         fi
-#        cmp $bc tests_bitcode${bc##tests}
-#        if [[ $? == 0 ]]; then
-#            /bin/rm $bc
-#        fi
-    fi
-    /bin/rm $bc
-done
-
-echo Running failing tests
-for i in failing_tests/*.ispc; do
-    (ispc -O2 $i -woff -o - --emit-llvm | ispc_test -) 2>/dev/null 1>/dev/null
-    if [[ $? == 0 ]]; then
-        surprises=1
-        echo Test $i UNEXPECTEDLY PASSED
-        echo
-    fi
-done
+    done
+fi
 
 if [[ $surprises == 0 ]]; then
     echo No surprises.
