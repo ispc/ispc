@@ -1516,29 +1516,18 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
 
     assert(llvm::isa<const llvm::PointerType>(lvalue->getType()));
     
-    const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
-    if (structType != NULL) {
-        // Assigning a structure
-        for (int i = 0; i < structType->GetElementCount(); ++i) {
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(rvalueType);
+    if (collectionType != NULL) {
+        // Assigning a structure / array / vector. Handle each element
+        // individually with what turns into a recursive call to
+        // makedStore()
+        for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             llvm::Value *eltValue = ExtractInst(rvalue, i, "rvalue_member");
             llvm::Value *eltLValue = GetElementPtrInst(lvalue, 0, i, 
                                                        "struct_lvalue_ptr");
             StoreInst(eltValue, eltLValue, storeMask, 
-                      structType->GetElementType(i));
-        }
-        return;
-    }
-
-    const SequentialType *sequentialType = 
-        dynamic_cast<const SequentialType *>(rvalueType);
-    if (sequentialType != NULL) {
-        // Assigning arrays and vectors. Handle each element individually
-        // with what turns into a recursive call to makedStore()
-        for (int i = 0; i < sequentialType->GetElementCount(); ++i) {
-            llvm::Value *eltLValue = GetElementPtrInst(lvalue, 0, i, "lval_i_ptr");
-            llvm::Value *eltValue = ExtractInst(rvalue, i, "array_i_val");
-            StoreInst(eltValue, eltLValue, storeMask, 
-                      sequentialType->GetElementType());
+                      collectionType->GetElementType(i));
         }
         return;
     }
