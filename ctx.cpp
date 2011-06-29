@@ -1109,7 +1109,7 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, const llvm::Type *type,
 }
 
 
-llvm::Instruction *
+llvm::Value *
 FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
@@ -1117,16 +1117,31 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
         return NULL;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
-    llvm::Instruction *inst = 
-        new llvm::PtrToIntInst(value, type, name ? name : "ptr2int", bblock);
-    AddDebugPos(inst);
-    return inst;
+    const llvm::Type *valType = value->getType();
+    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
+    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+        // varying lvalue -> apply ptr to int to the individual pointers
+        assert((int)at->getNumElements() == g->target.vectorWidth);
+
+        llvm::Value *ret = 
+            llvm::UndefValue::get(llvm::ArrayType::get(type, g->target.vectorWidth));
+        for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value *elt = ExtractInst(value, i);
+            llvm::Value *p2i = PtrToIntInst(elt, type, name);
+            ret = InsertInst(ret, p2i, i);
+        }
+        return ret;
+    }
+    else {
+        llvm::Instruction *inst = 
+            new llvm::PtrToIntInst(value, type, name ? name : "ptr2int", bblock);
+        AddDebugPos(inst);
+        return inst;
+    }
 }
 
 
-llvm::Instruction *
+llvm::Value *
 FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
@@ -1134,12 +1149,27 @@ FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
         return NULL;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
-    llvm::Instruction *inst = 
-        new llvm::IntToPtrInst(value, type, name ? name : "int2ptr", bblock);
-    AddDebugPos(inst);
-    return inst;
+    const llvm::Type *valType = value->getType();
+    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
+    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+        // varying lvalue -> apply int to ptr to the individual pointers
+        assert((int)at->getNumElements() == g->target.vectorWidth);
+
+        llvm::Value *ret = 
+            llvm::UndefValue::get(llvm::ArrayType::get(type, g->target.vectorWidth));
+        for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value *elt = ExtractInst(value, i);
+            llvm::Value *i2p = IntToPtrInst(elt, type, name);
+            ret = InsertInst(ret, i2p, i);
+        }
+        return ret;
+    }
+    else {
+        llvm::Instruction *inst = 
+            new llvm::IntToPtrInst(value, type, name ? name : "int2ptr", bblock);
+        AddDebugPos(inst);
+        return inst;
+    }
 }
 
 
