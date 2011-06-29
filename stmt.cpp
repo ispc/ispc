@@ -233,16 +233,16 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *type,
             // The { ... } case; make sure we have the same number of
             // expressions in the ExprList as we have struct members
             int nInits = exprList->exprs.size();
-            if (nInits != st->NumElements())
+            if (nInits != st->GetElementCount())
                 Error(initExpr->pos, 
                       "Initializer for struct \"%s\" requires %d values; %d provided.",
-                      symName, st->NumElements(), nInits);
+                      symName, st->GetElementCount(), nInits);
             else {
                 // Initialize each struct member with the corresponding
                 // value from the ExprList
                 for (int i = 0; i < nInits; ++i) {
                     llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "structelement");
-                    lInitSymbol(ep, symName, st->GetMemberType(i), exprList->exprs[i],
+                    lInitSymbol(ep, symName, st->GetElementType(i), exprList->exprs[i],
                                 ctx, pos);
                 }
             }
@@ -251,9 +251,9 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *type,
                  initExpr->GetType()->IsBoolType()) {
             // Otherwise initialize all of the struct elements in turn with
             // the initExpr.
-            for (int i = 0; i < st->NumElements(); ++i) {
+            for (int i = 0; i < st->GetElementCount(); ++i) {
                 llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "structelement");
-                lInitSymbol(ep, symName, st->GetMemberType(i), initExpr, ctx, pos);
+                lInitSymbol(ep, symName, st->GetElementType(i), initExpr, ctx, pos);
             }
         }
         else {

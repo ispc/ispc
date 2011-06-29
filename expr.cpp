@@ -1526,7 +1526,7 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         if (st != NULL) {
             bool anyUniform = false;
             for (int i = 0; i < st->NumElements(); ++i) {
-                if (st->GetMemberType(i)->IsUniformType())
+                if (st->GetElementType(i)->IsUniformType())
                     anyUniform = true;
             }
 
@@ -2498,10 +2498,10 @@ ExprList::GetConstant(const Type *type) const {
         // same number of elements in the ExprList as the struct has
         // members (and the various elements line up with the shape of the
         // corresponding struct elements).
-        if ((int)exprs.size() != structType->NumElements()) {
+        if ((int)exprs.size() != structType->GetElementCount()) {
             Error(pos, "Initializer list for struct \"%s\" must have %d "
                   "elements (has %d).", structType->GetString().c_str(),
-                  (int)exprs.size(), structType->NumElements());
+                  (int)exprs.size(), structType->GetElementCount());
             return NULL;
         }
 
@@ -2509,7 +2509,7 @@ ExprList::GetConstant(const Type *type) const {
         for (unsigned int i = 0; i < exprs.size(); ++i) {
             if (exprs[i] == NULL)
                 return NULL;
-            const Type *elementType = structType->GetMemberType(i);
+            const Type *elementType = structType->GetElementType(i);
             llvm::Constant *c = exprs[i]->GetConstant(elementType);
             if (c == NULL)
                 // If this list element couldn't convert to the right
@@ -2832,7 +2832,7 @@ MemberExpr::GetType() const {
         // Otherwise it's a struct, and the result type is the element
         // type, possibly promoted to varying if the struct type / lvalue
         // is varying.
-        const Type *elementType = structType->GetMemberType(identifier);
+        const Type *elementType = structType->GetElementType(identifier);
         if (!elementType)
             Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
                   identifier.c_str(), structType->GetString().c_str(),
@@ -2912,7 +2912,7 @@ MemberExpr::getElementNumber() const {
         }
     }
     else {
-        elementNumber = structType->GetMemberNumber(identifier);
+        elementNumber = structType->GetElementNumber(identifier);
         if (elementNumber == -1)
             Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
                   identifier.c_str(), structType->GetString().c_str(),
@@ -3004,7 +3004,7 @@ MemberExpr::getCandidateNearMatches() const {
         return "";
 
     std::vector<std::string> elementNames;
-    for (int i = 0; i < structType->NumElements(); ++i)
+    for (int i = 0; i < structType->GetElementCount(); ++i)
         elementNames.push_back(structType->GetElementName(i));
     std::vector<std::string> alternates = MatchStrings(identifier, elementNames);
     if (!alternates.size())
@@ -3904,9 +3904,9 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     // needed) and populate the return struct
     const StructType *structType = dynamic_cast<const StructType *>(type);
     if (structType != NULL) {
-        for (int i = 0; i < structType->NumElements(); ++i) {
+        for (int i = 0; i < structType->GetElementCount(); ++i) {
             llvm::Value *v = ctx->ExtractInst(value, i, "struct_element");
-            v = lUniformValueToVarying(ctx, v, structType->GetMemberType(i));
+            v = lUniformValueToVarying(ctx, v, structType->GetElementType(i));
             retValue = ctx->InsertInst(retValue, v, i, "set_struct_element");
         }
         return retValue;

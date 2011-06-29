@@ -411,6 +411,14 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// SequentialType
+
+const Type *SequentialType::GetElementType(int index) const {
+    return GetElementType();
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // ArrayType
 
 ArrayType::ArrayType(const Type *c, int a) 
@@ -1035,8 +1043,8 @@ StructType::GetSOAType(int width) const {
     std::vector<const Type *> et;
     // The SOA version of a structure is just a structure that holds SOAed
     // versions of its elements
-    for (int i = 0; i < NumElements(); ++i) {
-        const Type *t = GetMemberType(i);
+    for (int i = 0; i < GetElementCount(); ++i) {
+        const Type *t = GetElementType(i);
         et.push_back(t->GetSOAType(width));
     }
     return new StructType(name, et, elementNames, elementPositions,
@@ -1125,8 +1133,8 @@ StructType::GetCDeclaration(const std::string &n) const {
 const llvm::Type *
 StructType::LLVMType(llvm::LLVMContext *ctx) const {
     std::vector<const llvm::Type *> llvmTypes;
-    for (int i = 0; i < NumElements(); ++i) {
-        const Type *type = GetMemberType(i);
+    for (int i = 0; i < GetElementCount(); ++i) {
+        const Type *type = GetElementType(i);
         llvmTypes.push_back(type->LLVMType(ctx));
     }
     return llvm::StructType::get(*ctx, llvmTypes);
@@ -1146,7 +1154,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     // alignment and size, using that to figure out its offset w.r.t. the
     // start of the structure.
     for (unsigned int i = 0; i < elementTypes.size(); ++i) {
-        llvm::DIType eltType = GetMemberType(i)->GetDIType(scope);
+        llvm::DIType eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
 
@@ -1197,7 +1205,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
 
 const Type *
-StructType::GetMemberType(int i) const {
+StructType::GetElementType(int i) const {
     assert(i < (int)elementTypes.size());
     // If the struct is uniform qualified, then each member comes out with
     // the same type as in the original source file.  If it's varying, then
@@ -1209,7 +1217,7 @@ StructType::GetMemberType(int i) const {
 
 
 const Type *
-StructType::GetMemberType(const std::string &n) const {
+StructType::GetElementType(const std::string &n) const {
     for (unsigned int i = 0; i < elementNames.size(); ++i)
         if (elementNames[i] == n) {
             const Type *ret = isUniform ? elementTypes[i] : 
@@ -1221,7 +1229,7 @@ StructType::GetMemberType(const std::string &n) const {
 
 
 int
-StructType::GetMemberNumber(const std::string &n) const {
+StructType::GetElementNumber(const std::string &n) const {
     for (unsigned int i = 0; i < elementNames.size(); ++i)
         if (elementNames[i] == n)
             return i;
@@ -1775,10 +1783,10 @@ Type::Equal(const Type *a, const Type *b) {
     const StructType *sta = dynamic_cast<const StructType *>(a);
     const StructType *stb = dynamic_cast<const StructType *>(b);
     if (sta && stb) {
-        if (sta->NumElements() != stb->NumElements())
+        if (sta->GetElementCount() != stb->GetElementCount())
             return false;
-        for (int i = 0; i < sta->NumElements(); ++i)
-            if (!Equal(sta->GetMemberType(i), stb->GetMemberType(i)))
+        for (int i = 0; i < sta->GetElementCount(); ++i)
+            if (!Equal(sta->GetElementType(i), stb->GetElementType(i)))
                 return false;
         return true;
     }

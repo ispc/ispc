@@ -1359,10 +1359,10 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
         // If we're gathering structures, do an element-wise gather
         // recursively.
         llvm::Value *retValue = llvm::UndefValue::get(retType);
-        for (int i = 0; i < st->NumElements(); ++i) {
+        for (int i = 0; i < st->GetElementCount(); ++i) {
             llvm::Value *eltPtrs = GetElementPtrInst(lvalue, 0, i);
             // This in turn will be another gather
-            llvm::Value *eltValues = LoadInst(eltPtrs, st->GetMemberType(i), 
+            llvm::Value *eltValues = LoadInst(eltPtrs, st->GetElementType(i), 
                                               name);
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
@@ -1519,12 +1519,12 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
     const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
     if (structType != NULL) {
         // Assigning a structure
-        for (int i = 0; i < structType->NumElements(); ++i) {
+        for (int i = 0; i < structType->GetElementCount(); ++i) {
             llvm::Value *eltValue = ExtractInst(rvalue, i, "rvalue_member");
             llvm::Value *eltLValue = GetElementPtrInst(lvalue, 0, i, 
                                                        "struct_lvalue_ptr");
             StoreInst(eltValue, eltLValue, storeMask, 
-                      structType->GetMemberType(i));
+                      structType->GetElementType(i));
         }
         return;
     }
@@ -1598,10 +1598,10 @@ FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue,
     const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
     if (structType) {
         // Scatter the struct elements individually
-        for (int i = 0; i < structType->NumElements(); ++i) {
+        for (int i = 0; i < structType->GetElementCount(); ++i) {
             llvm::Value *lv = GetElementPtrInst(lvalue, 0, i);
             llvm::Value *rv = ExtractInst(rvalue, i);
-            scatter(rv, lv, storeMask, structType->GetMemberType(i));
+            scatter(rv, lv, storeMask, structType->GetElementType(i));
         }
         return;
     }

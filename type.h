@@ -243,19 +243,42 @@ private:
 };
 
 
-/** @brief Abstract base class for tpyes that represent sequences
+/** @brief Abstract base class for types that represent collections of
+    other types.
+
+    This is a common base class that StructTypes, ArrayTypes, and
+    VectorTypes all inherit from.
+*/ 
+class CollectionType : public Type {
+public:
+    /** Returns the total number of elements in the collection. */
+    virtual int GetElementCount() const = 0;
+
+    /** Returns the type of the element given by index.  (The value of
+        index must be between 0 and GetElementCount()-1.
+     */
+    virtual const Type *GetElementType(int index) const = 0;
+};
+
+
+/** @brief Abstract base class for types that represent sequences
 
     SequentialType is an abstract base class that adds interface routines
     for types that represent linear sequences of other types (i.e., arrays
     and vectors).
  */
-class SequentialType : public Type {
+class SequentialType : public CollectionType {
 public:
-    /** Returns the total number of elements in the sequence. */
-    virtual int GetElementCount() const = 0;
-
-    /** Returns the Type of the elements that the sequence stores. */
+    /** Returns the Type of the elements that the sequence stores; for
+        SequentialTypes, all elements have the same type . */
     virtual const Type *GetElementType() const = 0;
+
+    /** SequentialType provides an implementation of this CollectionType
+        method, just passing the query on to the GetElementType(void)
+        implementation, since all of the elements of a SequentialType have
+        the same type.
+     */
+    const Type *GetElementType(int index) const;
 };
 
 
@@ -439,7 +462,7 @@ private:
 
 /** @brief Representation of a structure holding a number of members.
  */
-class StructType : public Type {
+class StructType : public CollectionType {
 public:
     StructType(const std::string &name, const std::vector<const Type *> &elts, 
                const std::vector<std::string> &eltNames, 
@@ -469,21 +492,21 @@ public:
 
     /** Returns the type of the structure element with the given name (if any).
         Returns NULL if there is no such named element. */
-    const Type *GetMemberType(const std::string &name) const;
+    const Type *GetElementType(const std::string &name) const;
 
     /** Returns the type of the i'th structure element.  The value of \c i must
         be between 0 and NumElements()-1. */
-    const Type *GetMemberType(int i) const;
+    const Type *GetElementType(int i) const;
 
     /** Returns which structure element number (starting from zero) that
         has the given name.  If there is no such element, return -1. */
-    int GetMemberNumber(const std::string &name) const;
+    int GetElementNumber(const std::string &name) const;
 
     /** Returns the name of the i'th element of the structure. */
     const std::string GetElementName(int i) const { return elementNames[i]; }
     
     /** Returns the total number of elements in the structure. */
-    int NumElements() const { return int(elementTypes.size()); }
+    int GetElementCount() const { return int(elementTypes.size()); }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
