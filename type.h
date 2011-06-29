@@ -442,7 +442,8 @@ private:
 class StructType : public Type {
 public:
     StructType(const std::string &name, const std::vector<const Type *> &elts, 
-               const std::vector<std::string> &eltNames, bool isConst, 
+               const std::vector<std::string> &eltNames, 
+               const std::vector<SourcePos> &eltPositions, bool isConst, 
                bool isUniform, SourcePos pos);
 
     bool IsUniformType() const;
@@ -501,6 +502,9 @@ private:
      */
     const std::vector<const Type *> elementTypes;
     const std::vector<std::string> elementNames;
+    /** Source file position at which each structure element declaration
+        appeared. */
+    const std::vector<SourcePos> elementPositions;
     const bool isUniform;
     const bool isConst;
     const SourcePos pos;

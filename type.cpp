@@ -961,9 +961,10 @@ VectorType::getVectorMemoryCount() const {
 
 StructType::StructType(const std::string &n, const std::vector<const Type *> &elts, 
                        const std::vector<std::string> &en,
+                       const std::vector<SourcePos> &ep,
                        bool ic, bool iu, SourcePos p) 
-    : name(n), elementTypes(elts), elementNames(en), isUniform(iu), isConst(ic), 
-      pos(p) {
+    : name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
+      isUniform(iu), isConst(ic), pos(p) {
 }
 
 
@@ -1014,8 +1015,8 @@ StructType::GetAsVaryingType() const {
     if (IsVaryingType()) 
         return this;
     else
-        return new StructType(name, elementTypes, elementNames, isConst,
-                              false, pos);
+        return new StructType(name, elementTypes, elementNames, elementPositions,
+                              isConst, false, pos);
 }
 
 
@@ -1024,8 +1025,8 @@ StructType::GetAsUniformType() const {
     if (IsUniformType()) 
         return this;
     else
-        return new StructType(name, elementTypes, elementNames, isConst,
-                              true, pos);
+        return new StructType(name, elementTypes, elementNames, elementPositions,
+                              isConst, true, pos);
 }
 
 
@@ -1038,7 +1039,8 @@ StructType::GetSOAType(int width) const {
         const Type *t = GetMemberType(i);
         et.push_back(t->GetSOAType(width));
     }
-    return new StructType(name, et, elementNames, isConst, isUniform, pos);
+    return new StructType(name, et, elementNames, elementPositions,
+                          isConst, isUniform, pos);
 }
 
 
@@ -1047,8 +1049,8 @@ StructType::GetAsConstType() const {
     if (IsConstType()) 
         return this;
     else
-        return new StructType(name, elementTypes, elementNames, true,
-                              isUniform, pos);
+        return new StructType(name, elementTypes, elementNames, 
+                              elementPositions, true, isUniform, pos);
 }
 
 
@@ -1057,8 +1059,8 @@ StructType::GetAsNonConstType() const {
     if (!IsConstType()) 
         return this;
     else
-        return new StructType(name, elementTypes, elementNames, false,
-                              isUniform, pos);
+        return new StructType(name, elementTypes, elementNames, elementPositions,
+                              false, isUniform, pos);
 }
 
 
@@ -1138,7 +1140,6 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     return llvm::DIType();
 #else
     uint64_t currentSize = 0, align = 0;
-    llvm::DIFile diFile = pos.GetDIFile();
 
     std::vector<llvm::Value *> elementLLVMTypes;
     // Walk through the elements of the struct; for each one figure out its
@@ -1159,17 +1160,17 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
             currentSize += eltAlign - (currentSize % eltAlign);
         assert((currentSize == 0) || (currentSize % eltAlign) == 0);
 
-        // FIXME: we should pass this actual file/line number for the
-        // member, not the position of the struct declaration
+        llvm::DIFile diFile = elementPositions[i].GetDIFile();
+        int line = elementPositions[i].first_line;
 #ifdef LLVM_2_9
         llvm::DIType fieldType = 
-            m->diBuilder->createMemberType(elementNames[i], diFile, pos.first_line,
+            m->diBuilder->createMemberType(elementNames[i], diFile, line,
                                            eltSize, eltAlign, currentSize, 0,
                                            eltType);
 #else
         llvm::DIType fieldType = 
             m->diBuilder->createMemberType(scope, elementNames[i], diFile, 
-                                           pos.first_line, eltSize, eltAlign, 
+                                           line, eltSize, eltAlign, 
                                            currentSize, 0, eltType);
 #endif // LLVM_2_9
         elementLLVMTypes.push_back(fieldType);
@@ -1188,6 +1189,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 #else
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
 #endif
+    llvm::DIFile diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, currentSize, 
                                           align, 0, elements);
 #endif // LLVM_2_8

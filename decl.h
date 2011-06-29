@@ -196,8 +196,9 @@ struct StructDeclaration {
 
 /** Given a set of StructDeclaration instances, this returns the types of
     the elements of the corresponding struct and their names. */
-extern void GetStructTypesAndNames(const std::vector<StructDeclaration *> &sd,
-                                   std::vector<const Type *> *elementTypes,
-                                   std::vector<std::string> *elementNames);
+extern void GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
+                                         std::vector<const Type *> *elementTypes,
+                                         std::vector<std::string> *elementNames,
+                                         std::vector<SourcePos> *elementPositions);
 
 #endif // ISPC_DECL_H
