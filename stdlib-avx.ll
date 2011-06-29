@@ -525,12 +525,53 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
 }
 
 
-define void @__masked_store_blend_64(<8 x i64>* nocapture, <8 x i64>,
-                                     <8 x i32>) nounwind alwaysinline {
-  ; always just serialize it
-  ; FIXME: should implement the "do two 32-bit masked stores" stuff that
-  ; other targets do...
-  call void @__masked_store_64(<8 x i64>* nocapture %0, <8 x i64> %1, <8 x i32> %2)
+define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
+                                     <8 x i32> %i32mask) nounwind alwaysinline {
+  %oldValue = load <8 x i64>* %ptr, align 8
+  %mask = bitcast <8 x i32> %i32mask to <8 x float>
+
+  ; Do 4x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values
+  ; are actually bitcast <4 x i64> values
+  ;
+  ; set up the first four 64-bit values
+  %old01  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+                          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %old01f = bitcast <4 x i64> %old01 to <8 x float>
+  %new01  = shufflevector <8 x i64> %new, <8 x i64> undef,
+                          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %new01f = bitcast <4 x i64> %new01 to <8 x float>
+  ; compute mask--note that the indices are all doubled-up
+  %mask01 = shufflevector <8 x float> %mask, <8 x float> undef,
+                          <8 x i32> <i32 0, i32 0, i32 1, i32 1,
+                                     i32 2, i32 2, i32 3, i32 3>
+  ; and blend them
+  %result01f = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %old01f,
+                                                       <8 x float> %new01f,
+                                                       <8 x float> %mask01)
+  %result01 = bitcast <8 x float> %result01f to <4 x i64>
+
+  ; and again
+  %old23  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+                          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %old23f = bitcast <4 x i64> %old23 to <8 x float>
+  %new23  = shufflevector <8 x i64> %new, <8 x i64> undef,
+                          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %new23f = bitcast <4 x i64> %new23 to <8 x float>
+  ; compute mask--note that the values are doubled-up...
+  %mask23 = shufflevector <8 x float> %mask, <8 x float> undef,
+                          <8 x i32> <i32 4, i32 4, i32 5, i32 5,
+                                     i32 6, i32 6, i32 7, i32 7>
+  ; and blend them
+  %result23f = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %old23f,
+                                                       <8 x float> %new23f,
+                                                       <8 x float> %mask23)
+  %result23 = bitcast <8 x float> %result23f to <4 x i64>
+
+  ; reconstruct the final <8 x i64> vector
+  %final = shufflevector <4 x i64> %result01, <4 x i64> %result23,
+                         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
+                                    i32 4, i32 5, i32 6, i32 7>
+  store <8 x i64> %final, <8 x i64> * %ptr, align 8
   ret void
 }
 
