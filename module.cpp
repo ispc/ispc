@@ -70,6 +70,7 @@
 #include <llvm/Instructions.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetRegistry.h>
 #include <llvm/Target/TargetSelect.h>
@@ -162,9 +163,11 @@ Module::CompileFile() {
     // preprocessor.
     FILE *f;
 
+    std::string ppOutfile;
+
     if (runPreprocessor) {
-        std::string outfile = std::string(filename) + ".out";
-        f = execPreprocessor(filename, outfile.c_str());
+        ppOutfile = std::string(filename) + ".pp";
+        f = execPreprocessor(filename, ppOutfile.c_str());
     }
     else {
         // No preprocessor, just open up the file if it's not stdin..
@@ -186,15 +189,11 @@ Module::CompileFile() {
     yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
     yyparse();
 
-    if (runPreprocessor) {
-#ifdef ISPC_IS_WINDOWS
-        FATAL("need to implement this for windows as well");
-#else
-        pclose(f);
-#endif // ISPC_IS_WINDOWS
-    }
-    else
-        fclose(f);
+    //Close and purge the temporary preprocessor file.
+    fclose(f);
+    
+    if (runPreprocessor)
+        remove(ppOutfile.c_str());
 
     if (errorCount == 0)
         Optimize(module, g->opt.level);
