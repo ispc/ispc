@@ -9,6 +9,9 @@ arguments and another target isn't explicitly specified.
 The standard library now provides broadcast(), rotate(), and shuffle()
 routines for efficient communication between program instances.
 
+The MSVC solution files to build the examples on Windows now use
+/fpmath:fast when building.
+
 === v1.0.1 === (24 June 2011)
 
 ispc no longer requires that pointers to memory that are passed in to ispc
