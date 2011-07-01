@@ -35,7 +35,10 @@
    Dispatch. */
 
 #include <dispatch/dispatch.h>
+#include <stdio.h>
+#include <stdlib.h>
 
+static bool initialized = false;
 static dispatch_queue_t gcdQueue;
 static dispatch_group_t gcdGroup;
 
@@ -55,6 +58,7 @@ void
 TasksInit() {
     gcdQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
     gcdGroup = dispatch_group_create();
+    initialized = true;
 }
 
 
@@ -77,6 +81,10 @@ lRunTask(void *ti) {
 
 
 void ISPCLaunch(void *func, void *data) {
+    if (!initialized) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
     TaskInfo *ti = new TaskInfo;
     ti->func = func;
     ti->data = data;
@@ -85,6 +93,11 @@ void ISPCLaunch(void *func, void *data) {
 
 
 void ISPCSync() {
+    if (!initialized) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
+
     // Wait for all of the tasks in the group to complete before returning
     dispatch_group_wait(gcdGroup, DISPATCH_TIME_FOREVER);
 }
