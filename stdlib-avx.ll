@@ -46,14 +46,14 @@ int8_16(8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
-declare <8 x float> @llvm.x86.avx.rcp.ps(<8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.rcp.ss(<8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
 define internal <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
 
-  %call = call <8 x float> @llvm.x86.avx.rcp.ps(<8 x float> %0)
+  %call = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %0)
   ; do one N-R iteration
   %v_iv = fmul <8 x float> %0, %call
   %two_minus = fsub <8 x float> <float 2., float 2., float 2., float 2.,
@@ -65,9 +65,9 @@ define internal <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly 
 define internal float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 ;    uniform float iv = extract(__rcp_u(v), 0);
 ;    return iv * (2. - v * iv);
-  %vecval = insertelement <8 x float> undef, float %0, i32 0
-  %call = call <8 x float> @llvm.x86.avx.rcp.ss(<8 x float> %vecval)
-  %scall = extractelement <8 x float> %call, i32 0
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %scall = extractelement <4 x float> %call, i32 0
 
   ; do one N-R iteration
   %v_iv = fmul float %0, %scall
@@ -79,12 +79,12 @@ define internal float @__rcp_uniform_float(float) nounwind readonly alwaysinline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding
 
-declare <8 x float> @llvm.x86.avx.round.ps(<8 x float>, i32) nounwind readnone
-declare <8 x float> @llvm.x86.avx.round.ss(<8 x float>, <8 x float>, i32) nounwind readnone
+declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readnone
+declare <4 x float> @llvm.x86.sse.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
 
 define internal <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
   ; roundps, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  %call = call <8 x float> @llvm.x86.avx.round.ps(<8 x float> %0, i32 8)
+  %call = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %0, i32 8)
   ret <8 x float> %call
 }
 
@@ -105,48 +105,48 @@ define internal float @__round_uniform_float(float) nounwind readonly alwaysinli
   ;
   ;  It doesn't matter what we pass as a, since we only need the r0 value
   ;  here.  So we pass the same register for both.
-  %xi = insertelement <8 x float> undef, float %0, i32 0
-  %xr = call <8 x float> @llvm.x86.avx.round.ss(<8 x float> %xi, <8 x float> %xi, i32 8)
-  %rs = extractelement <8 x float> %xr, i32 0
+  %xi = insertelement <4 x float> undef, float %0, i32 0
+  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
+  %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }
 
 define internal <8 x float> @__floor_varying_float(<8 x float>) nounwind readonly alwaysinline {
   ; roundps, round down 0b01 | don't signal precision exceptions 0b1000 = 9
-  %call = call <8 x float> @llvm.x86.avx.round.ps(<8 x float> %0, i32 9)
+  %call = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %0, i32 9)
   ret <8 x float> %call
 }
 
 define internal float @__floor_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <8 x float> undef, float %0, i32 0
+  %xi = insertelement <4 x float> undef, float %0, i32 0
   ; roundps, round down 0b01 | don't signal precision exceptions 0b1000 = 9
-  %xr = call <8 x float> @llvm.x86.avx.round.ss(<8 x float> %xi, <8 x float> %xi, i32 9)
-  %rs = extractelement <8 x float> %xr, i32 0
+  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
+  %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }
 
 define internal <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysinline {
   ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
-  %call = call <8 x float> @llvm.x86.avx.round.ps(<8 x float> %0, i32 10)
+  %call = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %0, i32 10)
   ret <8 x float> %call
 }
 
 define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <8 x float> undef, float %0, i32 0
+  %xi = insertelement <4 x float> undef, float %0, i32 0
   ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
-  %xr = call <8 x float> @llvm.x86.avx.round.ss(<8 x float> %xi, <8 x float> %xi, i32 10)
-  %rs = extractelement <8 x float> %xr, i32 0
+  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
+  %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }
 
-declare <8 x float> @llvm.x86.avx.rsqrt.ps(<8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.rsqrt.ss(<8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
 define internal <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
-  %is = call <8 x float> @llvm.x86.avx.rsqrt.ps(<8 x float> %v)
+  %is = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v)
   ;  return 0.5 * is * (3. - (v * is) * is);
   %v_is = fmul <8 x float> %v, %is
   %v_is_is = fmul <8 x float> %v_is, %is
@@ -158,9 +158,9 @@ define internal <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind read
 
 define internal float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
-  %v = insertelement <8 x float> undef, float %0, i32 0
-  %vis = call <8 x float> @llvm.x86.avx.rsqrt.ss(<8 x float> %v)
-  %is = extractelement <8 x float> %vis, i32 0
+  %v = insertelement <4 x float> undef, float %0, i32 0
+  %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
+  %is = extractelement <4 x float> %vis, i32 0
 
   ;  return 0.5 * is * (3. - (v * is) * is);
   %v_is = fmul float %0, %is
@@ -175,16 +175,16 @@ define internal float @__rsqrt_uniform_float(float) nounwind readonly alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sqrt
 
-declare <8 x float> @llvm.x86.avx.sqrt.ps(<8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.sqrt.ss(<8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 define internal <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  %call = call <8 x float> @llvm.x86.avx.sqrt.ps(<8 x float> %0)
+  %call = call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %0)
   ret <8 x float> %call
 }
 
 define internal float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  sse_unary_scalar(ret, 8, float, @llvm.x86.avx.sqrt.ss, %0)
+  sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
   ret float %ret
 }
 
@@ -192,18 +192,18 @@ define internal float @__sqrt_uniform_float(float) nounwind readonly alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fastmath
 
-declare void @llvm.x86.avx.stmxcsr(i32 *) nounwind
-declare void @llvm.x86.avx.ldmxcsr(i32 *) nounwind
+declare void @llvm.x86.sse.stmxcsr(i32 *) nounwind
+declare void @llvm.x86.sse.ldmxcsr(i32 *) nounwind
 
 define internal void @__fastmath() nounwind alwaysinline {
   %ptr = alloca i32
-  call void @llvm.x86.avx.stmxcsr(i32 * %ptr)
+  call void @llvm.x86.sse.stmxcsr(i32 * %ptr)
   %oldval = load i32 *%ptr
 
   ; turn on DAZ (64)/FTZ (32768) -> 32832
   %update = or i32 %oldval, 32832
   store i32 %update, i32 *%ptr
-  call void @llvm.x86.avx.ldmxcsr(i32 * %ptr)
+  call void @llvm.x86.sse.ldmxcsr(i32 * %ptr)
   ret void
 }
 
@@ -228,30 +228,30 @@ declare <8 x float> @__svml_pow(<8 x float>, <8 x float>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
-declare <8 x float> @llvm.x86.avx.max.ps(<8 x float>, <8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.max.ss(<8 x float>, <8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.min.ps(<8 x float>, <8 x float>) nounwind readnone
-declare <8 x float> @llvm.x86.avx.min.ss(<8 x float>, <8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.min.ss(<4 x float>, <4 x float>) nounwind readnone
 
 define internal <8 x float> @__max_varying_float(<8 x float>,
                                                  <8 x float>) nounwind readonly alwaysinline {
-  %call = call <8 x float> @llvm.x86.avx.max.ps(<8 x float> %0, <8 x float> %1)
+  %call = call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }
 
 define internal float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, float, @llvm.x86.avx.max.ss, %0, %1)
+  sse_binary_scalar(ret, 4, float, @llvm.x86.sse.max.ss, %0, %1)
   ret float %ret
 }
 
 define internal <8 x float> @__min_varying_float(<8 x float>,
                                                  <8 x float>) nounwind readonly alwaysinline {
-  %call = call <8 x float> @llvm.x86.avx.min.ps(<8 x float> %0, <8 x float> %1)
+  %call = call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }
 
 define internal float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, float, @llvm.x86.avx.min.ss, %0, %1)
+  sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
   ret float %ret
 }
 
@@ -259,26 +259,26 @@ define internal float @__min_uniform_float(float, float) nounwind readonly alway
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-declare <8 x i32> @llvm.x86.avx.pminsd(<8 x i32>, <8 x i32>) nounwind readnone
-declare <8 x i32> @llvm.x86.avx.pmaxsd(<8 x i32>, <8 x i32>) nounwind readnone
+declare <8 x i32> @llvm.x86.avx.min.sd.256(<8 x i32>, <8 x i32>) nounwind readnone
+declare <8 x i32> @llvm.x86.avx.max.sd.256(<8 x i32>, <8 x i32>) nounwind readnone
 
 define internal <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.pminsd(<8 x i32> %0, <8 x i32> %1)
+  %call = call <8 x i32> @llvm.x86.avx.min.sd.256(<8 x i32> %0, <8 x i32> %1)
   ret <8 x i32> %call
 }
 
 define internal i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.pminsd, %0, %1)
+  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.min.sd.256, %0, %1)
   ret i32 %ret
 }
 
 define internal <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.pmaxsd(<8 x i32> %0, <8 x i32> %1)
+  %call = call <8 x i32> @llvm.x86.avx.max.sd.256(<8 x i32> %0, <8 x i32> %1)
   ret <8 x i32> %call
 }
 
 define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.pmaxsd, %0, %1)
+  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.max.sd.256, %0, %1)
   ret i32 %ret
 }
 
@@ -286,28 +286,29 @@ define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-declare <8 x i32> @llvm.x86.avx.pminud(<8 x i32>, <8 x i32>) nounwind readnone
-declare <8 x i32> @llvm.x86.avx.pmaxud(<8 x i32>, <8 x i32>) nounwind readnone
+; FIXME: looks like these aren't available in LLVM?
+declare <8 x i32> @llvm.x86.avx.min.ud.256(<8 x i32>, <8 x i32>) nounwind readnone
+declare <8 x i32> @llvm.x86.avx.max.ud.256(<8 x i32>, <8 x i32>) nounwind readnone
 
 define internal <8 x i32> @__min_varying_uint32(<8 x i32>,
                                                 <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.pminud(<8 x i32> %0, <8 x i32> %1)
+  %call = call <8 x i32> @llvm.x86.avx.min.ud.256(<8 x i32> %0, <8 x i32> %1)
   ret <8 x i32> %call
 }
 
 define internal i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.pminud, %0, %1)
+  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.min.ud.256, %0, %1)
   ret i32 %ret
 }
 
 define internal <8 x i32> @__max_varying_uint32(<8 x i32>,
                                                 <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.pmaxud(<8 x i32> %0, <8 x i32> %1)
+  %call = call <8 x i32> @llvm.x86.avx.max.ud.256(<8 x i32> %0, <8 x i32> %1)
   ret <8 x i32> %call
 }
 
 define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.pmaxud, %0, %1)
+  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.max.ud.256, %0, %1)
   ret i32 %ret
 }
 
@@ -322,22 +323,22 @@ define internal i32 @__popcnt(i32) nounwind readonly alwaysinline {
   ret i32 %call
 }
 
-declare i32 @llvm.x86.avx.movmsk.ps(<8 x float>) nounwind readnone
+declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
 define internal i32 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
-  %v = call i32 @llvm.x86.avx.movmsk.ps(<8 x float> %floatmask) nounwind readnone
+  %v = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %floatmask) nounwind readnone
   ret i32 %v
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 
-declare <8 x float> @llvm.x86.avx.hadd.ps(<8 x float>, <8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
 define internal float @__reduce_add_float(<8 x float>) nounwind readonly alwaysinline {
-  %v1 = call <8 x float> @llvm.x86.avx.hadd.ps(<8 x float> %0, <8 x float> %0)
-  %v2 = call <8 x float> @llvm.x86.avx.hadd.ps(<8 x float> %v1, <8 x float> %v1)
+  %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %0, <8 x float> %0)
+  %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
   %scalar1 = extractelement <8 x float> %v2, i32 0
   %scalar2 = extractelement <8 x float> %v2, i32 4
   %sum = fadd float %scalar1, %scalar2
@@ -506,8 +507,8 @@ define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
 }
 
 
-declare <8 x float> @llvm.x86.avx.blendvps(<8 x float>, <8 x float>,
-                                           <8 x float>) nounwind readnone
+declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
+                                                <8 x float>) nounwind readnone
 
 
 define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
@@ -516,9 +517,9 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
   %oldValue = load <8 x i32>* %0, align 4
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
   %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
-  %blend = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %oldAsFloat,
-                                                   <8 x float> %newAsFloat,
-                                                   <8 x float> %mask_as_float)
+  %blend = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %oldAsFloat,
+                                                        <8 x float> %newAsFloat,
+                                                        <8 x float> %mask_as_float)
   %blendAsInt = bitcast <8 x float> %blend to <8 x i32>
   store <8 x i32> %blendAsInt, <8 x i32>* %0, align 4
   ret void
@@ -545,9 +546,9 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
                           <8 x i32> <i32 0, i32 0, i32 1, i32 1,
                                      i32 2, i32 2, i32 3, i32 3>
   ; and blend them
-  %result01f = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %old01f,
-                                                       <8 x float> %new01f,
-                                                       <8 x float> %mask01)
+  %result01f = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %old01f,
+                                                            <8 x float> %new01f,
+                                                            <8 x float> %mask01)
   %result01 = bitcast <8 x float> %result01f to <4 x i64>
 
   ; and again
@@ -562,9 +563,9 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
                           <8 x i32> <i32 4, i32 4, i32 5, i32 5,
                                      i32 6, i32 6, i32 7, i32 7>
   ; and blend them
-  %result23f = call <8 x float> @llvm.x86.avx.blendvps(<8 x float> %old23f,
-                                                       <8 x float> %new23f,
-                                                       <8 x float> %mask23)
+  %result23f = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %old23f,
+                                                            <8 x float> %new23f,
+                                                            <8 x float> %mask23)
   %result23 = bitcast <8 x float> %result23f to <4 x i64>
 
   ; reconstruct the final <8 x i64> vector
@@ -587,16 +588,16 @@ gen_scatter(8, i64)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <4 x double> @llvm.x86.avx.sqrt.pd(<4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.sqrt.sd(<4 x double>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse.sqrt.sd(<2 x double>) nounwind readnone
 
 define internal <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
-  unary4to8(ret, double, @llvm.x86.avx.sqrt.pd, %0)
+  unary4to8(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
   ret <8 x double> %ret
 }
 
 define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  sse_unary_scalar(ret, 4, double, @llvm.x86.avx.sqrt.pd, %0)
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse.sqrt.sd, %0)
   ret double %ret
 }
 
@@ -604,27 +605,27 @@ define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision min/max
 
-declare <4 x double> @llvm.x86.avx.max.pd(<4 x double>, <4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.max.sd(<4 x double>, <4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.min.pd(<4 x double>, <4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.min.sd(<4 x double>, <4 x double>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse.max.sd(<2 x double>, <2 x double>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse.min.sd(<2 x double>, <2 x double>) nounwind readnone
 
 define internal <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  binary4to8(ret, double, @llvm.x86.avx.min.pd, %0, %1)
+  binary4to8(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
   ret <8 x double> %ret
 }
 
 define internal double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 4, double, @llvm.x86.avx.min.pd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse.min.sd, %0, %1)
   ret double %ret
 }
 
 define internal <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  binary4to8(ret, double, @llvm.x86.avx.max.pd, %0, %1)
+  binary4to8(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
   ret <8 x double> %ret
 }
 
 define internal double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 4, double, @llvm.x86.avx.max.pd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse.max.sd, %0, %1)
   ret double %ret
 }
