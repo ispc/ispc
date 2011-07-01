@@ -4,7 +4,11 @@ export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    float x[40][40] = b;
+    float x[40][40];
+    for (uniform int i = 0; i < 40; ++i)
+        for (uniform int j = 0; j < 40; ++j)
+            x[i][j] = b;
+
     uniform int index[4] = { 0, 1, 2, 4 };
     float v = index[programIndex & 0x3];
     x[a][v] = 0;

@@ -2,7 +2,10 @@
 export uniform int width() { return programCount; }
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
-    uniform float foo[16] = 1;
+    uniform float foo[16];
+    for (uniform int i = 0; i < 16; ++i)
+        foo[i] = 1;
+
     uniform int i = 0;
     foo[i++] += 1;
     ret[programIndex] = i;

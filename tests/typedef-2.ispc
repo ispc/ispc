@@ -15,7 +15,10 @@ struct Bar {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    Bar bar = b;
+    Bar bar;
+    for (uniform int i = 0; i < 16; ++i)
+        for (uniform int j = 0; j < 16; ++j)
+            bar.foo[i].x[j] = b;
     RET[programIndex] = bar.foo[a-1].x[a-1];
 }
 

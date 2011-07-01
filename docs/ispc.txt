@@ -766,22 +766,18 @@ Variables can also be declared in ``for`` statement initializers:
 
     for (int i = 0; ...)
 
-Arrays can be initialized with either a scalar value or with individual
-element values in braces:
+Arrays can be initialized with individual element values in braces:
 
 ::
 
-    int foo[10] = x;  // all ten elements take the value of x
     int bar[2][4] = { { 1, 2, 3, 4 }, { 5, 6, 7, 8 } };
 
-Structures can also be initialized both with scalar values or with element
-values in braces:
+Structures can also be initialized only with element values in braces:
 
 ::
 
     struct Color { float r, g, b; };
     ....
-    Color c = 1; // all are one
     Color d = { 0.5, .75, 1.0 }; // r = 0.5, ...
 
 

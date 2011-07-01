@@ -9,7 +9,7 @@ void bar(reference varying Foo f) { ++f.x; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    varying Foo f = a;
+    varying Foo f = {a};
     if (a == 1 || a == 4)
         bar(f);
     RET[programIndex] = f.x;

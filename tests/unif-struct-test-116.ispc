@@ -8,7 +8,7 @@ struct Foo {
 };
 
 export void f_fi(uniform float RET[], uniform float a[], uniform int b[]) {
-    uniform struct Foo myFoo = 2;
+    uniform struct Foo myFoo = {2,2};
     RET[programIndex] = myFoo.x + myFoo.f;
 }
 

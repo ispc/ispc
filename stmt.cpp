@@ -217,21 +217,10 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *type,
                             exprList->exprs[i], ctx, pos);
             }
         }
-        else if (initExpr->GetType()->IsNumericType() ||
-                 initExpr->GetType()->IsBoolType()) {
-            // Otherwise initialize all of the elements in turn with the
-            // initExpr.
-            for (int i = 0; i < collectionType->GetElementCount(); ++i) {
-                llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "element");
-                lInitSymbol(ep, symName, collectionType->GetElementType(i), 
-                            initExpr, ctx, pos);
-            }
-        }
-        else {
+        else
             Error(initExpr->pos, "Can't assign type \"%s\" to \"%s\".",
                   initExpr->GetType()->GetString().c_str(),
                   collectionType->GetString().c_str());
-        }
         return;
     }
 

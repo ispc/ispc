@@ -1,4 +1,12 @@
-=== v1.0.2 ===
+=== v1.0.3 === (not yet released)
+
+In initializer expressions with variable declarations, it is no longer
+legal to initialize arrays and structs with single scalar values that then
+initialize their members; they now must be initialized with initializer
+lists in braces (or initialized after of the initializer with a loop over
+array elements, etc.)
+
+=== v1.0.2 === (1 July 2011)
 
 Floating-point hexidecimal constants are now parsed correctly on Windows
 (fixes issue #16).
