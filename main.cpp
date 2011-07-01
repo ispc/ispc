@@ -91,7 +91,7 @@ static void usage(int ret) {
     printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
-    printf("    [--target={sse2,sse4,sse4x2,avx}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
+    printf("    [--target={sse2,sse4,sse4x2}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
@@ -118,11 +118,13 @@ static void lDoTarget(const char *target) {
         g->target.nativeVectorWidth = 4;
         g->target.vectorWidth = 8;
     }
+#if 0
     else if (!strcasecmp(target, "avx")) {
         g->target.isa = Target::AVX;
         g->target.nativeVectorWidth = 8;
         g->target.vectorWidth = 8;
     }
+#endif
     else
         usage(1);
 }
