@@ -979,6 +979,11 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     }
 
     std::string featuresString;
+#ifdef LLVM_3_0svn
+    llvm::TargetMachine *targetMachine = 
+        target->createTargetMachine(triple.getTriple(), g->target.cpu,
+                                    featuresString);
+#else
     if (g->target.cpu.size()) {
         llvm::SubtargetFeatures features;
         features.setCPU(g->target.cpu);
@@ -987,6 +992,7 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
 
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple.getTriple(), featuresString);
+#endif
     if (targetMachine == NULL) {
         fprintf(stderr, "Unable to create target machine for target \"%s\"!",
                 triple.str().c_str());
