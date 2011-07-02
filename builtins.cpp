@@ -176,30 +176,6 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
     }
 }
 
-/** Declare the function symbol 'bool __is_compile_time_constant_mask(mask type)'.  
-    This function will never be defined; it's just a placeholder
-    that will be handled during the optimization process.  See the
-    discussion of the implementation of CompileTimeConstantResolvePass for
-    more details.
- */
-static void
-lDeclareCompileTimeConstant(llvm::Module *module) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    std::vector<const llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::BoolType, argTypes, false);
-    llvm::Function *func =
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               "__is_compile_time_constant_mask", module);
-    func->setOnlyReadsMemory(true);
-    func->setDoesNotThrow(true);
-}
-
-
 /** Declare the 'pseudo-gather' functions.  When the ispc front-end needs
     to perform a gather, it generates a call to one of these functions,
     which have signatures:
@@ -583,7 +559,6 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
 
     // Declare various placeholder functions that the optimizer will later
     // find and replace with something more useful.
-    lDeclareCompileTimeConstant(module);
     lDeclarePseudoGathers(module);
     lDeclarePseudoScatters(module);
     lDeclarePseudoMaskedStore(module);

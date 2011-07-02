@@ -34,7 +34,7 @@
 ;; builtins for various targets can use macros from this file to simplify
 ;; generating code for their implementations of those builtins.
 
-declare i1 @__is_compile_time_constant_int32(i32)
+declare i1 @__is_compile_time_constant_uniform_int32(i32)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -319,7 +319,7 @@ forloop(i, 1, eval($1-1), `  %r_`'i = insertelement <$1 x $2> %r_`'eval(i-1), $2
 }
 
 define internal <$1 x $2> @__rotate_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
-  %isc = call i1 @__is_compile_time_constant_int32(i32 %1)
+  %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
   br i1 %isc, label %is_const, label %not_const
 
 is_const:
@@ -363,12 +363,53 @@ forloop(i, 1, eval($1-1), `  %ret_`'i = insertelement <$1 x $2> %ret_`'eval(i-1)
   ret <$1 x $2> %ret_`'eval($1-1)
 }
 
+define internal <$1 x $2> @__shuffle2_$3(<$1 x $2>, <$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
+  %v2 = shufflevector <$1 x $2> %0, <$1 x $2> %1, <eval(2*$1) x i32> <
+      forloop(i, 0, eval(2*$1-2), `i32 i, ') i32 eval(2*$1-1)
+  >
+forloop(i, 0, eval($1-1), `  
+  %index_`'i = extractelement <$1 x i32> %2, i32 i')
+
+  %isc = call i1 @__is_compile_time_constant_varying_int32(<$1 x i32> %2)
+  br i1 %isc, label %is_const, label %not_const
+
+is_const:
+  ; extract from the requested lanes and insert into the result; LLVM turns
+  ; this into good code in the end
+forloop(i, 0, eval($1-1), `  
+  %v_`'i = extractelement <eval(2*$1) x $2> %v2, i32 %index_`'i')
+
+  %ret_0 = insertelement <$1 x $2> undef, $2 %v_0, i32 0
+forloop(i, 1, eval($1-1), `  %ret_`'i = insertelement <$1 x $2> %ret_`'eval(i-1), $2 %v_`'i, i32 i
+')
+  ret <$1 x $2> %ret_`'eval($1-1)
+
+not_const:
+  ; otherwise store the two vectors onto the stack and then use the given
+  ; permutation vector to get indices into that array...
+  %ptr = alloca <eval(2*$1) x $2>
+  store <eval(2*$1) x $2> %v2, <eval(2*$1) x $2> * %ptr
+  %baseptr = bitcast <eval(2*$1) x $2> * %ptr to $2 *
+
+  %ptr_0 = getelementptr $2 * %baseptr, i32 %index_0
+  %val_0 = load $2 * %ptr_0
+  %result_0 = insertelement <$1 x $2> undef, $2 %val_0, i32 0
+
+forloop(i, 1, eval($1-1), `  
+  %ptr_`'i = getelementptr $2 * %baseptr, i32 %index_`'i
+  %val_`'i = load $2 * %ptr_`'i
+  %result_`'i = insertelement <$1 x $2> %result_`'eval(i-1), $2 %val_`'i, i32 i
+')
+
+  ret <$1 x $2> %result_`'eval($1-1)
+}
 ')
 
 
 define(`stdlib_core', `
 
 declare i1 @__is_compile_time_constant_mask(<$1 x i32> %mask)
+declare i1 @__is_compile_time_constant_varying_int32(<$1 x i32>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops

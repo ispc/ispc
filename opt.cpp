@@ -2116,12 +2116,11 @@ CreateLowerGatherScatterPass() {
 // IsCompileTimeConstantPass
 
 /** LLVM IR implementations of target-specific functions may include calls
-    to the functions "bool __is_compile_time_constant_mask(mask type)" and
-    "bool __is_compile_time_constant_int32(i32)"; these allow them to have
-    specialied code paths for where the corresponding value is known at
-    compile time.  For masks, for example, this allows them to not incur
-    the cost of a MOVMSK call at runtime to compute its value in cases
-    where the mask value isn't known until runtime.
+    to the functions "bool __is_compile_time_constant_*(...)"; these allow
+    them to have specialied code paths for where the corresponding value is
+    known at compile time.  For masks, for example, this allows them to not
+    incur the cost of a MOVMSK call at runtime to compute its value in
+    cases where the mask value isn't known until runtime.
 
     This pass resolves these calls into either 'true' or 'false' values so
     that later optimization passes can operate with these as constants.
@@ -2149,8 +2148,11 @@ llvm::RegisterPass<IsCompileTimeConstantPass>
 
 bool
 IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    llvm::Function *maskFunc = m->module->getFunction("__is_compile_time_constant_mask");
-    llvm::Function *int32Func = m->module->getFunction("__is_compile_time_constant_int32");
+    llvm::Function *funcs[] = {
+        m->module->getFunction("__is_compile_time_constant_mask"),
+        m->module->getFunction("__is_compile_time_constant_uniform_int32"),
+        m->module->getFunction("__is_compile_time_constant_varying_int32")
+    };
 
     bool modifiedAny = false;
  restart:
@@ -2158,8 +2160,17 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // Iterate through the instructions looking for calls to the
         // __is_compile_time_constant_*() functions
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*i);
-        if (!callInst || (callInst->getCalledFunction() != maskFunc &&
-                          callInst->getCalledFunction() != int32Func))
+        if (callInst == NULL)
+            continue;
+
+        int j;
+        int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
+        for (j = 0; j < nFuncs; ++j) {
+            if (callInst->getCalledFunction() == funcs[j]) 
+                break;
+        }
+        if (j == nFuncs)
+            // not a __is_compile_time_constant_* function
             continue;
 
         // This optimization pass can be disabled with the (poorly named)

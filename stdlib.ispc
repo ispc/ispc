@@ -129,6 +129,22 @@ static inline int64 shuffle(int64 v, int i) {
     return __shuffle_int64(v, i);
 }
 
+static inline float shuffle(float v0, float v1, int i) {
+    return __shuffle2_float(v0, v1, i);
+}
+
+static inline int32 shuffle(int32 v0, int32 v1, int i) {
+    return __shuffle2_int32(v0, v1, i);
+}
+
+static inline double shuffle(double v0, double v1, int i) {
+    return __shuffle2_double(v0, v1, i);
+}
+
+static inline int64 shuffle(int64 v0, int64 v1, int i) {
+    return __shuffle2_int64(v0, v1, i);
+}
+
 // x[i]
 static inline uniform float extract(float x, uniform int i) {
     return __extract(x, i);

@@ -6,6 +6,12 @@ initialize their members; they now must be initialized with initializer
 lists in braces (or initialized after of the initializer with a loop over
 array elements, etc.)
 
+Added another shuffle() function to the standard library: 
+"<type> shuffle(<type> v0, <type> v1, int permute)", where the permutation
+vector indexes over the concatenation of the two vectors (e.g. the value
+0 corresponds to the first element of v0, the value 2*programCount-1
+corresponds to the last element of v1, etc.)
+
 === v1.0.2 === (1 July 2011)
 
 Floating-point hexidecimal constants are now parsed correctly on Windows

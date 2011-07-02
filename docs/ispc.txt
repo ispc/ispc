@@ -1704,10 +1704,11 @@ provided offset value can be positive or negative, and may be greater than
     int64 rotate(int64 value, uniform int offset)
 
 
-Finally, ``shuffle()`` allows fully general shuffling of values among the
-program instances.  Each program instance's value of permutation gives the
-program instance from which to get the value of ``value``.  The provided
-values for ``permutation`` must all be between 0 and ``programCount-1``.
+Finally, the ``shuffle()`` functions allow two variants of fully general
+shuffling of values among the program instances.  For the first version,
+each program instance's value of permutation gives the program instance
+from which to get the value of ``value``.  The provided values for
+``permutation`` must all be between 0 and ``programCount-1``.
 
 ::
 
@@ -1715,6 +1716,20 @@ values for ``permutation`` must all be between 0 and ``programCount-1``.
     int32 shuffle(int32 value, int permutation)
     double shuffle(double value, int permutation)
     int64 shuffle(int64 value, int permutation)
+
+
+The second variant of ``shuffle()`` permutes over the extended vector that
+is the concatenation of the two provided values.  In other words, a value
+of 0 in an element of ``permutation`` corresponds to the first element of
+``value0``, the value ``2*programCount-1`` corresponds to the last element
+of ``value1``, etc.)
+
+::
+
+    float shuffle(float value0, float value1, int permutation)
+    int32 shuffle(int32 value0, int32 value1, int permutation)
+    double shuffle(double value0, double value1, int permutation)
+    int64 shuffle(int64 value0, int64 value1, int permutation)
 
 The various variants of ``popcnt()`` return the population count--the
 number of bits set in the given value.
