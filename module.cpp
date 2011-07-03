@@ -151,12 +151,6 @@ Module::CompileFile() {
 
     bool runPreprocessor = g->runCPP;
 
-    // If we run the preprocessor, we'll have access to a string
-    // buffer containing the contents of the preprocessed file.
-    // Otherwise, we'll have a regular FILE.
-    llvm::raw_string_ostream* os = NULL;
-    FILE* f = NULL;
-
     if (runPreprocessor) {
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
@@ -167,6 +161,7 @@ Module::CompileFile() {
     }
     else {
         // No preprocessor, just open up the file if it's not stdin..
+        FILE* f = NULL;
         if (filename == NULL) 
             f = stdin;
         else {
