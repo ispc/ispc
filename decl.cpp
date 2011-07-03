@@ -318,9 +318,10 @@ Declaration::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 
 void
-GetStructTypesAndNames(const std::vector<StructDeclaration *> &sd,
-                       std::vector<const Type *> *elementTypes,
-                       std::vector<std::string> *elementNames) {
+GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
+                             std::vector<const Type *> *elementTypes,
+                             std::vector<std::string> *elementNames,
+                             std::vector<SourcePos> *elementPositions) {
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
         // FIXME: making this fake little DeclSpecs here is really
@@ -343,6 +344,7 @@ GetStructTypesAndNames(const std::vector<StructDeclaration *> &sd,
 
             elementTypes->push_back(d->sym->type);
             elementNames->push_back(d->sym->name);
+            elementPositions->push_back(d->sym->pos);
         }
     }
 }

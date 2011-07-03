@@ -4,3 +4,4 @@ depend
 ispc
 ispc_test
 objs
+docs/doxygen

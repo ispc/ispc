@@ -9,7 +9,7 @@ struct Foo {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    varying Foo myFoo = a;
+    varying Foo myFoo = { a, a };
     RET[programIndex] = myFoo.x;
 }
 

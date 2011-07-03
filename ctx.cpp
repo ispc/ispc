@@ -1109,7 +1109,7 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, const llvm::Type *type,
 }
 
 
-llvm::Instruction *
+llvm::Value *
 FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
@@ -1117,16 +1117,31 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
         return NULL;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
-    llvm::Instruction *inst = 
-        new llvm::PtrToIntInst(value, type, name ? name : "ptr2int", bblock);
-    AddDebugPos(inst);
-    return inst;
+    const llvm::Type *valType = value->getType();
+    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
+    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+        // varying lvalue -> apply ptr to int to the individual pointers
+        assert((int)at->getNumElements() == g->target.vectorWidth);
+
+        llvm::Value *ret = 
+            llvm::UndefValue::get(llvm::ArrayType::get(type, g->target.vectorWidth));
+        for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value *elt = ExtractInst(value, i);
+            llvm::Value *p2i = PtrToIntInst(elt, type, name);
+            ret = InsertInst(ret, p2i, i);
+        }
+        return ret;
+    }
+    else {
+        llvm::Instruction *inst = 
+            new llvm::PtrToIntInst(value, type, name ? name : "ptr2int", bblock);
+        AddDebugPos(inst);
+        return inst;
+    }
 }
 
 
-llvm::Instruction *
+llvm::Value *
 FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
@@ -1134,12 +1149,27 @@ FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
         return NULL;
     }
 
-    // TODO: we should probably handle the array case as in
-    // e.g. BitCastInst(), but we don't currently need that functionality
-    llvm::Instruction *inst = 
-        new llvm::IntToPtrInst(value, type, name ? name : "int2ptr", bblock);
-    AddDebugPos(inst);
-    return inst;
+    const llvm::Type *valType = value->getType();
+    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
+    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+        // varying lvalue -> apply int to ptr to the individual pointers
+        assert((int)at->getNumElements() == g->target.vectorWidth);
+
+        llvm::Value *ret = 
+            llvm::UndefValue::get(llvm::ArrayType::get(type, g->target.vectorWidth));
+        for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value *elt = ExtractInst(value, i);
+            llvm::Value *i2p = IntToPtrInst(elt, type, name);
+            ret = InsertInst(ret, i2p, i);
+        }
+        return ret;
+    }
+    else {
+        llvm::Instruction *inst = 
+            new llvm::IntToPtrInst(value, type, name ? name : "int2ptr", bblock);
+        AddDebugPos(inst);
+        return inst;
+    }
 }
 
 
@@ -1359,10 +1389,10 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
         // If we're gathering structures, do an element-wise gather
         // recursively.
         llvm::Value *retValue = llvm::UndefValue::get(retType);
-        for (int i = 0; i < st->NumElements(); ++i) {
+        for (int i = 0; i < st->GetElementCount(); ++i) {
             llvm::Value *eltPtrs = GetElementPtrInst(lvalue, 0, i);
             // This in turn will be another gather
-            llvm::Value *eltValues = LoadInst(eltPtrs, st->GetMemberType(i), 
+            llvm::Value *eltValues = LoadInst(eltPtrs, st->GetElementType(i), 
                                               name);
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
@@ -1482,6 +1512,16 @@ FunctionEmitContext::AllocaInst(const llvm::Type *llvmType, const char *name,
         // current basic block
         inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
 
+    // If no alignment was specified but we have an array of a uniform
+    // type, then align it to 4 * the native vector width; it's not
+    // unlikely that this array will be loaded into varying variables with
+    // what will be aligned accesses if the uniform -> varying load is done
+    // in regular chunks.
+    const llvm::ArrayType *arrayType = llvm::dyn_cast<const llvm::ArrayType>(llvmType);
+    if (align == 0 && arrayType != NULL && 
+        !llvm::isa<const llvm::VectorType>(arrayType->getElementType()))
+        align = 4 * g->target.nativeVectorWidth;
+
     if (align != 0)
         inst->setAlignment(align);
     // Don't add debugging info to alloca instructions
@@ -1506,29 +1546,18 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
 
     assert(llvm::isa<const llvm::PointerType>(lvalue->getType()));
     
-    const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
-    if (structType != NULL) {
-        // Assigning a structure
-        for (int i = 0; i < structType->NumElements(); ++i) {
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(rvalueType);
+    if (collectionType != NULL) {
+        // Assigning a structure / array / vector. Handle each element
+        // individually with what turns into a recursive call to
+        // makedStore()
+        for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             llvm::Value *eltValue = ExtractInst(rvalue, i, "rvalue_member");
             llvm::Value *eltLValue = GetElementPtrInst(lvalue, 0, i, 
                                                        "struct_lvalue_ptr");
             StoreInst(eltValue, eltLValue, storeMask, 
-                      structType->GetMemberType(i));
-        }
-        return;
-    }
-
-    const SequentialType *sequentialType = 
-        dynamic_cast<const SequentialType *>(rvalueType);
-    if (sequentialType != NULL) {
-        // Assigning arrays and vectors. Handle each element individually
-        // with what turns into a recursive call to makedStore()
-        for (int i = 0; i < sequentialType->GetElementCount(); ++i) {
-            llvm::Value *eltLValue = GetElementPtrInst(lvalue, 0, i, "lval_i_ptr");
-            llvm::Value *eltValue = ExtractInst(rvalue, i, "array_i_val");
-            StoreInst(eltValue, eltLValue, storeMask, 
-                      sequentialType->GetElementType());
+                      collectionType->GetElementType(i));
         }
         return;
     }
@@ -1588,10 +1617,10 @@ FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue,
     const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
     if (structType) {
         // Scatter the struct elements individually
-        for (int i = 0; i < structType->NumElements(); ++i) {
+        for (int i = 0; i < structType->GetElementCount(); ++i) {
             llvm::Value *lv = GetElementPtrInst(lvalue, 0, i);
             llvm::Value *rv = ExtractInst(rvalue, i);
-            scatter(rv, lv, storeMask, structType->GetMemberType(i));
+            scatter(rv, lv, storeMask, structType->GetElementType(i));
         }
         return;
     }

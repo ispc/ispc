@@ -305,10 +305,10 @@ public:
 
     llvm::Value *BitCastInst(llvm::Value *value, const llvm::Type *type,
                              const char *name = NULL);
-    llvm::Instruction *PtrToIntInst(llvm::Value *value, const llvm::Type *type,
-                                    const char *name = NULL);
-    llvm::Instruction *IntToPtrInst(llvm::Value *value, const llvm::Type *type,
-                                    const char *name = NULL);
+    llvm::Value *PtrToIntInst(llvm::Value *value, const llvm::Type *type,
+                              const char *name = NULL);
+    llvm::Value *IntToPtrInst(llvm::Value *value, const llvm::Type *type,
+                              const char *name = NULL);
     llvm::Instruction *TruncInst(llvm::Value *value, const llvm::Type *type,
                                  const char *name = NULL);
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,

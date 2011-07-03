@@ -2116,11 +2116,11 @@ CreateLowerGatherScatterPass() {
 // IsCompileTimeConstantPass
 
 /** LLVM IR implementations of target-specific functions may include calls
-    to a function "bool __is_compile_time_constant_mask(mask type)"; this
-    allows them to have specialied code paths for where the mask is known
-    at compile time but not incurring the cost of a MOVMSK call at runtime
-    to compute its value in cases where the mask value isn't known until
-    runtime.
+    to the functions "bool __is_compile_time_constant_*(...)"; these allow
+    them to have specialied code paths for where the corresponding value is
+    known at compile time.  For masks, for example, this allows them to not
+    incur the cost of a MOVMSK call at runtime to compute its value in
+    cases where the mask value isn't known until runtime.
 
     This pass resolves these calls into either 'true' or 'false' values so
     that later optimization passes can operate with these as constants.
@@ -2148,17 +2148,29 @@ llvm::RegisterPass<IsCompileTimeConstantPass>
 
 bool
 IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    llvm::Function *func = m->module->getFunction("__is_compile_time_constant_mask");
-    if (!func)
-        return false;
+    llvm::Function *funcs[] = {
+        m->module->getFunction("__is_compile_time_constant_mask"),
+        m->module->getFunction("__is_compile_time_constant_uniform_int32"),
+        m->module->getFunction("__is_compile_time_constant_varying_int32")
+    };
 
     bool modifiedAny = false;
  restart:
     for (llvm::BasicBlock::iterator i = bb.begin(), e = bb.end(); i != e; ++i) {
-        // Iterate through the instructions looking for calls to
-        // __is_compile_time_constant_mask().
+        // Iterate through the instructions looking for calls to the
+        // __is_compile_time_constant_*() functions
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*i);
-        if (!callInst || callInst->getCalledFunction() != func)
+        if (callInst == NULL)
+            continue;
+
+        int j;
+        int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
+        for (j = 0; j < nFuncs; ++j) {
+            if (callInst->getCalledFunction() == funcs[j]) 
+                break;
+        }
+        if (j == nFuncs)
+            // not a __is_compile_time_constant_* function
             continue;
 
         // This optimization pass can be disabled with the (poorly named)
@@ -2171,8 +2183,8 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         // Is it a constant?  Bingo, turn the call's value into a constant
         // true value.
-        llvm::Value *mask = callInst->getArgOperand(0);
-        if (llvm::isa<llvm::Constant>(mask)) {
+        llvm::Value *operand = callInst->getArgOperand(0);
+        if (llvm::isa<llvm::Constant>(operand)) {
             llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMTrue);
             modifiedAny = true;
             goto restart;

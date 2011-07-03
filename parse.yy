@@ -564,9 +564,11 @@ struct_or_union_specifier
       { 
           std::vector<const Type *> elementTypes;
           std::vector<std::string> elementNames;
-          GetStructTypesAndNames(*$4, &elementTypes, &elementNames);
+          std::vector<SourcePos> elementPositions;
+          GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
+                                       &elementPositions);
           StructType *st = new StructType($2, elementTypes, elementNames,
-                                          false, true, @2);
+                                          elementPositions, false, true, @2);
           m->symbolTable->AddType($2, st, @2);
           $$ = st;
       }
@@ -574,8 +576,11 @@ struct_or_union_specifier
       {
           std::vector<const Type *> elementTypes;
           std::vector<std::string> elementNames;
-          GetStructTypesAndNames(*$3, &elementTypes, &elementNames);
-          $$ = new StructType("", elementTypes, elementNames, false, true, @1);
+          std::vector<SourcePos> elementPositions;
+          GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
+                                       &elementPositions);
+          $$ = new StructType("", elementTypes, elementNames, elementPositions,
+                              false, true, @1);
       }
     | struct_or_union '{' '}' 
       {
