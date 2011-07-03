@@ -137,8 +137,9 @@ extern FILE *yyin;
 extern int yyparse();
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern void yy_switch_to_buffer(YY_BUFFER_STATE);
+extern YY_BUFFER_STATE yy_scan_string(const char *);
 extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
-
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
@@ -150,24 +151,19 @@ Module::CompileFile() {
 
     bool runPreprocessor = g->runCPP;
 
-    // We currently require that the user run the preprocessor by hand on
-    // windows and pipe the result to ispc.
-    // FIXME: It'd be nice to run cl.exe for them to do this, if it's available
-    // in the PATH...
-#ifdef ISPC_IS_WINDOWS
-    runPreprocessor = false;
-#endif // ISPC_IS_WINDOWS
-
-    // The FILE handle that we'll point the parser at.  This may end up
-    // being stdin, an opened file on disk, or the piped output from the
-    // preprocessor.
-    FILE *f;
-
-    std::string ppOutfile;
+    // If we run the preprocessor, we'll have access to a string
+    // buffer containing the contents of the preprocessed file.
+    // Otherwise, we'll have a regular FILE.
+    llvm::raw_string_ostream* os = NULL;
+    FILE* f = NULL;
 
     if (runPreprocessor) {
-        ppOutfile = std::string(filename) + ".pp";
-        f = execPreprocessor(filename, ppOutfile.c_str());
+        std::string buffer;
+        llvm::raw_string_ostream os(buffer);
+        execPreprocessor(filename, &os);
+        YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
+        yyparse();
+        yy_delete_buffer(strbuf);
     }
     else {
         // No preprocessor, just open up the file if it's not stdin..
@@ -180,20 +176,11 @@ Module::CompileFile() {
                 return 1;
             }
         }
+        yyin = f;
+        yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
+        yyparse();
+        fclose(f);
     }
-
-    // Here is where the magic happens: parse the file, build the AST, etc.
-    // This in turn will lead to calls back to Module::AddFunction(),
-    // etc...
-    yyin = f;
-    yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
-    yyparse();
-
-    //Close and purge the temporary preprocessor file.
-    fclose(f);
-    
-    if (runPreprocessor)
-        remove(ppOutfile.c_str());
 
     if (errorCount == 0)
         Optimize(module, g->opt.level);
@@ -1395,17 +1382,21 @@ Module::writeHeader(const char *fn) {
     return true;
 }
 
-FILE*
-Module::execPreprocessor(const char* infilename, const char* outfilename) const
+void
+Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostream) const
 {
     clang::CompilerInstance inst;
     std::string error;
-    llvm::tool_output_file *of = new llvm::tool_output_file(outfilename, error, 0);
 
     inst.createFileManager();
     inst.createDiagnostics(0, NULL);
     clang::TargetOptions& options = inst.getTargetOpts();
-    options.Triple = "i486-redhat-linux";
+
+    llvm::Triple triple(module->getTargetTriple());
+    if (triple.getTriple().empty())
+        triple.setTriple(llvm::sys::getHostTriple());
+    
+    options.Triple = triple.getTriple();
 
     clang::TargetInfo* target 
         = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
@@ -1416,6 +1407,10 @@ Module::execPreprocessor(const char* infilename, const char* outfilename) const
 
     clang::PreprocessorOptions& opts = inst.getPreprocessorOpts();
 
+    //Add defs for ISPC and PI
+    opts.addMacroDef("ISPC");
+    opts.addMacroDef("PI=3.1415926535");
+
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
         //Sanity Check, should really begin with -D
         if (g->cppArgs[i].substr(0,2) == "-D") {
@@ -1424,10 +1419,6 @@ Module::execPreprocessor(const char* infilename, const char* outfilename) const
     }    
     inst.createPreprocessor();
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
-                                    &(of->os()), inst.getPreprocessorOutputOpts());
-    of->os().close();
-    of->keep();
-
-    return fopen(outfilename, "r");
+                                    ostream, inst.getPreprocessorOutputOpts());
 }
 
