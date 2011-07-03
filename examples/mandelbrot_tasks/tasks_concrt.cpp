@@ -39,6 +39,7 @@
 using namespace Concurrency;
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" { 
@@ -61,12 +62,14 @@ static int taskOffset;
 static TaskInfo taskInfo[MAX_TASKS];
 static event *events[MAX_TASKS];
 static CRITICAL_SECTION criticalSection;
+static bool initialized = false;
 
 void
 TasksInit() {
     InitializeCriticalSection(&criticalSection);
     for (int i = 0; i < MAX_TASKS; ++i)
         events[i] = new event;
+    initialized = true;
 }
 
 
@@ -91,6 +94,11 @@ lRunTask(LPVOID param) {
 
 void
 ISPCLaunch(void *func, void *data) {
+    if (!initialized) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
+
     // Get a TaskInfo struct for this task
     EnterCriticalSection(&criticalSection);
     TaskInfo *ti = &taskInfo[taskOffset++];
@@ -105,6 +113,11 @@ ISPCLaunch(void *func, void *data) {
 
 
 void ISPCSync() {
+    if (!initialized) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
+
     event::wait_for_multiple(&events[0], taskOffset, true, 
                              COOPERATIVE_TIMEOUT_INFINITE);
 

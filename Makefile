@@ -110,9 +110,7 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-$(STDLIB_SRC): stdlib.m4
-
-objs/stdlib-%.cpp: stdlib-%.ll
+objs/stdlib-%.cpp: stdlib-%.ll stdlib.m4 stdlib-sse.ll
 	@echo Creating C++ source from stdlib file $<
 	@m4 stdlib.m4 $< | ./bitcode2cpp.py $< > $@
 

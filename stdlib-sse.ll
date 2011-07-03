@@ -404,7 +404,7 @@ define internal <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alway
 
 
 define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.pd, %0)
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
   ret double %ret
 }
 
@@ -424,7 +424,7 @@ define internal <4 x double> @__min_varying_double(<4 x double>, <4 x double>) n
 
 
 define internal double @__min_uniform_double(double, double) nounwind readnone {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.pd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
   ret double %ret
 }
 
@@ -436,6 +436,6 @@ define internal <4 x double> @__max_varying_double(<4 x double>, <4 x double>) n
 
 
 define internal double @__max_uniform_double(double, double) nounwind readnone {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.pd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
   ret double %ret
 }

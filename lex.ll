@@ -45,6 +45,7 @@ static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lHandleCppHash(SourcePos *);
 static void lStringConst(YYSTYPE *, SourcePos *);
+static double lParseHexFloat(const char *ptr);
 
 #define YY_USER_ACTION \
     yylloc->first_line = yylloc->last_line; \
@@ -65,7 +66,8 @@ inline int isatty(int) { return 0; }
 
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))
-FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)|([-]?0x[01]\.?[0-9a-fA-F]+p[-+]?[0-9]+[fF]?)
+FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
+HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 
 IDENT [a-zA-Z_][a-zA-Z_0-9]*
 
@@ -182,10 +184,12 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 }
 
 {FLOAT_NUMBER} { 
-    /* FIXME: need to implement a hex float constant parser so that we can 
-       support them on Windows (which doesn't handle them in its atof()
-       implementation... */
     yylval->floatVal = atof(yytext); 
+    return TOKEN_FLOAT_CONSTANT; 
+}
+
+{HEX_FLOAT_NUMBER} {
+    yylval->floatVal = lParseHexFloat(yytext); 
     return TOKEN_FLOAT_CONSTANT; 
 }
 
@@ -423,4 +427,83 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
        str.push_back(cval);
     } 
     yylval->stringVal = new std::string(str);
+}
+
+
+/** Compute the value 2^n, where the exponent is given as an integer.
+    There are more efficient ways to do this, for example by just slamming
+    the bits into the appropriate bits of the double, but let's just do the
+    obvious thing. 
+*/
+static double
+ipow2(int exponent) {
+    if (exponent < 0)
+        return 1. / ipow2(-exponent);
+
+    double ret = 1.;
+    while (exponent > 16) {
+        ret *= 65536.;
+        exponent -= 16;
+    }
+    while (exponent-- > 0)
+        ret *= 2.;
+    return ret;
+}
+
+
+/** Parse a hexadecimal-formatted floating-point number (C99 hex float
+    constant-style). 
+*/
+static double
+lParseHexFloat(const char *ptr) {
+    assert(ptr != NULL);
+
+    assert(ptr[0] == '0' && ptr[1] == 'x');
+    ptr += 2;
+
+    // Start initializing the mantissa
+    assert(*ptr == '0' || *ptr == '1');
+    double mantissa = (*ptr == '1') ? 1. : 0.;
+    ++ptr;
+
+    if (*ptr == '.') {
+        // Is there a fraction part?  If so, the i'th digit we encounter
+        // gives the 1/(16^i) component of the mantissa.
+        ++ptr;
+
+        double scale = 1. / 16.;
+        // Keep going until we come to the 'p', which indicates that we've
+        // come to the exponent
+        while (*ptr != 'p') {
+            // Figure out the raw value from 0-15
+            int digit;
+            if (*ptr >= '0' && *ptr <= '9')
+                digit = *ptr - '0';
+            else if (*ptr >= 'a' && *ptr <= 'f')
+                digit = 10 + *ptr - 'a';
+            else {
+                assert(*ptr >= 'A' && *ptr <= 'F');
+                digit = 10 + *ptr - 'A';
+            }
+
+            // And add its contribution to the mantissa
+            mantissa += scale * digit;
+            scale /= 16.;
+            ++ptr;
+        }
+    }
+    else
+        // If there's not a '.', then we better be going straight to the
+        // exponent
+        assert(*ptr == 'p');
+
+    ++ptr; // skip the 'p'
+
+    // interestingly enough, the exponent is provided base 10..
+    int exponent = (int)strtol(ptr, (char **)NULL, 10);
+
+    // Does stdlib exp2() guarantee exact results for integer n where can
+    // be represented exactly as doubles?  I would hope so but am not sure,
+    // so let's be sure.
+    return mantissa * ipow2(exponent);
 }

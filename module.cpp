@@ -212,8 +212,8 @@ lRecursiveCheckVarying(const Type *t) {
 
     const StructType *st = dynamic_cast<const StructType *>(t);
     if (st) {
-        for (int i = 0; i < st->NumElements(); ++i)
-            if (lRecursiveCheckVarying(st->GetMemberType(i)))
+        for (int i = 0; i < st->GetElementCount(); ++i)
+            if (lRecursiveCheckVarying(st->GetElementType(i)))
                 return true;
     }
     return false;
@@ -943,6 +943,11 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     }
 
     std::string featuresString;
+#ifdef LLVM_3_0svn
+    llvm::TargetMachine *targetMachine = 
+        target->createTargetMachine(triple.getTriple(), g->target.cpu,
+                                    featuresString);
+#else
     if (g->target.cpu.size()) {
         llvm::SubtargetFeatures features;
         features.setCPU(g->target.cpu);
@@ -951,6 +956,7 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
 
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple.getTriple(), featuresString);
+#endif
     if (targetMachine == NULL) {
         fprintf(stderr, "Unable to create target machine for target \"%s\"!",
                 triple.str().c_str());
@@ -1005,8 +1011,8 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
 static void
 lRecursiveAddStructs(const StructType *structType,
                      std::vector<const StructType *> &structParamTypes) {
-    for (int i = 0; i < structType->NumElements(); ++i) {
-        const Type *elementBaseType = structType->GetMemberType(i)->GetBaseType();
+    for (int i = 0; i < structType->GetElementCount(); ++i) {
+        const Type *elementBaseType = structType->GetElementType(i)->GetBaseType();
         const StructType *elementStructType = 
             dynamic_cast<const StructType *>(elementBaseType);
         if (elementStructType != NULL) {
@@ -1076,9 +1082,9 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
         StructDAGNode *node = new StructDAGNode;
         structToNode[st] = node;
 
-        for (int j = 0; j < st->NumElements(); ++j) {
+        for (int j = 0; j < st->GetElementCount(); ++j) {
             const StructType *elementStructType = 
-                dynamic_cast<const StructType *>(st->GetMemberType(j));
+                dynamic_cast<const StructType *>(st->GetElementType(j));
             // If this element is a struct type and we haven't already
             // processed it for the current struct type, then upate th
             // dependencies and record that this element type has other
@@ -1108,8 +1114,8 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
     for (unsigned int i = 0; i < sortedTypes.size(); ++i) {
         const StructType *st = sortedTypes[i];
         fprintf(file, "struct %s {\n", st->GetStructName().c_str());
-        for (int j = 0; j < st->NumElements(); ++j) {
-            const Type *type = st->GetMemberType(j)->GetAsNonConstType();
+        for (int j = 0; j < st->GetElementCount(); ++j) {
+            const Type *type = st->GetElementType(j)->GetAsNonConstType();
             std::string d = type->GetCDeclaration(st->GetElementName(j));
             fprintf(file, "    %s;\n", d.c_str());
         }
@@ -1174,8 +1180,8 @@ lGetVectorsFromStructs(const std::vector<const StructType *> &structParamTypes,
                        std::vector<const VectorType *> *vectorParamTypes) {
     for (unsigned int i = 0; i < structParamTypes.size(); ++i) {
         const StructType *structType = structParamTypes[i];
-        for (int j = 0; j < structType->NumElements(); ++j) {
-            const Type *elementType = structType->GetMemberType(j);
+        for (int j = 0; j < structType->GetElementCount(); ++j) {
+            const Type *elementType = structType->GetElementType(j);
 
             const ArrayType *at = dynamic_cast<const ArrayType *>(elementType);
             if (at)

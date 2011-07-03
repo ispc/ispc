@@ -135,6 +135,11 @@ TasksInit() {
 
 void
 ISPCLaunch(void *f, void *d) {
+    if (threads == NULL) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
+
     //
     // Acquire mutex, add task
     //
@@ -256,6 +261,11 @@ lTaskEntry(void *arg) {
 
 
 void ISPCSync() {
+    if (threads == NULL) {
+        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
+        exit(1);
+    }
+
     int err;
     if ((err = pthread_mutex_lock(&tasksRunningConditionMutex)) != 0) {
         fprintf(stderr, "Error from pthread_mutex_lock: %s\n", strerror(err));

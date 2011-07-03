@@ -1526,7 +1526,7 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         if (st != NULL) {
             bool anyUniform = false;
             for (int i = 0; i < st->NumElements(); ++i) {
-                if (st->GetMemberType(i)->IsUniformType())
+                if (st->GetElementType(i)->IsUniformType())
                     anyUniform = true;
             }
 
@@ -2489,71 +2489,57 @@ ExprList::TypeCheck() {
 
 llvm::Constant *
 ExprList::GetConstant(const Type *type) const {
-    const StructType *structType = dynamic_cast<const StructType *>(type);
-    const SequentialType *sequentialType = 
-        dynamic_cast<const SequentialType *>(type);
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(type);
+    if (collectionType == NULL)
+        return NULL;
 
-    if (structType != NULL) {
-        // We can potentially return an llvm::ConstantStruct if we have the
-        // same number of elements in the ExprList as the struct has
-        // members (and the various elements line up with the shape of the
-        // corresponding struct elements).
-        if ((int)exprs.size() != structType->NumElements()) {
-            Error(pos, "Initializer list for struct \"%s\" must have %d "
-                  "elements (has %d).", structType->GetString().c_str(),
-                  (int)exprs.size(), structType->NumElements());
+    std::string name;
+    if (dynamic_cast<const StructType *>(type) != NULL)
+        name = "struct";
+    else if (dynamic_cast<const ArrayType *>(type) != NULL) 
+        name = "array";
+    else if (dynamic_cast<const VectorType *>(type) != NULL) 
+        name = "vector";
+    else 
+        FATAL("Unexpected CollectionType in ExprList::GetConstant()");
+
+    if ((int)exprs.size() != collectionType->GetElementCount()) {
+        Error(pos, "Initializer list for %s \"%s\" must have %d elements "
+              "(has %d).", name.c_str(), collectionType->GetString().c_str(),
+              collectionType->GetElementCount(), (int)exprs.size());
+        return NULL;
+    }
+
+    std::vector<llvm::Constant *> cv;
+    for (unsigned int i = 0; i < exprs.size(); ++i) {
+        if (exprs[i] == NULL)
             return NULL;
-        }
+        const Type *elementType = collectionType->GetElementType(i);
+        llvm::Constant *c = exprs[i]->GetConstant(elementType);
+        if (c == NULL)
+            // If this list element couldn't convert to the right constant
+            // type for the corresponding collection member, then give up.
+            return NULL;
+        cv.push_back(c);
+    }
 
-        std::vector<llvm::Constant *> cv;
-        for (unsigned int i = 0; i < exprs.size(); ++i) {
-            if (exprs[i] == NULL)
-                return NULL;
-            const Type *elementType = structType->GetMemberType(i);
-            llvm::Constant *c = exprs[i]->GetConstant(elementType);
-            if (c == NULL)
-                // If this list element couldn't convert to the right
-                // constant type for the corresponding struct member, then
-                // give up
-                return NULL;
-            cv.push_back(c);
-        }
-
+    if (dynamic_cast<const StructType *>(type) != NULL) {
 #if defined(LLVM_2_8) || defined(LLVM_2_9)
         return llvm::ConstantStruct::get(*g->ctx, cv, false);
 #else
         const llvm::StructType *llvmStructType =
-            llvm::dyn_cast<const llvm::StructType>(structType->LLVMType(g->ctx));
+            llvm::dyn_cast<const llvm::StructType>(collectionType->LLVMType(g->ctx));
         assert(llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
 #endif
     }
-    else if (sequentialType) {
-        // Similarly, if we have an array or vector type, we may be able to
-        // return the corresponding llvm constant value.
-        if ((int)exprs.size() != sequentialType->GetElementCount()) {
-            bool isArray = (dynamic_cast<const ArrayType *>(type) != NULL);
-            Error(pos, "Initializer list for %s \"%s\" must have %d elements (has %d).",
-                  isArray ? "array" : "vector", sequentialType->GetString().c_str(),
-                  (int)exprs.size(), sequentialType->GetElementCount());
-            return NULL;
-        }
-
-        std::vector<llvm::Constant *> cv;
-        for (unsigned int i = 0; i < exprs.size(); ++i) {
-            if (exprs[i] == NULL)
-                return NULL;
-            const Type *elementType = sequentialType->GetElementType();
-            llvm::Constant *c = exprs[i]->GetConstant(elementType);
-            if (c == NULL) 
-                return NULL;
-            cv.push_back(c);
-        }
-        
+    else {
         const llvm::Type *lt = type->LLVMType(g->ctx);
         const llvm::ArrayType *lat = llvm::dyn_cast<const llvm::ArrayType>(lt);
         // FIXME: should the assert below validly fail for uniform vectors
-        // now?
+        // now?  Need a test case to reproduce it and then to be sure we
+        // have the right fix; leave the assert until we can hit it...
         assert(lat != NULL);
         return llvm::ConstantArray::get(lat, cv);
     }
@@ -2832,7 +2818,7 @@ MemberExpr::GetType() const {
         // Otherwise it's a struct, and the result type is the element
         // type, possibly promoted to varying if the struct type / lvalue
         // is varying.
-        const Type *elementType = structType->GetMemberType(identifier);
+        const Type *elementType = structType->GetElementType(identifier);
         if (!elementType)
             Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
                   identifier.c_str(), structType->GetString().c_str(),
@@ -2912,7 +2898,7 @@ MemberExpr::getElementNumber() const {
         }
     }
     else {
-        elementNumber = structType->GetMemberNumber(identifier);
+        elementNumber = structType->GetElementNumber(identifier);
         if (elementNumber == -1)
             Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
                   identifier.c_str(), structType->GetString().c_str(),
@@ -3004,7 +2990,7 @@ MemberExpr::getCandidateNearMatches() const {
         return "";
 
     std::vector<std::string> elementNames;
-    for (int i = 0; i < structType->NumElements(); ++i)
+    for (int i = 0; i < structType->GetElementCount(); ++i)
         elementNames.push_back(structType->GetElementName(i));
     std::vector<std::string> alternates = MatchStrings(identifier, elementNames);
     if (!alternates.size())
@@ -3900,25 +3886,14 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     const llvm::Type *llvmType = type->GetAsVaryingType()->LLVMType(g->ctx);
     llvm::Value *retValue = llvm::UndefValue::get(llvmType);
 
-    // for structs, just recursively make their elements varying (if
-    // needed) and populate the return struct
-    const StructType *structType = dynamic_cast<const StructType *>(type);
-    if (structType != NULL) {
-        for (int i = 0; i < structType->NumElements(); ++i) {
-            llvm::Value *v = ctx->ExtractInst(value, i, "struct_element");
-            v = lUniformValueToVarying(ctx, v, structType->GetMemberType(i));
-            retValue = ctx->InsertInst(retValue, v, i, "set_struct_element");
-        }
-        return retValue;
-    }
-
-    // And similarly do the elements of arrays and vectors individually
-    const SequentialType *sequentialType = 
-        dynamic_cast<const SequentialType *>(type);
-    if (sequentialType != NULL) {
-        for (int i = 0; i < sequentialType->GetElementCount(); ++i) {
+    // for structs/arrays/vectors, just recursively make their elements
+    // varying (if needed) and populate the return value.
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(type);
+    if (collectionType != NULL) {
+        for (int i = 0; i < collectionType->GetElementCount(); ++i) {
             llvm::Value *v = ctx->ExtractInst(value, i, "get_element");
-            v = lUniformValueToVarying(ctx, v, sequentialType->GetElementType());
+            v = lUniformValueToVarying(ctx, v, collectionType->GetElementType(i));
             retValue = ctx->InsertInst(retValue, v, i, "set_element");
         }
         return retValue;
