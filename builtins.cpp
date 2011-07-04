@@ -99,11 +99,17 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
     else if (t == LLVMTypes::Int32PointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt32 :
                                                  AtomicType::UniformInt32, false);
+    else if (t == LLVMTypes::Int64PointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt64 :
+                                                 AtomicType::UniformInt64, false);
     else if (t == LLVMTypes::FloatPointerType)
         return new ReferenceType(AtomicType::UniformFloat, false);
     else if (t == LLVMTypes::Int32VectorPointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
                                                  AtomicType::VaryingInt32, false);
+    else if (t == LLVMTypes::Int64VectorPointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt64 :
+                                                 AtomicType::VaryingInt64, false);
     else if (t == LLVMTypes::FloatVectorPointerType)
         return new ReferenceType(AtomicType::VaryingFloat, false);
     else if (llvm::isa<const llvm::PointerType>(t)) {
@@ -113,16 +119,15 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         // create the equivalent ispc type.  Note that it has to be a
         // reference to an array, since ispc passes arrays to functions by
         // reference.
-        //
-        // FIXME: generalize this to do more than uniform int32s (that's
-        // all that's necessary for the stdlib currently.)
         const llvm::ArrayType *at = 
             llvm::dyn_cast<const llvm::ArrayType>(pt->getElementType());
-        if (at && at->getNumElements() == 0 &&
-            at->getElementType() == LLVMTypes::Int32Type) {
-            const Type *eltType = intAsUnsigned ? AtomicType::UniformUInt32 :
-                                                  AtomicType::UniformInt32;
-            return new ReferenceType(new ArrayType(eltType, 0), false);
+        if (at != NULL) {
+            const Type *eltType = lLLVMTypeToISPCType(at->getElementType(),
+                                                      intAsUnsigned);
+            if (eltType == NULL)
+                return NULL;
+            return new ReferenceType(new ArrayType(eltType, at->getNumElements()),
+                                     false);
         }
     }
 
