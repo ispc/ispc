@@ -6,12 +6,9 @@ ARCH_OS = $(shell uname)
 ARCH_TYPE = $(shell arch)
 
 CLANG=clang
-CLANG_LIBS = -lclangFrontendTool -lclangFrontend -lclangDriver \
-             -lclangSerialization -lclangCodeGen -lclangParse -lclangSema \
-             -lclangStaticAnalyzerFrontend -lclangStaticAnalyzerCheckers \
-             -lclangStaticAnalyzerCore \
-             -lclangAnalysis -lclangIndex -lclangRewrite \
-             -lclangAST -lclangLex -lclangBasic
+CLANG_LIBS = -lclangFrontend -lclangDriver \
+             -lclangSerialization -lclangParse -lclangSema \
+             -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
 LLVM_LIBS=$(shell llvm-config --ldflags --libs) -lpthread -ldl
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)

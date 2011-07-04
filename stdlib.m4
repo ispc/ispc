@@ -557,33 +557,101 @@ define internal float @__stdlib_pow(float, float) nounwind readnone alwaysinline
 ;; $1: vector width of the target
 
 define(`int8_16', `
-define internal <$1 x i32> @__load_uint8([0 x i32] *, i32 %offset) nounwind alwaysinline {
+define internal <$1 x i32> @__load_uint8([0 x i32] *, i32 %offset,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %doload, label %skip
+
+doload:  
   %ptr8 = bitcast [0 x i32] *%0 to i8 *
   %ptr = getelementptr i8 * %ptr8, i32 %offset
   %ptr64 = bitcast i8 * %ptr to i`'eval(8*$1) *
   %val = load i`'eval(8*$1) * %ptr64, align 1
 
   %vval = bitcast i`'eval(8*$1) %val to <$1 x i8>
-  ; were assuming unsigned, so zero-extend to i32... 
+  ; unsigned, so zero-extend to i32... 
   %ret = zext <$1 x i8> %vval to <$1 x i32>
   ret <$1 x i32> %ret
+
+skip:
+  ret <$1 x i32> undef
 }
 
 
-define internal <$1 x i32> @__load_uint16([0 x i32] *, i32 %offset) nounwind alwaysinline {
+define internal <$1 x i32> @__load_int8([0 x i32] *, i32 %offset,
+                                        <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %doload, label %skip
+
+doload:  
+  %ptr8 = bitcast [0 x i32] *%0 to i8 *
+  %ptr = getelementptr i8 * %ptr8, i32 %offset
+  %ptr64 = bitcast i8 * %ptr to i`'eval(8*$1) *
+  %val = load i`'eval(8*$1) * %ptr64, align 1
+
+  %vval = bitcast i`'eval(8*$1) %val to <$1 x i8>
+  ; signed, so sign-extend to i32... 
+  %ret = sext <$1 x i8> %vval to <$1 x i32>
+  ret <$1 x i32> %ret
+
+skip:
+  ret <$1 x i32> undef
+}
+
+
+define internal <$1 x i32> @__load_uint16([0 x i32] *, i32 %offset,
+                                          <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %doload, label %skip
+
+doload:  
   %ptr16 = bitcast [0 x i32] *%0 to i16 *
   %ptr = getelementptr i16 * %ptr16, i32 %offset
   %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
   %val = load i`'eval(16*$1) * %ptr64, align 2
 
   %vval = bitcast i`'eval(16*$1) %val to <$1 x i16>
-  ; unsigned, so use zero-extent...
+  ; unsigned, so use zero-extend...
   %ret = zext <$1 x i16> %vval to <$1 x i32>
   ret <$1 x i32> %ret
+
+skip:
+  ret <$1 x i32> undef
 }
 
-define internal void @__store_uint8([0 x i32] *, i32 %offset, <$1 x i32> %val32,
-                                    <$1 x i32> %mask) nounwind alwaysinline {
+
+define internal <$1 x i32> @__load_int16([0 x i32] *, i32 %offset,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %doload, label %skip
+
+doload:  
+  %ptr16 = bitcast [0 x i32] *%0 to i16 *
+  %ptr = getelementptr i16 * %ptr16, i32 %offset
+  %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
+  %val = load i`'eval(16*$1) * %ptr64, align 2
+
+  %vval = bitcast i`'eval(16*$1) %val to <$1 x i16>
+  ; signed, so use sign-extend...
+  %ret = sext <$1 x i16> %vval to <$1 x i32>
+  ret <$1 x i32> %ret
+
+skip:
+  ret <$1 x i32> undef
+}
+
+
+define internal void @__store_int8([0 x i32] *, i32 %offset, <$1 x i32> %val32,
+                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %dostore, label %skip
+
+dostore:  
   %val = trunc <$1 x i32> %val32 to <$1 x i8>
   %val64 = bitcast <$1 x i8> %val to i`'eval(8*$1)
 
@@ -604,10 +672,18 @@ define internal void @__store_uint8([0 x i32] *, i32 %offset, <$1 x i32> %val32,
   store i`'eval(8*$1) %final, i`'eval(8*$1) * %ptr64, align 1
 
   ret void
+
+skip:
+  ret void
 }
 
-define internal void @__store_uint16([0 x i32] *, i32 %offset, <$1 x i32> %val32,
-                                     <$1 x i32> %mask) nounwind alwaysinline {
+define internal void @__store_int16([0 x i32] *, i32 %offset, <$1 x i32> %val32,
+                                    <$1 x i32> %mask) nounwind alwaysinline {
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any = icmp ne i32 %mm, 0
+  br i1 %any, label %dostore, label %skip
+
+dostore:
   %val = trunc <$1 x i32> %val32 to <$1 x i16>
   %val64 = bitcast <$1 x i16> %val to i`'eval(16*$1)
 
@@ -626,6 +702,9 @@ define internal void @__store_uint16([0 x i32] *, i32 %offset, <$1 x i32> %val32
   %final = or i`'eval(16*$1) %oldmasked, %newmasked
   store i`'eval(16*$1) %final, i`'eval(16*$1) * %ptr64, align 2
 
+  ret void
+
+skip:
   ret void
 }
 '

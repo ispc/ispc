@@ -1777,24 +1777,31 @@ Packed Load and Store Operations
 --------------------------------
 
 The standard library also offers routines for writing out and reading in
-values from linear memory locations for the active program instances.
-``packed_load_active()`` loads consecutive values from the given array,
-starting at ``a[offset]``, loading one value for each currently-executing
-program instance and storing it into that program instance's ``val``
-variable.  It returns the total number of values loaded.  Similarly,
-``packed_store_active()`` stores the ``val`` values for each program
-instances that executed the ``packed_store_active()`` call, storing the
-results into the given array starting at the given offset.  It returns the
-total number of values stored.
+values from linear memory locations for the active program instances.  The
+``packed_load_active()`` functions load consecutive values from the given
+array, starting at ``a[offset]``, loading one value for each
+currently-executing program instance and storing it into that program
+instance's ``val`` variable.  They return the total number of values
+loaded.  Similarly, the ``packed_store_active()`` functions store the
+``val`` values for each program instances that executed the
+``packed_store_active()`` call, storing the results into the given array
+starting at the given offset.  They return the total number of values
+stored.
 
 ::
 
-    uniform unsigned int packed_load_active(uniform int a[],
-                                            uniform int offset,
-                                            reference int val)
-    uniform unsigned int packed_store_active(uniform int a[],
-                                             uniform int offset,
-                                             int val)
+    uniform int packed_load_active(uniform int a[],
+                                   uniform int offset,
+                                   reference int val)
+    uniform int packed_load_active(uniform unsigned int a[],
+                                   uniform int offset,
+                                   reference unsigned int val)
+    uniform int packed_store_active(uniform int a[],
+                                    uniform int offset,
+                                    int val)
+    uniform int packed_store_active(uniform unsigned int a[],
+                                    uniform int offset,
+                                    unsigned int val)
 
 
 As an example of how these functions can be used, the following code shows
@@ -1845,24 +1852,31 @@ and this conversion step are necessary because ``ispc`` doesn't have native
 
 ::
 
-    unsigned int load_from_int8(uniform int a[],
+    int load_from_int8(uniform int a[], uniform int offset)
+    unsigned int load_from_int8(uniform unsigned int a[],
                                 uniform int offset)
     void store_to_int8(uniform int a[], uniform int offset, 
+                       int val)
+    void store_to_int8(uniform unsigned int a[], uniform int offset, 
                        unsigned int val)
     unsigned int load_from_int16(uniform int a[],
                                  uniform int offset)
+    unsigned unsigned int load_from_int16(uniform unsigned int a[],
+                                          uniform int offset)
     void store_to_int16(uniform int a[], uniform int offset, 
+                        int val)
+    void store_to_int16(uniform unsigned int a[], uniform int offset, 
                         unsigned int val)
 
 There are three things to note in these functions.  First, note that these
-functions take ``unsigned int`` arrays as parameters; you need
-to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side to
-``unsigned int`` when passing them to ``ispc`` code.  Second, although the
-arrays are passed as ``unsigned int``, in the array indexing calculation,
-with the ``offset`` parameter, they are treated as if they were ``int8`` or
-``int16`` types.  (i.e. the offset treated as being in terms of number of 8
-or 16-bit elements.) Third, note that programIndex is implicitly added
-to offset.
+functions take either ``int`` or ``unsigned int`` arrays as parameters; you
+need to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side
+to ``int`` or ``unsigned int`` when passing them to ``ispc`` code.  Second,
+although the arrays are passed as 32-bit integers, in the array indexing
+calculation, with the ``offset`` parameter, they are treated as if they
+were ``int8`` or ``int16`` types (i.e. the offset treated as being in terms
+of number of 8 or 16-bit elements).  Third, note that the value of
+``programIndex`` is implicitly added to offset.
 
 The ``intbits()`` and ``floatbits()`` functions can be used to implement
 low-level floating-point bit twiddling.  For example, ``intbits()`` returns

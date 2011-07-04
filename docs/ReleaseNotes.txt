@@ -1,5 +1,11 @@
 === v1.0.3 === (not yet released)
 
+There are now both 'signed' and 'unsigned' variants of the standard library
+functions like packed_load_active() that that references to arrays of
+signed int32s and unsigned int32s respectively.  (The
+{load_from,store_to}_{int8,int16}() functions have similarly been augmented
+to have both 'signed' and 'unsigned' variants.)
+
 In initializer expressions with variable declarations, it is no longer
 legal to initialize arrays and structs with single scalar values that then
 initialize their members; they now must be initialized with initializer

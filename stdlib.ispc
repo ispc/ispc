@@ -181,7 +181,7 @@ static inline uniform bool all(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
     bool match = ((v & __mask) == __mask);
-    return __movmsk(match) == (1 << programCount) - 1;
+    return __movmsk((int)match) == (1 << programCount) - 1;
 }
 
 static inline uniform int popcnt(uniform int v) {
@@ -273,35 +273,71 @@ static inline uniform unsigned int reduce_max(unsigned int v) {
 ///////////////////////////////////////////////////////////////////////////
 // packed load, store
 
-static inline uniform unsigned int packed_load_active(uniform int a[], uniform int start,
-                                               reference int vals) {
+static inline uniform int 
+packed_load_active(uniform unsigned int a[], uniform int start,
+                   reference unsigned int vals) {
     return __packed_load_active(a, start, vals, __mask);
 }
 
-static inline uniform unsigned int packed_store_active(uniform int a[], uniform int start,
-                                                int vals) {
+static inline uniform int
+packed_store_active(uniform unsigned int a[], uniform int start,
+                    unsigned int vals) {
+    return __packed_store_active(a, start, vals, __mask);
+}
+
+static inline uniform int packed_load_active(uniform int a[], uniform int start,
+                                             reference int vals) {
+    return __packed_load_active(a, start, vals, __mask);
+}
+
+static inline uniform int packed_store_active(uniform int a[], uniform int start,
+                                              int vals) {
     return __packed_store_active(a, start, vals, __mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // Load/store from/to 8/16-bit types
 
-static inline unsigned int load_from_int8(uniform int a[], uniform int offset) {
-    return __load_uint8(a, offset);
+static inline int load_from_int8(uniform int a[], uniform int offset) {
+    return __load_int8(a, offset, __mask);
+}
+
+static inline unsigned int load_from_uint8(uniform unsigned int a[], 
+                                           uniform int offset) {
+    return __load_uint8(a, offset, __mask);
 }
 
 static inline void store_to_int8(uniform int a[], uniform int offset, 
-                          unsigned int val) {
-    __store_uint8(a, offset, val, __mask);
+                                 unsigned int val) {
+    __store_int8(a, offset, val, __mask);
 }
 
-static inline unsigned int load_from_int16(uniform int a[], uniform int offset) {
-    return __load_uint16(a, offset);
+static inline void store_to_uint8(uniform unsigned int a[], uniform int offset, 
+                                  unsigned int val) {
+    // Can use __store_int8 for unsigned stuff, since it truncates bits in
+    // either case.
+    __store_int8(a, offset, val, __mask);
+}
+
+static inline int load_from_int16(uniform int a[], uniform int offset) {
+    return __load_int16(a, offset, __mask);
+}
+
+static inline unsigned int load_from_int16(uniform unsigned int a[], 
+                                           uniform int offset) {
+    return __load_uint16(a, offset, __mask);
 }
 
 static inline void store_to_int16(uniform int a[], uniform int offset, 
-                           unsigned int val) {
-    __store_uint16(a, offset, val, __mask);
+                                  int val) {
+    __store_int16(a, offset, val, __mask);
+}
+
+static inline void store_to_uint16(uniform unsigned int a[], uniform int offset, 
+                                   unsigned int val) {
+    // Can use __store_int16 for unsigned stuff, since it truncates bits in
+    // either case.
+    __store_int16(a, offset, val, __mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
