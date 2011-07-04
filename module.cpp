@@ -154,7 +154,7 @@ Module::CompileFile() {
     if (runPreprocessor) {
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
-        execPreprocessor(filename, &os);
+        execPreprocessor((filename != NULL) ? filename : "-", &os);
         YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
         yyparse();
         yy_delete_buffer(strbuf);
