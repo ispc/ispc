@@ -121,7 +121,7 @@ objs/stdlib-c.o: objs/stdlib-c.cpp
 
 objs/stdlib_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $<
-	@$(CPP) -DISPC=1 -DPI=3.1415926536 $< | ./stdlib2cpp.py > $@
+	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | ./stdlib2cpp.py > $@
 
 objs/stdlib_ispc.o: objs/stdlib_ispc.cpp
 	@echo Compiling $<

@@ -76,6 +76,7 @@ Contents:
   + `Output Functions`_
   + `Cross-Program Instance Operations`_
   + `Packed Load and Store Operations`_
+  + `Atomic Operations and Memory Fences`_
   + `Low-Level Bits`_
 
 * `Interoperability with the Application`_
@@ -1809,6 +1810,69 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     uniform int extract(int x, uniform int i)
     float insert(float x, uniform int i, uniform float v)
     int insert(int x, uniform int i, uniform int v)
+
+
+Atomic Operations and Memory Fences
+-----------------------------------
+
+The usual range of atomic memory operations are provided in ``ispc``.  As an
+example, consider the 32-bit integer atomic add routine:
+
+::
+
+  int32 atomic_add_global(reference uniform int32 val, int32 delta)
+
+The semantics are the expected ones for an atomic add function: the value
+"val" has the value "delta" added to it atomically, and the old value of
+"val" is returned from the function.  (Thus, if multiple processors 
+simultaneously issue atomic adds to the same memory location, the adds will
+be serialized by the hardware so that the correct result is computed in the
+end.)
+
+One thing to note is that that the value being added to here is a
+``uniform`` integer, while the increment amount and the return value are
+``varying``.  In other words, the semantics are that each running program
+instance individually issues the atomic operation with its own ``delta``
+value and gets the previous value of ``val`` back in return.
+
+Here are the declarations of the ``int32`` variants of these functions.
+There are also ``int64`` equivalents as well as variants that take
+``unsigned`` ``int32`` and ``int64`` values.
+
+::
+
+  int32 atomic_add_global(reference uniform int32 val, int32 value)
+  int32 atomic_subtract_global(reference uniform int32 val, int32 value)
+  int32 atomic_min_global(reference uniform int32 val, int32 value)
+  int32 atomic_max_global(reference uniform int32 val, int32 value)
+  int32 atomic_and_global(reference uniform int32 val, int32 value)
+  int32 atomic_or_global(reference uniform int32 val, int32 value)
+  int32 atomic_xor_global(reference uniform int32 val, int32 value)
+  int32 atomic_swap_global(reference uniform int32 val, int32 newval)
+
+There is also an atomic "compare and exchange" function; it atomically
+compares the value in "val" to "compare"--if they match, it assigns
+"newval" to "val".  In either case, the old value of "val" is returned.
+(As with the other atomic operations, there are also ``unsigned`` and
+64-bit variants of this function.)
+
+::
+
+  int32 atomic_compare_exchange_global(reference uniform int32 val,
+                                       int32 compare, int32 newval)
+
+``ispc`` also has a standard library routine that inserts a memory barrier
+into the code; it ensures that all memory reads and writes prior to be
+barrier complete before any reads or writes after the barrier are issued.
+See the `Linux kernel documentation on memory barriers`_ for an excellent
+writeup on the need for that the use of memory barriers in multi-threaded
+code.
+
+.. _Linux kernel documentation on memory barriers: http://www.kernel.org/doc/Documentation/memory-barriers.txt
+
+::
+
+    void memory_barrier();
 
 
 Low-Level Bits

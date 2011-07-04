@@ -405,6 +405,95 @@ forloop(i, 1, eval($1-1), `
 }
 ')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic
+;; Defines the implementation of a function that handles the mapping from
+;; an ispc atomic function to the underlying LLVM intrinsics.  Specifically,
+;; the function handles loooping over the active lanes, calling the underlying
+;; scalar atomic intrinsic for each one, and assembling the vector result.
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the LLVM atomic (e.g. i32)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+
+define(`global_atomic', `
+
+declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
+
+define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+                                                 <$1 x i32> %mask) nounwind alwaysinline {
+  %rptr = alloca <$1 x $3>
+  %rptr32 = bitcast <$1 x $3> * %rptr to $3 *
+
+  per_lane($1, <$1 x i32> %mask, `
+   %v_LANE_ID = extractelement <$1 x $3> %val, i32 LANE
+   %r_LANE_ID = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %v_LANE_ID)
+   %rp_LANE_ID = getelementptr $3 * %rptr32, i32 LANE
+   store $3 %r_LANE_ID, $3 * %rp_LANE_ID')
+
+  %r = load <$1 x $3> * %rptr
+  ret <$1 x $3> %r
+}
+')
+
+;; Macro to declare the function that implements the swap atomic.  
+;; Takes three parameters:
+;; $1: vector width of the target
+;; $2: llvm type of the vector elements (e.g. i32)
+;; $3: ispc type of the elements (e.g. int32)
+
+define(`global_swap', `
+
+declare $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
+
+define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
+                                          <$1 x i32> %mask) nounwind alwaysinline {
+  %rptr = alloca <$1 x $2>
+  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
+
+  per_lane($1, <$1 x i32> %mask, `
+   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
+   %r_LANE_ID = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val_LANE_ID)
+   %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
+   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
+
+  %r = load <$1 x $2> * %rptr
+  ret <$1 x $2> %r
+}
+')
+
+
+;; Similarly, macro to declare the function that implements the compare/exchange
+;; atomic.  Takes three parameters:
+;; $1: vector width of the target
+;; $2: llvm type of the vector elements (e.g. i32)
+;; $3: ispc type of the elements (e.g. int32)
+
+define(`global_atomic_exchange', `
+
+declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
+
+define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+                               <$1 x $2> %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %rptr = alloca <$1 x $2>
+  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
+
+  per_lane($1, <$1 x i32> %mask, `
+   %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
+   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
+   %r_LANE_ID = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp_LANE_ID,
+                                                         $2 %val_LANE_ID)
+   %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
+   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
+
+  %r = load <$1 x $2> * %rptr
+  ret <$1 x $2> %r
+}
+')
+
 
 define(`stdlib_core', `
 
@@ -543,6 +632,48 @@ define internal float @__stdlib_pow(float, float) nounwind readnone alwaysinline
   %r = call float @powf(float %0, float %1)
   ret float %r
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; atomics and memory barriers
+
+declare void @llvm.memory.barrier(i1 %loadload, i1 %loadstore, i1 %storeload,
+                                  i1 %storestore, i1 %device)
+
+define internal void @__memory_barrier() nounwind readnone alwaysinline {
+  ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
+  ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
+  ;; in the case where the first 4 args are true but it is false.
+  ;;  So we just always set that to true...
+  call void @llvm.memory.barrier(i1 true, i1 true, i1 true, i1 true, i1 true)
+  ret void
+}
+
+global_atomic($1, add, i32, int32)
+global_atomic($1, sub, i32, int32)
+global_atomic($1, and, i32, int32)
+global_atomic($1, or, i32, int32)
+global_atomic($1, xor, i32, int32)
+global_atomic($1, min, i32, int32)
+global_atomic($1, max, i32, int32)
+global_atomic($1, umin, i32, uint32)
+global_atomic($1, umax, i32, uint32)
+
+global_atomic($1, add, i64, int64)
+global_atomic($1, sub, i64, int64)
+global_atomic($1, and, i64, int64)
+global_atomic($1, or, i64, int64)
+global_atomic($1, xor, i64, int64)
+global_atomic($1, min, i64, int64)
+global_atomic($1, max, i64, int64)
+global_atomic($1, umin, i64, uint64)
+global_atomic($1, umax, i64, uint64)
+
+global_swap($1, i32, int32)
+global_swap($1, i64, int64)
+
+global_atomic_exchange($1, i32, int32)
+global_atomic_exchange($1, i64, int64)
+
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
