@@ -144,18 +144,18 @@
     <CustomBuild Include="rt.ispc">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86
+ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h
+ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).obj</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).obj</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86
+ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h
+ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).obj</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).obj</Outputs>
