@@ -104,27 +104,8 @@ Contents:
 Recent Changes to ISPC
 ======================
 
-This section summarizes recent changes and bugfixes.
-
-* 17 May: Fixed a number of bugs related to error handling in Windows*.  In
-  particular, if you use the ``/E`` command line flag to ``cl.exe`` (rather
-  than ``/EP``) when using it as a preprocessor, then ``ispc`` will
-  correctly report the source file position with warnings and errors.
-
-* 15 May: Improved error messages and warnings in many cases.  For example,
-  the column number is reported along with the line number and
-  the source line with the error is printed as part of the message.
-
-* 8 May: ``ispc``'s typechecker has been substantially improved in how it
-  handles ``const``-qualified types.  Some programs that previously
-  compiled may now fail with errors related to ``const``.  For example,
-  ``ispc`` issues an error message if you try to assign a member of a const
-  structure.
-
-* 2 May: "uniform" short-vector types are now stored across the lanes of
-  the SIMD registers.  This enables you to also write classic 'explicit
-  vector' computation in ``ispc`` as well.  This change does change how
-  these types are laid out in memory; see `Data Layout`_ for more details.)
+See the file ``ReleaseNotes.txt`` in the ``ispc`` distribution for a list
+of recent changes to the compiler.
 
 Getting Started with ISPC
 =========================
@@ -282,19 +263,9 @@ with application code, enter the following command
 
    ispc foo.ispc -o foo.o
 
-On Linux\* and Mac OS\*, ``ispc`` automatically runs the C preprocessor on
-your input program; under Windows\*, this must be done manually.  With
-Microsoft Visual C++ 2010\*, the following custom build step for
-``ispc`` source files takes care of this job:
-
-::
-
-  cl /E /TP %(Filename).ispc | ispc - -o %(Filename).obj -h %(Filename).h
-
-The ``cl`` call runs the C preprocessor on the ``ispc`` file; the result is
-piped to ``ispc`` to generate an object file and a header.  As an example,
-see the file ``simple.vcxproj`` in the ``examples/simple`` directory of the
-``ispc`` distribution.
+``ispc`` automatically runs the C preprocessor on your input program before
+compiling it.  (This functionality can be disabled with the ``--nocpp``
+command-line argument.)
 
 Command-line Options
 --------------------
