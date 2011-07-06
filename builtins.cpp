@@ -516,11 +516,12 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         FATAL("logic error");
     }
 
-    // Add a declaration of void *ISPCMalloc(int64_t).  The user is
-    // responsible for linking in a definition of this if it's needed by
-    // the compiled program.
+    // Add a declaration of void *ISPCMalloc(int64_t size, int alignment).
+    // The user is responsible for linking in a definition of this if it's
+    // needed by the compiled program.
     { std::vector<const llvm::Type *> argTypes;
         argTypes.push_back(llvm::Type::getInt64Ty(*ctx));
+        argTypes.push_back(llvm::Type::getInt32Ty(*ctx));
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
                                                             argTypes, false);
         llvm::Function *func = 

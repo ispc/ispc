@@ -757,7 +757,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 
 llvm::Value *
-FunctionEmitContext::EmitMalloc(const llvm::Type *ty) {
+FunctionEmitContext::EmitMalloc(const llvm::Type *ty, int align) {
     // Emit code to compute the size of the given type using a GEP with a
     // NULL base pointer, indexing one element of the given type, and
     // casting the resulting 'pointer' to an int giving its size.
@@ -767,12 +767,13 @@ FunctionEmitContext::EmitMalloc(const llvm::Type *ty) {
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
                                                            "offset_ptr", bblock);
     AddDebugPos(poffset);
-    llvm::Value *sizeOf =  PtrToIntInst(poffset, LLVMTypes::Int64Type, "offset_int");
+    llvm::Value *sizeOf = PtrToIntInst(poffset, LLVMTypes::Int64Type, "offset_int");
 
     // And given the size, call the malloc function
     llvm::Function *fmalloc = m->module->getFunction("ISPCMalloc");
     assert(fmalloc != NULL);
-    llvm::Value *mem = CallInst(fmalloc, sizeOf, "raw_argmem");
+    llvm::Value *mem = CallInst(fmalloc, sizeOf, LLVMInt32(align), 
+                                "raw_argmem");
     // Cast the void * back to the result pointer type
     return BitCastInst(mem, ptrType, "mem_bitcast");
 }
@@ -1921,12 +1922,19 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
         static_cast<const llvm::StructType *>(pt->getElementType());
     assert(argStructType->getNumElements() == argVals.size() + 1);
 
-    // Use alloca for space for the task args.  KEY DETAIL: pass false
-    // to the call of FunctionEmitContext::AllocaInst so that the alloca
-    // doesn't happen just once at the top of the function, but happens
-    // each time the enclosing basic block executes.
     int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
+#ifdef ISPC_IS_WINDOWS
+    // Use malloc() to allocate storage on Windows, since the stack is
+    // generally not big enough there to do enough allocations for lots of
+    // tasks and then things crash horribly...
+    llvm::Value *argmem = EmitMalloc(argStructType, align);
+#else
+    // Use alloca for space for the task args on OSX And Linux.  KEY
+    // DETAIL: pass false to the call of FunctionEmitContext::AllocaInst so
+    // that the alloca doesn't happen just once at the top of the function,
+    // but happens each time the enclosing basic block executes.
     llvm::Value *argmem = AllocaInst(argStructType, "argmem", align, false);
+#endif // ISPC_IS_WINDOWS
     llvm::Value *voidmem = BitCastInst(argmem, LLVMTypes::VoidPointerType);
 
     // Copy the values of the parameters into the appropriate place in

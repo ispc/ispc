@@ -640,6 +640,14 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         assert(threadCountSym);
         threadCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
         ctx->StoreInst(threadCount, threadCountSym->storagePtr);
+
+#ifdef ISPC_IS_WINDOWS
+        // On Windows, we dynamically-allocate space for the task arguments
+        // (see FunctionEmitContext::LaunchInst().)  Here is where we emit
+        // the code to free that memory, now that we've copied the
+        // parameter values out of the structure.
+        ctx->EmitFree(structParamPtr);
+#endif // ISPC_IS_WINDOWS
     }
     else {
         // Regular, non-task function

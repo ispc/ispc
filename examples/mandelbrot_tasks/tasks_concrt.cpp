@@ -37,6 +37,7 @@
 #include <windows.h>
 #include <concrt.h>
 using namespace Concurrency;
+#include <stdint.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,8 @@ using namespace Concurrency;
 extern "C" { 
     void ISPCLaunch(void *f, void *data);
     void ISPCSync();
+    void *ISPCMalloc(int64_t size, int32_t alignment);
+    void ISPCFree(void *ptr);
 }
 
 typedef void (*TaskFuncType)(void *, int, int);
@@ -125,4 +128,14 @@ void ISPCSync() {
         events[i]->reset();
 
     taskOffset = 0;
+}
+
+
+void *ISPCMalloc(int64_t size, int32_t alignment) {
+    return _aligned_malloc(size, alignment);
+}
+
+
+void ISPCFree(void *ptr) {
+    _aligned_free(ptr);
 }
