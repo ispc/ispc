@@ -110,6 +110,7 @@ static const char *lBuiltinTokens[] = {
     Expr *expr;
     ExprList *exprList;
     const Type *type;
+    const AtomicType *atomicType;
     int typeQualifier;
     StorageClass storageClass;
     Stmt *stmt;
@@ -176,6 +177,8 @@ static const char *lBuiltinTokens[] = {
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
 %type <type> enum_specifier type_specifier type_name
+%type <type> short_vec_specifier
+%type <atomicType> atomic_var_type_specifier
 
 %type <typeQualifier> type_qualifier
 %type <storageClass> storage_class_specifier
@@ -534,13 +537,7 @@ storage_class_specifier
     ;
 
 type_specifier
-    : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
-/*    | TOKEN_CHAR { UNIMPLEMENTED; } */
-    | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
-    | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
-    | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }
-    | TOKEN_INT64 { $$ = AtomicType::VaryingInt64; }
+    : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
       { const Type *t = m->symbolTable->LookupType(yytext); 
         assert(t != NULL);
@@ -552,6 +549,25 @@ type_specifier
 /*    | TOKEN_TYPE_NAME 
       { UNIMPLEMENTED; }
 */
+    ;
+
+atomic_var_type_specifier
+    : TOKEN_VOID { $$ = AtomicType::Void; }
+    | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
+/*  | TOKEN_CHAR { UNIMPLEMENTED; } */
+    | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
+    | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
+    | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }
+    | TOKEN_INT64 { $$ = AtomicType::VaryingInt64; }
+    ;
+
+short_vec_specifier
+    : atomic_var_type_specifier '<' int_constant '>'
+      {
+        Type* vt = 
+          new VectorType($1, $3);
+        $$ = vt;
+      }
     ;
 
 struct_or_union_name
@@ -630,6 +646,7 @@ struct_declaration
 specifier_qualifier_list
     : type_specifier specifier_qualifier_list
     | type_specifier
+    | short_vec_specifier
     | type_qualifier specifier_qualifier_list 
     {
         if ($1 == TYPEQUAL_UNIFORM)
