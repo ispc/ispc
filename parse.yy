@@ -103,6 +103,12 @@ static const char *lBuiltinTokens[] = {
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
+
+static const char *lParamListTokens[] = {
+    "bool", "char", "const", "double", "enum", "false", "float", "int",
+    "int32", "int64", "reference", "struct", "true", "uniform", "unsigned",
+    "varying", "void", NULL 
+};
     
 %}
 
@@ -798,14 +804,32 @@ parameter_list
     : parameter_declaration
     {
         std::vector<Declaration *> *dl = new std::vector<Declaration *>;
-        dl->push_back($1);
+        if ($1 != NULL)
+            dl->push_back($1);
         $$ = dl;
     }
     | parameter_list ',' parameter_declaration
     {
         std::vector<Declaration *> *dl = (std::vector<Declaration *> *)$1;
-        dl->push_back($3);
+        if (dl == NULL)
+            // dl may be NULL due to an earlier parse error...
+            dl = new std::vector<Declaration *>;
+        if ($3 != NULL)
+            dl->push_back($3);
         $$ = dl;
+    }
+    | error
+    {
+        std::vector<std::string> builtinTokens;
+        const char **token = lParamListTokens;
+        while (*token) {
+            builtinTokens.push_back(*token);
+            ++token;
+        }
+        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+        std::string alts = lGetAlternates(alternates);
+        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        $$ = NULL;
     }
     ;
 
@@ -888,6 +912,18 @@ statement
     | jump_statement
     | declaration_statement
     | print_statement
+    | error
+    {
+        std::vector<std::string> builtinTokens;
+        const char **token = lBuiltinTokens;
+        while (*token) {
+            builtinTokens.push_back(*token);
+            ++token;
+        }
+        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+        std::string alts = lGetAlternates(alternates);
+        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+    }
     ;
 
 labeled_statement
