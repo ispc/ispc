@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -187,7 +187,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMArchive.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMipa.lib;LLVMipo.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMArchive.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMipa.lib;LLVMipo.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -207,7 +207,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMArchive.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMipa.lib;LLVMipo.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMArchive.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMipa.lib;LLVMipo.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

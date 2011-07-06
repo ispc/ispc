@@ -37,7 +37,9 @@
 
 #include "util.h"
 #include "module.h"
-#ifndef ISPC_IS_WINDOWS
+#ifdef ISPC_IS_WINDOWS
+#include <shlwapi.h>
+#else
 #include <alloca.h>
 #endif
 #include <stdio.h>
@@ -368,6 +370,15 @@ void
 GetDirectoryAndFileName(const std::string &currentDirectory, 
                         const std::string &relativeName,
                         std::string *directory, std::string *filename) {
+#ifdef ISPC_IS_WINDOWS
+    char path[MAX_PATH];
+    const char *combPath = PathCombine(path, currentDirectory.c_str(),
+                                       relativeName.c_str());
+    assert(combPath != NULL);
+    const char *filenamePtr = PathFindFileName(combPath);
+    *filename = filenamePtr;
+    *directory = std::string(combPath, filenamePtr - combPath);
+#else
     // We need a fully qualified path.  First, see if the current file name
     // is fully qualified itself--in that case, the current working
     // directory isn't needed.  
@@ -390,4 +401,5 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     assert(basenameStart != '\0');
     *filename = basenameStart;
     *directory = std::string(fp, basenameStart - fp);
+#endif // ISPC_IS_WINDOWS
 }
