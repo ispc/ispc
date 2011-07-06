@@ -1895,6 +1895,21 @@ lPrintFunctionOverloads(const std::vector<Symbol *> &matches) {
 }
 
 
+static void
+lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
+    fprintf(stderr, "Passed types:\n\t%s(", funName);
+    for (unsigned int i = 0; i < argExprs.size(); ++i) {
+        const Type *t = argExprs[i]->GetType();
+        if (t)
+            fprintf(stderr, "%s%s", t->GetString().c_str(),
+                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+        else
+            fprintf(stderr, "(unknown type)%s", 
+                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+    }
+}
+
+             
 /** Helper function used for function overload resolution: returns true if
     the call argument's type exactly matches the function argument type
     (modulo a conversion to a const type if needed).
@@ -2064,6 +2079,7 @@ FunctionCallExpr::tryResolve(bool (*matchFunc)(Expr *, const Type *)) {
         Error(fse->pos, "Multiple overloaded instances of function \"%s\" matched.",
               funName);
         lPrintFunctionOverloads(matches);
+        lPrintPassedTypes(funName, args->exprs);
         // Stop trying to find more matches after failure
         return true;
     }
@@ -2112,16 +2128,7 @@ FunctionCallExpr::resolveFunctionOverloads() {
           funName);
     fprintf(stderr, "Candidates are:\n");
     lPrintFunctionOverloads(*fse->candidateFunctions);
-    fprintf(stderr, "Passed types:\n\t%s(", funName);
-    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-        const Type *t = args->exprs[i]->GetType();
-        if (t)
-            fprintf(stderr, "%s%s", t->GetString().c_str(),
-                    (i < args->exprs.size()-1) ? ", " : ")\n");
-        else
-            fprintf(stderr, "(unknown type)%s", 
-                    (i < args->exprs.size()-1) ? ", " : ")\n");
-    }
+    lPrintPassedTypes(funName, args->exprs);
 }
 
 
