@@ -178,6 +178,12 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         // so that we get symbols for things with no integer types!
         if (i == 0 || anyIntArgs == true) {
             FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+            // set NULL default arguments
+            std::vector<ConstExpr *> defaults;
+            for (int j = 0; j < ftype->getNumParams(); ++j)
+                defaults.push_back(NULL);
+            funcType->SetArgumentDefaults(defaults);
+
             Symbol *sym = new Symbol(name, noPos, funcType);
             sym->function = func;
             symbolTable->AddFunction(sym);
