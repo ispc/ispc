@@ -129,17 +129,16 @@ static const char *lParamListTokens[] = {
     StructDeclaration *structDeclaration;
     std::vector<StructDeclaration *> *structDeclarationList;
     int32_t int32Val;
-    uint32_t uint32Val;
     double floatVal;
     int64_t int64Val;
-    uint64_t uint64Val;
     std::string *stringVal;
     const char *constCharPtr;
 }
 
 
-%token TOKEN_IDENTIFIER TOKEN_INT_CONSTANT TOKEN_UINT_CONSTANT TOKEN_FLOAT_CONSTANT 
-%token TOKEN_STRING_LITERAL TOKEN_TYPE_NAME
+%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT TOKEN_INT64_CONSTANT
+%token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT
+%token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
@@ -220,12 +219,17 @@ primary_expression
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
     }
-    | TOKEN_INT_CONSTANT {
-        /* FIXME: should support 64 bit constants (and doubles...) */
+    | TOKEN_INT32_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformConstInt32, yylval.int32Val, @1); 
     }
-    | TOKEN_UINT_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt32, yylval.uint32Val, @1); 
+    | TOKEN_UINT32_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformConstUInt32, (uint32_t)yylval.int32Val, @1); 
+    }
+    | TOKEN_INT64_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformConstInt64, yylval.int64Val, @1); 
+    }
+    | TOKEN_UINT64_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformConstUInt64, (uint64_t)yylval.int64Val, @1); 
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformConstFloat, (float)yylval.floatVal, @1); 
@@ -740,7 +744,7 @@ declarator
     ;
 
 int_constant
-    : TOKEN_INT_CONSTANT { $$ = yylval.int32Val; }
+    : TOKEN_INT32_CONSTANT { $$ = yylval.int32Val; }
     ;
 
 direct_declarator
