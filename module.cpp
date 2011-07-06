@@ -70,6 +70,7 @@
 #include <llvm/Instructions.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Support/FormattedStream.h>
+#include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetRegistry.h>
 #include <llvm/Target/TargetSelect.h>
@@ -79,6 +80,9 @@
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
+#include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/Utils.h>
+#include <clang/Basic/TargetInfo.h>
 #ifndef LLVM_2_8
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
@@ -133,8 +137,9 @@ extern FILE *yyin;
 extern int yyparse();
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern void yy_switch_to_buffer(YY_BUFFER_STATE);
+extern YY_BUFFER_STATE yy_scan_string(const char *);
 extern YY_BUFFER_STATE yy_create_buffer(FILE *, int);
-
+extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
@@ -146,63 +151,17 @@ Module::CompileFile() {
 
     bool runPreprocessor = g->runCPP;
 
-    // We currently require that the user run the preprocessor by hand on
-    // windows and pipe the result to ispc.
-    // FIXME: It'd be nice to run cl.exe for them to do this, if it's available
-    // in the PATH...
-#ifdef ISPC_IS_WINDOWS
-    runPreprocessor = false;
-#endif // ISPC_IS_WINDOWS
-
-    // The FILE handle that we'll point the parser at.  This may end up
-    // being stdin, an opened file on disk, or the piped output from the
-    // preprocessor.
-    FILE *f;
-
     if (runPreprocessor) {
-        // Before we run the preprocessor, make sure that file exists and
-        // we can read it since otherwise we get a pretty obscure/unhelpful
-        // error message from cpp
-        if (filename) {
-            f = fopen(filename, "r");
-            if (f == NULL) {
-                perror(filename);
-                return 1;
-            }
-            fclose(f);
-        }
-
-        // Go ahead and construct a command string to run the preprocessor.
-        // First, concatentate all of the -D statements from the original
-        // ispc command line so that we can pass them along to cpp.
-        std::string cppDefs;
-        for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
-            cppDefs += g->cppArgs[i];
-            cppDefs += ' ';
-        }
-
-#ifdef ISPC_IS_WINDOWS
-        // For now, this code should never be reached
-        FATAL("Need to implement code to run the preprocessor for windows"); 
-#else // ISPC_IS_WINDOWS
-        char *cmd = NULL;
-        if (asprintf(&cmd, "/usr/bin/cpp -DISPC=1 -DPI=3.1415926536 %s %s", 
-                     cppDefs.c_str(), filename ? filename : "-") == -1) {
-            fprintf(stderr, "Unable to allocate memory in asprintf()?!\n");
-            exit(1);
-        }
-
-        f = popen(cmd, "r");
-        free(cmd);
-
-        if (f == NULL) {
-            perror(filename ? filename : "<stdin>");
-            return 1;
-        }
-#endif // ISPC_IS_WINDOWS
+        std::string buffer;
+        llvm::raw_string_ostream os(buffer);
+        execPreprocessor((filename != NULL) ? filename : "-", &os);
+        YY_BUFFER_STATE strbuf = yy_scan_string(os.str().c_str());
+        yyparse();
+        yy_delete_buffer(strbuf);
     }
     else {
         // No preprocessor, just open up the file if it's not stdin..
+        FILE* f = NULL;
         if (filename == NULL) 
             f = stdin;
         else {
@@ -212,24 +171,11 @@ Module::CompileFile() {
                 return 1;
             }
         }
-    }
-
-    // Here is where the magic happens: parse the file, build the AST, etc.
-    // This in turn will lead to calls back to Module::AddFunction(),
-    // etc...
-    yyin = f;
-    yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
-    yyparse();
-
-    if (runPreprocessor) {
-#ifdef ISPC_IS_WINDOWS
-        FATAL("need to implement this for windows as well");
-#else
-        pclose(f);
-#endif // ISPC_IS_WINDOWS
-    }
-    else
+        yyin = f;
+        yy_switch_to_buffer(yy_create_buffer(yyin, 4096));
+        yyparse();
         fclose(f);
+    }
 
     if (errorCount == 0)
         Optimize(module, g->opt.level);
@@ -1430,3 +1376,44 @@ Module::writeHeader(const char *fn) {
     fclose(f);
     return true;
 }
+
+void
+Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostream) const
+{
+    clang::CompilerInstance inst;
+    std::string error;
+
+    inst.createFileManager();
+    inst.createDiagnostics(0, NULL);
+    clang::TargetOptions& options = inst.getTargetOpts();
+
+    llvm::Triple triple(module->getTargetTriple());
+    if (triple.getTriple().empty())
+        triple.setTriple(llvm::sys::getHostTriple());
+    
+    options.Triple = triple.getTriple();
+
+    clang::TargetInfo* target 
+        = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
+
+    inst.setTarget(target);
+    inst.createSourceManager(inst.getFileManager());
+    inst.InitializeSourceManager(infilename);
+
+    clang::PreprocessorOptions& opts = inst.getPreprocessorOpts();
+
+    //Add defs for ISPC and PI
+    opts.addMacroDef("ISPC");
+    opts.addMacroDef("PI=3.1415926535");
+
+    for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
+        //Sanity Check, should really begin with -D
+        if (g->cppArgs[i].substr(0,2) == "-D") {
+            opts.addMacroDef(g->cppArgs[i].substr(2));
+        }
+    }    
+    inst.createPreprocessor();
+    clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
+                                    ostream, inst.getPreprocessorOutputOpts());
+}
+

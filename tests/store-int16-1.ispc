@@ -6,11 +6,11 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         x[i] = 0xffffffff;
     unsigned int val = aFOO[programIndex];
     store_to_int16(x, 5, val);
-    int v = load_from_int16(x, 6);
+    unsigned int v = load_from_int16(x, 6);
     RET[programIndex] = v;
 }
 
 export void result(uniform float RET[]) {
     RET[programIndex] = 2+programIndex;
-    RET[programCount-1] = -1;
+    RET[programCount-1] = (unsigned int)0xffffffff;
 }

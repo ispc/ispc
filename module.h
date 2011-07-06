@@ -41,6 +41,11 @@
 
 #include "ispc.h"
 
+namespace llvm
+{
+class raw_string_ostream;
+}
+
 class Module {
 public:
     /** The name of the source file being compiled should be passed as the
@@ -108,6 +113,8 @@ private:
 
     bool writeHeader(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
+    void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
+
 };
 
 #endif // ISPC_MODULE_H

@@ -181,7 +181,7 @@ static inline uniform bool all(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
     bool match = ((v & __mask) == __mask);
-    return __movmsk(match) == (1 << programCount) - 1;
+    return __movmsk((int)match) == (1 << programCount) - 1;
 }
 
 static inline uniform int popcnt(uniform int v) {
@@ -273,35 +273,140 @@ static inline uniform unsigned int reduce_max(unsigned int v) {
 ///////////////////////////////////////////////////////////////////////////
 // packed load, store
 
-static inline uniform unsigned int packed_load_active(uniform int a[], uniform int start,
-                                               reference int vals) {
+static inline uniform int 
+packed_load_active(uniform unsigned int a[], uniform int start,
+                   reference unsigned int vals) {
     return __packed_load_active(a, start, vals, __mask);
 }
 
-static inline uniform unsigned int packed_store_active(uniform int a[], uniform int start,
-                                                int vals) {
+static inline uniform int
+packed_store_active(uniform unsigned int a[], uniform int start,
+                    unsigned int vals) {
+    return __packed_store_active(a, start, vals, __mask);
+}
+
+static inline uniform int packed_load_active(uniform int a[], uniform int start,
+                                             reference int vals) {
+    return __packed_load_active(a, start, vals, __mask);
+}
+
+static inline uniform int packed_store_active(uniform int a[], uniform int start,
+                                              int vals) {
     return __packed_store_active(a, start, vals, __mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// Atomics and memory barriers
+
+static inline void memory_barrier() {
+    __memory_barrier();
+}
+
+#define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB)                                 \
+static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
+    memory_barrier();                                                   \
+    TA ret = __atomic_##OPB##_##TB##_global(ref, value, __mask);  \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}
+
+DEFINE_ATOMIC_OP(int32,int32,add,add)
+DEFINE_ATOMIC_OP(int32,int32,subtract,sub)
+DEFINE_ATOMIC_OP(int32,int32,min,min)
+DEFINE_ATOMIC_OP(int32,int32,max,max)
+DEFINE_ATOMIC_OP(int32,int32,and,and)
+DEFINE_ATOMIC_OP(int32,int32,or,or)
+DEFINE_ATOMIC_OP(int32,int32,xor,xor)
+DEFINE_ATOMIC_OP(int32,int32,swap,swap)
+
+// For everything but atomic min and max, we can use the same
+// implementations for unsigned as for signed.
+DEFINE_ATOMIC_OP(unsigned int32,int32,add,add)
+DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub)
+DEFINE_ATOMIC_OP(unsigned int32,uint32,min,umin)
+DEFINE_ATOMIC_OP(unsigned int32,uint32,max,umax)
+DEFINE_ATOMIC_OP(unsigned int32,int32,and,and)
+DEFINE_ATOMIC_OP(unsigned int32,int32,or,or)
+DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor)
+DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap)
+
+DEFINE_ATOMIC_OP(int64,int64,add,add)
+DEFINE_ATOMIC_OP(int64,int64,subtract,sub)
+DEFINE_ATOMIC_OP(int64,int64,min,min)
+DEFINE_ATOMIC_OP(int64,int64,max,max)
+DEFINE_ATOMIC_OP(int64,int64,and,and)
+DEFINE_ATOMIC_OP(int64,int64,or,or)
+DEFINE_ATOMIC_OP(int64,int64,xor,xor)
+DEFINE_ATOMIC_OP(int64,int64,swap,swap)
+
+// For everything but atomic min and max, we can use the same
+// implementations for unsigned as for signed.
+DEFINE_ATOMIC_OP(unsigned int64,int64,add,add)
+DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub)
+DEFINE_ATOMIC_OP(unsigned int64,uint64,min,umin)
+DEFINE_ATOMIC_OP(unsigned int64,uint64,max,umax)
+DEFINE_ATOMIC_OP(unsigned int64,int64,and,and)
+DEFINE_ATOMIC_OP(unsigned int64,int64,or,or)
+DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor)
+DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap)
+
+#define ATOMIC_DECL_CMPXCHG(TA, TB)                                        \
+static inline TA atomic_compare_exchange_global(                           \
+         uniform reference TA ref, TA oldval, TA newval) {                 \
+    memory_barrier();                                                      \
+    TA ret = __atomic_compare_exchange_##TB##_global(ref, oldval, newval, __mask); \
+    memory_barrier();                                                      \
+    return ret;                                                            \
+}
+
+ATOMIC_DECL_CMPXCHG(int32, int32)
+ATOMIC_DECL_CMPXCHG(unsigned int32, int32)
+ATOMIC_DECL_CMPXCHG(int64, int64)
+ATOMIC_DECL_CMPXCHG(unsigned int64, int64)
+
+///////////////////////////////////////////////////////////////////////////
 // Load/store from/to 8/16-bit types
 
-static inline unsigned int load_from_int8(uniform int a[], uniform int offset) {
-    return __load_uint8(a, offset);
+static inline int load_from_int8(uniform int a[], uniform int offset) {
+    return __load_int8(a, offset, __mask);
+}
+
+static inline unsigned int load_from_uint8(uniform unsigned int a[], 
+                                           uniform int offset) {
+    return __load_uint8(a, offset, __mask);
 }
 
 static inline void store_to_int8(uniform int a[], uniform int offset, 
-                          unsigned int val) {
-    __store_uint8(a, offset, val, __mask);
+                                 unsigned int val) {
+    __store_int8(a, offset, val, __mask);
 }
 
-static inline unsigned int load_from_int16(uniform int a[], uniform int offset) {
-    return __load_uint16(a, offset);
+static inline void store_to_uint8(uniform unsigned int a[], uniform int offset, 
+                                  unsigned int val) {
+    // Can use __store_int8 for unsigned stuff, since it truncates bits in
+    // either case.
+    __store_int8(a, offset, val, __mask);
+}
+
+static inline int load_from_int16(uniform int a[], uniform int offset) {
+    return __load_int16(a, offset, __mask);
+}
+
+static inline unsigned int load_from_int16(uniform unsigned int a[], 
+                                           uniform int offset) {
+    return __load_uint16(a, offset, __mask);
 }
 
 static inline void store_to_int16(uniform int a[], uniform int offset, 
-                           unsigned int val) {
-    __store_uint16(a, offset, val, __mask);
+                                  int val) {
+    __store_int16(a, offset, val, __mask);
+}
+
+static inline void store_to_uint16(uniform unsigned int a[], uniform int offset, 
+                                   unsigned int val) {
+    // Can use __store_int16 for unsigned stuff, since it truncates bits in
+    // either case.
+    __store_int16(a, offset, val, __mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////

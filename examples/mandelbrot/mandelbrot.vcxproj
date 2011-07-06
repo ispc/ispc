@@ -147,15 +147,15 @@
   <ItemGroup>
     <CustomBuild Include="mandelbrot.ispc">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=sse4x2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=sse4x2
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --target=sse4x2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=sse4x2
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).obj;%(Filename)_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).obj;%(Filename)_ispc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=sse4x2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=sse4x2
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cl /E /TP %(Filename).ispc | ispc -O2 - -o %(Filename).obj -h %(Filename)_ispc.h --target=sse4x2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=sse4x2
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename).obj;%(Filename)_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename).obj;%(Filename)_ispc.h</Outputs>

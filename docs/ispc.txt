@@ -76,6 +76,7 @@ Contents:
   + `Output Functions`_
   + `Cross-Program Instance Operations`_
   + `Packed Load and Store Operations`_
+  + `Atomic Operations and Memory Fences`_
   + `Low-Level Bits`_
 
 * `Interoperability with the Application`_
@@ -104,27 +105,8 @@ Contents:
 Recent Changes to ISPC
 ======================
 
-This section summarizes recent changes and bugfixes.
-
-* 17 May: Fixed a number of bugs related to error handling in Windows*.  In
-  particular, if you use the ``/E`` command line flag to ``cl.exe`` (rather
-  than ``/EP``) when using it as a preprocessor, then ``ispc`` will
-  correctly report the source file position with warnings and errors.
-
-* 15 May: Improved error messages and warnings in many cases.  For example,
-  the column number is reported along with the line number and
-  the source line with the error is printed as part of the message.
-
-* 8 May: ``ispc``'s typechecker has been substantially improved in how it
-  handles ``const``-qualified types.  Some programs that previously
-  compiled may now fail with errors related to ``const``.  For example,
-  ``ispc`` issues an error message if you try to assign a member of a const
-  structure.
-
-* 2 May: "uniform" short-vector types are now stored across the lanes of
-  the SIMD registers.  This enables you to also write classic 'explicit
-  vector' computation in ``ispc`` as well.  This change does change how
-  these types are laid out in memory; see `Data Layout`_ for more details.)
+See the file ``ReleaseNotes.txt`` in the ``ispc`` distribution for a list
+of recent changes to the compiler.
 
 Getting Started with ISPC
 =========================
@@ -282,19 +264,9 @@ with application code, enter the following command
 
    ispc foo.ispc -o foo.o
 
-On Linux\* and Mac OS\*, ``ispc`` automatically runs the C preprocessor on
-your input program; under Windows\*, this must be done manually.  With
-Microsoft Visual C++ 2010\*, the following custom build step for
-``ispc`` source files takes care of this job:
-
-::
-
-  cl /E /TP %(Filename).ispc | ispc - -o %(Filename).obj -h %(Filename).h
-
-The ``cl`` call runs the C preprocessor on the ``ispc`` file; the result is
-piped to ``ispc`` to generate an object file and a header.  As an example,
-see the file ``simple.vcxproj`` in the ``examples/simple`` directory of the
-``ispc`` distribution.
+``ispc`` automatically runs the C preprocessor on your input program before
+compiling it.  (This functionality can be disabled with the ``--nocpp``
+command-line argument.)
 
 Command-line Options
 --------------------
@@ -1777,24 +1749,31 @@ Packed Load and Store Operations
 --------------------------------
 
 The standard library also offers routines for writing out and reading in
-values from linear memory locations for the active program instances.
-``packed_load_active()`` loads consecutive values from the given array,
-starting at ``a[offset]``, loading one value for each currently-executing
-program instance and storing it into that program instance's ``val``
-variable.  It returns the total number of values loaded.  Similarly,
-``packed_store_active()`` stores the ``val`` values for each program
-instances that executed the ``packed_store_active()`` call, storing the
-results into the given array starting at the given offset.  It returns the
-total number of values stored.
+values from linear memory locations for the active program instances.  The
+``packed_load_active()`` functions load consecutive values from the given
+array, starting at ``a[offset]``, loading one value for each
+currently-executing program instance and storing it into that program
+instance's ``val`` variable.  They return the total number of values
+loaded.  Similarly, the ``packed_store_active()`` functions store the
+``val`` values for each program instances that executed the
+``packed_store_active()`` call, storing the results into the given array
+starting at the given offset.  They return the total number of values
+stored.
 
 ::
 
-    uniform unsigned int packed_load_active(uniform int a[],
-                                            uniform int offset,
-                                            reference int val)
-    uniform unsigned int packed_store_active(uniform int a[],
-                                             uniform int offset,
-                                             int val)
+    uniform int packed_load_active(uniform int a[],
+                                   uniform int offset,
+                                   reference int val)
+    uniform int packed_load_active(uniform unsigned int a[],
+                                   uniform int offset,
+                                   reference unsigned int val)
+    uniform int packed_store_active(uniform int a[],
+                                    uniform int offset,
+                                    int val)
+    uniform int packed_store_active(uniform unsigned int a[],
+                                    uniform int offset,
+                                    unsigned int val)
 
 
 As an example of how these functions can be used, the following code shows
@@ -1833,6 +1812,69 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     int insert(int x, uniform int i, uniform int v)
 
 
+Atomic Operations and Memory Fences
+-----------------------------------
+
+The usual range of atomic memory operations are provided in ``ispc``.  As an
+example, consider the 32-bit integer atomic add routine:
+
+::
+
+  int32 atomic_add_global(reference uniform int32 val, int32 delta)
+
+The semantics are the expected ones for an atomic add function: the value
+"val" has the value "delta" added to it atomically, and the old value of
+"val" is returned from the function.  (Thus, if multiple processors 
+simultaneously issue atomic adds to the same memory location, the adds will
+be serialized by the hardware so that the correct result is computed in the
+end.)
+
+One thing to note is that that the value being added to here is a
+``uniform`` integer, while the increment amount and the return value are
+``varying``.  In other words, the semantics are that each running program
+instance individually issues the atomic operation with its own ``delta``
+value and gets the previous value of ``val`` back in return.
+
+Here are the declarations of the ``int32`` variants of these functions.
+There are also ``int64`` equivalents as well as variants that take
+``unsigned`` ``int32`` and ``int64`` values.
+
+::
+
+  int32 atomic_add_global(reference uniform int32 val, int32 value)
+  int32 atomic_subtract_global(reference uniform int32 val, int32 value)
+  int32 atomic_min_global(reference uniform int32 val, int32 value)
+  int32 atomic_max_global(reference uniform int32 val, int32 value)
+  int32 atomic_and_global(reference uniform int32 val, int32 value)
+  int32 atomic_or_global(reference uniform int32 val, int32 value)
+  int32 atomic_xor_global(reference uniform int32 val, int32 value)
+  int32 atomic_swap_global(reference uniform int32 val, int32 newval)
+
+There is also an atomic "compare and exchange" function; it atomically
+compares the value in "val" to "compare"--if they match, it assigns
+"newval" to "val".  In either case, the old value of "val" is returned.
+(As with the other atomic operations, there are also ``unsigned`` and
+64-bit variants of this function.)
+
+::
+
+  int32 atomic_compare_exchange_global(reference uniform int32 val,
+                                       int32 compare, int32 newval)
+
+``ispc`` also has a standard library routine that inserts a memory barrier
+into the code; it ensures that all memory reads and writes prior to be
+barrier complete before any reads or writes after the barrier are issued.
+See the `Linux kernel documentation on memory barriers`_ for an excellent
+writeup on the need for that the use of memory barriers in multi-threaded
+code.
+
+.. _Linux kernel documentation on memory barriers: http://www.kernel.org/doc/Documentation/memory-barriers.txt
+
+::
+
+    void memory_barrier();
+
+
 Low-Level Bits
 --------------
 
@@ -1845,24 +1887,31 @@ and this conversion step are necessary because ``ispc`` doesn't have native
 
 ::
 
-    unsigned int load_from_int8(uniform int a[],
+    int load_from_int8(uniform int a[], uniform int offset)
+    unsigned int load_from_int8(uniform unsigned int a[],
                                 uniform int offset)
     void store_to_int8(uniform int a[], uniform int offset, 
+                       int val)
+    void store_to_int8(uniform unsigned int a[], uniform int offset, 
                        unsigned int val)
     unsigned int load_from_int16(uniform int a[],
                                  uniform int offset)
+    unsigned unsigned int load_from_int16(uniform unsigned int a[],
+                                          uniform int offset)
     void store_to_int16(uniform int a[], uniform int offset, 
+                        int val)
+    void store_to_int16(uniform unsigned int a[], uniform int offset, 
                         unsigned int val)
 
 There are three things to note in these functions.  First, note that these
-functions take ``unsigned int`` arrays as parameters; you need
-to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side to
-``unsigned int`` when passing them to ``ispc`` code.  Second, although the
-arrays are passed as ``unsigned int``, in the array indexing calculation,
-with the ``offset`` parameter, they are treated as if they were ``int8`` or
-``int16`` types.  (i.e. the offset treated as being in terms of number of 8
-or 16-bit elements.) Third, note that programIndex is implicitly added
-to offset.
+functions take either ``int`` or ``unsigned int`` arrays as parameters; you
+need to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side
+to ``int`` or ``unsigned int`` when passing them to ``ispc`` code.  Second,
+although the arrays are passed as 32-bit integers, in the array indexing
+calculation, with the ``offset`` parameter, they are treated as if they
+were ``int8`` or ``int16`` types (i.e. the offset treated as being in terms
+of number of 8 or 16-bit elements).  Third, note that the value of
+``programIndex`` is implicitly added to offset.
 
 The ``intbits()`` and ``floatbits()`` functions can be used to implement
 low-level floating-point bit twiddling.  For example, ``intbits()`` returns

@@ -1,16 +1,34 @@
-=== v1.0.3 === (not yet released)
+=== v1.0.3 === (4 July 2011)
+
+ispc now has a bulit-in pre-processor (from LLVM's clang compiler).
+(Thanks to Pete Couperus for this patch!)  It is therefore no longer
+necessary to use cl.exe for preprocessing on Windows; the MSVC proejct
+files for the examples have been updated accordingly.
+
+There is another variant of the shuffle() function int the standard
+library: "<type> shuffle(<type> v0, <type> v1, int permute)", where the
+permutation vector indexes over the concatenation of the two vectors
+(e.g. the value 0 corresponds to the first element of v0, the value
+2*programCount-1 corresponds to the last element of v1, etc.)
+
+ispc now supports the usual range of atomic operations (add, subtract, min,
+max, and, or, and xor) as well as atomic swap and atomic compare and
+exchange.  There is also a facility for inserting memory fences.  See the
+"Atomic Operations and Memory Fences" section of the user's guide
+(http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences) for
+more information.
+ 
+There are now both 'signed' and 'unsigned' variants of the standard library
+functions like packed_load_active() that take references to arrays of
+signed int32s and unsigned int32s respectively.  (The
+{load_from,store_to}_{int8,int16}() functions have similarly been augmented
+to have both 'signed' and 'unsigned' variants.)
 
 In initializer expressions with variable declarations, it is no longer
 legal to initialize arrays and structs with single scalar values that then
 initialize their members; they now must be initialized with initializer
 lists in braces (or initialized after of the initializer with a loop over
 array elements, etc.)
-
-Added another shuffle() function to the standard library: 
-"<type> shuffle(<type> v0, <type> v1, int permute)", where the permutation
-vector indexes over the concatenation of the two vectors (e.g. the value
-0 corresponds to the first element of v0, the value 2*programCount-1
-corresponds to the last element of v1, etc.)
 
 === v1.0.2 === (1 July 2011)
 

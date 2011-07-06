@@ -164,15 +164,20 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk) {
             if (Type::Equal(toType->GetReferenceTarget(),
                             fromType->GetReferenceTarget()->GetAsConstType()))
                 return new TypeCastExpr(toType, this, pos);
-#if 0
-            // FIXME: why is this commented out??
+
+            const ArrayType *atFrom = dynamic_cast<const ArrayType *>(fromType->GetReferenceTarget());
+            const ArrayType *atTo = dynamic_cast<const ArrayType *>(toType->GetReferenceTarget());
+            if (atFrom != NULL && atTo != NULL && 
+                Type::Equal(atFrom->GetElementType(), atTo->GetElementType()))
+                return new TypeCastExpr(toType, this, pos);
+
             else {
-                Error(pos, "Can't convert between incompatible reference types \"%s\" "
-                      "and \"%s\".", fromType->GetString().c_str(),
-                      toType->GetString().c_str());
+                if (!failureOk)
+                    Error(pos, "Can't convert between incompatible reference types \"%s\" "
+                          "and \"%s\" for %s.", fromType->GetString().c_str(),
+                          toType->GetString().c_str(), errorMsgBase);
                 return NULL;
             }
-#endif
         }
         else {
             // convert from a reference T -> T
@@ -1897,8 +1902,12 @@ lPrintFunctionOverloads(const std::vector<Symbol *> &matches) {
 static bool
 lExactMatch(Expr *callArg, const Type *funcArgType) {
     const Type *callType = callArg->GetType();
+// FIXME MOVE THESE TWO TO ALWAYS DO IT...
     if (dynamic_cast<const ReferenceType *>(callType) == NULL)
         callType = callType->GetAsNonConstType();
+    if (dynamic_cast<const ReferenceType *>(funcArgType) != NULL && 
+        dynamic_cast<const ReferenceType *>(callType) == NULL)
+        callType = new ReferenceType(callType, funcArgType->IsConstType());
 
     return Type::Equal(callType, funcArgType);
 }
@@ -1952,7 +1961,7 @@ lMatchWithTypeConvSameVariability(Expr *callArg, const Type *funcArgType) {
 
 
 /** Helper function used for function overload resolution: returns true if
-    there is any type conversino that gets us from the caller argument type
+    there is any type conversion that gets us from the caller argument type
     to the function argument type.
  */
 static bool
@@ -2072,7 +2081,7 @@ FunctionCallExpr::resolveFunctionOverloads() {
     // Try to find the best overload for the function...
 
     // Is there an exact match that doesn't require any argument type
-    // conversion at all?
+    // conversion (other than converting type -> reference type)?
     if (tryResolve(lExactMatch))
         return;
 
@@ -2099,10 +2108,11 @@ FunctionCallExpr::resolveFunctionOverloads() {
 
     // failure :-(
     const char *funName = fse->candidateFunctions->front()->name.c_str();
-    Error(pos, "Unable to find matching overload for call to function \"%s\". "
-          "Candidates are:", funName);
+    Error(pos, "Unable to find matching overload for call to function \"%s\".",
+          funName);
+    fprintf(stderr, "Candidates are:\n");
     lPrintFunctionOverloads(*fse->candidateFunctions);
-    fprintf(stderr, "Passed types: %s(", funName);
+    fprintf(stderr, "Passed types:\n\t%s(", funName);
     for (unsigned int i = 0; i < args->exprs.size(); ++i) {
         const Type *t = args->exprs[i]->GetType();
         if (t)

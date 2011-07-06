@@ -2,9 +2,14 @@
 # ispc Makefile
 #
 
-ARCH = $(shell uname)
+ARCH_OS = $(shell uname)
+ARCH_TYPE = $(shell arch)
 
 CLANG=clang
+CLANG_LIBS = -lclangFrontend -lclangDriver \
+             -lclangSerialization -lclangParse -lclangSema \
+             -lclangAnalysis -lclangAST -lclangLex -lclangBasic
+
 LLVM_LIBS=$(shell llvm-config --ldflags --libs) -lpthread -ldl
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION_DEF=-DLLVM_$(shell llvm-config --version | sed s/\\./_/)
@@ -18,10 +23,14 @@ CXXFLAGS=-g3 $(LLVM_CXXFLAGS) -I. -Iobjs/ -Wall $(LLVM_VERSION_DEF) \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
 
 LDFLAGS=
-ifeq ($(ARCH),Linux)
+ifeq ($(ARCH_OS),Linux)
   # try to link everything statically under Linux (including libstdc++) so
   # that the binaries we generate will be portable across distributions...
-  LDFLAGS=-static -L/usr/lib/gcc/x86_64-linux-gnu/4.4
+  ifeq ($(ARCH_TYPE),x86_64)
+    LDFLAGS=-static -L/usr/lib/gcc/x86_64-linux-gnu/4.4
+  else
+    LDFLAGS=-L/usr/lib/gcc/i686-redhat-linux/4.6.0
+  endif
 endif
 
 LEX=flex
@@ -68,7 +77,7 @@ doxygen:
 
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(LLVM_LIBS)
+	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(CLANG_LIBS) $(LLVM_LIBS)
 
 ispc_test: dirs ispc_test.cpp
 	@echo Creating ispc_test executable
@@ -112,7 +121,7 @@ objs/stdlib-c.o: objs/stdlib-c.cpp
 
 objs/stdlib_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $<
-	@$(CPP) -DISPC=1 -DPI=3.1415926536 $< | ./stdlib2cpp.py > $@
+	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | ./stdlib2cpp.py > $@
 
 objs/stdlib_ispc.o: objs/stdlib_ispc.cpp
 	@echo Compiling $<

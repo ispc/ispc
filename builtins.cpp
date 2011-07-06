@@ -64,41 +64,52 @@ extern yy_buffer_state *yy_scan_string(const char *);
 /** Given an LLVM type, try to find the equivalent ispc type.  Note that
     this is an under-constrained problem due to LLVM's type representations
     carrying less information than ispc's.  (For example, LLVM doesn't
-    distinguish between signed and unsigned integers in its types.)  
+    distinguish between signed and unsigned integers in its types.)
 
-    However, because this function is only used for generating ispc
-    declarations of functions defined in LLVM bitcode in the stdlib-*.ll
-    files, in practice we can get enough of what we need for the relevant
-    cases to make things work.
+    Because this function is only used for generating ispc declarations of
+    functions defined in LLVM bitcode in the stdlib-*.ll files, in practice
+    we can get enough of what we need for the relevant cases to make things
+    work, partially with the help of the intAsUnsigned parameter, which
+    indicates whether LLVM integer types should be treated as being signed
+    or unsigned.
+
  */
 static const Type *
-lLLVMTypeToISPCType(const llvm::Type *t) {
+lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
     if (t == LLVMTypes::VoidType)
         return AtomicType::Void;
     else if (t == LLVMTypes::BoolType)
         return AtomicType::UniformBool;
     else if (t == LLVMTypes::Int32Type)
-        return AtomicType::UniformInt32;
+        return intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32;
     else if (t == LLVMTypes::FloatType)
         return AtomicType::UniformFloat;
     else if (t == LLVMTypes::DoubleType)
         return AtomicType::UniformDouble;
     else if (t == LLVMTypes::Int64Type)
-        return AtomicType::UniformInt64;
+        return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
     else if (t == LLVMTypes::Int32VectorType)
-        return AtomicType::VaryingInt32;
+        return intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32;
     else if (t == LLVMTypes::FloatVectorType)
         return AtomicType::VaryingFloat;
     else if (t == LLVMTypes::DoubleVectorType)
         return AtomicType::VaryingDouble;
     else if (t == LLVMTypes::Int64VectorType)
-        return AtomicType::VaryingInt64;
+        return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
     else if (t == LLVMTypes::Int32PointerType)
-        return new ReferenceType(AtomicType::UniformInt32, false);
+        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt32 :
+                                                 AtomicType::UniformInt32, false);
+    else if (t == LLVMTypes::Int64PointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt64 :
+                                                 AtomicType::UniformInt64, false);
     else if (t == LLVMTypes::FloatPointerType)
         return new ReferenceType(AtomicType::UniformFloat, false);
     else if (t == LLVMTypes::Int32VectorPointerType)
-        return new ReferenceType(AtomicType::VaryingInt32, false);
+        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
+                                                 AtomicType::VaryingInt32, false);
+    else if (t == LLVMTypes::Int64VectorPointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt64 :
+                                                 AtomicType::VaryingInt64, false);
     else if (t == LLVMTypes::FloatVectorPointerType)
         return new ReferenceType(AtomicType::VaryingFloat, false);
     else if (llvm::isa<const llvm::PointerType>(t)) {
@@ -108,15 +119,16 @@ lLLVMTypeToISPCType(const llvm::Type *t) {
         // create the equivalent ispc type.  Note that it has to be a
         // reference to an array, since ispc passes arrays to functions by
         // reference.
-        //
-        // FIXME: generalize this to do more than uniform int32s (that's
-        // all that's necessary for the stdlib currently.)
         const llvm::ArrayType *at = 
             llvm::dyn_cast<const llvm::ArrayType>(pt->getElementType());
-        if (at && at->getNumElements() == 0 &&
-            at->getElementType() == LLVMTypes::Int32Type)
-            return new ReferenceType(new ArrayType(AtomicType::UniformInt32, 0),
+        if (at != NULL) {
+            const Type *eltType = lLLVMTypeToISPCType(at->getElementType(),
+                                                      intAsUnsigned);
+            if (eltType == NULL)
+                return NULL;
+            return new ReferenceType(new ArrayType(eltType, at->getNumElements()),
                                      false);
+        }
     }
 
     return NULL;
@@ -135,26 +147,43 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string name = func->getName();
 
-    const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType());
-    if (!returnType)
-        // return type not representable in ispc -> not callable from ispc
-        return false;
+    // If the function has any parameters with integer types, we'll make
+    // two Symbols for two overloaded versions of the function, one with
+    // all of the integer types treated as signed integers and one with all
+    // of them treated as unsigned.
+    for (int i = 0; i < 2; ++i) {
+        bool intAsUnsigned = (i == 1);
 
-    // Iterate over the arguments and try to find their equivalent ispc
-    // types.
-    std::vector<const Type *> argTypes;
-    for (unsigned int i = 0; i < ftype->getNumParams(); ++i) {
-        const llvm::Type *llvmArgType = ftype->getParamType(i);
-        const Type *type = lLLVMTypeToISPCType(llvmArgType);
-        if (type == NULL)
+        const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(),
+                                                     intAsUnsigned);
+        if (!returnType)
+            // return type not representable in ispc -> not callable from ispc
             return false;
-        argTypes.push_back(type);
+
+        // Iterate over the arguments and try to find their equivalent ispc
+        // types.  Track if any of the arguments has an integer type.
+        bool anyIntArgs = false;
+        std::vector<const Type *> argTypes;
+        for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
+            const llvm::Type *llvmArgType = ftype->getParamType(j);
+            const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
+            if (type == NULL)
+                return false;
+            anyIntArgs |= 
+                (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
+            argTypes.push_back(type);
+        }
+
+        // Always create the symbol the first time through, in particular
+        // so that we get symbols for things with no integer types!
+        if (i == 0 || anyIntArgs == true) {
+            FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+            Symbol *sym = new Symbol(name, noPos, funcType);
+            sym->function = func;
+            symbolTable->AddFunction(sym);
+        }
     }
 
-    FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-    Symbol *sym = new Symbol(name, noPos, funcType);
-    sym->function = func;
-    symbolTable->AddFunction(sym);
     return true;
 }
 

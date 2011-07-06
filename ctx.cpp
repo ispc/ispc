@@ -695,7 +695,8 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i32 value
     std::vector<Symbol *> *mm = m->symbolTable->LookupFunction("__movmsk");
-    assert(mm && mm->size() == 1);
+    // There should be one with signed int signature, one unsigned int.
+    assert(mm && mm->size() == 2); 
     llvm::Function *fmm = (*mm)[0]->function;
     return CallInst(fmm, v, "val_movmsk");
 }
