@@ -152,6 +152,17 @@ Module::CompileFile() {
     bool runPreprocessor = g->runCPP;
 
     if (runPreprocessor) {
+        if (filename != NULL) {
+            // Try to open the file first, since otherwise we crash in the
+            // preprocessor if the file doesn't exist.
+            FILE *f = fopen(filename, "r");
+            if (!f) {
+                perror(filename);
+                return 1;
+            }
+            fclose(f);
+        }
+
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
         execPreprocessor((filename != NULL) ? filename : "-", &os);
