@@ -927,6 +927,7 @@ statement
         std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
         std::string alts = lGetAlternates(alternates);
         Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        $$ = NULL;
     }
     ;
 

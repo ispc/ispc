@@ -1899,8 +1899,8 @@ static void
 lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
     fprintf(stderr, "Passed types:\n\t%s(", funName);
     for (unsigned int i = 0; i < argExprs.size(); ++i) {
-        const Type *t = argExprs[i]->GetType();
-        if (t)
+        const Type *t;
+        if (argExprs[i] != NULL && (t = argExprs[i]->GetType()) != NULL)
             fprintf(stderr, "%s%s", t->GetString().c_str(),
                     (i < argExprs.size()-1) ? ", " : ")\n\n");
         else
