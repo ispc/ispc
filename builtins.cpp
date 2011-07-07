@@ -180,7 +180,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
             // set NULL default arguments
             std::vector<ConstExpr *> defaults;
-            for (int j = 0; j < ftype->getNumParams(); ++j)
+            for (unsigned int j = 0; j < ftype->getNumParams(); ++j)
                 defaults.push_back(NULL);
             funcType->SetArgumentDefaults(defaults);
 
