@@ -104,6 +104,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
                                                  AtomicType::UniformInt64, false);
     else if (t == LLVMTypes::FloatPointerType)
         return new ReferenceType(AtomicType::UniformFloat, false);
+    else if (t == LLVMTypes::DoublePointerType)
+        return new ReferenceType(AtomicType::UniformDouble, false);
     else if (t == LLVMTypes::Int32VectorPointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
                                                  AtomicType::VaryingInt32, false);
@@ -112,6 +114,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
                                                  AtomicType::VaryingInt64, false);
     else if (t == LLVMTypes::FloatVectorPointerType)
         return new ReferenceType(AtomicType::VaryingFloat, false);
+    else if (t == LLVMTypes::DoubleVectorPointerType)
+        return new ReferenceType(AtomicType::VaryingDouble, false);
     else if (llvm::isa<const llvm::PointerType>(t)) {
         const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(t);
 

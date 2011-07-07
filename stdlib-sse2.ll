@@ -153,6 +153,40 @@ define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinlin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding doubles
+
+declare double @round(double)
+declare double @floor(double)
+declare double @ceil(double)
+
+define internal <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  unary1to4(double, @round)
+}
+
+define internal double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @round(double %0)
+  ret double %r
+}
+
+define internal <4 x double> @__floor_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  unary1to4(double, @floor)
+}
+
+define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @floor(double %0)
+  ret double %r
+}
+
+define internal <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  unary1to4(double, @ceil)
+}
+
+define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @ceil(double %0)
+  ret double %r
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; min/max
 
 ; There is no blend instruction with SSE2, so we simulate it with bit
@@ -252,7 +286,7 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 ; it does generate non-POPCNT code and in particular better code than
 ; the below does.)
 
-define internal i32 @__popcnt(i32) nounwind readonly alwaysinline {
+define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
 entry:
   br label %loop
 
@@ -267,6 +301,16 @@ loop:
 
 exit:
   ret i32 %newcount
+}
+
+define internal i32 @__popcnt_int64(i64) nounwind readnone alwaysinline {
+  %vec = bitcast i64 %0 to <2 x i32>
+  %v0 = extractelement <2 x i32> %vec, i32 0
+  %v1 = extractelement <2 x i32> %vec, i32 1
+  %c0 = call i32 @__popcnt_int32(i32 %v0)
+  %c1 = call i32 @__popcnt_int32(i32 %v1)
+  %sum = add i32 %c0, %c1
+  ret i32 %sum
 }
 
 

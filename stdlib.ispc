@@ -147,29 +147,56 @@ static inline int64 shuffle(int64 v0, int64 v1, int i) {
 
 // x[i]
 static inline uniform float extract(float x, uniform int i) {
-    return __extract(x, i);
+    return floatbits(__extract_int32((int)intbits(x), i));
+}
+
+static inline uniform int extract(int x, uniform int i) {
+    return __extract_int32(x, i);
+}
+
+static inline uniform unsigned int extract(unsigned int x, uniform int i) {
+    return __extract_int32(x, (unsigned int)i);
+}
+
+static inline uniform double extract(double x, uniform int i) {
+    return doublebits(__extract_int64((int64)intbits(x), i));
+}
+
+static inline uniform int64 extract(int64 x, uniform int i) {
+    return __extract_int64(x, i);
+}
+
+static inline uniform unsigned int64 extract(unsigned int64 x, uniform int i) {
+    return __extract_int64(x, (unsigned int)i);
 }
 
 // x[i] = v
 static inline float insert(float x, uniform int i, uniform float v) {
-    return __insert(x, i, v);
-}
-
-static inline uniform int extract(int x, uniform int i) {
-    return intbits(extract(floatbits(x), i));
+    return floatbits(__insert_int32((int)intbits(x), i, (int)intbits(v)));
 }
 
 static inline int insert(int x, uniform int i, uniform int v) {
-    return intbits(insert(floatbits(x), i, floatbits(v)));
+    return __insert_int32(x, i, v);
 }
 
-static inline uniform unsigned int extract(unsigned int x, uniform int i) {
-    return intbits(extract(floatbits(x), i));
+static inline unsigned int insert(unsigned int x, uniform int i, 
+                                  uniform unsigned int v) {
+    return __insert_int32(x, (unsigned int)i, v);
 }
 
-static inline unsigned int insert(unsigned int x, uniform int i, uniform unsigned int v) {
-    return intbits(insert(floatbits(x), i, floatbits(v)));
+static inline double insert(double x, uniform int i, uniform double v) {
+    return doublebits(__insert_int64((int64)intbits(x), i, (int64)intbits(v)));
 }
+
+static inline int64 insert(int64 x, uniform int i, uniform int64 v) {
+    return __insert_int64(x, i, v);
+}
+
+static inline unsigned int64 insert(unsigned int64 x, uniform int i, 
+                                    uniform unsigned int64 v) {
+    return __insert_int64(x, (unsigned int)i, v);
+}
+
 
 static inline uniform bool any(bool v) {
     // We only care about whether "any" is true for the active program instances,
@@ -185,20 +212,30 @@ static inline uniform bool all(bool v) {
 }
 
 static inline uniform int popcnt(uniform int v) {
-    return __popcnt(v);
+    return __popcnt_int32(v);
+}
+
+static inline uniform int popcnt(uniform int64 v) {
+    return (int32)__popcnt_int64(v);
 }
 
 static inline int popcnt(int v) {
     int r;
-    uniform int i;
-    for (i = 0; i < programCount; ++i)
+    for (uniform int i = 0; i < programCount; ++i)
+        r = insert(r, i, popcnt(extract(v, i)));
+    return (r & __mask);
+}
+
+static inline int popcnt(int64 v) {
+    int r;
+    for (uniform int i = 0; i < programCount; ++i)
         r = insert(r, i, popcnt(extract(v, i)));
     return (r & __mask);
 }
 
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
-    return __popcnt(__movmsk(v & __mask));
+    return __popcnt_int32(__movmsk(v & __mask));
 }
 
 static inline uniform int lanemask() {
@@ -268,6 +305,64 @@ static inline uniform unsigned int reduce_max(unsigned int v) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
     return __reduce_max_uint32(__mask ? v : 0);
+}
+
+
+static inline uniform double reduce_add(double x) {
+    // zero the lanes where the mask is off
+    return __reduce_add_double(__mask ? x : 0.);
+}
+
+static inline uniform double reduce_min(double v) {
+    int64 iflt_max = 0x7ff0000000000000; // infinity
+    // Must use __doublebits_varying_int64, not doublebits(), since with the
+    // latter the current mask enters into the returned result...
+    return __reduce_min_double(__mask ? v : __doublebits_varying_int64(iflt_max));
+}
+
+static inline uniform double reduce_max(double v) {
+    const uniform int64 iflt_neg_max = 0xfff0000000000000; // -infinity
+    // Must use __doublebits_varying_int64, not doublebits(), since with the
+    // latter the current mask enters into the returned result...
+    return __reduce_max_double(__mask ? v : __doublebits_varying_int64(iflt_neg_max));
+}
+
+static inline uniform int64 reduce_add(int64 x) {
+    // Zero out the values for lanes that aren't running
+    return __reduce_add_int64(x & (int64)__mask);
+}
+
+static inline uniform int64 reduce_min(int64 v) {
+    // Set values for non-running lanes to the maximum integer value so
+    // they don't affect the result.
+    int64 int_max = 0x7fffffffffffffff;
+    return __reduce_min_int64(__mask ? v : int_max);
+}
+
+static inline uniform int64 reduce_max(int64 v) {
+    // Set values for non-running lanes to the minimum integer value so
+    // they don't affect the result.
+    int64 int_min = 0x8000000000000000;
+    return __reduce_max_int64(__mask ? v : int_min);
+}
+
+static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_add_int64(x & (int64)__mask);
+}
+
+static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
+    // Set values for non-running lanes to the maximum unsigned integer
+    // value so they don't affect the result.
+    unsigned int64 uint_max = 0xffffffffffffffff;
+    return __reduce_min_uint64(__mask ? v : uint_max);
+}
+
+static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
+    // Set values for non-running lanes to zero so they don't affect the
+    // result.
+    return __reduce_max_uint64(__mask ? v : 0);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -425,14 +520,37 @@ static inline uniform float abs(uniform float a) {
     return floatbits(i);
 }
 
+static inline double abs(double a) {
+    // zeroing the high bit clears the sign
+    unsigned int64 i = intbits(a);
+    i &= 0x7fffffffffffffff;
+    return doublebits(i);
+}
+
+static inline uniform double abs(uniform double a) {
+    uniform unsigned int64 i = intbits(a);
+    i &= 0x7fffffffffffffff;
+    return doublebits(i);
+}
+
 static inline unsigned int signbits(float x) {
     unsigned int i = intbits(x);
-    return (i & 0x80000000u);
+    return (i & 0x80000000);
 }
 
 static inline uniform unsigned int signbits(uniform float x) {
     uniform unsigned int i = intbits(x);
-    return (i & 0x80000000u);
+    return (i & 0x80000000);
+}
+
+static inline unsigned int64 signbits(double x) {
+    unsigned int64 i = intbits(x);
+    return (i & 0x8000000000000000);
+}
+
+static inline uniform unsigned int64 signbits(uniform double x) {
+    uniform unsigned int64 i = intbits(x);
+    return (i & 0x8000000000000000);
 }
 
 static inline float round(float x) {
@@ -443,12 +561,28 @@ static inline uniform float round(uniform float x) {
     return __round_uniform_float(x);
 }
 
+static inline double round(double x) {
+    return __round_varying_double(x);
+}
+
+static inline uniform double round(uniform double x) {
+    return __round_uniform_double(x);
+}
+
 static inline float floor(float x) {
     return __floor_varying_float(x);
 }
 
 static inline uniform float floor(uniform float x) {
     return __floor_uniform_float(x);
+}
+
+static inline double floor(double x) {
+    return __floor_varying_double(x);
+}
+
+static inline uniform double floor(uniform double x) {
+    return __floor_uniform_double(x);
 }
 
 static inline float ceil(float x) {
@@ -459,20 +593,20 @@ static inline uniform float ceil(uniform float x) {
     return __ceil_uniform_float(x);
 }
 
+static inline double ceil(double x) {
+    return __ceil_varying_double(x);
+}
+
+static inline uniform double ceil(uniform double x) {
+    return __ceil_uniform_double(x);
+}
+
 static inline float rcp(float v) {
     return __rcp_varying_float(v);
 }
 
 static inline uniform float rcp(uniform float v) {
     return __rcp_uniform_float(v);
-}
-
-static inline float sqrt(float v) {
-    return __sqrt_varying_float(v);
-}
-
-static inline uniform float sqrt(uniform float v) {
-    return __sqrt_uniform_float(v);
 }
 
 static inline float min(float a, float b) {
@@ -483,12 +617,28 @@ static inline uniform float min(uniform float a, uniform float b) {
     return __min_uniform_float(a, b);
 }
 
+static inline double min(double a, double b) {
+    return __min_varying_double(a, b);
+}
+
+static inline uniform double min(uniform double a, uniform double b) {
+    return __min_uniform_double(a, b);
+}
+
 static inline float max(float a, float b) {
     return __max_varying_float(a, b);
 }
 
 static inline uniform float max(uniform float a, uniform float b) {
     return __max_uniform_float(a, b);
+}
+
+static inline double max(double a, double b) {
+    return __max_varying_double(a, b);
+}
+
+static inline uniform double max(uniform double a, uniform double b) {
+    return __max_uniform_double(a, b);
 }
 
 static inline unsigned int min(unsigned int a, unsigned int b) {
@@ -523,6 +673,38 @@ static inline uniform int max(uniform int a, uniform int b) {
     return __max_uniform_int32(a, b);
 }
 
+static inline unsigned int64 min(unsigned int64 a, unsigned int64 b) {
+    return __min_varying_uint64(a, b);
+}
+
+static inline uniform unsigned int64 min(uniform unsigned int64 a, uniform unsigned int64 b) {
+    return __min_uniform_uint64(a, b);
+}
+
+static inline unsigned int64 max(unsigned int64 a, unsigned int64 b) {
+    return __max_varying_uint64(a, b);
+}
+
+static inline uniform unsigned int64 max(uniform unsigned int64 a, uniform unsigned int64 b) {
+    return __max_uniform_uint64(a, b);
+}
+
+static inline int64 min(int64 a, int64 b) {
+    return __min_varying_int64(a, b);
+}
+
+static inline uniform int64 min(uniform int64 a, uniform int64 b) {
+    return __min_uniform_int64(a, b);
+}
+
+static inline int64 max(int64 a, int64 b) {
+    return __max_varying_int64(a, b);
+}
+
+static inline uniform int64 max(uniform int64 a, uniform int64 b) {
+    return __max_uniform_int64(a, b);
+}
+
 static inline float clamp(float v, float low, float high) {
     return min(max(v, low), high);
 }
@@ -536,7 +718,16 @@ static inline unsigned int clamp(unsigned int v, unsigned int low, unsigned int 
 }
 
 static inline uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low, 
-                                  uniform unsigned int high) {
+                                         uniform unsigned int high) {
+    return min(max(v, low), high);
+}
+
+static inline unsigned int64 clamp(unsigned int64 v, unsigned int64 low, unsigned int64 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform unsigned int64 clamp(uniform unsigned int64 v, uniform unsigned int64 low, 
+                                           uniform unsigned int64 high) {
     return min(max(v, low), high);
 }
 
@@ -548,8 +739,24 @@ static inline uniform int clamp(uniform int v, uniform int low, uniform int high
     return min(max(v, low), high);
 }
 
+static inline int64 clamp(int64 v, int64 low, int64 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform int64 clamp(uniform int64 v, uniform int64 low, uniform int64 high) {
+    return min(max(v, low), high);
+}
+
 ///////////////////////////////////////////////////////////////////////////
-// Transcendentals
+// Transcendentals (float precision)
+
+static inline float sqrt(float v) {
+    return __sqrt_varying_float(v);
+}
+
+static inline uniform float sqrt(uniform float v) {
+    return __sqrt_uniform_float(v);
+}
 
 static inline float rsqrt(float v) {
     return __rsqrt_varying_float(v);
@@ -612,7 +819,7 @@ static inline float sin(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_sin(extract(x_full, i));
+            uniform float r = __stdlib_sinf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -669,7 +876,7 @@ static inline float sin(float x_full) {
 static inline uniform float sin(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_sin(x_full);
+        return __stdlib_sinf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -741,7 +948,7 @@ static inline float cos(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_cos(extract(x_full, i));
+            uniform float r = __stdlib_cosf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -797,7 +1004,7 @@ static inline float cos(float x_full) {
 static inline uniform float cos(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_cos(x_full);
+        return __stdlib_cosf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -868,7 +1075,7 @@ static inline void sincos(float x_full, reference float sin_result, reference fl
             if ((mask & (1 << i)) == 0)
                 continue;
             uniform float s, c;
-            __stdlib_sincos(extract(x_full, i), s, c);
+            __stdlib_sincosf(extract(x_full, i), s, c);
             sin_result = insert(sin_result, i, s);
             cos_result = insert(cos_result, i, c);
         }
@@ -930,10 +1137,10 @@ static inline void sincos(float x_full, reference float sin_result, reference fl
 
 
 static inline void sincos(uniform float x_full, reference uniform float sin_result,
-                   reference uniform float cos_result) {
+                          reference uniform float cos_result) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        __stdlib_sincos(x_full, sin_result, cos_result);
+        __stdlib_sincosf(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -1001,7 +1208,7 @@ static inline float tan(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_tan(extract(x_full, i));
+            uniform float r = __stdlib_tanf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1075,7 +1282,7 @@ static inline float tan(float x_full) {
 static inline uniform float tan(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_tan(x_full);
+        return __stdlib_tanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -1153,7 +1360,7 @@ static inline float atan(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_atan(extract(x_full, i));
+            uniform float r = __stdlib_atanf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1199,7 +1406,7 @@ static inline float atan(float x_full) {
 static inline uniform float atan(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_atan(x_full);
+        return __stdlib_atanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -1249,7 +1456,7 @@ static inline float atan2(float y, float x) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_atan2(extract(y, i), extract(x, i));
+            uniform float r = __stdlib_atan2f(extract(y, i), extract(x, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1283,7 +1490,7 @@ static inline float atan2(float y, float x) {
 static inline uniform float atan2(uniform float y, uniform float x) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_atan2(y, x);
+        return __stdlib_atan2f(y, x);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -1310,7 +1517,7 @@ static inline float exp(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_exp(extract(x_full, i));
+            uniform float r = __stdlib_expf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1384,7 +1591,7 @@ static inline float exp(float x_full) {
 static inline uniform float exp(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_exp(x_full);
+        return __stdlib_expf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
         uniform float z = floor(1.44269504088896341f * x_full + 0.5f); 
@@ -1485,7 +1692,7 @@ static inline void __range_reduce_log(float input, reference float reduced, refe
 
 
 static inline void __range_reduce_log(uniform float input, reference uniform float reduced, 
-                               reference uniform int exponent) {
+                                      reference uniform int exponent) {
     uniform int int_version = intbits(input);
     static const uniform int nonexponent_mask = 0x807FFFFF;
 
@@ -1509,7 +1716,7 @@ static inline float log(float x_full) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_log(extract(x_full, i));
+            uniform float r = __stdlib_logf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1592,7 +1799,7 @@ static inline float log(float x_full) {
 static inline uniform float log(uniform float x_full) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_log(x_full);
+        return __stdlib_logf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
         uniform int e;
@@ -1679,7 +1886,7 @@ static inline float pow(float a, float b) {
         for (uniform int i = 0; i < programCount; ++i) {
             if ((mask & (1 << i)) == 0)
                 continue;
-            uniform float r = __stdlib_pow(extract(a, i), extract(b, i));
+            uniform float r = __stdlib_powf(extract(a, i), extract(b, i));
             ret = insert(ret, i, r);
         }
         return ret;
@@ -1693,7 +1900,7 @@ static inline float pow(float a, float b) {
 static inline uniform float pow(uniform float a, uniform float b) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
-        return __stdlib_pow(a, b);
+        return __stdlib_powf(a, b);
     }
     else if (__math_lib == __math_lib_ispc || 
              __math_lib == __math_lib_ispc_fast) {
@@ -1701,6 +1908,273 @@ static inline uniform float pow(uniform float a, uniform float b) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals (double precision)
+
+static inline double sqrt(double v) {
+    return __sqrt_varying_double(v);
+}
+
+static inline uniform double sqrt(uniform double v) {
+    return __sqrt_uniform_double(v);
+}
+
+static inline double ldexp(double x, int n) {
+    unsigned int64 ex = 0x7ff0000000000000;
+    unsigned int64 ix = intbits(x);
+    ex &= ix;
+    ix = ix & ~0x7ff0000000000000;  // clear exponent
+    int64 n64 = ((int64)n << 52) + ex;
+    ix |= n64; // insert new exponent
+    return doublebits(ix);
+}
+
+static inline uniform double ldexp(uniform double x, uniform int n) {
+    uniform unsigned int64 ex = 0x7ff0000000000000;
+    uniform unsigned int64 ix = intbits(x);
+    ex &= ix;
+    ix = ix & ~0x7ff0000000000000;  // clear exponent
+    uniform int n64 = ((int64)n << 52) + ex;
+    ix |= n64; // insert new exponent
+    return doublebits(ix);
+}
+
+static inline double frexp(double x, reference int pw2) {
+    unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
+    unsigned int64 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7ff0000000000000;  // clear exponent
+    pw2 = (int)(ex >> 52) - 1022; // compute exponent
+    ix |= 0x3fe0000000000000;         // insert exponent +1 in x
+    return doublebits(ix);
+}
+
+static inline uniform double frexp(uniform double x, reference uniform int pw2) {
+    uniform unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
+    uniform unsigned int64 ix = intbits(x);
+    ex &= ix;
+    ix &= ~0x7ff0000000000000;  // clear exponent
+    pw2 = (int)(ex >> 52) - 1022; // compute exponent
+    ix |= 0x3fe0000000000000;         // insert exponent +1 in x
+    return doublebits(ix);
+}
+
+static inline double sin(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return sin((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_sin(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double sin(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return sin((float)x);
+    else
+        return __stdlib_sin(x);
+}
+
+static inline double cos(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return cos((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_cos(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double cos(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return cos((float)x);
+    else
+        return __stdlib_cos(x);
+}
+
+static inline void sincos(double x, reference double sin_result,
+                          reference double cos_result) {
+    if (__math_lib == __math_lib_ispc_fast) {
+        float sr, cr;
+        sincos((float)x, sr, cr);
+        sin_result = sr;
+        cos_result = cr;
+    }
+    else {
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            uniform double sr, cr;
+            if ((mask & (1 << i)) == 0)
+                continue;
+            __stdlib_sincos(extract(x, i), sr, cr);
+            sin_result = insert(sin_result, i, sr);
+            cos_result = insert(cos_result, i, cr);
+        }
+    }
+}
+
+static inline void sincos(uniform double x, reference uniform double sin_result,
+                          reference uniform double cos_result) {
+    if (__math_lib == __math_lib_ispc_fast) {
+        uniform float sr, cr;
+        sincos((uniform float)x, sr, cr);
+        sin_result = sr;
+        cos_result = cr;
+    }
+    else
+        __stdlib_sincos(x, sin_result, cos_result);
+}
+
+static inline double tan(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return tan((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_tan(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double tan(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return tan((float)x);
+    else
+        return __stdlib_tan(x);
+}
+
+static inline double atan(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return atan((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_atan(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double atan(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return atan((float)x);
+    else
+        return __stdlib_atan(x);
+}
+
+static inline double atan2(double y, double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return atan2((float)y, (float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_atan2(extract(y, i), extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double atan2(uniform double y, uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return atan2((float)y, (float)x);
+    else
+        return __stdlib_atan2(y, x);
+}
+
+static inline double exp(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return exp((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_exp(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double exp(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return exp((float)x);
+    else
+        return __stdlib_exp(x);
+}
+
+static inline double log(double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return log((float)x);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_log(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double log(uniform double x) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return log((float)x);
+    else
+        return __stdlib_log(x);
+}
+
+static inline double pow(double a, double b) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return pow((float)a, (float)b);
+    else {
+        double ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform double r = __stdlib_pow(extract(a, i), extract(b, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+static inline uniform double pow(uniform double a, uniform double b) {
+    if (__math_lib == __math_lib_ispc_fast)
+        return pow((float)a, (float)b);
+    else
+        return __stdlib_pow(a, b);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // RNG stuff
@@ -1709,7 +2183,7 @@ struct RNGState {
     unsigned int z1, z2, z3, z4;
 };
 
-static inline unsigned int random(reference uniform RNGState state)
+static inline unsigned int random(reference RNGState state)
 {
     unsigned int b;
 
@@ -1724,14 +2198,14 @@ static inline unsigned int random(reference uniform RNGState state)
     return (state.z1 ^ state.z2 ^ state.z3 ^ state.z4);
 }
 
-static inline float frandom(reference uniform RNGState state)
+static inline float frandom(reference RNGState state)
 {
     return ((int)(random(state) & ((1<<24)-1))) / (float)(1 << 24);
 }
 
-static inline uniform unsigned int __seed4(reference uniform RNGState state, 
-                                    uniform int start,
-                                    uniform unsigned int seed) {
+static inline uniform unsigned int __seed4(reference RNGState state, 
+                                           uniform int start,
+                                           uniform unsigned int seed) {
     uniform unsigned int c1 = 0xf0f0f0f0;
     uniform unsigned int c2 = 0x0f0f0f0f;
 
