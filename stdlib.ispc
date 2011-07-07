@@ -1934,7 +1934,7 @@ static inline uniform double ldexp(uniform double x, uniform int n) {
     uniform unsigned int64 ix = intbits(x);
     ex &= ix;
     ix = ix & ~0x7ff0000000000000;  // clear exponent
-    uniform int n64 = ((int64)n << 52) + ex;
+    uniform int64 n64 = ((int64)n << 52) + ex;
     ix |= n64; // insert new exponent
     return doublebits(ix);
 }
