@@ -70,6 +70,7 @@ FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 
 IDENT [a-zA-Z_][a-zA-Z_0-9]*
+ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 
 %%
 "/*"            { lCComment(yylloc); }
@@ -132,6 +133,13 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         return TOKEN_TYPE_NAME;
     else
         return TOKEN_IDENTIFIER; 
+}
+
+{ZO_SWIZZLE} {
+    /* We have a swizzle which starts with 0 or 1 (e.g. 1xy).
+       Other swizzles (those starting with [x-zuvrgba] will
+       be matched by identifiers. */
+    return TOKEN_ZO_SWIZZLE;
 }
 
 {INT_NUMBER} { 

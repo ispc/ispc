@@ -138,7 +138,7 @@ static const char *lParamListTokens[] = {
 }
 
 
-%token TOKEN_IDENTIFIER TOKEN_INT_CONSTANT TOKEN_UINT_CONSTANT TOKEN_FLOAT_CONSTANT 
+%token TOKEN_IDENTIFIER TOKEN_ZO_SWIZZLE TOKEN_INT_CONSTANT TOKEN_UINT_CONSTANT TOKEN_FLOAT_CONSTANT 
 %token TOKEN_STRING_LITERAL TOKEN_TYPE_NAME
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -254,10 +254,12 @@ postfix_expression
     | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
       { $$ = new FunctionCallExpr($3, new ExprList(@3), @3, true); }
     | postfix_expression '.' TOKEN_IDENTIFIER
-      { $$ = new MemberExpr($1, yytext, @1, @3); }
+      { $$ = MemberExpr::create($1, yytext, @1, @3); }
 /*    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
       { UNIMPLEMENTED }
 */
+    | postfix_expression '.' TOKEN_ZO_SWIZZLE
+      { $$ = MemberExpr::create($1, yytext, @1, @3); }
     | postfix_expression TOKEN_INC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, @1); }
     | postfix_expression TOKEN_DEC_OP

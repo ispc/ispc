@@ -2763,6 +2763,52 @@ IndexExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // MemberExpr
 
+class StructMemberExpr : public MemberExpr
+{
+public:
+    StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
+        : MemberExpr(e, id, p, idpos) {
+    }
+};
+
+class VectorMemberExpr : public MemberExpr
+{
+public:
+    VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
+        : MemberExpr(e, id, p, idpos) {
+    }
+};
+
+class ReferenceMemberExpr : public MemberExpr
+{
+public:
+    ReferenceMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
+        : MemberExpr(e, id, p, idpos) {
+    }
+};
+
+MemberExpr*
+MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
+    const Type* exprType;
+    if (e == NULL || (exprType = e->GetType()) == NULL)
+        Error(p, "Member Expressions valid only for Typed base expressions");
+
+    const StructType* structType = dynamic_cast<const StructType*>(exprType);
+    if (structType != NULL)
+        return new StructMemberExpr(e, id, p, idpos);
+
+    const VectorType* vectorType = dynamic_cast<const VectorType*>(exprType);
+    if (vectorType != NULL)
+        return new VectorMemberExpr(e, id, p, idpos);
+
+    const ReferenceType* refType = dynamic_cast<const ReferenceType*>(exprType);
+    if (refType != NULL)
+        return new ReferenceMemberExpr(e, id, p, idpos);
+  
+    Error(p, "Member Expressions valid only for Struct, Vector, Reference types");
+    return NULL;
+}
+
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos) 
     : Expr(p), identifierPos(idpos) {
     expr = e;
