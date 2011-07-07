@@ -178,6 +178,12 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         // so that we get symbols for things with no integer types!
         if (i == 0 || anyIntArgs == true) {
             FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+            // set NULL default arguments
+            std::vector<ConstExpr *> defaults;
+            for (int j = 0; j < ftype->getNumParams(); ++j)
+                defaults.push_back(NULL);
+            funcType->SetArgumentDefaults(defaults);
+
             Symbol *sym = new Symbol(name, noPos, funcType);
             sym->function = func;
             symbolTable->AddFunction(sym);
@@ -516,11 +522,12 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         FATAL("logic error");
     }
 
-    // Add a declaration of void *ISPCMalloc(int64_t).  The user is
-    // responsible for linking in a definition of this if it's needed by
-    // the compiled program.
+    // Add a declaration of void *ISPCMalloc(int64_t size, int alignment).
+    // The user is responsible for linking in a definition of this if it's
+    // needed by the compiled program.
     { std::vector<const llvm::Type *> argTypes;
         argTypes.push_back(llvm::Type::getInt64Ty(*ctx));
+        argTypes.push_back(llvm::Type::getInt32Ty(*ctx));
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
                                                             argTypes, false);
         llvm::Function *func = 

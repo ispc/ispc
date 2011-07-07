@@ -33,6 +33,10 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#ifdef ISPC_IS_WINDOWS
+#define NOMINMAX
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdint.h>
 
@@ -77,6 +81,8 @@ extern "C" {
 extern "C" { 
     void ISPCLaunch(void *, void *);
     void ISPCSync();
+    void *ISPCMalloc(int64_t size, int32_t alignment);
+    void ISPCFree(void *ptr);
 }
 
 void ISPCLaunch(void *func, void *data) {
@@ -88,6 +94,18 @@ void ISPCLaunch(void *func, void *data) {
 
 void ISPCSync() {
 }
+
+
+#ifdef ISPC_IS_WINDOWS
+void *ISPCMalloc(int64_t size, int32_t alignment) {
+    return _aligned_malloc(size, alignment);
+}
+
+
+void ISPCFree(void *ptr) {
+    _aligned_free(ptr);
+}
+#endif
 
 static void usage(int ret) {
     fprintf(stderr, "usage: ispc_test\n");
@@ -144,6 +162,12 @@ static bool lRunTest(const char *fn) {
         ee->addGlobalMapping(func, (void *)ISPCLaunch);
     if ((func = module->getFunction("ISPCSync")) != NULL)
         ee->addGlobalMapping(func, (void *)ISPCSync);
+#ifdef ISPC_IS_WINDOWS
+    if ((func = module->getFunction("ISPCMalloc")) != NULL)
+        ee->addGlobalMapping(func, (void *)ISPCMalloc);
+    if ((func = module->getFunction("ISPCFree")) != NULL)
+        ee->addGlobalMapping(func, (void *)ISPCFree);
+#endif // ISPC_IS_WINDOWS
     if ((func = module->getFunction("putchar")) != NULL)
         ee->addGlobalMapping(func, (void *)putchar);
     if ((func = module->getFunction("printf")) != NULL)

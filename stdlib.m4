@@ -449,8 +449,8 @@ define(`global_swap', `
 
 declare $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
 
-define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
-                                          <$1 x i32> %mask) nounwind alwaysinline {
+define internal <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
   %rptr = alloca <$1 x $2>
   %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
 
@@ -476,7 +476,7 @@ define(`global_atomic_exchange', `
 
 declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
 
-define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
                                <$1 x $2> %val, <$1 x i32> %mask) nounwind alwaysinline {
   %rptr = alloca <$1 x $2>
   %rptr32 = bitcast <$1 x $2> * %rptr to $2 *

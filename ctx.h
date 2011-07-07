@@ -213,7 +213,7 @@ public:
     /** Emit code to call the user-supplied ISPCMalloc function to
         allocate space for an object of thee given type.  Returns the
         pointer value returned by the ISPCMalloc call. */
-    llvm::Value *EmitMalloc(const llvm::Type *ty);
+    llvm::Value *EmitMalloc(const llvm::Type *ty, int align = 0);
 
     /** Emit code to call the user-supplied ISPCFree function, passing it
         the given pointer to storage previously allocated by an

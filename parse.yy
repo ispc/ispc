@@ -103,6 +103,12 @@ static const char *lBuiltinTokens[] = {
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
+
+static const char *lParamListTokens[] = {
+    "bool", "char", "const", "double", "enum", "false", "float", "int",
+    "int32", "int64", "reference", "struct", "true", "uniform", "unsigned",
+    "varying", "void", NULL 
+};
     
 %}
 
@@ -110,6 +116,7 @@ static const char *lBuiltinTokens[] = {
     Expr *expr;
     ExprList *exprList;
     const Type *type;
+    const AtomicType *atomicType;
     int typeQualifier;
     StorageClass storageClass;
     Stmt *stmt;
@@ -176,6 +183,8 @@ static const char *lBuiltinTokens[] = {
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
 %type <type> enum_specifier type_specifier type_name
+%type <type> short_vec_specifier
+%type <atomicType> atomic_var_type_specifier
 
 %type <typeQualifier> type_qualifier
 %type <storageClass> storage_class_specifier
@@ -534,13 +543,7 @@ storage_class_specifier
     ;
 
 type_specifier
-    : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
-/*    | TOKEN_CHAR { UNIMPLEMENTED; } */
-    | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
-    | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
-    | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }
-    | TOKEN_INT64 { $$ = AtomicType::VaryingInt64; }
+    : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
       { const Type *t = m->symbolTable->LookupType(yytext); 
         assert(t != NULL);
@@ -552,6 +555,25 @@ type_specifier
 /*    | TOKEN_TYPE_NAME 
       { UNIMPLEMENTED; }
 */
+    ;
+
+atomic_var_type_specifier
+    : TOKEN_VOID { $$ = AtomicType::Void; }
+    | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
+/*  | TOKEN_CHAR { UNIMPLEMENTED; } */
+    | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
+    | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
+    | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }
+    | TOKEN_INT64 { $$ = AtomicType::VaryingInt64; }
+    ;
+
+short_vec_specifier
+    : atomic_var_type_specifier '<' int_constant '>'
+      {
+        Type* vt = 
+          new VectorType($1, $3);
+        $$ = vt;
+      }
     ;
 
 struct_or_union_name
@@ -630,6 +652,7 @@ struct_declaration
 specifier_qualifier_list
     : type_specifier specifier_qualifier_list
     | type_specifier
+    | short_vec_specifier
     | type_qualifier specifier_qualifier_list 
     {
         if ($1 == TYPEQUAL_UNIFORM)
@@ -781,14 +804,32 @@ parameter_list
     : parameter_declaration
     {
         std::vector<Declaration *> *dl = new std::vector<Declaration *>;
-        dl->push_back($1);
+        if ($1 != NULL)
+            dl->push_back($1);
         $$ = dl;
     }
     | parameter_list ',' parameter_declaration
     {
         std::vector<Declaration *> *dl = (std::vector<Declaration *> *)$1;
-        dl->push_back($3);
+        if (dl == NULL)
+            // dl may be NULL due to an earlier parse error...
+            dl = new std::vector<Declaration *>;
+        if ($3 != NULL)
+            dl->push_back($3);
         $$ = dl;
+    }
+    | error
+    {
+        std::vector<std::string> builtinTokens;
+        const char **token = lParamListTokens;
+        while (*token) {
+            builtinTokens.push_back(*token);
+            ++token;
+        }
+        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+        std::string alts = lGetAlternates(alternates);
+        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        $$ = NULL;
     }
     ;
 
@@ -871,6 +912,18 @@ statement
     | jump_statement
     | declaration_statement
     | print_statement
+    | error
+    {
+        std::vector<std::string> builtinTokens;
+        const char **token = lBuiltinTokens;
+        while (*token) {
+            builtinTokens.push_back(*token);
+            ++token;
+        }
+        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+        std::string alts = lGetAlternates(alternates);
+        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+    }
     ;
 
 labeled_statement

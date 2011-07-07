@@ -152,6 +152,17 @@ Module::CompileFile() {
     bool runPreprocessor = g->runCPP;
 
     if (runPreprocessor) {
+        if (filename != NULL) {
+            // Try to open the file first, since otherwise we crash in the
+            // preprocessor if the file doesn't exist.
+            FILE *f = fopen(filename, "r");
+            if (!f) {
+                perror(filename);
+                return 1;
+            }
+            fclose(f);
+        }
+
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
         execPreprocessor((filename != NULL) ? filename : "-", &os);
@@ -629,6 +640,14 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         assert(threadCountSym);
         threadCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
         ctx->StoreInst(threadCount, threadCountSym->storagePtr);
+
+#ifdef ISPC_IS_WINDOWS
+        // On Windows, we dynamically-allocate space for the task arguments
+        // (see FunctionEmitContext::LaunchInst().)  Here is where we emit
+        // the code to free that memory, now that we've copied the
+        // parameter values out of the structure.
+        ctx->EmitFree(structParamPtr);
+#endif // ISPC_IS_WINDOWS
     }
     else {
         // Regular, non-task function

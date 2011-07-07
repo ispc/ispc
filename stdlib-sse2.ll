@@ -244,6 +244,14 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 
 ; FIXME: this is very inefficient, loops over all 32 bits...
 
+; we could use the LLVM intrinsic declare i32 @llvm.ctpop.i32(i32),
+; although that currently ends up generating a POPCNT instruction even
+; if we give --target=sse2 on the command line.  We probably need to
+; pipe through the 'sse2' request to LLVM via the 'features' string
+; at codegen time...  (If e.g. --cpu=penryn is also passed along, then
+; it does generate non-POPCNT code and in particular better code than
+; the below does.)
+
 define internal i32 @__popcnt(i32) nounwind readonly alwaysinline {
 entry:
   br label %loop
