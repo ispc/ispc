@@ -425,6 +425,8 @@ DEFINE_ATOMIC_OP(unsigned int32,int32,or,or)
 DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor)
 DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap)
 
+DEFINE_ATOMIC_OP(float,float,swap,swap)
+
 DEFINE_ATOMIC_OP(int64,int64,add,add)
 DEFINE_ATOMIC_OP(int64,int64,subtract,sub)
 DEFINE_ATOMIC_OP(int64,int64,min,min)
@@ -445,6 +447,8 @@ DEFINE_ATOMIC_OP(unsigned int64,int64,or,or)
 DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor)
 DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap)
 
+DEFINE_ATOMIC_OP(double,double,swap,swap)
+
 #define ATOMIC_DECL_CMPXCHG(TA, TB)                                        \
 static inline TA atomic_compare_exchange_global(                           \
          uniform reference TA ref, TA oldval, TA newval) {                 \
@@ -456,8 +460,10 @@ static inline TA atomic_compare_exchange_global(                           \
 
 ATOMIC_DECL_CMPXCHG(int32, int32)
 ATOMIC_DECL_CMPXCHG(unsigned int32, int32)
+ATOMIC_DECL_CMPXCHG(float, float)
 ATOMIC_DECL_CMPXCHG(int64, int64)
 ATOMIC_DECL_CMPXCHG(unsigned int64, int64)
+ATOMIC_DECL_CMPXCHG(double, double)
 
 ///////////////////////////////////////////////////////////////////////////
 // Load/store from/to 8/16-bit types

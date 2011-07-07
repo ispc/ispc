@@ -800,9 +800,48 @@ global_atomic($1, umax, i64, uint64)
 global_swap($1, i32, int32)
 global_swap($1, i64, int64)
 
+define internal <$1 x float> @__atomic_swap_float_global(float * %ptr, <$1 x float> %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %ival = bitcast <$1 x float> %val to <$1 x i32>
+  %iret = call <$1 x i32> @__atomic_swap_int32_global(i32 * %iptr, <$1 x i32> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i32> %iret to <$1 x float>
+  ret <$1 x float> %ret
+}
+
+define internal <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x double> %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %ival = bitcast <$1 x double> %val to <$1 x i64>
+  %iret = call <$1 x i64> @__atomic_swap_int64_global(i64 * %iptr, <$1 x i64> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i64> %iret to <$1 x double>
+  ret <$1 x double> %ret
+}
+
 global_atomic_exchange($1, i32, int32)
 global_atomic_exchange($1, i64, int64)
 
+define internal <$1 x float> @__atomic_compare_exchange_float_global(float * %ptr,
+                      <$1 x float> %cmp, <$1 x float> %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %icmp = bitcast <$1 x float> %cmp to <$1 x i32>
+  %ival = bitcast <$1 x float> %val to <$1 x i32>
+  %iret = call <$1 x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <$1 x i32> %icmp,
+                                                                  <$1 x i32> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i32> %iret to <$1 x float>
+  ret <$1 x float> %ret
+}
+
+define internal <$1 x double> @__atomic_compare_exchange_double_global(double * %ptr,
+                      <$1 x double> %cmp, <$1 x double> %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %icmp = bitcast <$1 x double> %cmp to <$1 x i64>
+  %ival = bitcast <$1 x double> %val to <$1 x i64>
+  %iret = call <$1 x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <$1 x i64> %icmp,
+                                                                  <$1 x i64> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i64> %iret to <$1 x double>
+  ret <$1 x double> %ret
+}
 ')
 
 
