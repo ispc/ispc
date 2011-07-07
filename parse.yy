@@ -305,9 +305,13 @@ cast_expression
           // uniform float x = 1. / (float)y;
           // don't issue an error due to (float)y being inadvertently
           // and undesirably-to-the-user "varying"...
-          if ($4->GetType()->IsUniformType())
-             $2 = $2->GetAsUniformType();
-          $$ = new TypeCastExpr($2, $4, @1); 
+          if ($2 == NULL || $4 == NULL || $4->GetType() == NULL)
+              $$ = NULL;
+          else {
+              if ($4->GetType()->IsUniformType())
+                 $2 = $2->GetAsUniformType();
+              $$ = new TypeCastExpr($2, $4, @1); 
+          }
       }
     ;
 
@@ -459,13 +463,15 @@ declaration_specifiers
     | storage_class_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds->storageClass != SC_NONE)
-              Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
-                    "(Have provided both \"%s\" and \"%s\".)",
-                    lGetStorageClassString(ds->storageClass),
-                    lGetStorageClassString($1));
-          else
-              ds->storageClass = $1;
+          if (ds != NULL) {
+              if (ds->storageClass != SC_NONE)
+                  Error(@1, "Multiple storage class specifiers in a declaration are illegal. "
+                        "(Have provided both \"%s\" and \"%s\".)",
+                        lGetStorageClassString(ds->storageClass),
+                        lGetStorageClassString($1));
+              else
+                  ds->storageClass = $1;
+          }
           $$ = ds;
       }
     | soa_width_specifier
@@ -477,10 +483,12 @@ declaration_specifiers
     | soa_width_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds->soaWidth != 0)
-              Error(@1, "soa<> qualifier supplied multiple times in declaration.");
-          else
-              ds->soaWidth = $1;
+          if (ds != NULL) {
+              if (ds->soaWidth != 0)
+                  Error(@1, "soa<> qualifier supplied multiple times in declaration.");
+              else
+                  ds->soaWidth = $1;
+          }
           $$ = ds;
       }
     | type_specifier
@@ -496,9 +504,11 @@ declaration_specifiers
     | type_specifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          if (ds->baseType != NULL)
-              Error(@1, "Multiple types provided for declaration.");
-          ds->baseType = $1;
+          if (ds != NULL) {
+              if (ds->baseType != NULL)
+                  Error(@1, "Multiple types provided for declaration.");
+              ds->baseType = $1;
+          }
           $$ = ds;
       }
     | type_qualifier
@@ -508,7 +518,8 @@ declaration_specifiers
     | type_qualifier declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
-          ds->typeQualifier |= $1;
+          if (ds != NULL)
+              ds->typeQualifier |= $1;
           $$ = ds;
       }
     ;
@@ -523,14 +534,20 @@ init_declarator_list
     | init_declarator_list ',' init_declarator
       {
           std::vector<Declarator *> *dl = (std::vector<Declarator *> *)$1;
-          dl->push_back($3);
+          if (dl != NULL && $3 != NULL)
+              dl->push_back($3);
           $$ = $1;
       }
     ;
 
 init_declarator
     : declarator
-    | declarator '=' initializer { $1->initExpr = $3; $$ = $1; }
+    | declarator '=' initializer 
+      {
+          if ($1 != NULL)
+              $1->initExpr = $3; 
+          $$ = $1; 
+      }
     ;
 
 storage_class_specifier
@@ -637,13 +654,15 @@ struct_declaration_list
     : struct_declaration 
       { 
           std::vector<StructDeclaration *> *sdl = new std::vector<StructDeclaration *>;
-          sdl->push_back($1);
+          if (sdl != NULL && $1 != NULL)
+              sdl->push_back($1);
           $$ = sdl;
       }
     | struct_declaration_list struct_declaration 
       {
           std::vector<StructDeclaration *> *sdl = (std::vector<StructDeclaration *> *)$1;
-          sdl->push_back($2);
+          if (sdl != NULL && $2 != NULL)
+              sdl->push_back($2);
           $$ = $1;
       }
     ;
@@ -659,27 +678,31 @@ specifier_qualifier_list
     | short_vec_specifier
     | type_qualifier specifier_qualifier_list 
     {
-        if ($1 == TYPEQUAL_UNIFORM)
-            $$ = $2->GetAsUniformType();
-        else if ($1 == TYPEQUAL_VARYING)
-            $$ = $2->GetAsVaryingType();
-        else if ($1 == TYPEQUAL_REFERENCE)
-            $$ = new ReferenceType($2, false);
-        else if ($1 == TYPEQUAL_CONST)
-            $$ = $2->GetAsConstType();
-        else if ($1 == TYPEQUAL_UNSIGNED) {
-            const Type *t = $2->GetAsUnsignedType();
-            if (t)
-                $$ = t;
+        if ($2 != NULL) {
+            if ($1 == TYPEQUAL_UNIFORM)
+                $$ = $2->GetAsUniformType();
+            else if ($1 == TYPEQUAL_VARYING)
+                $$ = $2->GetAsVaryingType();
+            else if ($1 == TYPEQUAL_REFERENCE)
+                $$ = new ReferenceType($2, false);
+            else if ($1 == TYPEQUAL_CONST)
+                $$ = $2->GetAsConstType();
+            else if ($1 == TYPEQUAL_UNSIGNED) {
+                const Type *t = $2->GetAsUnsignedType();
+                if (t)
+                    $$ = t;
+                else {
+                    Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
+                          $2->GetString().c_str());
+                    $$ = $2;
+                }
+            } 
             else {
-                Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
-                      $2->GetString().c_str());
-                $$ = $2;
+                UNIMPLEMENTED;
             }
-        } 
-        else {
-            UNIMPLEMENTED;
         }
+        else
+            $$ = NULL;
     }
 /* K&R--implicit int type--e.g. "static foo" -> foo is an int */
 /*    | type_qualifier { UNIMPLEMENTED; }*/
@@ -690,13 +713,15 @@ struct_declarator_list
     : struct_declarator 
       {
           std::vector<Declarator *> *sdl = new std::vector<Declarator *>;
-          sdl->push_back($1);
+          if ($1 != NULL)
+              sdl->push_back($1);
           $$ = sdl;
       }
     | struct_declarator_list ',' struct_declarator 
       {
           std::vector<Declarator *> *sdl = (std::vector<Declarator *> *)$1;
-          sdl->push_back($3);
+          if (sdl != NULL && $3 != NULL)
+              sdl->push_back($3);
           $$ = $1;
       }
     ;
@@ -757,8 +782,9 @@ direct_declarator
     | direct_declarator '[' constant_expression ']'
     {
         Expr *size = $3;
-        if (size) size = size->TypeCheck();
-        if (size) {
+        if (size)
+            size = size->TypeCheck();
+        if (size && $1 != NULL) {
             size = size->Optimize();
             llvm::Constant *cval = size->GetConstant(size->GetType());
             if (!cval) {
@@ -780,21 +806,25 @@ direct_declarator
     }
     | direct_declarator '[' ']'
     {
-        $1->AddArrayDimension(-1); // unsized
+        if ($1 != NULL)
+            $1->AddArrayDimension(-1); // unsized
         $$ = $1;
     }
     | direct_declarator '(' parameter_type_list ')'
       {
           Declarator *d = (Declarator *)$1;
-          d->isFunction = true;
-          d->functionArgs = $3;
+          if (d != NULL) {
+              d->isFunction = true;
+              d->functionArgs = $3;
+          }
           $$ = d;
       }
 /* K&R?   | direct_declarator '(' identifier_list ')' */
     | direct_declarator '(' ')'
       {
           Declarator *d = (Declarator *)$1;
-          d->isFunction = true;
+          if (d != NULL)
+              d->isFunction = true;
           $$ = d;
       }
     ;
@@ -844,7 +874,8 @@ parameter_declaration
     }
     | declaration_specifiers declarator '=' initializer
     { 
-        $2->initExpr = $4;
+        if ($2 != NULL)
+            $2->initExpr = $4;
         $$ = new Declaration($1, $2); 
 
     }
@@ -900,10 +931,14 @@ initializer_list
       { $$ = new ExprList($1, @1); }
     | initializer_list ',' initializer
       {
-          ExprList *exprList = dynamic_cast<ExprList *>($1);
-          assert(exprList);
-          exprList->exprs.push_back($3);
-          $$ = exprList;
+          if ($1 == NULL)
+              $$ = NULL;
+          else {
+              ExprList *exprList = dynamic_cast<ExprList *>($1);
+              assert(exprList);
+              exprList->exprs.push_back($3);
+              $$ = exprList;
+          }
       }
     ;
 
@@ -960,7 +995,8 @@ statement_list
       }
     | statement_list statement
       {
-          ((StmtList *)$1)->Add($2);
+          if ($1 != NULL)
+              ((StmtList *)$1)->Add($2);
           $$ = $1;
       }
     ;
@@ -1084,8 +1120,9 @@ external_declaration
     | TOKEN_EXTERN TOKEN_STRING_LITERAL '{' declaration '}' // FIXME: make sure string=="C"
     | declaration 
     { 
-        for (unsigned int i = 0; i < $1->declarators.size(); ++i)
-            m->AddGlobal($1->declSpecs, $1->declarators[i]);
+        if ($1 != NULL)
+            for (unsigned int i = 0; i < $1->declarators.size(); ++i)
+                m->AddGlobal($1->declSpecs, $1->declarators[i]);
     }
     ;
 
@@ -1127,6 +1164,8 @@ lAddFunctionParams(Declarator *decl) {
     if (decl->functionArgs) {
         for (unsigned int i = 0; i < decl->functionArgs->size(); ++i) {
             Declaration *pdecl = (*decl->functionArgs)[i];
+            if (pdecl == NULL)
+                continue;
             assert(pdecl->declarators.size() == 1);
             Symbol *sym = pdecl->declarators[0]->sym;
 #ifndef NDEBUG
