@@ -393,12 +393,12 @@ lEscapeChar(char *str, char *pChar, SourcePos *pos)
         // octal constants \012
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7':
-            *pChar = strtol(str, &tail, 8);
+            *pChar = (char)strtol(str, &tail, 8);
             str = tail - 1;
             break;
         // hexidecimal constant \xff
         case 'x':
-            *pChar = strtol(str, &tail, 16);
+            *pChar = (char)strtol(str, &tail, 16);
             str = tail - 1;
             break;
         default:
