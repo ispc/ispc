@@ -1170,7 +1170,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
         llvm::DIFile diFile = elementPositions[i].GetDIFile();
         int line = elementPositions[i].first_line;
-#ifdef LLVM_2_9
+#if defined(LLVM_2_9) || defined(LLVM_3_0svn)
         llvm::DIType fieldType = 
             m->diBuilder->createMemberType(elementNames[i], diFile, line,
                                            eltSize, eltAlign, currentSize, 0,
