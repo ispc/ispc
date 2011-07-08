@@ -625,7 +625,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its definitions
         // added.
-        extern const char *stdlib_code;
+        extern char stdlib_code[];
         yy_scan_string(stdlib_code);
         yyparse();
     }
