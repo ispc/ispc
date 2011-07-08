@@ -2763,17 +2763,6 @@ IndexExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // MemberExpr
 
-class NullMemberExpr : public MemberExpr
-{
-public:
-    NullMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
-        : MemberExpr(e, id, p, idpos) {}
-
-    const Type* GetType() const {
-        return NULL;
-    }
-};
-
 class StructMemberExpr : public MemberExpr
 {
 public:
@@ -2855,7 +2844,7 @@ MemberExpr*
 MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
     const Type* exprType;
     if (e == NULL || (exprType = e->GetType()) == NULL)
-        return new NullMemberExpr(e, id, p, idpos);
+        return new MemberExpr(e, id, p, idpos);
 
     const StructType* structType = dynamic_cast<const StructType*>(exprType);
     if (structType != NULL)
@@ -2869,7 +2858,7 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
     if (referenceType != NULL)
         return new ReferenceMemberExpr(e, id, p, idpos, referenceType);
   
-    return new NullMemberExpr(e, id, p, idpos);
+    return new MemberExpr(e, id, p, idpos);
 }
 
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos) 
@@ -2913,48 +2902,7 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 MemberExpr::GetType() const {
-    if (!expr)
-        return NULL;
-
-    const Type *exprType = expr->GetType();
-    if (!exprType)
-        return NULL;
-
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    if (!structType && !vectorType) {
-        const ReferenceType *referenceType =
-            dynamic_cast<const ReferenceType *>(exprType);
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget();
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL) {
-            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
-                  exprType->GetString().c_str());
-            return NULL;
-        }
-    }
-
-    if (vectorType != NULL)
-        // only one-element vector selection is supported for now (i.e. no
-        // swizzling "foo.xxy"), so the result type is always just the
-        // element type.
-        return vectorType->GetElementType();
-    else {
-        // Otherwise it's a struct, and the result type is the element
-        // type, possibly promoted to varying if the struct type / lvalue
-        // is varying.
-        const Type *elementType = structType->GetElementType(identifier);
-        if (!elementType)
-            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
-                  identifier.c_str(), structType->GetString().c_str(),
-                  getCandidateNearMatches().c_str());
-        
-        if (exprType->IsVaryingType())
-            return elementType->GetAsVaryingType();
-        else
-            return elementType;
-    }
+    return NULL;
 }
 
 Symbol *
