@@ -463,53 +463,10 @@ define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-; FIXME: I think this and the next one need to verify that the mask isn't
-; all off before doing the load!!!  (See e.g. stdlib-sse.ll)
-
-define <8 x i32> @__load_and_broadcast_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to i32 *
-  %val = load i32 * %ptr
-
-  %ret0 = insertelement <8 x i32> undef, i32 %val, i32 0
-  %ret1 = insertelement <8 x i32> %ret0, i32 %val, i32 1
-  %ret2 = insertelement <8 x i32> %ret1, i32 %val, i32 2
-  %ret3 = insertelement <8 x i32> %ret2, i32 %val, i32 3
-  %ret4 = insertelement <8 x i32> %ret3, i32 %val, i32 4
-  %ret5 = insertelement <8 x i32> %ret4, i32 %val, i32 5
-  %ret6 = insertelement <8 x i32> %ret5, i32 %val, i32 6
-  %ret7 = insertelement <8 x i32> %ret6, i32 %val, i32 7
-  ret <8 x i32> %ret7
-}
-
-
-define <8 x i64> @__load_and_broadcast_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to i64 *
-  %val = load i64 * %ptr
-
-  %ret0 = insertelement <8 x i64> undef, i64 %val, i32 0
-  %ret1 = insertelement <8 x i64> %ret0, i64 %val, i32 1
-  %ret2 = insertelement <8 x i64> %ret1, i64 %val, i32 2
-  %ret3 = insertelement <8 x i64> %ret2, i64 %val, i32 3
-  %ret4 = insertelement <8 x i64> %ret3, i64 %val, i32 4
-  %ret5 = insertelement <8 x i64> %ret4, i64 %val, i32 5
-  %ret6 = insertelement <8 x i64> %ret5, i64 %val, i32 6
-  %ret7 = insertelement <8 x i64> %ret6, i64 %val, i32 7
-  ret <8 x i64> %ret7
-}
-
-
-define <8 x i32> @__load_masked_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to <8 x i32> *
-  %val = load <8 x i32> * %ptr, align 4
-  ret <8 x i32> %val
-}
-
-
-define <8 x i64> @__load_masked_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to <8 x i64> *
-  %val = load <8 x i64> * %ptr, align 8
-  ret <8 x i64> %val
-}
+load_and_broadcast(8, i32, 32)
+load_and_broadcast(8, i64, 64)
+load_masked(8, i32, 32, 4)
+load_masked(8, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

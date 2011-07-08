@@ -401,82 +401,10 @@ define void @__masked_store_64(<4 x i64>* nocapture, <4 x i64>, <4 x i32>) nounw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-define <4 x i32> @__load_and_broadcast_32(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  ; must not load if the mask is all off; the address may be invalid
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  %ptr = bitcast i8 * %0 to i32 *
-  %val = load i32 * %ptr
-
-  %ret0 = insertelement <4 x i32> undef, i32 %val, i32 0
-  %ret1 = insertelement <4 x i32> %ret0, i32 %val, i32 1
-  %ret2 = insertelement <4 x i32> %ret1, i32 %val, i32 2
-  %ret3 = insertelement <4 x i32> %ret2, i32 %val, i32 3
-  ret <4 x i32> %ret3
-
-skip:
-  ret <4 x i32> undef
-}
-
-define <4 x i64> @__load_and_broadcast_64(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  ; must not load if the mask is all off; the address may be invalid
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  %ptr = bitcast i8 * %0 to i64 *
-  %val = load i64 * %ptr
-
-  %ret0 = insertelement <4 x i64> undef, i64 %val, i32 0
-  %ret1 = insertelement <4 x i64> %ret0, i64 %val, i32 1
-  %ret2 = insertelement <4 x i64> %ret1, i64 %val, i32 2
-  %ret3 = insertelement <4 x i64> %ret2, i64 %val, i32 3
-  ret <4 x i64> %ret3
-
-skip:
-  ret <4 x i64> undef
-}
-
-define <4 x i32> @__load_masked_32(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load: 
-  ; if any mask lane is on, just load all of the values
-  ; FIXME: there is a lurking bug here if we straddle a page boundary, the
-  ; next page is invalid to read, but the mask bits are set so that we
-  ; aren't supposed to be reading those elements...
-  %ptr = bitcast i8 * %0 to <4 x i32> *
-  %val = load <4 x i32> * %ptr, align 4
-  ret <4 x i32> %val
-
-skip:
-  ret <4 x i32> undef
-}
-
-define <4 x i64> @__load_masked_64(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  ; if any mask lane is on, just load all of the values
-  ; FIXME: there is a lurking bug here if we straddle a page boundary, the
-  ; next page is invalid to read, but the mask bits are set so that we
-  ; aren't supposed to be reading those elements...
-  %ptr = bitcast i8 * %0 to <4 x i64> *
-  %val = load <4 x i64> * %ptr, align 8
-  ret <4 x i64> %val
-
-skip:
-  ret <4 x i64> undef
-}
-
+load_and_broadcast(4, i32, 32)
+load_and_broadcast(4, i64, 64)
+load_masked(4, i32, 32, 4)
+load_masked(4, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

@@ -1056,6 +1056,90 @@ skip:
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Emit code to safely load a scalar value and broadcast it across the
+;; elements of a vector.  Parameters:
+;; $1: target vector width
+;; $2: element type for which to emit the function (i32, i64, ...)
+;; $3: suffix for function name (32, 64, ...)
+
+
+define(`load_and_broadcast', `
+define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+  ; must not load if the mask is all off; the address may be invalid
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any_on = icmp ne i32 %mm, 0
+  br i1 %any_on, label %load, label %skip
+
+load:
+  %ptr = bitcast i8 * %0 to $2 *
+  %val = load $2 * %ptr
+
+  %ret0 = insertelement <$1 x $2> undef, $2 %val, i32 0
+  forloop(i, 1, eval($1-1), `
+  %ret`'i = insertelement <$1 x $2> %ret`'eval(i-1), $2 %val, i32 i')
+  ret <$1 x $2> %ret`'eval($1-1)
+
+skip:
+  ret <$1 x $2> undef
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Emit general-purpose code to do a masked load for targets that dont have
+;; an instruction to do that.  Parameters:
+;; $1: target vector width
+;; $2: element type for which to emit the function (i32, i64, ...)
+;; $3: suffix for function name (32, 64, ...)
+;; $4: alignment for elements of type $2 (4, 8, ...)
+
+define(`load_masked', `
+define <$1 x $2> @__load_masked_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+entry:
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  ; if the first lane and the last lane are on, then it is safe to do a vector load
+  ; of the whole thing--what the lanes in the middle want turns out to not matter...
+  %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
+  %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
+  ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
+  %retptr = alloca <$1 x $2>
+  %retptr32 = bitcast <$1 x $2> * %retptr to $2 *
+  br i1 %can_vload, label %load, label %loop
+
+load: 
+  %ptr = bitcast i8 * %0 to <$1 x $2> *
+  %valall = load <$1 x $2> * %ptr, align $4
+  ret <$1 x $2> %valall
+
+loop:
+  ; loop over the lanes and see if each one is on...
+  %lane = phi i32 [ 0, %entry ], [ %next_lane, %lane_done ]
+  %lanemask = shl i32 1, %lane
+  %mask_and = and i32 %mm, %lanemask
+  %do_lane = icmp ne i32 %mask_and, 0
+  br i1 %do_lane, label %load_lane, label %lane_done
+
+load_lane:
+  ; yes!  do the load and store the result into the appropriate place in the
+  ; allocaed memory above
+  %ptr32 = bitcast i8 * %0 to $2 *
+  %lane_ptr = getelementptr $2 * %ptr32, i32 %lane
+  %val = load $2 * %lane_ptr
+  %store_ptr = getelementptr $2 * %retptr32, i32 %lane
+  store $2 %val, $2 * %store_ptr
+  br label %lane_done
+
+lane_done:
+  %next_lane = add i32 %lane, 1
+  %done = icmp eq i32 %lane, eval($1-1)
+  br i1 %done, label %return, label %loop
+
+return:
+  %r = load <$1 x $2> * %retptr
+  ret <$1 x $2> %r
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; packed load and store functions
 ;;
 ;; These define functions to emulate those nice packed load and packed store
