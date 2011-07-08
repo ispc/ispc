@@ -2893,6 +2893,28 @@ public:
         }
     }
 
+    llvm::Value* GetLValue(FunctionEmitContext* ctx) const {
+        if (dereferencedExpr == NULL) {
+            // FIXME: again I think typechecking should have caught this
+            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
+                  exprReferenceType->GetString().c_str());
+            return NULL;
+        }
+
+        //FIXME: Minor Code-dup...this is the same as the base, except
+        // llvm::Value *basePtr = expr->GetLValue instead of expr->getValue
+        llvm::Value *basePtr = expr->GetValue(ctx);
+        if (!basePtr)
+            return NULL;
+
+        int elementNumber = getElementNumber();
+        if (elementNumber == -1)
+            return NULL;
+
+        ctx->SetDebugPos(pos);
+        return ctx->GetElementPtrInst(basePtr, 0, elementNumber);
+    }
+
 private:
     const ReferenceType* exprReferenceType;
     MemberExpr* dereferencedExpr;
@@ -2963,6 +2985,7 @@ MemberExpr::GetType() const {
     return NULL;
 }
 
+
 Symbol *
 MemberExpr::GetBaseSymbol() const {
     return expr ? expr->GetBaseSymbol() : NULL;
@@ -2975,36 +2998,17 @@ MemberExpr::getElementNumber() const {
 }
 
 
-
 llvm::Value *
 MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
+    //This kindof feels like magic, but this functionality
+    // will have to be overridden in VectorMemberExpr when
+    // we support multi-swizzle.
     const Type *exprType;
     if (!expr || ((exprType = expr->GetType()) == NULL))
         return NULL;
 
     ctx->SetDebugPos(pos);
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    llvm::Value *basePtr = NULL;
-    if (structType || vectorType)
-        basePtr = expr->GetLValue(ctx);
-    else {
-        const ReferenceType *referenceType = dynamic_cast<const ReferenceType *>(exprType);
-        // FIXME: store structType and vectorType as members, or do all
-        // this in a separate function?  This code to figure out
-        // struct/vectorType is replicated a bunch of times in
-        // MemberExpr...
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget() ;
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL) {
-            // FIXME: again I think typechecking should have caught this
-            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
-                  exprType->GetString().c_str());
-            return NULL;
-        }
-        basePtr = expr->GetValue(ctx);
-    }
+    llvm::Value *basePtr = expr->GetLValue(ctx);
     if (!basePtr)
         return NULL;
 
