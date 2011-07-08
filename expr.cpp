@@ -2763,6 +2763,31 @@ IndexExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // MemberExpr
 
+/** Map one character ids to vector element numbers.  Allow a few different
+    conventions--xyzw, rgba, uv.
+ */
+static int
+lIdentifierToVectorElement(char id) {
+    switch (id) {
+    case 'x':
+    case 'r':
+    case 'u':
+        return 0;
+    case 'y':
+    case 'g':
+    case 'v':
+        return 1;
+    case 'z':
+    case 'b':
+        return 2;
+    case 'w':
+    case 'a':
+        return 3;
+    default:
+        return -1;
+    }
+}
+
 class StructMemberExpr : public MemberExpr
 {
 public:
@@ -2786,6 +2811,14 @@ public:
             return elementType;
     }
 
+    int getElementNumber() const {
+        int elementNumber = exprStructType->GetElementNumber(identifier);
+        if (elementNumber == -1)
+            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
+                  identifier.c_str(), exprStructType->GetString().c_str(),
+                  getCandidateNearMatches().c_str());
+        return elementNumber;
+    }
 
 private:
     const StructType* exprStructType;
@@ -2801,6 +2834,21 @@ public:
     const Type* GetType() const {
         //No swizzle support yet.
         return exprVectorType->GetElementType();
+    }
+
+    int getElementNumber() const {
+        int elementNumber = -1;
+        if (identifier.size() != 1) {
+            Error(pos, "Only single-character vector element accessors are currently "
+                  "supported--\"%s\" is invalid.  Sorry.", identifier.c_str());
+        }
+        else {
+            elementNumber = lIdentifierToVectorElement(identifier[0]);
+            if (elementNumber == -1)
+                Error(pos, "Vector element identifier \"%s\" unknown.", 
+                      identifier.c_str());
+        }
+        return elementNumber;
     }
 
 private:
@@ -2832,6 +2880,16 @@ public:
             return NULL;
         } else {
             return dereferencedExpr->GetType();
+        }
+    }
+
+    int getElementNumber() const {
+        if (dereferencedExpr == NULL) {
+            // FIXME: I think we shouldn't ever get here and that
+            // typechecking should have caught this case
+            return -1;
+        } else {
+            return dereferencedExpr->getElementNumber();
         }
     }
 
@@ -2911,73 +2969,9 @@ MemberExpr::GetBaseSymbol() const {
 }
 
 
-/** Map one character ids to vector element numbers.  Allow a few different
-    conventions--xyzw, rgba, uv.
- */
-static int
-lIdentifierToVectorElement(char id) {
-    switch (id) {
-    case 'x':
-    case 'r':
-    case 'u':
-        return 0;
-    case 'y':
-    case 'g':
-    case 'v':
-        return 1;
-    case 'z':
-    case 'b':
-        return 2;
-    case 'w':
-    case 'a':
-        return 3;
-    default:
-        return -1;
-    }
-}
-
-
 int
 MemberExpr::getElementNumber() const {
-    const Type *exprType;
-    if (!expr || ((exprType = expr->GetType()) == NULL))
-        return -1;
-
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    if (!structType && !vectorType) {
-        const ReferenceType *referenceType = 
-            dynamic_cast<const ReferenceType *>(exprType);
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget() ;
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL)
-            // FIXME: I think we shouldn't ever get here and that
-            // typechecking should have caught this case
-            return -1;
-    }
-
-    int elementNumber = -1;
-    if (vectorType) {
-        if (identifier.size() != 1) {
-            Error(pos, "Only single-character vector element accessors are currently "
-                  "supported--\"%s\" is invalid.  Sorry.", identifier.c_str());
-        }
-        else {
-            elementNumber = lIdentifierToVectorElement(identifier[0]);
-            if (elementNumber == -1)
-                Error(pos, "Vector element identifier \"%s\" unknown.", 
-                      identifier.c_str());
-        }
-    }
-    else {
-        elementNumber = structType->GetElementNumber(identifier);
-        if (elementNumber == -1)
-            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
-                  identifier.c_str(), structType->GetString().c_str(),
-                  getCandidateNearMatches().c_str());
-    }
-    return elementNumber;
+    return -1;
 }
 
 

@@ -309,10 +309,10 @@ public:
     virtual void Print() const;
     virtual Expr *Optimize();
     virtual Expr *TypeCheck();
+    virtual int getElementNumber() const;
 
 protected:
     std::string getCandidateNearMatches() const;
-    int getElementNumber() const;
 
     Expr *expr;
     std::string identifier;
