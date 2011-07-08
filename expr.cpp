@@ -2763,50 +2763,113 @@ IndexExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // MemberExpr
 
+class NullMemberExpr : public MemberExpr
+{
+public:
+    NullMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
+        : MemberExpr(e, id, p, idpos) {}
+
+    const Type* GetType() const {
+        return NULL;
+    }
+};
+
 class StructMemberExpr : public MemberExpr
 {
 public:
-    StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
-        : MemberExpr(e, id, p, idpos) {
+    StructMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, const StructType* structType)
+        : MemberExpr(e, id, p, idpos), exprStructType(structType) {
     }
+
+    const Type* GetType() const {
+        // It's a struct, and the result type is the element
+        // type, possibly promoted to varying if the struct type / lvalue
+        // is varying.
+        const Type *elementType = exprStructType->GetElementType(identifier);
+        if (!elementType)
+            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
+                  identifier.c_str(), exprStructType->GetString().c_str(),
+                  getCandidateNearMatches().c_str());
+
+        if (exprStructType->IsVaryingType()) 
+            return elementType->GetAsVaryingType();
+        else
+            return elementType;
+    }
+
+
+private:
+    const StructType* exprStructType;
 };
 
 class VectorMemberExpr : public MemberExpr
 {
 public:
-    VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
-        : MemberExpr(e, id, p, idpos) {
+    VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, const VectorType* vectorType)
+        : MemberExpr(e, id, p, idpos), exprVectorType(vectorType) {
     }
+
+    const Type* GetType() const {
+        //No swizzle support yet.
+        return exprVectorType->GetElementType();
+    }
+
+private:
+    const VectorType* exprVectorType;
 };
 
 class ReferenceMemberExpr : public MemberExpr
 {
 public:
-    ReferenceMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos)
-        : MemberExpr(e, id, p, idpos) {
+    ReferenceMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, const ReferenceType* referenceType)
+        : MemberExpr(e, id, p, idpos), exprReferenceType(referenceType) {
+        const Type* refTarget = exprReferenceType->GetReferenceTarget();
+        const StructType* structType;
+        const VectorType* vectorType;
+
+        if ((structType = dynamic_cast<const StructType *>(refTarget)) != NULL) {
+            dereferencedExpr = new StructMemberExpr(e, id, p, idpos, structType);
+        } else if ((vectorType = dynamic_cast<const VectorType *>(refTarget)) != NULL) {
+            dereferencedExpr = new VectorMemberExpr(e, id, p, idpos, vectorType);
+        } else {
+            dereferencedExpr = NULL;
+        }
     }
+
+    const Type* GetType() const {
+        if (dereferencedExpr == NULL) {
+            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
+                  exprReferenceType->GetString().c_str());
+            return NULL;
+        } else {
+            return dereferencedExpr->GetType();
+        }
+    }
+
+private:
+    const ReferenceType* exprReferenceType;
+    MemberExpr* dereferencedExpr;
 };
 
 MemberExpr*
 MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
     const Type* exprType;
     if (e == NULL || (exprType = e->GetType()) == NULL)
-        Error(p, "Member Expressions valid only for Typed base expressions");
+        return new NullMemberExpr(e, id, p, idpos);
 
     const StructType* structType = dynamic_cast<const StructType*>(exprType);
     if (structType != NULL)
-        return new StructMemberExpr(e, id, p, idpos);
+        return new StructMemberExpr(e, id, p, idpos, structType);
 
     const VectorType* vectorType = dynamic_cast<const VectorType*>(exprType);
     if (vectorType != NULL)
-        return new VectorMemberExpr(e, id, p, idpos);
+        return new VectorMemberExpr(e, id, p, idpos, vectorType);
 
-    const ReferenceType* refType = dynamic_cast<const ReferenceType*>(exprType);
-    if (refType != NULL)
-        return new ReferenceMemberExpr(e, id, p, idpos);
+    const ReferenceType* referenceType = dynamic_cast<const ReferenceType*>(exprType);
+    if (referenceType != NULL)
+        return new ReferenceMemberExpr(e, id, p, idpos, referenceType);
   
-    Error(p, "Member Expressions valid only for Struct, Vector, Reference types");
-    return NULL;
+    return new NullMemberExpr(e, id, p, idpos);
 }
 
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos) 
@@ -2860,7 +2923,7 @@ MemberExpr::GetType() const {
     const StructType *structType = dynamic_cast<const StructType *>(exprType);
     const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
     if (!structType && !vectorType) {
-        const ReferenceType *referenceType = 
+        const ReferenceType *referenceType =
             dynamic_cast<const ReferenceType *>(exprType);
         const Type *refTarget = (referenceType == NULL) ? NULL :
             referenceType->GetReferenceTarget();
@@ -2886,14 +2949,13 @@ MemberExpr::GetType() const {
             Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
                   identifier.c_str(), structType->GetString().c_str(),
                   getCandidateNearMatches().c_str());
-
-        if (exprType->IsVaryingType()) 
+        
+        if (exprType->IsVaryingType())
             return elementType->GetAsVaryingType();
         else
             return elementType;
     }
 }
-
 
 Symbol *
 MemberExpr::GetBaseSymbol() const {
