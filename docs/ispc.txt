@@ -1852,7 +1852,8 @@ example.
 
 Here are the declarations of the ``int32`` variants of these functions.
 There are also ``int64`` equivalents as well as variants that take
-``unsigned`` ``int32`` and ``int64`` values.
+``unsigned`` ``int32`` and ``int64`` values.  (The ``atomic_swap_global()``
+function can be used with ``float`` and ``double`` types as well.)
 
 ::
 
@@ -1869,7 +1870,8 @@ There is also an atomic "compare and exchange" function; it atomically
 compares the value in "val" to "compare"--if they match, it assigns
 "newval" to "val".  In either case, the old value of "val" is returned.
 (As with the other atomic operations, there are also ``unsigned`` and
-64-bit variants of this function.)
+64-bit variants of this function.  Furthermore, there are ``float`` and
+``double`` variants as well.)
 
 ::
 

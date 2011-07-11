@@ -39,6 +39,7 @@
 stdlib_core(8)
 packed_load_and_store(8)
 int8_16(8)
+int64minmax(8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -258,7 +259,7 @@ define internal float @__min_uniform_float(float, float) nounwind readonly alway
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
+;; int32 min/max
 
 declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
 declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
@@ -380,6 +381,60 @@ define internal i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinli
   reduce8by4(i32, @llvm.x86.sse41.pmaxud, @__max_uniform_uint32)
 }
 
+define internal <4 x double> @__add_varying_double(<4 x double>,
+                                     <4 x double>) nounwind readnone alwaysinline {
+  %r = fadd <4 x double> %0, %1
+  ret <4 x double> %r
+}
+
+define internal double @__add_uniform_double(double, double) nounwind readnone alwaysinline {
+  %r = fadd double %0, %1
+  ret double %r
+}
+
+define internal double @__reduce_add_double(<8 x double>) nounwind readnone {
+  reduce8by4(double, @__add_varying_double, @__add_uniform_double)
+}
+
+define internal double @__reduce_min_double(<8 x double>) nounwind readnone {
+  reduce8(double, @__min_varying_double, @__min_uniform_double)
+}
+
+define internal double @__reduce_max_double(<8 x double>) nounwind readnone {
+  reduce8(double, @__max_varying_double, @__max_uniform_double)
+}
+
+define internal <4 x i64> @__add_varying_int64(<4 x i64>,
+                                               <4 x i64>) nounwind readnone alwaysinline {
+  %r = add <4 x i64> %0, %1
+  ret <4 x i64> %r
+}
+
+define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
+  %r = add i64 %0, %1
+  ret i64 %r
+}
+
+define internal i64 @__reduce_add_int64(<8 x i64>) nounwind readnone {
+  reduce8by4(i64, @__add_varying_int64, @__add_uniform_int64)
+}
+
+define internal i64 @__reduce_min_int64(<8 x i64>) nounwind readnone {
+  reduce8(i64, @__min_varying_int64, @__min_uniform_int64)
+}
+
+define internal i64 @__reduce_max_int64(<8 x i64>) nounwind readnone {
+  reduce8(i64, @__max_varying_int64, @__max_uniform_int64)
+}
+
+define internal i64 @__reduce_min_uint64(<8 x i64>) nounwind readnone {
+  reduce8(i64, @__min_varying_uint64, @__min_uniform_uint64)
+}
+
+define internal i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone {
+  reduce8(i64, @__max_varying_uint64, @__max_uniform_uint64)
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
@@ -408,53 +463,10 @@ define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-; FIXME: I think this and the next one need to verify that the mask isn't
-; all off before doing the load!!!  (See e.g. stdlib-sse.ll)
-
-define <8 x i32> @__load_and_broadcast_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to i32 *
-  %val = load i32 * %ptr
-
-  %ret0 = insertelement <8 x i32> undef, i32 %val, i32 0
-  %ret1 = insertelement <8 x i32> %ret0, i32 %val, i32 1
-  %ret2 = insertelement <8 x i32> %ret1, i32 %val, i32 2
-  %ret3 = insertelement <8 x i32> %ret2, i32 %val, i32 3
-  %ret4 = insertelement <8 x i32> %ret3, i32 %val, i32 4
-  %ret5 = insertelement <8 x i32> %ret4, i32 %val, i32 5
-  %ret6 = insertelement <8 x i32> %ret5, i32 %val, i32 6
-  %ret7 = insertelement <8 x i32> %ret6, i32 %val, i32 7
-  ret <8 x i32> %ret7
-}
-
-
-define <8 x i64> @__load_and_broadcast_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to i64 *
-  %val = load i64 * %ptr
-
-  %ret0 = insertelement <8 x i64> undef, i64 %val, i32 0
-  %ret1 = insertelement <8 x i64> %ret0, i64 %val, i32 1
-  %ret2 = insertelement <8 x i64> %ret1, i64 %val, i32 2
-  %ret3 = insertelement <8 x i64> %ret2, i64 %val, i32 3
-  %ret4 = insertelement <8 x i64> %ret3, i64 %val, i32 4
-  %ret5 = insertelement <8 x i64> %ret4, i64 %val, i32 5
-  %ret6 = insertelement <8 x i64> %ret5, i64 %val, i32 6
-  %ret7 = insertelement <8 x i64> %ret6, i64 %val, i32 7
-  ret <8 x i64> %ret7
-}
-
-
-define <8 x i32> @__load_masked_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to <8 x i32> *
-  %val = load <8 x i32> * %ptr, align 4
-  ret <8 x i32> %val
-}
-
-
-define <8 x i64> @__load_masked_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to <8 x i64> *
-  %val = load <8 x i64> * %ptr, align 8
-  ret <8 x i64> %val
-}
+load_and_broadcast(8, i32, 32)
+load_and_broadcast(8, i64, 64)
+load_masked(8, i32, 32, 4)
+load_masked(8, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -465,7 +477,7 @@ gen_scatter(8, i32)
 gen_scatter(8, i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; math
+;; float rounding
 
 declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
@@ -527,13 +539,65 @@ define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinlin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding doubles
+
+declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readnone
+declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
+
+define internal <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
+  round2to8double(%0, 8)
+}
+
+define internal double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+define internal <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  round2to8double(%0, 9)
+}
+
+define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  ; see above for round_ss instrinsic discussion...
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+define internal <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
+  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  round2to8double(%0, 10)
+}
+
+define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  ; see above for round_ss instrinsic discussion...
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 
-define internal i32 @__popcnt(i32) nounwind readonly alwaysinline {
+define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
   %call = call i32 @llvm.ctpop.i32(i32 %0)
   ret i32 %call
+}
+
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+
+define internal i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
+  %call = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %call
 }
 
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone

@@ -44,7 +44,7 @@ if [[ "$1" > 0 ]]; then
                 echo
             fi
         fi
-        /bin/rm $bc
+        /bin/rm -f $bc
     done
 else
     echo Running all correctness tests
@@ -52,7 +52,7 @@ else
     for i in tests/*.ispc; do
         if $verbose; then
             echo -en "Running test $counter of $number.\r"
-    fi
+        fi
         (( counter++ ))
         bc=${i%%ispc}bc
         ispc -O2 $i -woff -o $bc --emit-llvm --target=$target
@@ -68,10 +68,10 @@ else
                 echo
             fi
         fi
-        /bin/rm $bc
+        /bin/rm -f $bc
     done
 
-    echo Running failing tests
+    echo -e "\nRunning failing tests"
     for i in failing_tests/*.ispc; do
         (ispc -O2 $i -woff -o - --emit-llvm | ispc_test -) 2>/dev/null 1>/dev/null
         if [[ $? == 0 ]]; then

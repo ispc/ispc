@@ -2,10 +2,11 @@
 
 import sys
 
-print "const char *stdlib_code = "
-for line in sys.stdin:
-    l=line.rstrip()
-    l=l.replace('"', '\\"')
-    print "\"" + l + "\\n\""
+print "char stdlib_code[] = { "
 
-print ";"
+for line in sys.stdin:
+    for c in line:
+        print ord(c)
+        print ", "
+
+print "0 };"
