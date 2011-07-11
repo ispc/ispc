@@ -50,6 +50,7 @@ const llvm::Type *LLVMTypes::Int64PointerType = NULL;
 const llvm::Type *LLVMTypes::FloatType = NULL;
 const llvm::Type *LLVMTypes::FloatPointerType = NULL;
 const llvm::Type *LLVMTypes::DoubleType = NULL;
+const llvm::Type *LLVMTypes::DoublePointerType = NULL;
 
 const llvm::VectorType *LLVMTypes::MaskType = NULL;
 const llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
@@ -61,6 +62,7 @@ const llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
 const llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
 const llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
 const llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
+const llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
 const llvm::ArrayType *LLVMTypes::VoidPointerVectorType = NULL;
 
 llvm::Constant *LLVMTrue = NULL;
@@ -83,6 +85,7 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
     LLVMTypes::FloatType = llvm::Type::getFloatTy(*ctx);
     LLVMTypes::FloatPointerType = llvm::PointerType::get(LLVMTypes::FloatType, 0);
     LLVMTypes::DoubleType = llvm::Type::getDoubleTy(*ctx);
+    LLVMTypes::DoublePointerType = llvm::PointerType::get(LLVMTypes::DoubleType, 0);
 
     // Note that both the mask and bool vectors are vector of int32s
     // (not i1s).  LLVM ends up generating much better SSE code with
@@ -103,6 +106,7 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
     LLVMTypes::FloatVectorPointerType = llvm::PointerType::get(LLVMTypes::FloatVectorType, 0);
     LLVMTypes::DoubleVectorType = 
         llvm::VectorType::get(LLVMTypes::DoubleType, target.vectorWidth);
+    LLVMTypes::DoubleVectorPointerType = llvm::PointerType::get(LLVMTypes::DoubleVectorType, 0);
     LLVMTypes::VoidPointerVectorType = 
         llvm::ArrayType::get(LLVMTypes::VoidPointerType, target.vectorWidth);
 

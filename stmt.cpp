@@ -239,6 +239,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             continue;
 
         Symbol *sym = decl->sym;
+        assert(decl->sym != NULL);
         const Type *type = sym->type;
         if (!type)
             continue;
@@ -280,6 +281,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         const llvm::Type *llvmType = type->LLVMType(g->ctx);
+        assert(llvmType != NULL);
 
         if (declaration->declSpecs->storageClass == SC_STATIC) {
             // For static variables, we need a compile-time constant value
@@ -353,11 +355,16 @@ DeclStmt::Optimize() {
 
 Stmt *
 DeclStmt::TypeCheck() {
+    bool encounteredError = false;
     for (unsigned int i = 0; i < declaration->declarators.size(); ++i) {
         Declarator *decl = declaration->declarators[i];
-        if (!decl || !decl->initExpr)
+        if (!decl) {
+            encounteredError = true;
             continue;
+        }
 
+        if (!decl->initExpr)
+            continue;
         decl->initExpr = decl->initExpr->TypeCheck();
         if (!decl->initExpr)
             continue;
@@ -374,7 +381,7 @@ DeclStmt::TypeCheck() {
                 decl->initExpr = decl->initExpr->TypeConv(type, "initializer");
         }
     }
-    return this;
+    return encounteredError ? NULL : this;
 }
 
 

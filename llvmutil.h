@@ -61,6 +61,7 @@ struct LLVMTypes {
     static const llvm::Type *FloatType;
     static const llvm::Type *FloatPointerType;
     static const llvm::Type *DoubleType;
+    static const llvm::Type *DoublePointerType;
 
     static const llvm::VectorType *MaskType;
     static const llvm::VectorType *BoolVectorType;
@@ -72,6 +73,7 @@ struct LLVMTypes {
     static const llvm::VectorType *FloatVectorType;
     static const llvm::Type *FloatVectorPointerType;
     static const llvm::VectorType *DoubleVectorType;
+    static const llvm::Type *DoubleVectorPointerType;
     static const llvm::ArrayType *VoidPointerVectorType;
 };
 

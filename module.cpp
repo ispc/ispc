@@ -944,7 +944,7 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     }
 
     std::string featuresString;
-#ifdef LLVM_3_0svn
+#if defined LLVM_3_0svn || defined LLVM_3_0
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple.getTriple(), g->target.cpu,
                                     featuresString);

@@ -37,6 +37,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 int8_16(4)
+int64minmax(4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -227,6 +228,54 @@ define internal float @__min_uniform_float(float, float) nounwind readonly alway
   ret float %ret
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision sqrt
+
+declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+
+define internal <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
+  unary2to4(ret, double, @llvm.x86.sse2.sqrt.pd, %0)
+  ret <4 x double> %ret
+}
+
+
+define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
+  ret double %ret
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision min/max
+
+declare <2 x double> @llvm.x86.sse2.max.pd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
+
+define internal <4 x double> @__min_varying_double(<4 x double>, <4 x double>) nounwind readnone {
+  binary2to4(ret, double, @llvm.x86.sse2.min.pd, %0, %1)
+  ret <4 x double> %ret
+}
+
+
+define internal double @__min_uniform_double(double, double) nounwind readnone {
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
+  ret double %ret
+}
+
+
+define internal <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind readnone {
+  binary2to4(ret, double, @llvm.x86.sse2.max.pd, %0, %1)
+  ret <4 x double> %ret
+}
+
+
+define internal double @__max_uniform_double(double, double) nounwind readnone {
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
+  ret double %ret
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
@@ -279,6 +328,55 @@ define internal i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone {
  }
 
 
+define internal double @__reduce_add_double(<4 x double>) nounwind readnone {
+  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = fadd <2 x double> %v0, %v1
+  %e0 = extractelement <2 x double> %sum, i32 0
+  %e1 = extractelement <2 x double> %sum, i32 1
+  %m = fadd double %e0, %e1
+  ret double %m
+}
+
+define internal double @__reduce_min_double(<4 x double>) nounwind readnone {
+  reduce4(double, @__min_varying_double, @__min_uniform_double)
+}
+
+define internal double @__reduce_max_double(<4 x double>) nounwind readnone {
+  reduce4(double, @__max_varying_double, @__max_uniform_double)
+}
+
+define internal i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
+  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = add <2 x i64> %v0, %v1
+  %e0 = extractelement <2 x i64> %sum, i32 0
+  %e1 = extractelement <2 x i64> %sum, i32 1
+  %m = add i64 %e0, %e1
+  ret i64 %m
+}
+
+define internal i64 @__reduce_min_int64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
+}
+
+define internal i64 @__reduce_max_int64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__max_varying_int64, @__max_uniform_int64)
+}
+
+define internal i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__min_varying_uint64, @__min_uniform_uint64)
+}
+
+define internal i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__max_varying_uint64, @__max_uniform_uint64)
+}
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
@@ -303,82 +401,10 @@ define void @__masked_store_64(<4 x i64>* nocapture, <4 x i64>, <4 x i32>) nounw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-define <4 x i32> @__load_and_broadcast_32(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  ; must not load if the mask is all off; the address may be invalid
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  %ptr = bitcast i8 * %0 to i32 *
-  %val = load i32 * %ptr
-
-  %ret0 = insertelement <4 x i32> undef, i32 %val, i32 0
-  %ret1 = insertelement <4 x i32> %ret0, i32 %val, i32 1
-  %ret2 = insertelement <4 x i32> %ret1, i32 %val, i32 2
-  %ret3 = insertelement <4 x i32> %ret2, i32 %val, i32 3
-  ret <4 x i32> %ret3
-
-skip:
-  ret <4 x i32> undef
-}
-
-define <4 x i64> @__load_and_broadcast_64(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  ; must not load if the mask is all off; the address may be invalid
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  %ptr = bitcast i8 * %0 to i64 *
-  %val = load i64 * %ptr
-
-  %ret0 = insertelement <4 x i64> undef, i64 %val, i32 0
-  %ret1 = insertelement <4 x i64> %ret0, i64 %val, i32 1
-  %ret2 = insertelement <4 x i64> %ret1, i64 %val, i32 2
-  %ret3 = insertelement <4 x i64> %ret2, i64 %val, i32 3
-  ret <4 x i64> %ret3
-
-skip:
-  ret <4 x i64> undef
-}
-
-define <4 x i32> @__load_masked_32(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load: 
-  ; if any mask lane is on, just load all of the values
-  ; FIXME: there is a lurking bug here if we straddle a page boundary, the
-  ; next page is invalid to read, but the mask bits are set so that we
-  ; aren't supposed to be reading those elements...
-  %ptr = bitcast i8 * %0 to <4 x i32> *
-  %val = load <4 x i32> * %ptr, align 4
-  ret <4 x i32> %val
-
-skip:
-  ret <4 x i32> undef
-}
-
-define <4 x i64> @__load_masked_64(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<4 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  ; if any mask lane is on, just load all of the values
-  ; FIXME: there is a lurking bug here if we straddle a page boundary, the
-  ; next page is invalid to read, but the mask bits are set so that we
-  ; aren't supposed to be reading those elements...
-  %ptr = bitcast i8 * %0 to <4 x i64> *
-  %val = load <4 x i64> * %ptr, align 8
-  ret <4 x i64> %val
-
-skip:
-  ret <4 x i64> undef
-}
-
+load_and_broadcast(4, i32, 32)
+load_and_broadcast(4, i64, 64)
+load_masked(4, i32, 32, 4)
+load_masked(4, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -389,53 +415,3 @@ gen_gather(4, i32)
 gen_gather(4, i64)
 gen_scatter(4, i32)
 gen_scatter(4, i64)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision sqrt
-
-declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
-
-define internal <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
-  unary2to4(ret, double, @llvm.x86.sse2.sqrt.pd, %0)
-  ret <4 x double> %ret
-}
-
-
-define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
-  ret double %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision min/max
-
-declare <2 x double> @llvm.x86.sse2.max.pd(<2 x double>, <2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
-
-define internal <4 x double> @__min_varying_double(<4 x double>, <4 x double>) nounwind readnone {
-  binary2to4(ret, double, @llvm.x86.sse2.min.pd, %0, %1)
-  ret <4 x double> %ret
-}
-
-
-define internal double @__min_uniform_double(double, double) nounwind readnone {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
-  ret double %ret
-}
-
-
-define internal <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind readnone {
-  binary2to4(ret, double, @llvm.x86.sse2.max.pd, %0, %1)
-  ret <4 x double> %ret
-}
-
-
-define internal double @__max_uniform_double(double, double) nounwind readnone {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
-  ret double %ret
-}

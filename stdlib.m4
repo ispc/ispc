@@ -136,6 +136,26 @@ define(`reduce8by4', `
 )
 
 
+;; Apply a unary function to the 4-vector in %0, return the vector result.
+;; $1: scalar type of result
+;; $2: name of scalar function to call
+
+define(`unary1to4', `
+  %v_0 = extractelement <4 x $1> %0, i32 0
+  %r_0 = call $1 $2($1 %v_0)
+  %ret_0 = insertelement <4 x $1> undef, $1 %r_0, i32 0
+  %v_1 = extractelement <4 x $1> %0, i32 1
+  %r_1 = call $1 $2($1 %v_1)
+  %ret_1 = insertelement <4 x $1> %ret_0, $1 %r_1, i32 1
+  %v_2 = extractelement <4 x $1> %0, i32 2
+  %r_2 = call $1 $2($1 %v_2)
+  %ret_2 = insertelement <4 x $1> %ret_1, $1 %r_2, i32 2
+  %v_3 = extractelement <4 x $1> %0, i32 3
+  %r_3 = call $1 $2($1 %v_3)
+  %ret_3 = insertelement <4 x $1> %ret_2, $1 %r_3, i32 3
+  ret <4 x $1> %ret_3
+')
+
 ;; Given a unary function that takes a 2-wide vector and a 4-wide vector
 ;; that we'd like to apply it to, extract 2 2-wide vectors from the 4-wide
 ;; vector, apply it, and return the corresponding 4-wide vector result
@@ -283,6 +303,49 @@ define(`round4to8', `
 %ret = shufflevector <4 x float> %r0, <4 x float> %r1, 
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ret <8 x float> %ret
+'
+)
+
+define(`round4to8double', `
+%v0 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%r0 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v0, i32 $2)
+%r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
+%ret = shufflevector <4 x double> %r0, <4 x double> %r1, 
+         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+ret <8 x double> %ret
+'
+)
+
+; and similarly for doubles...
+
+define(`round2to4double', `
+%v0 = shufflevector <4 x double> $1, <4 x double> undef, <2 x i32> <i32 0, i32 1>
+%v1 = shufflevector <4 x double> $1, <4 x double> undef, <2 x i32> <i32 2, i32 3>
+%r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
+%r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
+%ret = shufflevector <2 x double> %r0, <2 x double> %r1, 
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+ret <4 x double> %ret
+'
+)
+
+define(`round2to8double', `
+%v0 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 0, i32 1>
+%v1 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 2, i32 3>
+%v2 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 4, i32 5>
+%v3 = shufflevector <8 x double> $1, <8 x double> undef, <2 x i32> <i32 6, i32 7>
+%r0 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v0, i32 $2)
+%r1 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v1, i32 $2)
+%r2 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v2, i32 $2)
+%r3 = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %v3, i32 $2)
+%ret0 = shufflevector <2 x double> %r0, <2 x double> %r1, 
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret1 = shufflevector <2 x double> %r2, <2 x double> %r3, 
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%ret = shufflevector <4 x double> %ret0, <4 x double> %ret1,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+ret <8 x double> %ret
 '
 )
 
@@ -503,15 +566,26 @@ declare i1 @__is_compile_time_constant_varying_int32(<$1 x i32>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
 
-define internal float @__extract(<$1 x float>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <$1 x float> %0, i32 %1
-  ret float %extract
+define internal i32 @__extract_int32(<$1 x i32>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <$1 x i32> %0, i32 %1
+  ret i32 %extract
 }
 
-define internal <$1 x float> @__insert(<$1 x float>, i32, 
-                                       float) nounwind readnone alwaysinline {
-  %insert = insertelement <$1 x float> %0, float %2, i32 %1
-  ret <$1 x float> %insert
+define internal <$1 x i32> @__insert_int32(<$1 x i32>, i32, 
+                                           i32) nounwind readnone alwaysinline {
+  %insert = insertelement <$1 x i32> %0, i32 %2, i32 %1
+  ret <$1 x i32> %insert
+}
+
+define internal i64 @__extract_int64(<$1 x i64>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <$1 x i64> %0, i32 %1
+  ret i64 %extract
+}
+
+define internal <$1 x i64> @__insert_int64(<$1 x i64>, i32, 
+                                           i64) nounwind readnone alwaysinline {
+  %insert = insertelement <$1 x i64> %0, i64 %2, i32 %1
+  ret <$1 x i64> %insert
 }
 
 shuffles($1, float, float, 4)
@@ -588,49 +662,104 @@ declare float @expf(float) nounwind readnone
 declare float @logf(float) nounwind readnone
 declare float @powf(float, float) nounwind readnone
 
-define internal float @__stdlib_sin(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_sinf(float) nounwind readnone alwaysinline {
   %r = call float @sinf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_cos(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   %r = call float @cosf(float %0)
   ret float %r
 }
 
-define internal void @__stdlib_sincos(float, float *, float *) nounwind readnone alwaysinline {
+define internal void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
 }
 
-define internal float @__stdlib_tan(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_tanf(float) nounwind readnone alwaysinline {
   %r = call float @tanf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_atan(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_atanf(float) nounwind readnone alwaysinline {
   %r = call float @atanf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_atan2(float, float) nounwind readnone alwaysinline {
+define internal float @__stdlib_atan2f(float, float) nounwind readnone alwaysinline {
   %r = call float @atan2f(float %0, float %1)
   ret float %r
 }
 
-define internal float @__stdlib_log(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_logf(float) nounwind readnone alwaysinline {
   %r = call float @logf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_exp(float) nounwind readnone alwaysinline {
+define internal float @__stdlib_expf(float) nounwind readnone alwaysinline {
   %r = call float @expf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_pow(float, float) nounwind readnone alwaysinline {
+define internal float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
   %r = call float @powf(float %0, float %1)
   ret float %r
+}
+
+declare double @sin(double) nounwind readnone
+declare double @cos(double) nounwind readnone
+declare void @sincos(double, double *, double *) nounwind readnone
+declare double @tan(double) nounwind readnone
+declare double @atan(double) nounwind readnone
+declare double @atan2(double, double) nounwind readnone
+declare double @exp(double) nounwind readnone
+declare double @log(double) nounwind readnone
+declare double @pow(double, double) nounwind readnone
+
+define internal double @__stdlib_sin(double) nounwind readnone alwaysinline {
+  %r = call double @sin(double %0)
+  ret double %r
+}
+
+define internal double @__stdlib_cos(double) nounwind readnone alwaysinline {
+  %r = call double @cos(double %0)
+  ret double %r
+}
+
+define internal void @__stdlib_sincos(double, double *, double *) nounwind readnone alwaysinline {
+  call void @sincos(double %0, double *%1, double *%2)
+  ret void
+}
+
+define internal double @__stdlib_tan(double) nounwind readnone alwaysinline {
+  %r = call double @tan(double %0)
+  ret double %r
+}
+
+define internal double @__stdlib_atan(double) nounwind readnone alwaysinline {
+  %r = call double @atan(double %0)
+  ret double %r
+}
+
+define internal double @__stdlib_atan2(double, double) nounwind readnone alwaysinline {
+  %r = call double @atan2(double %0, double %1)
+  ret double %r
+}
+
+define internal double @__stdlib_log(double) nounwind readnone alwaysinline {
+  %r = call double @log(double %0)
+  ret double %r
+}
+
+define internal double @__stdlib_exp(double) nounwind readnone alwaysinline {
+  %r = call double @exp(double %0)
+  ret double %r
+}
+
+define internal double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
+  %r = call double @pow(double %0, double %1)
+  ret double %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -671,9 +800,94 @@ global_atomic($1, umax, i64, uint64)
 global_swap($1, i32, int32)
 global_swap($1, i64, int64)
 
+define internal <$1 x float> @__atomic_swap_float_global(float * %ptr, <$1 x float> %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %ival = bitcast <$1 x float> %val to <$1 x i32>
+  %iret = call <$1 x i32> @__atomic_swap_int32_global(i32 * %iptr, <$1 x i32> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i32> %iret to <$1 x float>
+  ret <$1 x float> %ret
+}
+
+define internal <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x double> %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %ival = bitcast <$1 x double> %val to <$1 x i64>
+  %iret = call <$1 x i64> @__atomic_swap_int64_global(i64 * %iptr, <$1 x i64> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i64> %iret to <$1 x double>
+  ret <$1 x double> %ret
+}
+
 global_atomic_exchange($1, i32, int32)
 global_atomic_exchange($1, i64, int64)
 
+define internal <$1 x float> @__atomic_compare_exchange_float_global(float * %ptr,
+                      <$1 x float> %cmp, <$1 x float> %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %icmp = bitcast <$1 x float> %cmp to <$1 x i32>
+  %ival = bitcast <$1 x float> %val to <$1 x i32>
+  %iret = call <$1 x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <$1 x i32> %icmp,
+                                                                  <$1 x i32> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i32> %iret to <$1 x float>
+  ret <$1 x float> %ret
+}
+
+define internal <$1 x double> @__atomic_compare_exchange_double_global(double * %ptr,
+                      <$1 x double> %cmp, <$1 x double> %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %icmp = bitcast <$1 x double> %cmp to <$1 x i64>
+  %ival = bitcast <$1 x double> %val to <$1 x i64>
+  %iret = call <$1 x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <$1 x i64> %icmp,
+                                                                  <$1 x i64> %ival, <$1 x i32> %mask)
+  %ret = bitcast <$1 x i64> %iret to <$1 x double>
+  ret <$1 x double> %ret
+}
+')
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 64-bit integer min and max functions
+
+;; utility function used by int64minmax below.  This shouldn't be called by
+;; target .ll files directly.
+;; $1: target vector width
+;; $2: {min,max} (used in constructing function names)
+;; $3: {int64,uint64} (used in constructing function names)
+;; $4: {slt,sgt} comparison operator to used
+
+define(`i64minmax', `
+define internal i64 @__$2_uniform_$3(i64, i64) nounwind alwaysinline readnone {
+  %c = icmp $4 i64 %0, %1
+  %r = select i1 %c, i64 %0, i64 %1
+  ret i64 %r
+}
+
+define internal <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline readnone {
+  %rptr = alloca <$1 x i64>
+  %r64ptr = bitcast <$1 x i64> * %rptr to i64 *
+
+  forloop(i, 0, eval($1-1), `
+  %v0_`'i = extractelement <$1 x i64> %0, i32 i
+  %v1_`'i = extractelement <$1 x i64> %1, i32 i
+  %c_`'i = icmp $4 i64 %v0_`'i, %v1_`'i
+  %v_`'i = select i1 %c_`'i, i64 %v0_`'i, i64 %v1_`'i
+  %ptr_`'i = getelementptr i64 * %r64ptr, i32 i
+  store i64 %v_`'i, i64 * %ptr_`'i
+')                  
+
+  %ret = load <$1 x i64> * %rptr
+  ret <$1 x i64> %ret
+}
+')
+
+;; this is the function that target .ll files should call; it just takes the target
+;; vector width as a parameter
+
+define(`int64minmax', `
+i64minmax($1,min,int64,slt)
+i64minmax($1,max,int64,sgt)
+i64minmax($1,min,uint64,ult)
+i64minmax($1,max,uint64,ugt)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -840,6 +1054,90 @@ skip:
 }
 '
 )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Emit code to safely load a scalar value and broadcast it across the
+;; elements of a vector.  Parameters:
+;; $1: target vector width
+;; $2: element type for which to emit the function (i32, i64, ...)
+;; $3: suffix for function name (32, 64, ...)
+
+
+define(`load_and_broadcast', `
+define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+  ; must not load if the mask is all off; the address may be invalid
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %any_on = icmp ne i32 %mm, 0
+  br i1 %any_on, label %load, label %skip
+
+load:
+  %ptr = bitcast i8 * %0 to $2 *
+  %val = load $2 * %ptr
+
+  %ret0 = insertelement <$1 x $2> undef, $2 %val, i32 0
+  forloop(i, 1, eval($1-1), `
+  %ret`'i = insertelement <$1 x $2> %ret`'eval(i-1), $2 %val, i32 i')
+  ret <$1 x $2> %ret`'eval($1-1)
+
+skip:
+  ret <$1 x $2> undef
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Emit general-purpose code to do a masked load for targets that dont have
+;; an instruction to do that.  Parameters:
+;; $1: target vector width
+;; $2: element type for which to emit the function (i32, i64, ...)
+;; $3: suffix for function name (32, 64, ...)
+;; $4: alignment for elements of type $2 (4, 8, ...)
+
+define(`load_masked', `
+define <$1 x $2> @__load_masked_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+entry:
+  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  ; if the first lane and the last lane are on, then it is safe to do a vector load
+  ; of the whole thing--what the lanes in the middle want turns out to not matter...
+  %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
+  %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
+  ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
+  %retptr = alloca <$1 x $2>
+  %retptr32 = bitcast <$1 x $2> * %retptr to $2 *
+  br i1 %can_vload, label %load, label %loop
+
+load: 
+  %ptr = bitcast i8 * %0 to <$1 x $2> *
+  %valall = load <$1 x $2> * %ptr, align $4
+  ret <$1 x $2> %valall
+
+loop:
+  ; loop over the lanes and see if each one is on...
+  %lane = phi i32 [ 0, %entry ], [ %next_lane, %lane_done ]
+  %lanemask = shl i32 1, %lane
+  %mask_and = and i32 %mm, %lanemask
+  %do_lane = icmp ne i32 %mask_and, 0
+  br i1 %do_lane, label %load_lane, label %lane_done
+
+load_lane:
+  ; yes!  do the load and store the result into the appropriate place in the
+  ; allocaed memory above
+  %ptr32 = bitcast i8 * %0 to $2 *
+  %lane_ptr = getelementptr $2 * %ptr32, i32 %lane
+  %val = load $2 * %lane_ptr
+  %store_ptr = getelementptr $2 * %retptr32, i32 %lane
+  store $2 %val, $2 * %store_ptr
+  br label %lane_done
+
+lane_done:
+  %next_lane = add i32 %lane, 1
+  %done = icmp eq i32 %lane, eval($1-1)
+  br i1 %done, label %return, label %loop
+
+return:
+  %r = load <$1 x $2> * %retptr
+  ret <$1 x $2> %r
+}
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; packed load and store functions

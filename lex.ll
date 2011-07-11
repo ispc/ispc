@@ -39,8 +39,9 @@
 #include "sym.h"
 #include "util.h"
 #include "module.h"
+#include <stdlib.h>
 
-static uint32_t lParseBinary(const char *ptr, SourcePos pos);
+static uint64_t lParseBinary(const char *ptr, SourcePos pos);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lHandleCppHash(SourcePos *);
@@ -136,51 +137,54 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 
 {INT_NUMBER} { 
     char *endPtr = NULL;
-#ifdef ISPC_IS_WINDOWS
-    unsigned long val;
-#else
-    unsigned long long val;
-#endif
+    int64_t val;
 
     if (yytext[0] == '0' && yytext[1] == 'b')
         val = lParseBinary(yytext+2, *yylloc);
     else {
 #ifdef ISPC_IS_WINDOWS
-        val = strtoul(yytext, &endPtr, 0);
+        val = _strtoi64(yytext, &endPtr, 0);
 #else
+        // FIXME: should use strtouq and then issue an error if we can't
+        // fit into 64 bits...
         val = strtoull(yytext, &endPtr, 0);
 #endif
     }
-    yylval->int32Val = (int32_t)val;
-    if (val != (unsigned int)yylval->int32Val)
-        Warning(*yylloc, "32-bit integer has insufficient bits to represent value %s (%x %llx)",
-                yytext, yylval->int32Val, (unsigned long long)val);
-    return TOKEN_INT_CONSTANT; 
+
+    // See if we can fit this into a 32-bit integer...
+    if ((val & 0xffffffff) == val) {
+        yylval->int32Val = (int32_t)val;
+        return TOKEN_INT32_CONSTANT; 
+    }
+    else {
+        yylval->int64Val = val;
+        return TOKEN_INT64_CONSTANT; 
+    }
 }
 
 {INT_NUMBER}[uU] {
     char *endPtr = NULL;
-#ifdef ISPC_IS_WINDOWS
-    unsigned long val;
-#else
-    unsigned long long val;
-#endif
+    uint64_t val;
 
     if (yytext[0] == '0' && yytext[1] == 'b')
         val = lParseBinary(yytext+2, *yylloc);
     else {
 #ifdef ISPC_IS_WINDOWS
-        val = strtoul(yytext, &endPtr, 0);
+        val = _strtoui64(yytext, &endPtr, 0);
 #else
         val = strtoull(yytext, &endPtr, 0);
 #endif
     }
 
-    yylval->int32Val = (int32_t)val;
-    if (val != (unsigned int)yylval->int32Val)
-        Warning(*yylloc, "32-bit integer has insufficient bits to represent value %s (%x %llx)",
-                yytext, yylval->int32Val, (unsigned long long)val);
-    return TOKEN_UINT_CONSTANT; 
+    if ((val & 0xffffffff) == val) {
+        // we can represent it in a 32-bit value
+        yylval->int32Val = (int32_t)val;
+        return TOKEN_UINT32_CONSTANT; 
+    }
+    else {
+        yylval->int64Val = val;
+        return TOKEN_UINT64_CONSTANT; 
+    }
 }
 
 {FLOAT_NUMBER} { 
@@ -268,19 +272,18 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 
 /** Return the integer version of a binary constant from a string.
  */
-static uint32_t
+static uint64_t
 lParseBinary(const char *ptr, SourcePos pos) {
-    uint32_t val = 0;
+    uint64_t val = 0;
     bool warned = false;
 
     while (*ptr != '\0') {
         /* if this hits, the regexp for 0b... constants is broken */
         assert(*ptr == '0' || *ptr == '1');
 
-        if ((val & (1<<31)) && warned == false) {
+        if ((val & (((int64_t)1)<<63)) && warned == false) {
             // We're about to shift out a set bit
-            // FIXME: 64-bit int constants...
-            Warning(pos, "Can't represent binary constant with 32-bit integer type");
+            Warning(pos, "Can't represent binary constant with a 64-bit integer type");
             warned = true;
         }
 
@@ -393,12 +396,12 @@ lEscapeChar(char *str, char *pChar, SourcePos *pos)
         // octal constants \012
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7':
-            *pChar = strtol(str, &tail, 8);
+            *pChar = (char)strtol(str, &tail, 8);
             str = tail - 1;
             break;
         // hexidecimal constant \xff
         case 'x':
-            *pChar = strtol(str, &tail, 16);
+            *pChar = (char)strtol(str, &tail, 16);
             str = tail - 1;
             break;
         default:

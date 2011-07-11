@@ -104,6 +104,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
                                                  AtomicType::UniformInt64, false);
     else if (t == LLVMTypes::FloatPointerType)
         return new ReferenceType(AtomicType::UniformFloat, false);
+    else if (t == LLVMTypes::DoublePointerType)
+        return new ReferenceType(AtomicType::UniformDouble, false);
     else if (t == LLVMTypes::Int32VectorPointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
                                                  AtomicType::VaryingInt32, false);
@@ -112,6 +114,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
                                                  AtomicType::VaryingInt64, false);
     else if (t == LLVMTypes::FloatVectorPointerType)
         return new ReferenceType(AtomicType::VaryingFloat, false);
+    else if (t == LLVMTypes::DoubleVectorPointerType)
+        return new ReferenceType(AtomicType::VaryingDouble, false);
     else if (llvm::isa<const llvm::PointerType>(t)) {
         const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(t);
 
@@ -180,7 +184,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
             // set NULL default arguments
             std::vector<ConstExpr *> defaults;
-            for (int j = 0; j < ftype->getNumParams(); ++j)
+            for (unsigned int j = 0; j < ftype->getNumParams(); ++j)
                 defaults.push_back(NULL);
             funcType->SetArgumentDefaults(defaults);
 
@@ -621,7 +625,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its definitions
         // added.
-        extern const char *stdlib_code;
+        extern char stdlib_code[];
         yy_scan_string(stdlib_code);
         yyparse();
     }

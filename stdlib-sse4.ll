@@ -40,7 +40,7 @@ packed_load_and_store(4)
 include(`stdlib-sse.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; math
+;; rounding floats
 
 declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
 declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
@@ -106,7 +106,52 @@ define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinlin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; integer min/max
+;; rounding doubles
+
+declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readnone
+declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
+
+define internal <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  round2to4double(%0, 8)
+}
+
+define internal double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+define internal <4 x double> @__floor_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  round2to4double(%0, 9)
+}
+
+define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  ; see above for round_ss instrinsic discussion...
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+define internal <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alwaysinline {
+  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  round2to4double(%0, 10)
+}
+
+define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  ; see above for round_ss instrinsic discussion...
+  %xi = insertelement <2 x double> undef, double %0, i32 0
+  ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
+  %rs = extractelement <2 x double> %xr, i32 0
+  ret double %rs
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int32 min/max
 
 declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
 declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
@@ -163,9 +208,16 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 
-define internal i32 @__popcnt(i32) nounwind readonly alwaysinline {
+define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
   %call = call i32 @llvm.ctpop.i32(i32 %0)
   ret i32 %call
+}
+
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+
+define internal i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
+  %call = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %call
 }
 
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone
