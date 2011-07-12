@@ -644,6 +644,17 @@ define internal float @__undef_uniform() nounwind readnone alwaysinline {
   ret float undef
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; sign extension
+
+define internal i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
+  %r = sext i1 %0 to i32
+  ret i32 %r
+}
+
+define internal <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone alwaysinline {
+  ret <$1 x i32> %0
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals

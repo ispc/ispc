@@ -3785,14 +3785,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            // FIXME: we're currently doing sign extension rather than zero
-            // extension here, which means that ints will have the value
-            // 0xffffffff for 'true' bools (versus the value 1).  There is
-            // some code in stdlib.ispc that depends on bool->int conversions
-            // having this behavior that needs to be cleaned up (e.g. to
-            // call a __sext() builtin to do bool->int conversions) if we
-            // are going to fix this here.
-            cast = ctx->SExtInst(exprVal, targetType, "bool2int");
+            cast = ctx->ZExtInst(exprVal, targetType, "bool2int");
             break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
@@ -3824,9 +3817,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            // FIXME: See comments above w.r.t. fixing this to be a
-            // ZExtInst rather than an SExtInst...
-            cast = ctx->SExtInst(exprVal, targetType, "bool2uint");
+            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint");
             break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
@@ -3864,7 +3855,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             if (fromType->IsVaryingType() &&
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->SExtInst(exprVal, targetType, "bool2int64");
+            cast = ctx->ZExtInst(exprVal, targetType, "bool2int64");
             break;
         case AtomicType::TYPE_INT32:
             cast = ctx->SExtInst(exprVal, targetType, "int32_to_int64");
@@ -3898,7 +3889,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->SExtInst(exprVal, targetType, "bool2uint");
+            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint");
             break;
         case AtomicType::TYPE_INT32:
             cast = ctx->SExtInst(exprVal, targetType, "int32_to_uint64");
