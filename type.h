@@ -133,7 +133,7 @@ public:
     virtual std::string GetCDeclaration(const std::string &name) const = 0;
 
     /** Returns the LLVM type corresponding to this ispc type */
-    virtual const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
+    virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
 
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
@@ -202,7 +202,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** This enumerant records the basic types that AtomicTypes can be 
@@ -323,7 +323,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-    const llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
 
     /** This method returns the total number of elements in the array,
         including all dimensions if this is a multidimensional array. */
@@ -392,7 +392,7 @@ public:
 
     int TotalElementCount() const;
 
-    const llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     SOAArrayType *GetSizedArray(int size) const;
@@ -441,7 +441,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     int GetElementCount() const;
@@ -487,7 +487,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** Returns the type of the structure element with the given name (if any).
@@ -559,7 +559,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
 private:
@@ -605,7 +605,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &fname) const;
 
-    const llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     const Type *GetReturnType() const { return returnType; }

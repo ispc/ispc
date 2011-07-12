@@ -265,7 +265,7 @@ lDeclarePseudoGathers(llvm::Module *module) {
     noPos.name = "__stdlib";
 
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerVectorType);
         argTypes.push_back(LLVMTypes::MaskType);
 
@@ -285,7 +285,7 @@ lDeclarePseudoGathers(llvm::Module *module) {
     }
 
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerType);
         argTypes.push_back(LLVMTypes::Int32VectorType);
         argTypes.push_back(LLVMTypes::MaskType);
@@ -331,7 +331,7 @@ lDeclarePseudoScatters(llvm::Module *module) {
     noPos.name = "__stdlib";
 
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerVectorType);
         argTypes.push_back(LLVMTypes::Int32VectorType);
         argTypes.push_back(LLVMTypes::MaskType);
@@ -344,7 +344,7 @@ lDeclarePseudoScatters(llvm::Module *module) {
         func->setDoesNotThrow(true);
     }
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerVectorType);
         argTypes.push_back(LLVMTypes::Int64VectorType);
         argTypes.push_back(LLVMTypes::MaskType);
@@ -358,7 +358,7 @@ lDeclarePseudoScatters(llvm::Module *module) {
     }
 
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerType);
         argTypes.push_back(LLVMTypes::Int32VectorType);
         argTypes.push_back(LLVMTypes::Int32VectorType);
@@ -372,7 +372,7 @@ lDeclarePseudoScatters(llvm::Module *module) {
         func->setDoesNotThrow(true);
     }
     {
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerType);
         argTypes.push_back(LLVMTypes::Int32VectorType);
         argTypes.push_back(LLVMTypes::Int64VectorType);
@@ -404,7 +404,7 @@ lDeclarePseudoMaskedStore(llvm::Module *module) {
     noPos.name = "__stdlib";
 
     {
-    std::vector<const llvm::Type *> argTypes;
+    std::vector<llvm::Type *> argTypes;
     argTypes.push_back(LLVMTypes::Int32VectorPointerType);
     argTypes.push_back(LLVMTypes::Int32VectorType);
     argTypes.push_back(LLVMTypes::MaskType);
@@ -420,7 +420,7 @@ lDeclarePseudoMaskedStore(llvm::Module *module) {
     }
 
     {
-    std::vector<const llvm::Type *> argTypes;
+    std::vector<llvm::Type *> argTypes;
     argTypes.push_back(LLVMTypes::Int64VectorPointerType);
     argTypes.push_back(LLVMTypes::Int64VectorType);
     argTypes.push_back(LLVMTypes::MaskType);
@@ -550,7 +550,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Add a declaration of void *ISPCMalloc(int64_t size, int alignment).
     // The user is responsible for linking in a definition of this if it's
     // needed by the compiled program.
-    { std::vector<const llvm::Type *> argTypes;
+    { std::vector<llvm::Type *> argTypes;
         argTypes.push_back(llvm::Type::getInt64Ty(*ctx));
         argTypes.push_back(llvm::Type::getInt32Ty(*ctx));
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
@@ -564,7 +564,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Add a declaration of void ISPCFree(void *).  The user is
     // responsible for linking in a definition of this if it's needed by
     // the compiled program.
-    { std::vector<const llvm::Type *> argTypes;
+    { std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerType);
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
                                                             argTypes, false);
@@ -577,7 +577,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Add a declaration of void ISPCLaunch(void *funcPtr, void *data).
     // The user is responsible for linking in a definition of this if it's
     // needed by the compiled program.
-    { std::vector<const llvm::Type *> argTypes;
+    { std::vector<llvm::Type *> argTypes;
         argTypes.push_back(LLVMTypes::VoidPointerType);
         argTypes.push_back(LLVMTypes::VoidPointerType);
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 
@@ -592,7 +592,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // linking in a definition of this if it's needed by the compiled
     // program.
     { 
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 
                                                             argTypes, false);
         llvm::Function *func = 
@@ -605,7 +605,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // The user is responsible for linking in a definition of this if it's
     // needed by the compiled program.
     { 
-        std::vector<const llvm::Type *> argTypes;
+        std::vector<llvm::Type *> argTypes;
         argTypes.push_back(llvm::PointerType::get(llvm::Type::getInt8Ty(*g->ctx), 0));
         argTypes.push_back(llvm::PointerType::get(llvm::Type::getInt8Ty(*g->ctx), 0));
         argTypes.push_back(LLVMTypes::Int32Type);

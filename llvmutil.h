@@ -49,32 +49,32 @@
     verbose LLVM API calls.
  */ 
 struct LLVMTypes {
-    static const llvm::Type *VoidType;
-    static const llvm::PointerType *VoidPointerType;
-    static const llvm::Type *BoolType;
-    static const llvm::Type *Int8Type;
-    static const llvm::Type *Int16Type;
-    static const llvm::Type *Int32Type;
-    static const llvm::Type *Int32PointerType;
-    static const llvm::Type *Int64Type;
-    static const llvm::Type *Int64PointerType;
-    static const llvm::Type *FloatType;
-    static const llvm::Type *FloatPointerType;
-    static const llvm::Type *DoubleType;
-    static const llvm::Type *DoublePointerType;
+    static llvm::Type *VoidType;
+    static llvm::PointerType *VoidPointerType;
+    static llvm::Type *BoolType;
+    static llvm::Type *Int8Type;
+    static llvm::Type *Int16Type;
+    static llvm::Type *Int32Type;
+    static llvm::Type *Int32PointerType;
+    static llvm::Type *Int64Type;
+    static llvm::Type *Int64PointerType;
+    static llvm::Type *FloatType;
+    static llvm::Type *FloatPointerType;
+    static llvm::Type *DoubleType;
+    static llvm::Type *DoublePointerType;
 
-    static const llvm::VectorType *MaskType;
-    static const llvm::VectorType *BoolVectorType;
-    static const llvm::VectorType *Int1VectorType;
-    static const llvm::VectorType *Int32VectorType;
-    static const llvm::Type *Int32VectorPointerType;
-    static const llvm::VectorType *Int64VectorType;
-    static const llvm::Type *Int64VectorPointerType;
-    static const llvm::VectorType *FloatVectorType;
-    static const llvm::Type *FloatVectorPointerType;
-    static const llvm::VectorType *DoubleVectorType;
-    static const llvm::Type *DoubleVectorPointerType;
-    static const llvm::ArrayType *VoidPointerVectorType;
+    static llvm::VectorType *MaskType;
+    static llvm::VectorType *BoolVectorType;
+    static llvm::VectorType *Int1VectorType;
+    static llvm::VectorType *Int32VectorType;
+    static llvm::Type *Int32VectorPointerType;
+    static llvm::VectorType *Int64VectorType;
+    static llvm::Type *Int64VectorPointerType;
+    static llvm::VectorType *FloatVectorType;
+    static llvm::Type *FloatVectorPointerType;
+    static llvm::VectorType *DoubleVectorType;
+    static llvm::Type *DoubleVectorPointerType;
+    static llvm::ArrayType *VoidPointerVectorType;
 };
 
 /** These variables hold the corresponding LLVM constant values as a
