@@ -20,7 +20,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     float v = float4(1,1,0,0);
     bool b = (v == 1.);
-    ret = __movmsk(((int)b));
+    ret = __movmsk((sign_extend(b)));
     RET[programIndex] = ret;
 }
 
