@@ -509,11 +509,9 @@ is provided in parenthesis around the expression:
     double foo = 1. / 3.;
     int bar = (float)bar + (float)bar;  // 32-bit float addition
 
-Note: if a ``bool`` is converted to an integer numeric type (``int``,
-``int64``, etc.), then the conversion is done with sign extension, not zero
-extension.  Thus, the resulting value has all bits set if the ``bool`` is
-``true``; for example, ``0xffffffff`` for ``int32``.  This differs from C
-and C++, where a ``true`` bool is converted to the integer value one.
+If a ``bool`` is converted to an integer numeric type (``int``, ``int64``,
+etc.), then the result is the value one if the ``bool`` has the value
+``true`` and has the value zero otherwise.
 
 Variables can be declared with the ``const`` qualifier, which prohibits
 their modification.
@@ -1895,6 +1893,16 @@ code.
 Low-Level Bits
 --------------
 
+Sometimes it's useful to convert a ``bool`` value to an integer using sign
+extension so that the integer's bits are all on if the ``bool`` has the
+value ``true`` (rather than just having the value one).  The
+``sign_extend()`` functions provide this functionality:
+
+::
+
+    int sign_extend(bool value) 
+    uniform int sign_extend(uniform bool value) 
+
 ``ispc`` provides a number of bit/memory-level utility routines in its
 standard library as well.  It has routines that load from and store
 to 8-bit and 16-bit integer values stored in memory, converting to and from
@@ -1963,7 +1971,6 @@ as follows:
 It, it clears the high order bit, to ensure that the given floating-point
 value is positive.  This compiles down to a single ``andps`` instruction
 when used with an Intel® SSE target, for example.
-
 
 Interoperability with the Application
 =====================================

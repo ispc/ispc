@@ -197,18 +197,25 @@ static inline unsigned int64 insert(unsigned int64 x, uniform int i,
     return __insert_int64(x, (unsigned int)i, v);
 }
 
+static inline uniform int32 sign_extend(uniform bool v) {
+    return __sext_uniform_bool(v);
+}
+
+static inline int32 sign_extend(bool v) {
+    return __sext_varying_bool(v);
+}
 
 static inline uniform bool any(bool v) {
     // We only care about whether "any" is true for the active program instances,
     // so we have to make v with the current program mask.
-    return __movmsk(v & __mask) != 0;
+    return __movmsk(__sext_varying_bool(v) & __mask) != 0;
 }
 
 static inline uniform bool all(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
-    bool match = ((v & __mask) == __mask);
-    return __movmsk((int)match) == (1 << programCount) - 1;
+    int32 match = __sext_varying_bool((__sext_varying_bool(v) & __mask) == __mask);
+    return __movmsk(match) == (1 << programCount) - 1;
 }
 
 static inline uniform int popcnt(uniform int v) {
@@ -235,7 +242,7 @@ static inline int popcnt(int64 v) {
 
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
-    return __popcnt_int32(__movmsk(v & __mask));
+    return __popcnt_int32(__movmsk(__sext_varying_bool(v) & __mask));
 }
 
 static inline uniform int lanemask() {
@@ -271,7 +278,7 @@ static inline uniform float reduce_max(float v) {
 
 static inline uniform int reduce_add(int x) {
     // Zero out the values for lanes that aren't running
-    return __reduce_add_int32(x & (int)__mask);
+    return __reduce_add_int32(x & __mask);
 }
 
 static inline uniform int reduce_min(int v) {
@@ -291,7 +298,7 @@ static inline uniform int reduce_max(int v) {
 static inline uniform unsigned int reduce_add(unsigned int x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
-    return __reduce_add_uint32(x & (int)__mask);
+    return __reduce_add_uint32(x & __mask);
 }
 
 static inline uniform unsigned int reduce_min(unsigned int v) {
@@ -329,7 +336,7 @@ static inline uniform double reduce_max(double v) {
 
 static inline uniform int64 reduce_add(int64 x) {
     // Zero out the values for lanes that aren't running
-    return __reduce_add_int64(x & (int64)__mask);
+    return __reduce_add_int64(x & (int64)(__mask));
 }
 
 static inline uniform int64 reduce_min(int64 v) {
@@ -349,7 +356,7 @@ static inline uniform int64 reduce_max(int64 v) {
 static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
-    return __reduce_add_int64(x & (int64)__mask);
+    return __reduce_add_int64(x & (int64)(__mask));
 }
 
 static inline uniform unsigned int64 reduce_min(unsigned int64 v) {

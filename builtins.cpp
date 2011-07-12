@@ -151,6 +151,27 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string name = func->getName();
 
+    // An unfortunate hack: we want this builtin function to have the
+    // signature "int __sext_varying_bool(bool)", but the ispc function
+    // symbol creation code below assumes that any LLVM vector of i32s is a
+    // varying int32.  Here, we need that to be interpreted as a varying
+    // bool, so just have a one-off override for that one...
+    if (name == "__sext_varying_bool") {
+        const Type *returnType = AtomicType::VaryingInt32;
+        std::vector<const Type *> argTypes;
+        argTypes.push_back(AtomicType::VaryingBool);
+        std::vector<ConstExpr *> defaults;
+        defaults.push_back(NULL);
+
+        FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+        funcType->SetArgumentDefaults(defaults);
+
+        Symbol *sym = new Symbol(name, noPos, funcType);
+        sym->function = func;
+        symbolTable->AddFunction(sym);
+        return true;
+    }
+
     // If the function has any parameters with integer types, we'll make
     // two Symbols for two overloaded versions of the function, one with
     // all of the integer types treated as signed integers and one with all
