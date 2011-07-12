@@ -136,13 +136,6 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         return TOKEN_IDENTIFIER; 
 }
 
-{ZO_SWIZZLE} {
-    /* We have a swizzle which starts with 0 or 1 (e.g. 1xy).
-       Other swizzles (those starting with [x-zuvrgba] will
-       be matched by identifiers. */
-    return TOKEN_ZO_SWIZZLE;
-}
-
 {INT_NUMBER} { 
     char *endPtr = NULL;
     int64_t val;

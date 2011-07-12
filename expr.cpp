@@ -2829,11 +2829,68 @@ class VectorMemberExpr : public MemberExpr
 public:
     VectorMemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos, const VectorType* vectorType)
         : MemberExpr(e, id, p, idpos), exprVectorType(vectorType) {
+        memberType = new VectorType(exprVectorType->GetElementType(), identifier.length());
+    }
+
+    ~VectorMemberExpr() {
+        delete memberType;
     }
 
     const Type* GetType() const {
         //No swizzle support yet.
-        return exprVectorType->GetElementType();
+        if (identifier.length() == 1) {
+            return exprVectorType->GetElementType();
+        } else {
+            return memberType;
+        }
+    }
+
+    llvm::Value* GetLValue(FunctionEmitContext* ctx) const {
+        if (identifier.length() == 1) {
+            return MemberExpr::GetLValue(ctx);
+        } else {
+            return NULL;
+        }
+    }
+
+    llvm::Value* GetValue(FunctionEmitContext* ctx) const {
+        if (identifier.length() == 1) {
+            return MemberExpr::GetValue(ctx);
+        } else {
+            std::vector<int> indices;
+
+            for (size_t i = 0; i < identifier.size(); ++i) {
+                int idx = lIdentifierToVectorElement(identifier[i]);
+                if (idx == -1)
+                    Error(pos,
+                          "Invalid swizzle charcter '%c' in swizzle \"%s\".",
+                          identifier[i], identifier.c_str());
+
+                indices.push_back(idx);
+            }
+
+            llvm::Value *basePtr = expr->GetLValue(ctx);
+            if (basePtr == NULL) {
+                assert(m->errorCount > 0);
+            }
+            llvm::Value *ltmp = ctx->AllocaInst(memberType->LLVMType(g->ctx), 
+                                                "vector_tmp");
+
+            for (size_t i = 0; i < identifier.size(); ++i) {
+                llvm::Value *ptmp =
+                    ctx->GetElementPtrInst(ltmp, 0, i, "new_offset");
+                llvm::Value *initLValue =
+                    ctx->GetElementPtrInst(basePtr , 0,
+                                           indices[i], "orig_offset");
+                llvm::Value *initValue =
+                    ctx->LoadInst(initLValue, memberType->GetElementType(),
+                                  "vec_element");
+                ctx->StoreInst(initValue, ptmp);
+            }
+
+            ctx->SetDebugPos(pos);
+            return ctx->LoadInst(ltmp, memberType, "swizzle_vec");
+        }
     }
 
     int getElementNumber() const {
@@ -2853,6 +2910,7 @@ public:
 
 private:
     const VectorType* exprVectorType;
+    const VectorType* memberType;
 };
 
 class ReferenceMemberExpr : public MemberExpr
