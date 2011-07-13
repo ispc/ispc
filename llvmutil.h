@@ -44,37 +44,38 @@
 #include <llvm/DerivedTypes.h>
 #include <llvm/Constants.h>
 
+
 /** This structure holds pointers to a variety of LLVM types; code
     elsewhere can use them from here, ratherthan needing to make more
     verbose LLVM API calls.
  */ 
 struct LLVMTypes {
-    static llvm::Type *VoidType;
-    static llvm::PointerType *VoidPointerType;
-    static llvm::Type *BoolType;
-    static llvm::Type *Int8Type;
-    static llvm::Type *Int16Type;
-    static llvm::Type *Int32Type;
-    static llvm::Type *Int32PointerType;
-    static llvm::Type *Int64Type;
-    static llvm::Type *Int64PointerType;
-    static llvm::Type *FloatType;
-    static llvm::Type *FloatPointerType;
-    static llvm::Type *DoubleType;
-    static llvm::Type *DoublePointerType;
+    static LLVM_TYPE_CONST llvm::Type *VoidType;
+    static LLVM_TYPE_CONST llvm::PointerType *VoidPointerType;
+    static LLVM_TYPE_CONST llvm::Type *BoolType;
+    static LLVM_TYPE_CONST llvm::Type *Int8Type;
+    static LLVM_TYPE_CONST llvm::Type *Int16Type;
+    static LLVM_TYPE_CONST llvm::Type *Int32Type;
+    static LLVM_TYPE_CONST llvm::Type *Int32PointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int64Type;
+    static LLVM_TYPE_CONST llvm::Type *Int64PointerType;
+    static LLVM_TYPE_CONST llvm::Type *FloatType;
+    static LLVM_TYPE_CONST llvm::Type *FloatPointerType;
+    static LLVM_TYPE_CONST llvm::Type *DoubleType;
+    static LLVM_TYPE_CONST llvm::Type *DoublePointerType;
 
-    static llvm::VectorType *MaskType;
-    static llvm::VectorType *BoolVectorType;
-    static llvm::VectorType *Int1VectorType;
-    static llvm::VectorType *Int32VectorType;
-    static llvm::Type *Int32VectorPointerType;
-    static llvm::VectorType *Int64VectorType;
-    static llvm::Type *Int64VectorPointerType;
-    static llvm::VectorType *FloatVectorType;
-    static llvm::Type *FloatVectorPointerType;
-    static llvm::VectorType *DoubleVectorType;
-    static llvm::Type *DoubleVectorPointerType;
-    static llvm::ArrayType *VoidPointerVectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *MaskType;
+    static LLVM_TYPE_CONST llvm::VectorType *BoolVectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *Int1VectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *Int32VectorType;
+    static LLVM_TYPE_CONST llvm::Type *Int32VectorPointerType;
+    static LLVM_TYPE_CONST llvm::VectorType *Int64VectorType;
+    static LLVM_TYPE_CONST llvm::Type *Int64VectorPointerType;
+    static LLVM_TYPE_CONST llvm::VectorType *FloatVectorType;
+    static LLVM_TYPE_CONST llvm::Type *FloatVectorPointerType;
+    static LLVM_TYPE_CONST llvm::VectorType *DoubleVectorType;
+    static LLVM_TYPE_CONST llvm::Type *DoubleVectorPointerType;
+    static LLVM_TYPE_CONST llvm::ArrayType *VoidPointerVectorType;
 };
 
 /** These variables hold the corresponding LLVM constant values as a

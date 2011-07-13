@@ -326,7 +326,7 @@ AtomicType::GetCDeclaration(const std::string &name) const {
 }
 
 
-llvm::Type *
+LLVM_TYPE_CONST llvm::Type *
 AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
     switch (basicType) {
     case TYPE_VOID:
@@ -428,12 +428,12 @@ ArrayType::ArrayType(const Type *c, int a)
 }
 
 
-llvm::ArrayType *
+LLVM_TYPE_CONST llvm::ArrayType *
 ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (!child)
         return NULL;
 
-    llvm::Type *ct = child->LLVMType(ctx);
+    LLVM_TYPE_CONST llvm::Type *ct = child->LLVMType(ctx);
     if (!ct)
         return NULL;
     return llvm::ArrayType::get(ct, numElements);
@@ -730,7 +730,7 @@ SOAArrayType::TotalElementCount() const {
 }
 
 
-llvm::ArrayType *
+LLVM_TYPE_CONST llvm::ArrayType *
 SOAArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (!child)
         return NULL;
@@ -894,9 +894,9 @@ VectorType::GetElementType() const {
 }
 
 
-llvm::Type *
+LLVM_TYPE_CONST llvm::Type *
 VectorType::LLVMType(llvm::LLVMContext *ctx) const {
-    llvm::Type *bt = base->LLVMType(ctx);
+    LLVM_TYPE_CONST llvm::Type *bt = base->LLVMType(ctx);
     if (!bt)
         return NULL;
 
@@ -1130,9 +1130,9 @@ StructType::GetCDeclaration(const std::string &n) const {
 }
 
 
-llvm::Type *
+LLVM_TYPE_CONST llvm::Type *
 StructType::LLVMType(llvm::LLVMContext *ctx) const {
-    std::vector<llvm::Type *> llvmTypes;
+    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmTypes;
     for (int i = 0; i < GetElementCount(); ++i) {
         const Type *type = GetElementType(i);
         llvmTypes.push_back(type->LLVMType(ctx));
@@ -1385,11 +1385,11 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
 }
 
 
-llvm::Type *
+LLVM_TYPE_CONST llvm::Type *
 ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
     if (!targetType)
         return NULL;
-    llvm::Type *t = targetType->LLVMType(ctx);
+    LLVM_TYPE_CONST llvm::Type *t = targetType->LLVMType(ctx);
     if (!t)
         return NULL;
     return llvm::PointerType::get(t, 0);
@@ -1542,7 +1542,7 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
 }
 
 
-llvm::Type *
+LLVM_TYPE_CONST llvm::Type *
 FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     FATAL("FunctionType::LLVMType() shouldn't be called");
     return NULL;
@@ -1565,12 +1565,12 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     }
 
     // Get the LLVM Type *s for the function arguments
-    std::vector<llvm::Type *> llvmArgTypes;
+    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
         if (!argTypes[i])
             return NULL;
 
-        llvm::Type *t = argTypes[i]->LLVMType(ctx);
+        LLVM_TYPE_CONST llvm::Type *t = argTypes[i]->LLVMType(ctx);
         if (!t)
             return NULL;
         llvmArgTypes.push_back(t);
@@ -1580,7 +1580,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (includeMask)
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
-    std::vector<llvm::Type *> callTypes;
+    std::vector<LLVM_TYPE_CONST llvm::Type *> callTypes;
     if (isTask) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of

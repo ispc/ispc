@@ -73,6 +73,13 @@ namespace llvm {
     class Value;
 }
 
+// llvm::Type *s are no longer const in llvm 3.0
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#define LLVM_TYPE_CONST
+#else
+#define LLVM_TYPE_CONST const
+#endif
+
 class ArrayType;
 class AtomicType;
 class DeclSpecs;
