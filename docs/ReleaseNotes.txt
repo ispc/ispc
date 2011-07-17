@@ -1,3 +1,29 @@
+=== v1.0.4 === (18 July 2011)
+
+enums are now supported in ispc; see the section on enumeration types in
+the documentation (http://ispc.github.com/ispc.html#enumeration-types) for
+more informaiton.
+
+bools are converted to integers with zero extension, not sign extension as
+before (i.e. a 'true' bool converts to the value one, not 'all bits on'.)
+For cases where sign extension is still desired, there is a
+sign_extend(bool) function in the standard library.
+
+Support for 64-bit types in the standard library is much more complete than
+before.
+
+64-bit integer constants are now supported by the parser.
+
+Storage for parameters to tasks is now allocated dynamically on Windows,
+rather than on the stack; with this fix, all tests now run correctly on
+Windows.
+
+There is now support for atomic swap and compare/exchange with float and
+double types.
+
+A number of additional small bugs have been fixed and a number of cases
+where the compiler would crash given a malformed program have been fixed.
+
 === v1.0.3 === (4 July 2011)
 
 ispc now has a bulit-in pre-processor (from LLVM's clang compiler).

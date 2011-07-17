@@ -5,3 +5,4 @@ ispc
 ispc_test
 objs
 docs/doxygen
+docs/ispc.html
