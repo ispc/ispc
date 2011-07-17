@@ -50,6 +50,7 @@ Contents:
 
   + `Lexical Structure`_
   + `Basic Types and Type Qualifiers`_
+  + `Enumeration Types`_
   + `Short Vector Types`_
   + `Struct and Array Types`_
   + `Declarations and Initializers`_
@@ -550,6 +551,51 @@ results or modify existing variables.
 ``ispc`` doesn't currently support pointer types.
 
 
+Enumeration Types
+-----------------
+
+It is possible to define user-defined enumeration types in ``ispc`` with
+the ``enum`` keyword, which is followed by an option enumeration type name
+and then a brace-delimited list of enumerators with optional values:
+
+::
+
+    enum Color { RED, GREEN, BLUE };
+    enum Flags { 
+        UNINITIALIZED = 0,
+        INITIALIZED = 2,
+        CACHED = 4
+    };
+
+Each ``enum`` declaration defines a new type; an attempt to implicitly
+convert between enumerations of different types gives a compile-time error,
+but enuemrations of different types can be explicitly cast to one other.
+
+::
+
+    Color c = (Color)CACHED;
+
+Enumerators are implicitly converted to integer types, however, so they can
+be directly passed to routines that take integer parameters and can be used
+in expressions including integers, for example.  However, the integer
+result of such an expression must be explicitly cast back to the enumerant
+type if it to be assigned to a variable with the enuemrant type.
+
+::
+
+    Color c = RED;
+    int nextColor = c+1;
+    c = (Color)nextColor;
+
+In this particular case, the explicit cast could be avoided using an
+increment operator.
+
+::
+
+    Color c = RED;
+    ++c;  // c == GREEN now
+
+
 Short Vector Types
 ------------------
 
@@ -844,7 +890,6 @@ C Constructs not in ISPC
 
 The following C features are not available in ``ispc``.
 
-* ``enum`` s
 * Pointers and function pointers
 * ``char`` and ``short`` types
 * ``switch`` statements

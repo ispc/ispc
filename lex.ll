@@ -35,10 +35,11 @@
 
 #include "ispc.h"
 #include "decl.h"
-#include "parse.hh"
 #include "sym.h"
 #include "util.h"
 #include "module.h"
+#include "type.h"
+#include "parse.hh"
 #include <stdlib.h>
 
 static uint64_t lParseBinary(const char *ptr, SourcePos pos);

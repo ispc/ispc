@@ -1564,8 +1564,9 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
         return;
     }
 
-    // We must have a regular atomic type at this point
-    assert(dynamic_cast<const AtomicType *>(rvalueType) != NULL);
+    // We must have a regular atomic or enumerator type at this point
+    assert(dynamic_cast<const AtomicType *>(rvalueType) != NULL ||
+           dynamic_cast<const EnumType *>(rvalueType) != NULL);
     rvalueType = rvalueType->GetAsNonConstType();
 
     llvm::Function *maskedStoreFunc = NULL;
@@ -1585,7 +1586,8 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
         assert(rvalueType == AtomicType::VaryingFloat ||
                rvalueType == AtomicType::VaryingBool ||
                rvalueType == AtomicType::VaryingInt32 ||
-               rvalueType == AtomicType::VaryingUInt32);
+               rvalueType == AtomicType::VaryingUInt32 ||
+               dynamic_cast<const EnumType *>(rvalueType) != NULL);
 
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         lvalue = BitCastInst(lvalue, LLVMTypes::Int32VectorPointerType, 

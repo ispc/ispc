@@ -1005,26 +1005,6 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
 }
 
 
-/** Walk through the elements of the given structure; for any elements that
-    are themselves structs, add their Type * to structParamTypes and
-    recursively process their elements.
- */
-static void
-lRecursiveAddStructs(const StructType *structType,
-                     std::vector<const StructType *> &structParamTypes) {
-    for (int i = 0; i < structType->GetElementCount(); ++i) {
-        const Type *elementBaseType = structType->GetElementType(i)->GetBaseType();
-        const StructType *elementStructType = 
-            dynamic_cast<const StructType *>(elementBaseType);
-        if (elementStructType != NULL) {
-            structParamTypes.push_back(elementStructType);
-            lRecursiveAddStructs(elementStructType, structParamTypes);
-        }
-    }
-        
-}
-
-
 /** Small structure used in representing dependency graphs of structures
     (i.e. given a StructType, which other structure types does it have as
     elements).
@@ -1125,6 +1105,42 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
 }
 
 
+/** Emit C declarations of enumerator types to the generated header file.
+ */
+static void
+lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
+    if (enumTypes.size() == 0)
+        return;
+
+    fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+    fprintf(file, "// Enumerator types with external visibility from ispc code\n");
+    fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
+    
+    for (unsigned int i = 0; i < enumTypes.size(); ++i) {
+        std::string declaration = enumTypes[i]->GetCDeclaration("");
+        fprintf(file, "%s {\n", declaration.c_str());
+
+        // Print the individual enumerators 
+        for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
+            const Symbol *e = enumTypes[i]->GetEnumerator(j);
+            assert(e->constValue != NULL);
+            unsigned int enumValue;
+            int count = e->constValue->AsUInt32(&enumValue);
+            assert(count == 1);
+
+            // Always print an initializer to set the value.  We could be
+            // 'clever' here and detect whether the implicit value given by
+            // one plus the previous enumerator value (or zero, for the
+            // first enumerator) is the same as the value stored with the
+            // enumerator, though that doesn't seem worth the trouble...
+            fprintf(file, "    %s = %d%c\n", e->name.c_str(), enumValue,
+                    (j < enumTypes[i]->GetEnumeratorCount() - 1) ? ',' : ' ');
+        }
+        fprintf(file, "};\n");
+    }
+}
+
+
 /** Print declarations of VectorTypes used in 'export'ed parts of the
     program in the header file.
  */
@@ -1137,24 +1153,12 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
     fprintf(file, "// Vector types with external visibility from ispc code\n");
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
 
-    std::vector<const VectorType *> emittedTypes;
     int align = g->target.nativeVectorWidth * 4;
 
     for (unsigned int i = 0; i < types.size(); ++i) {
         std::string baseDecl;
         const VectorType *vt = types[i]->GetAsNonConstType();
         int size = vt->GetElementCount();
-
-        // Don't print the declaration for this type if we've already
-        // handled it.
-        //
-        // FIXME: this is n^2, unnecessarily.  Being able to compare Type
-        // *s directly will eventually make this much better--can use a
-        // std::set...  Probably not going to matter in practice.
-        for (unsigned int j = 0; j < emittedTypes.size(); ++j) {
-            if (Type::Equal(vt, emittedTypes[j]))
-                goto skip;
-        }
 
         baseDecl = vt->GetBaseType()->GetCDeclaration("");
         fprintf(file, "#ifdef _MSC_VER\n__declspec( align(%d) ) ", align);
@@ -1164,58 +1168,59 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
         fprintf(file, "struct %s%d { %s v[%d]; } __attribute__ ((aligned(%d)));\n", 
                 baseDecl.c_str(), size, baseDecl.c_str(), size, align);
         fprintf(file, "#endif\n");
-                
-        emittedTypes.push_back(vt);
-    skip:
-        ;
     }
     fprintf(file, "\n");
 }
 
 
-/** Given a set of StructTypes, walk through their elements and collect the
-    VectorTypes that are present in them.
+/** Add the given type to the vector, if that type isn't already in there.
  */
-static void
-lGetVectorsFromStructs(const std::vector<const StructType *> &structParamTypes,
-                       std::vector<const VectorType *> *vectorParamTypes) {
-    for (unsigned int i = 0; i < structParamTypes.size(); ++i) {
-        const StructType *structType = structParamTypes[i];
-        for (int j = 0; j < structType->GetElementCount(); ++j) {
-            const Type *elementType = structType->GetElementType(j);
+template <typename T> static void
+lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
+    type = type->GetAsNonConstType();
 
-            const ArrayType *at = dynamic_cast<const ArrayType *>(elementType);
-            if (at)
-                elementType = at->GetBaseType();
+    // Linear search, so this ends up being n^2.  It's unlikely this will
+    // matter in practice, though.
+    for (unsigned int i = 0; i < exportedTypes->size(); ++i)
+        if (Type::Equal((*exportedTypes)[i], type))
+            return;
 
-            const VectorType *vt = dynamic_cast<const VectorType *>(elementType);
-            if (vt != NULL) {
-                // make sure it isn't there already...
-                for (unsigned int k = 0; k < vectorParamTypes->size(); ++k)
-                    if (Type::Equal(vt, (*vectorParamTypes)[k]))
-                        goto skip;
-                vectorParamTypes->push_back(vt);
-            }
-            skip:
-            ;
-        }
-    }
+    const T *castType = dynamic_cast<const T *>(type);
+    assert(castType != NULL);
+    exportedTypes->push_back(castType);
 }
 
 
+/** Given an arbitrary type that appears in the app/ispc interface, add it
+    to an appropriate vector if it is a struct, enum, or short vector type.
+    Then, if it's a struct, recursively process its members to do the same.
+ */
 static void
-lGetStructAndVectorTypes(const Type *type, 
-                         std::vector<const StructType *> *structParamTypes,
-                         std::vector<const VectorType *> *vectorParamTypes) {
-    const StructType *st = dynamic_cast<const StructType *>(type->GetBaseType());
-    if (st != NULL)
-        structParamTypes->push_back(st);
-    const VectorType *vt = dynamic_cast<const VectorType *>(type);
-    if (vt != NULL)
-        vectorParamTypes->push_back(vt);
-    vt = dynamic_cast<const VectorType *>(type->GetBaseType());
-    if (vt != NULL)
-        vectorParamTypes->push_back(vt);
+lGetExportedTypes(const Type *type, 
+                  std::vector<const StructType *> *exportedStructTypes,
+                  std::vector<const EnumType *> *exportedEnumTypes,
+                  std::vector<const VectorType *> *exportedVectorTypes) {
+    const ArrayType *arrayType = dynamic_cast<const ArrayType *>(type);
+    const StructType *structType = dynamic_cast<const StructType *>(type);
+
+    if (dynamic_cast<const ReferenceType *>(type) != NULL)
+        lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, 
+                          exportedEnumTypes, exportedVectorTypes);
+    else if (arrayType != NULL)
+        lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, 
+                          exportedEnumTypes, exportedVectorTypes);
+    else if (structType != NULL) {
+        lAddTypeIfNew(type, exportedStructTypes);
+        for (int i = 0; i < structType->GetElementCount(); ++i)
+            lGetExportedTypes(structType->GetElementType(i), exportedStructTypes,
+                              exportedEnumTypes, exportedVectorTypes);
+    }
+    else if (dynamic_cast<const EnumType *>(type) != NULL)
+        lAddTypeIfNew(type, exportedEnumTypes);
+    else if (dynamic_cast<const VectorType *>(type) != NULL)
+        lAddTypeIfNew(type, exportedVectorTypes);
+    else
+        assert(dynamic_cast<const AtomicType *>(type) != NULL);
 }
 
 
@@ -1223,18 +1228,21 @@ lGetStructAndVectorTypes(const Type *type,
     present in the parameters to them.
  */
 static void
-lGetStructAndVectorParams(const std::vector<Symbol *> &funcs, 
-                          std::vector<const StructType *> *structParamTypes,
-                          std::vector<const VectorType *> *vectorParamTypes) {
+lGetExportedParamTypes(const std::vector<Symbol *> &funcs, 
+                       std::vector<const StructType *> *exportedStructTypes,
+                       std::vector<const EnumType *> *exportedEnumTypes,
+                       std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
-        lGetStructAndVectorTypes(ftype->GetReturnType(), structParamTypes,
-                                 vectorParamTypes);
+        // Handle the return type
+        lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes,
+                          exportedEnumTypes, exportedVectorTypes);
+
+        // And now the parameter types...
         const std::vector<const Type *> &argTypes = ftype->GetArgumentTypes();
-        for (unsigned int j = 0; j < argTypes.size(); ++j) {
-            lGetStructAndVectorTypes(argTypes[j], structParamTypes, 
-                                     vectorParamTypes);
-        }
+        for (unsigned int j = 0; j < argTypes.size(); ++j)
+            lGetExportedTypes(argTypes[j], exportedStructTypes,
+                              exportedEnumTypes, exportedVectorTypes);
     }
 }
 
@@ -1323,42 +1331,25 @@ Module::writeHeader(const char *fn) {
     m->symbolTable->GetMatchingFunctions(lIsExported, &exportedFuncs);
     m->symbolTable->GetMatchingFunctions(lIsExternC, &externCFuncs);
     
-    // Get all of the structs used as function parameters and extern
-    // globals.  These vectors may have repeats.
-    std::vector<const StructType *> structParamTypes;
-    std::vector<const VectorType *> vectorParamTypes;
-    lGetStructAndVectorParams(exportedFuncs, &structParamTypes, &vectorParamTypes);
-    lGetStructAndVectorParams(externCFuncs, &structParamTypes, &vectorParamTypes);
+    // Get all of the struct, vector, and enumerant types used as function
+    // parameters.  These vectors may have repeats.
+    std::vector<const StructType *> exportedStructTypes;
+    std::vector<const EnumType *> exportedEnumTypes;
+    std::vector<const VectorType *> exportedVectorTypes;
+    lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
+                           &exportedEnumTypes, &exportedVectorTypes);
+    lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
+                           &exportedEnumTypes, &exportedVectorTypes);
 
-    // And do same for the 'extern' globals
+    // And do the same for the 'extern' globals
     for (unsigned int i = 0; i < externGlobals.size(); ++i)
-        lGetStructAndVectorTypes(externGlobals[i]->type,
-                                 &structParamTypes, &vectorParamTypes);
+        lGetExportedTypes(externGlobals[i]->type, &exportedStructTypes,
+                          &exportedEnumTypes, &exportedVectorTypes);
 
-    // Get all of the structs that the structs we have seen so far they
-    // depend on transitively.  Note the array may grow as a result of the
-    // call to lRecursiveAddStructs -> an iterator would be a bad idea
-    // (would be invalidated) -> the value of size() may increase as we go
-    // along.  But that's good; that lets us actually get the whole
-    // transitive set of struct types we need.
-    for (unsigned int i = 0; i < structParamTypes.size(); ++i)
-        lRecursiveAddStructs(structParamTypes[i], structParamTypes);
-
-    // Now get the unique struct types.  This is an n^2 search, which is
-    // kind of ugly, but unlikely to be a problem in practice.
-    std::vector<const StructType *> uniqueStructTypes;
-    for (unsigned int i = 0; i < structParamTypes.size(); ++i) {
-        for (unsigned int j = 0; j < uniqueStructTypes.size(); ++j)
-            if (Type::Equal(structParamTypes[i], uniqueStructTypes[j]))
-                goto skip;
-        uniqueStructTypes.push_back(structParamTypes[i]);
-    skip:
-        ;
-    }
-
-    lGetVectorsFromStructs(uniqueStructTypes, &vectorParamTypes);
-    lEmitVectorTypedefs(vectorParamTypes, f);
-    lEmitStructDecls(uniqueStructTypes, f);
+    // And print them
+    lEmitVectorTypedefs(exportedVectorTypes, f);
+    lEmitEnumDecls(exportedEnumTypes, f);
+    lEmitStructDecls(exportedStructTypes, f);
 
     // emit externs for globals
     if (externGlobals.size() > 0) {
@@ -1395,6 +1386,7 @@ Module::writeHeader(const char *fn) {
     fclose(f);
     return true;
 }
+
 
 void
 Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostream) const

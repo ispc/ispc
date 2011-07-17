@@ -135,3 +135,14 @@ SourcePos::Print() const {
     printf(" @ [%s:%d.%d - %d.%d] ", name, first_line, first_column,
            last_line, last_column); 
 }
+
+
+bool
+SourcePos::operator==(const SourcePos &p2) const {
+    return (!strcmp(name, p2.name) && 
+            first_line == p2.first_line &&
+            first_column == p2.first_column &&
+            last_line == p2.last_line &&
+            last_column == p2.last_column);
+}
+

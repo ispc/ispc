@@ -219,11 +219,16 @@ public:
         name. */
     std::vector<std::string> ClosestTypeMatch(const char *name) const;
 
+    std::vector<std::string> ClosestEnumTypeMatch(const char *name) const;
+
     /** Prints out the entire contents of the symbol table to standard error.
         (Debugging method). */
     void Print();
 
 private:
+    std::vector<std::string> closestTypeMatch(const char *str, 
+                                              bool structsVsEnums) const;
+
     /** This member variable holds one \c vector of Symbol pointers for
         each of the current active scopes as the program is being parsed.
         New vectors of symbols are added and removed from the end of the

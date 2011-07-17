@@ -39,6 +39,7 @@
 #define ISPC_EXPR_H 1
 
 #include "ispc.h"
+#include "type.h"
 
 class FunctionSymbolExpr;
 
@@ -318,9 +319,9 @@ private:
 /** @brief Expression representing a compile-time constant value.  
 
     This class can currently represent compile-time constants of anything
-    that is an AtomicType; for anything more complex, we don't currently
-    have a representation of a compile-time constant that can be further
-    reasoned about.
+    that is an AtomicType or an EnumType; for anything more complex, we
+    don't currently have a representation of a compile-time constant that
+    can be further reasoned about.
  */
 class ConstExpr : public Expr {
 public:
@@ -412,7 +413,9 @@ public:
     int Count() const;
 
 private:
-    const AtomicType *type;
+    AtomicType::BasicType getBasicType() const;
+
+    const Type *type;
     union {
         int32_t int32Val[ISPC_MAX_NVEC];
         uint32_t uint32Val[ISPC_MAX_NVEC];

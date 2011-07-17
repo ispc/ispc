@@ -94,6 +94,9 @@ static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static const char *lGetStorageClassString(StorageClass sc);
+static bool lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage);
+static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
+                                       const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
     "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor", "char", 
@@ -128,6 +131,9 @@ static const char *lParamListTokens[] = {
     std::vector<Declarator *> *structDeclaratorList;
     StructDeclaration *structDeclaration;
     std::vector<StructDeclaration *> *structDeclarationList;
+    const EnumType *enumType;
+    Symbol *enumerator;
+    std::vector<Symbol *> *enumeratorList;
     int32_t int32Val;
     double floatVal;
     int64_t int64Val;
@@ -180,8 +186,12 @@ static const char *lParamListTokens[] = {
 %type <structDeclaration> struct_declaration
 %type <structDeclarationList> struct_declaration_list
 
+%type <enumeratorList> enumerator_list
+%type <enumerator> enumerator
+%type <enumType> enum_specifier
+
 %type <type> specifier_qualifier_list struct_or_union_specifier
-%type <type> enum_specifier type_specifier type_name
+%type <type> type_specifier type_name
 %type <type> short_vec_specifier
 %type <atomicType> atomic_var_type_specifier
 
@@ -190,7 +200,7 @@ static const char *lParamListTokens[] = {
 %type <declSpecs> declaration_specifiers 
 
 %type <stringVal> string_constant
-%type <constCharPtr> struct_or_union_name
+%type <constCharPtr> struct_or_union_name enum_identifier
 %type <int32Val> int_constant soa_width_specifier
 
 %start translation_unit
@@ -571,11 +581,7 @@ type_specifier
         $$ = t;
       }
     | struct_or_union_specifier { $$ = $1; }
-    | enum_specifier 
-      { UNIMPLEMENTED; }
-/*    | TOKEN_TYPE_NAME 
-      { UNIMPLEMENTED; }
-*/
+    | enum_specifier { $$ = $1; }
     ;
 
 atomic_var_type_specifier
@@ -641,7 +647,8 @@ struct_or_union_specifier
             Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
         }
         else if (dynamic_cast<const StructType *>(st) == NULL)
-            Error(@2, "Type \"%s\" is not a struct type!", $2);
+            Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
+                  st->GetString().c_str());
         $$ = st;
       }
     ;
@@ -734,24 +741,98 @@ struct_declarator
 */
     ;
 
+enum_identifier
+    : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
+
 enum_specifier
     : TOKEN_ENUM '{' enumerator_list '}' 
-      { UNIMPLEMENTED; }
-    | TOKEN_ENUM TOKEN_IDENTIFIER '{' enumerator_list '}' 
-      { UNIMPLEMENTED; }
-    | TOKEN_ENUM TOKEN_IDENTIFIER 
-      { UNIMPLEMENTED; }
+      {
+          if ($3 != NULL) {
+              EnumType *enumType = new EnumType(@1);
+
+              lFinalizeEnumeratorSymbols(*$3, enumType);
+              for (unsigned int i = 0; i < $3->size(); ++i)
+                  m->symbolTable->AddVariable((*$3)[i]);
+              enumType->SetEnumerators(*$3);
+              $$ = enumType;
+          }
+          else
+              $$ = NULL;
+      }
+    | TOKEN_ENUM enum_identifier '{' enumerator_list '}' 
+      {
+          if ($4 != NULL) {
+              EnumType *enumType = new EnumType($2, $2);
+              m->symbolTable->AddType($2, enumType, @2);
+
+              lFinalizeEnumeratorSymbols(*$4, enumType);
+              for (unsigned int i = 0; i < $4->size(); ++i)
+                  m->symbolTable->AddVariable((*$4)[i]);
+              enumType->SetEnumerators(*$4);
+              $$ = enumType;
+          }
+          else
+              $$ = NULL;
+      }
+    | TOKEN_ENUM enum_identifier
+      {
+          const Type *type = m->symbolTable->LookupType($2);
+          if (type == NULL) {
+              std::vector<std::string> alternates = m->symbolTable->ClosestEnumTypeMatch($2);
+              std::string alts = lGetAlternates(alternates);
+              Error(@2, "Enum type \"%s\" unknown.%s", $2, alts.c_str());
+              $$ = NULL;
+          }
+          else {
+              const EnumType *enumType = dynamic_cast<const EnumType *>(type);
+              if (enumType == NULL) {
+                  Error(@2, "Type \"%s\" is not an enum type (%s).", $2,
+                        type->GetString().c_str());
+                  $$ = NULL;
+              }
+              else
+                  $$ = enumType;
+          }
+      }
     ;
 
 enumerator_list
     : enumerator 
-      { UNIMPLEMENTED; }
+      {
+          if ($1 == NULL)
+              $$ = NULL;
+          else {
+              std::vector<Symbol *> *el = new std::vector<Symbol *>; 
+              el->push_back($1);
+              $$ = el;
+          }
+      }
     | enumerator_list ',' enumerator
+      {
+          if ($1 != NULL && $3 != NULL)
+              $1->push_back($3);
+          $$ = $1;
+      }
     ;
 
 enumerator
-    : TOKEN_IDENTIFIER
-    | TOKEN_IDENTIFIER '=' constant_expression
+    : enum_identifier
+      {
+          $$ = new Symbol($1, @1);
+      }
+    | enum_identifier '=' constant_expression
+      {
+          int value;
+          if ($1 != NULL && $3 != NULL &&
+              lGetConstantInt($3, &value, @3, "Enumerator value")) {
+              Symbol *sym = new Symbol($1, @1);
+              sym->constValue = new ConstExpr(AtomicType::UniformConstUInt32,
+                                              (uint32_t)value, @3);
+              $$ = sym;
+          }
+          else
+              $$ = NULL;
+      }
     ;
 
 type_qualifier
@@ -781,25 +862,10 @@ direct_declarator
     | '(' declarator ')' { $$ = $2; }
     | direct_declarator '[' constant_expression ']'
     {
-        Expr *size = $3;
-        if (size)
-            size = size->TypeCheck();
-        if (size && $1 != NULL) {
-            size = size->Optimize();
-            llvm::Constant *cval = size->GetConstant(size->GetType());
-            if (!cval) {
-                Error(@3, "Array dimension must be compile-time constant");
-                $$ = NULL;
-            }
-            else {
-                llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(cval);
-                if (!ci) {
-                    Error(@3, "Array dimension must be compile-time integer constant.");
-                    $$ = NULL;
-                }
-                $1->AddArrayDimension((int)ci->getZExtValue());
-                $$ = $1;
-            }
+        int size;
+        if ($1 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
+            $1->AddArrayDimension(size);
+            $$ = $1;
         }
         else
             $$ = NULL;
@@ -1238,3 +1304,81 @@ lGetStorageClassString(StorageClass sc) {
 }
 
 
+/** Given an expression, see if it is equal to a compile-time constant
+    integer value.  If so, return true and return the value in *value.
+    If the expression isn't a compile-time constant or isn't an integer
+    type, return false.
+*/
+static bool
+lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
+    if (expr == NULL)
+        return false;
+    expr = expr->TypeCheck();
+    if (expr == NULL)
+        return false;
+    expr = expr->Optimize();
+    if (expr == NULL)
+        return false;
+
+    llvm::Constant *cval = expr->GetConstant(expr->GetType());
+    if (cval == NULL) {
+        Error(pos, "%s must be a compile-time constant.", usage);
+        return false;
+    }
+    else {
+        llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(cval);
+        if (ci == NULL) {
+            Error(pos, "%s must be a compile-time integer constant.", usage);
+            return false;
+        }
+        *value = (int)ci->getZExtValue();
+        return true;
+    }
+}
+
+
+/** Given an array of enumerator symbols, make sure each of them has a
+    ConstExpr * in their Symbol::constValue member that stores their 
+    unsigned integer value.  Symbols that had values explicitly provided
+    in the source file will already have ConstExpr * set; we just need
+    to set the values for the others here.
+*/
+static void
+lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums, 
+                           const EnumType *enumType) {
+    enumType = enumType->GetAsConstType();
+    enumType = enumType->GetAsUniformType();
+
+    /* nextVal tracks the value for the next enumerant.  It starts from
+       zero and goes up with each successive enumerant.  If any of them
+       has a value specified, then nextVal is ignored for that one and is
+       set to one plus that one's value for the default value for the next
+       one. */
+    uint32_t nextVal = 0;
+
+    for (unsigned int i = 0; i < enums.size(); ++i) {
+        enums[i]->type = enumType;
+        if (enums[i]->constValue != NULL) {
+            /* Already has a value, so first update nextVal with it. */
+            int count = enums[i]->constValue->AsUInt32(&nextVal);
+            assert(count == 1);
+            ++nextVal;
+
+            /* When the source file as being parsed, the ConstExpr for any
+               enumerant with a specified value was set to have unsigned
+               int32 type, since we haven't created the parent EnumType
+               by then.  Therefore, add a little type cast from uint32 to
+               the actual enum type here and optimize it, which will have
+               us end up with a ConstExpr with the desired EnumType... */
+            Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
+                                              enums[i]->pos);
+            castExpr = castExpr->Optimize();
+            enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
+            assert(enums[i]->constValue != NULL);
+        }
+        else {
+            enums[i]->constValue = new ConstExpr(enumType, nextVal++, 
+                                                 enums[i]->pos);
+        }
+    }
+}

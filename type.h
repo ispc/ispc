@@ -205,7 +205,7 @@ public:
     LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
-    /** This enumerant records the basic types that AtomicTypes can be 
+    /** This enumerator records the basic types that AtomicTypes can be 
         built from.  */
     enum BasicType {
         TYPE_VOID,
@@ -240,6 +240,52 @@ private:
     const bool isUniform;
     const bool isConst;
     AtomicType(BasicType basicType, bool isUniform, bool isConst);
+};
+
+
+/** @brief Type implementation for enumerated types
+ */
+class EnumType : public Type {
+public:
+    /** Constructor for anonymous enumerated types */
+    EnumType(SourcePos pos);
+    /** Constructor for named enumerated types */
+    EnumType(const char *name, SourcePos pos);
+
+    bool IsUniformType() const;
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const EnumType *GetBaseType() const;
+    const EnumType *GetAsVaryingType() const;
+    const EnumType *GetAsUniformType() const;
+    const Type *GetSOAType(int width) const;
+    const EnumType *GetAsConstType() const;
+    const EnumType *GetAsNonConstType() const;
+
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+
+    /** Provides the enumerators defined in the enum definition. */
+    void SetEnumerators(const std::vector<Symbol *> &enumerators);
+    /** Returns the total number of enuemrators in this enum type. */
+    int GetEnumeratorCount() const;
+    /** Returns the symbol for the given enumerator number. */
+    const Symbol *GetEnumerator(int i) const;
+
+    const SourcePos pos;
+
+private:
+    const std::string name;
+    bool isUniform, isConst;
+    std::vector<Symbol *> enumerators;
 };
 
 

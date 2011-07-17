@@ -256,9 +256,33 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk) {
         return new TypeCastExpr(toType, this, pos);
     }
 
+    const EnumType *toEnumType = dynamic_cast<const EnumType *>(toType);
+    const EnumType *fromEnumType = dynamic_cast<const EnumType *>(fromType);
+    if (toEnumType != NULL && fromEnumType != NULL) {
+        // No implicit conversions between different enum types
+        if (!Type::Equal(toEnumType->GetAsUniformType()->GetAsConstType(),
+                         fromEnumType->GetAsUniformType()->GetAsConstType())) {
+            if (!failureOk)
+                Error(pos, "Can't convert between different enum types "
+                      "\"%s\" -> \"%s\".", fromEnumType->GetString().c_str(),
+                      toEnumType->GetString().c_str());
+            return NULL;
+        }
+
+        return new TypeCastExpr(toType, this, pos);
+    }
+
+    const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
+    const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
+
+    // enum -> atomic (integer, generally...) is always ok
+    if (fromEnumType != NULL) {
+        assert(toAtomicType != NULL || toVectorType != NULL);
+        return new TypeCastExpr(toType, this, pos);
+    }
+
     // from here on out, the from type can only be atomic something or
     // other...
-    const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
     if (fromAtomicType == NULL) {
         if (!failureOk)
             Error(pos, "Type conversion only possible from atomic types, not "
@@ -272,7 +296,6 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk) {
         return new TypeCastExpr(toType, this, pos);
 
     // ok, it better be a scalar->scalar conversion of some sort by now
-    const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
     if (toAtomicType == NULL) {
         if (!failureOk)
             Error(pos, "Type conversion only possible to atomic types, not "
@@ -316,18 +339,22 @@ lMatchingBoolType(const Type *type) {
 static llvm::Constant *
 lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
     const AtomicType *atomicType = dynamic_cast<const AtomicType *>(type);
+    const EnumType *enumType = dynamic_cast<const EnumType *>(type);
     const VectorType *vectorType = dynamic_cast<const VectorType *>(type);
 
-    // This function is only called with, and only works for atomic and
-    // vector types.
-    assert(atomicType != NULL || vectorType != NULL);
+    // This function is only called with, and only works for atomic, enum,
+    // and vector types.
+    assert(atomicType != NULL || enumType != NULL || vectorType != NULL);
 
-    if (atomicType) {
-        // If it's an atomic type, then figure out which of the llvmutil.h
-        // functions to call to get the corresponding constant and then
-        // call it...
+    if (atomicType != NULL || enumType != NULL) {
+        // If it's an atomic or enuemrator type, then figure out which of
+        // the llvmutil.h functions to call to get the corresponding
+        // constant and then call it...
         bool isUniform = type->IsUniformType();
-        switch (atomicType->basicType) {
+        AtomicType::BasicType basicType = (enumType != NULL) ? 
+            AtomicType::TYPE_UINT32 : atomicType->basicType;
+
+        switch (basicType) {
         case AtomicType::TYPE_VOID:
             FATAL("can't get constant value for void type");
             return NULL;
@@ -477,7 +504,7 @@ lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx) {
         return ctx->BinaryOperator(llvm::Instruction::FSub, zero, argVal, "fnegate");
     else {
         assert(type->IsIntType());
-        return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal, "fnegate");
+        return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal, "inegate");
     }
 }
 
@@ -561,6 +588,7 @@ UnaryExpr::Optimize() {
         return this;
 
     const Type *type = constExpr->GetType();
+    bool isEnumType = dynamic_cast<const EnumType *>(type) != NULL;
 
     if (type == AtomicType::UniformInt64 || 
         type == AtomicType::VaryingInt64 ||
@@ -607,7 +635,8 @@ UnaryExpr::Optimize() {
         else if (type == AtomicType::UniformUInt32 || 
                  type == AtomicType::VaryingUInt32 ||
                  type == AtomicType::UniformConstUInt32 || 
-                 type == AtomicType::VaryingConstUInt32) {
+                 type == AtomicType::VaryingConstUInt32 ||
+                 isEnumType == true) {
             uint32_t v[ISPC_MAX_NVEC];
             int count = constExpr->AsUInt32(v);
             for (int i = 0; i < count; ++i)
@@ -1190,7 +1219,8 @@ BinaryExpr::Optimize() {
         else
             return this;
     }
-    else if (type == AtomicType::UniformUInt32 || type == AtomicType::VaryingUInt32) {
+    else if (type == AtomicType::UniformUInt32 || type == AtomicType::VaryingUInt32 ||
+             dynamic_cast<const EnumType *>(type) != NULL) {
         uint32_t v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
         constArg0->AsUInt32(v0);
         constArg1->AsUInt32(v1);
@@ -2069,6 +2099,7 @@ FunctionCallExpr::tryResolve(bool (*matchFunc)(Expr *, const Type *)) {
         assert(ft != NULL);
         const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
         const std::vector<const Type *> &argTypes = ft->GetArgumentTypes();
+        assert(argumentDefaults.size() == argTypes.size());
         for (unsigned int i = callArgs.size(); i < argTypes.size(); ++i) {
             assert(argumentDefaults[i] != NULL);
             args->exprs.push_back(argumentDefaults[i]);
@@ -3028,8 +3059,7 @@ MemberExpr::getCandidateNearMatches() const {
 
 ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstInt32);
     int32Val[0] = i;
@@ -3038,8 +3068,7 @@ ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstInt32 || 
            type == AtomicType::VaryingConstInt32);
@@ -3050,21 +3079,22 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
-    assert(type == AtomicType::UniformConstUInt32);
+    assert(type == AtomicType::UniformConstUInt32 ||
+           (dynamic_cast<const EnumType *>(type) != NULL &&
+            type->IsUniformType()));
     uint32Val[0] = u;
 }
 
 
 ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstUInt32 || 
-           type == AtomicType::VaryingConstUInt32);
+           type == AtomicType::VaryingConstUInt32 ||
+           (dynamic_cast<const EnumType *>(type) != NULL));
     for (int j = 0; j < Count(); ++j)
         uint32Val[j] = u[j];
 }
@@ -3072,8 +3102,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, float f, SourcePos p)
     : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstFloat);
     floatVal[0] = f;
@@ -3082,8 +3111,7 @@ ConstExpr::ConstExpr(const Type *t, float f, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, float *f, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstFloat || 
            type == AtomicType::VaryingConstFloat);
@@ -3094,8 +3122,7 @@ ConstExpr::ConstExpr(const Type *t, float *f, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstInt64);
     int64Val[0] = i;
@@ -3104,8 +3131,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstInt64 || 
            type == AtomicType::VaryingConstInt64);
@@ -3116,8 +3142,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformUInt64);
     uint64Val[0] = u;
@@ -3126,8 +3151,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstUInt64 || 
            type == AtomicType::VaryingConstUInt64);
@@ -3138,8 +3162,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, double f, SourcePos p)
     : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstDouble);
     doubleVal[0] = f;
@@ -3148,8 +3171,7 @@ ConstExpr::ConstExpr(const Type *t, double f, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, double *f, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstDouble || 
            type == AtomicType::VaryingConstDouble);
@@ -3160,8 +3182,7 @@ ConstExpr::ConstExpr(const Type *t, double *f, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstBool);
     boolVal[0] = b;
@@ -3170,8 +3191,7 @@ ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p)
 
 ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p) 
   : Expr(p) {
-    type = dynamic_cast<const AtomicType *>(t);
-    assert(type != NULL);
+    type = t;
     type = type->GetAsConstType();
     assert(type == AtomicType::UniformConstBool || 
            type == AtomicType::VaryingConstBool);
@@ -3183,7 +3203,10 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p)
 ConstExpr::ConstExpr(ConstExpr *old, double *v) 
     : Expr(old->pos) {
     type = old->type;
-    switch (type->basicType) {
+
+    AtomicType::BasicType basicType = getBasicType();
+
+    switch (basicType) {
     case AtomicType::TYPE_BOOL:
         for (int i = 0; i < Count(); ++i)
             boolVal[i] = (v[i] != 0.);
@@ -3215,6 +3238,18 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
 }
 
 
+AtomicType::BasicType
+ConstExpr::getBasicType() const {
+    const AtomicType *at = dynamic_cast<const AtomicType *>(type);
+    if (at != NULL)
+        return at->basicType;
+    else {
+        assert(dynamic_cast<const EnumType *>(type) != NULL);
+        return AtomicType::TYPE_UINT32;
+    }
+}
+
+
 const Type *
 ConstExpr::GetType() const { 
     return type; 
@@ -3226,10 +3261,9 @@ ConstExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     bool isVarying = type->IsVaryingType();
 
-    // ConstExpr only represents atomic types; just dispatch out to the
-    // appropriate utility routine to get the llvm constant value of the
-    // type we need.
-    switch (type->basicType) {
+    AtomicType::BasicType basicType = getBasicType();
+
+    switch (basicType) {
     case AtomicType::TYPE_BOOL:
         if (isVarying)
             return LLVMBoolVector(boolVal);
@@ -3314,7 +3348,7 @@ lConvert(const From *from, To *to, int count, bool forceVarying) {
 
 int
 ConstExpr::AsInt64(int64_t *ip, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
@@ -3331,7 +3365,7 @@ ConstExpr::AsInt64(int64_t *ip, bool forceVarying) const {
 
 int
 ConstExpr::AsUInt64(uint64_t *up, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
@@ -3348,7 +3382,7 @@ ConstExpr::AsUInt64(uint64_t *up, bool forceVarying) const {
 
 int
 ConstExpr::AsDouble(double *d, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   d, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  d, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, d, Count(), forceVarying); break;
@@ -3365,7 +3399,7 @@ ConstExpr::AsDouble(double *d, bool forceVarying) const {
 
 int
 ConstExpr::AsFloat(float *fp, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   fp, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  fp, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, fp, Count(), forceVarying); break;
@@ -3382,7 +3416,7 @@ ConstExpr::AsFloat(float *fp, bool forceVarying) const {
 
 int
 ConstExpr::AsBool(bool *b, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   b, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  b, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, b, Count(), forceVarying); break;
@@ -3399,7 +3433,7 @@ ConstExpr::AsBool(bool *b, bool forceVarying) const {
 
 int
 ConstExpr::AsInt32(int32_t *ip, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  ip, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, ip, Count(), forceVarying); break;
@@ -3416,7 +3450,7 @@ ConstExpr::AsInt32(int32_t *ip, bool forceVarying) const {
 
 int
 ConstExpr::AsUInt32(uint32_t *up, bool forceVarying) const {
-    switch (type->basicType) {
+    switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT32:  lConvert(int32Val,  up, Count(), forceVarying); break;
     case AtomicType::TYPE_UINT32: lConvert(uint32Val, up, Count(), forceVarying); break;
@@ -3461,7 +3495,8 @@ ConstExpr::GetConstant(const Type *type) const {
         else
             return LLVMInt32Vector(iv);
     }
-    else if (type == AtomicType::UniformUInt32 || type == AtomicType::VaryingUInt32) {
+    else if (type == AtomicType::UniformUInt32 || type == AtomicType::VaryingUInt32 ||
+             dynamic_cast<const EnumType *>(type) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
         AsUInt32(uiv, type->IsVaryingType());
         if (type->IsUniformType())
@@ -3520,12 +3555,11 @@ ConstExpr::TypeCheck() {
 }
 
 
-
 void
 ConstExpr::Print() const {
     printf("[%s] (", GetType()->GetString().c_str());
     for (int i = 0; i < Count(); ++i) {
-        switch (type->basicType) {
+        switch (getBasicType()) {
         case AtomicType::TYPE_BOOL:
             printf("%s", boolVal[i] ? "true" : "false");
             break;
@@ -4007,13 +4041,24 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return cast;
     }
 
-    const AtomicType *fromAtomic = dynamic_cast<const AtomicType *>(fromType);
-    // at this point, coming from an atomic type is all that's left...
-    assert(fromAtomic != NULL);
-
     llvm::Value *exprVal = expr->GetValue(ctx);
     if (!exprVal)
         return NULL;
+
+    const EnumType *fromEnum = dynamic_cast<const EnumType *>(fromType);
+    const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
+    if (fromEnum)
+        // treat it as an uint32 type for the below and all will be good.
+        fromType = fromEnum->IsUniformType() ? AtomicType::UniformUInt32 :
+            AtomicType::VaryingUInt32;
+    if (toEnum)
+        // treat it as an uint32 type for the below and all will be good.
+        toType = toEnum->IsUniformType() ? AtomicType::UniformUInt32 :
+            AtomicType::VaryingUInt32;
+
+    const AtomicType *fromAtomic = dynamic_cast<const AtomicType *>(fromType);
+    // at this point, coming from an atomic type is all that's left...
+    assert(fromAtomic != NULL);
 
     if (toVector) {
         // scalar -> short vector conversion
@@ -4099,18 +4144,19 @@ TypeCastExpr::TypeCheck() {
         return this;
     }
     else {
-        assert(dynamic_cast<const AtomicType *>(fromType) != NULL);
-        // If we're going from an atomic type, the only possible result is
-        // another atomic type
-        if (dynamic_cast<const AtomicType *>(toType) == NULL) {
-            Error(pos, "Can't convert from non-atomic type \"%s\" to \"%s\".",
+        assert(dynamic_cast<const AtomicType *>(fromType) != NULL ||
+               dynamic_cast<const EnumType *>(fromType) != NULL);
+        // If we're going from an atomic or enum type, the only possible
+        // result is another atomic or enum type
+        if (dynamic_cast<const AtomicType *>(toType) == NULL &&
+            dynamic_cast<const EnumType *>(toType) == NULL) {
+            Error(pos, "Can't convert from type \"%s\" to \"%s\".",
                   fromTypeString, toTypeString);
             return NULL;
         }
 
         return this;
     }
-
 }
 
 
@@ -4128,10 +4174,11 @@ TypeCastExpr::Optimize() {
 
     const Type *toType = GetType();
     const AtomicType *toAtomic = dynamic_cast<const AtomicType *>(toType);
-    // If we're not casting to an atomic type, we can't do anything here,
-    // since ConstExprs can only represent atomic types.  (So e.g. we're
-    // casting from an int to an int<4>.)
-    if (toAtomic == NULL)
+    const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
+    // If we're not casting to an atomic or enum type, we can't do anything
+    // here, since ConstExprs can only represent those two types.  (So
+    // e.g. we're casting from an int to an int<4>.)
+    if (toAtomic == NULL && toEnum == NULL)
         return this;
 
     bool forceVarying = toType->IsVaryingType();
@@ -4139,7 +4186,9 @@ TypeCastExpr::Optimize() {
     // All of the type conversion smarts we need is already in the
     // ConstExpr::AsBool(), etc., methods, so we just need to call the
     // appropriate one for the type that this cast is converting to.
-    switch (toAtomic->basicType) {
+    AtomicType::BasicType basicType = toAtomic ? toAtomic->basicType :
+        AtomicType::TYPE_UINT32;
+    switch (basicType) {
     case AtomicType::TYPE_BOOL: {
         bool bv[ISPC_MAX_NVEC];
         constExpr->AsBool(bv, forceVarying);
@@ -4179,7 +4228,6 @@ TypeCastExpr::Optimize() {
         FATAL("unimplemented");
     }
     return this;
-
 }
 
 

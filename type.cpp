@@ -411,6 +411,223 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// EnumType
+
+EnumType::EnumType(SourcePos p) 
+    : pos(p) {
+    //    name = "/* (anonymous) */";
+    isConst = false;
+    isUniform = false;
+}
+
+
+EnumType::EnumType(const char *n, SourcePos p) 
+    : pos(p), name(n) {
+    isConst = false;
+    isUniform = false;
+}
+
+
+bool 
+EnumType::IsUniformType() const {
+    return isUniform;
+}
+
+
+bool 
+EnumType::IsBoolType() const {
+    return false;
+}
+
+
+bool 
+EnumType::IsFloatType() const {
+    return false;
+}
+
+
+bool 
+EnumType::IsIntType() const {
+    return true;
+}
+
+
+bool 
+EnumType::IsUnsignedType() const {
+    return true;
+}
+
+
+bool 
+EnumType::IsConstType() const {
+    return isConst;
+}
+
+
+const EnumType *
+EnumType::GetBaseType() const {
+    return this;
+}
+
+
+const EnumType *
+EnumType::GetAsVaryingType() const {
+    if (IsVaryingType())
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->isUniform = false;
+        return enumType;
+    }
+}
+
+
+const EnumType *
+EnumType::GetAsUniformType() const {
+    if (IsUniformType())
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->isUniform = true;
+        return enumType;
+    }
+}
+
+
+const Type *
+EnumType::GetSOAType(int width) const {
+    assert(width > 0);
+    return new ArrayType(this, width);
+}
+
+
+const EnumType *
+EnumType::GetAsConstType() const {
+    if (isConst)
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->isConst = true;
+        return enumType;
+    }
+}
+
+
+const EnumType *
+EnumType::GetAsNonConstType() const {
+    if (!isConst)
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->isConst = false;
+        return enumType;
+    }
+}
+
+
+std::string 
+EnumType::GetString() const {
+    std::string ret;
+    if (isConst) ret += "const ";
+    if (isUniform) ret += "uniform ";
+    ret += "enum ";
+    if (name.size())
+        ret += name;
+    return ret;
+}
+
+
+std::string 
+EnumType::Mangle() const {
+    std::string ret = std::string("enum[") + name + std::string("]");
+    return ret;
+}
+
+
+std::string 
+EnumType::GetCDeclaration(const std::string &varName) const {
+    std::string ret;
+    if (isConst) ret += "const ";
+    ret += "enum";
+    if (name.size())
+        ret += std::string(" ") + name;
+    if (lShouldPrintName(varName)) {
+        ret += " ";
+        ret += varName;
+    }
+    return ret;
+}
+
+
+LLVM_TYPE_CONST llvm::Type *
+EnumType::LLVMType(llvm::LLVMContext *ctx) const {
+    return isUniform ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType;
+}
+
+
+llvm::DIType 
+EnumType::GetDIType(llvm::DIDescriptor scope) const {
+#ifdef LLVM_2_8
+    FATAL("debug info not supported in llvm 2.8");
+    return llvm::DIType();
+#else
+    std::vector<llvm::Value *> enumeratorDescriptors;
+    for (unsigned int i = 0; i < enumerators.size(); ++i) {
+        unsigned int enumeratorValue;
+        assert(enumerators[i]->constValue != NULL);
+        int count = enumerators[i]->constValue->AsUInt32(&enumeratorValue);
+        assert(count == 1);
+
+        llvm::Value *descriptor = 
+            m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
+        enumeratorDescriptors.push_back(descriptor);
+    }
+    llvm::DIArray elementArray = 
+        m->diBuilder->getOrCreateArray(&enumeratorDescriptors[0],
+                                       enumeratorDescriptors.size());
+
+    llvm::DIFile diFile = pos.GetDIFile();
+    llvm::DIType diType =
+        m->diBuilder->createEnumerationType(scope, name, diFile, pos.first_line,
+                                            32 /* size in bits */,
+                                            32 /* align in bits */,
+                                            elementArray);
+    if (IsUniformType())
+        return diType;
+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
+#ifdef LLVM_2_9
+    llvm::Value *suba[] = { sub };
+    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(suba, 1);
+#else
+    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
+#endif // !LLVM_2_9
+    uint64_t size =  diType.getSizeInBits()  * g->target.vectorWidth;
+    uint64_t align = diType.getAlignInBits() * g->target.vectorWidth;
+    return m->diBuilder->createVectorType(size, align, diType, subArray);
+#endif // !LLVM_2_8
+}
+
+
+void
+EnumType::SetEnumerators(const std::vector<Symbol *> &e) {
+    enumerators = e;
+}
+
+
+int
+EnumType::GetEnumeratorCount() const {
+    return (int)enumerators.size();
+}
+
+
+const Symbol *
+EnumType::GetEnumerator(int i) const {
+    return enumerators[i];
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // SequentialType
 
 const Type *SequentialType::GetElementType(int index) const {
@@ -1462,6 +1679,7 @@ FunctionType::GetBaseType() const {
     return NULL;
 }
 
+
 const Type *
 FunctionType::GetAsVaryingType() const {
     FATAL("FunctionType::GetAsVaryingType shouldn't be called");
@@ -1735,54 +1953,95 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
     // TODO: what do we need to do about references here, if anything??
 
-    // Now all we can do is promote atomic types...
     const AtomicType *at0 = dynamic_cast<const AtomicType *>(t0->GetReferenceTarget());
     const AtomicType *at1 = dynamic_cast<const AtomicType *>(t1->GetReferenceTarget());
 
-    if (!at0 || !at1) {
-        assert(reason);
+    const EnumType *et0 = dynamic_cast<const EnumType *>(t0->GetReferenceTarget());
+    const EnumType *et1 = dynamic_cast<const EnumType *>(t1->GetReferenceTarget());
+    if (et0 != NULL && et1 != NULL) {
+        // Two different enum types -> make them uint32s...
+        assert(et0->IsVaryingType() == et1->IsVaryingType());
+        return et0->IsVaryingType() ? AtomicType::VaryingUInt32 :
+                AtomicType::UniformUInt32;
+    }
+    else if (et0 != NULL) {
+        if (at1 != NULL)
+            // Enum type and atomic type -> convert the enum to the atomic type
+            // TODO: should we return uint32 here, unless the atomic type is
+            // a 64-bit atomic type, in which case we return that?
+            return at1;
+        else {
+            Error(pos, "Implicit conversion from enum type \"%s\" to "
+                  "non-atomic type \"%s\" for %s not possible.",
+                  t0->GetString().c_str(), t1->GetString().c_str(), reason);
+            return NULL;
+        }
+    }
+    else if (et1 != NULL) {
+        if (at0 != NULL)
+            // Enum type and atomic type; see TODO above here as well...
+            return at0;
+        else {
+            Error(pos, "Implicit conversion from enum type \"%s\" to "
+                  "non-atomic type \"%s\" for %s not possible.",
+                  t1->GetString().c_str(), t0->GetString().c_str(), reason);
+            return NULL;
+        }
+    }
+
+    // Now all we can do is promote atomic types...
+    if (at0 == NULL || at1 == NULL) {
+        assert(reason != NULL);
         Error(pos, "Implicit conversion from type \"%s\" to \"%s\" for %s not possible.",
               t0->GetString().c_str(), t1->GetString().c_str(), reason);
         return NULL;
     }
 
     // Finally, to determine which of the two atomic types is more general,
-    // use the ordering of entries in the AtomicType::BasicType enumerant.
+    // use the ordering of entries in the AtomicType::BasicType enumerator.
     return (int(at0->basicType) >= int(at1->basicType)) ? at0 : at1;
 }
 
 
 bool
 Type::Equal(const Type *a, const Type *b) {
-    if (!a || !b)
+    if (a == NULL || b == NULL)
         return false;
 
     // We can compare AtomicTypes with pointer equality, since the
     // AtomicType constructor is private so that there isonly the single
     // canonical instance of the AtomicTypes (AtomicType::UniformInt32,
     // etc.)
-    if (dynamic_cast<const AtomicType *>(a) &&
-        dynamic_cast<const AtomicType *>(b))
+    if (dynamic_cast<const AtomicType *>(a) != NULL &&
+        dynamic_cast<const AtomicType *>(b) != NULL)
         return a == b;
 
     // For all of the other types, we need to see if we have the same two
     // general types.  If so, then we dig into the details of the type and
     // see if all of the relevant bits are equal...
+    const EnumType *eta = dynamic_cast<const EnumType *>(a);
+    const EnumType *etb = dynamic_cast<const EnumType *>(b);
+    if (eta != NULL && etb != NULL)
+        // Kind of goofy, but this sufficies to check
+        return (eta->pos == etb->pos &&
+                eta->IsUniformType() == etb->IsUniformType() &&
+                eta->IsConstType() == etb->IsConstType());
+
     const ArrayType *ata = dynamic_cast<const ArrayType *>(a);
     const ArrayType *atb = dynamic_cast<const ArrayType *>(b);
-    if (ata && atb)
+    if (ata != NULL && atb != NULL)
         return (ata->GetElementCount() == atb->GetElementCount() && 
                 Equal(ata->GetElementType(), atb->GetElementType()));
 
     const VectorType *vta = dynamic_cast<const VectorType *>(a);
     const VectorType *vtb = dynamic_cast<const VectorType *>(b);
-    if (vta && vtb)
+    if (vta != NULL && vtb != NULL)
         return (vta->GetElementCount() == vtb->GetElementCount() && 
                 Equal(vta->GetElementType(), vtb->GetElementType()));
 
     const StructType *sta = dynamic_cast<const StructType *>(a);
     const StructType *stb = dynamic_cast<const StructType *>(b);
-    if (sta && stb) {
+    if (sta != NULL && stb != NULL) {
         if (sta->GetElementCount() != stb->GetElementCount())
             return false;
         for (int i = 0; i < sta->GetElementCount(); ++i)
@@ -1793,13 +2052,13 @@ Type::Equal(const Type *a, const Type *b) {
 
     const ReferenceType *rta = dynamic_cast<const ReferenceType *>(a);
     const ReferenceType *rtb = dynamic_cast<const ReferenceType *>(b);
-    if (rta && rtb)
+    if (rta != NULL && rtb != NULL)
         return Type::Equal(rta->GetReferenceTarget(),
                            rtb->GetReferenceTarget());
 
     const FunctionType *fta = dynamic_cast<const FunctionType *>(a);
     const FunctionType *ftb = dynamic_cast<const FunctionType *>(b);
-    if (fta && ftb) {
+    if (fta != NULL && ftb != NULL) {
         // Both the return types and all of the argument types must match
         // for function types to match
         if (!Equal(fta->GetReturnType(), ftb->GetReturnType()))

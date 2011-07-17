@@ -117,6 +117,8 @@ struct SourcePos {
 
     /** Returns a LLVM DIFile object that represents the SourcePos's file */
     llvm::DIFile GetDIFile() const;
+
+    bool operator==(const SourcePos &p2) const;
 };
 
 
@@ -156,7 +158,7 @@ public:
 struct Target {
     Target();
 
-    /** Enumerant giving the instruction sets that the compiler can
+    /** Enumerator giving the instruction sets that the compiler can
         target. */
     enum ISA { SSE2, SSE4, AVX };
 

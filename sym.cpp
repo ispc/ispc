@@ -59,6 +59,7 @@ Symbol::MangledName() const {
     return name + type->Mangle();
 }
 
+
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable
 
@@ -257,7 +258,19 @@ SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
 
 std::vector<std::string>
 SymbolTable::ClosestTypeMatch(const char *str) const {
-    // This follows the same approach as ClosestVariableOrFunctionmatch()
+    return closestTypeMatch(str, true);
+}
+
+
+std::vector<std::string>
+SymbolTable::ClosestEnumTypeMatch(const char *str) const {
+    return closestTypeMatch(str, false);
+}
+
+
+std::vector<std::string>
+SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
+    // This follows the same approach as ClosestVariableOrFunctionMatch()
     // above; compute all edit distances, keep the ones shorter than
     // maxDelta, return the first non-empty vector of one or more sets of
     // alternatives with minimal edit distance.
@@ -267,6 +280,14 @@ SymbolTable::ClosestTypeMatch(const char *str) const {
     for (unsigned int i = 0; i < types.size(); ++i) {
         TypeMapType::const_iterator iter;
         for (iter = types[i]->begin(); iter != types[i]->end(); ++iter) {
+            // Skip over either StructTypes or EnumTypes, depending on the
+            // value of the structsVsEnums parameter
+            bool isEnum = (dynamic_cast<const EnumType *>(iter->second) != NULL);
+            if (isEnum && structsVsEnums)
+                continue;
+            else if (!isEnum && !structsVsEnums)
+                continue;
+
             int dist = StringEditDistance(str, iter->first, maxDelta+1);
             if (dist <= maxDelta)
                 matches[dist].push_back(iter->first);
