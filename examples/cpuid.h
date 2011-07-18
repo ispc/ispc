@@ -31,61 +31,36 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "../cpuid.h"
+#ifndef ISPC_CPUID_H
+#define ISPC_CPUID_H 1
 
-// Include the header file that the ispc compiler generates
-#include "simple_ispc.h"
-using namespace ispc;
-
-// Make sure that the vector ISA used during compilation is supported by
-// the processor.  The ISPC_TARGET_* macro is set in the ispc-generated
-// header file that we include above.
-static void
-ensureTargetISAIsSupported() {
-#if defined(ISPC_TARGET_SSE2)
-    bool isaSupported = CPUSupportsSSE2();
-    const char *target = "SSE2";
-#elif defined(ISPC_TARGET_SSE4)
-    bool isaSupported = CPUSupportsSSE4();
-    const char *target = "SSE4";
-#elif defined(ISPC_TARGET_AVX)
-    bool isaSupported = CPUSupportsAVX();
-    const char *target = "AVX";
-#else
-#error "Unknown ISPC_TARGET_* value"
-#endif
-    if (!isaSupported) {
-        fprintf(stderr, "***\n*** Error: the ispc-compiled code uses the %s instruction "
-                "set, which isn't\n***        supported by this computer's CPU!\n", target);
-        fprintf(stderr, "***\n***        Please modify the "
 #ifdef _MSC_VER
-                "MSVC project file "
+// Provides a __cpuid() function with same signature as below
+#include <intrin.h>
 #else
-                "Makefile "
+static void __cpuid(int info[4], int infoType) {
+    __asm__ __volatile__ ("cpuid"
+                          : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
+                          : "0" (infoType));
+}
 #endif
-                "to select another target (e.g. sse2)\n***\n");
-        exit(1);
-    }
+
+inline bool CPUSupportsSSE2() {
+    int info[4];
+    __cpuid(info, 1);
+    return (info[3] & (1 << 26));
 }
 
-
-int main() {
-    ensureTargetISAIsSupported();
-
-    float vin[16], vout[16];
-
-    // Initialize input buffer
-    for (int i = 0; i < 16; ++i)
-        vin[i] = (float)i;
-
-    // Call simple() function from simple.ispc file
-    simple(vin, vout, 16);
-
-    // Print results
-    for (int i = 0; i < 16; ++i)
-        printf("%d: simple(%f) = %f\n", i, vin[i], vout[i]);
-
-    return 0;
+inline bool CPUSupportsSSE4() {
+    int info[4];
+    __cpuid(info, 1);
+    return (info[2] & (1 << 19));
 }
+
+inline bool CPUSupportsAVX() {
+    int info[4];
+    __cpuid(info, 1);
+    return (info[2] & (1 << 28));
+}
+
+#endif // ISPC_CPUID_H

@@ -1316,6 +1316,21 @@ Module::writeHeader(const char *fn) {
     fprintf(f, "#ifndef %s\n#define %s\n\n", guard.c_str(), guard.c_str());
 
     fprintf(f, "#include <stdint.h>\n\n");
+
+    switch (g->target.isa) {
+    case Target::SSE2:
+        fprintf(f, "#define ISPC_TARGET_SSE2\n\n");
+        break;
+    case Target::SSE4:
+        fprintf(f, "#define ISPC_TARGET_SSE4\n\n");
+        break;
+    case Target::AVX:
+        fprintf(f, "#define ISPC_TARGET_AVX\n\n");
+        break;
+    default:
+        FATAL("Unhandled target in header emission");
+    }
+
     fprintf(f, "#ifdef __cplusplus\nnamespace ispc {\n#endif // __cplusplus\n\n");
 
     if (g->emitInstrumentation) {

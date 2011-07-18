@@ -56,6 +56,7 @@ using namespace ispc;
 
 #include "instrument.h"
 #include "../timing.h"
+#include "../cpuid.h"
 
 #define NSUBSAMPLES        2
 
@@ -102,6 +103,38 @@ savePPM(const char *fname, int w, int h)
 }
 
 
+// Make sure that the vector ISA used during compilation is supported by
+// the processor.  The ISPC_TARGET_* macro is set in the ispc-generated
+// header file that we include above.
+static void
+ensureTargetISAIsSupported() {
+#if defined(ISPC_TARGET_SSE2)
+    bool isaSupported = CPUSupportsSSE2();
+    const char *target = "SSE2";
+#elif defined(ISPC_TARGET_SSE4)
+    bool isaSupported = CPUSupportsSSE4();
+    const char *target = "SSE4";
+#elif defined(ISPC_TARGET_AVX)
+    bool isaSupported = CPUSupportsAVX();
+    const char *target = "AVX";
+#else
+#error "Unknown ISPC_TARGET_* value"
+#endif
+    if (!isaSupported) {
+        fprintf(stderr, "***\n*** Error: the ispc-compiled code uses the %s instruction "
+                "set, which isn't\n***        supported by this computer's CPU!\n", target);
+        fprintf(stderr, "***\n***        Please modify the "
+#ifdef _MSC_VER
+                "MSVC project file "
+#else
+                "Makefile "
+#endif
+                "to select another target (e.g. sse2)\n***\n");
+        exit(1);
+    }
+}
+
+
 int main(int argc, char **argv)
 {
     if (argc != 4) {
@@ -115,6 +148,8 @@ int main(int argc, char **argv)
         width = atoi (argv[2]);
         height = atoi (argv[3]);
     }
+
+    ensureTargetISAIsSupported();
 
     // Allocate space for output images
     img = new unsigned char[width * height * 3];
