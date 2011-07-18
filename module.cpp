@@ -898,6 +898,10 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
     llvm::InitializeAllTargets();
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::InitializeAllMCAsmInfos();
+    llvm::InitializeAllMCSubtargetInfos();
+#endif
     llvm::InitializeAllAsmPrinters();
     llvm::InitializeAllAsmParsers();
 
