@@ -325,8 +325,8 @@ LLVMBoolVector(const bool *bvec) {
 }
 
 
-const llvm::ArrayType *
-LLVMPointerVectorType(const llvm::Type *t) {
+LLVM_TYPE_CONST llvm::ArrayType *
+LLVMPointerVectorType(LLVM_TYPE_CONST llvm::Type *t) {
     // NOTE: ArrayType, not VectorType
     return llvm::ArrayType::get(llvm::PointerType::get(t, 0), 
                                 g->target.vectorWidth);

@@ -213,7 +213,7 @@ public:
     /** Emit code to call the user-supplied ISPCMalloc function to
         allocate space for an object of thee given type.  Returns the
         pointer value returned by the ISPCMalloc call. */
-    llvm::Value *EmitMalloc(const llvm::Type *ty, int align = 0);
+    llvm::Value *EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align = 0);
 
     /** Emit code to call the user-supplied ISPCFree function, passing it
         the given pointer to storage previously allocated by an
@@ -303,21 +303,21 @@ public:
                          llvm::CmpInst::Predicate pred,
                          llvm::Value *v0, llvm::Value *v1, const char *name = NULL);
 
-    llvm::Value *BitCastInst(llvm::Value *value, const llvm::Type *type,
+    llvm::Value *BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                              const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, const llvm::Type *type,
+    llvm::Value *PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
-    llvm::Value *IntToPtrInst(llvm::Value *value, const llvm::Type *type,
+    llvm::Value *IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
-    llvm::Instruction *TruncInst(llvm::Value *value, const llvm::Type *type,
+    llvm::Instruction *TruncInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                  const char *name = NULL);
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
-                                const llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *FPCastInst(llvm::Value *value, const llvm::Type *type, 
+                                LLVM_TYPE_CONST llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *FPCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                   const char *name = NULL);
-    llvm::Instruction *SExtInst(llvm::Value *value, const llvm::Type *type, 
+    llvm::Instruction *SExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                 const char *name = NULL);
-    llvm::Instruction *ZExtInst(llvm::Value *value, const llvm::Type *type, 
+    llvm::Instruction *ZExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                 const char *name = NULL);
 
     /** This GEP method is a generalization of the standard one in LLVM; it
@@ -347,7 +347,7 @@ public:
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */ 
-    llvm::Value *AllocaInst(const llvm::Type *llvmType, const char *name = NULL,
+    llvm::Value *AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, const char *name = NULL,
                             int align = 0, bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
@@ -378,7 +378,8 @@ public:
     llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, 
                             const char *name = NULL);
 
-    llvm::PHINode *PhiNode(const llvm::Type *type, int count, const char *name = NULL);
+    llvm::PHINode *PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
+                           const char *name = NULL);
     llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
                                   llvm::Value *val1, const char *name = NULL);
 

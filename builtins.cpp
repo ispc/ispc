@@ -476,7 +476,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     Symbol *pw = new Symbol(name, SourcePos(), AtomicType::UniformConstInt32);
     pw->isStatic = true;
     pw->constValue = new ConstExpr(pw->type, val, SourcePos());
-    const llvm::Type *ltype = LLVMTypes::Int32Type;
+    LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
     pw->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
                                               llvm::GlobalValue::InternalLinkage,
@@ -496,7 +496,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         pi[i] = i;
     pidx->constValue = new ConstExpr(pidx->type, pi, SourcePos());
 
-    const llvm::Type *ltype = LLVMTypes::Int32VectorType;
+    LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
     pidx->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
                                                 llvm::GlobalValue::InternalLinkage, linit, 

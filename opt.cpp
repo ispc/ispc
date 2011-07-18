@@ -692,7 +692,7 @@ lSizeOfIfKnown(const llvm::Type *type, uint64_t *size) {
     inserted before insertBefore.
  */
 static llvm::Value *
-lSizeOf(const llvm::Type *type, llvm::Instruction *insertBefore) {
+lSizeOf(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
     // First try the easy case and see if we can get it as a simple
     // constant..
     uint64_t size;
@@ -703,7 +703,7 @@ lSizeOf(const llvm::Type *type, llvm::Instruction *insertBefore) {
     // the pointer to the second element of an array of items of this type.
     // Then convert that pointer to an int and we've got the offset to the
     // second element in the array, a.k.a. the size of the type.
-    const llvm::Type *ptrType = llvm::PointerType::get(type, 0);
+    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
@@ -721,13 +721,13 @@ lSizeOf(const llvm::Type *type, llvm::Instruction *insertBefore) {
     instructions that compute this value are inserted before insertBefore.
  */
 static llvm::Value *
-lStructOffset(const llvm::Type *type, uint64_t member, 
+lStructOffset(LLVM_TYPE_CONST llvm::Type *type, uint64_t member, 
               llvm::Instruction *insertBefore) {
     // Do a similar trick to the one done in lSizeOf above; compute the
     // pointer to the member starting from a NULL base pointer and then
     // cast that 'pointer' to an int...
     assert(llvm::isa<const llvm::StructType>(type));
-    const llvm::Type *ptrType = llvm::PointerType::get(type, 0);
+    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[2] = { LLVMInt32(0), LLVMInt32((int32_t)member) };
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[2],
@@ -741,8 +741,9 @@ lStructOffset(const llvm::Type *type, uint64_t member,
 
 
 static llvm::Value *
-lGetTypeSize(const llvm::Type *type, llvm::Instruction *insertBefore) {
-    const llvm::ArrayType *arrayType =  llvm::dyn_cast<const llvm::ArrayType>(type);
+lGetTypeSize(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
+    LLVM_TYPE_CONST llvm::ArrayType *arrayType =  
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
     if (arrayType != NULL)
         type = arrayType->getElementType();
 
@@ -756,7 +757,7 @@ lGetTypeSize(const llvm::Type *type, llvm::Instruction *insertBefore) {
 
 static llvm::Value *
 lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset, 
-                  const llvm::Type **scaleType, bool *leafIsVarying,
+                  LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
                   llvm::Instruction *insertBefore) {
     if (!llvm::isa<llvm::GetElementPtrInst>(value)) {
         assert(llvm::isa<llvm::BitCastInst>(value));
@@ -777,21 +778,22 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
     }
 
     if (leafIsVarying != NULL) {
-        const llvm::Type *pt = value->getType();
-        const llvm::PointerType *ptrType = llvm::dyn_cast<const llvm::PointerType>(pt);
+        LLVM_TYPE_CONST llvm::Type *pt = value->getType();
+        LLVM_TYPE_CONST llvm::PointerType *ptrType = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(pt);
         assert(ptrType);
-        const llvm::Type *eltType = ptrType->getElementType();
-        *leafIsVarying = llvm::isa<const llvm::VectorType>(eltType);
+        LLVM_TYPE_CONST llvm::Type *eltType = ptrType->getElementType();
+        *leafIsVarying = llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(eltType);
     }
 
     llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(value);
     assert(gep);
 
     assert(lGetIntValue(gep->getOperand(1)) == 0);
-    const llvm::PointerType *targetPtrType = 
-        llvm::dyn_cast<const llvm::PointerType>(gep->getOperand(0)->getType());
+    LLVM_TYPE_CONST llvm::PointerType *targetPtrType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(gep->getOperand(0)->getType());
     assert(targetPtrType);
-    const llvm::Type *targetType = targetPtrType->getElementType();
+    LLVM_TYPE_CONST llvm::Type *targetType = targetPtrType->getElementType();
 
     if (llvm::isa<const llvm::StructType>(targetType)) {
         *offset = lStructOffset(targetType, lGetIntValue(gep->getOperand(2)),
@@ -841,7 +843,7 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
  */
 static llvm::Value *
 lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
-                     const llvm::Type **scaleType, bool *leafIsVarying,
+                     LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
                      llvm::Instruction *insertBefore) {
     // This depends on the front-end constructing the arrays of pointers
     // via InsertValue instructions.  (Which it does do in
@@ -897,8 +899,8 @@ lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
  */
 static llvm::Value *
 lSmearScalar(llvm::Value *scalar, llvm::Instruction *insertBefore) {
-    const llvm::Type *vectorType = llvm::VectorType::get(scalar->getType(), 
-                                                         g->target.vectorWidth);
+    LLVM_TYPE_CONST llvm::Type *vectorType = llvm::VectorType::get(scalar->getType(), 
+                                                                   g->target.vectorWidth);
     llvm::Value *result = llvm::UndefValue::get(vectorType);
     for (int i = 0; i < g->target.vectorWidth; ++i) {
         result = llvm::InsertElementInst::Create(result, scalar, LLVMInt32(i),
@@ -919,7 +921,7 @@ lGetPtrAndOffsets(llvm::Value *ptrs, llvm::Value **basePtr,
         llvm::Value *offsets[ISPC_MAX_NVEC];
         for (int i = 0; i < g->target.vectorWidth; ++i)
             offsets[i] = NULL;
-        const llvm::Type *scaleType = NULL;
+        LLVM_TYPE_CONST llvm::Type *scaleType = NULL;
 
         llvm::Value *nextChain = 
             lTraverseInsertChain(ptrs, offsets, &scaleType,
@@ -1026,12 +1028,19 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
             // Generate a new function call to the next pseudo gather
             // base+offsets instruction.  Note that we're passing a NULL
-            // llvm::BasicBlock to llvm::CallInst::Create; this means that
+            // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
             llvm::Value *newArgs[3] = { basePtr, offsetVector, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[3]);
+            llvm::Instruction *newCall = 
+                llvm::CallInst::Create(gFunc, newArgArray, "newgather", 
+                                       (llvm::Instruction *)NULL);
+#else
             llvm::Instruction *newCall = 
                 llvm::CallInst::Create(gFunc, &newArgs[0], &newArgs[3], "newgather");
+#endif
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -1045,10 +1054,17 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
-            // for the basic block is intended.
+            // for the Instruction * is intended.
             llvm::Value *newArgs[4] = { basePtr, offsetVector, rvalue, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[4]);
+            llvm::Instruction *newCall = 
+                llvm::CallInst::Create(gFunc, newArgArray, "", 
+                                       (llvm::Instruction *)NULL);
+#else
             llvm::Instruction *newCall = 
                 llvm::CallInst::Create(gFunc, &newArgs[0], &newArgs[4]);
+#endif
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -1131,8 +1147,9 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular store
-            const llvm::Type *rvalueType = rvalue->getType();
-            const llvm::Type *ptrType = llvm::PointerType::get(rvalueType, 0);
+            LLVM_TYPE_CONST llvm::Type *rvalueType = rvalue->getType();
+            LLVM_TYPE_CONST llvm::Type *ptrType = 
+                llvm::PointerType::get(rvalueType, 0);
             // Need to update this when int8/int16 are added
             int align = (called == pms32Func || called == pms64Func ||
                          called == msb32Func) ? 4 : 8;
@@ -1268,8 +1285,14 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Function *fms = m->module->getFunction(lMaskedStoreName(doBlend, is32));
         assert(fms);
         llvm::Value *args[3] = { lvalue, rvalue, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+        llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
+        llvm::Instruction *inst = llvm::CallInst::Create(fms, newArgArray, "", 
+                                                         callInst);
+#else
         llvm::Instruction *inst = llvm::CallInst::Create(fms, &args[0], &args[3], "", 
                                                          callInst);
+#endif
         lCopyMetadata(inst, callInst);
 
         callInst->eraseFromParent();
@@ -1445,11 +1468,11 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         if (!lScalarizeVector(ci->getOperand(0), scalarizedTarget))
             return false;
 
-        const llvm::Type *destType = ci->getDestTy();
-        const llvm::VectorType *vectorDestType =
-            llvm::dyn_cast<const llvm::VectorType>(destType);
+        LLVM_TYPE_CONST llvm::Type *destType = ci->getDestTy();
+        LLVM_TYPE_CONST llvm::VectorType *vectorDestType =
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(destType);
         assert(vectorDestType != NULL);
-        const llvm::Type *elementType = vectorDestType->getElementType();
+        LLVM_TYPE_CONST llvm::Type *elementType = vectorDestType->getElementType();
 
         for (int i = 0; i < g->target.vectorWidth; ++i) {
             scalarizedVector[i] = 
@@ -1467,19 +1490,19 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         // an assert at the bottom of this routien will hit the first time
         // it runs as a reminder that this needs to be tested further.
 
-        const llvm::VectorType *svInstType = 
-            llvm::dyn_cast<const llvm::VectorType>(svi->getType());
+        LLVM_TYPE_CONST llvm::VectorType *svInstType = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(svi->getType());
         assert(svInstType != NULL);
         assert((int)svInstType->getNumElements() == g->target.vectorWidth);
 
         // Scalarize the two vectors being shuffled.  First figure out how
         // big they are.
-        const llvm::Type *type0 = svi->getOperand(0)->getType();
-        const llvm::Type *type1 = svi->getOperand(1)->getType();
-        const llvm::VectorType *vectorType0 = 
-            llvm::dyn_cast<const llvm::VectorType>(type0);
-        const llvm::VectorType *vectorType1 = 
-            llvm::dyn_cast<const llvm::VectorType>(type1);
+        LLVM_TYPE_CONST llvm::Type *type0 = svi->getOperand(0)->getType();
+        LLVM_TYPE_CONST llvm::Type *type1 = svi->getOperand(1)->getType();
+        LLVM_TYPE_CONST llvm::VectorType *vectorType0 = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type0);
+        LLVM_TYPE_CONST llvm::VectorType *vectorType1 = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type1);
         assert(vectorType0 != NULL && vectorType1 != NULL);
 
         int n0 = vectorType0->getNumElements();
@@ -1926,9 +1949,16 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                   "__load_and_broadcast_64");
                 assert(loadBroadcast);
                 llvm::Value *args[2] = { ptr, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+                llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
+                llvm::Instruction *newCall = 
+                    llvm::CallInst::Create(loadBroadcast, newArgArray,
+                                           "load_broadcast", (llvm::Instruction *)NULL);
+#else
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(loadBroadcast, &args[0], &args[2],
                                            "load_broadcast");
+#endif
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }
@@ -1984,8 +2014,15 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 assert(loadMasked);
 
                 llvm::Value *args[2] = { ptr, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+                llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
+                llvm::Instruction *newCall = 
+                    llvm::CallInst::Create(loadMasked, argArray, "load_masked",
+                                           (llvm::Instruction *)NULL);
+#else
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(loadMasked, &args[0], &args[2], "load_masked");
+#endif
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }
@@ -2000,13 +2037,20 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                     m->module->getFunction(is32 ? "__pseudo_masked_store_32" :
                                                   "__pseudo_masked_store_64");
                 assert(storeMasked);
-                const llvm::Type *vecPtrType = is32 ?
+                LLVM_TYPE_CONST llvm::Type *vecPtrType = is32 ?
                     LLVMTypes::Int32VectorPointerType : LLVMTypes::Int64VectorPointerType;
                 ptr = new llvm::BitCastInst(ptr, vecPtrType, "ptrcast", callInst);
 
                 llvm::Value *args[3] = { ptr, rvalue, mask };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+                llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
+                llvm::Instruction *newCall = 
+                    llvm::CallInst::Create(storeMasked, argArray, "",
+                                           (llvm::Instruction *)NULL);
+#else
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(storeMasked, &args[0], &args[3], "");
+#endif
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }

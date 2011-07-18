@@ -317,7 +317,7 @@ lInitFunSymDecl(DeclSpecs *ds, Declarator *decl) {
 
     // Get the LLVM FunctionType
     bool includeMask = (ds->storageClass != SC_EXTERN_C);
-    const llvm::FunctionType *llvmFunctionType = 
+    LLVM_TYPE_CONST llvm::FunctionType *llvmFunctionType = 
         functionType->LLVMFunctionType(g->ctx, includeMask);
     if (llvmFunctionType == NULL)
         return false;
@@ -486,7 +486,7 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
             return;
         }
 
-        const llvm::Type *llvmType = decl->sym->type->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::Type *llvmType = decl->sym->type->LLVMType(g->ctx);
         llvm::GlobalValue::LinkageTypes linkage =
             (ds->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
                                               llvm::GlobalValue::ExternalLinkage;
@@ -576,7 +576,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, Declarator *decl,
         llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
     // Get the type of the argument we're copying in and its Symbol pointer
-    const llvm::Type *argType = argStructType->getElementType(i);
+    LLVM_TYPE_CONST llvm::Type *argType = argStructType->getElementType(i);
     Declaration *pdecl = (*decl->functionArgs)[i];
     assert(pdecl->declarators.size() == 1);
     Symbol *sym = pdecl->declarators[0]->sym;
@@ -796,7 +796,8 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
         // the application can call it
         if (ds->storageClass == SC_EXPORT) {
             if (!functionType->isTask) {
-                const llvm::FunctionType *ftype = functionType->LLVMFunctionType(g->ctx);
+                LLVM_TYPE_CONST llvm::FunctionType *ftype = 
+                    functionType->LLVMFunctionType(g->ctx);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 llvm::Function *appFunction = 
                     llvm::Function::Create(ftype, linkage, funSym->name.c_str(), module);

@@ -147,7 +147,7 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
     if (!returnType || returnType == AtomicType::Void)
         returnValuePtr = NULL;
     else {
-        const llvm::Type *ftype = returnType->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::Type *ftype = returnType->LLVMType(g->ctx);
         returnValuePtr = AllocaInst(ftype, "return_value_memory");
         // FIXME: don't do this store???
         StoreInst(llvm::Constant::getNullValue(ftype), returnValuePtr);
@@ -735,11 +735,12 @@ FunctionEmitContext::CreateBasicBlock(const char *name) {
 
 llvm::Value *
 FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
-    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(b->getType());
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(b->getType());
     if (at) {
         // If we're given an array of vectors of i1s, then do the
         // conversion for each of the elements
-        const llvm::Type *boolArrayType = 
+        LLVM_TYPE_CONST llvm::Type *boolArrayType = 
             llvm::ArrayType::get(LLVMTypes::BoolVectorType, at->getNumElements());
         llvm::Value *ret = llvm::UndefValue::get(boolArrayType);
 
@@ -757,11 +758,11 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 
 llvm::Value *
-FunctionEmitContext::EmitMalloc(const llvm::Type *ty, int align) {
+FunctionEmitContext::EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align) {
     // Emit code to compute the size of the given type using a GEP with a
     // NULL base pointer, indexing one element of the given type, and
     // casting the resulting 'pointer' to an int giving its size.
-    const llvm::Type *ptrType = llvm::PointerType::get(ty, 0);
+    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(ty, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
@@ -941,15 +942,16 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym) {
     Otherwise return zero.
  */
 static int
-lArrayVectorWidth(const llvm::Type *t) {
-    const llvm::ArrayType *arrayType = llvm::dyn_cast<const llvm::ArrayType>(t);
+lArrayVectorWidth(LLVM_TYPE_CONST llvm::Type *t) {
+    LLVM_TYPE_CONST llvm::ArrayType *arrayType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(t);
     if (arrayType == NULL)
         return 0;
 
     // We shouldn't be seeing arrays of anything but vectors being passed
     // to things like FunctionEmitContext::BinaryOperator() as operands
-    const llvm::VectorType *vectorElementType = 
-        llvm::dyn_cast<const llvm::VectorType>(arrayType->getElementType());
+    LLVM_TYPE_CONST llvm::VectorType *vectorElementType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(arrayType->getElementType());
     assert(vectorElementType != NULL &&
            (int)vectorElementType->getNumElements() == g->target.vectorWidth);
     return (int)arrayType->getNumElements();
@@ -966,7 +968,7 @@ FunctionEmitContext::BinaryOperator(llvm::Instruction::BinaryOps inst,
     }
 
     assert(v0->getType() == v1->getType());
-    const llvm::Type *type = v0->getType();
+    LLVM_TYPE_CONST llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
         llvm::Instruction *bop = 
@@ -1000,7 +1002,7 @@ FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
     // Similarly to BinaryOperator, do the operation on all the elements of
     // the array if we're given an array type; otherwise just do the
     // regular llvm operation.
-    const llvm::Type *type = v->getType();
+    LLVM_TYPE_CONST llvm::Type *type = v->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
         llvm::Instruction *binst = 
@@ -1025,20 +1027,20 @@ FunctionEmitContext::NotOperator(llvm::Value *v, const char *name) {
 // Given the llvm Type that represents an ispc VectorType, return an
 // equally-shaped type with boolean elements.  (This is the type that will
 // be returned from CmpInst with ispc VectorTypes).
-static const llvm::Type *
-lGetMatchingBoolVectorType(const llvm::Type *type) {
-    const llvm::ArrayType *arrayType = 
-        llvm::dyn_cast<const llvm::ArrayType>(type);
+static LLVM_TYPE_CONST llvm::Type *
+lGetMatchingBoolVectorType(LLVM_TYPE_CONST llvm::Type *type) {
+    LLVM_TYPE_CONST llvm::ArrayType *arrayType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
     // should only be called for vector typed stuff...
     assert(arrayType != NULL);
 
-    const llvm::VectorType *vectorElementType =
-        llvm::dyn_cast<const llvm::VectorType>(arrayType->getElementType());
+    LLVM_TYPE_CONST llvm::VectorType *vectorElementType =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(arrayType->getElementType());
     assert(vectorElementType != NULL &&
            (int)vectorElementType->getNumElements() == g->target.vectorWidth);
 
-    const llvm::Type *base = llvm::VectorType::get(LLVMTypes::BoolType, 
-                                                   g->target.vectorWidth);
+    LLVM_TYPE_CONST llvm::Type *base = 
+        llvm::VectorType::get(LLVMTypes::BoolType, g->target.vectorWidth);
     return llvm::ArrayType::get(base, arrayType->getNumElements());
 }
 
@@ -1054,7 +1056,7 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
     }
 
     assert(v0->getType() == v1->getType());
-    const llvm::Type *type = v0->getType();
+    LLVM_TYPE_CONST llvm::Type *type = v0->getType();
     int arraySize = lArrayVectorWidth(type);
     if (arraySize == 0) {
         llvm::Instruction *ci = 
@@ -1064,7 +1066,7 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
         return ci;
     }
     else {
-        const llvm::Type *boolType = lGetMatchingBoolVectorType(type);
+        LLVM_TYPE_CONST llvm::Type *boolType = lGetMatchingBoolVectorType(type);
         llvm::Value *ret = llvm::UndefValue::get(boolType);
         for (int i = 0; i < arraySize; ++i) {
             llvm::Value *a = ExtractInst(v0, i);
@@ -1078,16 +1080,17 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
 
 
 llvm::Value *
-FunctionEmitContext::BitCastInst(llvm::Value *value, const llvm::Type *type, 
+FunctionEmitContext::BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                  const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
         return NULL;
     }
 
-    const llvm::Type *valType = value->getType();
-    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
-    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+    LLVM_TYPE_CONST llvm::Type *valType = value->getType();
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(valType);
+    if (at && llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(at->getElementType())) {
         // If we're bitcasting an array of pointers, we have a varying
         // lvalue; apply the corresponding bitcast to each of the
         // individual pointers and return the result array.
@@ -1112,16 +1115,17 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, const llvm::Type *type,
 
 
 llvm::Value *
-FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
+FunctionEmitContext::PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
         return NULL;
     }
 
-    const llvm::Type *valType = value->getType();
-    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
-    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+    LLVM_TYPE_CONST llvm::Type *valType = value->getType();
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(valType);
+    if (at && llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(at->getElementType())) {
         // varying lvalue -> apply ptr to int to the individual pointers
         assert((int)at->getNumElements() == g->target.vectorWidth);
 
@@ -1144,16 +1148,17 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const llvm::Type *type,
 
 
 llvm::Value *
-FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
+FunctionEmitContext::IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                   const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
         return NULL;
     }
 
-    const llvm::Type *valType = value->getType();
-    const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(valType);
-    if (at && llvm::isa<const llvm::PointerType>(at->getElementType())) {
+    LLVM_TYPE_CONST llvm::Type *valType = value->getType();
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(valType);
+    if (at && llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(at->getElementType())) {
         // varying lvalue -> apply int to ptr to the individual pointers
         assert((int)at->getNumElements() == g->target.vectorWidth);
 
@@ -1176,7 +1181,7 @@ FunctionEmitContext::IntToPtrInst(llvm::Value *value, const llvm::Type *type,
 
 
 llvm::Instruction *
-FunctionEmitContext::TruncInst(llvm::Value *value, const llvm::Type *type,
+FunctionEmitContext::TruncInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
@@ -1194,7 +1199,7 @@ FunctionEmitContext::TruncInst(llvm::Value *value, const llvm::Type *type,
 
 llvm::Instruction *
 FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
-                              const llvm::Type *type, const char *name) {
+                              LLVM_TYPE_CONST llvm::Type *type, const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
         return NULL;
@@ -1210,7 +1215,7 @@ FunctionEmitContext::CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
 
 
 llvm::Instruction *
-FunctionEmitContext::FPCastInst(llvm::Value *value, const llvm::Type *type, 
+FunctionEmitContext::FPCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                 const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
@@ -1227,7 +1232,7 @@ FunctionEmitContext::FPCastInst(llvm::Value *value, const llvm::Type *type,
 
 
 llvm::Instruction *
-FunctionEmitContext::SExtInst(llvm::Value *value, const llvm::Type *type, 
+FunctionEmitContext::SExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                               const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
@@ -1244,7 +1249,7 @@ FunctionEmitContext::SExtInst(llvm::Value *value, const llvm::Type *type,
 
 
 llvm::Instruction *
-FunctionEmitContext::ZExtInst(llvm::Value *value, const llvm::Type *type, 
+FunctionEmitContext::ZExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                               const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
@@ -1270,14 +1275,15 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
 
     // FIXME: do we need need to handle the case of the first index being
     // varying?  It's currently needed...
-    assert(!llvm::isa<const llvm::VectorType>(index0->getType()));
+    assert(!llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index0->getType()));
 
-    const llvm::Type *basePtrType = basePtr->getType();
-    const llvm::ArrayType *baseArrayType = 
-        llvm::dyn_cast<const llvm::ArrayType>(basePtrType);
+    LLVM_TYPE_CONST llvm::Type *basePtrType = basePtr->getType();
+    LLVM_TYPE_CONST llvm::ArrayType *baseArrayType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(basePtrType);
     bool baseIsVaryingTypePointer = (baseArrayType != NULL) && 
-        llvm::isa<const llvm::PointerType>(baseArrayType->getElementType());
-    bool indexIsVaryingType = llvm::isa<const llvm::VectorType>(index1->getType());
+        llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(baseArrayType->getElementType());
+    bool indexIsVaryingType = 
+        llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index1->getType());
 
     if (!indexIsVaryingType && !baseIsVaryingTypePointer) {
         // The easy case: both the base pointer and the indices are
@@ -1316,9 +1322,10 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
                 // This is kind of a hack: use the type from the GEP to
                 // figure out the return type and the first time through,
                 // create an undef value of that type here
-                const llvm::PointerType *elementPtrType = 
-                    llvm::dyn_cast<const llvm::PointerType>(eltPtr->getType());
-                const llvm::Type *elementType = elementPtrType->getElementType();
+                LLVM_TYPE_CONST llvm::PointerType *elementPtrType = 
+                    llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(eltPtr->getType());
+                LLVM_TYPE_CONST llvm::Type *elementType = 
+                    elementPtrType->getElementType();
                 lret = llvm::UndefValue::get(LLVMPointerVectorType(elementType));
             }
 
@@ -1345,7 +1352,7 @@ FunctionEmitContext::LoadInst(llvm::Value *lvalue, const Type *type,
         return NULL;
     }
 
-    if (llvm::isa<const llvm::PointerType>(lvalue->getType())) {
+    if (llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(lvalue->getType())) {
         // If the lvalue is a straight up regular pointer, then just issue
         // a regular load.  First figure out the alignment; in general we
         // can just assume the natural alignment (0 here), but for varying
@@ -1372,7 +1379,7 @@ FunctionEmitContext::LoadInst(llvm::Value *lvalue, const Type *type,
         // information we need from the LLVM::Type, so have to carry the
         // ispc type in through this path..
         assert(type != NULL);
-        assert(llvm::isa<const llvm::ArrayType>(lvalue->getType()));
+        assert(llvm::isa<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()));
         return gather(lvalue, type, name);
     }
 }
@@ -1382,9 +1389,9 @@ llvm::Value *
 FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type, 
                             const char *name) {
     // We should have a varying lvalue if we get here...
-    assert(llvm::dyn_cast<const llvm::ArrayType>(lvalue->getType()));
+    assert(llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()));
 
-    const llvm::Type *retType = type->LLVMType(g->ctx);
+    LLVM_TYPE_CONST llvm::Type *retType = type->LLVMType(g->ctx);
 
     const StructType *st = dynamic_cast<const StructType *>(type);
     if (st) {
@@ -1410,7 +1417,7 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
         // the GEP stuff in the loop below ends up computing pointers based
         // on elements in the vectors rather than incorrectly advancing to
         // the next vector...
-        const llvm::Type *eltType = 
+        LLVM_TYPE_CONST llvm::Type *eltType = 
             vt->GetBaseType()->GetAsUniformType()->LLVMType(g->ctx);
         lvalue = BitCastInst(lvalue, llvm::PointerType::get(llvm::ArrayType::get(eltType, 0), 0));
 
@@ -1499,7 +1506,7 @@ FunctionEmitContext::addGSMetadata(llvm::Instruction *inst, SourcePos pos) {
 
 
 llvm::Value *
-FunctionEmitContext::AllocaInst(const llvm::Type *llvmType, const char *name,
+FunctionEmitContext::AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, const char *name,
                                 int align, bool atEntryBlock) {
     llvm::AllocaInst *inst = NULL;
     if (atEntryBlock) {
@@ -1519,9 +1526,10 @@ FunctionEmitContext::AllocaInst(const llvm::Type *llvmType, const char *name,
     // unlikely that this array will be loaded into varying variables with
     // what will be aligned accesses if the uniform -> varying load is done
     // in regular chunks.
-    const llvm::ArrayType *arrayType = llvm::dyn_cast<const llvm::ArrayType>(llvmType);
+    LLVM_TYPE_CONST llvm::ArrayType *arrayType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(llvmType);
     if (align == 0 && arrayType != NULL && 
-        !llvm::isa<const llvm::VectorType>(arrayType->getElementType()))
+        !llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(arrayType->getElementType()))
         align = 4 * g->target.nativeVectorWidth;
 
     if (align != 0)
@@ -1546,7 +1554,7 @@ FunctionEmitContext::maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
         return;
     }
 
-    assert(llvm::isa<const llvm::PointerType>(lvalue->getType()));
+    assert(llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(lvalue->getType()));
     
     const CollectionType *collectionType = 
         dynamic_cast<const CollectionType *>(rvalueType);
@@ -1616,7 +1624,7 @@ void
 FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue, 
                              llvm::Value *storeMask, const Type *rvalueType) {
     assert(rvalueType->IsVaryingType());
-    assert(llvm::isa<const llvm::ArrayType>(lvalue->getType()));
+    assert(llvm::isa<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()));
 
     const StructType *structType = dynamic_cast<const StructType *>(rvalueType);
     if (structType) {
@@ -1635,7 +1643,8 @@ FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue,
         // the GEP stuff in the loop below ends up computing pointers based
         // on elements in the vectors rather than incorrectly advancing to
         // the next vector...
-        const llvm::Type *eltType = vt->GetBaseType()->GetAsUniformType()->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::Type *eltType = 
+            vt->GetBaseType()->GetAsUniformType()->LLVMType(g->ctx);
         lvalue = BitCastInst(lvalue, llvm::PointerType::get(llvm::ArrayType::get(eltType, 0), 0));
 
         for (int i = 0; i < vt->GetElementCount(); ++i) {
@@ -1653,7 +1662,7 @@ FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue,
     assert(dynamic_cast<const AtomicType *>(rvalueType) != NULL);
 
     llvm::Function *func = NULL;
-    const llvm::Type *type = rvalue->getType();
+    LLVM_TYPE_CONST llvm::Type *type = rvalue->getType();
     if (type == LLVMTypes::DoubleVectorType || 
         type == LLVMTypes::Int64VectorType) {
         func = m->module->getFunction("__pseudo_scatter_64");
@@ -1720,7 +1729,7 @@ FunctionEmitContext::StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
         llvm::Instruction *si = new llvm::StoreInst(rvalue, lvalue, bblock);
         AddDebugPos(si);
     }
-    else if (llvm::isa<const llvm::ArrayType>(lvalue->getType()))
+    else if (llvm::isa<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()))
         // We have a varying lvalue (an array of pointers), so it's time to
         // scatter
         scatter(rvalue, lvalue, storeMask, rvalueType);
@@ -1764,7 +1773,7 @@ FunctionEmitContext::ExtractInst(llvm::Value *v, int elt, const char *name) {
     }
 
     llvm::Instruction *ei = NULL;
-    if (llvm::isa<const llvm::VectorType>(v->getType()))
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(v->getType()))
         ei = llvm::ExtractElementInst::Create(v, LLVMInt32(elt), 
                                               name ? name : "extract", bblock);
     else
@@ -1784,7 +1793,7 @@ FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
     }
 
     llvm::Instruction *ii = NULL;
-    if (llvm::isa<const llvm::VectorType>(v->getType()))
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(v->getType()))
         ii = llvm::InsertElementInst::Create(v, eltVal, LLVMInt32(elt), 
                                              name ? name : "insert", bblock);
     else
@@ -1796,7 +1805,7 @@ FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
 
 
 llvm::PHINode *
-FunctionEmitContext::PhiNode(const llvm::Type *type, int count, 
+FunctionEmitContext::PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
                              const char *name) {
     llvm::PHINode *pn = llvm::PHINode::Create(type, 
 #if !defined(LLVM_2_8) && !defined(LLVM_2_9)
@@ -1833,9 +1842,14 @@ FunctionEmitContext::CallInst(llvm::Function *func,
         return NULL;
     }
 
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::Instruction *ci = 
+        llvm::CallInst::Create(func, args, name ? name : "", bblock);
+#else
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, args.begin(), args.end(), 
                                name ? name : "", bblock);
+#endif
     AddDebugPos(ci);
     return ci;
 }
@@ -1849,10 +1863,15 @@ FunctionEmitContext::CallInst(llvm::Function *func, llvm::Value *arg,
         return NULL;
     }
 
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::Instruction *ci = 
+        llvm::CallInst::Create(func, arg, name ? name : "", bblock);
+#else
     llvm::Value *args[] = { arg };
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, &args[0], &args[1], name ? name : "",
                                bblock);
+#endif
     AddDebugPos(ci);
     return ci;
 }
@@ -1867,9 +1886,16 @@ FunctionEmitContext::CallInst(llvm::Function *func, llvm::Value *arg0,
     }
 
     llvm::Value *args[] = { arg0, arg1 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::ArrayRef<llvm::Value *> argArrayRef(&args[0], &args[2]);
+    llvm::Instruction *ci = 
+        llvm::CallInst::Create(func, argArrayRef, name ? name : "", 
+                               bblock);
+#else
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, &args[0], &args[2], name ? name : "", 
                                bblock);
+#endif
     AddDebugPos(ci);
     return ci;
 }
@@ -1916,12 +1942,13 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
 
     launchedTasks = true;
 
-    const llvm::Type *argType = callee->arg_begin()->getType();
+    LLVM_TYPE_CONST llvm::Type *argType = callee->arg_begin()->getType();
     assert(llvm::PointerType::classof(argType));
-    const llvm::PointerType *pt = static_cast<const llvm::PointerType *>(argType);
+    LLVM_TYPE_CONST llvm::PointerType *pt = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(argType);
     assert(llvm::StructType::classof(pt->getElementType()));
-    const llvm::StructType *argStructType = 
-        static_cast<const llvm::StructType *>(pt->getElementType());
+    LLVM_TYPE_CONST llvm::StructType *argStructType = 
+        static_cast<LLVM_TYPE_CONST llvm::StructType *>(pt->getElementType());
     assert(argStructType->getNumElements() == argVals.size() + 1);
 
     int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);

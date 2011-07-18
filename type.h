@@ -660,8 +660,8 @@ public:
         function type.  The \c includeMask parameter indicates whether the
         llvm::FunctionType should have a mask as the last argument in its
         function signature. */
-    const llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
-                                               bool includeMask = false) const;
+    LLVM_TYPE_CONST llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
+                                                         bool includeMask = false) const;
 
     const std::vector<const Type *> &GetArgumentTypes() const { return argTypes; }
     const std::vector<ConstExpr *> &GetArgumentDefaults() const { return argDefaults; }

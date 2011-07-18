@@ -397,7 +397,7 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
     // a recursive call to lLLVMConstantValue().
     const Type *baseType = vectorType->GetBaseType();
     llvm::Constant *constElement = lLLVMConstantValue(baseType, ctx, value);
-    const llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
+    LLVM_TYPE_CONST llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
 
     // Now create a constant version of the corresponding LLVM type that we
     // use to represent the VectorType.
@@ -406,8 +406,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
     // LLVM ArrayTypes leaks into the code here; it feels like this detail
     // should be better encapsulated?
     if (baseType->IsUniformType()) {
-        const llvm::VectorType *lvt = 
-            llvm::dyn_cast<const llvm::VectorType>(llvmVectorType);
+        LLVM_TYPE_CONST llvm::VectorType *lvt = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(llvmVectorType);
         assert(lvt != NULL);
         std::vector<llvm::Constant *> vals;
         for (unsigned int i = 0; i < lvt->getNumElements(); ++i)
@@ -415,8 +415,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 	return llvm::ConstantVector::get(vals);
     }
     else {
-        const llvm::ArrayType *lat = 
-            llvm::dyn_cast<const llvm::ArrayType>(llvmVectorType);
+        LLVM_TYPE_CONST llvm::ArrayType *lat = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(llvmVectorType);
         assert(lat != NULL);
         std::vector<llvm::Constant *> vals;
         for (unsigned int i = 0; i < lat->getNumElements(); ++i)
@@ -2419,7 +2419,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     // The return value for the non-void case is either undefined or the
     // function return value, depending on whether we actually ran the code
     // path that called the function or not.
-    const llvm::Type *lrType = ft->GetReturnType()->LLVMType(g->ctx);
+    LLVM_TYPE_CONST llvm::Type *lrType = ft->GetReturnType()->LLVMType(g->ctx);
     llvm::PHINode *ret = ctx->PhiNode(lrType, 2, "fun_ret");
     assert(retVal != NULL);
     ret->addIncoming(llvm::UndefValue::get(lrType), bSkip);
@@ -2576,15 +2576,16 @@ ExprList::GetConstant(const Type *type) const {
 #if defined(LLVM_2_8) || defined(LLVM_2_9)
         return llvm::ConstantStruct::get(*g->ctx, cv, false);
 #else
-        const llvm::StructType *llvmStructType =
-            llvm::dyn_cast<const llvm::StructType>(collectionType->LLVMType(g->ctx));
+        LLVM_TYPE_CONST llvm::StructType *llvmStructType =
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(collectionType->LLVMType(g->ctx));
         assert(llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
 #endif
     }
     else {
-        const llvm::Type *lt = type->LLVMType(g->ctx);
-        const llvm::ArrayType *lat = llvm::dyn_cast<const llvm::ArrayType>(lt);
+        LLVM_TYPE_CONST llvm::Type *lt = type->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::ArrayType *lat = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lt);
         // FIXME: should the assert below validly fail for uniform vectors
         // now?  Need a test case to reproduce it and then to be sure we
         // have the right fix; leave the assert until we can hit it...
@@ -2625,19 +2626,19 @@ IndexExpr::IndexExpr(Expr *a, Expr *i, SourcePos p)
 
 static llvm::Value *
 lCastUniformVectorBasePtr(llvm::Value *ptr, FunctionEmitContext *ctx) {
-    const llvm::PointerType *baseType = 
-        llvm::dyn_cast<const llvm::PointerType>(ptr->getType());
+    LLVM_TYPE_CONST llvm::PointerType *baseType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(ptr->getType());
     if (!baseType)
         return ptr;
 
-    const llvm::VectorType *baseEltVecType = 
-        llvm::dyn_cast<const llvm::VectorType>(baseType->getElementType());
+    LLVM_TYPE_CONST llvm::VectorType *baseEltVecType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(baseType->getElementType());
     if (!baseEltVecType)
         return ptr;
 
-    const llvm::Type *vecEltType = baseEltVecType->getElementType();
+    LLVM_TYPE_CONST llvm::Type *vecEltType = baseEltVecType->getElementType();
     int numElts = baseEltVecType->getNumElements();
-    const llvm::Type *castType = 
+    LLVM_TYPE_CONST llvm::Type *castType = 
         llvm::PointerType::get(llvm::ArrayType::get(vecEltType, numElts), 0);
     return ctx->BitCastInst(ptr, castType);
 }
@@ -3622,7 +3623,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
     switch (toType->basicType) {
     case AtomicType::TYPE_FLOAT: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::FloatType : 
                                         LLVMTypes::FloatVectorType;
         switch (fromType->basicType) {
@@ -3662,7 +3663,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_DOUBLE: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::DoubleType :
                                         LLVMTypes::DoubleVectorType;
         switch (fromType->basicType) {
@@ -3699,7 +3700,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT32: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
@@ -3731,7 +3732,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT32: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
@@ -3769,7 +3770,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT64: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
@@ -3803,7 +3804,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT64: {
-        const llvm::Type *targetType = 
+        LLVM_TYPE_CONST llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
@@ -3904,7 +3905,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
     // If we also want to go from uniform to varying, replicate out the
     // value across the vector elements..
     if (toType->IsVaryingType() && fromType->IsUniformType()) {
-        const llvm::Type *vtype = toType->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::Type *vtype = toType->LLVMType(g->ctx);
         llvm::Value *castVec = llvm::UndefValue::get(vtype);
         for (int i = 0; i < g->target.vectorWidth; ++i)
             castVec = ctx->InsertInst(castVec, cast, i, "smearinsert");
@@ -3925,7 +3926,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     if (type->IsVaryingType())
         return value;
 
-    const llvm::Type *llvmType = type->GetAsVaryingType()->LLVMType(g->ctx);
+    LLVM_TYPE_CONST llvm::Type *llvmType = type->GetAsVaryingType()->LLVMType(g->ctx);
     llvm::Value *retValue = llvm::UndefValue::get(llvmType);
 
     // for structs/arrays/vectors, just recursively make their elements
@@ -3989,7 +3990,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             assert(Type::Equal(toArray->GetBaseType()->GetAsConstType(),
                                fromArray->GetBaseType()->GetAsConstType()));
             llvm::Value *v = expr->GetValue(ctx);
-            const llvm::Type *ptype = toType->LLVMType(g->ctx);
+            LLVM_TYPE_CONST llvm::Type *ptype = toType->LLVMType(g->ctx);
             return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
         }
 

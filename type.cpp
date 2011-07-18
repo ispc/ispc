@@ -582,9 +582,14 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
             m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
         enumeratorDescriptors.push_back(descriptor);
     }
+#ifdef LLVM_2_9
     llvm::DIArray elementArray = 
         m->diBuilder->getOrCreateArray(&enumeratorDescriptors[0],
                                        enumeratorDescriptors.size());
+#else
+    llvm::DIArray elementArray = 
+        m->diBuilder->getOrCreateArray(enumeratorDescriptors);
+#endif
 
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIType diType =
@@ -1775,7 +1780,7 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 }
 
 
-const llvm::FunctionType *
+LLVM_TYPE_CONST llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (!includeMask && isTask) {
         Error(pos, "Function can't have both \"task\" and \"export\" qualifiers");

@@ -155,6 +155,6 @@ extern llvm::Constant *LLVMMaskAllOff;
     pointers to that type.  (In practice, an array of pointers, since LLVM
     prohibits vectors of pointers.
  */
-extern const llvm::ArrayType *LLVMPointerVectorType(const llvm::Type *t);
+extern LLVM_TYPE_CONST llvm::ArrayType *LLVMPointerVectorType(LLVM_TYPE_CONST llvm::Type *t);
 
 #endif // ISPC_LLVMUTIL_H
