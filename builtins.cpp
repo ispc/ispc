@@ -151,6 +151,9 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     const llvm::FunctionType *ftype = func->getFunctionType();
     std::string name = func->getName();
 
+    if (name.size() < 3 || name[0] != '_' || name[1] != '_')
+        return false;
+
     // An unfortunate hack: we want this builtin function to have the
     // signature "int __sext_varying_bool(bool)", but the ispc function
     // symbol creation code below assumes that any LLVM vector of i32s is a
