@@ -2207,11 +2207,11 @@ LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         LowerGSInfo("__pseudo_gather_base_offsets_8",  "__gather_base_offsets_i8",  true),
         LowerGSInfo("__pseudo_gather_base_offsets_16", "__gather_base_offsets_i16", true),
         LowerGSInfo("__pseudo_gather_base_offsets_32", "__gather_base_offsets_i32", true),
-        LowerGSInfo("__pseudo_gather_base_offsets_32", "__gather_base_offsets_i32", true),
+        LowerGSInfo("__pseudo_gather_base_offsets_64", "__gather_base_offsets_i64", true),
         LowerGSInfo("__pseudo_scatter_base_offsets_8",  "__scatter_base_offsets_i8",  false),
         LowerGSInfo("__pseudo_scatter_base_offsets_16", "__scatter_base_offsets_i16", false),
         LowerGSInfo("__pseudo_scatter_base_offsets_32", "__scatter_base_offsets_i32", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets_32", "__scatter_base_offsets_i32", false)
+        LowerGSInfo("__pseudo_scatter_base_offsets_64", "__scatter_base_offsets_i64", false)
     };
 
     bool modifiedAny = false;
