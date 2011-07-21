@@ -2363,7 +2363,7 @@ static inline uniform float half_to_float(uniform unsigned int16 h) {
         uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
         uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
         uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
-        cif (he == 0) {  
+        if (he == 0) {  
             // Denormal will convert to normalized
             uniform int e = -1;
             // The following loop figures out how much extra to adjust the exponent
@@ -2485,7 +2485,7 @@ static inline uniform int16 float_to_half(uniform float f) {
             ret = (xs >> 16);
         } 
         else {
-            cif (xe == 0x7F800000u) {  
+            if (xe == 0x7F800000u) {  
                 // Inf or NaN (all the exponent bits are set)
                 if (xm == 0)
                     // Zero mantissa -> signed infinity

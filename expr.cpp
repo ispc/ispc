@@ -1659,7 +1659,7 @@ AssignExpr::TypeCheck() {
     if (rvalue != NULL) 
         rvalue = rvalue->TypeCheck();
     if (rvalue != NULL && lvalue != NULL) 
-        rvalue = rvalue->TypeConv(lvalue->GetType(), "operator =");
+        rvalue = rvalue->TypeConv(lvalue->GetType(), "assignment");
     if (rvalue == NULL || lvalue == NULL) 
         return NULL;
 

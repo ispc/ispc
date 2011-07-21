@@ -93,6 +93,7 @@ Contents:
   + `Understanding How to Interoperate With the Application's Data`_
   + `Communicating Between SPMD Program Instances`_
   + `Gather and Scatter`_
+  + `8 and 16-bit Integer Types`_
   + `Low-level Vector Tricks`_
   + `Debugging`_
   + `The "Fast math" Option`_
@@ -2527,6 +2528,15 @@ do a vector load.  For example, given:
     return array[2*x + programIndex];
 
 A regular vector load is done from array, starting at offset ``2*x``.
+
+
+8 and 16-bit Integer Types
+--------------------------
+
+The code generated for 8 and 16-bit integer types is generally not as
+efficient as the code generated for 32-bit integer types.  It is generally
+worthwhile to use 32-bit integer types for intermediate computations, even
+if the final result will be stored in a smaller integer type.
 
 Low-level Vector Tricks
 -----------------------
