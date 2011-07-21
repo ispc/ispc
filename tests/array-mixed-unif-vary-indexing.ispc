@@ -8,7 +8,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float x[47][47];
     for (uniform int i = 0; i < 47; ++i)
         for (uniform int j = 0; j < 47; ++j)
-            x[i][j] = 2;
+            x[i][j] = 2+b-5;
 
     x[a][b-1] = 0;
     RET[programIndex] = x[2][a];

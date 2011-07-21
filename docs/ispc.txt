@@ -427,7 +427,8 @@ The following identifiers are reserved as language keywords: ``bool``,
 ``char``, ``cif``, ``cwhile``, ``const``, ``continue``, ``creturn``,
 ``default``, ``do``, ``double``, ``else``, ``enum``, ``export``,
 ``extern``, ``false``, ``float``, ``for``, ``goto``, ``if``, ``inline``, ``int``,
-``int32``, ``int64``, ``launch``, ``print``, ``reference``, ``return``,
+``int8``, ``int16``, ``int32``, ``int64``, ``launch``, ``print``,
+``reference``, ``return``,
 ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
 ``sync``, ``task``, ``true``, ``typedef``, ``uniform``, ``union``,
 ``unsigned``, ``varying``, ``void``, ``volatile``, ``while``.
@@ -481,6 +482,10 @@ types.
 * ``void``: "empty" type representing no value.
 * ``bool``: boolean value; may be assigned ``true``, ``false``, or the
   value of a boolean expression.
+* ``int8``: 8-bit signed integer.
+* ``unsigned int8``: 8-bit unsigned integer.
+* ``int16``: 16-bit signed integer.
+* ``unsigned int16``: 16-bit unsigned integer.
 * ``int``: 32-bit signed integer; may also be specified as ``int32``.
 * ``unsigned int``: 32-bit unsigned integer; may also be specified as
   ``unsigned int32``.
@@ -497,7 +502,8 @@ general" of the two types, with the following precedence:
 
 ::
 
-  double > uint64 > int64 > float > uint32 > int32 > bool
+  double > uint64 > int64 > float > uint32 > int32 > 
+      uint16 > int16 > uint8 > int8 > bool
 
 In other words, adding an ``int64`` to a ``double`` causes the ``int64`` to
 be converted to a ``double``, the addition to be performed, and a
@@ -1709,10 +1715,12 @@ the running program instances.
 
 ::
 
-    float broadcast(float value, uniform int index)
+    int8 broadcast(int8 value, uniform int index)
+    int16 broadcast(int16 value, uniform int index)
     int32 broadcast(int32 value, uniform int index)
-    double broadcast(double value, uniform int index)
     int64 broadcast(int64 value, uniform int index)
+    float broadcast(float value, uniform int index)
+    double broadcast(double value, uniform int index)
 
 The ``rotate()`` function allows each program instance to find the value of
 the given value that their neighbor ``offset`` steps away has.  For
@@ -1725,10 +1733,12 @@ provided offset value can be positive or negative, and may be greater than
 
 ::
 
-    float rotate(float value, uniform int offset)
+    int8 rotate(int8 value, uniform int offset)
+    int16 rotate(int16 value, uniform int offset)
     int32 rotate(int32 value, uniform int offset)
-    double rotate(double value, uniform int offset)
     int64 rotate(int64 value, uniform int offset)
+    float rotate(float value, uniform int offset)
+    double rotate(double value, uniform int offset)
 
 
 Finally, the ``shuffle()`` functions allow two variants of fully general
@@ -1739,10 +1749,12 @@ from which to get the value of ``value``.  The provided values for
 
 ::
 
-    float shuffle(float value, int permutation)
+    int8 shuffle(int8 value, int permutation)
+    int16 shuffle(int16 value, int permutation)
     int32 shuffle(int32 value, int permutation)
-    double shuffle(double value, int permutation)
     int64 shuffle(int64 value, int permutation)
+    float shuffle(float value, int permutation)
+    double shuffle(double value, int permutation)
 
 
 The second variant of ``shuffle()`` permutes over the extended vector that
@@ -1753,10 +1765,12 @@ of ``value1``, etc.)
 
 ::
 
-    float shuffle(float value0, float value1, int permutation)
+    int8 shuffle(int8 value0, int8 value1, int permutation)
+    int16 shuffle(int16 value0, int16 value1, int permutation)
     int32 shuffle(int32 value0, int32 value1, int permutation)
-    double shuffle(double value0, double value1, int permutation)
     int64 shuffle(int64 value0, int64 value1, int permutation)
+    float shuffle(float value0, float value1, int permutation)
+    double shuffle(double value0, double value1, int permutation)
 
 The various variants of ``popcnt()`` return the population count--the
 number of bits set in the given value.
@@ -1861,10 +1875,19 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 
 ::
 
+    uniform int8 extract(int8 x, uniform int i)
+    uniform int16 extract(int16 x, uniform int i)
+    uniform int32 extract(int32 x, uniform int i)
+    uniform int64 extract(int64 x, uniform int i)
     uniform float extract(float x, uniform int i)
-    uniform int extract(int x, uniform int i)
+
+::
+
+    int8 insert(int8 x, uniform int i, uniform int8 v)
+    int16 insert(int16 x, uniform int i, uniform int16 v)
+    int32 insert(int32 x, uniform int i, uniform int32 v)
+    int64 insert(int64 x, uniform int i, uniform int64 v)
     float insert(float x, uniform int i, uniform float v)
-    int insert(int x, uniform int i, uniform int v)
 
 
 Atomic Operations and Memory Fences
@@ -1947,41 +1970,6 @@ value ``true`` (rather than just having the value one).  The
 
     int sign_extend(bool value) 
     uniform int sign_extend(uniform bool value) 
-
-``ispc`` provides a number of bit/memory-level utility routines in its
-standard library as well.  It has routines that load from and store
-to 8-bit and 16-bit integer values stored in memory, converting to and from
-32-bit integers for use in computation in ``ispc`` code.  (These functions
-and this conversion step are necessary because ``ispc`` doesn't have native
-8-bit or 16-bit types in the language.)
-
-::
-
-    int load_from_int8(uniform int a[], uniform int offset)
-    unsigned int load_from_int8(uniform unsigned int a[],
-                                uniform int offset)
-    void store_to_int8(uniform int a[], uniform int offset, 
-                       int val)
-    void store_to_int8(uniform unsigned int a[], uniform int offset, 
-                       unsigned int val)
-    unsigned int load_from_int16(uniform int a[],
-                                 uniform int offset)
-    unsigned unsigned int load_from_int16(uniform unsigned int a[],
-                                          uniform int offset)
-    void store_to_int16(uniform int a[], uniform int offset, 
-                        int val)
-    void store_to_int16(uniform unsigned int a[], uniform int offset, 
-                        unsigned int val)
-
-There are three things to note in these functions.  First, note that these
-functions take either ``int`` or ``unsigned int`` arrays as parameters; you
-need to cast `the ``int8_t`` and ``int16_t`` pointers from the C/C++ side
-to ``int`` or ``unsigned int`` when passing them to ``ispc`` code.  Second,
-although the arrays are passed as 32-bit integers, in the array indexing
-calculation, with the ``offset`` parameter, they are treated as if they
-were ``int8`` or ``int16`` types (i.e. the offset treated as being in terms
-of number of 8 or 16-bit elements).  Third, note that the value of
-``programIndex`` is implicitly added to offset.
 
 The ``intbits()`` and ``floatbits()`` functions can be used to implement
 low-level floating-point bit twiddling.  For example, ``intbits()`` returns

@@ -1,12 +1,17 @@
 export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    uniform int x[5] = { 0x04030201, 0x08070605, 0x0c0b0a09, 0x100f0e0d,
-                         0x14131211 };
-    unsigned int v = load_from_int8(x, 2);
+    uniform int8 x[programCount];
+    x[programIndex] = aFOO[programIndex];
+    unsigned int8 v = 0;
+    if (programIndex & 1)
+        v = x[programIndex];
     RET[programIndex] = v;
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 3+programIndex;
+    if (programIndex & 1)
+        RET[programIndex] = 1+programIndex;
+    else
+        RET[programIndex] = 0;
 }

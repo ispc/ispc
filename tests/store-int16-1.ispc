@@ -1,16 +1,15 @@
 export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    uniform int x[16];
-    for (uniform int i = 0; i < 16; ++i)
-        x[i] = 0xffffffff;
-    unsigned int val = aFOO[programIndex];
-    store_to_int16(x, 5, val);
-    unsigned int v = load_from_int16(x, 6);
-    RET[programIndex] = v;
+    uniform unsigned int16 x[2*programCount];
+    for (uniform int i = 0; i < 2*programCount; ++i)
+        x[i] = 0xffff;
+    unsigned int16 val = aFOO[programIndex];
+    x[2+programIndex] = val;
+    RET[programIndex] = x[1+programIndex];
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 2+programIndex;
-    RET[programCount-1] = (unsigned int)0xffffffff;
+    RET[programIndex] = programIndex;
+    RET[0] = 65535;
 }

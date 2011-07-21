@@ -104,6 +104,8 @@ goto { return TOKEN_GOTO; }
 if { return TOKEN_IF; }
 inline { return TOKEN_INLINE; }
 int { return TOKEN_INT; }
+int8 { return TOKEN_INT8; }
+int16 { return TOKEN_INT16; }
 int32 { return TOKEN_INT; }
 int64 { return TOKEN_INT64; }
 launch { return TOKEN_LAUNCH; }

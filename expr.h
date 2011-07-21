@@ -325,6 +325,24 @@ private:
  */
 class ConstExpr : public Expr {
 public:
+    /** Create a ConstExpr from a uniform int8 value */
+    ConstExpr(const Type *t, int8_t i, SourcePos p);
+    /** Create a ConstExpr from a varying int8 value */
+    ConstExpr(const Type *t, int8_t *i, SourcePos p);
+    /** Create a ConstExpr from a uniform uint8 value */
+    ConstExpr(const Type *t, uint8_t u, SourcePos p);
+    /** Create a ConstExpr from a varying uint8 value */
+    ConstExpr(const Type *t, uint8_t *u, SourcePos p);
+
+    /** Create a ConstExpr from a uniform int16 value */
+    ConstExpr(const Type *t, int16_t i, SourcePos p);
+    /** Create a ConstExpr from a varying int16 value */
+    ConstExpr(const Type *t, int16_t *i, SourcePos p);
+    /** Create a ConstExpr from a uniform uint16 value */
+    ConstExpr(const Type *t, uint16_t u, SourcePos p);
+    /** Create a ConstExpr from a varying uint16 value */
+    ConstExpr(const Type *t, uint16_t *u, SourcePos p);
+
     /** Create a ConstExpr from a uniform int32 value */
     ConstExpr(const Type *t, int32_t i, SourcePos p);
     /** Create a ConstExpr from a varying int32 value */
@@ -333,14 +351,17 @@ public:
     ConstExpr(const Type *t, uint32_t u, SourcePos p);
     /** Create a ConstExpr from a varying uint32 value */
     ConstExpr(const Type *t, uint32_t *u, SourcePos p);
+
     /** Create a ConstExpr from a uniform float value */
     ConstExpr(const Type *t, float f, SourcePos p);
     /** Create a ConstExpr from a varying float value */
     ConstExpr(const Type *t, float *f, SourcePos p);
+
     /** Create a ConstExpr from a uniform double value */
     ConstExpr(const Type *t, double d, SourcePos p);
     /** Create a ConstExpr from a varying double value */
     ConstExpr(const Type *t, double *d, SourcePos p);
+
     /** Create a ConstExpr from a uniform int64 value */
     ConstExpr(const Type *t, int64_t i, SourcePos p);
     /** Create a ConstExpr from a varying int64 value */
@@ -349,10 +370,12 @@ public:
     ConstExpr(const Type *t, uint64_t i, SourcePos p);
     /** Create a ConstExpr from a varying uint64 value */
     ConstExpr(const Type *t, uint64_t *i, SourcePos p);
+
     /** Create a ConstExpr from a uniform bool value */
     ConstExpr(const Type *t, bool b, SourcePos p);
     /** Create a ConstExpr from a varying bool value */
     ConstExpr(const Type *t, bool *b, SourcePos p);
+
     /** Create a ConstExpr of the same type as the given old ConstExpr,
         with values given by the "vales" parameter. */
     ConstExpr(ConstExpr *old, double *values);
@@ -370,6 +393,30 @@ public:
         convert to 'varying' so as to always return a number of values
         equal to the target vector width into the given pointer. */
     int AsBool(bool *, bool forceVarying = false) const;
+
+    /** Return the ConstExpr's values as int8s, doing type conversion
+        from the actual type if needed.  If forceVarying is true, then type
+        convert to 'varying' so as to always return a number of values
+        equal to the target vector width into the given pointer. */
+    int AsInt8(int8_t *, bool forceVarying = false) const;
+
+    /** Return the ConstExpr's values as uint8s, doing type conversion
+        from the actual type if needed.  If forceVarying is true, then type
+        convert to 'varying' so as to always return a number of values
+        equal to the target vector width into the given pointer. */
+    int AsUInt8(uint8_t *, bool forceVarying = false) const;
+
+    /** Return the ConstExpr's values as int16s, doing type conversion
+        from the actual type if needed.  If forceVarying is true, then type
+        convert to 'varying' so as to always return a number of values
+        equal to the target vector width into the given pointer. */
+    int AsInt16(int16_t *, bool forceVarying = false) const;
+
+    /** Return the ConstExpr's values as uint16s, doing type conversion
+        from the actual type if needed.  If forceVarying is true, then type
+        convert to 'varying' so as to always return a number of values
+        equal to the target vector width into the given pointer. */
+    int AsUInt16(uint16_t *, bool forceVarying = false) const;
 
     /** Return the ConstExpr's values as int32s, doing type conversion
         from the actual type if needed.  If forceVarying is true, then type
@@ -417,6 +464,10 @@ private:
 
     const Type *type;
     union {
+        int8_t int8Val[ISPC_MAX_NVEC];
+        uint8_t uint8Val[ISPC_MAX_NVEC];
+        int16_t int16Val[ISPC_MAX_NVEC];
+        uint16_t uint16Val[ISPC_MAX_NVEC];
         int32_t int32Val[ISPC_MAX_NVEC];
         uint32_t uint32Val[ISPC_MAX_NVEC];
         bool boolVal[ISPC_MAX_NVEC];

@@ -75,29 +75,19 @@ struct Ray {
 namespace ispc {
     struct Triangle {
         float3 p[3];
-        int id;
+        int32_t id;
     };
 
     struct LinearBVHNode {
         float3 bounds[2];
-        unsigned int offset;     // primitives for leaf, second child for interior
-        unsigned int primsAxis;  // 0:7 nPrimitives, 8:15 split axis, 16:31 padding
+        int32_t offset;     // primitives for leaf, second child for interior
+        uint8_t nPrimitives;
+        uint8_t splitAxis;
+        uint16_t pad;
     };
 }
 
 using namespace ispc;
-
-inline int nPrims(const LinearBVHNode &node) {
-    return (node.primsAxis & 0xff);
-}
-
-inline int axis(const LinearBVHNode &node) {
-    return ((node.primsAxis >> 8) & 0xff);
-}
-
-inline bool isInterior(const LinearBVHNode &node) {
-    return nPrims(node) == 0;
-}
 
 inline float3 Cross(const float3 &v1, const float3 &v2) {
     float v1x = v1.x, v1y = v1.y, v1z = v1.z;
@@ -230,7 +220,7 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
         // Check ray against BVH node
         const LinearBVHNode &node = nodes[nodeNum];
         if (BBoxIntersect(node.bounds, ray)) {
-            unsigned int nPrimitives = nPrims(node);
+            unsigned int nPrimitives = node.nPrimitives;
             if (nPrimitives > 0) {
                 // Intersect ray with primitives in leaf BVH node
                 unsigned int primitivesOffset = node.offset;
@@ -244,7 +234,7 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
             }
             else {
                 // Put far BVH node on _todo_ stack, advance to near node
-                if (r.dirIsNeg[axis(node)]) {
+                if (r.dirIsNeg[node.splitAxis]) {
                    todo[todoOffset++] = nodeNum + 1;
                    nodeNum = node.offset;
                 }

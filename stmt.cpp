@@ -1405,6 +1405,18 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
             return NULL;
     }
 
+    // Just int8 and int16 types to int32s...
+    const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
+    if (baseType == AtomicType::UniformInt8 ||
+        baseType == AtomicType::UniformUInt8 ||
+        baseType == AtomicType::UniformInt16 ||
+        baseType == AtomicType::UniformUInt16) {
+        expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
+                                                        AtomicType::VaryingInt32, 
+                                expr, expr->pos);
+        type = expr->GetType();
+    }
+        
     char t = lEncodeType(type->GetAsNonConstType());
     if (t == '\0') {
         Error(expr->pos, "Only atomic types are allowed in print statements; "

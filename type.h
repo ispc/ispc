@@ -210,6 +210,10 @@ public:
     enum BasicType {
         TYPE_VOID,
         TYPE_BOOL,
+        TYPE_INT8,
+        TYPE_UINT8,
+        TYPE_INT16,
+        TYPE_UINT16,
         TYPE_INT32,
         TYPE_UINT32,
         TYPE_FLOAT,
@@ -221,14 +225,22 @@ public:
     const BasicType basicType;
 
     static const AtomicType *UniformBool, *VaryingBool;
+    static const AtomicType *UniformInt8, *VaryingInt8;
+    static const AtomicType *UniformInt16, *VaryingInt16;
     static const AtomicType *UniformInt32, *VaryingInt32;
+    static const AtomicType *UniformUInt8, *VaryingUInt8;
+    static const AtomicType *UniformUInt16, *VaryingUInt16;
     static const AtomicType *UniformUInt32, *VaryingUInt32;
     static const AtomicType *UniformFloat, *VaryingFloat;
     static const AtomicType *UniformInt64, *VaryingInt64;
     static const AtomicType *UniformUInt64, *VaryingUInt64;
     static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *UniformConstBool, *VaryingConstBool;
+    static const AtomicType *UniformConstInt8, *VaryingConstInt8;
+    static const AtomicType *UniformConstInt16, *VaryingConstInt16;
     static const AtomicType *UniformConstInt32, *VaryingConstInt32;
+    static const AtomicType *UniformConstUInt8, *VaryingConstUInt8;
+    static const AtomicType *UniformConstUInt16, *VaryingConstUInt16;
     static const AtomicType *UniformConstUInt32, *VaryingConstUInt32;
     static const AtomicType *UniformConstFloat, *VaryingConstFloat;
     static const AtomicType *UniformConstInt64, *VaryingConstInt64;

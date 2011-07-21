@@ -85,6 +85,14 @@ static inline float broadcast(float v, uniform int i) {
     return __broadcast_float(v, i);
 }
 
+static inline int8 broadcast(int8 v, uniform int i) {
+    return __broadcast_int8(v, i);
+}
+
+static inline int16 broadcast(int16 v, uniform int i) {
+    return __broadcast_int16(v, i);
+}
+
 static inline int32 broadcast(int32 v, uniform int i) {
     return __broadcast_int32(v, i);
 }
@@ -99,6 +107,14 @@ static inline int64 broadcast(int64 v, uniform int i) {
 
 static inline float rotate(float v, uniform int i) {
     return __rotate_float(v, i);
+}
+
+static inline int8 rotate(int8 v, uniform int i) {
+    return __rotate_int8(v, i);
+}
+
+static inline int16 rotate(int16 v, uniform int i) {
+    return __rotate_int16(v, i);
 }
 
 static inline int32 rotate(int32 v, uniform int i) {
@@ -117,6 +133,14 @@ static inline float shuffle(float v, int i) {
     return __shuffle_float(v, i);
 }
 
+static inline int8 shuffle(int8 v, int i) {
+    return __shuffle_int8(v, i);
+}
+
+static inline int16 shuffle(int16 v, int i) {
+    return __shuffle_int16(v, i);
+}
+
 static inline int32 shuffle(int32 v, int i) {
     return __shuffle_int32(v, i);
 }
@@ -131,6 +155,14 @@ static inline int64 shuffle(int64 v, int i) {
 
 static inline float shuffle(float v0, float v1, int i) {
     return __shuffle2_float(v0, v1, i);
+}
+
+static inline int8 shuffle(int8 v0, int8 v1, int i) {
+    return __shuffle2_int8(v0, v1, i);
+}
+
+static inline int16 shuffle(int16 v0, int16 v1, int i) {
+    return __shuffle2_int16(v0, v1, i);
 }
 
 static inline int32 shuffle(int32 v0, int32 v1, int i) {
@@ -150,11 +182,27 @@ static inline uniform float extract(float x, uniform int i) {
     return floatbits(__extract_int32((int)intbits(x), i));
 }
 
-static inline uniform int extract(int x, uniform int i) {
+static inline uniform int8 extract(int8 x, uniform int i) {
+    return __extract_int8(x, i);
+}
+
+static inline uniform unsigned int8 extract(unsigned int8 x, uniform int i) {
+    return __extract_int8(x, (unsigned int)i);
+}
+
+static inline uniform int16 extract(int16 x, uniform int i) {
+    return __extract_int16(x, i);
+}
+
+static inline uniform unsigned int16 extract(unsigned int16 x, uniform int i) {
+    return __extract_int16(x, (unsigned int)i);
+}
+
+static inline uniform int32 extract(int32 x, uniform int i) {
     return __extract_int32(x, i);
 }
 
-static inline uniform unsigned int extract(unsigned int x, uniform int i) {
+static inline uniform unsigned int32 extract(unsigned int32 x, uniform int i) {
     return __extract_int32(x, (unsigned int)i);
 }
 
@@ -175,12 +223,30 @@ static inline float insert(float x, uniform int i, uniform float v) {
     return floatbits(__insert_int32((int)intbits(x), i, (int)intbits(v)));
 }
 
-static inline int insert(int x, uniform int i, uniform int v) {
+static inline int8 insert(int8 x, uniform int i, uniform int8 v) {
+    return __insert_int8(x, i, v);
+}
+
+static inline unsigned int8 insert(unsigned int8 x, uniform int i, 
+                                    uniform unsigned int8 v) {
+    return __insert_int8(x, (unsigned int)i, v);
+}
+
+static inline int16 insert(int16 x, uniform int i, uniform int16 v) {
+    return __insert_int16(x, i, v);
+}
+
+static inline unsigned int16 insert(unsigned int16 x, uniform int i, 
+                                    uniform unsigned int16 v) {
+    return __insert_int16(x, (unsigned int)i, v);
+}
+
+static inline int32 insert(int32 x, uniform int i, uniform int32 v) {
     return __insert_int32(x, i, v);
 }
 
-static inline unsigned int insert(unsigned int x, uniform int i, 
-                                  uniform unsigned int v) {
+static inline unsigned int32 insert(unsigned int32 x, uniform int i, 
+                                    uniform unsigned int32 v) {
     return __insert_int32(x, (unsigned int)i, v);
 }
 
@@ -218,7 +284,7 @@ static inline uniform bool all(bool v) {
     return __movmsk(match) == (1 << programCount) - 1;
 }
 
-static inline uniform int popcnt(uniform int v) {
+static inline uniform int32 popcnt(uniform int32 v) {
     return __popcnt_int32(v);
 }
 
@@ -473,52 +539,7 @@ ATOMIC_DECL_CMPXCHG(unsigned int64, int64)
 ATOMIC_DECL_CMPXCHG(double, double)
 
 ///////////////////////////////////////////////////////////////////////////
-// Load/store from/to 8/16-bit types
-
-static inline int load_from_int8(uniform int a[], uniform int offset) {
-    return __load_int8(a, offset, __mask);
-}
-
-static inline unsigned int load_from_uint8(uniform unsigned int a[], 
-                                           uniform int offset) {
-    return __load_uint8(a, offset, __mask);
-}
-
-static inline void store_to_int8(uniform int a[], uniform int offset, 
-                                 unsigned int val) {
-    __store_int8(a, offset, val, __mask);
-}
-
-static inline void store_to_uint8(uniform unsigned int a[], uniform int offset, 
-                                  unsigned int val) {
-    // Can use __store_int8 for unsigned stuff, since it truncates bits in
-    // either case.
-    __store_int8(a, offset, val, __mask);
-}
-
-static inline int load_from_int16(uniform int a[], uniform int offset) {
-    return __load_int16(a, offset, __mask);
-}
-
-static inline unsigned int load_from_int16(uniform unsigned int a[], 
-                                           uniform int offset) {
-    return __load_uint16(a, offset, __mask);
-}
-
-static inline void store_to_int16(uniform int a[], uniform int offset, 
-                                  int val) {
-    __store_int16(a, offset, val, __mask);
-}
-
-static inline void store_to_uint16(uniform unsigned int a[], uniform int offset, 
-                                   unsigned int val) {
-    // Can use __store_int16 for unsigned stuff, since it truncates bits in
-    // either case.
-    __store_int16(a, offset, val, __mask);
-}
-
-///////////////////////////////////////////////////////////////////////////
-// Math
+// Floating-Point Math
 
 static inline float abs(float a) {
     // Floating-point hack: zeroing the high bit clears the sign
@@ -622,20 +643,17 @@ static inline uniform float rcp(uniform float v) {
     return __rcp_uniform_float(v);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// min/max
+
+// float
+
 static inline float min(float a, float b) {
     return __min_varying_float(a, b);
 }
 
 static inline uniform float min(uniform float a, uniform float b) {
     return __min_uniform_float(a, b);
-}
-
-static inline double min(double a, double b) {
-    return __min_varying_double(a, b);
-}
-
-static inline uniform double min(uniform double a, uniform double b) {
-    return __min_uniform_double(a, b);
 }
 
 static inline float max(float a, float b) {
@@ -646,6 +664,17 @@ static inline uniform float max(uniform float a, uniform float b) {
     return __max_uniform_float(a, b);
 }
 
+
+// double
+
+static inline double min(double a, double b) {
+    return __min_varying_double(a, b);
+}
+
+static inline uniform double min(uniform double a, uniform double b) {
+    return __min_uniform_double(a, b);
+}
+
 static inline double max(double a, double b) {
     return __max_varying_double(a, b);
 }
@@ -653,6 +682,80 @@ static inline double max(double a, double b) {
 static inline uniform double max(uniform double a, uniform double b) {
     return __max_uniform_double(a, b);
 }
+
+// int8
+
+static inline uniform unsigned int8 min(uniform unsigned int8 a,
+                                        uniform unsigned int8 b) {
+    return (a < b) ? a : b;
+}
+
+static inline uniform unsigned int8 max(uniform unsigned int8 a, 
+                                        uniform unsigned int8 b) {
+    return (a > b) ? a : b;
+}
+
+static inline uniform int8 min(uniform int8 a, uniform int8 b) {
+    return (a < b) ? a : b;
+}
+
+static inline uniform int8 max(uniform int8 a, uniform int8 b) {
+    return (a > b) ? a : b;
+}
+
+static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) {
+    return (a < b) ? a : b;
+}
+
+static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) {
+    return (a > b) ? a : b;
+}
+
+static inline int8 min(int8 a, int8 b) {
+    return (a < b) ? a : b;
+}
+
+static inline int8 max(int8 a, int8 b) {
+    return (a > b) ? a : b;
+}
+
+// int16
+
+static inline uniform unsigned int16 min(uniform unsigned int16 a, 
+                                         uniform unsigned int16 b) {
+    return (a < b) ? a : b;
+}
+
+static inline uniform unsigned int16 max(uniform unsigned int16 a, 
+                                         uniform unsigned int16 b) {
+    return (a > b) ? a : b;
+}
+
+static inline uniform int16 min(uniform int16 a, uniform int16 b) {
+    return (a < b) ? a : b;
+}
+
+static inline uniform int16 max(uniform int16 a, uniform int16 b) {
+    return (a > b) ? a : b;
+}
+
+static inline unsigned int16 min(unsigned int16 a, unsigned int16 b) {
+    return (a < b) ? a : b;
+}
+
+static inline unsigned int16 max(unsigned int16 a, unsigned int16 b) {
+    return (a > b) ? a : b;
+}
+
+static inline int16 min(int16 a, int16 b) {
+    return (a < b) ? a : b;
+}
+
+static inline int16 max(int16 a, int16 b) {
+    return (a > b) ? a : b;
+}
+
+// int32
 
 static inline unsigned int min(unsigned int a, unsigned int b) {
     return __min_varying_uint32(a, b);
@@ -686,6 +789,8 @@ static inline uniform int max(uniform int a, uniform int b) {
     return __max_uniform_int32(a, b);
 }
 
+// int64
+
 static inline unsigned int64 min(unsigned int64 a, unsigned int64 b) {
     return __min_varying_uint64(a, b);
 }
@@ -718,6 +823,11 @@ static inline uniform int64 max(uniform int64 a, uniform int64 b) {
     return __max_uniform_int64(a, b);
 }
 
+///////////////////////////////////////////////////////////////////////////
+// clamps
+
+// float
+
 static inline float clamp(float v, float low, float high) {
     return min(max(v, low), high);
 }
@@ -726,21 +836,58 @@ static inline uniform float clamp(uniform float v, uniform float low, uniform fl
     return min(max(v, low), high);
 }
 
+// int8
+
+static inline unsigned int8 clamp(unsigned int8 v, unsigned int8 low, 
+                                   unsigned int8 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform unsigned int8 clamp(uniform unsigned int8 v, 
+                                           uniform unsigned int8 low, 
+                                           uniform unsigned int8 high) {
+    return min(max(v, low), high);
+}
+
+static inline int8 clamp(int8 v, int8 low, int8 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform int8 clamp(uniform int8 v, uniform int8 low, 
+                                  uniform int8 high) {
+    return min(max(v, low), high);
+}
+
+// int16
+
+static inline unsigned int16 clamp(unsigned int16 v, unsigned int16 low, 
+                                   unsigned int16 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform unsigned int16 clamp(uniform unsigned int16 v, 
+                                           uniform unsigned int16 low, 
+                                           uniform unsigned int16 high) {
+    return min(max(v, low), high);
+}
+
+static inline int16 clamp(int16 v, int16 low, int16 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform int16 clamp(uniform int16 v, uniform int16 low, 
+                                  uniform int16 high) {
+    return min(max(v, low), high);
+}
+
+// int32
+
 static inline unsigned int clamp(unsigned int v, unsigned int low, unsigned int high) {
     return min(max(v, low), high);
 }
 
 static inline uniform unsigned int clamp(uniform unsigned int v, uniform unsigned int low, 
                                          uniform unsigned int high) {
-    return min(max(v, low), high);
-}
-
-static inline unsigned int64 clamp(unsigned int64 v, unsigned int64 low, unsigned int64 high) {
-    return min(max(v, low), high);
-}
-
-static inline uniform unsigned int64 clamp(uniform unsigned int64 v, uniform unsigned int64 low, 
-                                           uniform unsigned int64 high) {
     return min(max(v, low), high);
 }
 
@@ -752,11 +899,25 @@ static inline uniform int clamp(uniform int v, uniform int low, uniform int high
     return min(max(v, low), high);
 }
 
+// int64
+
+static inline unsigned int64 clamp(unsigned int64 v, unsigned int64 low, 
+                                   unsigned int64 high) {
+    return min(max(v, low), high);
+}
+
+static inline uniform unsigned int64 clamp(uniform unsigned int64 v, 
+                                           uniform unsigned int64 low, 
+                                           uniform unsigned int64 high) {
+    return min(max(v, low), high);
+}
+
 static inline int64 clamp(int64 v, int64 low, int64 high) {
     return min(max(v, low), high);
 }
 
-static inline uniform int64 clamp(uniform int64 v, uniform int64 low, uniform int64 high) {
+static inline uniform int64 clamp(uniform int64 v, uniform int64 low, 
+                                  uniform int64 high) {
     return min(max(v, low), high);
 }
 

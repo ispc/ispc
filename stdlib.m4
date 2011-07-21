@@ -566,6 +566,28 @@ declare i1 @__is_compile_time_constant_varying_int32(<$1 x i32>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
 
+define internal i8 @__extract_int8(<$1 x i8>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <$1 x i8> %0, i32 %1
+  ret i8 %extract
+}
+
+define internal <$1 x i8> @__insert_int8(<$1 x i8>, i32, 
+                                           i8) nounwind readnone alwaysinline {
+  %insert = insertelement <$1 x i8> %0, i8 %2, i32 %1
+  ret <$1 x i8> %insert
+}
+
+define internal i16 @__extract_int16(<$1 x i16>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <$1 x i16> %0, i32 %1
+  ret i16 %extract
+}
+
+define internal <$1 x i16> @__insert_int16(<$1 x i16>, i32, 
+                                           i16) nounwind readnone alwaysinline {
+  %insert = insertelement <$1 x i16> %0, i16 %2, i32 %1
+  ret <$1 x i16> %insert
+}
+
 define internal i32 @__extract_int32(<$1 x i32>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <$1 x i32> %0, i32 %1
   ret i32 %extract
@@ -588,6 +610,8 @@ define internal <$1 x i64> @__insert_int64(<$1 x i64>, i32,
   ret <$1 x i64> %insert
 }
 
+shuffles($1, i8, int8, 1)
+shuffles($1, i16, int16, 2)
 shuffles($1, float, float, 4)
 shuffles($1, i32, int32, 4)
 shuffles($1, double, double, 8)
@@ -902,171 +926,6 @@ i64minmax($1,max,uint64,ugt)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Definitions of 8 and 16-bit load and store functions
-;;
-;; The `int8_16' macro defines functions related to loading and storing 8 and
-;; 16-bit values in memory, converting to and from i32.  (This is a workaround
-;; to be able to use in-memory values of types in ispc programs, since the
-;; compiler doesn't yet support 8 and 16-bit datatypes...
-;;
-;; Arguments to pass to `int8_16':
-;; $1: vector width of the target
-
-define(`int8_16', `
-define internal <$1 x i32> @__load_uint8([0 x i32] *, i32 %offset,
-                                         <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %doload, label %skip
-
-doload:  
-  %ptr8 = bitcast [0 x i32] *%0 to i8 *
-  %ptr = getelementptr i8 * %ptr8, i32 %offset
-  %ptr64 = bitcast i8 * %ptr to i`'eval(8*$1) *
-  %val = load i`'eval(8*$1) * %ptr64, align 1
-
-  %vval = bitcast i`'eval(8*$1) %val to <$1 x i8>
-  ; unsigned, so zero-extend to i32... 
-  %ret = zext <$1 x i8> %vval to <$1 x i32>
-  ret <$1 x i32> %ret
-
-skip:
-  ret <$1 x i32> undef
-}
-
-
-define internal <$1 x i32> @__load_int8([0 x i32] *, i32 %offset,
-                                        <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %doload, label %skip
-
-doload:  
-  %ptr8 = bitcast [0 x i32] *%0 to i8 *
-  %ptr = getelementptr i8 * %ptr8, i32 %offset
-  %ptr64 = bitcast i8 * %ptr to i`'eval(8*$1) *
-  %val = load i`'eval(8*$1) * %ptr64, align 1
-
-  %vval = bitcast i`'eval(8*$1) %val to <$1 x i8>
-  ; signed, so sign-extend to i32... 
-  %ret = sext <$1 x i8> %vval to <$1 x i32>
-  ret <$1 x i32> %ret
-
-skip:
-  ret <$1 x i32> undef
-}
-
-
-define internal <$1 x i32> @__load_uint16([0 x i32] *, i32 %offset,
-                                          <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %doload, label %skip
-
-doload:  
-  %ptr16 = bitcast [0 x i32] *%0 to i16 *
-  %ptr = getelementptr i16 * %ptr16, i32 %offset
-  %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
-  %val = load i`'eval(16*$1) * %ptr64, align 2
-
-  %vval = bitcast i`'eval(16*$1) %val to <$1 x i16>
-  ; unsigned, so use zero-extend...
-  %ret = zext <$1 x i16> %vval to <$1 x i32>
-  ret <$1 x i32> %ret
-
-skip:
-  ret <$1 x i32> undef
-}
-
-
-define internal <$1 x i32> @__load_int16([0 x i32] *, i32 %offset,
-                                         <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %doload, label %skip
-
-doload:  
-  %ptr16 = bitcast [0 x i32] *%0 to i16 *
-  %ptr = getelementptr i16 * %ptr16, i32 %offset
-  %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
-  %val = load i`'eval(16*$1) * %ptr64, align 2
-
-  %vval = bitcast i`'eval(16*$1) %val to <$1 x i16>
-  ; signed, so use sign-extend...
-  %ret = sext <$1 x i16> %vval to <$1 x i32>
-  ret <$1 x i32> %ret
-
-skip:
-  ret <$1 x i32> undef
-}
-
-
-define internal void @__store_int8([0 x i32] *, i32 %offset, <$1 x i32> %val32,
-                                   <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %dostore, label %skip
-
-dostore:  
-  %val = trunc <$1 x i32> %val32 to <$1 x i8>
-  %val64 = bitcast <$1 x i8> %val to i`'eval(8*$1)
-
-  %mask8 = trunc <$1 x i32> %mask to <$1 x i8>
-  %mask64 = bitcast <$1 x i8> %mask8 to i`'eval(8*$1)
-  %notmask = xor i`'eval(8*$1) %mask64, -1
-
-  %ptr8 = bitcast [0 x i32] *%0 to i8 *
-  %ptr = getelementptr i8 * %ptr8, i32 %offset
-  %ptr64 = bitcast i8 * %ptr to i`'eval(8*$1) *
-
-  ;; load the old value, use logical ops to blend based on the mask, then
-  ;; store the result back
-  %old = load i`'eval(8*$1) * %ptr64, align 1
-  %oldmasked = and i`'eval(8*$1) %old, %notmask
-  %newmasked = and i`'eval(8*$1) %val64, %mask64
-  %final = or i`'eval(8*$1) %oldmasked, %newmasked
-  store i`'eval(8*$1) %final, i`'eval(8*$1) * %ptr64, align 1
-
-  ret void
-
-skip:
-  ret void
-}
-
-define internal void @__store_int16([0 x i32] *, i32 %offset, <$1 x i32> %val32,
-                                    <$1 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any = icmp ne i32 %mm, 0
-  br i1 %any, label %dostore, label %skip
-
-dostore:
-  %val = trunc <$1 x i32> %val32 to <$1 x i16>
-  %val64 = bitcast <$1 x i16> %val to i`'eval(16*$1)
-
-  %mask8 = trunc <$1 x i32> %mask to <$1 x i16>
-  %mask64 = bitcast <$1 x i16> %mask8 to i`'eval(16*$1)
-  %notmask = xor i`'eval(16*$1) %mask64, -1
-
-  %ptr16 = bitcast [0 x i32] *%0 to i16 *
-  %ptr = getelementptr i16 * %ptr16, i32 %offset
-  %ptr64 = bitcast i16 * %ptr to i`'eval(16*$1) *
-
-  ;; as above, use mask to do blending with logical ops...
-  %old = load i`'eval(16*$1) * %ptr64, align 2
-  %oldmasked = and i`'eval(16*$1) %old, %notmask
-  %newmasked = and i`'eval(16*$1) %val64, %mask64
-  %final = or i`'eval(16*$1) %oldmasked, %newmasked
-  store i`'eval(16*$1) %final, i`'eval(16*$1) * %ptr64, align 2
-
-  ret void
-
-skip:
-  ret void
-}
-'
-)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emit code to safely load a scalar value and broadcast it across the
 ;; elements of a vector.  Parameters:
 ;; $1: target vector width
@@ -1149,6 +1008,105 @@ return:
   ret <$1 x $2> %r
 }
 ')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; masked store
+;; emit code to do masked store as a set of per-lane scalar stores
+;; parameters:
+;; $1: target vector width
+;; $2: llvm type of elements
+;; $3: suffix for function name
+
+define(`gen_masked_store', `
+define void @__masked_store_$3(<$1 x $2>* nocapture, <$1 x $2>, <$1 x i32>) nounwind alwaysinline {
+  per_lane($1, <$1 x i32> %2, `
+      %ptr_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
+      %storeval_ID = extractelement <$1 x $2> %1, i32 LANE
+      store $2 %storeval_ID, $2 * %ptr_ID')
+  ret void
+}
+')
+
+define(`masked_store_blend_8_16_by_4', `
+define void @__masked_store_blend_8(<4 x i8>* nocapture, <4 x i8>,
+                                    <4 x i32>) nounwind alwaysinline {
+  %old = load <4 x i8> * %0
+  %old32 = bitcast <4 x i8> %old to i32
+  %new32 = bitcast <4 x i8> %1 to i32
+
+  %mask8 = trunc <4 x i32> %2 to <4 x i8>
+  %mask32 = bitcast <4 x i8> %mask8 to i32
+  %notmask32 = xor i32 %mask32, -1
+
+  %newmasked = and i32 %new32, %mask32
+  %oldmasked = and i32 %old32, %notmask32
+  %result = or i32 %newmasked, %oldmasked
+
+  %resultvec = bitcast i32 %result to <4 x i8>
+  store <4 x i8> %resultvec, <4 x i8> * %0
+  ret void
+}
+
+define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
+                                     <4 x i32>) nounwind alwaysinline {
+  %old = load <4 x i16> * %0
+  %old64 = bitcast <4 x i16> %old to i64
+  %new64 = bitcast <4 x i16> %1 to i64
+
+  %mask16 = trunc <4 x i32> %2 to <4 x i16>
+  %mask64 = bitcast <4 x i16> %mask16 to i64
+  %notmask64 = xor i64 %mask64, -1
+
+  %newmasked = and i64 %new64, %mask64
+  %oldmasked = and i64 %old64, %notmask64
+  %result = or i64 %newmasked, %oldmasked
+
+  %resultvec = bitcast i64 %result to <4 x i16>
+  store <4 x i16> %resultvec, <4 x i16> * %0
+  ret void
+}
+')
+
+define(`masked_store_blend_8_16_by_8', `
+define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>,
+                                    <8 x i32>) nounwind alwaysinline {
+  %old = load <8 x i8> * %0
+  %old64 = bitcast <8 x i8> %old to i64
+  %new64 = bitcast <8 x i8> %1 to i64
+
+  %mask8 = trunc <8 x i32> %2 to <8 x i8>
+  %mask64 = bitcast <8 x i8> %mask8 to i64
+  %notmask64 = xor i64 %mask64, -1
+
+  %newmasked = and i64 %new64, %mask64
+  %oldmasked = and i64 %old64, %notmask64
+  %result = or i64 %newmasked, %oldmasked
+
+  %resultvec = bitcast i64 %result to <8 x i8>
+  store <8 x i8> %resultvec, <8 x i8> * %0
+  ret void
+}
+
+define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
+                                     <8 x i32>) nounwind alwaysinline {
+  %old = load <8 x i16> * %0
+  %old128 = bitcast <8 x i16> %old to i128
+  %new128 = bitcast <8 x i16> %1 to i128
+
+  %mask16 = trunc <8 x i32> %2 to <8 x i16>
+  %mask128 = bitcast <8 x i16> %mask16 to i128
+  %notmask128 = xor i128 %mask128, -1
+
+  %newmasked = and i128 %new128, %mask128
+  %oldmasked = and i128 %old128, %notmask128
+  %result = or i128 %newmasked, %oldmasked
+
+  %resultvec = bitcast i128 %result to <8 x i16>
+  store <8 x i16> %resultvec, <8 x i16> * %0
+  ret void
+}
+')
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; packed load and store functions

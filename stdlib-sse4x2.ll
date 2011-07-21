@@ -38,7 +38,6 @@
 
 stdlib_core(8)
 packed_load_and_store(8)
-int8_16(8)
 int64minmax(8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -436,43 +435,28 @@ define internal i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; masked store
-
-define void @__masked_store_32(<8 x i32>* nocapture, <8 x i32>,
-                               <8 x i32>) nounwind alwaysinline {
-  per_lane(8, <8 x i32> %2, `
-      ; compute address for this one
-      %ptr_ID = getelementptr <8 x i32> * %0, i32 0, i32 LANE
-      %storeval_ID = extractelement <8 x i32> %1, i32 LANE
-      store i32 %storeval_ID, i32 * %ptr_ID')
-  ret void
-}
-
-
-define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
-                               <8 x i32>) nounwind alwaysinline {
-  per_lane(8, <8 x i32> %2, `
-      ; compute address for this one
-      %ptr_ID = getelementptr <8 x i64> * %0, i32 0, i32 LANE
-      %storeval_ID = extractelement <8 x i64> %1, i32 LANE
-      store i64 %storeval_ID, i64 * %ptr_ID')
-  ret void
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
+load_and_broadcast(8, i8, 8)
+load_and_broadcast(8, i16, 16)
 load_and_broadcast(8, i32, 32)
 load_and_broadcast(8, i64, 64)
+
+load_masked(8, i8,  8,  1)
+load_masked(8, i16, 16, 2)
 load_masked(8, i32, 32, 4)
 load_masked(8, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
+gen_gather(8, i8)
+gen_gather(8, i16)
 gen_gather(8, i32)
 gen_gather(8, i64)
+
+gen_scatter(8, i8)
+gen_scatter(8, i16)
 gen_scatter(8, i32)
 gen_scatter(8, i64)
 
@@ -618,6 +602,13 @@ define internal float @__reduce_add_float(<8 x float>) nounwind readonly alwaysi
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
+
+gen_masked_store(8, i8, 8)
+gen_masked_store(8, i16, 16)
+gen_masked_store(8, i32, 32)
+gen_masked_store(8, i64, 64)
+
+masked_store_blend_8_16_by_8()
 
 declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
                                              <4 x float>) nounwind readnone

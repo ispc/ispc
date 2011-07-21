@@ -53,28 +53,39 @@ struct LLVMTypes {
     static LLVM_TYPE_CONST llvm::Type *VoidType;
     static LLVM_TYPE_CONST llvm::PointerType *VoidPointerType;
     static LLVM_TYPE_CONST llvm::Type *BoolType;
+
     static LLVM_TYPE_CONST llvm::Type *Int8Type;
     static LLVM_TYPE_CONST llvm::Type *Int16Type;
     static LLVM_TYPE_CONST llvm::Type *Int32Type;
-    static LLVM_TYPE_CONST llvm::Type *Int32PointerType;
     static LLVM_TYPE_CONST llvm::Type *Int64Type;
-    static LLVM_TYPE_CONST llvm::Type *Int64PointerType;
     static LLVM_TYPE_CONST llvm::Type *FloatType;
-    static LLVM_TYPE_CONST llvm::Type *FloatPointerType;
     static LLVM_TYPE_CONST llvm::Type *DoubleType;
+
+    static LLVM_TYPE_CONST llvm::Type *Int8PointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int16PointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int32PointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int64PointerType;
+    static LLVM_TYPE_CONST llvm::Type *FloatPointerType;
     static LLVM_TYPE_CONST llvm::Type *DoublePointerType;
 
     static LLVM_TYPE_CONST llvm::VectorType *MaskType;
+
     static LLVM_TYPE_CONST llvm::VectorType *BoolVectorType;
     static LLVM_TYPE_CONST llvm::VectorType *Int1VectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *Int8VectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *Int16VectorType;
     static LLVM_TYPE_CONST llvm::VectorType *Int32VectorType;
-    static LLVM_TYPE_CONST llvm::Type *Int32VectorPointerType;
     static LLVM_TYPE_CONST llvm::VectorType *Int64VectorType;
-    static LLVM_TYPE_CONST llvm::Type *Int64VectorPointerType;
     static LLVM_TYPE_CONST llvm::VectorType *FloatVectorType;
-    static LLVM_TYPE_CONST llvm::Type *FloatVectorPointerType;
     static LLVM_TYPE_CONST llvm::VectorType *DoubleVectorType;
+
+    static LLVM_TYPE_CONST llvm::Type *Int8VectorPointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int16VectorPointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int32VectorPointerType;
+    static LLVM_TYPE_CONST llvm::Type *Int64VectorPointerType;
+    static LLVM_TYPE_CONST llvm::Type *FloatVectorPointerType;
     static LLVM_TYPE_CONST llvm::Type *DoubleVectorPointerType;
+
     static LLVM_TYPE_CONST llvm::ArrayType *VoidPointerVectorType;
 };
 
@@ -89,6 +100,14 @@ extern llvm::Constant *LLVMTrue, *LLVMFalse;
  */
 extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target target);
 
+/** Returns an LLVM i8 constant of the given value */
+extern llvm::ConstantInt *LLVMInt8(int8_t i);
+/** Returns an LLVM i8 constant of the given value */
+extern llvm::ConstantInt *LLVMUInt8(uint8_t i);
+/** Returns an LLVM i16 constant of the given value */
+extern llvm::ConstantInt *LLVMInt16(int16_t i);
+/** Returns an LLVM i16 constant of the given value */
+extern llvm::ConstantInt *LLVMUInt16(uint16_t i);
 /** Returns an LLVM i32 constant of the given value */
 extern llvm::ConstantInt *LLVMInt32(int32_t i);
 /** Returns an LLVM i32 constant of the given value */
@@ -105,18 +124,35 @@ extern llvm::Constant *LLVMDouble(double f);
 /** Returns an LLVM boolean vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMBoolVector(bool v);
+
+/** Returns an LLVM i8 vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMInt8Vector(int8_t i);
+/** Returns an LLVM i8 vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMUInt8Vector(uint8_t i);
+
+/** Returns an LLVM i16 vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMInt16Vector(int16_t i);
+/** Returns an LLVM i16 vector constant of the given value smeared
+    across all elements */
+extern llvm::Constant *LLVMUInt16Vector(uint16_t i);
+
 /** Returns an LLVM i32 vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMInt32Vector(int32_t i);
 /** Returns an LLVM i32 vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMUInt32Vector(uint32_t i);
+
 /** Returns an LLVM i64 vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMInt64Vector(int64_t i);
 /** Returns an LLVM i64 vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMUInt64Vector(uint64_t i);
+
 /** Returns an LLVM float vector constant of the given value smeared
     across all elements */
 extern llvm::Constant *LLVMFloatVector(float f);
@@ -127,18 +163,35 @@ extern llvm::Constant *LLVMDoubleVector(double f);
 /** Returns an LLVM boolean vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMBoolVector(const bool *v);
+
+/** Returns an LLVM i8 vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMInt8Vector(const int8_t *i);
+/** Returns an LLVM i8 vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMUInt8Vector(const uint8_t *i);
+
+/** Returns an LLVM i16 vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMInt16Vector(const int16_t *i);
+/** Returns an LLVM i16 vector based on the given array of values.
+    The array should have g->target.vectorWidth elements. */
+extern llvm::Constant *LLVMUInt16Vector(const uint16_t *i);
+
 /** Returns an LLVM i32 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMInt32Vector(const int32_t *i);
 /** Returns an LLVM i32 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMUInt32Vector(const uint32_t *i);
+
 /** Returns an LLVM i64 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMInt64Vector(const int64_t *i);
 /** Returns an LLVM i64 vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMUInt64Vector(const uint64_t *i);
+
 /** Returns an LLVM float vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMFloatVector(const float *f);

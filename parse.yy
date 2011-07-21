@@ -102,15 +102,16 @@ static const char *lBuiltinTokens[] = {
     "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor", "char", 
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
     "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
-    "inline", "int", "int32", "int64", "launch", "print", "reference", "return",
+    "inline", "int", "int8", "int16", "int32", "int64", "launch", "print",
+    "reference", "return",
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
     "bool", "char", "const", "double", "enum", "false", "float", "int",
-    "int32", "int64", "reference", "struct", "true", "uniform", "unsigned",
-    "varying", "void", NULL 
+    "int8", "int16", "int32", "int64", "reference", "struct", "true",
+     "uniform", "unsigned", "varying", "void", NULL 
 };
     
 %}
@@ -154,7 +155,7 @@ static const char *lParamListTokens[] = {
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK 
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
 %token TOKEN_CHAR TOKEN_INT TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
-%token TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
+%token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE TOKEN_REFERENCE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
@@ -587,7 +588,8 @@ type_specifier
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
     | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
-/*  | TOKEN_CHAR { UNIMPLEMENTED; } */
+    | TOKEN_INT8 { $$ = AtomicType::VaryingInt8; }
+    | TOKEN_INT16 { $$ = AtomicType::VaryingInt16; }
     | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
     | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
     | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }

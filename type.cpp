@@ -74,6 +74,14 @@ lShouldPrintName(const std::string &name) {
 
 const AtomicType *AtomicType::UniformBool = new AtomicType(TYPE_BOOL, true, false);
 const AtomicType *AtomicType::VaryingBool = new AtomicType(TYPE_BOOL, false, false);
+const AtomicType *AtomicType::UniformInt8 = new AtomicType(TYPE_INT8, true, false);
+const AtomicType *AtomicType::VaryingInt8 = new AtomicType(TYPE_INT8, false, false);
+const AtomicType *AtomicType::UniformUInt8 = new AtomicType(TYPE_UINT8, true, false);
+const AtomicType *AtomicType::VaryingUInt8 = new AtomicType(TYPE_UINT8, false, false);
+const AtomicType *AtomicType::UniformInt16 = new AtomicType(TYPE_INT16, true, false);
+const AtomicType *AtomicType::VaryingInt16 = new AtomicType(TYPE_INT16, false, false);
+const AtomicType *AtomicType::UniformUInt16 = new AtomicType(TYPE_UINT16, true, false);
+const AtomicType *AtomicType::VaryingUInt16 = new AtomicType(TYPE_UINT16, false, false);
 const AtomicType *AtomicType::UniformInt32 = new AtomicType(TYPE_INT32, true, false);
 const AtomicType *AtomicType::VaryingInt32 = new AtomicType(TYPE_INT32, false, false);
 const AtomicType *AtomicType::UniformUInt32 = new AtomicType(TYPE_UINT32, true, false);
@@ -89,6 +97,14 @@ const AtomicType *AtomicType::VaryingDouble = new AtomicType(TYPE_DOUBLE, false,
 
 const AtomicType *AtomicType::UniformConstBool = new AtomicType(TYPE_BOOL, true, true);
 const AtomicType *AtomicType::VaryingConstBool = new AtomicType(TYPE_BOOL, false, true);
+const AtomicType *AtomicType::UniformConstInt8 = new AtomicType(TYPE_INT8, true, true);
+const AtomicType *AtomicType::VaryingConstInt8 = new AtomicType(TYPE_INT8, false, true);
+const AtomicType *AtomicType::UniformConstUInt8 = new AtomicType(TYPE_UINT8, true, true);
+const AtomicType *AtomicType::VaryingConstUInt8 = new AtomicType(TYPE_UINT8, false, true);
+const AtomicType *AtomicType::UniformConstInt16 = new AtomicType(TYPE_INT16, true, true);
+const AtomicType *AtomicType::VaryingConstInt16 = new AtomicType(TYPE_INT16, false, true);
+const AtomicType *AtomicType::UniformConstUInt16 = new AtomicType(TYPE_UINT16, true, true);
+const AtomicType *AtomicType::VaryingConstUInt16 = new AtomicType(TYPE_UINT16, false, true);
 const AtomicType *AtomicType::UniformConstInt32 = new AtomicType(TYPE_INT32, true, true);
 const AtomicType *AtomicType::VaryingConstInt32 = new AtomicType(TYPE_INT32, false, true);
 const AtomicType *AtomicType::UniformConstUInt32 = new AtomicType(TYPE_UINT32, true, true);
@@ -101,6 +117,7 @@ const AtomicType *AtomicType::UniformConstUInt64 = new AtomicType(TYPE_UINT64, t
 const AtomicType *AtomicType::VaryingConstUInt64 = new AtomicType(TYPE_UINT64, false, true);
 const AtomicType *AtomicType::UniformConstDouble = new AtomicType(TYPE_DOUBLE, true, true);
 const AtomicType *AtomicType::VaryingConstDouble = new AtomicType(TYPE_DOUBLE, false, true);
+
 const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, true, false);
 
 
@@ -123,14 +140,17 @@ AtomicType::IsFloatType() const {
 
 bool
 AtomicType::IsIntType() const {
-    return (basicType == TYPE_INT32 || basicType == TYPE_UINT32 ||
+    return (basicType == TYPE_INT8  || basicType == TYPE_UINT8  ||
+            basicType == TYPE_INT16 || basicType == TYPE_UINT16 ||
+            basicType == TYPE_INT32 || basicType == TYPE_UINT32 ||
             basicType == TYPE_INT64 || basicType == TYPE_UINT64);
 }
 
 
 bool
 AtomicType::IsUnsignedType() const {
-    return (basicType == TYPE_UINT32 || basicType == TYPE_UINT64);
+    return (basicType == TYPE_UINT8  || basicType == TYPE_UINT16 ||
+            basicType == TYPE_UINT32 || basicType == TYPE_UINT64);
 }
 
 
@@ -151,10 +171,18 @@ AtomicType::GetAsUnsignedType() const {
     if (IsUnsignedType()) 
         return this;
 
-    if (this == AtomicType::UniformInt32)           return AtomicType::UniformUInt32;
+    if      (this == AtomicType::UniformInt8)       return AtomicType::UniformUInt8;
+    else if (this == AtomicType::VaryingInt8)       return AtomicType::VaryingUInt8;
+    else if (this == AtomicType::UniformInt16)      return AtomicType::UniformUInt16;
+    else if (this == AtomicType::VaryingInt16)      return AtomicType::VaryingUInt16;
+    else if (this == AtomicType::UniformInt32)      return AtomicType::UniformUInt32;
     else if (this == AtomicType::VaryingInt32)      return AtomicType::VaryingUInt32;
     else if (this == AtomicType::UniformInt64)      return AtomicType::UniformUInt64;
     else if (this == AtomicType::VaryingInt64)      return AtomicType::VaryingUInt64;
+    else if (this == AtomicType::UniformConstInt8)  return AtomicType::UniformConstUInt8;
+    else if (this == AtomicType::VaryingConstInt8)  return AtomicType::VaryingConstUInt8;
+    else if (this == AtomicType::UniformConstInt16) return AtomicType::UniformConstUInt16;
+    else if (this == AtomicType::VaryingConstInt16) return AtomicType::VaryingConstUInt16;
     else if (this == AtomicType::UniformConstInt32) return AtomicType::UniformConstUInt32;
     else if (this == AtomicType::VaryingConstInt32) return AtomicType::VaryingConstUInt32;
     else if (this == AtomicType::UniformConstInt64) return AtomicType::UniformConstUInt64;
@@ -170,6 +198,10 @@ AtomicType::GetAsConstType() const {
 
     switch (basicType) {
     case TYPE_BOOL:    return isUniform ? UniformConstBool   : VaryingConstBool;
+    case TYPE_INT8:    return isUniform ? UniformConstInt8   : VaryingConstInt8;
+    case TYPE_UINT8:   return isUniform ? UniformConstUInt8  : VaryingConstUInt8;
+    case TYPE_INT16:   return isUniform ? UniformConstInt16  : VaryingConstInt16;
+    case TYPE_UINT16:  return isUniform ? UniformConstUInt16 : VaryingConstUInt16;
     case TYPE_INT32:   return isUniform ? UniformConstInt32  : VaryingConstInt32;
     case TYPE_UINT32:  return isUniform ? UniformConstUInt32 : VaryingConstUInt32;
     case TYPE_FLOAT:   return isUniform ? UniformConstFloat  : VaryingConstFloat;
@@ -190,6 +222,10 @@ AtomicType::GetAsNonConstType() const {
 
     switch (basicType) {
     case TYPE_BOOL:    return isUniform ? UniformBool   : VaryingBool;
+    case TYPE_INT8:    return isUniform ? UniformInt8   : VaryingInt8;
+    case TYPE_UINT8:   return isUniform ? UniformUInt8  : VaryingUInt8;
+    case TYPE_INT16:   return isUniform ? UniformInt16  : VaryingInt16;
+    case TYPE_UINT16:  return isUniform ? UniformUInt16 : VaryingUInt16;
     case TYPE_INT32:   return isUniform ? UniformInt32  : VaryingInt32;
     case TYPE_UINT32:  return isUniform ? UniformUInt32 : VaryingUInt32;
     case TYPE_FLOAT:   return isUniform ? UniformFloat  : VaryingFloat;
@@ -216,13 +252,17 @@ AtomicType::GetAsVaryingType() const {
 
     switch (basicType) {
     case TYPE_VOID:   return this;
-    case TYPE_BOOL:   return isConst ? AtomicType::VaryingConstBool   : AtomicType::VaryingBool;
-    case TYPE_INT32:  return isConst ? AtomicType::VaryingConstInt32  : AtomicType::VaryingInt32;
-    case TYPE_UINT32: return isConst ? AtomicType::VaryingConstUInt32 : AtomicType::VaryingUInt32;
-    case TYPE_FLOAT:  return isConst ? AtomicType::VaryingConstFloat  : AtomicType::VaryingFloat;
-    case TYPE_INT64:  return isConst ? AtomicType::VaryingConstInt64  : AtomicType::VaryingInt64;
-    case TYPE_UINT64: return isConst ? AtomicType::VaryingConstUInt64 : AtomicType::VaryingUInt64;
-    case TYPE_DOUBLE: return isConst ? AtomicType::VaryingConstDouble : AtomicType::VaryingDouble;
+    case TYPE_BOOL:   return isConst ? VaryingConstBool   : VaryingBool;
+    case TYPE_INT8:   return isConst ? VaryingConstInt8   : VaryingInt8;
+    case TYPE_UINT8:  return isConst ? VaryingConstUInt8  : VaryingUInt8;
+    case TYPE_INT16:  return isConst ? VaryingConstInt16  : VaryingInt16;
+    case TYPE_UINT16: return isConst ? VaryingConstUInt16 : VaryingUInt16;
+    case TYPE_INT32:  return isConst ? VaryingConstInt32  : VaryingInt32;
+    case TYPE_UINT32: return isConst ? VaryingConstUInt32 : VaryingUInt32;
+    case TYPE_FLOAT:  return isConst ? VaryingConstFloat  : VaryingFloat;
+    case TYPE_INT64:  return isConst ? VaryingConstInt64  : VaryingInt64;
+    case TYPE_UINT64: return isConst ? VaryingConstUInt64 : VaryingUInt64;
+    case TYPE_DOUBLE: return isConst ? VaryingConstDouble : VaryingDouble;
     default:          FATAL("Logic error in AtomicType::GetAsVaryingType()");
     }
     return NULL;
@@ -236,13 +276,17 @@ AtomicType::GetAsUniformType() const {
 
     switch (basicType) {
     case TYPE_VOID:   return this;
-    case TYPE_BOOL:   return isConst ? AtomicType::UniformConstBool : AtomicType::UniformBool;
-    case TYPE_INT32:  return isConst ? AtomicType::UniformConstInt32 : AtomicType::UniformInt32;
-    case TYPE_UINT32: return isConst ? AtomicType::UniformConstUInt32 : AtomicType::UniformUInt32;
-    case TYPE_FLOAT:  return isConst ? AtomicType::UniformConstFloat : AtomicType::UniformFloat;
-    case TYPE_INT64:  return isConst ? AtomicType::UniformConstInt64 : AtomicType::UniformInt64;
-    case TYPE_UINT64: return isConst ? AtomicType::UniformConstUInt64 : AtomicType::UniformUInt64;
-    case TYPE_DOUBLE: return isConst ? AtomicType::UniformConstDouble : AtomicType::UniformDouble;
+    case TYPE_BOOL:   return isConst ? UniformConstBool   : UniformBool;
+    case TYPE_INT8:   return isConst ? UniformConstInt8   : UniformInt8;
+    case TYPE_UINT8:  return isConst ? UniformConstUInt8  : UniformUInt8;
+    case TYPE_INT16:  return isConst ? UniformConstInt16  : UniformInt16;
+    case TYPE_UINT16: return isConst ? UniformConstUInt16 : UniformUInt16;
+    case TYPE_INT32:  return isConst ? UniformConstInt32  : UniformInt32;
+    case TYPE_UINT32: return isConst ? UniformConstUInt32 : UniformUInt32;
+    case TYPE_FLOAT:  return isConst ? UniformConstFloat  : UniformFloat;
+    case TYPE_INT64:  return isConst ? UniformConstInt64  : UniformInt64;
+    case TYPE_UINT64: return isConst ? UniformConstUInt64 : UniformUInt64;
+    case TYPE_DOUBLE: return isConst ? UniformConstDouble : UniformDouble;
     default:          FATAL("Logic error in AtomicType::GetAsUniformType()");
     }
     return NULL;
@@ -267,6 +311,10 @@ AtomicType::GetString() const {
     switch (basicType) {
     case TYPE_VOID:   ret += "void";            break;
     case TYPE_BOOL:   ret += "bool";            break;
+    case TYPE_INT8:   ret += "int8";            break;
+    case TYPE_UINT8:  ret += "unsigned int8";   break;
+    case TYPE_INT16:  ret += "int16";           break;
+    case TYPE_UINT16: ret += "unsigned int16";  break;
     case TYPE_INT32:  ret += "int32";           break;
     case TYPE_UINT32: ret += "unsigned int32";  break;
     case TYPE_FLOAT:  ret += "float";           break;
@@ -288,6 +336,10 @@ AtomicType::Mangle() const {
     switch (basicType) {
     case TYPE_VOID:   ret += "v"; break;
     case TYPE_BOOL:   ret += "b"; break;
+    case TYPE_INT8:   ret += "t"; break;
+    case TYPE_UINT8:  ret += "T"; break;
+    case TYPE_INT16:  ret += "s"; break;
+    case TYPE_UINT16: ret += "S"; break;
     case TYPE_INT32:  ret += "i"; break;
     case TYPE_UINT32: ret += "u"; break;
     case TYPE_FLOAT:  ret += "f"; break;
@@ -309,12 +361,16 @@ AtomicType::GetCDeclaration(const std::string &name) const {
     switch (basicType) {
     case TYPE_VOID:   ret += "void";     break;
     case TYPE_BOOL:   ret += "bool";     break;
+    case TYPE_INT8:   ret += "int8_t";   break;
+    case TYPE_UINT8:  ret += "uint8_t";  break;
+    case TYPE_INT16:  ret += "int16_t";  break;
+    case TYPE_UINT16: ret += "uint16_t"; break;
     case TYPE_INT32:  ret += "int32_t";  break;
     case TYPE_UINT32: ret += "uint32_t"; break;
     case TYPE_FLOAT:  ret += "float";    break;
-    case TYPE_DOUBLE: ret += "double";   break;
     case TYPE_INT64:  ret += "int64_t";  break;
     case TYPE_UINT64: ret += "uint64_t"; break;
+    case TYPE_DOUBLE: ret += "double";   break;
     default: FATAL("Logic error in AtomicType::GetCDeclaration()");
     }
 
@@ -333,6 +389,12 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
         return llvm::Type::getVoidTy(*ctx);
     case TYPE_BOOL:
         return isUniform ? LLVMTypes::BoolType : LLVMTypes::BoolVectorType;
+    case TYPE_INT8:
+    case TYPE_UINT8:
+        return isUniform ? LLVMTypes::Int8Type : LLVMTypes::Int8VectorType;
+    case TYPE_INT16:
+    case TYPE_UINT16:
+        return isUniform ? LLVMTypes::Int16Type : LLVMTypes::Int16VectorType;
     case TYPE_INT32:
     case TYPE_UINT32:
         return isUniform ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType;
@@ -362,6 +424,22 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
             return llvm::DIType();
         case TYPE_BOOL:
             return m->diBuilder->createBasicType("bool", 32 /* size */, 32 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT8:
+            return m->diBuilder->createBasicType("int8", 8 /* size */, 8 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT8:
+            return m->diBuilder->createBasicType("uint8", 8 /* size */, 8 /* align */,
+                                                 llvm::dwarf::DW_ATE_unsigned);
+            break;
+        case TYPE_INT16:
+            return m->diBuilder->createBasicType("int16", 16 /* size */, 16 /* align */,
+                                                 llvm::dwarf::DW_ATE_signed);
+            break;
+        case TYPE_UINT16:
+            return m->diBuilder->createBasicType("uint16", 16 /* size */, 16 /* align */,
                                                  llvm::dwarf::DW_ATE_unsigned);
             break;
         case TYPE_INT32:

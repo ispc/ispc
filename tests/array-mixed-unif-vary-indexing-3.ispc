@@ -7,7 +7,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform float x[47][47];
     for (uniform int i = 0; i < 47; ++i)
         for (uniform int j = 0; j < 47; ++j)
-            x[i][j] = 2;
+            x[i][j] = 2+b-5;
 
     // all are 2 except (4,2) = 0, (4,...) = 1, (4,programCount-1)=2
     if (a == 3.)

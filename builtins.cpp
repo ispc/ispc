@@ -78,8 +78,14 @@ static const Type *
 lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
     if (t == LLVMTypes::VoidType)
         return AtomicType::Void;
+
+    // uniform
     else if (t == LLVMTypes::BoolType)
         return AtomicType::UniformBool;
+    else if (t == LLVMTypes::Int8Type)
+        return intAsUnsigned ? AtomicType::UniformUInt8 : AtomicType::UniformInt8;
+    else if (t == LLVMTypes::Int16Type)
+        return intAsUnsigned ? AtomicType::UniformUInt16 : AtomicType::UniformInt16;
     else if (t == LLVMTypes::Int32Type)
         return intAsUnsigned ? AtomicType::UniformUInt32 : AtomicType::UniformInt32;
     else if (t == LLVMTypes::FloatType)
@@ -88,6 +94,12 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return AtomicType::UniformDouble;
     else if (t == LLVMTypes::Int64Type)
         return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
+
+    // varying
+    else if (t == LLVMTypes::Int8VectorType)
+        return intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8;
+    else if (t == LLVMTypes::Int16VectorType)
+        return intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16;
     else if (t == LLVMTypes::Int32VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt32 : AtomicType::VaryingInt32;
     else if (t == LLVMTypes::FloatVectorType)
@@ -96,6 +108,14 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return AtomicType::VaryingDouble;
     else if (t == LLVMTypes::Int64VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
+
+    // pointers to uniform
+    else if (t == LLVMTypes::Int8PointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt8 :
+                                                 AtomicType::UniformInt8, false);
+    else if (t == LLVMTypes::Int16PointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt16 :
+                                                 AtomicType::UniformInt16, false);
     else if (t == LLVMTypes::Int32PointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt32 :
                                                  AtomicType::UniformInt32, false);
@@ -106,6 +126,14 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return new ReferenceType(AtomicType::UniformFloat, false);
     else if (t == LLVMTypes::DoublePointerType)
         return new ReferenceType(AtomicType::UniformDouble, false);
+
+    // pointers to varying
+    else if (t == LLVMTypes::Int8VectorPointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt8 :
+                                                 AtomicType::VaryingInt8, false);
+    else if (t == LLVMTypes::Int16VectorPointerType)
+        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt16 :
+                                                 AtomicType::VaryingInt16, false);
     else if (t == LLVMTypes::Int32VectorPointerType)
         return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
                                                  AtomicType::VaryingInt32, false);
@@ -116,6 +144,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return new ReferenceType(AtomicType::VaryingFloat, false);
     else if (t == LLVMTypes::DoubleVectorPointerType)
         return new ReferenceType(AtomicType::VaryingDouble, false);
+
+    // arrays
     else if (llvm::isa<const llvm::PointerType>(t)) {
         const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(t);
 
@@ -239,10 +269,49 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
     }
 }
 
+
+static void
+lDeclarePG(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
+           const char *name) {
+    SourcePos noPos;
+    noPos.name = "__stdlib";
+
+    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
+    argTypes.push_back(LLVMTypes::VoidPointerVectorType);
+    argTypes.push_back(LLVMTypes::MaskType);
+
+    llvm::FunctionType *fType = llvm::FunctionType::get(vecType, argTypes, false);
+    llvm::Function *func =
+        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
+                               name, module);
+    func->setOnlyReadsMemory(true);
+    func->setDoesNotThrow(true);
+}
+
+
+static void
+lDeclarePGBO(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
+             const char *name) {
+    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
+    argTypes.push_back(LLVMTypes::VoidPointerType);
+    argTypes.push_back(LLVMTypes::Int32VectorType);
+    argTypes.push_back(LLVMTypes::MaskType);
+
+    llvm::FunctionType *fType = llvm::FunctionType::get(vecType, argTypes, false);
+    llvm::Function *func =
+        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
+                               name, module);
+    func->setOnlyReadsMemory(true);
+    func->setDoesNotThrow(true);
+}
+
+
 /** Declare the 'pseudo-gather' functions.  When the ispc front-end needs
     to perform a gather, it generates a call to one of these functions,
     which have signatures:
     
+    varying int8  __pseudo_gather(varying int8 *, mask)
+    varying int16 __pseudo_gather(varying int16 *, mask)
     varying int32 __pseudo_gather(varying int32 *, mask)
     varying int64 __pseudo_gather(varying int64 *, mask)
 
@@ -253,6 +322,10 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
     front-end to be relatively simple in how it emits address calculation
     for gathers.
 
+    varying int8  __pseudo_gather_base_offsets_8(uniform int8 *base, 
+                                                 int32 offsets, mask)
+    varying int16 __pseudo_gather_base_offsets_16(uniform int16 *base, 
+                                                  int32 offsets, mask)
     varying int32 __pseudo_gather_base_offsets_32(uniform int32 *base, 
                                                   int32 offsets, mask)
     varying int64 __pseudo_gather_base_offsets_64(uniform int64 *base, 
@@ -264,49 +337,54 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
  */
 static void
 lDeclarePseudoGathers(llvm::Module *module) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
+    lDeclarePG(module, LLVMTypes::Int8VectorType, "__pseudo_gather_8");
+    lDeclarePG(module, LLVMTypes::Int16VectorType, "__pseudo_gather_16");
+    lDeclarePG(module, LLVMTypes::Int32VectorType, "__pseudo_gather_32");
+    lDeclarePG(module, LLVMTypes::Int64VectorType, "__pseudo_gather_64");
 
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerVectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+    lDeclarePGBO(module, LLVMTypes::Int8VectorType,
+                 "__pseudo_gather_base_offsets_8");
+    lDeclarePGBO(module, LLVMTypes::Int16VectorType,
+                 "__pseudo_gather_base_offsets_16");
+    lDeclarePGBO(module, LLVMTypes::Int32VectorType,
+                 "__pseudo_gather_base_offsets_32");
+    lDeclarePGBO(module, LLVMTypes::Int64VectorType,
+                 "__pseudo_gather_base_offsets_64");
+}
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::Int32VectorType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_gather_32", module);
-        func->setOnlyReadsMemory(true);
-        func->setDoesNotThrow(true);
 
-        fType = llvm::FunctionType::get(LLVMTypes::Int64VectorType, argTypes, false);
-        func = llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                      "__pseudo_gather_64", module);
-        func->setOnlyReadsMemory(true);
-        func->setDoesNotThrow(true);
-    }
+static void
+lDeclarePS(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
+           const char *name) {
+    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
+    argTypes.push_back(LLVMTypes::VoidPointerVectorType);
+    argTypes.push_back(vecType);
+    argTypes.push_back(LLVMTypes::MaskType);
 
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::Int32VectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+    llvm::FunctionType *fType = 
+        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
+    llvm::Function *func =
+        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
+                               name, module);
+    func->setDoesNotThrow(true);
+}
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::Int32VectorType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_gather_base_offsets_32", module);
-        func->setOnlyReadsMemory(true);
-        func->setDoesNotThrow(true);
 
-        fType = llvm::FunctionType::get(LLVMTypes::Int64VectorType, argTypes, false);
-        func = llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                      "__pseudo_gather_base_offsets_64", module);
-        func->setOnlyReadsMemory(true);
-        func->setDoesNotThrow(true);
-    }
+static void
+lDeclarePSBO(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType, 
+             const char *name) {
+    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
+    argTypes.push_back(LLVMTypes::VoidPointerType);
+    argTypes.push_back(LLVMTypes::Int32VectorType);
+    argTypes.push_back(vecType);
+    argTypes.push_back(LLVMTypes::MaskType);
+
+    llvm::FunctionType *fType = 
+        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
+    llvm::Function *func =
+        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
+                               name, module);
+    func->setDoesNotThrow(true);
 }
 
 
@@ -314,16 +392,22 @@ lDeclarePseudoGathers(llvm::Module *module) {
     we also declare (but never define) pseudo-scatter instructions with
     signatures:
 
+    void __pseudo_scatter_8 (varying int8 *, varying int8 values, mask)
+    void __pseudo_scatter_16(varying int16 *, varying int16 values, mask)
     void __pseudo_scatter_32(varying int32 *, varying int32 values, mask)
     void __pseudo_scatter_64(varying int64 *, varying int64 values, mask)
 
     The GatherScatterFlattenOpt optimization pass also finds these and
     transforms them to scatters like:
 
+    void __pseudo_scatter_base_offsets_8(uniform int8 *base, 
+                    varying int32 offsets, varying int8 values, mask)
+    void __pseudo_scatter_base_offsets_16(uniform int16 *base, 
+                    varying int32 offsets, varying int16 values, mask)
     void __pseudo_scatter_base_offsets_32(uniform int32 *base, 
                     varying int32 offsets, varying int32 values, mask)
     void __pseudo_scatter_base_offsets_64(uniform int64 *base, 
-                    varying int62 offsets, varying int64 values, mask)
+                    varying int32 offsets, varying int64 values, mask)
 
     And the GSImprovementsPass in turn converts these to actual native
     scatters or masked stores.  
@@ -333,67 +417,49 @@ lDeclarePseudoScatters(llvm::Module *module) {
     SourcePos noPos;
     noPos.name = "__stdlib";
 
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerVectorType);
-        argTypes.push_back(LLVMTypes::Int32VectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+    lDeclarePS(module, LLVMTypes::Int8VectorType, "__pseudo_scatter_8");
+    lDeclarePS(module, LLVMTypes::Int16VectorType, "__pseudo_scatter_16");
+    lDeclarePS(module, LLVMTypes::Int32VectorType, "__pseudo_scatter_32");
+    lDeclarePS(module, LLVMTypes::Int64VectorType, "__pseudo_scatter_64");
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_scatter_32", module);
-        func->setDoesNotThrow(true);
-    }
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerVectorType);
-        argTypes.push_back(LLVMTypes::Int64VectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+    lDeclarePSBO(module, LLVMTypes::Int8VectorType, 
+                 "__pseudo_scatter_base_offsets_8");
+    lDeclarePSBO(module, LLVMTypes::Int16VectorType, 
+                 "__pseudo_scatter_base_offsets_16");
+    lDeclarePSBO(module, LLVMTypes::Int32VectorType, 
+                 "__pseudo_scatter_base_offsets_32");
+    lDeclarePSBO(module, LLVMTypes::Int64VectorType, 
+                 "__pseudo_scatter_base_offsets_64");
+}
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_scatter_64", module);
-        func->setDoesNotThrow(true);
-    }
 
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::Int32VectorType);
-        argTypes.push_back(LLVMTypes::Int32VectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+static void
+lDeclarePMS(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *lvalueType, 
+            LLVM_TYPE_CONST llvm::Type *rvalueType, const char *name) {
+    SourcePos noPos;
+    noPos.name = "__stdlib";
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_scatter_base_offsets_32", module);
-        func->setDoesNotThrow(true);
-    }
-    {
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::Int32VectorType);
-        argTypes.push_back(LLVMTypes::Int64VectorType);
-        argTypes.push_back(LLVMTypes::MaskType);
+    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
+    argTypes.push_back(lvalueType);
+    argTypes.push_back(rvalueType);
+    argTypes.push_back(LLVMTypes::MaskType);
 
-        llvm::FunctionType *fType = 
-            llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-        llvm::Function *func =
-            llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                                   "__pseudo_scatter_base_offsets_64", module);
-        func->setDoesNotThrow(true);
-    }
+    llvm::FunctionType *fType = 
+        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
+    llvm::Function *func = 
+        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
+                               name, module);
+    func->setDoesNotThrow(true);
+    func->addFnAttr(llvm::Attribute::AlwaysInline);
+    func->setDoesNotCapture(1, true);
 }
 
 
 /** This function declares placeholder masked store functions for the
     front-end to use.
 
+    void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
+    void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
     void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
     void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
 
@@ -403,40 +469,14 @@ lDeclarePseudoScatters(llvm::Module *module) {
  */
 static void
 lDeclarePseudoMaskedStore(llvm::Module *module) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::Int32VectorPointerType);
-    argTypes.push_back(LLVMTypes::Int32VectorType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-    llvm::Function *func = 
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               "__pseudo_masked_store_32", module);
-    func->setDoesNotThrow(true);
-    func->addFnAttr(llvm::Attribute::AlwaysInline);
-    func->setDoesNotCapture(1, true);
-    }
-
-    {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::Int64VectorPointerType);
-    argTypes.push_back(LLVMTypes::Int64VectorType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-    llvm::Function *func = 
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               "__pseudo_masked_store_64", module);
-    func->setDoesNotThrow(true);
-    func->addFnAttr(llvm::Attribute::AlwaysInline);
-    func->setDoesNotCapture(1, true);
-    }
+    lDeclarePMS(module, LLVMTypes::Int8VectorPointerType,
+                LLVMTypes::Int8VectorType, "__pseudo_masked_store_8");
+    lDeclarePMS(module, LLVMTypes::Int16VectorPointerType,
+                LLVMTypes::Int16VectorType, "__pseudo_masked_store_16");
+    lDeclarePMS(module, LLVMTypes::Int32VectorPointerType, 
+                LLVMTypes::Int32VectorType, "__pseudo_masked_store_32");
+    lDeclarePMS(module, LLVMTypes::Int64VectorPointerType, 
+                LLVMTypes::Int64VectorType, "__pseudo_masked_store_64");
 }
 
 
@@ -609,8 +649,8 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // needed by the compiled program.
     { 
         std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(llvm::PointerType::get(llvm::Type::getInt8Ty(*g->ctx), 0));
-        argTypes.push_back(llvm::PointerType::get(llvm::Type::getInt8Ty(*g->ctx), 0));
+        argTypes.push_back(LLVMTypes::VoidPointerType);
+        argTypes.push_back(LLVMTypes::VoidPointerType);
         argTypes.push_back(LLVMTypes::Int32Type);
         argTypes.push_back(LLVMTypes::Int32Type);
         llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 

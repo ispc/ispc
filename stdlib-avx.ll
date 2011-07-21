@@ -41,7 +41,6 @@
 
 stdlib_core(8)
 packed_load_and_store(8)
-int8_16(8)
 int64minmax(8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -539,55 +538,14 @@ define internal i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-define <8 x i32> @__load_and_broadcast_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<8 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
+load_and_broadcast(8, i8, 8)
+load_and_broadcast(8, i16, 16)
+load_and_broadcast(8, i32, 32)
+load_and_broadcast(8, i64, 64)
 
-load:
-  ; TODO: make sure this becomes a vbroadcast...
-  %ptr = bitcast i8 * %0 to i32 *
-  %val = load i32 * %ptr
-
-  %ret0 = insertelement <8 x i32> undef, i32 %val, i32 0
-  %ret1 = insertelement <8 x i32> %ret0, i32 %val, i32 1
-  %ret2 = insertelement <8 x i32> %ret1, i32 %val, i32 2
-  %ret3 = insertelement <8 x i32> %ret2, i32 %val, i32 3
-  %ret4 = insertelement <8 x i32> %ret3, i32 %val, i32 4
-  %ret5 = insertelement <8 x i32> %ret4, i32 %val, i32 5
-  %ret6 = insertelement <8 x i32> %ret5, i32 %val, i32 6
-  %ret7 = insertelement <8 x i32> %ret6, i32 %val, i32 7
-  ret <8 x i32> %ret7
-
-skip:
-  ret <8 x i32> undef
-}
-
-
-define <8 x i64> @__load_and_broadcast_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
-  %mm = call i32 @__movmsk(<8 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
-  ; TODO: make sure this becomes a vbroadcast...
-  %ptr = bitcast i8 * %0 to i64 *
-  %val = load i64 * %ptr
-
-  %ret0 = insertelement <8 x i64> undef, i64 %val, i32 0
-  %ret1 = insertelement <8 x i64> %ret0, i64 %val, i32 1
-  %ret2 = insertelement <8 x i64> %ret1, i64 %val, i32 2
-  %ret3 = insertelement <8 x i64> %ret2, i64 %val, i32 3
-  %ret4 = insertelement <8 x i64> %ret3, i64 %val, i32 4
-  %ret5 = insertelement <8 x i64> %ret4, i64 %val, i32 5
-  %ret6 = insertelement <8 x i64> %ret5, i64 %val, i32 6
-  %ret7 = insertelement <8 x i64> %ret6, i64 %val, i32 7
-  ret <8 x i64> %ret3
-
-skip:
-  ret <8 x i64> undef
-}
-
+; no masked load instruction for i8 and i16 types??
+load_masked(8, i8,  8,  1)
+load_masked(8, i16, 16, 2)
 
 declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8 *, <8 x float> %mask)
 declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x double> %mask)
@@ -622,6 +580,12 @@ define <8 x i64> @__load_masked_64(i8 *, <8 x i32> %mask) nounwind alwaysinline 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
+
+; FIXME: there is no AVX instruction for these, but we could be clever
+; by packing the bits down and setting the last 3/4 or half, respectively,
+; of the mask to zero...  Not sure if this would be a win in the end
+gen_masked_store(8, i8, 8)
+gen_masked_store(8, i16, 16)
 
 ; note that mask is the 2nd parameter, not the 3rd one!!
 declare void @llvm.x86.avx.maskstore.ps.256(i8 *, <8 x float>, <8 x float>)
@@ -660,13 +624,14 @@ define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
   ret void
 }
 
+masked_store_blend_8_16_by_8()
 
 declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
                                                 <8 x float>) nounwind readnone
 
 
 define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
-                                           <8 x i32>) nounwind alwaysinline {
+                                     <8 x i32>) nounwind alwaysinline {
   %mask_as_float = bitcast <8 x i32> %2 to <8 x float>
   %oldValue = load <8 x i32>* %0, align 4
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>

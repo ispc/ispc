@@ -15,7 +15,7 @@ LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION_DEF=-DLLVM_$(shell llvm-config --version | sed s/\\./_/)
 
 BUILD_DATE=$(shell date +%Y%m%d)
-BUILD_VERSION=$(shell git log | head -1)
+BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
 
 CXX=g++
 CPP=cpp

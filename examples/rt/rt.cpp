@@ -190,7 +190,9 @@ int main(int argc, char *argv[]) {
         nodes[i].bounds[1].v[1] = b[4];
         nodes[i].bounds[1].v[2] = b[5];
         READ(nodes[i].offset, 1);
-        READ(nodes[i].primsAxis, 1);
+        READ(nodes[i].nPrimitives, 1);
+        READ(nodes[i].splitAxis, 1);
+        READ(nodes[i].pad, 1);
     }
 
     // And then read the triangles 
