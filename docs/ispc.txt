@@ -77,6 +77,7 @@ Contents:
   + `Output Functions`_
   + `Cross-Program Instance Operations`_
   + `Packed Load and Store Operations`_
+  + `Conversions To and From Half-Precision Floats`_
   + `Atomic Operations and Memory Fences`_
   + `Low-Level Bits`_
 
@@ -1888,6 +1889,28 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     int32 insert(int32 x, uniform int i, uniform int32 v)
     int64 insert(int64 x, uniform int i, uniform int64 v)
     float insert(float x, uniform int i, uniform float v)
+
+
+Conversions To and From Half-Precision Floats
+---------------------------------------------
+
+There are functions to convert to and from the IEEE 16-bit floating-point
+format.  Note that there is no ``half`` data-type, and it isn't possible
+to do floating-point math directly with ``half`` types in ``ispc``; these
+functions facilitate converting to and from half-format data in memory.
+
+To use them, half-format data should be loaded into an ``int16`` and the
+``half_to_float()`` function used to convert it the a 32-bit floating point
+value.  To store a value to memory in half format, the ``float_to_half()``
+function returns the 16 bits that are the closest match to the given
+``float``, in half format.
+
+::
+
+    float half_to_float(unsigned int16 h)
+    uniform float half_to_float(uniform unsigned int16 h)
+    int16 float_to_half(float f)
+    uniform int16 float_to_half(uniform float f)
 
 
 Atomic Operations and Memory Fences

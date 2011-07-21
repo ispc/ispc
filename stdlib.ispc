@@ -2351,6 +2351,256 @@ static inline uniform double pow(uniform double a, uniform double b) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// half-precision floats
+
+static inline uniform float half_to_float(uniform unsigned int16 h) {
+    if ((h & 0x7FFFu) == 0) 
+        // Signed zero
+        return floatbits(((unsigned int32) h) << 16);
+    else {
+        // Though these are int16 quantities, we get much better code 
+        // with them stored as int32s...
+        uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+        uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+        uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+        cif (he == 0) {  
+            // Denormal will convert to normalized
+            uniform int e = -1;
+            // The following loop figures out how much extra to adjust the exponent
+            // Shift until leading bit overflows into exponent bit
+            do {
+                e++;
+                hm <<= 1;
+            } while((hm & 0x0400u) == 0);
+
+            // Sign bit
+            uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
+            // Exponent: unbias the halfp, then bias the single
+            uniform int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
+            // Exponent
+            uniform unsigned int32 xe = (unsigned int32) (xes << 23); 
+            // Mantissa
+            uniform unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
+            return floatbits(xs | xe | xm);
+        } 
+        else {
+            if (he == 0x7C00u) {  
+                // Inf or NaN (all the exponent bits are set)
+                if (hm == 0)
+                    // Zero mantissa -> signed inf
+                    return floatbits((((unsigned int32) hs) << 16) | 
+                                     ((unsigned int32) 0x7F800000u));
+                else
+                    // NaN
+                    return floatbits(0xFFC00000u);
+            }
+            else { 
+                // Normalized number
+                // sign
+                uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
+                // Exponent: unbias the halfp, then bias the single
+                uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                // Exponent
+                uniform unsigned int32 xe = (unsigned int32) (xes << 23);
+                // Mantissa
+                uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                return floatbits(xs | xe | xm);
+            }
+        }
+    }
+}
+
+static inline float half_to_float(unsigned int16 h) {
+    if ((h & 0x7FFFu) == 0) 
+        // Signed zero
+        return floatbits(((unsigned int32) h) << 16);
+    else {
+        // Though these are int16 quantities, we get much better code 
+        // with them stored as int32s...
+        unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+        unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+        unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+        cif (he == 0) {  
+            // Denormal will convert to normalized
+            int e = -1;
+            // The following loop figures out how much extra to adjust the exponent
+            // Shift until leading bit overflows into exponent bit
+            do {
+                e++;
+                hm <<= 1;
+            } while((hm & 0x0400u) == 0);
+
+            // Sign bit
+            unsigned int32 xs = ((unsigned int32) hs) << 16; 
+            // Exponent: unbias the halfp, then bias the single
+            int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
+            // Exponent
+            unsigned int32 xe = (unsigned int32) (xes << 23); 
+            // Mantissa
+            unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
+            return floatbits(xs | xe | xm);
+        } 
+        else {
+            if (he == 0x7C00u) {  
+                // Inf or NaN (all the exponent bits are set)
+                if (hm == 0)
+                    // Zero mantissa -> signed inf
+                    return floatbits((((unsigned int32) hs) << 16) | 
+                                     ((unsigned int32) 0x7F800000u));
+                else
+                    // NaN
+                    return floatbits(0xFFC00000u);
+            }
+            else { 
+                // Normalized number
+                // sign
+                unsigned int32 xs = ((unsigned int32) hs) << 16; 
+                // Exponent: unbias the halfp, then bias the single
+                int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                // Exponent
+                unsigned int32 xe = (unsigned int32) (xes << 23);
+                // Mantissa
+                unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                return floatbits(xs | xe | xm);
+            }
+        }
+    }
+}
+
+
+static inline uniform int16 float_to_half(uniform float f) {
+    uniform int32 x = intbits(f);
+    // Store the return value in an int32 until the very end; this ends up
+    // generating better code...
+    uniform int32 ret;
+    if ((x & 0x7FFFFFFFu) == 0)
+        // Signed zero
+        ret = (x >> 16); 
+    else {
+        uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+        uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+        uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+        if (xe == 0) {  
+            // Denormal will underflow, return a signed zero
+            ret = (xs >> 16);
+        } 
+        else {
+            cif (xe == 0x7F800000u) {  
+                // Inf or NaN (all the exponent bits are set)
+                if (xm == 0)
+                    // Zero mantissa -> signed infinity
+                    ret = ((xs >> 16) | 0x7C00u);
+                else
+                    // NaN, only 1st mantissa bit set
+                    ret = 0xFE00u;
+            }
+            else { 
+                // Normalized number
+                uniform unsigned int32 hs = (xs >> 16); // Sign bit
+                uniform unsigned int32 hm;
+                // Exponent unbias the single, then bias the halfp
+                uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+                if (hes >= 0x1F)  
+                    // Overflow: return signed infinity
+                    ret = ((xs >> 16) | 0x7C00u);
+                else if (hes <= 0) {
+                    // Underflow
+                    if ((14 - hes) > 24) {  
+                        // Mantissa shifted all the way off & no rounding possibility
+                        hm = 0u;  // Set mantissa to zero
+                    } 
+                    else {
+                        xm |= 0x00800000u;  // Add the hidden leading bit
+                        hm = (xm >> (14 - hes)); // Mantissa
+                        if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
+                            // Round, might overflow into exp bit, but this is OK
+                            hm += 1u; 
+                    }
+                    ret = (hs | hm);
+                } 
+                else {
+                    uniform unsigned int32 he = (hes << 10); // Exponent
+                    hm = (xm >> 13); // Mantissa
+                    if (xm & 0x00001000u) // Check for rounding
+                        // Round, might overflow to inf, this is OK
+                        ret = (hs | he | hm) + 1u; 
+                    else
+                        ret = (hs | he | hm);
+                }
+            }
+        }
+    }
+    return (int16)ret;
+}
+
+
+static inline int16 float_to_half(float f) {
+    int32 x = intbits(f);
+    // Store the return value in an int32 until the very end; this ends up
+    // generating better code...
+    int32 ret;
+    if ((x & 0x7FFFFFFFu) == 0)
+        // Signed zero
+        ret = (x >> 16); 
+    else {
+        unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+        unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+        unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+        if (xe == 0) {  
+            // Denormal will underflow, return a signed zero
+            ret = (xs >> 16);
+        } 
+        else {
+            cif (xe == 0x7F800000u) {  
+                // Inf or NaN (all the exponent bits are set)
+                if (xm == 0)
+                    // Zero mantissa -> signed infinity
+                    ret = ((xs >> 16) | 0x7C00u);
+                else
+                    // NaN, only 1st mantissa bit set
+                    ret = 0xFE00u;
+            }
+            else { 
+                // Normalized number
+                unsigned int32 hs = (xs >> 16); // Sign bit
+                unsigned int32 hm;
+                // Exponent unbias the single, then bias the halfp
+                int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+                if (hes >= 0x1F)  
+                    // Overflow: return signed infinity
+                    ret = ((xs >> 16) | 0x7C00u);
+                else if (hes <= 0) {
+                    // Underflow
+                    if ((14 - hes) > 24) {  
+                        // Mantissa shifted all the way off & no rounding possibility
+                        hm = 0u;  // Set mantissa to zero
+                    } 
+                    else {
+                        xm |= 0x00800000u;  // Add the hidden leading bit
+                        hm = (xm >> (14 - hes)); // Mantissa
+                        if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
+                            // Round, might overflow into exp bit, but this is OK
+                            hm += 1u; 
+                    }
+                    ret = (hs | hm);
+                } 
+                else {
+                    unsigned int32 he = (hes << 10); // Exponent
+                    hm = (xm >> 13); // Mantissa
+                    if (xm & 0x00001000u) // Check for rounding
+                        // Round, might overflow to inf, this is OK
+                        ret = (hs | he | hm) + 1u; 
+                    else
+                        ret = (hs | he | hm);
+                }
+            }
+        }
+    }
+    return (int16)ret;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // RNG stuff
 
 struct RNGState {

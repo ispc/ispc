@@ -687,10 +687,15 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
-        // serialized version of the stdlib.ispc file to get its definitions
-        // added.
+        // serialized version of the stdlib.ispc file to get its
+        // definitions added.  Disable emission of performance warnings for
+        // now, since the user doesn't care about any of that in the stdlib
+        // implementation...
+        bool epf = g->emitPerfWarnings;
+        g->emitPerfWarnings = false;
         extern char stdlib_code[];
         yy_scan_string(stdlib_code);
         yyparse();
+        g->emitPerfWarnings = epf;
     }
 }
