@@ -52,6 +52,7 @@
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
+#include <llvm/Intrinsics.h>
 #include <llvm/Linker.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -480,6 +481,35 @@ lDeclarePseudoMaskedStore(llvm::Module *module) {
 }
 
 
+/** In many of the stdlib-*.ll files, we have declarations of various LLVM
+    intrinsics that are then used in the implementation of various target-
+    specific functions.  This function loops over all of the intrinsic 
+    declarations and makes sure that the signature we have in our .ll file
+    matches the signature of the actual intrinsic.
+*/
+static void
+lCheckModuleIntrinsics(llvm::Module *module) {
+    llvm::Module::iterator iter;
+    for (iter = module->begin(); iter != module->end(); ++iter) {
+        llvm::Function *func = iter;
+        if (!func->isIntrinsic())
+            continue;
+
+        const char *funcName = func->getName().str().c_str();
+        // Work around http://llvm.org/bugs/show_bug.cgi?id=10438; only
+        // check the llvm.x86.* intrinsics for now...
+        if (!strncmp(funcName, "llvm.x86.", 9)) {
+            llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
+            assert(id != 0);
+            LLVM_TYPE_CONST llvm::Type *intrinsicType = 
+                llvm::Intrinsic::getType(*g->ctx, id);
+            intrinsicType = llvm::PointerType::get(intrinsicType, 0);
+            assert(func->getType() == intrinsicType);
+        }
+    }
+}
+
+
 /** This utility function takes serialized binary LLVM bitcode and adds its
     definitions to the given module.  Functions in the bitcode that can be
     mapped to ispc functions are also added to the symbol table.
@@ -503,6 +533,7 @@ lAddBitcode(const unsigned char *bitcode, int length,
         if (llvm::Linker::LinkModules(module, bcModule, &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
         lAddModuleSymbols(module, symbolTable);
+        lCheckModuleIntrinsics(module);
     }
 }
 

@@ -127,21 +127,21 @@ define internal float @__sqrt_uniform_float(float) nounwind readonly alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fast math
 
-declare void @llvm.x86.sse.stmxcsr(i32 *) nounwind
-declare void @llvm.x86.sse.ldmxcsr(i32 *) nounwind
+declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
+declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
 
 define internal void @__fastmath() nounwind alwaysinline {
   %ptr = alloca i32
-  call void @llvm.x86.sse.stmxcsr(i32 * %ptr)
+  %ptr8 = bitcast i32 * %ptr to i8 *
+  call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
   %oldval = load i32 *%ptr
 
   ; turn on DAZ (64)/FTZ (32768) -> 32832
   %update = or i32 %oldval, 32832
   store i32 %update, i32 *%ptr
-  call void @llvm.x86.sse.ldmxcsr(i32 * %ptr)
+  call void @llvm.x86.sse.ldmxcsr(i8 * %ptr8)
   ret void
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; svml stuff
