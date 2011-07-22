@@ -269,7 +269,7 @@ postfix_expression
     | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
       { $$ = new FunctionCallExpr($3, new ExprList(@3), @3, true); }
     | postfix_expression '.' TOKEN_IDENTIFIER
-      { $$ = new MemberExpr($1, yytext, @1, @3); }
+      { $$ = MemberExpr::create($1, yytext, @1, @3); }
 /*    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
       { UNIMPLEMENTED }
 */

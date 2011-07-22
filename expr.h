@@ -292,23 +292,28 @@ private:
 
 
 /** @brief Expression representing member selection ("foo.bar").
+ *
+ *  This will also be overloaded to deal with swizzles.
  */
 class MemberExpr : public Expr {
 public:
+    static MemberExpr* create(Expr *expr, const char *identifier,
+                              SourcePos pos, SourcePos identifierPos);
+
     MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
                SourcePos identifierPos);
 
-    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
-    Symbol *GetBaseSymbol() const;
-    void Print() const;
-    Expr *Optimize();
-    Expr *TypeCheck();
+    virtual llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    virtual llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
+    virtual const Type *GetType() const;
+    virtual Symbol *GetBaseSymbol() const;
+    virtual void Print() const;
+    virtual Expr *Optimize();
+    virtual Expr *TypeCheck();
+    virtual int getElementNumber() const;
 
-private:
+protected:
     std::string getCandidateNearMatches() const;
-    int getElementNumber() const;
 
     Expr *expr;
     std::string identifier;

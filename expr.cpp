@@ -2820,6 +2820,288 @@ IndexExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // MemberExpr
 
+/** Map one character ids to vector element numbers.  Allow a few different
+    conventions--xyzw, rgba, uv.
+ */
+static int
+lIdentifierToVectorElement(char id) {
+    switch (id) {
+    case 'x':
+    case 'r':
+    case 'u':
+        return 0;
+    case 'y':
+    case 'g':
+    case 'v':
+        return 1;
+    case 'z':
+    case 'b':
+        return 2;
+    case 'w':
+    case 'a':
+        return 3;
+    default:
+        return -1;
+    }
+}
+
+class StructMemberExpr : public MemberExpr
+{
+public:
+    StructMemberExpr(Expr *e, const char *id, SourcePos p,
+                     SourcePos idpos, const StructType* structType);
+
+    const Type* GetType() const;
+
+    int getElementNumber() const;
+
+private:
+    const StructType* exprStructType;
+};
+
+StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p,
+                                   SourcePos idpos,
+                                   const StructType* structType)
+    : MemberExpr(e, id, p, idpos), exprStructType(structType) {
+}
+
+const Type*
+StructMemberExpr::GetType() const {
+    // It's a struct, and the result type is the element
+    // type, possibly promoted to varying if the struct type / lvalue
+    // is varying.
+    const Type *elementType = exprStructType->GetElementType(identifier);
+    if (!elementType)
+        Error(identifierPos,
+              "Element name \"%s\" not present in struct type \"%s\".%s",
+              identifier.c_str(), exprStructType->GetString().c_str(),
+              getCandidateNearMatches().c_str());
+
+    if (exprStructType->IsVaryingType()) 
+        return elementType->GetAsVaryingType();
+    else
+        return elementType;
+}
+
+int
+StructMemberExpr::getElementNumber() const {
+    int elementNumber = exprStructType->GetElementNumber(identifier);
+    if (elementNumber == -1)
+        Error(identifierPos,
+              "Element name \"%s\" not present in struct type \"%s\".%s",
+              identifier.c_str(), exprStructType->GetString().c_str(),
+              getCandidateNearMatches().c_str());
+    return elementNumber;
+}
+
+class VectorMemberExpr : public MemberExpr
+{
+public:
+    VectorMemberExpr(Expr *e, const char *id, SourcePos p,
+                     SourcePos idpos, const VectorType* vectorType);
+
+    ~VectorMemberExpr();
+
+    const Type* GetType() const;
+
+    llvm::Value* GetLValue(FunctionEmitContext* ctx) const;
+
+    llvm::Value* GetValue(FunctionEmitContext* ctx) const;
+
+    int getElementNumber() const;
+private:
+    const VectorType* exprVectorType;
+    const VectorType* memberType;
+};
+
+VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p,
+                                   SourcePos idpos,
+                                   const VectorType* vectorType)
+    : MemberExpr(e, id, p, idpos), exprVectorType(vectorType) {
+    memberType = new VectorType(exprVectorType->GetElementType(),
+                                identifier.length());
+}
+
+VectorMemberExpr::~VectorMemberExpr() {
+    delete memberType;
+}
+
+const Type*
+VectorMemberExpr::GetType() const {
+    // For 1-element expressions, we have the base vector element
+    // type.  For n-element expressions, we have a shortvec type
+    // with n > 1 elements.  This can be changed when we get
+    // type<1> -> type conversions.
+    if (identifier.length() == 1) {
+        return exprVectorType->GetElementType();
+    } else {
+        return memberType;
+    }
+}
+
+llvm::Value*
+VectorMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
+    if (identifier.length() == 1) {
+        return MemberExpr::GetLValue(ctx);
+    } else {
+        return NULL;
+    }
+}
+
+llvm::Value*
+VectorMemberExpr::GetValue(FunctionEmitContext* ctx) const {
+    if (identifier.length() == 1) {
+        return MemberExpr::GetValue(ctx);
+    } else {
+        std::vector<int> indices;
+
+        for (size_t i = 0; i < identifier.size(); ++i) {
+            int idx = lIdentifierToVectorElement(identifier[i]);
+            if (idx == -1)
+                Error(pos,
+                      "Invalid swizzle charcter '%c' in swizzle \"%s\".",
+                      identifier[i], identifier.c_str());
+
+            indices.push_back(idx);
+        }
+
+        llvm::Value *basePtr = expr->GetLValue(ctx);
+        if (basePtr == NULL) {
+            assert(m->errorCount > 0);
+            return NULL;
+        }
+        llvm::Value *ltmp = ctx->AllocaInst(memberType->LLVMType(g->ctx), 
+                                            "vector_tmp");
+
+        ctx->SetDebugPos(pos);
+        for (size_t i = 0; i < identifier.size(); ++i) {
+            llvm::Value *ptmp =
+                ctx->GetElementPtrInst(ltmp, 0, i, "new_offset");
+            llvm::Value *initLValue =
+                ctx->GetElementPtrInst(basePtr , 0,
+                                       indices[i], "orig_offset");
+            llvm::Value *initValue =
+                ctx->LoadInst(initLValue, memberType->GetElementType(),
+                              "vec_element");
+            ctx->StoreInst(initValue, ptmp);
+        }
+
+        return ctx->LoadInst(ltmp, memberType, "swizzle_vec");
+    }
+}
+
+int
+VectorMemberExpr::getElementNumber() const {
+    int elementNumber = lIdentifierToVectorElement(identifier[0]);
+    if (elementNumber == -1)
+        Error(pos, "Vector element identifier \"%s\" unknown.", 
+              identifier.c_str());
+    return elementNumber;
+}
+
+class ReferenceMemberExpr : public MemberExpr
+{
+public:
+    ReferenceMemberExpr(Expr *e, const char *id, SourcePos p,
+                        SourcePos idpos, const ReferenceType* referenceType);
+
+    const Type* GetType() const;
+
+    int getElementNumber() const;
+
+    llvm::Value* GetLValue(FunctionEmitContext* ctx) const;
+
+private:
+    const ReferenceType* exprReferenceType;
+    MemberExpr* dereferencedExpr;
+};
+
+ReferenceMemberExpr::ReferenceMemberExpr(Expr *e, const char *id, SourcePos p,
+                                         SourcePos idpos,
+                                         const ReferenceType* referenceType)
+    : MemberExpr(e, id, p, idpos), exprReferenceType(referenceType) {
+    const Type* refTarget = exprReferenceType->GetReferenceTarget();
+    const StructType* structType
+        = dynamic_cast<const StructType *>(refTarget);
+    const VectorType* vectorType
+        = dynamic_cast<const VectorType *>(refTarget);
+
+    if (structType != NULL) {
+        dereferencedExpr = new StructMemberExpr(e, id, p, idpos, structType);
+    } else if (vectorType != NULL) {
+        dereferencedExpr = new VectorMemberExpr(e, id, p, idpos, vectorType);
+    } else {
+        dereferencedExpr = NULL;
+    }
+}
+
+const Type*
+ReferenceMemberExpr::GetType() const {
+    if (dereferencedExpr == NULL) {
+        Error(pos, "Can't access member of non-struct/vector type \"%s\".",
+              exprReferenceType->GetString().c_str());
+        return NULL;
+    } else {
+        return dereferencedExpr->GetType();
+    }
+}
+
+int
+ReferenceMemberExpr::getElementNumber() const {
+    if (dereferencedExpr == NULL) {
+        // FIXME: I think we shouldn't ever get here and that
+        // typechecking should have caught this case
+        return -1;
+    } else {
+        return dereferencedExpr->getElementNumber();
+    }
+}
+
+llvm::Value*
+ReferenceMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
+    if (dereferencedExpr == NULL) {
+        // FIXME: again I think typechecking should have caught this
+        Error(pos, "Can't access member of non-struct/vector type \"%s\".",
+              exprReferenceType->GetString().c_str());
+        return NULL;
+    }
+
+    //FIXME: Minor Code-dup...this is the same as the base, except
+    // llvm::Value *basePtr = expr->GetLValue instead of expr->getValue
+    llvm::Value *basePtr = expr->GetValue(ctx);
+    if (!basePtr)
+        return NULL;
+
+    int elementNumber = getElementNumber();
+    if (elementNumber == -1)
+        return NULL;
+
+    ctx->SetDebugPos(pos);
+    return ctx->GetElementPtrInst(basePtr, 0, elementNumber);
+}
+
+
+MemberExpr*
+MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
+    const Type* exprType;
+    if (e == NULL || (exprType = e->GetType()) == NULL)
+        return new MemberExpr(e, id, p, idpos);
+
+    const StructType* structType = dynamic_cast<const StructType*>(exprType);
+    if (structType != NULL)
+        return new StructMemberExpr(e, id, p, idpos, structType);
+
+    const VectorType* vectorType = dynamic_cast<const VectorType*>(exprType);
+    if (vectorType != NULL)
+        return new VectorMemberExpr(e, id, p, idpos, vectorType);
+
+    const ReferenceType* referenceType = dynamic_cast<const ReferenceType*>(exprType);
+    if (referenceType != NULL)
+        return new ReferenceMemberExpr(e, id, p, idpos, referenceType);
+  
+    return new MemberExpr(e, id, p, idpos);
+}
+
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos) 
     : Expr(p), identifierPos(idpos) {
     expr = e;
@@ -2861,48 +3143,7 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 MemberExpr::GetType() const {
-    if (!expr)
-        return NULL;
-
-    const Type *exprType = expr->GetType();
-    if (!exprType)
-        return NULL;
-
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    if (!structType && !vectorType) {
-        const ReferenceType *referenceType = 
-            dynamic_cast<const ReferenceType *>(exprType);
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget();
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL) {
-            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
-                  exprType->GetString().c_str());
-            return NULL;
-        }
-    }
-
-    if (vectorType != NULL)
-        // only one-element vector selection is supported for now (i.e. no
-        // swizzling "foo.xxy"), so the result type is always just the
-        // element type.
-        return vectorType->GetElementType();
-    else {
-        // Otherwise it's a struct, and the result type is the element
-        // type, possibly promoted to varying if the struct type / lvalue
-        // is varying.
-        const Type *elementType = structType->GetElementType(identifier);
-        if (!elementType)
-            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
-                  identifier.c_str(), structType->GetString().c_str(),
-                  getCandidateNearMatches().c_str());
-
-        if (exprType->IsVaryingType()) 
-            return elementType->GetAsVaryingType();
-        else
-            return elementType;
-    }
+    return NULL;
 }
 
 
@@ -2912,106 +3153,23 @@ MemberExpr::GetBaseSymbol() const {
 }
 
 
-/** Map one character ids to vector element numbers.  Allow a few different
-    conventions--xyzw, rgba, uv.
- */
-static int
-lIdentifierToVectorElement(char id) {
-    switch (id) {
-    case 'x':
-    case 'r':
-    case 'u':
-        return 0;
-    case 'y':
-    case 'g':
-    case 'v':
-        return 1;
-    case 'z':
-    case 'b':
-        return 2;
-    case 'w':
-    case 'a':
-        return 3;
-    default:
-        return -1;
-    }
-}
-
-
 int
 MemberExpr::getElementNumber() const {
-    const Type *exprType;
-    if (!expr || ((exprType = expr->GetType()) == NULL))
-        return -1;
-
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    if (!structType && !vectorType) {
-        const ReferenceType *referenceType = 
-            dynamic_cast<const ReferenceType *>(exprType);
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget() ;
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL)
-            // FIXME: I think we shouldn't ever get here and that
-            // typechecking should have caught this case
-            return -1;
-    }
-
-    int elementNumber = -1;
-    if (vectorType) {
-        if (identifier.size() != 1) {
-            Error(pos, "Only single-character vector element accessors are currently "
-                  "supported--\"%s\" is invalid.  Sorry.", identifier.c_str());
-        }
-        else {
-            elementNumber = lIdentifierToVectorElement(identifier[0]);
-            if (elementNumber == -1)
-                Error(pos, "Vector element identifier \"%s\" unknown.", 
-                      identifier.c_str());
-        }
-    }
-    else {
-        elementNumber = structType->GetElementNumber(identifier);
-        if (elementNumber == -1)
-            Error(identifierPos, "Element name \"%s\" not present in struct type \"%s\".%s",
-                  identifier.c_str(), structType->GetString().c_str(),
-                  getCandidateNearMatches().c_str());
-    }
-    return elementNumber;
+    return -1;
 }
-
 
 
 llvm::Value *
 MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
+    //This kindof feels like magic, but this functionality
+    // will have to be overridden in VectorMemberExpr when
+    // we support multi-swizzle.
     const Type *exprType;
     if (!expr || ((exprType = expr->GetType()) == NULL))
         return NULL;
 
     ctx->SetDebugPos(pos);
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(exprType);
-    llvm::Value *basePtr = NULL;
-    if (structType || vectorType)
-        basePtr = expr->GetLValue(ctx);
-    else {
-        const ReferenceType *referenceType = dynamic_cast<const ReferenceType *>(exprType);
-        // FIXME: store structType and vectorType as members, or do all
-        // this in a separate function?  This code to figure out
-        // struct/vectorType is replicated a bunch of times in
-        // MemberExpr...
-        const Type *refTarget = (referenceType == NULL) ? NULL :
-            referenceType->GetReferenceTarget() ;
-        if ((structType = dynamic_cast<const StructType *>(refTarget)) == NULL &&
-            (vectorType = dynamic_cast<const VectorType *>(refTarget)) == NULL) {
-            // FIXME: again I think typechecking should have caught this
-            Error(pos, "Can't access member of non-struct/vector type \"%s\".",
-                  exprType->GetString().c_str());
-            return NULL;
-        }
-        basePtr = expr->GetValue(ctx);
-    }
+    llvm::Value *basePtr = expr->GetLValue(ctx);
     if (!basePtr)
         return NULL;
 
