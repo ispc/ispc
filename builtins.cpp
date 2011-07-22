@@ -495,10 +495,10 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         if (!func->isIntrinsic())
             continue;
 
-        const char *funcName = func->getName().str().c_str();
+        const std::string funcName = func->getName().str();
         // Work around http://llvm.org/bugs/show_bug.cgi?id=10438; only
         // check the llvm.x86.* intrinsics for now...
-        if (!strncmp(funcName, "llvm.x86.", 9)) {
+        if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
             assert(id != 0);
             LLVM_TYPE_CONST llvm::Type *intrinsicType = 
