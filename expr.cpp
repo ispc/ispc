@@ -2911,6 +2911,7 @@ VectorMemberExpr::GetValue(FunctionEmitContext* ctx) const {
         llvm::Value *basePtr = expr->GetLValue(ctx);
         if (basePtr == NULL) {
             assert(m->errorCount > 0);
+            return NULL;
         }
         llvm::Value *ltmp = ctx->AllocaInst(memberType->LLVMType(g->ctx), 
                                             "vector_tmp");
