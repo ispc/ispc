@@ -949,10 +949,12 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     }
 
     std::string featuresString;
+    llvm::TargetMachine *targetMachine = NULL;
 #if defined LLVM_3_0svn || defined LLVM_3_0
-    llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple.getTriple(), g->target.cpu,
-                                    featuresString);
+    if (g->target.isa == Target::AVX)
+        featuresString = "+avx";
+    targetMachine = target->createTargetMachine(triple.getTriple(), g->target.cpu,
+                                                featuresString);
 #else
     if (g->target.cpu.size()) {
         llvm::SubtargetFeatures features;
@@ -960,8 +962,8 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
         featuresString = features.getString();
     }
 
-    llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple.getTriple(), featuresString);
+    targetMachine = target->createTargetMachine(triple.getTriple(), 
+                                                featuresString);
 #endif
     if (targetMachine == NULL) {
         fprintf(stderr, "Unable to create target machine for target \"%s\"!",
