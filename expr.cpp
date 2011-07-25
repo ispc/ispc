@@ -119,13 +119,14 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
                     errorMsgBase);
         break;
     default:
-        FATAL("logic error in lMaybeIssuePrecisionWarning");
+        FATAL("logic error in lMaybeIssuePrecisionWarning()");
     }
 }
 
 
 Expr *
-Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk) {
+Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
+               bool issuePrecisionWarnings) {
     /* This function is way too long and complex.  Is type conversion stuff
        always this messy, or can this be cleaned up somehow? */
     assert(failureOk || errorMsgBase != NULL);
@@ -313,7 +314,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk) {
         return NULL;
     }
 
-    if (!failureOk)
+    if (!failureOk && issuePrecisionWarnings)
         lMaybeIssuePrecisionWarning(toAtomicType, fromAtomicType, pos, 
                                     errorMsgBase);
 
@@ -1010,6 +1011,7 @@ BinaryExpr::GetType() const {
         return lMatchingBoolType(promotedType);
     case Shl:
     case Shr:
+        return type1->IsVaryingType() ? type0->GetAsVaryingType() : type0;
     case BitAnd:
     case BitXor:
     case BitOr:
@@ -1309,15 +1311,28 @@ BinaryExpr::TypeCheck() {
             return NULL;
         }
 
-        const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos,
-                                                         "binary bit op");
-        if (promotedType == NULL)
-            return NULL;
+        if (op == Shl || op == Shr) {
+            bool isVarying = (type0->IsVaryingType() ||
+                              type1->IsVaryingType());
+            if (isVarying) {
+                arg0 = arg0->TypeConv(type0->GetAsVaryingType(), "shift operator");
+                type0 = arg0->GetType();
+            }
+            arg1 = arg1->TypeConv(type0, "shift operator", false, false);
+            if (arg1 == NULL)
+                return NULL;
+        }
+        else {
+            const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos,
+                                                             "binary bit op");
+            if (promotedType == NULL)
+                return NULL;
 
-        arg0 = arg0->TypeConv(promotedType, "binary bit op");
-        arg1 = arg1->TypeConv(promotedType, "binary bit op");
-        if (arg0 == NULL || arg1 == NULL)
-            return NULL;
+            arg0 = arg0->TypeConv(promotedType, "binary bit op");
+            arg1 = arg1->TypeConv(promotedType, "binary bit op");
+            if (arg0 == NULL || arg1 == NULL)
+                return NULL;
+        }
         return this;
     }
     case Add:

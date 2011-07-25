@@ -97,7 +97,7 @@ public:
         that incorporates the given error message string.  In either
         failure case, NULL is returned.  */
     Expr *TypeConv(const Type *type, const char *errorMsgBase = NULL, 
-                   bool failureOk = false);
+                   bool failureOk = false, bool issuePrecisionWarnings = true);
 };
 
 
