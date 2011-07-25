@@ -304,6 +304,7 @@ Optimize(llvm::Module *module, int optLevel) {
                                          true /* simplify lib calls */,
                                          false /* may have exceptions */,
                                          llvm::createFunctionInliningPass());
+
 #else
         llvm::PassManagerBuilder builder;
         builder.OptLevel = 3;
@@ -346,9 +347,9 @@ Optimize(llvm::Module *module, int optLevel) {
 /** This is a relatively simple optimization pass that does a few small
     optimizations that LLVM's x86 optimizer doesn't currently handle.
     (Specifically, MOVMSK of a constant can be replaced with the
-    corresponding constant value, and a BLENDVPS with either an 'all on' or
-    'all off' blend factor can be replaced with the corredponding value of
-    one of the two operands.
+    corresponding constant value, BLENDVPS and AVX masked load/store with
+    either an 'all on' or 'all off' masks can be replaced with simpler
+    operations.
 
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.  
@@ -408,8 +409,13 @@ IntrinsicsOpt::IntrinsicsOpt()
     llvm::Function *sseMovmsk = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
     maskInstructions.push_back(sseMovmsk);
-    maskInstructions.push_back(m->module->getFunction("llvm.x86.avx.movmsk.ps"));
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::Function *avxMovmsk = 
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
+    assert(avxMovmsk != NULL);
+    maskInstructions.push_back(avxMovmsk);
+#endif
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
@@ -494,6 +500,19 @@ lIsUndef(llvm::Value *value) {
 
 bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::Function *avxMaskedLoad32 = 
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
+    llvm::Function *avxMaskedLoad64 = 
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_pd_256);
+    llvm::Function *avxMaskedStore32 = 
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_ps_256);
+    llvm::Function *avxMaskedStore64 = 
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_pd_256);
+    assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
+    assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
+#endif
+
     bool modifiedAny = false;
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
@@ -564,6 +583,69 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+        else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
+                 callInst->getCalledFunction() == avxMaskedLoad64) {
+            llvm::Value *factor = callInst->getArgOperand(1);
+            int mask = lGetMask(factor);
+            if (mask == 0) {
+                // nothing being loaded, replace with undef value
+                llvm::Type *returnType = callInst->getType();
+                assert(llvm::isa<llvm::VectorType>(returnType));
+                llvm::Value *undefValue = llvm::UndefValue::get(returnType);
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
+                                           iter, undefValue);
+                modifiedAny = true;
+                goto restart;
+            }
+            else if (mask == 0xff) {
+                // all lanes active; replace with a regular load
+                llvm::Type *returnType = callInst->getType();
+                assert(llvm::isa<llvm::VectorType>(returnType));
+                // cast the i8 * to the appropriate type
+                llvm::Value *castPtr = 
+                    new llvm::BitCastInst(callInst->getArgOperand(0),
+                                          llvm::PointerType::get(returnType, 0), 
+                                          "ptr2vec", callInst);
+                lCopyMetadata(castPtr, callInst);
+                llvm::Instruction *loadInst = 
+                    new llvm::LoadInst(castPtr, "load", false /* not volatile */,
+                                       0 /* align */, (llvm::Instruction *)NULL);
+                lCopyMetadata(loadInst, callInst);
+                llvm::ReplaceInstWithInst(callInst, loadInst);
+                modifiedAny = true;
+                goto restart;
+            }
+        }
+        else if (callInst->getCalledFunction() == avxMaskedStore32 ||
+                 callInst->getCalledFunction() == avxMaskedStore64) {
+            // NOTE: mask is the 2nd parameter, not the 3rd one!!
+            llvm::Value *factor = callInst->getArgOperand(1);
+            int mask = lGetMask(factor);
+            if (mask == 0) {
+                // nothing actually being stored, just remove the inst
+                callInst->eraseFromParent();
+                modifiedAny = true;
+                goto restart;
+            }
+            else if (mask == 0xff) {
+                // all lanes storing, so replace with a regular store
+                llvm::Value *rvalue = callInst->getArgOperand(1);
+                llvm::Type *storeType = rvalue->getType();
+                llvm::Value *castPtr = 
+                    new llvm::BitCastInst(callInst->getArgOperand(0),
+                                          llvm::PointerType::get(storeType, 0), 
+                                          "ptr2vec", callInst);
+                lCopyMetadata(castPtr, callInst);
+                llvm::Instruction *storeInst = 
+                    new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
+                lCopyMetadata(storeInst, callInst);
+                llvm::ReplaceInstWithInst(callInst, storeInst);
+                modifiedAny = true;
+                goto restart;
+            }
+        }
+#endif
     }
     return modifiedAny;
 }
