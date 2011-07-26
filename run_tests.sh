@@ -6,7 +6,7 @@ number=$(ls -1 tests/*.ispc|wc -l)
 counter=1
 target=sse4
 
-while getopts ":vth" opt;do
+while getopts ":vt:h" opt;do
     case $opt in
         v) verbose=true
             ;;
