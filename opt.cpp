@@ -798,8 +798,14 @@ lSizeOf(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
+                                                           "offset_ptr", insertBefore);
+#else
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
                                                            "offset_ptr", insertBefore);
+#endif
     lCopyMetadata(poffset, insertBefore);
     llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, LLVMTypes::Int64Type, 
                                                      "offset_int", insertBefore);
@@ -822,8 +828,14 @@ lStructOffset(LLVM_TYPE_CONST llvm::Type *type, uint64_t member,
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[2] = { LLVMInt32(0), LLVMInt32((int32_t)member) };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[2]);
+    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
+                                                           "member_ptr", insertBefore);
+#else
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[2],
                                                            "member_ptr", insertBefore);
+#endif
     lCopyMetadata(poffset, insertBefore);
     llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, LLVMTypes::Int64Type, 
                                                      "member_int", insertBefore);
@@ -2122,9 +2134,15 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 new llvm::BitCastInst(base, LLVMTypes::VoidPointerType,
                                       "base2i8", callInst);
             lCopyMetadata(basei8, callInst);
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[1]);
+            llvm::Value *ptr = 
+                llvm::GetElementPtrInst::Create(basei8, arrayRef, "ptr", callInst);
+#else
             llvm::Value *ptr = 
                 llvm::GetElementPtrInst::Create(basei8, &indices[0], &indices[1],
                                                 "ptr", callInst);
+#endif
             lCopyMetadata(ptr, callInst);
 
             if (gatherInfo != NULL) {
@@ -2182,13 +2200,19 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             // and 64 bit gather/scatters, respectively.)
 
             // Get the base pointer using the first guy's offset.
-            llvm::Value *indices[2] = { offsetElements[0] };
+            llvm::Value *indices[1] = { offsetElements[0] };
             llvm::Value *basei8 =
                 new llvm::BitCastInst(base, LLVMTypes::VoidPointerType, "base2i8", callInst);
             lCopyMetadata(basei8, callInst);
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[1]);
+            llvm::Value *ptr = 
+                llvm::GetElementPtrInst::Create(basei8, arrayRef, "ptr", callInst);
+#else
             llvm::Value *ptr = 
                 llvm::GetElementPtrInst::Create(basei8, &indices[0], &indices[1],
                                                 "ptr", callInst);
+#endif
             lCopyMetadata(ptr, callInst);
 
             if (gatherInfo != NULL) {

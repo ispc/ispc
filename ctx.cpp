@@ -765,8 +765,14 @@ FunctionEmitContext::EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align) {
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(ty, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
+                                                           "offset_ptr", bblock);
+#else
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
                                                            "offset_ptr", bblock);
+#endif
     AddDebugPos(poffset);
     llvm::Value *sizeOf = PtrToIntInst(poffset, LLVMTypes::Int64Type, "offset_int");
 
@@ -798,8 +804,13 @@ lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  llvm::GlobalValue::InternalLinkage,
                                                  sConstant, s);
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+    return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
+#else
     return llvm::GetElementPtrInst::Create(sPtr, &indices[0], &indices[2],
                                            "sptr", bblock);
+#endif
 }
 
 
@@ -1289,9 +1300,16 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = { index0, index1 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+        llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+        llvm::Instruction *inst = 
+            llvm::GetElementPtrInst::Create(basePtr, arrayRef,
+                                            name ? name : "gep", bblock);
+#else
         llvm::Instruction *inst = 
             llvm::GetElementPtrInst::Create(basePtr, &indices[0], &indices[2], 
                                             name ? name : "gep", bblock);
+#endif
         AddDebugPos(inst);
         return inst;
     }
