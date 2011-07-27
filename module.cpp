@@ -118,16 +118,27 @@ Module::Module(const char *fn) {
     // If we're generating debugging symbols, let the DIBuilder know that
     // we're starting a new compilation unit.
     if (diBuilder != NULL) {
-        std::string directory, name;
-        GetDirectoryAndFileName(g->currentDirectory, filename, &directory,
-                                &name);
-        diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
-                                     name,  /* filename */
-                                     directory, /* directory */
-                                     "ispc", /* producer */
-                                     g->opt.level > 0 /* is optimized */,
-                                     "-g", /* command line args */
-                                     0 /* run time version */);
+        if (filename == NULL) {
+            // Unfortunately we can't yet call Error() since the global 'm'
+            // variable hasn't been initialized yet.
+            fprintf(stderr, "Can't emit debugging information with no "
+                    "source file on disk.\n");
+            ++errorCount;
+            delete diBuilder;
+            diBuilder = NULL;
+        }
+        else {
+            std::string directory, name;
+            GetDirectoryAndFileName(g->currentDirectory, filename, &directory,
+                                    &name);
+            diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
+                                         name,  /* filename */
+                                         directory, /* directory */
+                                         "ispc", /* producer */
+                                         g->opt.level > 0 /* is optimized */,
+                                         "-g", /* command line args */
+                                         0 /* run time version */);
+        }
     }
 #endif // LLVM_2_8
 }
