@@ -39,6 +39,7 @@
 #endif
 
 #include <algorithm>
+#include <stdint.h>
 
 // Just enough of a float3 class to do what we need in this file.
 #ifdef _MSC_VER
