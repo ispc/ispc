@@ -516,8 +516,12 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
                 decl->initExpr = decl->initExpr->TypeCheck();
                 if (decl->initExpr != NULL) {
                     // We need to make sure the initializer expression is
-                    // the same type as the global
-                    decl->initExpr = decl->initExpr->TypeConv(decl->sym->type, "initializer");
+                    // the same type as the global.  (But not if it's an
+                    // ExprList; they don't have types per se / can't type
+                    // convert themselves anyway.)
+                    if (dynamic_cast<ExprList *>(decl->initExpr) == NULL)
+                        decl->initExpr = 
+                            decl->initExpr->TypeConv(decl->sym->type, "initializer");
 
                     if (decl->initExpr != NULL) {
                         decl->initExpr = decl->initExpr->Optimize();
