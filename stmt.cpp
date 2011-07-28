@@ -306,17 +306,19 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          llvm::Twine("static.") +
                                          llvm::Twine(sym->pos.first_line) + 
                                          llvm::Twine(".") + sym->name.c_str());
+            // Tell the FunctionEmitContext about the variable 
+            ctx->EmitVariableDebugInfo(sym);
         }
         else {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());
+            // Tell the FunctionEmitContext about the variable; must do
+            // this before the initializer stuff.
+            ctx->EmitVariableDebugInfo(sym);
             // And then get it initialized...
             lInitSymbol(sym->storagePtr, sym->name.c_str(), type, decl->initExpr,
                         ctx, sym->pos);
         }
-
-        // Finally, tell the FunctionEmitContext about the variable 
-        ctx->EmitVariableDebugInfo(sym);
     }
 }
 
