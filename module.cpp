@@ -798,13 +798,14 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
     }
 
     if (errorCount == 0) {
-        if (g->debugPrint) {
-            llvm::PassManager ppm;
-            ppm.add(llvm::createPrintModulePass(&llvm::outs()));
-            ppm.run(*module);
+        if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
+            if (g->debugPrint) {
+                llvm::PassManager ppm;
+                ppm.add(llvm::createPrintModulePass(&llvm::outs()));
+                ppm.run(*module);
+            }
+            FATAL("Function verificication failed");
         }
-
-        llvm::verifyFunction(*function);
 
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
@@ -828,8 +829,17 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
                     FunctionEmitContext ec(functionType->GetReturnType(), appFunction, funSym,
                                            firstStmtPos);
                     lEmitFunctionCode(&ec, appFunction, functionType, funSym, decl, code);
-                    if (errorCount == 0)
-                        llvm::verifyFunction(*appFunction);
+                    if (errorCount == 0) {
+                        if (llvm::verifyFunction(*appFunction, 
+                                                 llvm::ReturnStatusAction) == true) {
+                            if (g->debugPrint) {
+                                llvm::PassManager ppm;
+                                ppm.add(llvm::createPrintModulePass(&llvm::outs()));
+                                ppm.run(*module);
+                            }
+                            FATAL("Function verificication failed");
+                        }
+                    }
                 }
             }
         }
