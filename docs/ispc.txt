@@ -673,6 +673,15 @@ expect, though the two vector types must have the same length:
     int<4> bat = foo;    // ERROR: different vector lengths
     float<4> bing = foo; // ERROR: different vector lengths
 
+For convenience, short vectors can be initialized with a list of individual
+element values:
+
+::
+
+    float x = ..., y = ..., z = ...;
+    float<3> pos = { x, y, z };
+
+
 There are two mechanisms to access the individual elements of these short
 vector data types.  The first is with the array indexing operator:
 
@@ -701,25 +710,24 @@ using the array indexing operator with an index that is greater than the
 vector size, accessing an element that is beyond the vector's size is
 undefined behavior and may cause your program to crash.
 
-Note: ``ispc`` doesn't support the "swizzling" operations that languages
-like HLSL do.  Only a single element of the vector can be accessed at a
-time with these member operators.
+It is also possible to construct new short vectors from other short vector
+values using this syntax, extended for "swizzling".  For example, 
 
 ::
 
-    float<3> foo = ...;
-    float<2> bar = foo.xy;  // ERROR
-    foo.xz = ...;           // ERROR
-    func(foo.xyx);          // ERROR
+    float<3> position = ...;
+    float<3> new_pos = position.zyx;  // reverse order of components
+    float<2> pos_2d = position.xy;
 
-For convenience, short vectors can be initialized with a list of individual
-element values:
+Though a single element can be assigned to, as in the examples above, it is
+not currently possible to use swizzles on the left-hand side of assignment
+expressions:
 
 ::
 
-    float x = ..., y = ..., z = ...;
-    float<3> pos = { x, y, z };
-
+    int8<2> foo = ...;
+    int8<2> bar = ...;
+    foo.yz = bar;   // Error: can't assign to left-hand side of expression
 
 Struct and Array Types
 ----------------------
