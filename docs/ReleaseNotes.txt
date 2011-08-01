@@ -1,3 +1,22 @@
+=== v1.0.5 === (1 August 2011)
+
+Multi-element vector swizzles are supported; for example, given a 3-wide
+vector "foo", then expressions like "foo.zyx" and "foo.yz" can be used to
+construct other short vectors.  See
+http://ispc.github.com/ispc.html#short-vector-types
+for more details.  (Thanks to Pete Couperus for implementing this code!).
+
+int8 and int16 datatypes are now supported.  It is still generally more
+efficient to use int32 for intermediate computations, even if the in-memory
+format is int8 or int16.
+
+There are now standard library routines to convert to and from 'half'-format
+floating-point values (half_to_float() and float_to_half()).
+
+There is a new example with an implementation of Perlin's Noise function
+(examples/noise).  It shows a speedup of approximately 4.2x versus a C
+implementation on OSX and a 2.9x speedup versus C on Windows.
+
 === v1.0.4 === (18 July 2011)
 
 enums are now supported in ispc; see the section on enumeration types in
