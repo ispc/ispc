@@ -1431,26 +1431,24 @@ pl_done:
 define(`gen_gather', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
-define internal <$1 x $2> @__gather_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %ret,
+define internal <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret,
                                            i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
-  %offset64 = zext i32 %offset32 to i64
-  %ptrdelta = add i64 %ptr64, %offset64
-  %ptr = inttoptr i64 %ptrdelta to $2 *
+  %ptroffset = getelementptr i8 * %ptr, i32 %offset32
+  %ptrcast = bitcast i8 * %ptroffset to $2 *
 
   ; load value and insert into returned value
-  %val = load $2 *%ptr
+  %val = load $2 *%ptrcast
   %updatedret = insertelement <$1 x $2> %ret, $2 %val, i32 %lane
   ret <$1 x $2> %updatedret
 }
 
 
-define <$1 x $2> @__gather_base_offsets_$2(i8*, <$1 x i32> %offsets,
+define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
                                            <$1 x i32> %vecmask) nounwind readonly alwaysinline {
 entry:
   %mask = call i32 @__movmsk(<$1 x i32> %vecmask)
-  %ptr64 = ptrtoint i8 * %0 to i64
 
   %maskKnown = call i1 @__is_compile_time_constant_mask(<$1 x i32> %vecmask)
   br i1 %maskKnown, label %known_mask, label %unknown_mask
@@ -1474,10 +1472,10 @@ unknown_mask:
                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i32> * %offsetsPtr
 
-  %ret0 = call <$1 x $2> @__gather_elt_$2(i64 %ptr64, <$1 x i32> %newOffsets,
+  %ret0 = call <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %newOffsets,
                                           <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
-          `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt_$2(i64 %ptr64, 
+          `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt_$2(i8 * %ptr, 
                                 <$1 x i32> %newOffsets, <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)

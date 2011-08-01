@@ -57,6 +57,13 @@ Linux, a pthreads-based task system is used (tasks_pthreads.cpp).  When
 using tasks with ispc, no task system is mandated; the user is free to plug
 in any task system they want, for ease of interoperating with existing task
 systems.
+
+Noise
+=====
+
+This example has an implementation of Ken Perlin's procedural "noise"
+function, as described in his 2002 "Improving Noise" SIGGRAPH paper.
+
  
 Options
 =======

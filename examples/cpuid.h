@@ -48,19 +48,19 @@ static void __cpuid(int info[4], int infoType) {
 inline bool CPUSupportsSSE2() {
     int info[4];
     __cpuid(info, 1);
-    return (info[3] & (1 << 26));
+    return (info[3] & (1 << 26)) != 0;
 }
 
 inline bool CPUSupportsSSE4() {
     int info[4];
     __cpuid(info, 1);
-    return (info[2] & (1 << 19));
+    return (info[2] & (1 << 19)) != 0;
 }
 
 inline bool CPUSupportsAVX() {
     int info[4];
     __cpuid(info, 1);
-    return (info[2] & (1 << 28));
+    return (info[2] & (1 << 28)) != 0;
 }
 
 #endif // ISPC_CPUID_H
