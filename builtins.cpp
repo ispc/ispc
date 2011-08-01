@@ -68,7 +68,7 @@ extern yy_buffer_state *yy_scan_string(const char *);
     distinguish between signed and unsigned integers in its types.)
 
     Because this function is only used for generating ispc declarations of
-    functions defined in LLVM bitcode in the stdlib-*.ll files, in practice
+    functions defined in LLVM bitcode in the builtins-*.ll files, in practice
     we can get enough of what we need for the relevant cases to make things
     work, partially with the help of the intAsUnsigned parameter, which
     indicates whether LLVM integer types should be treated as being signed
@@ -271,217 +271,7 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 }
 
 
-static void
-lDeclarePG(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
-           const char *name) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::VoidPointerVectorType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = llvm::FunctionType::get(vecType, argTypes, false);
-    llvm::Function *func =
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               name, module);
-    func->setOnlyReadsMemory(true);
-    func->setDoesNotThrow(true);
-}
-
-
-static void
-lDeclarePGBO(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
-             const char *name) {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::VoidPointerType);
-    argTypes.push_back(LLVMTypes::Int32VectorType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = llvm::FunctionType::get(vecType, argTypes, false);
-    llvm::Function *func =
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               name, module);
-    func->setOnlyReadsMemory(true);
-    func->setDoesNotThrow(true);
-}
-
-
-/** Declare the 'pseudo-gather' functions.  When the ispc front-end needs
-    to perform a gather, it generates a call to one of these functions,
-    which have signatures:
-    
-    varying int8  __pseudo_gather(varying int8 *, mask)
-    varying int16 __pseudo_gather(varying int16 *, mask)
-    varying int32 __pseudo_gather(varying int32 *, mask)
-    varying int64 __pseudo_gather(varying int64 *, mask)
-
-    These functions are never actually implemented; the
-    GatherScatterFlattenOpt optimization pass finds them and then converts
-    them to make calls to the following functions, which represent gathers
-    from a common base pointer with offsets.  This approach allows the
-    front-end to be relatively simple in how it emits address calculation
-    for gathers.
-
-    varying int8  __pseudo_gather_base_offsets_8(uniform int8 *base, 
-                                                 int32 offsets, mask)
-    varying int16 __pseudo_gather_base_offsets_16(uniform int16 *base, 
-                                                  int32 offsets, mask)
-    varying int32 __pseudo_gather_base_offsets_32(uniform int32 *base, 
-                                                  int32 offsets, mask)
-    varying int64 __pseudo_gather_base_offsets_64(uniform int64 *base, 
-                                                  int64 offsets, mask)
-
-    Then, the GSImprovementsPass optimizations finds these and either
-    converts them to native gather functions or converts them to vector
-    loads, if equivalent.
- */
-static void
-lDeclarePseudoGathers(llvm::Module *module) {
-    lDeclarePG(module, LLVMTypes::Int8VectorType, "__pseudo_gather_8");
-    lDeclarePG(module, LLVMTypes::Int16VectorType, "__pseudo_gather_16");
-    lDeclarePG(module, LLVMTypes::Int32VectorType, "__pseudo_gather_32");
-    lDeclarePG(module, LLVMTypes::Int64VectorType, "__pseudo_gather_64");
-
-    lDeclarePGBO(module, LLVMTypes::Int8VectorType,
-                 "__pseudo_gather_base_offsets_8");
-    lDeclarePGBO(module, LLVMTypes::Int16VectorType,
-                 "__pseudo_gather_base_offsets_16");
-    lDeclarePGBO(module, LLVMTypes::Int32VectorType,
-                 "__pseudo_gather_base_offsets_32");
-    lDeclarePGBO(module, LLVMTypes::Int64VectorType,
-                 "__pseudo_gather_base_offsets_64");
-}
-
-
-static void
-lDeclarePS(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType,
-           const char *name) {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::VoidPointerVectorType);
-    argTypes.push_back(vecType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-    llvm::Function *func =
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               name, module);
-    func->setDoesNotThrow(true);
-}
-
-
-static void
-lDeclarePSBO(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *vecType, 
-             const char *name) {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(LLVMTypes::VoidPointerType);
-    argTypes.push_back(LLVMTypes::Int32VectorType);
-    argTypes.push_back(vecType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-    llvm::Function *func =
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               name, module);
-    func->setDoesNotThrow(true);
-}
-
-
-/** Similarly to the 'pseudo-gathers' defined by lDeclarePseudoGathers(),
-    we also declare (but never define) pseudo-scatter instructions with
-    signatures:
-
-    void __pseudo_scatter_8 (varying int8 *, varying int8 values, mask)
-    void __pseudo_scatter_16(varying int16 *, varying int16 values, mask)
-    void __pseudo_scatter_32(varying int32 *, varying int32 values, mask)
-    void __pseudo_scatter_64(varying int64 *, varying int64 values, mask)
-
-    The GatherScatterFlattenOpt optimization pass also finds these and
-    transforms them to scatters like:
-
-    void __pseudo_scatter_base_offsets_8(uniform int8 *base, 
-                    varying int32 offsets, varying int8 values, mask)
-    void __pseudo_scatter_base_offsets_16(uniform int16 *base, 
-                    varying int32 offsets, varying int16 values, mask)
-    void __pseudo_scatter_base_offsets_32(uniform int32 *base, 
-                    varying int32 offsets, varying int32 values, mask)
-    void __pseudo_scatter_base_offsets_64(uniform int64 *base, 
-                    varying int32 offsets, varying int64 values, mask)
-
-    And the GSImprovementsPass in turn converts these to actual native
-    scatters or masked stores.  
-*/
-static void
-lDeclarePseudoScatters(llvm::Module *module) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    lDeclarePS(module, LLVMTypes::Int8VectorType, "__pseudo_scatter_8");
-    lDeclarePS(module, LLVMTypes::Int16VectorType, "__pseudo_scatter_16");
-    lDeclarePS(module, LLVMTypes::Int32VectorType, "__pseudo_scatter_32");
-    lDeclarePS(module, LLVMTypes::Int64VectorType, "__pseudo_scatter_64");
-
-    lDeclarePSBO(module, LLVMTypes::Int8VectorType, 
-                 "__pseudo_scatter_base_offsets_8");
-    lDeclarePSBO(module, LLVMTypes::Int16VectorType, 
-                 "__pseudo_scatter_base_offsets_16");
-    lDeclarePSBO(module, LLVMTypes::Int32VectorType, 
-                 "__pseudo_scatter_base_offsets_32");
-    lDeclarePSBO(module, LLVMTypes::Int64VectorType, 
-                 "__pseudo_scatter_base_offsets_64");
-}
-
-
-static void
-lDeclarePMS(llvm::Module *module, LLVM_TYPE_CONST llvm::Type *lvalueType, 
-            LLVM_TYPE_CONST llvm::Type *rvalueType, const char *name) {
-    SourcePos noPos;
-    noPos.name = "__stdlib";
-
-    std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-    argTypes.push_back(lvalueType);
-    argTypes.push_back(rvalueType);
-    argTypes.push_back(LLVMTypes::MaskType);
-
-    llvm::FunctionType *fType = 
-        llvm::FunctionType::get(LLVMTypes::VoidType, argTypes, false);
-    llvm::Function *func = 
-        llvm::Function::Create(fType, llvm::GlobalValue::ExternalLinkage,
-                               name, module);
-    func->setDoesNotThrow(true);
-    func->addFnAttr(llvm::Attribute::AlwaysInline);
-    func->setDoesNotCapture(1, true);
-}
-
-
-/** This function declares placeholder masked store functions for the
-    front-end to use.
-
-    void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
-    void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
-    void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
-    void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
-
-    These in turn are converted to native masked stores or to regular
-    stores (if the mask is all on) by the MaskedStoreOptPass optimization
-    pass.
- */
-static void
-lDeclarePseudoMaskedStore(llvm::Module *module) {
-    lDeclarePMS(module, LLVMTypes::Int8VectorPointerType,
-                LLVMTypes::Int8VectorType, "__pseudo_masked_store_8");
-    lDeclarePMS(module, LLVMTypes::Int16VectorPointerType,
-                LLVMTypes::Int16VectorType, "__pseudo_masked_store_16");
-    lDeclarePMS(module, LLVMTypes::Int32VectorPointerType, 
-                LLVMTypes::Int32VectorType, "__pseudo_masked_store_32");
-    lDeclarePMS(module, LLVMTypes::Int64VectorPointerType, 
-                LLVMTypes::Int64VectorType, "__pseudo_masked_store_64");
-}
-
-
-/** In many of the stdlib-*.ll files, we have declarations of various LLVM
+/** In many of the builtins-*.ll files, we have declarations of various LLVM
     intrinsics that are then used in the implementation of various target-
     specific functions.  This function loops over all of the intrinsic 
     declarations and makes sure that the signature we have in our .ll file
@@ -579,32 +369,32 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
 void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
-    // Add the definitions from the compiled stdlib-c.c file
-    extern unsigned char stdlib_bitcode_c[];
-    extern int stdlib_bitcode_c_length;
-    lAddBitcode(stdlib_bitcode_c, stdlib_bitcode_c_length, module, symbolTable);
+    // Add the definitions from the compiled builtins-c.c file
+    extern unsigned char builtins_bitcode_c[];
+    extern int builtins_bitcode_c_length;
+    lAddBitcode(builtins_bitcode_c, builtins_bitcode_c_length, module, symbolTable);
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target.isa) {
     case Target::SSE2:
-        extern unsigned char stdlib_bitcode_sse2[];
-        extern int stdlib_bitcode_sse2_length;
-        lAddBitcode(stdlib_bitcode_sse2, stdlib_bitcode_sse2_length, module,
+        extern unsigned char builtins_bitcode_sse2[];
+        extern int builtins_bitcode_sse2_length;
+        lAddBitcode(builtins_bitcode_sse2, builtins_bitcode_sse2_length, module,
                     symbolTable);
         break;
     case Target::SSE4:
-        extern unsigned char stdlib_bitcode_sse4[];
-        extern int stdlib_bitcode_sse4_length;
-        extern unsigned char stdlib_bitcode_sse4x2[];
-        extern int stdlib_bitcode_sse4x2_length;
+        extern unsigned char builtins_bitcode_sse4[];
+        extern int builtins_bitcode_sse4_length;
+        extern unsigned char builtins_bitcode_sse4x2[];
+        extern int builtins_bitcode_sse4x2_length;
         switch (g->target.vectorWidth) {
         case 4: 
-            lAddBitcode(stdlib_bitcode_sse4, stdlib_bitcode_sse4_length, 
+            lAddBitcode(builtins_bitcode_sse4, builtins_bitcode_sse4_length, 
                         module, symbolTable);
             break;
         case 8:
-            lAddBitcode(stdlib_bitcode_sse4x2, stdlib_bitcode_sse4x2_length, 
+            lAddBitcode(builtins_bitcode_sse4x2, builtins_bitcode_sse4x2_length, 
                         module, symbolTable);
             break;
         default:
@@ -612,91 +402,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX:
-        extern unsigned char stdlib_bitcode_avx[];
-        extern int stdlib_bitcode_avx_length;
-        lAddBitcode(stdlib_bitcode_avx, stdlib_bitcode_avx_length, module, 
+        extern unsigned char builtins_bitcode_avx[];
+        extern int builtins_bitcode_avx_length;
+        lAddBitcode(builtins_bitcode_avx, builtins_bitcode_avx_length, module, 
                     symbolTable);
         break;
     default:
         FATAL("logic error");
     }
-
-    // Add a declaration of void *ISPCMalloc(int64_t size, int alignment).
-    // The user is responsible for linking in a definition of this if it's
-    // needed by the compiled program.
-    { std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(llvm::Type::getInt64Ty(*ctx));
-        argTypes.push_back(llvm::Type::getInt32Ty(*ctx));
-        llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
-                                                            argTypes, false);
-        llvm::Function *func = 
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
-                                   "ISPCMalloc", module);
-        func->setDoesNotThrow(true);
-    }
-
-    // Add a declaration of void ISPCFree(void *).  The user is
-    // responsible for linking in a definition of this if it's needed by
-    // the compiled program.
-    { std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidPointerType, 
-                                                            argTypes, false);
-        llvm::Function *func = 
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
-                                   "ISPCFree", module);
-        func->setDoesNotThrow(true);
-    }
-
-    // Add a declaration of void ISPCLaunch(void *funcPtr, void *data).
-    // The user is responsible for linking in a definition of this if it's
-    // needed by the compiled program.
-    { std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 
-                                                            argTypes, false);
-        llvm::Function *func = 
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
-                                   "ISPCLaunch", module);
-        func->setDoesNotThrow(true);
-    }
-
-    // Add a declaration of void ISPCSync().  The user is responsible for
-    // linking in a definition of this if it's needed by the compiled
-    // program.
-    { 
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 
-                                                            argTypes, false);
-        llvm::Function *func = 
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
-                                   "ISPCSync", module);
-        func->setDoesNotThrow(true);
-    }
-
-    // Add a declaration of void ISPCInstrument(void *, void *, int, int).
-    // The user is responsible for linking in a definition of this if it's
-    // needed by the compiled program.
-    { 
-        std::vector<LLVM_TYPE_CONST llvm::Type *> argTypes;
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::VoidPointerType);
-        argTypes.push_back(LLVMTypes::Int32Type);
-        argTypes.push_back(LLVMTypes::Int32Type);
-        llvm::FunctionType *ftype = llvm::FunctionType::get(LLVMTypes::VoidType, 
-                                                            argTypes, false);
-        llvm::Function *func = 
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
-                                   "ISPCInstrument", module);
-        func->setDoesNotThrow(true);
-    }
-
-    // Declare various placeholder functions that the optimizer will later
-    // find and replace with something more useful.
-    lDeclarePseudoGathers(module);
-    lDeclarePseudoScatters(module);
-    lDeclarePseudoMaskedStore(module);
 
     // define the 'programCount' builtin variable
     lDefineConstantInt("programCount", g->target.vectorWidth, module, symbolTable);

@@ -31,7 +31,7 @@
 
 ;; This file declares implementations of various stdlib builtins that
 ;; only require SSE version 1 and 2 functionality; this file, in turn
-;; is then included by stdlib-sse2.ll and stdlib-sse4.ll to provide
+;; is then included by builtins-sse2.ll and builtins-sse4.ll to provide
 ;; those definitions for them.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

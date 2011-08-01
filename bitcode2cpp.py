@@ -9,7 +9,7 @@ length=0
 
 src=str(sys.argv[1])
 
-target = re.sub(".*stdlib-", "", src)
+target = re.sub(".*builtins-", "", src)
 target = re.sub("\.ll$", "", target)
 target = re.sub("\.c$", "", target)
 target = re.sub("-", "_", target)
@@ -20,14 +20,14 @@ except IOError:
     print >> sys.stderr, "Couldn't open " + src
     sys.exit(1)
 
-print "unsigned char stdlib_bitcode_" + target + "[] = {"
+print "unsigned char builtins_bitcode_" + target + "[] = {"
 for line in as_out.stdout.readlines():
     length = length + len(line)
     for c in line:
         print ord(c)
         print ", "
 print " 0 };\n\n"
-print "int stdlib_bitcode_" + target + "_length = " + str(length) + ";\n"
+print "int builtins_bitcode_" + target + "_length = " + str(length) + ";\n"
 
 as_out.wait()
 

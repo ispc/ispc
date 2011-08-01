@@ -37,7 +37,7 @@ stdlib_core(4)
 packed_load_and_store(4)
 
 ; Include the various definitions of things that only require SSE1 and SSE2
-include(`stdlib-sse.ll')
+include(`builtins-sse.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding

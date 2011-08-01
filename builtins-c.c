@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-/** @file stdlib-c.c
+/** @file builtins-c.c
     @brief Standard library function implementations written in C.
 
     This file provides C implementations of various functions that can be

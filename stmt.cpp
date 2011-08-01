@@ -1442,7 +1442,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
 
 
 /* PrintStmt works closely with the __do_print() function implemented in
-   the stdlib-c.c file.  In particular, the EmitCode() method here needs to
+   the builtins-c.c file.  In particular, the EmitCode() method here needs to
    take the arguments passed to it from ispc and generate a valid call to
    __do_print() with the information that __do_print() then needs to do the
    actual printing work at runtime.

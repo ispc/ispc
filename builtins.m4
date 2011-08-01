@@ -560,8 +560,107 @@ define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $
 
 define(`stdlib_core', `
 
+declare i8* @ISPCMalloc(i64, i32) nounwind
+declare i8* @ISPCFree(i8*) nounwind
+declare void @ISPCLaunch(i8*, i8*) nounwind
+declare void @ISPCSync() nounwind
+declare void @ISPCInstrument(i8*, i8*, i32, i32) nounwind
+
 declare i1 @__is_compile_time_constant_mask(<$1 x i32> %mask)
 declare i1 @__is_compile_time_constant_varying_int32(<$1 x i32>)
+
+; This function declares placeholder masked store functions for the
+;  front-end to use.
+;
+;  void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
+;  void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
+;  void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
+;  void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
+;
+;  These in turn are converted to native masked stores or to regular
+;  stores (if the mask is all on) by the MaskedStoreOptPass optimization
+;  pass.
+
+declare void @__pseudo_masked_store_8(<$1 x i8> * nocapture, <$1 x i8>, <$1 x i32>)
+declare void @__pseudo_masked_store_16(<$1 x i16> * nocapture, <$1 x i16>, <$1 x i32>)
+declare void @__pseudo_masked_store_32(<$1 x i32> * nocapture, <$1 x i32>, <$1 x i32>)
+declare void @__pseudo_masked_store_64(<$1 x i64> * nocapture, <$1 x i64>, <$1 x i32>)
+
+; Declare the pseudo-gather functions.  When the ispc front-end needs
+; to perform a gather, it generates a call to one of these functions,
+; which have signatures:
+;    
+; varying int8  __pseudo_gather(varying int8 *, mask)
+; varying int16 __pseudo_gather(varying int16 *, mask)
+; varying int32 __pseudo_gather(varying int32 *, mask)
+; varying int64 __pseudo_gather(varying int64 *, mask)
+;
+; These functions are never actually implemented; the
+; GatherScatterFlattenOpt optimization pass finds them and then converts
+; them to make calls to the following functions, which represent gathers
+; from a common base pointer with offsets.  This approach allows the
+; front-end to be relatively simple in how it emits address calculation
+; for gathers.
+;
+; varying int8  __pseudo_gather_base_offsets_8(uniform int8 *base, 
+;                                              int32 offsets, mask)
+; varying int16 __pseudo_gather_base_offsets_16(uniform int16 *base, 
+;                                               int32 offsets, mask)
+; varying int32 __pseudo_gather_base_offsets_32(uniform int32 *base, 
+;                                               int32 offsets, mask)
+; varying int64 __pseudo_gather_base_offsets_64(uniform int64 *base, 
+;                                               int64 offsets, mask)
+;
+; Then, the GSImprovementsPass optimizations finds these and either
+; converts them to native gather functions or converts them to vector
+; loads, if equivalent.
+
+declare <$1 x i8>  @__pseudo_gather_8([$1 x i8 *], <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather_16([$1 x i8 *], <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather_32([$1 x i8 *], <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather_64([$1 x i8 *], <$1 x i32>) nounwind readonly
+
+declare <$1 x i8>  @__pseudo_gather_base_offsets_8(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather_base_offsets_16(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather_base_offsets_32(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather_base_offsets_64(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+
+; Similarly to the pseudo-gathers defined above, we also declare undefined
+; pseudo-scatter instructions with signatures:
+;
+; void __pseudo_scatter_8 (varying int8 *, varying int8 values, mask)
+; void __pseudo_scatter_16(varying int16 *, varying int16 values, mask)
+; void __pseudo_scatter_32(varying int32 *, varying int32 values, mask)
+; void __pseudo_scatter_64(varying int64 *, varying int64 values, mask)
+;
+; The GatherScatterFlattenOpt optimization pass also finds these and
+; transforms them to scatters like:
+;
+; void __pseudo_scatter_base_offsets_8(uniform int8 *base, 
+;                 varying int32 offsets, varying int8 values, mask)
+; void __pseudo_scatter_base_offsets_16(uniform int16 *base, 
+;                 varying int32 offsets, varying int16 values, mask)
+; void __pseudo_scatter_base_offsets_32(uniform int32 *base, 
+;                 varying int32 offsets, varying int32 values, mask)
+; void __pseudo_scatter_base_offsets_64(uniform int64 *base, 
+;                 varying int32 offsets, varying int64 values, mask)
+;
+; And the GSImprovementsPass in turn converts these to actual native
+; scatters or masked stores.  
+
+declare void @__pseudo_scatter_8([$1 x i8 *], <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_16([$1 x i8 *], <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_32([$1 x i8 *], <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_64([$1 x i8 *], <$1 x i64>, <$1 x i32>) nounwind
+
+declare void @__pseudo_scatter_base_offsets_8(i8 * nocapture, <$1 x i32>,
+                                              <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets_16(i8 * nocapture, <$1 x i32>,
+                                               <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets_32(i8 * nocapture, <$1 x i32>,
+                                               <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets_64(i8 * nocapture, <$1 x i32>,
+                                               <$1 x i64>, <$1 x i32>) nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops

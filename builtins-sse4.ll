@@ -37,7 +37,7 @@ stdlib_core(4)
 packed_load_and_store(4)
 
 ; Define the stuff that can be done with base SSE1/SSE2 instructions
-include(`stdlib-sse.ll')
+include(`builtins-sse.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
