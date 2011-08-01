@@ -119,6 +119,19 @@ static void svml_missing() {
     exit(1);
 }
 
+// On Windows, sin() is an overloaded function, so we need an unambiguous
+// function we can take the address of when wiring up the external references
+// below.
+
+double Sin(double x) { return sin(x); }
+double Cos(double x) { return cos(x); }
+double Tan(double x) { return tan(x); }
+double Atan(double x) { return atan(x); }
+double Atan2(double y, double x) { return atan2(y, x); }
+double Pow(double a, double b) { return pow(a, b); }
+double Exp(double x) { return exp(x); }
+double Log(double x) { return log(x); }
+
 static bool lRunTest(const char *fn) {
     llvm::LLVMContext *ctx = new llvm::LLVMContext;
 
@@ -178,14 +191,14 @@ static bool lRunTest(const char *fn) {
     DO_FUNC(powf, "powf");
     DO_FUNC(expf, "expf");
     DO_FUNC(logf, "logf");
-    DO_FUNC(sin, "sin");
-    DO_FUNC(cos, "cos");
-    DO_FUNC(tan, "tan");
-    DO_FUNC(atan, "atan");
-    DO_FUNC(atan2, "atan2");
-    DO_FUNC(pow, "pow");
-    DO_FUNC(exp, "exp");
-    DO_FUNC(log, "log");
+    DO_FUNC(Sin, "sin");
+    DO_FUNC(Cos, "cos");
+    DO_FUNC(Tan, "tan");
+    DO_FUNC(Atan, "atan");
+    DO_FUNC(Atan2, "atan2");
+    DO_FUNC(Pow, "pow");
+    DO_FUNC(Exp, "exp");
+    DO_FUNC(Log, "log");
     DO_FUNC(memset, "memset");
 #ifdef ISPC_IS_APPLE
     DO_FUNC(memset_pattern4, "memset_pattern4");
