@@ -12,7 +12,8 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
 
 LLVM_LIBS=$(shell llvm-config --ldflags --libs) -lpthread -ldl
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
-LLVM_VERSION_DEF=-DLLVM_$(shell llvm-config --version | sed s/\\./_/)
+LLVM_VERSION=$(shell llvm-config --version | sed s/\\./_/)
+LLVM_VERSION_DEF=-DLLVM_$(LLVM_VERSION)
 
 BUILD_DATE=$(shell date +%Y%m%d)
 BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
@@ -105,7 +106,7 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 
 objs/builtins-%.cpp: builtins-%.ll builtins.m4 builtins-sse.ll
 	@echo Creating C++ source from builtin definitions file $<
-	@m4 builtins.m4 $< | ./bitcode2cpp.py $< > $@
+	@m4 -DLLVM_VERSION=$(LLVM_VERSION) builtins.m4 $< | ./bitcode2cpp.py $< > $@
 
 objs/builtins-%.o: objs/builtins-%.cpp
 	@echo Compiling $<

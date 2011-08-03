@@ -79,6 +79,7 @@ Contents:
   + `Packed Load and Store Operations`_
   + `Conversions To and From Half-Precision Floats`_
   + `Atomic Operations and Memory Fences`_
+  + `Prefetches`_
   + `Low-Level Bits`_
 
 * `Interoperability with the Application`_
@@ -1988,6 +1989,39 @@ code.
 ::
 
     void memory_barrier();
+
+
+Prefetches
+----------
+
+The standard library has a variety of functions to prefetch data into the
+processor's cache.  While modern CPUs have automatic prefetchers that do a
+reasonable job of prefetching data to the cache before its needed, high
+performance applications may find it helpful to prefetch data before it's
+needed.
+
+For example, this code shows how to prefetch data to the processor's L1
+cache while iterating over the items in an array.  
+
+::
+
+   uniform int32 array[...];
+   for (uniform int i = 0; i < count; ++i) {
+       // do computation with array[i]
+       prefetch_l1(array[i+32]);
+   }
+
+The standard library has routines to prefetch to the L1, L2, and L3
+caches.  It also has a variant, ``prefetch_nt()``, that indicates that the
+value being prefetched isn't expected to be used more than once (so should
+be high priority to be evicted from the cache).
+
+::
+
+    void prefetch_{l1,l2,l3,nt}(reference TYPE)
+
+These functions are available for all of the basic types in the
+language--``int8``, ``int16``, ``int32``, ``float``, and so forth.
 
 
 Low-Level Bits

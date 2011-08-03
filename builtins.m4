@@ -557,6 +557,41 @@ define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $
 }
 ')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; prefetch definitions
+
+; prefetch has a new parameter in LLVM3.0, to distinguish between instruction
+; and data caches--the declaration is now:
+; declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
+;                             i32 %cachetype)  (cachetype 1 == data cache)
+; however, the version below seems to still work...
+
+declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
+
+define(`prefetch_read', `
+define internal void @__prefetch_read_1_$1($2 *) alwaysinline {
+  %ptr8 = bitcast $2 * %0 to i8 *
+  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 3)
+  ret void
+}
+define internal void @__prefetch_read_2_$1($2 *) alwaysinline {
+  %ptr8 = bitcast $2 * %0 to i8 *
+  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 2)
+  ret void
+}
+define internal void @__prefetch_read_3_$1($2 *) alwaysinline {
+  %ptr8 = bitcast $2 * %0 to i8 *
+  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 1)
+  ret void
+}
+define internal void @__prefetch_read_nt_$1($2 *) alwaysinline {
+  %ptr8 = bitcast $2 * %0 to i8 *
+  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 0)
+  ret void
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`stdlib_core', `
 
@@ -778,6 +813,25 @@ define internal i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
 define internal <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone alwaysinline {
   ret <$1 x i32> %0
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; prefetching
+
+prefetch_read(uniform_bool, i1)
+prefetch_read(uniform_int8, i8)
+prefetch_read(uniform_int16, i16)
+prefetch_read(uniform_int32, i32)
+prefetch_read(uniform_int64, i64)
+prefetch_read(uniform_float, float)
+prefetch_read(uniform_double, double)
+
+prefetch_read(varying_bool, <$1 x i32>)
+prefetch_read(varying_int8, <$1 x i8>)
+prefetch_read(varying_int16, <$1 x i16>)
+prefetch_read(varying_int32, <$1 x i32>)
+prefetch_read(varying_int64, <$1 x i64>)
+prefetch_read(varying_float, <$1 x float>)
+prefetch_read(varying_double, <$1 x double>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals

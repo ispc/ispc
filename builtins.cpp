@@ -170,6 +170,27 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 }
 
 
+static void
+lCreateSymbol(const std::string &name, const Type *returnType, 
+              const std::vector<const Type *> &argTypes, 
+              const llvm::FunctionType *ftype, llvm::Function *func, 
+              SymbolTable *symbolTable) {
+    SourcePos noPos;
+    noPos.name = "__stdlib";
+
+    FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+    // set NULL default arguments
+    std::vector<ConstExpr *> defaults;
+    for (unsigned int j = 0; j < ftype->getNumParams(); ++j)
+        defaults.push_back(NULL);
+    funcType->SetArgumentDefaults(defaults);
+
+    Symbol *sym = new Symbol(name, noPos, funcType);
+    sym->function = func;
+    symbolTable->AddFunction(sym);
+}
+
+
 /** Given an LLVM function declaration, synthesize the equivalent ispc
     symbol for the function (if possible).  Returns true on success, false
     on failure.
@@ -221,7 +242,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
 
         // Iterate over the arguments and try to find their equivalent ispc
         // types.  Track if any of the arguments has an integer type.
-        bool anyIntArgs = false;
+        bool anyIntArgs = false, anyReferenceArgs = false;
         std::vector<const Type *> argTypes;
         for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
@@ -230,22 +251,26 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
                 return false;
             anyIntArgs |= 
                 (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
+            anyReferenceArgs |= (dynamic_cast<const ReferenceType *>(type) != NULL);
             argTypes.push_back(type);
         }
 
         // Always create the symbol the first time through, in particular
         // so that we get symbols for things with no integer types!
-        if (i == 0 || anyIntArgs == true) {
-            FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-            // set NULL default arguments
-            std::vector<ConstExpr *> defaults;
-            for (unsigned int j = 0; j < ftype->getNumParams(); ++j)
-                defaults.push_back(NULL);
-            funcType->SetArgumentDefaults(defaults);
+        if (i == 0 || anyIntArgs == true)
+            lCreateSymbol(name, returnType, argTypes, ftype, func, symbolTable);
 
-            Symbol *sym = new Symbol(name, noPos, funcType);
-            sym->function = func;
-            symbolTable->AddFunction(sym);
+        // If there are any reference types, also make a variant of the
+        // symbol that has them as const references.  This obviously
+        // doesn't make sense for many builtins, but we'll give the stdlib
+        // the option to call one if it needs one.
+        if (anyReferenceArgs == true) {
+            for (unsigned int j = 0; j < argTypes.size(); ++j) {
+                if (dynamic_cast<const ReferenceType *>(argTypes[j]) != NULL)
+                    argTypes[j] = argTypes[j]->GetAsConstType();
+                lCreateSymbol(name + "_refsconst", returnType, argTypes, 
+                              ftype, func, symbolTable);
+            }
         }
     }
 

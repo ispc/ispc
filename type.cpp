@@ -1541,7 +1541,7 @@ StructType::GetElementNumber(const std::string &n) const {
 // ReferenceType
 
 ReferenceType::ReferenceType(const Type *t, bool ic) 
-    : isConst(ic), targetType(t) {
+    : isConst(ic), targetType(t->GetAsNonConstType()) {
 }
 
 
@@ -2136,8 +2136,9 @@ Type::Equal(const Type *a, const Type *b) {
     const ReferenceType *rta = dynamic_cast<const ReferenceType *>(a);
     const ReferenceType *rtb = dynamic_cast<const ReferenceType *>(b);
     if (rta != NULL && rtb != NULL)
-        return Type::Equal(rta->GetReferenceTarget(),
-                           rtb->GetReferenceTarget());
+        return ((rta->IsConstType() == rtb->IsConstType()) &&
+                Type::Equal(rta->GetReferenceTarget(),
+                            rtb->GetReferenceTarget()));
 
     const FunctionType *fta = dynamic_cast<const FunctionType *>(a);
     const FunctionType *ftb = dynamic_cast<const FunctionType *>(b);

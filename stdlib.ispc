@@ -316,6 +316,39 @@ static inline uniform int lanemask() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// Prefetching
+
+#define PREFETCHES(NAME, TYPE)                                  \
+static inline void prefetch_l1(const reference TYPE ptr) {      \
+    __prefetch_read_1_##NAME##_refsconst(ptr);                  \
+}                                                               \
+static inline void prefetch_l2(const reference TYPE ptr) {      \
+    __prefetch_read_2_##NAME##_refsconst(ptr);                  \
+}                                                               \
+static inline void prefetch_l3(const reference TYPE ptr) {      \
+    __prefetch_read_3_##NAME##_refsconst(ptr);                  \
+}                                                               \
+ static inline void prefetch_nt(const reference TYPE ptr) {     \
+     __prefetch_read_nt_##NAME##_refsconst(ptr);                \
+}
+
+PREFETCHES(uniform_int8, uniform int8)
+PREFETCHES(uniform_int16, uniform int16)
+PREFETCHES(uniform_int32, uniform int32)
+PREFETCHES(uniform_int64, uniform int64)
+PREFETCHES(uniform_float, uniform float)
+PREFETCHES(uniform_double, uniform double)
+
+PREFETCHES(varying_int8, int8)
+PREFETCHES(varying_int16, int16)
+PREFETCHES(varying_int32, int32)
+PREFETCHES(varying_int64, int64)
+PREFETCHES(varying_float, float)
+PREFETCHES(varying_double, double)
+
+#undef PREFETCHES
+
+///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
 
 static inline uniform float reduce_add(float x) {
@@ -522,6 +555,8 @@ DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap)
 
 DEFINE_ATOMIC_OP(double,double,swap,swap)
 
+#undef DEFINE_ATOMIC_OP
+
 #define ATOMIC_DECL_CMPXCHG(TA, TB)                                        \
 static inline TA atomic_compare_exchange_global(                           \
          uniform reference TA ref, TA oldval, TA newval) {                 \
@@ -537,6 +572,8 @@ ATOMIC_DECL_CMPXCHG(float, float)
 ATOMIC_DECL_CMPXCHG(int64, int64)
 ATOMIC_DECL_CMPXCHG(unsigned int64, int64)
 ATOMIC_DECL_CMPXCHG(double, double)
+
+#undef ATOMIC_DECL_CMPXCHG
 
 ///////////////////////////////////////////////////////////////////////////
 // Floating-Point Math
