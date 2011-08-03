@@ -2600,6 +2600,80 @@ static inline int16 float_to_half(float f) {
 }
 
 
+static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
+    uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+    uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+    uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+
+    // sign
+    uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
+    // Exponent: unbias the halfp, then bias the single
+    uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+    // Exponent
+    uniform unsigned int32 xe = (unsigned int32) (xes << 23);
+    // Mantissa
+    uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
+    return floatbits(xs | xe | xm);
+
+}
+
+static inline float half_to_float_fast(unsigned int16 h) {
+    unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+    unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+    unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+
+    // sign
+    unsigned int32 xs = ((unsigned int32) hs) << 16; 
+    // Exponent: unbias the halfp, then bias the single
+    int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+    // Exponent
+    unsigned int32 xe = (unsigned int32) (xes << 23);
+    // Mantissa
+    unsigned int32 xm = ((unsigned int32) hm) << 13; 
+    return floatbits(xs | xe | xm);
+
+}
+
+static inline uniform int16 float_to_half_fast(uniform float f) {
+    uniform int32 x = intbits(f);
+    uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+    uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+    uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+
+    uniform unsigned int32 hs = (xs >> 16); // Sign bit
+    // Exponent unbias the single, then bias the halfp
+    uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+    uniform unsigned int32 he = (hes << 10); // Exponent
+    uniform int32 hm = (xm >> 13); // Mantissa
+    uniform int32 ret = (hs | he | hm);
+
+    if (xm & 0x00001000u) // Check for rounding
+        // Round, might overflow to inf, this is OK
+        ret += 1u; 
+
+    return (int16)ret;
+}
+
+static inline int16 float_to_half_fast(float f) {
+    int32 x = intbits(f);
+    unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+    unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+    unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+
+    unsigned int32 hs = (xs >> 16); // Sign bit
+    // Exponent unbias the single, then bias the halfp
+    int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+    unsigned int32 he = (hes << 10); // Exponent
+    int32 hm = (xm >> 13); // Mantissa
+    int32 ret = (hs | he | hm);
+
+    if (xm & 0x00001000u) // Check for rounding
+        // Round, might overflow to inf, this is OK
+        ret += 1u; 
+
+    return (int16)ret;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // RNG stuff
 
