@@ -2624,7 +2624,9 @@ static inline unsigned int random(reference RNGState state)
 
 static inline float frandom(reference RNGState state)
 {
-    return ((int)(random(state) & ((1<<24)-1))) / (float)(1 << 24);
+    unsigned int irand = random(state);
+    irand &= (1<<23)-1;
+    return floatbits(0x3F800000 | irand)-1.0f;
 }
 
 static inline uniform unsigned int __seed4(reference RNGState state, 
