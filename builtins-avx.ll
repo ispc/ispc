@@ -309,26 +309,27 @@ define internal float @__min_uniform_float(float, float) nounwind readonly alway
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-declare <8 x i32> @llvm.x86.avx.min.sd.256(<8 x i32>, <8 x i32>) nounwind readnone
-declare <8 x i32> @llvm.x86.avx.max.sd.256(<8 x i32>, <8 x i32>) nounwind readnone
+; no 8-wide integer stuff in avx1... 
+declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
 
 define internal <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.min.sd.256(<8 x i32> %0, <8 x i32> %1)
-  ret <8 x i32> %call
+  binary4to8(ret, i32, @llvm.x86.sse41.pminsd, %0, %1)
+  ret <8 x i32> %ret
 }
 
 define internal i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.min.sd.256, %0, %1)
+  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminsd, %0, %1)
   ret i32 %ret
 }
 
 define internal <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.max.sd.256(<8 x i32> %0, <8 x i32> %1)
-  ret <8 x i32> %call
+  binary4to8(ret, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
+  ret <8 x i32> %ret
 }
 
 define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.max.sd.256, %0, %1)
+  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
   ret i32 %ret
 }
 
@@ -336,32 +337,28 @@ define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-; FIXME: looks like these aren't available in LLVM?
-declare <8 x i32> @llvm.x86.avx.min.ud.256(<8 x i32>, <8 x i32>) nounwind readnone
-declare <8 x i32> @llvm.x86.avx.max.ud.256(<8 x i32>, <8 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
+declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
 
-define internal <8 x i32> @__min_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.min.ud.256(<8 x i32> %0, <8 x i32> %1)
-  ret <8 x i32> %call
+define internal <8 x i32> @__min_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+  binary4to8(ret, i32, @llvm.x86.sse41.pminud, %0, %1)
+  ret <8 x i32> %ret
 }
 
 define internal i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.min.ud.256, %0, %1)
+  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminud, %0, %1)
   ret i32 %ret
 }
 
-define internal <8 x i32> @__max_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
-  %call = call <8 x i32> @llvm.x86.avx.max.ud.256(<8 x i32> %0, <8 x i32> %1)
-  ret <8 x i32> %call
+define internal <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+  binary4to8(ret, i32, @llvm.x86.sse41.pmaxud, %0, %1)
+  ret <8 x i32> %ret
 }
 
 define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 8, i32, @llvm.x86.avx.max.ud.256, %0, %1)
+  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxud, %0, %1)
   ret i32 %ret
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops
