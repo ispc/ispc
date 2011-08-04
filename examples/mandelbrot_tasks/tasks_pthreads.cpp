@@ -106,7 +106,7 @@ TasksInit() {
     }
 
     char name[32];
-    sprintf(name, "mandelbrot.%d", (int)getpid());
+    sprintf(name, "ispc_task.%d", (int)getpid());
     workerSemaphore = sem_open(name, O_CREAT, S_IRUSR|S_IWUSR, 0);
     if (!workerSemaphore) {
         fprintf(stderr, "Error creating semaphore: %s\n", strerror(err));
