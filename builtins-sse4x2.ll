@@ -434,6 +434,8 @@ define internal i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
+reduce_equal(8)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 

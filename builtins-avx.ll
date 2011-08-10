@@ -409,6 +409,7 @@ define internal float @__reduce_max_float(<8 x float>) nounwind readnone alwaysi
   reduce8(float, @__max_varying_float, @__max_uniform_float)
 }
 
+reduce_equal(8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops

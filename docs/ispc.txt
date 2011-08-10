@@ -1823,7 +1823,34 @@ given value across all of the currently-executing vector lanes.
     uniform int reduce_max(int a, int b)
     uniform unsigned int reduce_max(unsigned int a, unsigned int b)
 
+Finally, you can check to see if a particular value has the same value in
+all of the currently-running program instances:
 
+::
+
+    uniform bool reduce_equal(int32 v)
+    uniform bool reduce_equal(unsigned int32 v)
+    uniform bool reduce_equal(float v)
+    uniform bool reduce_equal(int64 v)
+    uniform bool reduce_equal(unsigned int64 v)
+    uniform bool reduce_equal(double)
+
+There are also variants of these functions that return the value as a
+``uniform`` in the case where the values are all the same.
+
+::
+
+    uniform bool reduce_equal(int32 v, reference uniform int32 sameval)
+    uniform bool reduce_equal(unsigned int32 v,
+                              reference uniform unsigned int32 sameval)
+    uniform bool reduce_equal(float v, reference uniform float sameval)
+    uniform bool reduce_equal(int64 v, reference uniform int64 sameval)
+    uniform bool reduce_equal(unsigned int64 v,
+                              reference uniform unsigned int64 sameval)
+    uniform bool reduce_equal(double, reference uniform double sameval)
+
+The value returned by the ``reduce_equal()`` function is undefined if
+it is called when none of the program instances are running.
 
 Packed Load and Store Operations
 --------------------------------

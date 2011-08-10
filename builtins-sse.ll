@@ -376,6 +376,7 @@ define internal i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
   reduce4(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
+reduce_equal(4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store

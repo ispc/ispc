@@ -471,6 +471,22 @@ static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
     return __reduce_max_uint64(__mask ? v : 0);
 }
 
+#define REDUCE_EQUAL(TYPE, FUNCTYPE)                               \
+static inline uniform bool reduce_equal(TYPE v) {                  \
+    uniform TYPE unusedValue;                                      \
+    return __reduce_equal_##FUNCTYPE(v, unusedValue, (int32)__mask); \
+}                                                                  \
+static inline uniform bool reduce_equal(TYPE v, reference uniform TYPE value) { \
+    return __reduce_equal_##FUNCTYPE(v, value, (int32)__mask);       \
+}
+
+REDUCE_EQUAL(int32, int32)
+REDUCE_EQUAL(unsigned int32, int32)
+REDUCE_EQUAL(float, float)
+REDUCE_EQUAL(int64, int64)
+REDUCE_EQUAL(unsigned int64, int64)
+REDUCE_EQUAL(double, double)
+
 ///////////////////////////////////////////////////////////////////////////
 // packed load, store
 

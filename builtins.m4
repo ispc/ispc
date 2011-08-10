@@ -1401,6 +1401,81 @@ done:
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reduce_equal
+
+; count leading zeros
+declare i32 @llvm.cttz.i32(i32)
+
+define(`reduce_equal_aux', `
+define internal i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
+                                      <$1 x i32> %mask) nounwind alwaysinline {
+entry:
+   %mm = call i32 @__movmsk(<$1 x i32> %mask)
+   %allon = icmp eq i32 %mm, eval((1<<$1)-1)
+   br i1 %allon, label %check_neighbors, label %domixed
+
+domixed:
+  ; the mask is mixed on/off.  First see if the lanes are all off
+  %alloff = icmp eq i32 %mm, 0
+  br i1 %alloff, label %doalloff, label %actuallymixed
+
+doalloff:
+  ret i1 undef  ;; should we return an actual value here?
+
+actuallymixed: 
+  ; First, figure out which lane is the first active one
+  %first = call i32 @llvm.cttz.i32(i32 %mm)
+  %baseval = extractelement <$1 x $2> %v, i32 %first
+  %basev1 = bitcast $2 %baseval to <1 x $2>
+  ; get a vector that is that value smeared across all elements
+  %basesmear = shufflevector <1 x $2> %basev1, <1 x $2> undef,
+        <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
+
+  ; now to a blend of that vector with the original vector, such that the
+  ; result will be the original value for the active lanes, and the value
+  ; from the first active lane for the inactive lanes.  Given that, we can
+  ; just unconditionally check if the lanes are all equal in check_neighbors
+  ; below without worrying about inactive lanes...
+  %ptr = alloca <$1 x $2>
+  store <$1 x $2> %basesmear, <$1 x $2> * %ptr
+  %castptr = bitcast <$1 x $2> * %ptr to <$1 x $4> *
+  %castv = bitcast <$1 x $2> %v to <$1 x $4>
+  call void @__masked_store_blend_$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x i32> %mask)
+  %blendvec = load <$1 x $2> * %ptr
+  br label %check_neighbors
+
+check_neighbors:
+  %vec = phi <$1 x $2> [ %blendvec, %actuallymixed ], [ %v, %entry ]
+  ; now we can just rotate once and compare with the vector, which ends 
+  ; up comparing each element to its neighbor on the right.  Then see if
+  ; all of those values are true; if so, then all of the elements are equal..
+  %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
+  %castvr = call <$1 x $4> @__rotate_int$6(<$1 x $4> %castvec, i32 1)
+  %vr = bitcast <$1 x $4> %castvr to <$1 x $2>
+  %eq = $5 eq <$1 x $2> %vec, %vr
+  %eq32 = sext <$1 x i1> %eq to <$1 x i32>
+  %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)
+  %alleq = icmp eq i32 %eqmm, eval((1<<$1)-1)
+  br i1 %alleq, label %all_equal, label %not_all_equal
+
+all_equal:
+  %the_value = extractelement <$1 x $2> %vec, i32 0
+  store $2 %the_value, $2 * %samevalue
+  ret i1 true
+
+not_all_equal:
+  ret i1 false
+}
+')
+
+define(`reduce_equal', `
+reduce_equal_aux($1, i32, int32, i32, icmp, 32)
+reduce_equal_aux($1, float, float, i32, fcmp, 32)
+reduce_equal_aux($1, i64, int64, i64, icmp, 64)
+reduce_equal_aux($1, double, double, i64, fcmp, 64)
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; per_lane
 ;;
 ;; The scary macro below encapsulates the 'scalarization' idiom--i.e. we have
