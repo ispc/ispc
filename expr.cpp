@@ -2100,7 +2100,8 @@ FunctionCallExpr::tryResolve(bool (*matchFunc)(Expr *, const Type *)) {
             // It's kind of a silly to redundantly discover this for each
             // potential match versus detecting this earlier in the
             // matching process and just giving up.
-            if (!callArgs[i] || !callArgs[i]->GetType() || !candArgTypes[i])
+            if (!callArgs[i] || !callArgs[i]->GetType() || !candArgTypes[i] ||
+                dynamic_cast<const FunctionType *>(callArgs[i]->GetType()) != NULL)
                 return false;
             
             // See if this caller argument matches the type of the
