@@ -101,6 +101,7 @@ Contents:
   + `"Inline" Aggressively`_
   + `Small Performance Tricks`_
   + `Instrumenting Your ISPC Programs`_
+  + `Using Scan Operations For Variable Output`_
 
 * `Disclaimer and Legal Information`_
 
@@ -1852,6 +1853,44 @@ There are also variants of these functions that return the value as a
 The value returned by the ``reduce_equal()`` function is undefined if
 it is called when none of the program instances are running.
 
+There are also a number of functions to compute "scan"s of values across
+the program instances.  For example, the ``exclusive_scan_and()`` function
+computes, for each program instance, the sum of the given value over all of
+the preceeding program instances.  (The scans currently available in
+``ispc`` are all so-called "exclusive" scans, meaning that the value
+computed for a given element does not include the value provided for that
+element.)  In C code, an exclusive add scan over an array might be
+implemented as:
+
+::
+
+    void scan_add(int *in_array, int *result_array, int count) {
+        result_array[0] = 0;
+        for (int i = 0; i < count; ++i)
+            result_array[i] = result_array[i-1] + in_array[i-1];
+    }
+
+``ispc`` provides the following scan functions--addition, bitwise-and, and
+bitwise-or are available:
+
+::
+
+    int32 exclusive_scan_add(int32 v) 
+    unsigned int32 exclusive_scan_add(unsigned int32 v) 
+    float exclusive_scan_add(float v) 
+    int64 exclusive_scan_add(int64 v) 
+    unsigned int64 exclusive_scan_add(unsigned int64 v) 
+    double exclusive_scan_add(double v) 
+    int32 exclusive_scan_and(int32 v) 
+    unsigned int32 exclusive_scan_and(unsigned int32 v) 
+    int64 exclusive_scan_and(int64 v) 
+    unsigned int64 exclusive_scan_and(unsigned int64 v) 
+    int32 exclusive_scan_or(int32 v) 
+    unsigned int32 exclusive_scan_or(unsigned int32 v) 
+    int64 exclusive_scan_or(int64 v) 
+    unsigned int64 exclusive_scan_or(unsigned int64 v) 
+
+
 Packed Load and Store Operations
 --------------------------------
 
@@ -2759,6 +2798,38 @@ active upon function entry.
     ao.ispc(0079) - function entry: 10072 calls (0 / 0.00% all off!), 45.09% active lanes
     ao.ispc(0088) - function entry: 36928 calls (0 / 0.00% all off!), 97.40% active lanes
     ...
+
+
+Using Scan Operations For Variable Output
+-----------------------------------------
+
+One important application of the ``exclusive_scan_add()`` function in the
+standard library is when program instances want to generate a variable amount
+of output and when one would like that output to be densely packed in a
+single array.  For example, consider the code fragment below:
+
+::
+
+    uniform int func(uniform float outArray[], ...) {
+       int numOut = ...;  // figure out how many to be output
+       float outLocal[MAX_OUT]; // staging area
+       // put results in outLocal[0], ..., outLocal[numOut-1]
+       int startOffset = exclusive_scan_add(numOut);
+       for (int i = 0; i < numOut; ++i)
+           outArray[startOffset + i] = outLocal[i];
+       return reduce_add(numOut);
+    }
+
+Here, each program instance has computed a number, ``numOut``, of values to
+output, and has stored them in the ``outLocal`` array.  Assume that four
+program instances are running and that the first one wants to output one
+value, the second two values, and the third and fourth three values each.
+In this case, ``exclusive_scan_add()`` will return the values (0, 1, 3, 6)
+to the four program instances, respectively.  The first program instance
+will write its one result to ``outArray[0]``, the second will write its two
+values to ``outArray[1]`` and ``outArray[2]``, and so forth.  The
+``reduce_add`` call at the end returns the total number of values that the
+program instances have written to the array.
 
 Disclaimer and Legal Information
 ================================

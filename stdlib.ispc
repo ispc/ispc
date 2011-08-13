@@ -487,6 +487,62 @@ REDUCE_EQUAL(int64, int64)
 REDUCE_EQUAL(unsigned int64, int64)
 REDUCE_EQUAL(double, double)
 
+static int32 exclusive_scan_add(int32 v) {
+    return __exclusive_scan_add_i32(v, (int32)__mask);
+}
+
+static unsigned int32 exclusive_scan_add(unsigned int32 v) {
+    return __exclusive_scan_add_i32(v, __mask);
+}
+
+static float exclusive_scan_add(float v) {
+    return __exclusive_scan_add_float(v, __mask);
+}
+
+static int64 exclusive_scan_add(int64 v) {
+    return __exclusive_scan_add_i64(v, (int32)__mask);
+}
+
+static unsigned int64 exclusive_scan_add(unsigned int64 v) {
+    return __exclusive_scan_add_i64(v, __mask);
+}
+
+static double exclusive_scan_add(double v) {
+    return __exclusive_scan_add_double(v, __mask);
+}
+
+static int32 exclusive_scan_and(int32 v) {
+    return __exclusive_scan_and_i32(v, (int32)__mask);
+}
+
+static unsigned int32 exclusive_scan_and(unsigned int32 v) {
+    return __exclusive_scan_and_i32(v, __mask);
+}
+
+static int64 exclusive_scan_and(int64 v) {
+    return __exclusive_scan_and_i64(v, (int32)__mask);
+}
+
+static unsigned int64 exclusive_scan_and(unsigned int64 v) {
+    return __exclusive_scan_and_i64(v, __mask);
+}
+
+static int32 exclusive_scan_or(int32 v) {
+    return __exclusive_scan_or_i32(v, (int32)__mask);
+}
+
+static unsigned int32 exclusive_scan_or(unsigned int32 v) {
+    return __exclusive_scan_or_i32(v, __mask);
+}
+
+static int64 exclusive_scan_or(int64 v) {
+    return __exclusive_scan_or_i64(v, (int32)__mask);
+}
+
+static unsigned int64 exclusive_scan_or(unsigned int64 v) {
+    return __exclusive_scan_or_i64(v, __mask);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // packed load, store
 

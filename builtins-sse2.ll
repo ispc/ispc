@@ -35,6 +35,7 @@
 ; Define some basics for a 4-wide target
 stdlib_core(4)
 packed_load_and_store(4)
+scans(4)
 
 ; Include the various definitions of things that only require SSE1 and SSE2
 include(`builtins-sse.ll')

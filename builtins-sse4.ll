@@ -35,6 +35,7 @@
 ; Define common 4-wide stuff
 stdlib_core(4)
 packed_load_and_store(4)
+scans(4)
 
 ; Define the stuff that can be done with base SSE1/SSE2 instructions
 include(`builtins-sse.ll')
@@ -228,7 +229,6 @@ define internal float @__reduce_add_float(<4 x float>) nounwind readonly alwaysi
   %scalar = extractelement <4 x float> %v2, i32 0
   ret float %scalar
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store

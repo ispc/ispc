@@ -1476,6 +1476,66 @@ reduce_equal_aux($1, double, double, i64, fcmp, 64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; prefix sum stuff
+
+; $1: vector width (e.g. 4)
+; $2: vector element type (e.g. float)
+; $3: bit width of vector element type (e.g. 32)
+; $4: operator to apply (e.g. fadd)
+; $5: identity element value (e.g. 0)
+; $6: suffix for function (e.g. add_float)
+
+define(`exclusive_scan', `
+define internal <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
+                                  <$1 x i32> %mask) nounwind alwaysinline {
+  ; first, set the value of any off lanes to the identity value
+  %ptr = alloca <$1 x $2>
+  %idvec1 = bitcast $2 $5 to <1 x $2>
+  %idvec = shufflevector <1 x $2> %idvec1, <1 x $2> undef,
+      <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
+  store <$1 x $2> %idvec, <$1 x $2> * %ptr
+  %ptr`'$3 = bitcast <$1 x $2> * %ptr to <$1 x i`'$3> *
+  %vi = bitcast <$1 x $2> %v to <$1 x i`'$3>
+  call void @__masked_store_blend_$3(<$1 x i`'$3> * %ptr`'$3, <$1 x i`'$3> %vi,
+                                     <$1 x i32> %mask)
+  %v_id = load <$1 x $2> * %ptr
+
+  ; extract elements of the vector to use in computing the scan
+  forloop(i, 0, eval($1-1), `
+  %v`'i = extractelement <$1 x $2> %v_id, i32 i')
+
+  ; and just compute the scan directly.
+  ; 0th element is the identity (so nothing to do here),
+  ; 1st element is identity (op) the 0th element of the original vector,
+  ; each successive element is the previous element (op) the previous element
+  ;  of the original vector
+  %s1 = $4 $2 $5, %v0
+  forloop(i, 2, eval($1-1), `
+  %s`'i = $4 $2 %s`'eval(i-1), %v`'eval(i-1)')
+
+  ; and fill in the result vector
+  %r0 = insertelement <$1 x $2> undef, $2 $5, i32 0  ; 0th element gets identity
+  forloop(i, 1, eval($1-1), `
+  %r`'i = insertelement <$1 x $2> %r`'eval(i-1), $2 %s`'i, i32 i')
+
+  ret <$1 x $2> %r`'eval($1-1)
+}
+')
+
+define(`scans', `
+exclusive_scan($1, i32, 32, add, 0, add_i32)
+exclusive_scan($1, float, 32, fadd, zeroinitializer, add_float)
+exclusive_scan($1, i64, 64, add, 0, add_i64)
+exclusive_scan($1, double, 64, fadd, zeroinitializer, add_double)
+
+exclusive_scan($1, i32, 32, and, -1, and_i32)
+exclusive_scan($1, i64, 64, and, -1, and_i64)
+
+exclusive_scan($1, i32, 32, or, 0, or_i32)
+exclusive_scan($1, i64, 64, or, 0, or_i64)
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; per_lane
 ;;
 ;; The scary macro below encapsulates the 'scalarization' idiom--i.e. we have
