@@ -1446,7 +1446,8 @@ actuallymixed:
 
 check_neighbors:
   %vec = phi <$1 x $2> [ %blendvec, %actuallymixed ], [ %v, %entry ]
-  ; now we can just rotate once and compare with the vector, which ends 
+  ifelse($6, `32', `
+  ; For 32-bit elements, we rotate once and compare with the vector, which ends 
   ; up comparing each element to its neighbor on the right.  Then see if
   ; all of those values are true; if so, then all of the elements are equal..
   %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
@@ -1457,6 +1458,22 @@ check_neighbors:
   %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)
   %alleq = icmp eq i32 %eqmm, eval((1<<$1)-1)
   br i1 %alleq, label %all_equal, label %not_all_equal
+  ', `
+  ; But for 64-bit elements, it turns out to be more efficient to just
+  ; scalarize and do a individual pairwise comparisons and AND those
+  ; all together..
+  forloop(i, 0, eval($1-1), `
+  %v`'i = extractelement <$1 x $2> %vec, i32 i')
+
+  forloop(i, 0, eval($1-2), `
+  %eq`'i = $5 eq $2 %v`'i, %v`'eval(i+1)')
+
+  %and0 = and i1 %eq0, %eq1
+  forloop(i, 1, eval($1-3), `
+  %and`'i = and i1 %and`'eval(i-1), %eq`'eval(i+1)')
+
+  br i1 %and`'eval($1-3), label %all_equal, label %not_all_equal
+  ')
 
 all_equal:
   %the_value = extractelement <$1 x $2> %vec, i32 0
