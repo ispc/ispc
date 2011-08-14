@@ -1420,7 +1420,7 @@ domixed:
   br i1 %alloff, label %doalloff, label %actuallymixed
 
 doalloff:
-  ret i1 undef  ;; should we return an actual value here?
+  ret i1 false  ;; this seems safest
 
 actuallymixed: 
   ; First, figure out which lane is the first active one

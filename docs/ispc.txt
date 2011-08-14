@@ -1850,8 +1850,8 @@ There are also variants of these functions that return the value as a
                               reference uniform unsigned int64 sameval)
     uniform bool reduce_equal(double, reference uniform double sameval)
 
-The value returned by the ``reduce_equal()`` function is undefined if
-it is called when none of the program instances are running.
+If called when none of the program instances are running,
+``reduce_equal()`` will return ``false``.
 
 There are also a number of functions to compute "scan"s of values across
 the program instances.  For example, the ``exclusive_scan_and()`` function
