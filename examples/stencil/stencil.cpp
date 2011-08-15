@@ -85,14 +85,6 @@ extern void loop_stencil_serial(int t0, int t1, int x0, int x1,
                                 const float coef[5], 
                                 const float vsq[],
                                 float Aeven[], float Aodd[]);
-extern "C" {
-extern void loop_stencil_ispc(int t0, int t1, int x0, int x1,
-                              int y0, int y1, int z0, int z1,
-                              int Nx, int Ny, int Nz,
-                              const float coef[5], 
-                              const float vsq[],
-                              float Aeven[], float Aodd[]);
-}
 
 
 void InitData(int Nx, int Ny, int Nz, float *A[2], float *vsq) {
