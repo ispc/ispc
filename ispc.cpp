@@ -60,6 +60,7 @@ Module *m;
 Target::Target() {
     arch = "x86-64";
     cpu = "nehalem";
+    is32bit = false;
     isa = SSE4;
     nativeVectorWidth = 4;
     vectorWidth = 4;

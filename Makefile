@@ -48,8 +48,9 @@ BUILTINS_SRC=builtins-avx.ll builtins-sse2.ll builtins-sse4.ll builtins-sse4x2.l
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
-OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_SRC:.ll=.o) builtins-c.o stdlib_ispc.o \
-	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
+OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_SRC:.ll=.o) \
+	builtins-c-32.o builtins-c-64.o stdlib_ispc.o $(BISON_SRC:.yy=.o) \
+	$(FLEX_SRC:.ll=.o))
 
 default: ispc ispc_test
 
@@ -112,11 +113,19 @@ objs/builtins-%.o: objs/builtins-%.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-c.cpp: builtins-c.c
+objs/builtins-c-32.cpp: builtins-c.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -I /opt/l1om/usr/include/ -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py $< > $@
+	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py builtins-c-32.c > $@
 
-objs/builtins-c.o: objs/builtins-c.cpp
+objs/builtins-c-32.o: objs/builtins-c-32.cpp
+	@echo Compiling $<
+	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+objs/builtins-c-64.cpp: builtins-c.c
+	@echo Creating C++ source from builtins definition file $<
+	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py builtins-c-64.c > $@
+
+objs/builtins-c-64.o: objs/builtins-c-64.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 

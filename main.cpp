@@ -209,8 +209,13 @@ int main(int Argc, char *Argv[]) {
             g->cppArgs.push_back(argv[i]);
         }
 #endif // !ISPC_IS_WINDOWS
-        else if (!strncmp(argv[i], "--arch=", 7))
+        else if (!strncmp(argv[i], "--arch=", 7)) {
             g->target.arch = argv[i] + 7;
+            if (g->target.arch == "x86")
+                g->target.is32bit = true;
+            else if (g->target.arch == "x86-64")
+                g->target.is32bit = false;
+        }
         else if (!strncmp(argv[i], "--cpu=", 6))
             g->target.cpu = argv[i] + 6;
         else if (!strcmp(argv[i], "--fast-math"))

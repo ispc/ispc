@@ -107,6 +107,43 @@ Module::Module(const char *fn) {
     symbolTable = new SymbolTable;
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
 
+    // initialize target in module
+    llvm::InitializeAllTargets();
+
+    llvm::Triple triple;
+    // Start with the host triple as the default
+    triple.setTriple(llvm::sys::getHostTriple());
+    if (g->target.arch != "") {
+        // If the user specified a target architecture, see if it's a known
+        // one; print an error with the valid ones otherwise.
+        const llvm::Target *target = NULL;
+        for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
+             iter != llvm::TargetRegistry::end(); ++iter) {
+            if (g->target.arch == iter->getName()) {
+                target = &*iter;
+                break;
+            }
+        }
+        if (!target) {
+            fprintf(stderr, "Invalid target \"%s\"\nOptions: ", 
+                    g->target.arch.c_str());
+            llvm::TargetRegistry::iterator iter;
+            for (iter = llvm::TargetRegistry::begin();
+                 iter != llvm::TargetRegistry::end(); ++iter)
+                fprintf(stderr, "%s ", iter->getName());
+            fprintf(stderr, "\n");
+            exit(1);
+        }
+
+        // And override the arch in the host triple
+        llvm::Triple::ArchType archType = 
+            llvm::Triple::getArchTypeForLLVMName(g->target.arch);
+        if (archType != llvm::Triple::UnknownArch)
+            triple.setArch(archType);
+    }
+    module->setTargetTriple(triple.str());
+
+
 #ifndef LLVM_2_8
     if (g->generateDebuggingSymbols)
         diBuilder = new llvm::DIBuilder(*module);
@@ -923,7 +960,6 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
 
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
-    llvm::InitializeAllTargets();
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
     llvm::InitializeAllTargetMCs();
 #endif
@@ -931,47 +967,12 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     llvm::InitializeAllAsmParsers();
 
     llvm::Triple triple(module->getTargetTriple());
-    if (triple.getTriple().empty())
-        triple.setTriple(llvm::sys::getHostTriple());
+    assert(triple.getTriple().empty() == false);
 
     const llvm::Target *target = NULL;
-    if (g->target.arch != "") {
-        // If the user specified a target architecture, see if it's a known
-        // one; print an error with the valid ones otherwise.
-        for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
-             iter != llvm::TargetRegistry::end(); ++iter) {
-            if (g->target.arch == iter->getName()) {
-                target = &*iter;
-                break;
-            }
-        }
-        if (!target) {
-            fprintf(stderr, "Invalid target \"%s\"\nOptions: ", 
-                    g->target.arch.c_str());
-            llvm::TargetRegistry::iterator iter;
-            for (iter = llvm::TargetRegistry::begin();
-                 iter != llvm::TargetRegistry::end(); ++iter)
-                fprintf(stderr, "%s ", iter->getName());
-            fprintf(stderr, "\n");
-            return false;
-        }
-
-        llvm::Triple::ArchType archType = 
-            llvm::Triple::getArchTypeForLLVMName(g->target.arch);
-        if (archType != llvm::Triple::UnknownArch)
-            triple.setArch(archType);
-    }
-    else {
-        // Otherwise get the target either based on the host or the
-        // module's target, if it has been set there.
-        std::string error;
-        target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), error);
-        if (!target) {
-            fprintf(stderr, "Unable to select target for module: %s\n", 
-                    error.c_str());
-            return false;
-        }
-    }
+    std::string error;
+    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), error);
+    assert(target != NULL);
 
     std::string featuresString;
     llvm::TargetMachine *targetMachine = NULL;
@@ -1004,7 +1005,6 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
     unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
 
-    std::string error;
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
     if (error.size()) {
         fprintf(stderr, "Error opening output file \"%s\".\n", outFileName);

@@ -16,7 +16,8 @@
     <ClCompile Include="decl.cpp" />
     <ClCompile Include="expr.cpp" />
     <ClCompile Include="gen-bitcode-avx.cpp" />
-    <ClCompile Include="gen-bitcode-c.cpp" />
+    <ClCompile Include="gen-bitcode-c-32.cpp" />
+    <ClCompile Include="gen-bitcode-c-64.cpp" />
     <ClCompile Include="gen-bitcode-sse2.cpp" />
     <ClCompile Include="gen-bitcode-sse4.cpp" />
     <ClCompile Include="gen-bitcode-sse4x2.cpp" />
@@ -29,9 +30,9 @@
     <ClCompile Include="opt.cpp" />
     <ClCompile Include="parse.cc" />
     <CustomBuild Include="builtins-c.c">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%LLVM_INSTALL_DIR%\bin\clang -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c.c &gt; gen-bitcode-c.cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%LLVM_INSTALL_DIR%\bin\clang -m32 -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c-32.c &gt; gen-bitcode-c-32.cpp</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">clang builtins-c.c</Message>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%LLVM_INSTALL_DIR%\bin\clang -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c.c &gt; gen-bitcode-c.cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%LLVM_INSTALL_DIR%\bin\clang -m32 -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c-32.c &gt; gen-bitcode-c-32.cpp</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">clang builtins-c.c</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-c.cpp</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-c.cpp</Outputs>

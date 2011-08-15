@@ -54,6 +54,8 @@
 #include <llvm/Instructions.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Linker.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/SubtargetFeature.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
@@ -344,6 +346,22 @@ lAddBitcode(const unsigned char *bitcode, int length,
     if (!bcModule)
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", bcErr.c_str());
     else {
+        // FIXME: this feels like a bad idea, but the issue is that when we
+        // set the llvm::Module's target triple in the ispc Module::Module
+        // constructor, we start by calling llvm::sys::getHostTriple() (and
+        // then change the arch if needed).  Somehow that ends up giving us
+        // strings like 'x86_64-apple-darwin11.0.0', while the stuff we
+        // compile to bitcode with clang has module triples like
+        // 'i386-apple-macosx10.7.0'.  And then LLVM issues a warning about
+        // linking together modules with incompatible target triples..
+        llvm::Triple mTriple(m->module->getTargetTriple());
+        llvm::Triple bcTriple(bcModule->getTargetTriple());
+        assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
+               mTriple.getArch() == bcTriple.getArch());
+        assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
+               mTriple.getVendor() == bcTriple.getVendor());
+        bcModule->setTargetTriple(mTriple.str());
+
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
@@ -395,9 +413,18 @@ void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
     // Add the definitions from the compiled builtins-c.c file
-    extern unsigned char builtins_bitcode_c[];
-    extern int builtins_bitcode_c_length;
-    lAddBitcode(builtins_bitcode_c, builtins_bitcode_c_length, module, symbolTable);
+    if (g->target.is32bit) {
+        extern unsigned char builtins_bitcode_c_32[];
+        extern int builtins_bitcode_c_32_length;
+        lAddBitcode(builtins_bitcode_c_32, builtins_bitcode_c_32_length, 
+                    module, symbolTable);
+    }
+    else {
+        extern unsigned char builtins_bitcode_c_64[];
+        extern int builtins_bitcode_c_64_length;
+        lAddBitcode(builtins_bitcode_c_64, builtins_bitcode_c_64_length, 
+                    module, symbolTable);
+    }
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).

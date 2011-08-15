@@ -168,6 +168,9 @@ struct Target {
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
     std::string arch;
 
+    /** Is the target architecture 32 or 64 bit */
+    bool is32bit;
+
     /** Target CPU. (e.g. "corei7", "corei7-avx", ..) */
     std::string cpu;
 
