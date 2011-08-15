@@ -23,6 +23,12 @@ EOF
     esac
 done
 
+ISPC_ARCH=x86-64
+if [[ $OS == "Windows_NT" ]]; then
+  ISPC_ARCH=x86
+fi
+ISPC_ARGS="--target=$target --arch=$ISPC_ARCH -O2 --woff"
+
 shift $(( $OPTIND - 1 ))
 if [[ "$1" > 0 ]]; then
     while [[ "$1" > 0 ]]; do
@@ -31,7 +37,7 @@ if [[ "$1" > 0 ]]; then
         echo Running test $i
 
         bc=${i%%ispc}bc
-        ispc -O2 $i -woff -o $bc --emit-llvm --target=$target
+        ispc $ISPC_ARGS $i -o $bc --emit-llvm
         if [[ $? != 0 ]]; then
             surprises=1
             echo Test $i FAILED ispc compile
@@ -55,7 +61,7 @@ else
         fi
         (( counter++ ))
         bc=${i%%ispc}bc
-        ispc -O2 $i -woff -o $bc --emit-llvm --target=$target
+        ispc $ISPC_ARGS $i -o $bc --emit-llvm 
         if [[ $? != 0 ]]; then
             surprises=1
             echo Test $i FAILED ispc compile
