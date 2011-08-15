@@ -606,6 +606,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, Declarator *decl,
     // memory
     llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
+    ctx->EmitFunctionParameterDebugInfo(sym);
 }
 
 
