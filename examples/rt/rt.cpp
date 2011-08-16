@@ -90,6 +90,7 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
         }
     }            
     fclose(f);
+    printf("Wrote image file %s\n", filename);
 }
 
 

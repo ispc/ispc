@@ -100,6 +100,7 @@ savePPM(const char *fname, int w, int h)
     fprintf(fp, "255\n");
     fwrite(img, w * h * 3, 1, fp);
     fclose(fp);
+    printf("Wrote image file %s\n", fname);
 }
 
 

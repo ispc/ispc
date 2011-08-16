@@ -64,6 +64,7 @@ writePPM(int *buf, int width, int height, const char *fn) {
             fputc(c, fp);
     }
     fclose(fp);
+    printf("Wrote image file %s\n", fn);
 }
 
 
