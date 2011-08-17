@@ -164,6 +164,7 @@ ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h
   <ItemGroup>
     <ClCompile Include="rt.cpp" />
     <ClCompile Include="rt_serial.cpp" />
+    <ClCompile Include="tasks_concrt.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
