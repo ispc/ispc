@@ -174,9 +174,6 @@ int main(int argc, char *argv[]) {
 
     ensureTargetISAIsSupported();
 
-    extern void TasksInit();
-    TasksInit();
-    
     //
     // Load viewing data and the volume density data
     //

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2011, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,8 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#include "taskinfo.h"
+
 /* Simple task system implementation for ispc based on Microsoft's
    Concurrency Runtime. */
 
@@ -41,6 +43,7 @@ using namespace Concurrency;
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" { 
@@ -50,84 +53,44 @@ extern "C" {
     void ISPCFree(void *ptr);
 }
 
-typedef void (*TaskFuncType)(void *, int, int);
-
-struct TaskInfo {
-    TaskFuncType ispcFunc;
-    void *ispcData;
-};
-
-// This is a simple implementation that just aborts if more than MAX_TASKS
-// are launched.  It could easily be extended to be more general...
-
-#define MAX_TASKS 4096
-static int taskOffset;
-static TaskInfo taskInfo[MAX_TASKS];
-static event *events[MAX_TASKS];
-static CRITICAL_SECTION criticalSection;
-static bool initialized = false;
-
-void
-TasksInit() {
-    InitializeCriticalSection(&criticalSection);
-    for (int i = 0; i < MAX_TASKS; ++i)
-        events[i] = new event;
-    initialized = true;
-}
-
 
 void __cdecl
 lRunTask(LPVOID param) {
     TaskInfo *ti = (TaskInfo *)param;
     
     // Actually run the task. 
-    // FIXME: like the tasks_gcd.cpp implementation, this is passing bogus
+    // FIXME: like the GCD implementation for OS X, this is passing bogus
     // values for the threadIndex and threadCount builtins, which in turn
-    // will cause bugs in code that uses those.  FWIW this example doesn't
-    // use them...
+    // will cause bugs in code that uses those.
     int threadIndex = 0;
     int threadCount = 1;
-    ti->ispcFunc(ti->ispcData, threadIndex, threadCount);
+    TaskFuncType func = (TaskFuncType)ti->func;
+    func(ti->data, threadIndex, threadCount);
 
     // Signal the event that this task is done
-    int taskNum = ti - &taskInfo[0];
-    events[taskNum]->set();
+    ti->taskEvent.set();
 }
 
 
 void
 ISPCLaunch(void *func, void *data) {
-    if (!initialized) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
-    }
-
-    // Get a TaskInfo struct for this task
-    EnterCriticalSection(&criticalSection);
-    TaskInfo *ti = &taskInfo[taskOffset++];
-    assert(taskOffset < MAX_TASKS);
-    LeaveCriticalSection(&criticalSection);
-
-    // And pass it on to the Concurrency Runtime...
-    ti->ispcFunc = (TaskFuncType)func;
-    ti->ispcData = data;
+    TaskInfo *ti = lGetTaskInfo();
+    ti->func = (TaskFuncType)func;
+    ti->data = data;
+	ti->taskEvent.reset();
     CurrentScheduler::ScheduleTask(lRunTask, ti);
 }
 
 
 void ISPCSync() {
-    if (!initialized) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
+    for (int i = 0; i < nextTaskInfoCoordinate; ++i) {
+		int index = (i >> LOG_TASK_QUEUE_CHUNK_SIZE);
+		int offset = i & (TASK_QUEUE_CHUNK_SIZE-1);
+		taskInfo[index][offset].taskEvent.wait();
+		taskInfo[index][offset].taskEvent.reset();
     }
 
-    event::wait_for_multiple(&events[0], taskOffset, true, 
-                             COOPERATIVE_TIMEOUT_INFINITE);
-
-    for (int i = 0; i < taskOffset; ++i)
-        events[i]->reset();
-
-    taskOffset = 0;
+    lResetTaskInfo();
 }
 
 

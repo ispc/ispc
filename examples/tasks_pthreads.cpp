@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2011, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#include "taskinfo.h"
 #include <pthread.h>
 #include <semaphore.h>
 #include <string.h>
@@ -45,7 +46,18 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <vector>
+
+static int initialized = 0;
+static volatile int32_t lock = 0;
+
+static int nThreads;
+static pthread_t *threads;
+static pthread_mutex_t taskQueueMutex;
+static int nextTaskToRun;
+static sem_t *workerSemaphore;
+static uint32_t numUnfinishedTasks;
+static pthread_mutex_t tasksRunningConditionMutex;
+static pthread_cond_t tasksRunningCondition;
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" { 
@@ -53,51 +65,21 @@ extern "C" {
     void ISPCSync();
 }
 
-
-static int nThreads;
-static pthread_t *threads;
-static pthread_mutex_t taskQueueMutex;
-static std::vector<std::pair<void *, void *> > taskQueue;
-static sem_t *workerSemaphore;
-static uint32_t numUnfinishedTasks;
-static pthread_mutex_t tasksRunningConditionMutex;
-static pthread_cond_t tasksRunningCondition;
-
 static void *lTaskEntry(void *arg);
 
 /** Figure out how many CPU cores there are in the system
  */
 static int
 lNumCPUCores() {
-#if defined(__linux__)
     return sysconf(_SC_NPROCESSORS_ONLN);
-#else
-    // Mac
-    int mib[2];
-    mib[0] = CTL_HW;
-    size_t length = 2;
-    if (sysctlnametomib("hw.logicalcpu", mib, &length) == -1) {
-        fprintf(stderr, "sysctlnametomib() filed.  Guessing 2 cores.");
-        return 2;
-    }
-    assert(length == 2);
-
-    int nCores = 0;
-    size_t size = sizeof(nCores);
-
-    if (sysctl(mib, 2, &nCores, &size, NULL, 0) == -1) {
-        fprintf(stderr, "sysctl() to find number of cores present failed.  Guessing 2.");
-        return 2;
-    }
-    return nCores;
-#endif
 }
 
-void
-TasksInit() {
+
+static void
+lTasksInit() {
     nThreads = lNumCPUCores();
 
-    threads = new pthread_t[nThreads];
+    threads = (pthread_t *)malloc(nThreads * sizeof(pthread_t));
 
     int err;
     if ((err = pthread_mutex_init(&taskQueueMutex, NULL)) != 0) {
@@ -124,7 +106,7 @@ TasksInit() {
     }
 
     for (int i = 0; i < nThreads; ++i) {
-        err = pthread_create(&threads[i], NULL, &lTaskEntry, reinterpret_cast<void *>(i));
+        err = pthread_create(&threads[i], NULL, &lTaskEntry, (void *)(i));
         if (err != 0) {
             fprintf(stderr, "Error creating pthread %d: %s\n", i, strerror(err));
             exit(1);
@@ -135,21 +117,35 @@ TasksInit() {
 
 void
 ISPCLaunch(void *f, void *d) {
-    if (threads == NULL) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
+    int err;
+
+    if (!initialized) {
+        while (1) {
+            if (lAtomicCompareAndSwap32(&lock, 1, 0) == 0) {
+                if (!initialized) {
+                    lTasksInit();
+                    __asm__ __volatile__("mfence":::"memory");
+                    initialized = 1;
+                }
+                lock = 0;
+                break;
+            }
+        }
     }
 
     //
     // Acquire mutex, add task
     //
-    int err;
     if ((err = pthread_mutex_lock(&taskQueueMutex)) != 0) {
         fprintf(stderr, "Error from pthread_mutex_lock: %s\n", strerror(err));
         exit(1);
     }
 
-    taskQueue.push_back(std::make_pair(f, d));
+    // Need a mutex here to ensure we get this filled in before a worker
+    // grabs it and starts running...
+    TaskInfo *ti = lGetTaskInfo();
+    ti->func = f;
+    ti->data = d;
 
     if ((err = pthread_mutex_unlock(&taskQueueMutex)) != 0) {
         fprintf(stderr, "Error from pthread_mutex_unlock: %s\n", strerror(err));
@@ -164,6 +160,7 @@ ISPCLaunch(void *f, void *d) {
         exit(1);
     }
 
+    // FIXME: is this redundant with nextTaskInfoCoordinate?
     ++numUnfinishedTasks;
 
     if ((err = pthread_mutex_unlock(&tasksRunningConditionMutex)) != 0) {
@@ -184,17 +181,17 @@ ISPCLaunch(void *f, void *d) {
 
 static void *
 lTaskEntry(void *arg) {
-    int threadIndex = int(reinterpret_cast<int64_t>(arg));
+    int threadIndex = (int)arg;
     int threadCount = nThreads;
+    TaskFuncType func;
 
-    while (true) {
+    while (1) {
         int err;
         if ((err = sem_wait(workerSemaphore)) != 0) {
             fprintf(stderr, "Error from sem_wait: %s\n", strerror(err));
             exit(1);
         }
 
-        std::pair<void *, void *> myTask;
         //
         // Acquire mutex, get task
         //
@@ -202,7 +199,8 @@ lTaskEntry(void *arg) {
             fprintf(stderr, "Error from pthread_mutex_lock: %s\n", strerror(err));
             exit(1);
         }
-        if (taskQueue.size() == 0) {
+
+        if (nextTaskToRun == nextTaskInfoCoordinate) {
             //
             // Task queue is empty, go back and wait on the semaphore
             //
@@ -213,8 +211,10 @@ lTaskEntry(void *arg) {
             continue;
         }
 
-        myTask = taskQueue.back();
-        taskQueue.pop_back();
+        int runCoord = nextTaskToRun++;
+        int index = (runCoord >> LOG_TASK_QUEUE_CHUNK_SIZE);
+        int offset = runCoord & (TASK_QUEUE_CHUNK_SIZE-1);
+        TaskInfo *myTask = &taskInfo[index][offset];
 
         if ((err = pthread_mutex_unlock(&taskQueueMutex)) != 0) {
             fprintf(stderr, "Error from pthread_mutex_unlock: %s\n", strerror(err));
@@ -224,9 +224,8 @@ lTaskEntry(void *arg) {
         //
         // Do work for _myTask_
         //
-        typedef void (*TaskFunType)(void *, int, int);
-        TaskFunType func = (TaskFunType)myTask.first;
-        func(myTask.second, threadIndex, threadCount);
+        func = (TaskFuncType)myTask->func;
+        func(myTask->data, threadIndex, threadCount);
 
         //
         // Decrement the number of unfinished tasks counter
@@ -236,6 +235,8 @@ lTaskEntry(void *arg) {
             exit(1);
         }
 
+        // FIXME: can this be a comparison of (nextTaskToRun == nextTaskInfoCoordinate)?
+        // (I don't think so--think there is a race...)
         int unfinished = --numUnfinishedTasks;
         if (unfinished == 0) {
             //
@@ -261,11 +262,6 @@ lTaskEntry(void *arg) {
 
 
 void ISPCSync() {
-    if (threads == NULL) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
-    }
-
     int err;
     if ((err = pthread_mutex_lock(&tasksRunningConditionMutex)) != 0) {
         fprintf(stderr, "Error from pthread_mutex_lock: %s\n", strerror(err));
@@ -283,6 +279,9 @@ void ISPCSync() {
         }
     }
     
+    lResetTaskInfo();
+    nextTaskToRun = 0;
+
     // We acquire ownership of the condition variable mutex when the above
     // pthread_cond_wait returns.
     // FIXME: is there a lurking issue here if numUnfinishedTasks gets back

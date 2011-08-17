@@ -102,9 +102,6 @@ void InitData(int Nx, int Ny, int Nz, float *A[2], float *vsq) {
 int main() {
     ensureTargetISAIsSupported();
 
-    extern void TasksInit();
-    TasksInit();
-
     int Nx = 256, Ny = 256, Nz = 256;
     int width = 4;
     float *Aserial[2], *Aispc[2];

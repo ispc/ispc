@@ -134,9 +134,6 @@ int main(int argc, char *argv[]) {
 
     ensureTargetISAIsSupported();
 
-    extern void TasksInit();
-    TasksInit();
-
 #define READ(var, n)                                            \
     if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
         fprintf(stderr, "Unexpected EOF reading scene file\n"); \

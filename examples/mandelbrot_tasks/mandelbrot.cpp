@@ -110,9 +110,6 @@ int main() {
 
     ensureTargetISAIsSupported();
 
-    extern void TasksInit();
-    TasksInit();
-
     int maxIterations = 512;
     int *buf = new int[width*height];
 

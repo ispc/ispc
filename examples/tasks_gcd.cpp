@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2011, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -31,61 +31,57 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#include "taskinfo.h"
+
 /* A simple task system for ispc programs based on Apple's Grand Central
    Dispatch. */
-
 #include <dispatch/dispatch.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-static bool initialized = false;
+static int initialized = 0;
+static volatile int32_t lock = 0;
 static dispatch_queue_t gcdQueue;
 static dispatch_group_t gcdGroup;
 
 // ispc expects these functions to have C linkage / not be mangled
-extern "C" {
+extern "C" { 
     void ISPCLaunch(void *f, void *data);
     void ISPCSync();
-}
-
-struct TaskInfo {
-    void *func;
-    void *data;
-};
-
-
-void
-TasksInit() {
-    gcdQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-    gcdGroup = dispatch_group_create();
-    initialized = true;
 }
 
 
 static void
 lRunTask(void *ti) {
-    typedef void (*TaskFuncType)(void *, int, int);
     TaskInfo *taskInfo = (TaskInfo *)ti;
-
-    TaskFuncType func = (TaskFuncType)(taskInfo->func);
-
     // FIXME: these are bogus values; may cause bugs in code that depends
     // on them having unique values in different threads.
     int threadIndex = 0;
     int threadCount = 1;
+    TaskFuncType func = (TaskFuncType)(taskInfo->func);
+
     // Actually run the task
     func(taskInfo->data, threadIndex, threadCount);
-
-    // FIXME: taskInfo leaks...
 }
 
 
 void ISPCLaunch(void *func, void *data) {
     if (!initialized) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
+        while (1) {
+            if (lAtomicCompareAndSwap32(&lock, 1, 0) == 0) {
+                if (!initialized) {
+                    gcdQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+                    gcdGroup = dispatch_group_create();
+                    lInitTaskInfo();
+                    __asm__ __volatile__("mfence":::"memory");
+                    initialized = 1;
+                }
+                lock = 0;
+                break;
+            }
+        }
     }
-    TaskInfo *ti = new TaskInfo;
+
+    TaskInfo *ti = lGetTaskInfo();
     ti->func = func;
     ti->data = data;
     dispatch_group_async_f(gcdGroup, gcdQueue, ti, lRunTask);
@@ -93,11 +89,11 @@ void ISPCLaunch(void *func, void *data) {
 
 
 void ISPCSync() {
-    if (!initialized) {
-        fprintf(stderr, "You must call TasksInit() before launching tasks.\n");
-        exit(1);
-    }
+    if (!initialized)
+        return;
 
     // Wait for all of the tasks in the group to complete before returning
     dispatch_group_wait(gcdGroup, DISPATCH_TIME_FOREVER);
+
+    lResetTaskInfo();
 }
