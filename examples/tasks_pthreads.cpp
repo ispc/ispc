@@ -181,7 +181,7 @@ ISPCLaunch(void *f, void *d) {
 
 static void *
 lTaskEntry(void *arg) {
-    int threadIndex = (int)arg;
+    int threadIndex = (int)((int64_t)arg);
     int threadCount = nThreads;
     TaskFuncType func;
 

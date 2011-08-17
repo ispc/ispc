@@ -42,6 +42,7 @@
 #include <math.h>
 #include <algorithm>
 #include <assert.h>
+#include <string.h>
 #include <sys/types.h>
 #include "../timing.h"
 #include "../cpuid.h"
