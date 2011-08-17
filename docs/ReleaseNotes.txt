@@ -1,3 +1,34 @@
+=== v1.0.6 === (17 August 2011)
+
+Some additional cross-program instance operations have been added to the
+standard library.  reduce_equal() checks to see if the given value is the
+same across all running program instances, and exclusive_scan_{and,or,and}()
+computes a scan over the given value in the running program instances.
+See the documentation of these new routines for more information:
+http://ispc.github.com/ispc.html#cross-program-instance-operations.
+
+The simple task system implementations used in the examples have been
+improved.  The Windows version no nlonger has a hard limit on the number of
+tasks that can be launched, and all versions have less dynamic memory
+allocation and less locking.  More of the examples now have paths that also
+measure performance using tasks along with SPMD vectorization.
+
+Two new examples have been added: one that shows the implementation of a
+ray-marching volume rendering algorithm, and one that shows a 3D stencil
+computation, as might be done for PDE solutions.
+
+Standard library routines to issue prefetches have been added.  See the
+documentation for more details: http://ispc.github.com/ispc.html#prefetches.
+
+Fast versions of the float to half-precision float conversion routines have
+been added.  For more details, see:
+http://ispc.github.com/ispc.html#conversions-to-and-from-half-precision-floats.
+
+There is the usual set of small bug fixes.  Notably, a number of details
+related to handling 32 versus 64 bit targets have been fixed, which in turn
+has fixed a bug related to tasks having incorrect values for pointers
+passed to them.
+
 === v1.0.5 === (1 August 2011)
 
 Multi-element vector swizzles are supported; for example, given a 3-wide

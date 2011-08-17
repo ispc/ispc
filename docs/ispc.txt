@@ -1988,6 +1988,18 @@ function returns the 16 bits that are the closest match to the given
     int16 float_to_half(float f)
     uniform int16 float_to_half(uniform float f)
 
+There are also faster versions of these functions that don't worry about
+handling floating point infinity, "not a number" and denormalized numbers
+correctly.  These are faster than the above functions, but are less
+precise.
+
+::
+
+    float half_to_float_fast(unsigned int16 h)
+    uniform float half_to_float_fast(uniform unsigned int16 h)
+    int16 float_to_half_fast(float f)
+    uniform int16 float_to_half_fast(uniform float f)
+
 
 Atomic Operations and Memory Fences
 -----------------------------------
