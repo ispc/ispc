@@ -55,7 +55,7 @@
 #include <llvm/Intrinsics.h>
 #include <llvm/Linker.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/SubtargetFeature.h>
+#include <llvm/ADT/Triple.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 

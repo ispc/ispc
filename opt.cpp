@@ -60,7 +60,7 @@
     #ifdef LLVM_2_9
         #include <llvm/Support/StandardPasses.h>
     #else
-        #include <llvm/Support/PassManagerBuilder.h>
+        #include <llvm/Transforms/IPO/PassManagerBuilder.h>
     #endif // LLVM_2_9
 #endif // LLVM_2_8
 #include <llvm/ADT/Triple.h>

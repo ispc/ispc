@@ -76,7 +76,9 @@
 #include <llvm/Target/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
+#if !defined(LLVM_3_0) && !defined(LLVM_3_0svn)
 #include <llvm/Target/SubtargetFeature.h>
+#endif // !LLVM_3_0
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
