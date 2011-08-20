@@ -395,7 +395,7 @@ define internal float @__reduce_add_float(<8 x float>) nounwind readonly alwaysi
   %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %0, <8 x float> %0)
   %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
   %scalar1 = extractelement <8 x float> %v2, i32 0
-  %scalar2 = extractelement <8 x float> %v2, i32 4
+  %scalar2 = extractelement <8 x float> %v2, i32 1
   %sum = fadd float %scalar1, %scalar2
   ret float %sum
 }
@@ -728,9 +728,9 @@ define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
 ;; double precision min/max
 
 declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse.max.sd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
 declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse.min.sd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
 
 define internal <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
   binary4to8(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
@@ -738,7 +738,7 @@ define internal <8 x double> @__min_varying_double(<8 x double>, <8 x double>) n
 }
 
 define internal double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse.min.sd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
   ret double %ret
 }
 
@@ -748,6 +748,6 @@ define internal <8 x double> @__max_varying_double(<8 x double>, <8 x double>) n
 }
 
 define internal double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse.max.sd, %0, %1)
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
   ret double %ret
 }
