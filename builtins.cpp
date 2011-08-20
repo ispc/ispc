@@ -454,10 +454,22 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX:
-        extern unsigned char builtins_bitcode_avx[];
-        extern int builtins_bitcode_avx_length;
-        lAddBitcode(builtins_bitcode_avx, builtins_bitcode_avx_length, module, 
-                    symbolTable);
+        switch (g->target.vectorWidth) {
+        case 8:
+            extern unsigned char builtins_bitcode_avx[];
+            extern int builtins_bitcode_avx_length;
+            lAddBitcode(builtins_bitcode_avx, builtins_bitcode_avx_length, module, 
+                        symbolTable);
+            break;
+        case 16:
+            extern unsigned char builtins_bitcode_avx_x2[];
+            extern int builtins_bitcode_avx_x2_length;
+            lAddBitcode(builtins_bitcode_avx_x2, builtins_bitcode_avx_x2_length,
+                        module,  symbolTable);
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
         break;
     default:
         FATAL("logic error");

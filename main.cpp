@@ -92,7 +92,7 @@ static void usage(int ret) {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    printf("    [--target={sse2,sse4,sse4x2,avx}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
+    printf("    [--target={sse2,sse4,sse4x2,avx,avx-x2}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
 #else
     printf("    [--target={sse2,sse4,sse4x2}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
 #endif // LLVM 3.0
@@ -127,6 +127,11 @@ static void lDoTarget(const char *target) {
         g->target.isa = Target::AVX;
         g->target.nativeVectorWidth = 8;
         g->target.vectorWidth = 8;
+    }
+    else if (!strcasecmp(target, "avx-x2")) {
+        g->target.isa = Target::AVX;
+        g->target.nativeVectorWidth = 8;
+        g->target.vectorWidth = 16;
     }
 #endif // LLVM 3.0
     else

@@ -16,6 +16,7 @@
     <ClCompile Include="decl.cpp" />
     <ClCompile Include="expr.cpp" />
     <ClCompile Include="gen-bitcode-avx.cpp" />
+    <ClCompile Include="gen-bitcode-avx-x2.cpp" />
     <ClCompile Include="gen-bitcode-c-32.cpp" />
     <ClCompile Include="gen-bitcode-c-64.cpp" />
     <ClCompile Include="gen-bitcode-sse2.cpp" />
@@ -118,6 +119,19 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins-avx-x2.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-avx-x2.ll | python bitcode2cpp.py builtins-avx-x2.ll &gt; gen-bitcode-avx-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-avx-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-avx-x2.ll | python bitcode2cpp.py builtins-avx-x2.ll &gt; gen-bitcode-avx-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-avx-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx-x2.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx-x2.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

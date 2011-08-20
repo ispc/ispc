@@ -111,6 +111,32 @@ define(`reduce8', `
 '
 )
 
+define(`reduce16', `
+  %v1 = shufflevector <16 x $1> %0, <16 x $1> undef,
+        <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15,
+                    i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef>
+  %m1 = call <16 x $1> $2(<16 x $1> %v1, <16 x $1> %0)
+  %v2 = shufflevector <16 x $1> %m1, <16 x $1> undef,
+        <16 x i32> <i32 4, i32 5, i32 6, i32 7,
+                    i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef>
+  %m2 = call <16 x $1> $2(<16 x $1> %v2, <16 x $1> %m1)
+  %v3 = shufflevector <16 x $1> %m2, <16 x $1> undef,
+        <16 x i32> <i32 2, i32 3, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef,
+                    i32 undef, i32 undef, i32 undef, i32 undef>
+  %m3 = call <16 x $1> $2(<16 x $1> %v3, <16 x $1> %m2)
+
+  %m3a = extractelement <16 x $1> %m3, i32 0
+  %m3b = extractelement <16 x $1> %m3, i32 1
+  %m = call $1 $3($1 %m3a, $1 %m3b)
+  ret $1 %m
+'
+)
+
 ;; Do an reduction over an 8-wide vector, using a vector reduction function
 ;; that only takes 4-wide vectors
 ;; $1: type of final scalar result
@@ -211,6 +237,45 @@ define(`unary4to8', `
 '
 )
 
+define(`unary4to16', `
+  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v$1_0 = call <4 x $2> $3(<4 x $2> %$1_0)
+  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v$1_1 = call <4 x $2> $3(<4 x $2> %$1_1)
+  %$1_2 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+  %v$1_2 = call <4 x $2> $3(<4 x $2> %$1_2)
+  %$1_3 = shufflevector <16 x $2> $4, <16 x $2> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+  %v$1_3 = call <4 x $2> $3(<4 x $2> %$1_3)
+
+  %$1a = shufflevector <4 x $2> %v$1_0, <4 x $2> %v$1_1, 
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1b = shufflevector <4 x $2> %v$1_2, <4 x $2> %v$1_3, 
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1 = shufflevector <8 x $2> %$1a, <8 x $2> %$1b,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+'
+)
+
+;; And so forth...
+;; $1: name of variable into which the final result should go
+;; $2: scalar type of the vector elements
+;; $3: 8-wide unary vector function to apply
+;; $4: 16-wide operand value
+
+define(`unary8to16', `
+  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef,
+             <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0)
+  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef,
+             <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1)
+  %$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1, 
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+'
+)
+
 ;; And along the lines of `binary2to4', this maps a 4-wide binary function to
 ;; two 8-wide vector operands
 ;; $1: name of variable into which the final result should go
@@ -231,6 +296,57 @@ define(`binary4to8', `
 '
 )
 
+define(`binary8to16', `
+%$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+%v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0a, <8 x $2> %$1_0b)
+%$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+%v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
+%$1 = shufflevector <8 x $2> %v$1_0, <8 x $2> %v$1_1, 
+         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+'
+)
+
+define(`binary4to16', `
+%$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%r$1_0 = call <4 x $2> $3(<4 x $2> %$1_0a, <4 x $2> %$1_0b) 
+
+%$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%r$1_1 = call <4 x $2> $3(<4 x $2> %$1_1a, <4 x $2> %$1_1b) 
+
+%$1_2a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+%$1_2b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+%r$1_2 = call <4 x $2> $3(<4 x $2> %$1_2a, <4 x $2> %$1_2b) 
+
+%$1_3a = shufflevector <16 x $2> $4, <16 x $2> undef,
+          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+%$1_3b = shufflevector <16 x $2> $5, <16 x $2> undef,
+          <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+%r$1_3 = call <4 x $2> $3(<4 x $2> %$1_3a, <4 x $2> %$1_3b)
+
+%r$1_01 = shufflevector <4 x $2> %r$1_0, <4 x $2> %r$1_1, 
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%r$1_23 = shufflevector <4 x $2> %r$1_2, <4 x $2> %r$1_3, 
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+%$1 = shufflevector <8 x $2> %r$1_01, <8 x $2> %r$1_23, 
+          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+')
 
 ;; Maps a 2-wide unary function to an 8-wide vector operand, returning an 
 ;; 8-wide vector result
@@ -306,6 +422,20 @@ ret <8 x float> %ret
 '
 )
 
+define(`round8to16', `
+%v0 = shufflevector <16 x float> $1, <16 x float> undef,
+        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%v1 = shufflevector <16 x float> $1, <16 x float> undef,
+        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+%r0 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v0, i32 $2)
+%r1 = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %v1, i32 $2)
+%ret = shufflevector <8 x float> %r0, <8 x float> %r1, 
+         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+ret <16 x float> %ret
+'
+)
+
 define(`round4to8double', `
 %v0 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 %v1 = shufflevector <8 x double> $1, <8 x double> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -346,6 +476,30 @@ define(`round2to8double', `
 %ret = shufflevector <4 x double> %ret0, <4 x double> %ret1,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ret <8 x double> %ret
+'
+)
+
+define(`round4to16double', `
+%v0 = shufflevector <16 x double> $1, <16 x double> undef,
+         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <16 x double> $1, <16 x double> undef,
+         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%v2 = shufflevector <16 x double> $1, <16 x double> undef,
+         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+%v3 = shufflevector <16 x double> $1, <16 x double> undef,
+         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+%r0 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v0, i32 $2)
+%r1 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v1, i32 $2)
+%r2 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v2, i32 $2)
+%r3 = call <4 x double> @llvm.x86.avx.round.pd.256(<4 x double> %v3, i32 $2)
+%ret0 = shufflevector <4 x double> %r0, <4 x double> %r1, 
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret1 = shufflevector <4 x double> %r2, <4 x double> %r3, 
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret = shufflevector <8 x double> %ret0, <8 x double> %ret1,
+          <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                      i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+ret <16 x double> %ret
 '
 )
 
@@ -1256,6 +1410,46 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
 
   %resultvec = bitcast i128 %result to <8 x i16>
   store <8 x i16> %resultvec, <8 x i16> * %0
+  ret void
+}
+')
+
+define(`masked_store_blend_8_16_by_16', `
+define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
+                                    <16 x i32>) nounwind alwaysinline {
+  %old = load <16 x i8> * %0
+  %old128 = bitcast <16 x i8> %old to i128
+  %new128 = bitcast <16 x i8> %1 to i128
+
+  %mask8 = trunc <16 x i32> %2 to <16 x i8>
+  %mask128 = bitcast <16 x i8> %mask8 to i128
+  %notmask128 = xor i128 %mask128, -1
+
+  %newmasked = and i128 %new128, %mask128
+  %oldmasked = and i128 %old128, %notmask128
+  %result = or i128 %newmasked, %oldmasked
+
+  %resultvec = bitcast i128 %result to <16 x i8>
+  store <16 x i8> %resultvec, <16 x i8> * %0
+  ret void
+}
+
+define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
+                                     <16 x i32>) nounwind alwaysinline {
+  %old = load <16 x i16> * %0
+  %old256 = bitcast <16 x i16> %old to i256
+  %new256 = bitcast <16 x i16> %1 to i256
+
+  %mask16 = trunc <16 x i32> %2 to <16 x i16>
+  %mask256 = bitcast <16 x i16> %mask16 to i256
+  %notmask256 = xor i256 %mask256, -1
+
+  %newmasked = and i256 %new256, %mask256
+  %oldmasked = and i256 %old256, %notmask256
+  %result = or i256 %newmasked, %oldmasked
+
+  %resultvec = bitcast i256 %result to <16 x i16>
+  store <16 x i16> %resultvec, <16 x i16> * %0
   ret void
 }
 ')
