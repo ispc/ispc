@@ -889,6 +889,11 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
 
 bool
 Module::WriteOutput(OutputType outputType, const char *outFileName) {
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    if (diBuilder != NULL && outputType != Header)
+        diBuilder->finalize();
+#endif // LLVM_3_0
+
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
     // command-line arguments specifying the output file type.
