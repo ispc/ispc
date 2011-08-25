@@ -61,8 +61,15 @@ extern "C" {
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+  #include <llvm/ExecutionEngine/MCJIT.h>
+  #include <llvm/Support/TargetRegistry.h>
+  #include <llvm/Support/TargetSelect.h>
+#else
+  #include <llvm/Target/TargetRegistry.h>
+  #include <llvm/Target/TargetSelect.h>
+#endif
 #include <llvm/ExecutionEngine/JIT.h>
-#include <llvm/Target/TargetSelect.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
 #include <llvm/Transforms/Scalar.h>

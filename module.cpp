@@ -72,12 +72,17 @@
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Target/TargetRegistry.h>
-#include <llvm/Target/TargetSelect.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+  #include <llvm/Support/TargetRegistry.h>
+  #include <llvm/Support/TargetSelect.h>
+#else
+  #include <llvm/Target/TargetRegistry.h>
+  #include <llvm/Target/TargetSelect.h>
+#endif
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
 #if !defined(LLVM_3_0) && !defined(LLVM_3_0svn)
-#include <llvm/Target/SubtargetFeature.h>
+  #include <llvm/Target/SubtargetFeature.h>
 #endif // !LLVM_3_0
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
