@@ -1464,8 +1464,11 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *args[5];
     std::string argTypes;
 
-    if (values == NULL)
-        args[4] = NULL;
+    if (values == NULL) {
+        LLVM_TYPE_CONST llvm::Type *ptrPtrType = 
+            llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
+        args[4] = llvm::Constant::getNullValue(ptrPtrType);
+    }
     else {
         // Get the values passed to the print() statement evaluated and
         // stored in memory so that we set up the array of pointers to them
