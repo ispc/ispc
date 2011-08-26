@@ -60,9 +60,7 @@ static void usage(int ret) {
            Target::SupportedTargetArchs());
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         (%s)\n", Target::SupportedTargetCPUs());
-#ifndef ISPC_IS_WINDOWS
     printf("    [-D<foo>]\t\t\t\t#define value when running preprocessor\n");
-#endif
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
@@ -78,9 +76,7 @@ static void usage(int ret) {
     printf("        svml\t\t\t\tUse the Intel SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
-#ifndef ISPC_IS_WINDOWS
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
-#endif
     printf("    [-o/--outfile] <name>\t\tOutput filename for bitcode (may be \"-\" for standard output)\n");
     printf("    [-O0/-O1]\t\t\t\tSet optimization level\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
@@ -173,11 +169,8 @@ int main(int Argc, char *Argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
-#ifndef ISPC_IS_WINDOWS
-        else if (!strncmp(argv[i], "-D", 2)) {
+        else if (!strncmp(argv[i], "-D", 2))
             g->cppArgs.push_back(argv[i]);
-        }
-#endif // !ISPC_IS_WINDOWS
         else if (!strncmp(argv[i], "--arch=", 7))
             arch = argv[i] + 7;
         else if (!strncmp(argv[i], "--cpu=", 6))
