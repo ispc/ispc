@@ -53,12 +53,13 @@
 #endif // ISPC_IS_WINDOWS
 
 static void usage(int ret) {
-    printf("This is the Intel(r) SPMD Program Compiler (ispc), build %s (%s)\n\n", BUILD_DATE, BUILD_VERSION);
+    printf("This is the Intel(r) SPMD Program Compiler (ispc), build %s (%s)\n\n", 
+           BUILD_DATE, BUILD_VERSION);
     printf("usage: ispc\n");
-    printf("    [--arch={x86,x86-64}]\t\tSelect target architecture\n");
+    printf("    [--arch={%s}]\t\tSelect target architecture\n", 
+           Target::SupportedTargetArchs());
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
-    printf("         (atom, barcelona, core2, corei7, corei7-avx, istanbul, nocona,\n");
-    printf("          penryn, westmere)\n");
+    printf("         (%s)\n", Target::SupportedTargetCPUs());
 #ifndef ISPC_IS_WINDOWS
     printf("    [-D<foo>]\t\t\t\t#define value when running preprocessor\n");
 #endif
@@ -91,11 +92,7 @@ static void usage(int ret) {
     printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    printf("    [--target={sse2,sse4,sse4x2,avx,avx-x2}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
-#else
-    printf("    [--target={sse2,sse4,sse4x2}] Select target ISA (SSE4 is default unless compiling for atom; then SSE2 is.)\n");
-#endif // LLVM 3.0
+    printf("    [--target=<isa>]\t\t\tSelect target ISA. (%s)\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
@@ -103,40 +100,6 @@ static void usage(int ret) {
     exit(ret);
 }
 
-/** Given a target name string, set initialize the global g->target
-    structure appropriately. 
-*/
-static void lDoTarget(const char *target) {
-    if (!strcasecmp(target, "sse2")) {
-        g->target.isa = Target::SSE2;
-        g->target.nativeVectorWidth = 4;
-        g->target.vectorWidth = 4;
-    }
-    else if (!strcasecmp(target, "sse4")) {
-        g->target.isa = Target::SSE4;
-        g->target.nativeVectorWidth = 4;
-        g->target.vectorWidth = 4;
-    }
-    else if (!strcasecmp(target, "sse4x2")) {
-        g->target.isa = Target::SSE4;
-        g->target.nativeVectorWidth = 4;
-        g->target.vectorWidth = 8;
-    }
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    else if (!strcasecmp(target, "avx")) {
-        g->target.isa = Target::AVX;
-        g->target.nativeVectorWidth = 8;
-        g->target.vectorWidth = 8;
-    }
-    else if (!strcasecmp(target, "avx-x2")) {
-        g->target.isa = Target::AVX;
-        g->target.nativeVectorWidth = 8;
-        g->target.vectorWidth = 16;
-    }
-#endif // LLVM 3.0
-    else
-        usage(1);
-}
 
 
 /** We take arguments from both the command line as well as from the
@@ -203,9 +166,10 @@ int main(int Argc, char *Argv[]) {
     // as we're parsing below
     g = new Globals;
 
-    bool debugSet = false, optSet = false, targetSet = false;
+    bool debugSet = false, optSet = false;
     Module::OutputType ot = Module::Object;
 
+    const char *arch = NULL, *cpu = NULL, *target = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
@@ -214,15 +178,10 @@ int main(int Argc, char *Argv[]) {
             g->cppArgs.push_back(argv[i]);
         }
 #endif // !ISPC_IS_WINDOWS
-        else if (!strncmp(argv[i], "--arch=", 7)) {
-            g->target.arch = argv[i] + 7;
-            if (g->target.arch == "x86")
-                g->target.is32bit = true;
-            else if (g->target.arch == "x86-64")
-                g->target.is32bit = false;
-        }
+        else if (!strncmp(argv[i], "--arch=", 7))
+            arch = argv[i] + 7;
         else if (!strncmp(argv[i], "--cpu=", 6))
-            g->target.cpu = argv[i] + 6;
+            cpu = argv[i] + 6;
         else if (!strcmp(argv[i], "--fast-math"))
             g->opt.fastMath = true;
         else if (!strcmp(argv[i], "--debug"))
@@ -240,14 +199,12 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
         else if (!strcmp(argv[i], "--target")) {
+            // FIXME: should remove this way of specifying the target...
             if (++i == argc) usage(1);
-            lDoTarget(argv[i]);
-            targetSet = true;
+            target = argv[i];
         }
-        else if (!strncmp(argv[i], "--target=", 9)) {
-            const char *target = argv[i] + 9;
-            lDoTarget(target);
-        }
+        else if (!strncmp(argv[i], "--target=", 9))
+            target = argv[i] + 9;
         else if (!strncmp(argv[i], "--math-lib=", 11)) {
             const char *lib = argv[i] + 11;
             if (!strcmp(lib, "default"))
@@ -332,10 +289,8 @@ int main(int Argc, char *Argv[]) {
     if (debugSet && !optSet)
         g->opt.level = 0;
 
-    // Make SSE2 the default target on atom unless the target has been set
-    // explicitly.
-    if (!targetSet && (g->target.cpu == "atom"))
-        lDoTarget("sse2");
+    if (!Target::GetTarget(arch, cpu, target, &g->target))
+        usage(1);
 
     m = new Module(file);
     if (m->CompileFile() == 0) {

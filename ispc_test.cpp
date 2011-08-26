@@ -171,7 +171,21 @@ static bool lRunTest(const char *fn) {
     }
 
     std::string eeError;
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::EngineBuilder engineBuilder(module);
+    engineBuilder.setErrorStr(&eeError);
+    engineBuilder.setEngineKind(llvm::EngineKind::JIT);
+#if 0
+    std::vector<std::string> attributes;
+    if (target != NULL && !strcmp(target, "avx"))
+        attributes.push_back("+avx");
+    engineBuilder.setMAttrs(attributes);
+    engineBuilder.setUseMCJIT(true);
+#endif
+    llvm::ExecutionEngine *ee = engineBuilder.create();
+#else
     llvm::ExecutionEngine *ee = llvm::ExecutionEngine::createJIT(module, &eeError);
+#endif
     if (!ee) {
         fprintf(stderr, "Unable to create ExecutionEngine: %s\n", eeError.c_str());
         return false;
@@ -338,6 +352,11 @@ static bool lRunTest(const char *fn) {
 
 int main(int argc, char *argv[]) {
     llvm::InitializeNativeTarget();
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    llvm::InitializeAllTargetMCs();
+    LLVMLinkInMCJIT();
+    LLVMLinkInJIT();
+#endif
 
     std::vector<const char *> files;
     for (int i = 1; i < argc; ++i) {

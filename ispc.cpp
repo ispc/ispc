@@ -50,6 +50,18 @@
 #endif
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Target/TargetData.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+  #include <llvm/Support/TargetRegistry.h>
+  #include <llvm/Support/TargetSelect.h>
+#else
+  #include <llvm/Target/TargetRegistry.h>
+  #include <llvm/Target/TargetSelect.h>
+  #include <llvm/Target/SubtargetFeature.h>
+#endif
+#include <llvm/Support/Host.h>
 
 Globals *g;
 Module *m;
@@ -57,14 +69,183 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-Target::Target() {
-    arch = "x86-64";
-    cpu = "nehalem";
-    is32bit = false;
-    isa = SSE4;
-    nativeVectorWidth = 4;
-    vectorWidth = 4;
+bool
+Target::GetTarget(const char *arch, const char *cpu, const char *isa,
+                  Target *t) {
+    // initialize available targets
+    LLVMInitializeX86Target();
+    LLVMInitializeX86TargetInfo();
+
+    if (cpu == NULL) {
+        std::string hostCPU = llvm::sys::getHostCPUName();
+        if (hostCPU.size() > 0)
+            cpu = hostCPU.c_str();
+        else {
+            fprintf(stderr, "Warning: unable to determine host CPU!\n");
+            cpu = "generic";
+        }
+    }
+    t->cpu = cpu;
+
+    if (isa == NULL) {
+        if (!strcasecmp(cpu, "atom"))
+            isa = "sse2";
+#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+        else if (!strcasecmp(cpu, "sandybridge") ||
+                 !strcasecmp(cpu, "corei7-avx"))
+            isa = "avx";
+#endif // LLVM_3_0
+        else
+            isa = "sse4";
+    }
+    if (arch == NULL)
+        arch = "x86-64";
+
+    bool error = false;
+
+    // Make sure the target architecture is a known one; print an error
+    // with the valid ones otherwise.
+    t->target = NULL;
+    for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
+         iter != llvm::TargetRegistry::end(); ++iter) {
+        if (std::string(arch) == iter->getName()) {
+            t->target = &*iter;
+            break;
+        }
+    }
+    if (t->target == NULL) {
+        fprintf(stderr, "Invalid architecture \"%s\"\nOptions: ", arch);
+        llvm::TargetRegistry::iterator iter;
+        for (iter = llvm::TargetRegistry::begin();
+             iter != llvm::TargetRegistry::end(); ++iter)
+            fprintf(stderr, "%s ", iter->getName());
+        fprintf(stderr, "\n");
+        error = true;
+    }
+    else {
+        t->arch = arch;
+    }
+
+    if (!strcasecmp(isa, "sse2")) {
+        t->isa = Target::SSE2;
+        t->nativeVectorWidth = 4;
+        t->vectorWidth = 4;
+        t->attributes = "-sse2,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+    }
+    else if (!strcasecmp(isa, "sse4")) {
+        t->isa = Target::SSE4;
+        t->nativeVectorWidth = 4;
+        t->vectorWidth = 4;
+        t->attributes = "+sse,+sse2,+sse3,+sse41,+sse42,+sse4a,+ssse3,+popcnt,+cmov";
+    }
+    else if (!strcasecmp(isa, "sse4x2")) {
+        t->isa = Target::SSE4;
+        t->nativeVectorWidth = 4;
+        t->vectorWidth = 8;
+        t->attributes = "+sse,+sse2,+sse3,+sse41,+sse42,+sse4a,+ssse3,+popcnt,+cmov";
+    }
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    else if (!strcasecmp(isa, "avx")) {
+        t->isa = Target::AVX;
+        t->nativeVectorWidth = 8;
+        t->vectorWidth = 8;
+        t->attributes = "+avx,+popcnt,+cmov";
+    }
+    else if (!strcasecmp(isa, "avx-x2")) {
+        t->isa = Target::AVX;
+        t->nativeVectorWidth = 8;
+        t->vectorWidth = 16;
+        t->attributes = "+avx,+popcnt,+cmov";
+    }
+#endif // LLVM 3.0
+    else {
+        fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n", 
+                isa, SupportedTargetISAs());
+        error = true;
+    }
+
+    if (!error) {
+        llvm::TargetMachine *targetMachine = t->GetTargetMachine();
+        const llvm::TargetData *targetData = targetMachine->getTargetData();
+        t->is32bit = (targetData->getPointerSize() == 4);
+    }
+
+    return !error;
 }
+
+
+const char *
+Target::SupportedTargetCPUs() {
+    return "atom, barcelona, core2, corei7, "
+#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+        "corei7-avx, "
+#endif
+        "istanbul, nocona, penryn, "
+#ifdef LLVM_2_9
+        "sandybridge, "
+#endif
+        "westmere";
+}
+
+
+const char *
+Target::SupportedTargetArchs() {
+    return "x86, x86-64";
+}
+
+
+const char *
+Target::SupportedTargetISAs() {
+    return "sse2, sse4, sse4x2"
+#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+        ", avx, avx-x2"
+#endif
+        ;
+}
+
+
+std::string
+Target::GetTripleString() const {
+    llvm::Triple triple;
+    // Start with the host triple as the default
+    triple.setTriple(llvm::sys::getHostTriple());
+
+    // And override the arch in the host triple based on what the user
+    // specified.  Here we need to deal with the fact that LLVM uses one
+    // naming convention for targets TargetRegistry, but wants some
+    // slightly different ones for the triple.  TODO: is there a way to
+    // have it do this remapping, which would presumably be a bit less
+    // error prone?
+    if (arch == "x86")
+        triple.setArchName("i386");
+    else if (arch == "x86-64")
+        triple.setArchName("x86_64");
+    else
+        triple.setArchName(arch);
+
+    return triple.str();
+}
+
+
+llvm::TargetMachine *
+Target::GetTargetMachine() const {
+    std::string triple = GetTripleString();
+
+#if defined(LLVM_3_0svn) || defined(LLVM_3_0)
+    std::string featuresString = attributes;
+    llvm::TargetMachine *targetMachine = 
+        target->createTargetMachine(triple, cpu, featuresString);
+#else
+    std::string featuresString = cpu + std::string(",") + attributes;
+    llvm::TargetMachine *targetMachine = 
+        target->createTargetMachine(triple, featuresString);
+#endif
+    assert(targetMachine != NULL);
+
+    targetMachine->setAsmVerbosityDefault(true);
+    return targetMachine;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // Opt

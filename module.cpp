@@ -72,18 +72,16 @@
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
+#include <llvm/Target/TargetOptions.h>
+#include <llvm/Target/TargetData.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>
 #else
   #include <llvm/Target/TargetRegistry.h>
   #include <llvm/Target/TargetSelect.h>
-#endif
-#include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetData.h>
-#if !defined(LLVM_3_0) && !defined(LLVM_3_0svn)
   #include <llvm/Target/SubtargetFeature.h>
-#endif // !LLVM_3_0
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
@@ -91,10 +89,10 @@
 #include <clang/Frontend/Utils.h>
 #include <clang/Basic/TargetInfo.h>
 #ifndef LLVM_2_8
-#include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Support/Host.h>
+  #include <llvm/Support/ToolOutputFile.h>
+  #include <llvm/Support/Host.h>
 #else // !LLVM_2_8
-#include <llvm/System/Host.h>
+  #include <llvm/System/Host.h>
 #endif // LLVM_2_8
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
@@ -114,42 +112,7 @@ Module::Module(const char *fn) {
     symbolTable = new SymbolTable;
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
 
-    // initialize target in module
-    llvm::InitializeAllTargets();
-
-    llvm::Triple triple;
-    // Start with the host triple as the default
-    triple.setTriple(llvm::sys::getHostTriple());
-    if (g->target.arch != "") {
-        // If the user specified a target architecture, see if it's a known
-        // one; print an error with the valid ones otherwise.
-        const llvm::Target *target = NULL;
-        for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
-             iter != llvm::TargetRegistry::end(); ++iter) {
-            if (g->target.arch == iter->getName()) {
-                target = &*iter;
-                break;
-            }
-        }
-        if (!target) {
-            fprintf(stderr, "Invalid target \"%s\"\nOptions: ", 
-                    g->target.arch.c_str());
-            llvm::TargetRegistry::iterator iter;
-            for (iter = llvm::TargetRegistry::begin();
-                 iter != llvm::TargetRegistry::end(); ++iter)
-                fprintf(stderr, "%s ", iter->getName());
-            fprintf(stderr, "\n");
-            exit(1);
-        }
-
-        // And override the arch in the host triple
-        llvm::Triple::ArchType archType = 
-            llvm::Triple::getArchTypeForLLVMName(g->target.arch);
-        if (archType != llvm::Triple::UnknownArch)
-            triple.setArch(archType);
-    }
-    module->setTargetTriple(triple.str());
-
+    module->setTargetTriple(g->target.GetTripleString());
 
 #ifndef LLVM_2_8
     if (g->generateDebuggingSymbols)
@@ -973,42 +936,12 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    llvm::InitializeAllTargetMCs();
+    LLVMInitializeX86TargetMC();
 #endif
-    llvm::InitializeAllAsmPrinters();
-    llvm::InitializeAllAsmParsers();
+    LLVMInitializeX86AsmPrinter();
+    LLVMInitializeX86AsmParser();
 
-    llvm::Triple triple(module->getTargetTriple());
-    assert(triple.getTriple().empty() == false);
-
-    const llvm::Target *target = NULL;
-    std::string error;
-    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), error);
-    assert(target != NULL);
-
-    std::string featuresString;
-    llvm::TargetMachine *targetMachine = NULL;
-#if defined LLVM_3_0svn || defined LLVM_3_0
-    if (g->target.isa == Target::AVX)
-        featuresString = "+avx";
-    targetMachine = target->createTargetMachine(triple.getTriple(), g->target.cpu,
-                                                featuresString);
-#else
-    if (g->target.cpu.size()) {
-        llvm::SubtargetFeatures features;
-        features.setCPU(g->target.cpu);
-        featuresString = features.getString();
-    }
-
-    targetMachine = target->createTargetMachine(triple.getTriple(), 
-                                                featuresString);
-#endif
-    if (targetMachine == NULL) {
-        fprintf(stderr, "Unable to create target machine for target \"%s\"!",
-                triple.str().c_str());
-        return false;
-    }
-    targetMachine->setAsmVerbosityDefault(true);
+    llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
 
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
@@ -1017,6 +950,7 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
     unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
 
+    std::string error;
     llvm::tool_output_file *of = new llvm::tool_output_file(outFileName, error, flags);
     if (error.size()) {
         fprintf(stderr, "Error opening output file \"%s\".\n", outFileName);
@@ -1034,9 +968,8 @@ Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName
         (g->opt.level > 0) ? llvm::CodeGenOpt::Aggressive : llvm::CodeGenOpt::None;
 
     if (targetMachine->addPassesToEmitFile(pm, fos, fileType, optLevel)) {
-        fprintf(stderr, "Fatal error adding passes to emit object file for "
-                "target %s!\n", triple.str().c_str());
-        return false;
+        fprintf(stderr, "Fatal error adding passes to emit object file!");
+        exit(1);
     }
 
     // Finally, run the passes to emit the object file/assembly

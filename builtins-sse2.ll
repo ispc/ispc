@@ -277,41 +277,18 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-; FIXME: this is very inefficient, loops over all 32 bits...
-
-; we could use the LLVM intrinsic declare i32 @llvm.ctpop.i32(i32),
-; although that currently ends up generating a POPCNT instruction even
-; if we give --target=sse2 on the command line.  We probably need to
-; pipe through the 'sse2' request to LLVM via the 'features' string
-; at codegen time...  (If e.g. --cpu=penryn is also passed along, then
-; it does generate non-POPCNT code and in particular better code than
-; the below does.)
+declare i32 @llvm.ctpop.i32(i32)
+declare i64 @llvm.ctpop.i64(i64)
 
 define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-entry:
-  br label %loop
-
-loop:
-  %count = phi i32 [ 0, %entry ], [ %newcount, %loop ]
-  %val = phi i32 [ %0, %entry ], [ %newval, %loop ]
-  %delta = and i32 %val, 1
-  %newcount = add i32 %count, %delta
-  %newval = lshr i32 %val, 1
-  %done = icmp eq i32 %newval, 0
-  br i1 %done, label %exit, label %loop
-
-exit:
-  ret i32 %newcount
+  %val = call i32 @llvm.ctpop.i32(i32 %0)
+  ret i32 %val
 }
 
 define internal i32 @__popcnt_int64(i64) nounwind readnone alwaysinline {
-  %vec = bitcast i64 %0 to <2 x i32>
-  %v0 = extractelement <2 x i32> %vec, i32 0
-  %v1 = extractelement <2 x i32> %vec, i32 1
-  %c0 = call i32 @__popcnt_int32(i32 %v0)
-  %c1 = call i32 @__popcnt_int32(i32 %v1)
-  %sum = add i32 %c0, %c1
-  ret i32 %sum
+  %val = call i64 @llvm.ctpop.i64(i64 %0)
+  %val32 = trunc i64 %val to i32
+  ret i32 %val32
 }
 
 

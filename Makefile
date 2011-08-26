@@ -10,7 +10,12 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
-LLVM_LIBS=$(shell llvm-config --ldflags --libs) -lpthread -ldl
+ISPC_LIBS=$(CLANG_LIBS) \
+	$(shell llvm-config --ldflags --libs backend bitreader bitwriter codegen engine mcjit scalaropts native analysis core instcombine ipa ipo linker instrumentation) \
+	-lpthread -ldl
+ISPC_TEST_LIBS=$(shell llvm-config --ldflags --libs bitreader backend interpreter engine jit mcjit) \
+	-lpthread -ldl
+
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION=$(shell llvm-config --version | sed s/\\./_/)
 LLVM_VERSION_DEF=-DLLVM_$(LLVM_VERSION)
@@ -80,11 +85,11 @@ doxygen:
 
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(CLANG_LIBS) $(LLVM_LIBS)
+	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 ispc_test: dirs ispc_test.cpp
 	@echo Creating ispc_test executable
-	@$(CXX) $(LDFLAGS) $(CXXFLAGS) -o $@ ispc_test.cpp $(LLVM_LIBS)
+	@$(CXX) $(LDFLAGS) $(CXXFLAGS) -o $@ ispc_test.cpp $(ISPC_TEST_LIBS)
 
 objs/%.o: %.cpp
 	@echo Compiling $<

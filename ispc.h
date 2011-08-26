@@ -69,6 +69,8 @@ namespace llvm {
     class FunctionType;
     class LLVMContext;
     class Module;
+    class Target;
+    class TargetMachine;
     class Type;
     class Value;
 }
@@ -156,7 +158,34 @@ public:
     This structure defines a compilation target for the ispc compiler.
 */
 struct Target {
-    Target();
+    /** Initializes the given Target pointer for a target of the given
+        name, if the name is a known target.  Returns true if the
+        target was initialized and false if the name is unknown. */
+    static bool GetTarget(const char *arch, const char *cpu, const char *isa,
+                          Target *);
+
+    /** Returns a comma-delimited string giving the names of the currently
+        supported target ISAs. */
+    static const char *SupportedTargetISAs();
+
+    /** Returns a comma-delimited string giving the names of the currently
+        supported target CPUs. */
+    static const char *SupportedTargetCPUs();
+
+    /** Returns a comma-delimited string giving the names of the currently
+        supported target architectures. */
+    static const char *SupportedTargetArchs();
+
+    /** Returns a triple string specifying the target architecture, vendor,
+        and environment. */
+    std::string GetTripleString() const;
+
+    /** Returns the LLVM TargetMachine object corresponding to this
+        target. */
+    llvm::TargetMachine *GetTargetMachine() const;
+
+    /** llvm Target object representing this target. */
+    const llvm::Target *target;
 
     /** Enumerator giving the instruction sets that the compiler can
         target. */
@@ -173,6 +202,9 @@ struct Target {
 
     /** Target CPU. (e.g. "corei7", "corei7-avx", ..) */
     std::string cpu;
+
+    /** Target-specific attributes to pass along to the LLVM backend */
+    std::string attributes;
 
     /** Native vector width of the vector instruction set.  Note that this
         value is directly derived from the ISA Being used (e.g. it's 4 for
