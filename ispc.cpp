@@ -132,13 +132,13 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::SSE4;
         t->nativeVectorWidth = 4;
         t->vectorWidth = 4;
-        t->attributes = "+sse,+sse2,+sse3,+sse41,+sse42,+sse4a,+ssse3,+popcnt,+cmov";
+        t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
     }
     else if (!strcasecmp(isa, "sse4x2")) {
         t->isa = Target::SSE4;
         t->nativeVectorWidth = 4;
         t->vectorWidth = 8;
-        t->attributes = "+sse,+sse2,+sse3,+sse41,+sse42,+sse4a,+ssse3,+popcnt,+cmov";
+        t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
     }
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
     else if (!strcasecmp(isa, "avx")) {
