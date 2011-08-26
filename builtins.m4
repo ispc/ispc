@@ -300,10 +300,10 @@ define(`binary8to16', `
 %$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 %$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef,
-          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 %v$1_0 = call <8 x $2> $3(<8 x $2> %$1_0a, <8 x $2> %$1_0b)
 %$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef,
-          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef,
           <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 %v$1_1 = call <8 x $2> $3(<8 x $2> %$1_1a, <8 x $2> %$1_1b)
@@ -1434,46 +1434,6 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
 
   %resultvec = bitcast i128 %result to <8 x i16>
   store <8 x i16> %resultvec, <8 x i16> * %0
-  ret void
-}
-')
-
-define(`masked_store_blend_8_16_by_16', `
-define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
-                                    <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i8> * %0
-  %old128 = bitcast <16 x i8> %old to i128
-  %new128 = bitcast <16 x i8> %1 to i128
-
-  %mask8 = trunc <16 x i32> %2 to <16 x i8>
-  %mask128 = bitcast <16 x i8> %mask8 to i128
-  %notmask128 = xor i128 %mask128, -1
-
-  %newmasked = and i128 %new128, %mask128
-  %oldmasked = and i128 %old128, %notmask128
-  %result = or i128 %newmasked, %oldmasked
-
-  %resultvec = bitcast i128 %result to <16 x i8>
-  store <16 x i8> %resultvec, <16 x i8> * %0
-  ret void
-}
-
-define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
-                                     <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i16> * %0
-  %old256 = bitcast <16 x i16> %old to i256
-  %new256 = bitcast <16 x i16> %1 to i256
-
-  %mask16 = trunc <16 x i32> %2 to <16 x i16>
-  %mask256 = bitcast <16 x i16> %mask16 to i256
-  %notmask256 = xor i256 %mask256, -1
-
-  %newmasked = and i256 %new256, %mask256
-  %oldmasked = and i256 %old256, %notmask256
-  %result = or i256 %newmasked, %oldmasked
-
-  %resultvec = bitcast i256 %result to <16 x i16>
-  store <16 x i16> %resultvec, <16 x i16> * %0
   ret void
 }
 ')

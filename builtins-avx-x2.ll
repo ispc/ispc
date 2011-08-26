@@ -233,7 +233,7 @@ define internal float @__reduce_add_float(<16 x float>) nounwind readonly always
   %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
   %v3 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v2, <8 x float> %v2)
   %scalar1 = extractelement <8 x float> %v2, i32 0
-  %scalar2 = extractelement <8 x float> %v2, i32 4
+  %scalar2 = extractelement <8 x float> %v2, i32 1
   %sum = fadd float %scalar1, %scalar2
   ret float %sum
 }
@@ -522,105 +522,22 @@ define void @__masked_store_64(<16 x i64>* nocapture, <16 x i64>,
   ret void
 }
 
-masked_store_blend_8_16_by_16()
 
-declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
-                                                <8 x float>) nounwind readnone
+;; FIXME: various code elsewhere in the builtins implementations makes
+;; calls to these, basically assuming that doing so is faster than doing
+;; a full call to an actual masked store, which isn't likely to be the
+;; case on AVX.  So here we provide those functions but then don't actually
+;; do what the caller asked for...
 
-
-define void @__masked_store_blend_32(<16 x i32>* nocapture, <16 x i32>,
+define void @__masked_store_blend_32(<16 x i32>* nocapture, <16 x i32>, 
                                      <16 x i32>) nounwind alwaysinline {
-  %maskAsFloat = bitcast <16 x i32> %2 to <16 x float>
-  %oldValue = load <16 x i32>* %0, align 4
-  %oldAsFloat = bitcast <16 x i32> %oldValue to <16 x float>
-  %newAsFloat = bitcast <16 x i32> %1 to <16 x float>
-
-  %old0 = shufflevector <16 x float> %oldAsFloat, <16 x float> undef,
-        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %old1 = shufflevector <16 x float> %oldAsFloat, <16 x float> undef,
-        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %new0 = shufflevector <16 x float> %newAsFloat, <16 x float> undef,
-        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %new1 = shufflevector <16 x float> %newAsFloat, <16 x float> undef,
-        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %mask0 = shufflevector <16 x float> %maskAsFloat, <16 x float> undef,
-        <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %mask1 = shufflevector <16 x float> %maskAsFloat, <16 x float> undef,
-        <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-
-  %blend0 = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %old0,
-                                                         <8 x float> %new0,
-                                                         <8 x float> %mask0)
-  %blend1 = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %old1,
-                                                         <8 x float> %new1,
-                                                         <8 x float> %mask1)
-  %blend = shufflevector <8 x float> %blend0, <8 x float> %blend1,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %blendAsInt = bitcast <16 x float> %blend to <16 x i32>
-  store <16 x i32> %blendAsInt, <16 x i32>* %0, align 4
+  call void @__masked_store_32(<16 x i32> * %0, <16 x i32> %1, <16 x i32> %2)
   ret void
 }
 
-
-declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
-                                                 <4 x double>) nounwind readnone
-
-define void @__masked_store_blend_64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64,
-                                     <16 x i32> %mask) nounwind alwaysinline {
-  %oldValue = load <16 x i64>* %ptr, align 8
-  %old = bitcast <16 x i64> %oldValue to <16 x double>
-  %old0d = shufflevector <16 x double> %old, <16 x double> undef,
-     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %old1d = shufflevector <16 x double> %old, <16 x double> undef,
-     <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %old2d = shufflevector <16 x double> %old, <16 x double> undef,
-     <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %old3d = shufflevector <16 x double> %old, <16 x double> undef,
-     <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-
-  %new = bitcast <16 x i64> %newi64 to <16 x double>
-  %new0d = shufflevector <16 x double> %new, <16 x double> undef,
-     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %new1d = shufflevector <16 x double> %new, <16 x double> undef,
-     <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %new2d = shufflevector <16 x double> %new, <16 x double> undef,
-     <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %new3d = shufflevector <16 x double> %new, <16 x double> undef,
-     <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-
-  %mask0 = shufflevector <16 x i32> %mask, <16 x i32> undef,
-     <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-  %mask1 = shufflevector <16 x i32> %mask, <16 x i32> undef,
-     <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
-  %mask2 = shufflevector <16 x i32> %mask, <16 x i32> undef,
-     <8 x i32> <i32 8, i32 8, i32 9, i32 9, i32 10, i32 10, i32 11, i32 11>
-  %mask3 = shufflevector <16 x i32> %mask, <16 x i32> undef,
-     <8 x i32> <i32 12, i32 12, i32 13, i32 13, i32 14, i32 14, i32 15, i32 15>
-  %mask0d = bitcast <8 x i32> %mask0 to <4 x double>
-  %mask1d = bitcast <8 x i32> %mask1 to <4 x double>
-  %mask2d = bitcast <8 x i32> %mask2 to <4 x double>
-  %mask3d = bitcast <8 x i32> %mask3 to <4 x double>
-
-  %result0d = call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %old0d,
-                                 <4 x double> %new0d, <4 x double> %mask0d)
-  %result1d = call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %old1d,
-                                 <4 x double> %new1d, <4 x double> %mask1d)
-  %result2d = call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %old2d,
-                                 <4 x double> %new2d, <4 x double> %mask2d)
-  %result3d = call <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %old3d,
-                                 <4 x double> %new3d, <4 x double> %mask3d)
-
-  %result01 = shufflevector <4 x double> %result0d, <4 x double> %result1d,
-           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %result23 = shufflevector <4 x double> %result2d, <4 x double> %result3d,
-           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-
-  %result = shufflevector <8 x double> %result01, <8 x double> %result23,
-           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %result64 = bitcast <16 x double> %result to <16 x i64>
-  store <16 x i64> %result64, <16 x i64> * %ptr
+define void @__masked_store_blend_64(<16 x i64>* nocapture, <16 x i64>, 
+                                     <16 x i32>) nounwind alwaysinline {
+  call void @__masked_store_64(<16 x i64> * %0, <16 x i64> %1, <16 x i32> %2)
   ret void
 }
 

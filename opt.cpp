@@ -1422,7 +1422,8 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // __masked_store_blend_* should be the same as __masked_store_*,
         // so this doesn't matter.  On SSE, blending is generally more
         // efficient and is always safe to do on stack-allocated values.(?)
-        bool doBlend = lIsStackVariablePointer(lvalue);
+        bool doBlend = (g->target.isa != Target::AVX &&
+                        lIsStackVariablePointer(lvalue));
         if (g->target.isa == Target::SSE4 || g->target.isa == Target::SSE2)
             doBlend |= !g->opt.disableBlendedMaskedStores;
 
