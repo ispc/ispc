@@ -1343,14 +1343,6 @@ Module::writeHeader(const char *fn) {
     lEmitEnumDecls(exportedEnumTypes, f);
     lEmitStructDecls(exportedStructTypes, f);
 
-    // emit externs for globals
-    if (externGlobals.size() > 0) {
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        fprintf(f, "// Globals declared \"extern\" from ispc code\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        lPrintExternGlobals(f, externGlobals);
-    }
-
     // emit function declarations for exported stuff...
     if (exportedFuncs.size() > 0) {
         fprintf(f, "\n");
@@ -1371,6 +1363,15 @@ Module::writeHeader(const char *fn) {
 
     // end namespace
     fprintf(f, "\n#ifdef __cplusplus\n}\n#endif // __cplusplus\n");
+
+    // and only now emit externs for globals, outside of the ispc namespace
+    if (externGlobals.size() > 0) {
+        fprintf(f, "\n");
+        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
+        fprintf(f, "// Globals declared \"extern\" from ispc code\n");
+        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
+        lPrintExternGlobals(f, externGlobals);
+    }
 
     // end guard
     fprintf(f, "\n#endif // %s\n", guard.c_str());
