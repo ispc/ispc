@@ -72,10 +72,6 @@ Module *m;
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   Target *t) {
-    // initialize available targets
-    LLVMInitializeX86Target();
-    LLVMInitializeX86TargetInfo();
-
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)

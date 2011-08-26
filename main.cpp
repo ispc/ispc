@@ -41,9 +41,17 @@
 #include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #ifdef LLVM_2_8
-#include <llvm/System/Signals.h>
+  #include <llvm/System/Signals.h>
 #else
-#include <llvm/Support/Signals.h>
+  #include <llvm/Support/Signals.h>
+#endif
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+  #include <llvm/Support/TargetRegistry.h>
+  #include <llvm/Support/TargetSelect.h>
+#else
+  #include <llvm/Target/TargetRegistry.h>
+  #include <llvm/Target/TargetSelect.h>
+  #include <llvm/Target/SubtargetFeature.h>
 #endif
 
 #ifdef ISPC_IS_WINDOWS
@@ -153,6 +161,16 @@ int main(int Argc, char *Argv[]) {
     // we crash
     llvm::sys::PrintStackTraceOnErrorSignal();
     llvm::PrettyStackTraceProgram X(argc, argv);
+
+    // initialize available LLVM targets
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86Target();
+    LLVMInitializeX86AsmPrinter();
+    LLVMInitializeX86AsmParser();
+    LLVMInitializeX86Disassembler();
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    LLVMInitializeX86TargetMC();
+#endif
 
     char *file = NULL;
     const char *headerFileName = NULL;

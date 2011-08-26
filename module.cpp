@@ -74,14 +74,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-  #include <llvm/Support/TargetRegistry.h>
-  #include <llvm/Support/TargetSelect.h>
-#else
-  #include <llvm/Target/TargetRegistry.h>
-  #include <llvm/Target/TargetSelect.h>
-  #include <llvm/Target/SubtargetFeature.h>
-#endif
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
@@ -935,12 +927,6 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
 
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    LLVMInitializeX86TargetMC();
-#endif
-    LLVMInitializeX86AsmPrinter();
-    LLVMInitializeX86AsmParser();
-
     llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
 
     // Figure out if we're generating object file or assembly output, and
