@@ -285,10 +285,9 @@ define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
   ret i32 %val
 }
 
-define internal i32 @__popcnt_int64(i64) nounwind readnone alwaysinline {
+define internal i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
   %val = call i64 @llvm.ctpop.i64(i64 %0)
-  %val32 = trunc i64 %val to i32
-  ret i32 %val32
+  ret i64 %val
 }
 
 
