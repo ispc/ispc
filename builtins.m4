@@ -656,6 +656,30 @@ define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 }
 ')
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_uniform
+;; Defines the implementation of a function that handles the mapping from
+;; an ispc atomic function to the underlying LLVM intrinsics.  This variant
+;; just calls the atomic once, for the given uniform value
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the LLVM atomic (e.g. i32)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+
+define(`global_atomic_uniform', `
+
+declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
+
+define internal $3 @__atomic_$2_$4_global($3 * %ptr, $3 %val,
+                                          <$1 x i32> %mask) nounwind alwaysinline {
+  %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
+  ret $3 %r
+}
+')
+
 ;; Macro to declare the function that implements the swap atomic.  
 ;; Takes three parameters:
 ;; $1: vector width of the target
@@ -1124,20 +1148,20 @@ global_atomic($1, sub, i32, int32)
 global_atomic($1, and, i32, int32)
 global_atomic($1, or, i32, int32)
 global_atomic($1, xor, i32, int32)
-global_atomic($1, min, i32, int32)
-global_atomic($1, max, i32, int32)
-global_atomic($1, umin, i32, uint32)
-global_atomic($1, umax, i32, uint32)
+global_atomic_uniform($1, min, i32, int32)
+global_atomic_uniform($1, max, i32, int32)
+global_atomic_uniform($1, umin, i32, uint32)
+global_atomic_uniform($1, umax, i32, uint32)
 
 global_atomic($1, add, i64, int64)
 global_atomic($1, sub, i64, int64)
 global_atomic($1, and, i64, int64)
 global_atomic($1, or, i64, int64)
 global_atomic($1, xor, i64, int64)
-global_atomic($1, min, i64, int64)
-global_atomic($1, max, i64, int64)
-global_atomic($1, umin, i64, uint64)
-global_atomic($1, umax, i64, uint64)
+global_atomic_uniform($1, min, i64, int64)
+global_atomic_uniform($1, max, i64, int64)
+global_atomic_uniform($1, umin, i64, uint64)
+global_atomic_uniform($1, umax, i64, uint64)
 
 global_swap($1, i32, int32)
 global_swap($1, i64, int64)

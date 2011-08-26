@@ -583,10 +583,22 @@ static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
     return ret;                                                         \
 }
 
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
+static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
+    uniform TA oneval = reduce_##OPA(value);                            \
+    TA ret;                                                             \
+    if (lanemask() != 0) {                                              \
+        memory_barrier();                                               \
+        ret = __atomic_##OPB##_##TB##_global(ref, oneval, __mask);      \
+        memory_barrier();                                               \
+    }                                                                   \
+    return ret;                                                         \
+}
+
 DEFINE_ATOMIC_OP(int32,int32,add,add)
 DEFINE_ATOMIC_OP(int32,int32,subtract,sub)
-DEFINE_ATOMIC_OP(int32,int32,min,min)
-DEFINE_ATOMIC_OP(int32,int32,max,max)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
 DEFINE_ATOMIC_OP(int32,int32,and,and)
 DEFINE_ATOMIC_OP(int32,int32,or,or)
 DEFINE_ATOMIC_OP(int32,int32,xor,xor)
@@ -596,8 +608,8 @@ DEFINE_ATOMIC_OP(int32,int32,swap,swap)
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int32,int32,add,add)
 DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub)
-DEFINE_ATOMIC_OP(unsigned int32,uint32,min,umin)
-DEFINE_ATOMIC_OP(unsigned int32,uint32,max,umax)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
 DEFINE_ATOMIC_OP(unsigned int32,int32,and,and)
 DEFINE_ATOMIC_OP(unsigned int32,int32,or,or)
 DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor)
@@ -607,8 +619,8 @@ DEFINE_ATOMIC_OP(float,float,swap,swap)
 
 DEFINE_ATOMIC_OP(int64,int64,add,add)
 DEFINE_ATOMIC_OP(int64,int64,subtract,sub)
-DEFINE_ATOMIC_OP(int64,int64,min,min)
-DEFINE_ATOMIC_OP(int64,int64,max,max)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
 DEFINE_ATOMIC_OP(int64,int64,and,and)
 DEFINE_ATOMIC_OP(int64,int64,or,or)
 DEFINE_ATOMIC_OP(int64,int64,xor,xor)
@@ -618,8 +630,8 @@ DEFINE_ATOMIC_OP(int64,int64,swap,swap)
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int64,int64,add,add)
 DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub)
-DEFINE_ATOMIC_OP(unsigned int64,uint64,min,umin)
-DEFINE_ATOMIC_OP(unsigned int64,uint64,max,umax)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
 DEFINE_ATOMIC_OP(unsigned int64,int64,and,and)
 DEFINE_ATOMIC_OP(unsigned int64,int64,or,or)
 DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor)
