@@ -86,7 +86,7 @@ define internal float @__round_uniform_float(float) nounwind readonly alwaysinli
 define internal float @__floor_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
@@ -95,7 +95,7 @@ define internal float @__floor_uniform_float(float) nounwind readonly alwaysinli
 define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
@@ -116,7 +116,7 @@ define internal double @__round_uniform_double(double) nounwind readonly alwaysi
 define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
   %rs = extractelement <2 x double> %xr, i32 0
   ret double %rs
@@ -125,7 +125,7 @@ define internal double @__floor_uniform_double(double) nounwind readonly alwaysi
 define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
   %rs = extractelement <2 x double> %xr, i32 0
   ret double %rs

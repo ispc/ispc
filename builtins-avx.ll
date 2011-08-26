@@ -76,13 +76,13 @@ define internal <8 x float> @__round_varying_float(<8 x float>) nounwind readonl
 }
 
 define internal <8 x float> @__floor_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %call = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %0, i32 9)
   ret <8 x float> %call
 }
 
 define internal <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %call = call <8 x float> @llvm.x86.avx.round.ps.256(<8 x float> %0, i32 10)
   ret <8 x float> %call
 }
