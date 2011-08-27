@@ -126,7 +126,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::SSE2;
         t->nativeVectorWidth = 4;
         t->vectorWidth = 4;
-        t->attributes = "-sse2,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
     }
     else if (!strcasecmp(isa, "sse4")) {
         t->isa = Target::SSE4;
