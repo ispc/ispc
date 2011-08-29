@@ -524,10 +524,24 @@ define void @__masked_store_64(<16 x i64>* nocapture, <16 x i64>,
 
 
 ;; FIXME: various code elsewhere in the builtins implementations makes
-;; calls to these, basically assuming that doing so is faster than doing
-;; a full call to an actual masked store, which isn't likely to be the
-;; case on AVX.  So here we provide those functions but then don't actually
-;; do what the caller asked for...
+;; calls to the 32/64 bit versions of these, basically assuming that doing
+;; so is faster than doing a full call to an actual masked store, which
+;; isn't likely to be the case on AVX.  So here we provide those functions
+;; but then don't actually do what the caller asked for...
+
+declare void @llvm.trap()
+
+define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>, 
+                                    <8 x i32>) nounwind alwaysinline {
+  call void @llvm.trap()
+  ret void
+}
+
+define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>, 
+                                     <8 x i32>) nounwind alwaysinline {
+  call void @llvm.trap()
+  ret void
+}
 
 define void @__masked_store_blend_32(<16 x i32>* nocapture, <16 x i32>, 
                                      <16 x i32>) nounwind alwaysinline {
