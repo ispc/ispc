@@ -38,7 +38,9 @@
 #include <windows.h>
 #define rdtsc __rdtsc
 #else
+#ifdef __cplusplus
 extern "C" {
+#endif /* __cplusplus */
     __inline__ uint64_t rdtsc() {
         uint32_t low, high;
         __asm__ __volatile__ (
@@ -48,7 +50,9 @@ extern "C" {
                               "rdtsc" : "=a" (low), "=d" (high));
         return (uint64_t)high << 32 | low;
     }
+#ifdef __cplusplus
 }
+#endif /* __cplusplus */
 #endif            
             
 static uint64_t start, end;
