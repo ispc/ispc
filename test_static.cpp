@@ -1,0 +1,117 @@
+/*
+  Copyright (c) 2010-2011, Intel Corporation
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+   IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+   TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+   PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+   PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+   PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+   LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+*/
+
+#include <string.h>
+#include <stdio.h>
+#include <assert.h>
+
+extern "C" {
+    extern int width();
+    extern void f_v(float *result);
+    extern void f_f(float *result, float *a);
+    extern void f_fu(float *result, float *a, float b);
+    extern void f_fi(float *result, float *a, int *b);
+    extern void f_du(float *result, double *a, double b);
+    extern void f_duf(float *result, double *a, float b);
+    extern void f_di(float *result, double *a, int *b);
+    extern void result(float *val);
+    
+    void ISPCLaunch(void *f, void *d);
+    void ISPCSync();
+}
+
+void ISPCLaunch(void *f, void *d) {
+    typedef void (*TaskFuncType)(void *, int, int);
+    TaskFuncType func = (TaskFuncType)f;
+    func(d, 0, 1);
+}
+
+void ISPCSync() {
+}
+
+
+int main(int argc, char *argv[]) {
+    int w = width();
+    assert(w <= 16);
+
+    float r1[16];
+    memset(r1, 0, 16*sizeof(float));
+    float vfloat[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    double vdouble[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    int vint[16] = { 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32 };
+    int vint2[16] = { 5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+    float b = 5.;
+
+#if (TEST_SIG == 0)
+    f_v(r1);
+#elif (TEST_SIG == 1)
+    f_f(r1, vfloat);
+#elif (TEST_SIG == 2)
+    f_fu(r1, vfloat, b);
+#elif (TEST_SIG == 3)
+    f_fi(r1, vfloat, vint);
+#elif (TEST_SIG == 4)
+    f_du(r1, vdouble, 5.);
+#elif (TEST_SIG == 5)
+    f_duf(r1, vdouble, 5.f);
+#elif (TEST_SIG == 6)
+    f_di(r1, vdouble, vint2);
+#else
+#error "Unknown or unset TEST_SIG value"
+#endif    
+
+    float r2[16];
+    memset(r2, 0, 16*sizeof(float));
+    result(r2);
+
+    int errors = 0;
+    for (int i = 0; i < w; ++i) {
+        if (r1[i] != r2[i]) {
+#ifdef EXPECT_FAILURE
+            // bingo, failed
+            return 1;
+#else
+            printf("%s: value %d disagrees: should be %f [%a], returned %f [%a]\n",
+                   argv[0], i, r1[i], r1[i], r2[i], r2[i]);
+            ++errors;
+#endif // EXPECT_FAILURE
+        }
+    }
+
+#ifdef EXPECT_FAILURE
+    // Don't expect to get here
+    return 0;
+#else
+    return errors > 0;
+#endif
+}

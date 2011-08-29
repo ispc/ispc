@@ -85,6 +85,8 @@ extern "C" {
 #include <llvm/Support/system_error.h>
 #endif
 
+bool shouldFail = false;
+
 extern "C" { 
     void ISPCLaunch(void *, void *);
     void ISPCSync();
@@ -117,6 +119,7 @@ void ISPCFree(void *ptr) {
 static void usage(int ret) {
     fprintf(stderr, "usage: ispc_test\n");
     fprintf(stderr, "\t[-h/--help]\tprint help\n");
+    fprintf(stderr, "\t[-f]\t\tindicates that test is expected to fail\n");
     fprintf(stderr, "\t<files>\n");
     exit(ret);
 }
@@ -267,7 +270,6 @@ static bool lRunTest(const char *fn) {
     float result[16];
     for (int i = 0; i < 16; ++i)
         result[i] = 0;
-    bool ok = true;
     if (foundResult) {
         typedef void (*PFN)(float *);
         PFN pfn = reinterpret_cast<PFN>(ee->getPointerToFunction(func));
@@ -324,31 +326,33 @@ static bool lRunTest(const char *fn) {
     }
     else {
         fprintf(stderr, "Unable to find runnable function in file \"%s\"\n", fn);
-        ok = false;
+        return false;
     }
 
     // see if we got the right result
-    if (ok) {
-        if (foundResult) {
-            for (int i = 0; i < width; ++i)
-                if (returned[i] != result[i]) {
-                    ok = false;
-                    fprintf(stderr, "Test \"%s\" RETURNED %d: %g / %a EXPECTED %g / %a\n",
-                            fn, i, returned[i], returned[i], result[i], result[i]);
-                }
-        }
-        else {
-            for (int i = 0; i < width; ++i)
-                fprintf(stderr, "Test \"%s\" returned %d: %g / %a\n",
-                        fn, i, returned[i], returned[i]);
-        }
+    bool resultsMatch = true;
+    if (foundResult) {
+        for (int i = 0; i < width; ++i)
+            if (returned[i] != result[i]) {
+                resultsMatch = false;
+                fprintf(stderr, "Test \"%s\" RETURNED %d: %g / %a EXPECTED %g / %a\n",
+                        fn, i, returned[i], returned[i], result[i], result[i]);
+            }
     }
+    else {
+        for (int i = 0; i < width; ++i)
+            fprintf(stderr, "Test \"%s\" returned %d: %g / %a\n",
+                    fn, i, returned[i], returned[i]);
+    }
+    if (foundResult && shouldFail && resultsMatch)
+        fprintf(stderr, "Test %s unexpectedly passed\n", fn);
 
     delete ee;
     delete ctx;
 
-    return ok && foundResult;
+    return foundResult && resultsMatch;
 }
+
 
 int main(int argc, char *argv[]) {
     llvm::InitializeNativeTarget();
@@ -358,21 +362,15 @@ int main(int argc, char *argv[]) {
     LLVMLinkInJIT();
 #endif
 
-    std::vector<const char *> files;
+    const char *filename = NULL;
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help") || !strcmp(argv[i], "-h"))
             usage(0);
+        if (!strcmp(argv[i], "-f"))
+            shouldFail = true;
         else
-            files.push_back(argv[i]);
+            filename = argv[i];
     }
 
-    int passes = 0, fails = 0;
-    for (unsigned int i = 0; i < files.size(); ++i) {
-        if (lRunTest(files[i])) ++passes;
-        else ++fails;
-    }
-
-    if (fails > 0)
-        fprintf(stderr, "%d/%d tests passed\n", passes, passes+fails);
-    return fails > 0;
+    return (lRunTest(filename) == true) ? 0 : 1;
 }

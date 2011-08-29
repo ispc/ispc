@@ -1,19 +1,14 @@
-static float float4(uniform float a, uniform float b, uniform float c, 
-                    uniform float d) {
-    float ret = 0;
-    for (uniform int i = 0; i < programCount; i += 4) {
-        ret = insert(ret, i + 0, a);
-        ret = insert(ret, i + 1, b);
-        ret = insert(ret, i + 2, c);
-        ret = insert(ret, i + 3, d);
-    }
-    return ret;
+
+export uniform int width() { return programCount; }
+
+export void f_f(uniform float r[], uniform float a[]) {
+    unsigned int i = (unsigned int)a[programIndex];
+    r[programIndex] = max((unsigned int)2, i);
 }
 
-export float f_f(float a) {
-    unsigned int i = (unsigned int)a;
-    return max((unsigned int)2, i);
+export void result(uniform float r[]) { 
+    r[programIndex] = 1+programIndex;
+    r[0] = 2;
 }
 
-export float result() { return float4(2,2,3,4); }
 

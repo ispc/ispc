@@ -1,8 +1,10 @@
 
-export float f_f(float a) {
-    unsigned int i = (unsigned int)a;
-    return max((unsigned int)10, i);
+export uniform int width() { return programCount; }
+
+export void f_f(uniform float result[], uniform float aa[]) {
+    unsigned int i = (unsigned int)aa[programIndex];
+    result[programIndex] = max((unsigned int)100, i);
 }
 
-export float result() { return 10; }
+export void result(uniform float r[]) { r[programIndex] = 100; }
 

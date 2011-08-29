@@ -14,7 +14,7 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     varying int3 vv = array[a];
     ++vv.y;
     array[a] = vv;
-    print("fin %\n", array[programIndex].y);
+//CO    print("fin %\n", array[programIndex].y);
     ret[programIndex] = array[programIndex].y;
 }
 
