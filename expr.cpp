@@ -799,11 +799,17 @@ lOpString(BinaryExpr::Op op) {
 */
 static llvm::Value *
 lEmitBinaryBitOp(BinaryExpr::Op op, llvm::Value *arg0Val,
-                 llvm::Value *arg1Val, FunctionEmitContext *ctx) {
+                 llvm::Value *arg1Val, bool isUnsigned,
+                 FunctionEmitContext *ctx) {
     llvm::Instruction::BinaryOps inst;
     switch (op) {
     case BinaryExpr::Shl:    inst = llvm::Instruction::Shl;  break;
-    case BinaryExpr::Shr:    inst = llvm::Instruction::AShr; break; 
+    case BinaryExpr::Shr:
+        if (isUnsigned)
+            inst = llvm::Instruction::LShr; 
+        else
+            inst = llvm::Instruction::AShr; 
+        break; 
     case BinaryExpr::BitAnd: inst = llvm::Instruction::And;  break;
     case BinaryExpr::BitXor: inst = llvm::Instruction::Xor;  break;
     case BinaryExpr::BitOr:  inst = llvm::Instruction::Or;   break;
@@ -949,7 +955,8 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
             dynamic_cast<ConstExpr *>(arg1) == NULL)
             PerformanceWarning(pos, "Shift right is extremely inefficient for "
                                "varying shift amounts.");
-        return lEmitBinaryBitOp(op, e0Val, e1Val, ctx);
+        return lEmitBinaryBitOp(op, e0Val, e1Val, 
+                                arg0->GetType()->IsUnsignedType(), ctx);
     }
     case LogicalAnd:
         return ctx->BinaryOperator(llvm::Instruction::And, e0Val, e1Val,
@@ -1533,7 +1540,8 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     case AssignExpr::AndAssign:
     case AssignExpr::XorAssign:
     case AssignExpr::OrAssign:
-        newValue = lEmitBinaryBitOp(basicop, oldLHS, rvalue, ctx);
+        newValue = lEmitBinaryBitOp(basicop, oldLHS, rvalue, 
+                                    arg0->GetType()->IsUnsignedType(), ctx);
         break;
     default:
         FATAL("logic error in lEmitOpAssign");
