@@ -637,10 +637,14 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                                           llvm::PointerType::get(storeType, 0), 
                                           "ptr2vec", callInst);
                 lCopyMetadata(castPtr, callInst);
-                llvm::Instruction *storeInst = 
+
+                llvm::StoreInst *storeInst = 
                     new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
+                int align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
+                storeInst->setAlignment(align);
                 lCopyMetadata(storeInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, storeInst);
+
                 modifiedAny = true;
                 goto restart;
             }
