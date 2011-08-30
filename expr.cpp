@@ -3289,7 +3289,7 @@ ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    assert(type == AtomicType::UniformUInt8);
+    assert(type == AtomicType::UniformConstUInt8);
     uint8Val[0] = u;
 }
 
@@ -3329,7 +3329,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    assert(type == AtomicType::UniformUInt16);
+    assert(type == AtomicType::UniformConstUInt16);
     uint16Val[0] = u;
 }
 
@@ -3432,7 +3432,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    assert(type == AtomicType::UniformUInt64);
+    assert(type == AtomicType::UniformConstUInt64);
     uint64Val[0] = u;
 }
 
