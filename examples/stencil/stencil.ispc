@@ -32,7 +32,7 @@
 */
 
 
-static task void
+static void
 stencil_step(uniform int x0, uniform int x1,
              uniform int y0, uniform int y1,
              uniform int z0, uniform int z1,
@@ -67,14 +67,26 @@ stencil_step(uniform int x0, uniform int x1,
 }
 
 
-export void loop_stencil_ispc(uniform int t0, uniform int t1, 
-                              uniform int x0, uniform int x1,
-                              uniform int y0, uniform int y1,
-                              uniform int z0, uniform int z1,
-                              uniform int Nx, uniform int Ny, uniform int Nz,
-                              uniform const float coef[4], 
-                              uniform const float vsq[],
-                              uniform float Aeven[], uniform float Aodd[])
+static task void
+stencil_step_task(uniform int x0, uniform int x1,
+                  uniform int y0, uniform int y1,
+                  uniform int z0, uniform int z1,
+                  uniform int Nx, uniform int Ny, uniform int Nz,
+                  uniform const float coef[4], uniform const float vsq[],
+                  uniform const float Ain[], uniform float Aout[]) {
+    stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, Ain, Aout);
+}
+
+
+export void
+loop_stencil_ispc_tasks(uniform int t0, uniform int t1, 
+                        uniform int x0, uniform int x1,
+                        uniform int y0, uniform int y1,
+                        uniform int z0, uniform int z1,
+                        uniform int Nx, uniform int Ny, uniform int Nz,
+                        uniform const float coef[4], 
+                        uniform const float vsq[],
+                        uniform float Aeven[], uniform float Aodd[])
 {
     for (uniform int t = t0; t < t1; ++t) {
         // Parallelize across cores as well: each task will work on a slice
@@ -83,14 +95,35 @@ export void loop_stencil_ispc(uniform int t0, uniform int t1,
         uniform int dz = 1;
         for (uniform int z = z0; z < z1; z += dz) {
             if ((t & 1) == 0)
-                launch < stencil_step(x0, x1, y0, y1, z, z+dz, Nx, Ny, Nz, coef, vsq, 
-                                      Aeven, Aodd) >;
+                launch < stencil_step_task(x0, x1, y0, y1, z, z+dz, Nx, Ny, Nz, 
+                                           coef, vsq, Aeven, Aodd) >;
             else
-                launch < stencil_step(x0, x1, y0, y1, z, z+dz, Nx, Ny, Nz, coef, vsq, 
-                                      Aodd, Aeven) >;
+                launch < stencil_step_task(x0, x1, y0, y1, z, z+dz, Nx, Ny, Nz, 
+                                           coef, vsq, Aodd, Aeven) >;
         }
         // We need to wait for all of the launched tasks to finish before
         // starting the next iteration.
         sync;
+    }
+}
+
+
+export void
+loop_stencil_ispc(uniform int t0, uniform int t1, 
+                  uniform int x0, uniform int x1,
+                  uniform int y0, uniform int y1,
+                  uniform int z0, uniform int z1,
+                  uniform int Nx, uniform int Ny, uniform int Nz,
+                  uniform const float coef[4], 
+                  uniform const float vsq[],
+                  uniform float Aeven[], uniform float Aodd[])
+{
+    for (uniform int t = t0; t < t1; ++t) {
+        if ((t & 1) == 0)
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+                         Aeven, Aodd);
+        else
+            stencil_step(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, coef, vsq, 
+                         Aodd, Aeven);
     }
 }

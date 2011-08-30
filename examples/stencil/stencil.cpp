@@ -116,20 +116,38 @@ int main() {
     InitData(Nx, Ny, Nz, Aispc, vsq);
 
     //
-    // Compute the image using the ispc implementation; report the minimum
-    // time of three runs.
+    // Compute the image using the ispc implementation on one core; report
+    // the minimum time of three runs.
     //
-    double minISPC = 1e30;
+    double minTimeISPC = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         loop_stencil_ispc(0, 6, width, Nx - width, width, Ny - width,
                           width, Nz - width, Nx, Ny, Nz, coeff, vsq,
                           Aispc[0], Aispc[1]);
         double dt = get_elapsed_mcycles();
-        minISPC = std::min(minISPC, dt);
+        minTimeISPC = std::min(minTimeISPC, dt);
     }
 
-    printf("[stencil ispc]:\t\t\t[%.3f] million cycles\n", minISPC);
+    printf("[stencil ispc 1 core]:\t\t[%.3f] million cycles\n", minTimeISPC);
+
+    InitData(Nx, Ny, Nz, Aispc, vsq);
+
+    //
+    // Compute the image using the ispc implementation with tasks; report
+    // the minimum time of three runs.
+    //
+    double minTimeISPCTasks = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        reset_and_start_timer();
+        loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
+                                width, Nz - width, Nx, Ny, Nz, coeff, vsq,
+                                Aispc[0], Aispc[1]);
+        double dt = get_elapsed_mcycles();
+        minTimeISPCTasks = std::min(minTimeISPCTasks, dt);
+    }
+
+    printf("[stencil ispc + tasks]:\t\t[%.3f] million cycles\n", minTimeISPCTasks);
 
     InitData(Nx, Ny, Nz, Aserial, vsq);
 
@@ -137,19 +155,20 @@ int main() {
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
-    double minSerial = 1e30;
+    double minTimeSerial = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         loop_stencil_serial(0, 6, width, Nx-width, width, Ny - width,
                             width, Nz - width, Nx, Ny, Nz, coeff, vsq,
                             Aserial[0], Aserial[1]);
         double dt = get_elapsed_mcycles();
-        minSerial = std::min(minSerial, dt);
+        minTimeSerial = std::min(minTimeSerial, dt);
     }
 
-    printf("[stencil serial]:\t\t[%.3f] millon cycles\n", minSerial);
+    printf("[stencil serial]:\t\t[%.3f] millon cycles\n", minTimeSerial);
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2f from ISPC + tasks)\n", 
+           minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
 
     // Check for agreement
     int offset = 0;
