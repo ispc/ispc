@@ -67,26 +67,27 @@ static void usage(int ret) {
     printf("    [--arch={%s}]\t\tSelect target architecture\n", 
            Target::SupportedTargetArchs());
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
-    printf("         (%s)\n", Target::SupportedTargetCPUs());
-    printf("    [-D<foo>]\t\t\t\t#define value when running preprocessor\n");
+    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
+    printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
-    printf("    [--emit-obj]\t\t\tGenerate object file file as output\n");
+    printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [--fast-math]\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
-    printf("    [-h] <name>\t\t\t\tOutput filename for header\n");
+    printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
-    printf("        svml\t\t\t\tUse the Intel SVML math libraries\n");
+    printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
-    printf("    [-o/--outfile] <name>\t\tOutput filename for bitcode (may be \"-\" for standard output)\n");
-    printf("    [-O0/-O1]\t\t\t\tSet optimization level\n");
+    printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
+    printf("    [-O0/-O1]\t\t\t\tSet optimization level (-O1 is default)\n");
+#if 0
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
     printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
@@ -96,7 +97,8 @@ static void usage(int ret) {
     printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
-    printf("    [--target=<isa>]\t\t\tSelect target ISA. (%s)\n", Target::SupportedTargetISAs());
+#endif
+    printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
@@ -256,13 +258,18 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
             g->emitPerfWarnings = false;
-        else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--outfile")) {
+        else if (!strcmp(argv[i], "-o")) {
             if (++i == argc) usage(1);
             outFileName = argv[i];
         }
-        else if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--header-outfile")) {
+        else if (!strcmp(argv[i], "--outfile="))
+            outFileName = argv[i] + strlen("--outfile=");
+        else if (!strcmp(argv[i], "-h")) {
             if (++i == argc) usage(1);
             headerFileName = argv[i];
+        }
+        else if (!strcmp(argv[i], "--header-outfile=")) {
+            headerFileName = argv[i] + strlen("--header-outfile=");
         }
         else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
