@@ -656,6 +656,84 @@ define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 }
 ')
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_associative
+;; More efficient implementation for atomics that are associative (e.g.,
+;; add, and, ...).  If a basic implementation would do sometihng like:
+;; result0 = atomic_op(ptr, val0)
+;; result1 = atomic_op(ptr, val1)
+;; ..
+;; Then instead we can do:
+;; tmp = (val0 op val1 op ...)
+;; result0 = atomic_op(ptr, tmp)
+;; result1 = (result0 op val0)
+;; ..
+;; And more efficiently compute the same result
+;;
+;; Takes five parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the LLVM atomic (e.g. i32)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
+
+define(`global_atomic_associative', `
+
+declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
+
+;; note that the mask is expected to be of type $3, so the caller must ensure
+;; that for 64-bit types, the mask is cast to a signed int before being passed
+;; to this so that it is properly sign extended...  (The code in stdlib.ispc
+;; does do this..)
+
+define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+                                                 <$1 x $3> %mask) nounwind alwaysinline {
+  ; first, for any lanes where the mask is off, compute a vector where those lanes
+  ; hold the identity value..
+
+  ; zero out any lanes that are off
+  %valoff = and <$1 x $3> %val, %mask
+
+  ; compute an identity vector that is zero in on lanes and has the identiy value
+  ; in the off lanes
+  %idv1 = bitcast $3 $5 to <1 x $3>
+  %idvec = shufflevector <1 x $3> %idv1, <1 x $3> undef,
+     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
+  %notmask = xor <$1 x $3> %mask, < forloop(i, 1, eval($1-1), `$3 -1, ') $3 -1 >
+  %idoff = and <$1 x $3> %idvec, %notmask
+
+  ; and comptue the merged vector that holds the identity in the off lanes
+  %valp = or <$1 x $3> %valoff, %idoff
+
+  ; now compute the local reduction (val0 op val1 op ... )--initialize
+  ; %eltvec so that the 0th element is the identity, the first is val0,
+  ; the second is (val0 op val1), ..
+  %red0 = extractelement <$1 x $3> %valp, i32 0
+  %eltvec0 = insertelement <$1 x $3> undef, $3 $5, i32 0
+
+  forloop(i, 1, eval($1-1), `
+  %elt`'i = extractelement <$1 x $3> %valp, i32 i
+  %red`'i = $2 $3 %red`'eval(i-1), %elt`'i
+  %eltvec`'i = insertelement <$1 x $3> %eltvec`'eval(i-1), $3 %red`'eval(i-1), i32 i')
+
+  ; make the atomic call, passing it the final reduced value
+  %final0 = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %red`'eval($1-1))
+
+  ; now go back and compute the values to be returned for each program 
+  ; instance--this just involves smearing the old value returned from the
+  ; actual atomic call across the vector and applying the vector op to the
+  ; %eltvec vector computed above..
+  %finalv1 = bitcast $3 %final0 to <1 x $3>
+  %final_base = shufflevector <1 x $3> %finalv1, <1 x $3> undef,
+     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
+  %r = $2 <$1 x $3> %final_base, %eltvec`'eval($1-1)
+
+  ret <$1 x $3> %r
+}
+')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_uniform
 ;; Defines the implementation of a function that handles the mapping from
@@ -1143,21 +1221,21 @@ define internal void @__memory_barrier() nounwind readnone alwaysinline {
   ret void
 }
 
-global_atomic($1, add, i32, int32)
-global_atomic($1, sub, i32, int32)
-global_atomic($1, and, i32, int32)
-global_atomic($1, or, i32, int32)
-global_atomic($1, xor, i32, int32)
+global_atomic_associative($1, add, i32, int32, 0)
+global_atomic_associative($1, sub, i32, int32, 0)
+global_atomic_associative($1, and, i32, int32, -1)
+global_atomic_associative($1, or, i32, int32, 0)
+global_atomic_associative($1, xor, i32, int32, 0)
 global_atomic_uniform($1, min, i32, int32)
 global_atomic_uniform($1, max, i32, int32)
 global_atomic_uniform($1, umin, i32, uint32)
 global_atomic_uniform($1, umax, i32, uint32)
 
-global_atomic($1, add, i64, int64)
-global_atomic($1, sub, i64, int64)
-global_atomic($1, and, i64, int64)
-global_atomic($1, or, i64, int64)
-global_atomic($1, xor, i64, int64)
+global_atomic_associative($1, add, i64, int64, 0)
+global_atomic_associative($1, sub, i64, int64, 0)
+global_atomic_associative($1, and, i64, int64, -1)
+global_atomic_associative($1, or, i64, int64, 0)
+global_atomic_associative($1, xor, i64, int64, 0)
 global_atomic_uniform($1, min, i64, int64)
 global_atomic_uniform($1, max, i64, int64)
 global_atomic_uniform($1, umin, i64, uint64)
