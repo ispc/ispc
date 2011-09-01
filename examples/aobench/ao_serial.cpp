@@ -140,7 +140,7 @@ ray_plane_intersect(Isect &isect, Ray &ray,
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
-    if (fabsf(v) < 1.0e-17) 
+    if (fabsf(v) < 1.0e-17f) 
         return;
     else {
         float t = -(dot(ray.org, plane.n) + d) / v;
@@ -183,11 +183,11 @@ orthoBasis(vec basis[3], const vec &n) {
     basis[2] = n;
     basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
 
-    if ((n.x < 0.6) && (n.x > -0.6)) {
+    if ((n.x < 0.6f) && (n.x > -0.6f)) {
         basis[1].x = 1.0;
-    } else if ((n.y < 0.6) && (n.y > -0.6)) {
+    } else if ((n.y < 0.6f) && (n.y > -0.6f)) {
         basis[1].y = 1.0;
-    } else if ((n.z < 0.6) && (n.z > -0.6)) {
+    } else if ((n.z < 0.6f) && (n.z > -0.6f)) {
         basis[1].z = 1.0;
     } else {
         basis[1].x = 1.0;
@@ -224,7 +224,7 @@ ambient_occlusion(Isect &isect, Plane &plane,
             float phi   = 2.0f * M_PI * drand48();
             float x = cosf(phi) * theta;
             float y = sinf(phi) * theta;
-            float z = sqrtf(1.0 - theta * theta);
+            float z = sqrtf(1.0f - theta * theta);
 
             // local . global
             float rx = x * basis[0].x + y * basis[1].x + z * basis[2].x;
@@ -236,14 +236,14 @@ ambient_occlusion(Isect &isect, Plane &plane,
             ray.dir.y = ry;
             ray.dir.z = rz;
 
-            occIsect.t   = 1.0e+17;
+            occIsect.t   = 1.0e+17f;
             occIsect.hit = 0;
 
             for (int snum = 0; snum < 3; ++snum)
                 ray_sphere_intersect(occIsect, ray, spheres[snum]); 
             ray_plane_intersect (occIsect, ray, plane); 
 
-            if (occIsect.hit) occlusion += 1.0;
+            if (occIsect.hit) occlusion += 1.f;
         }
     }
 
@@ -280,10 +280,10 @@ static void ao_scanlines(int y0, int y1, int w, int h, int nsubsamples,
 
                     ray.dir.x = px;
                     ray.dir.y = py;
-                    ray.dir.z = -1.0;
+                    ray.dir.z = -1.0f;
                     vnormalize(ray.dir);
 
-                    isect.t   = 1.0e+17;
+                    isect.t   = 1.0e+17f;
                     isect.hit = 0;
 
                     for (int snum = 0; snum < 3; ++snum)

@@ -104,7 +104,7 @@ inline float NoiseWeight(float t) {
 
 
 inline float Lerp(float t, float low, float high) {
-    return (1. - t) * low + t * high;
+    return (1.f - t) * low + t * high;
 }
 
 
@@ -147,7 +147,7 @@ static float Turbulence(float x, float y, float z, int octaves) {
         lambda *= 1.99f;
         o *= omega;
     }
-    return sum * 0.5;
+    return sum * 0.5f;
 }
 
 
@@ -163,7 +163,7 @@ void noise_serial(float x0, float y0, float x1, float y1,
             float y = y0 + j * dy;
 
             int index = (j * width + i);
-            output[index] = Turbulence(x, y, 0.6, 8);
+            output[index] = Turbulence(x, y, 0.6f, 8);
         }
     }
 }

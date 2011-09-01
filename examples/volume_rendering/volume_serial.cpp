@@ -104,7 +104,7 @@ Inside(float3 p, float3 pMin, float3 pMax) {
 
 static bool
 IntersectP(const Ray &ray, float3 pMin, float3 pMax, float *hit0, float *hit1) {
-    float t0 = -1e30, t1 = 1e30;
+    float t0 = -1e30f, t1 = 1e30f;
 
     float3 tNear = (pMin - ray.origin) / ray.dir;
     float3 tFar  = (pMax - ray.origin) / ray.dir;
@@ -213,7 +213,7 @@ transmittance(float3 p0, float3 p1, float3 pMin,
     float tau = 0;
     float rayLength = sqrtf(ray.dir.x * ray.dir.x + ray.dir.y * ray.dir.y +
                             ray.dir.z * ray.dir.z);
-    float stepDist = 0.2;
+    float stepDist = 0.2f;
     float stepT = stepDist / rayLength;
 
     float t = rayT0;
@@ -239,8 +239,8 @@ distanceSquared(float3 a, float3 b) {
 static float 
 raymarch(float density[], int nVoxels[3], const Ray &ray) {
     float rayT0, rayT1;
-    float3 pMin(.3, -.2, .3), pMax(1.8, 2.3, 1.8);
-    float3 lightPos(-1, 4, 1.5);
+    float3 pMin(.3f, -.2f, .3f), pMax(1.8f, 2.3f, 1.8f);
+    float3 lightPos(-1f, 4f, 1.5f);
 
     if (!IntersectP(ray, pMin, pMax, &rayT0, &rayT1))
         return 0.;
@@ -249,10 +249,10 @@ raymarch(float density[], int nVoxels[3], const Ray &ray) {
 
     // Parameters that define the volume scattering characteristics and
     // sampling rate for raymarching
-    float Le = .25;            // Emission coefficient
+    float Le = .25f;           // Emission coefficient
     float sigma_a = 10;        // Absorption coefficient
     float sigma_s = 10;        // Scattering coefficient
-    float stepDist = 0.025;    // Ray step amount
+    float stepDist = 0.025f;   // Ray step amount
     float lightIntensity = 40; // Light source intensity
 
     float tau = 0.f;  // accumulated beam transmittance
@@ -269,7 +269,7 @@ raymarch(float density[], int nVoxels[3], const Ray &ray) {
 
         // terminate once attenuation is high
         float atten = expf(-tau);
-        if (atten < .005)
+        if (atten < .005f)
             break;
 
         // direct lighting

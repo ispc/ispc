@@ -47,7 +47,7 @@ static inline float
 CND(float X) {
     float L = fabsf(X);
 
-    float k = 1.0 / (1.0 + 0.2316419 * L);
+    float k = 1.f / (1.f + 0.2316419f * L);
     float k2 = k*k;
     float k3 = k2*k;
     float k4 = k2*k2;
@@ -59,7 +59,7 @@ CND(float X) {
     w *= invSqrt2Pi * expf(-L * L * .5f);
 
     if (X > 0.f)
-        w = 1.0 - w;
+        w = 1.f - w;
     return w;
 }
 
@@ -94,7 +94,7 @@ binomial_put_serial(float Sa[], float Xa[], float Ta[],
 
         float dt = T / BINOMIAL_NUM;
         float u = expf(v * sqrtf(dt));
-        float d = 1. / u;
+        float d = 1.f / u;
         float disc = expf(r * dt);
         float Pu = (disc - d) / (u - d);
 
