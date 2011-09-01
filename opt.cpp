@@ -55,6 +55,7 @@
 #include <llvm/Instructions.h>
 #include <llvm/Intrinsics.h>
 #include <llvm/Constants.h>
+#include <llvm/Analysis/ConstantFolding.h>
 #ifndef LLVM_2_8
     #include <llvm/Target/TargetLibraryInfo.h>
     #ifdef LLVM_2_9
@@ -69,6 +70,7 @@
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
+#include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/raw_ostream.h>
 #ifndef LLVM_2_8
@@ -469,8 +471,18 @@ lGetMask(llvm::Value *factor) {
     else if (llvm::isa<llvm::ConstantAggregateZero>(factor))
         return 0;
     else {
+#if 0
+        llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(factor);
+        if (ce != NULL) {
+            llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
+            const llvm::TargetData *td = targetMachine->getTargetData();
+            llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
+            c->dump();
+            factor = c;
+        }
         // else we should be able to handle it above...
         assert(!llvm::isa<llvm::Constant>(factor));
+#endif
         return -1;
     }
 }
@@ -608,9 +620,10 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                                           llvm::PointerType::get(returnType, 0), 
                                           "ptr2vec", callInst);
                 lCopyMetadata(castPtr, callInst);
+                int align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                 llvm::Instruction *loadInst = 
                     new llvm::LoadInst(castPtr, "load", false /* not volatile */,
-                                       0 /* align */, (llvm::Instruction *)NULL);
+                                       align, (llvm::Instruction *)NULL);
                 lCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
                 modifiedAny = true;
