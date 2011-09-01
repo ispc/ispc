@@ -64,8 +64,8 @@ int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= 16);
 
-    float r1[16];
-    memset(r1, 0, 16*sizeof(float));
+    float returned_result[16];
+    memset(returned_result, 0, 16*sizeof(float));
     float vfloat[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     double vdouble[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
     int vint[16] = { 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32 };
@@ -73,36 +73,37 @@ int main(int argc, char *argv[]) {
     float b = 5.;
 
 #if (TEST_SIG == 0)
-    f_v(r1);
+    f_v(returned_result);
 #elif (TEST_SIG == 1)
-    f_f(r1, vfloat);
+    f_f(returned_result, vfloat);
 #elif (TEST_SIG == 2)
-    f_fu(r1, vfloat, b);
+    f_fu(returned_result, vfloat, b);
 #elif (TEST_SIG == 3)
-    f_fi(r1, vfloat, vint);
+    f_fi(returned_result, vfloat, vint);
 #elif (TEST_SIG == 4)
-    f_du(r1, vdouble, 5.);
+    f_du(returned_result, vdouble, 5.);
 #elif (TEST_SIG == 5)
-    f_duf(r1, vdouble, 5.f);
+    f_duf(returned_result, vdouble, 5.f);
 #elif (TEST_SIG == 6)
-    f_di(r1, vdouble, vint2);
+    f_di(returned_result, vdouble, vint2);
 #else
 #error "Unknown or unset TEST_SIG value"
 #endif    
 
-    float r2[16];
-    memset(r2, 0, 16*sizeof(float));
-    result(r2);
+    float expected_result[16];
+    memset(expected_result, 0, 16*sizeof(float));
+    result(expected_result);
 
     int errors = 0;
     for (int i = 0; i < w; ++i) {
-        if (r1[i] != r2[i]) {
+        if (returned_result[i] != expected_result[i]) {
 #ifdef EXPECT_FAILURE
             // bingo, failed
             return 1;
 #else
-            printf("%s: value %d disagrees: should be %f [%a], returned %f [%a]\n",
-                   argv[0], i, r1[i], r1[i], r2[i], r2[i]);
+            printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n",
+                   argv[0], i, returned_result[i], returned_result[i], 
+                   expected_result[i], expected_result[i]);
             ++errors;
 #endif // EXPECT_FAILURE
         }

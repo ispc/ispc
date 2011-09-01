@@ -204,4 +204,6 @@ if __name__ == '__main__':
         t.join()
         error_count += t.exitcode
     print
+    if error_count > 0:
+        print "%d / %d tests FAILED!" % (error_count, total_tests)
     sys.exit(error_count)

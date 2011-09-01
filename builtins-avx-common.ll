@@ -58,7 +58,7 @@ define internal float @__rcp_uniform_float(float) nounwind readonly alwaysinline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
 
-declare <4 x float> @llvm.x86.sse.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
+declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
 
 define internal float @__round_uniform_float(float) nounwind readonly alwaysinline {
   ; roundss, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
@@ -78,7 +78,7 @@ define internal float @__round_uniform_float(float) nounwind readonly alwaysinli
   ;  It doesn't matter what we pass as a, since we only need the r0 value
   ;  here.  So we pass the same register for both.
   %xi = insertelement <4 x float> undef, float %0, i32 0
-  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
+  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }
@@ -87,7 +87,7 @@ define internal float @__floor_uniform_float(float) nounwind readonly alwaysinli
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <4 x float> undef, float %0, i32 0
   ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
+  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }
@@ -96,7 +96,7 @@ define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinlin
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <4 x float> undef, float %0, i32 0
   ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <4 x float> @llvm.x86.sse.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
+  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
   %rs = extractelement <4 x float> %xr, i32 0
   ret float %rs
 }

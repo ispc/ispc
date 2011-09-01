@@ -233,7 +233,7 @@ define internal float @__reduce_add_float(<16 x float>) nounwind readonly always
   %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
   %v3 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v2, <8 x float> %v2)
   %scalar1 = extractelement <8 x float> %v2, i32 0
-  %scalar2 = extractelement <8 x float> %v2, i32 1
+  %scalar2 = extractelement <8 x float> %v2, i32 4
   %sum = fadd float %scalar1, %scalar2
   ret float %sum
 }
@@ -316,9 +316,7 @@ define internal double @__reduce_add_double(<16 x double>) nounwind readonly alw
 
   %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %vab, <4 x double> %vcd)
   %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
-  %scalar1 = extractelement <4 x double> %sum0, i32 0
-  %scalar2 = extractelement <4 x double> %sum1, i32 1
-  %sum = fadd double %scalar1, %scalar2
+  %sum = extractelement <4 x double> %sum1, i32 0
   ret double %sum
 }
 

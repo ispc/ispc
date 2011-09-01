@@ -220,7 +220,7 @@ define internal float @__reduce_add_float(<8 x float>) nounwind readonly alwaysi
   %v1 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %0, <8 x float> %0)
   %v2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %v1, <8 x float> %v1)
   %scalar1 = extractelement <8 x float> %v2, i32 0
-  %scalar2 = extractelement <8 x float> %v2, i32 1
+  %scalar2 = extractelement <8 x float> %v2, i32 4
   %sum = fadd float %scalar1, %scalar2
   ret float %sum
 }
@@ -294,11 +294,10 @@ define internal double @__reduce_add_double(<8 x double>) nounwind readonly alwa
                       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %v1 = shufflevector <8 x double> %0, <8 x double> undef,
                       <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %v0, <4 x double> %v1)
-  %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
-  %scalar1 = extractelement <4 x double> %sum0, i32 0
-  %scalar2 = extractelement <4 x double> %sum1, i32 1
-  %sum = fadd double %scalar1, %scalar2
+  %sum01 = fadd <4 x double> %v0, %v1
+  %red0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum01, <4 x double> %sum01)
+  %red1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %red0, <4 x double> %red0)
+  %sum = extractelement <4 x double> %red1, i32 0
   ret double %sum
 }
 
