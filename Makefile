@@ -11,9 +11,9 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
 ISPC_LIBS=$(CLANG_LIBS) \
-	$(shell llvm-config --ldflags --libs backend bitreader bitwriter codegen engine mcjit scalaropts native analysis core instcombine ipa ipo linker instrumentation) \
+	$(shell llvm-config --ldflags --libs) \
 	-lpthread -ldl
-ISPC_TEST_LIBS=$(shell llvm-config --ldflags --libs bitreader backend interpreter engine jit mcjit) \
+ISPC_TEST_LIBS=$(shell llvm-config --ldflags --libs) \
 	-lpthread -ldl
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
