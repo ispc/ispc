@@ -630,7 +630,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
             else if (mask == 0xff) {
                 // all lanes storing, so replace with a regular store
-                llvm::Value *rvalue = callInst->getArgOperand(1);
+                llvm::Value *rvalue = callInst->getArgOperand(2);
                 llvm::Type *storeType = rvalue->getType();
                 llvm::Value *castPtr = 
                     new llvm::BitCastInst(callInst->getArgOperand(0),
