@@ -240,7 +240,7 @@ static float
 raymarch(float density[], int nVoxels[3], const Ray &ray) {
     float rayT0, rayT1;
     float3 pMin(.3f, -.2f, .3f), pMax(1.8f, 2.3f, 1.8f);
-    float3 lightPos(-1f, 4f, 1.5f);
+    float3 lightPos(-1.f, 4.f, 1.5f);
 
     if (!IntersectP(ray, pMin, pMax, &rayT0, &rayT1))
         return 0.;
