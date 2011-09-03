@@ -1,3 +1,27 @@
+=== v1.0.7 === (3 September 2011)
+
+The various atomic_*_global() standard library functions are generally
+substantially more efficient.  They all previously issued one hardware
+atomic instruction for each running program instance but now locally
+compute a reduction over the operands and issue a single hardware atomic,
+giving the same effect and results in the end (issue #57).
+
+CPU/ISA target handling has been substantially improved.  If no CPU is
+specified, the host CPU type is used, not just a default of "nehalem".  A
+number of bugs were fixed that ensure that LLVM doesn't generate SSE>2
+instructions when using the SSE2 target (fixes issue #82).
+
+Shift rights of unsigned integer types use a logical shift right
+instruction now, not an arithmetic shift right (fixed issue #88).
+
+When emitting header files, 'extern' declarations of globals used in ispc
+code are now outside of the ispc namespace.  Fixes issue #64.
+
+The stencil example has been modified to do runs with and without
+parallelism.
+
+Many other small bugfixes and improvements.
+
 === v1.0.6 === (17 August 2011)
 
 Some additional cross-program instance operations have been added to the
