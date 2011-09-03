@@ -42,6 +42,7 @@
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #include <direct.h>
+#define strcasecmp stricmp
 #endif
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
