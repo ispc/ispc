@@ -30,6 +30,8 @@ parser.add_option('-t', '--target', dest='target',
 parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (x86, x86-64)',
                   default="x86-64")
+parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
+                  default=False, action="store_true")
 
 (options, args) = parser.parse_args()
 
@@ -129,6 +131,8 @@ def run_tasks_from_queue(queue):
                 exe_name = "%s.run" % filename
                 ispc_cmd = "ispc --woff %s -o %s --arch=%s --target=%s" % \
                     (filename, obj_name, options.arch, options.target)
+                if options.no_opt:
+                    ispc_cmd += " -O0" 
                 if options.arch == 'x86':
                     gcc_arch = '-m32'
                 else:
@@ -152,6 +156,8 @@ def run_tasks_from_queue(queue):
             bitcode_file = "%s.bc" % filename
             compile_cmd = "ispc --woff --emit-llvm %s --target=%s -o %s" % \
                 (filename, options.target, bitcode_file)
+            if options.no_opt:
+                compile_cmd += " -O0"
             test_cmd = "ispc_test %s" % bitcode_file
 
             error_count += run_cmds([compile_cmd, test_cmd], filename, should_fail)
