@@ -33,6 +33,17 @@ The main goals behind ``ispc`` are to:
 number of non-trivial workloads that aren't handled well by other
 compilation approaches (e.g. loop auto-vectorization.)
 
+**We are very interested in your feedback and comments about ispc and
+in hearing your experiences using the system.  We are especially interested
+in hearing if you try using ispc but see results that are not as you
+were expecting or hoping for.** We encourage you to send a note with your
+experiences or comments to the `ispc-users`_ mailing list or to file bug or
+feature requests with the ``ispc`` `bug tracker`_. (Thanks!)
+
+.. _ispc-users: http://groups.google.com/group/ispc-users
+.. _bug tracker: https://github.com/ispc/ispc/issues?state=open
+
+
 Contents:
 
 * `Recent Changes to ISPC`_
@@ -102,6 +113,8 @@ Contents:
   + `Small Performance Tricks`_
   + `Instrumenting Your ISPC Programs`_
   + `Using Scan Operations For Variable Output`_
+  + `Application-Supplied Execution Masks`_
+  + `Explicit Vector Programming With Uniform Short Vector Types`_
 
 * `Disclaimer and Legal Information`_
 
@@ -2209,14 +2222,14 @@ Both the ``foo`` and ``bar`` global variables can be accessed on each
 side.
 
 ``ispc`` code can also call back to C/C++.  On the ``ispc`` side, any
-application functions to be called must be declared with the ``export "C"``
+application functions to be called must be declared with the ``extern "C"``
 qualifier.
 
 ::
 
    extern "C" void foo(uniform float f, uniform float g);
 
-Unlike in C++, ``export "C"`` doesn't take braces to delineate
+Unlike in C++, ``extern "C"`` doesn't take braces to delineate
 multiple functions to be declared; thus, multiple C functions to be called
 from ``ispc`` must be declared as follows:
 
@@ -2842,6 +2855,91 @@ will write its one result to ``outArray[0]``, the second will write its two
 values to ``outArray[1]`` and ``outArray[2]``, and so forth.  The
 ``reduce_add`` call at the end returns the total number of values that the
 program instances have written to the array.
+
+Application-Supplied Execution Masks
+------------------------------------
+
+Recall that when execution transitions from the application code to an
+``ispc`` function, all of the program instances are initially executing.
+In some cases, it may desired that only some of them are running, based on
+a data-dependent condition computed in the application program.  This
+situation can easily be handled via an additional parameter from the
+application.
+
+As a simple example, consider a case where the application code has an
+array of ``float`` values and we'd like the ``ispc`` code to update
+just specific values in that array, where which of those values to be
+updated has been determined by the application.  In C++ code, we might
+have:
+
+::
+
+    int count = ...;
+    float *array = new float[count];
+    bool *shouldUpdate = new bool[count];
+    // initialize array and shouldUpdate
+    ispc_func(array, shouldUpdate, count);
+
+Then, the ``ispc`` code could process this update as:
+
+::
+
+    export void ispc_func(uniform float array[], uniform bool update[],
+                          uniform int count) {
+        for (uniform int i = 0; i < count; i += programCount) {
+            cif (update[i+programIndex] == true)
+                // update array[i+programIndex]...
+        }
+    }
+
+(In this case a "coherent" if statement is likely to be worthwhile if the
+``update`` array will tend to have sections that are either all-true or
+all-false.)
+
+Explicit Vector Programming With Uniform Short Vector Types
+-----------------------------------------------------------
+
+The typical model for programming in ``ispc`` is an *implicit* parallel
+model, where one writes a program that is apparently doing scalar
+computation on values and the program is then vectorized to run in parallel
+across the SIMD lanes of a processor.  However, ``ispc`` also has some
+support for explicit vector unit programming, where the vectorization is
+explicit.  Some computations may be more effectively described in the
+explicit model rather than the implicit model.
+
+This support is provided via ``uniform`` instances of short vectors 
+(as were introduced in the `Short Vector Types`_ section).  Specifically, 
+if this short program
+
+::
+
+    export uniform float<8> madd(uniform float<8> a, 
+                                 uniform float<8> b, uniform float<8> c) {
+        return a + b * c;
+    }
+
+is compiled with the AVX target, ``ispc`` generates the following assembly:
+
+::
+    _madd:
+	vmulps	%ymm2, %ymm1, %ymm1
+	vaddps	%ymm0, %ymm1, %ymm0
+	ret
+
+(And similarly, if compiled with a 4-wide SSE target, two ``mulps`` and two
+``addps`` instructions are generated, and so forth.)
+
+Note that ``ispc`` doesn't currently support control-flow based on
+``uniform`` short vector types; it is thus not possible to write code like:
+
+::
+
+    export uniform int<8> count(uniform float<8> a, uniform float<8> b) {
+        uniform int<8> sum = 0;
+        while (a++ < b)
+            ++sum;
+    }
+
 
 Disclaimer and Legal Information
 ================================
