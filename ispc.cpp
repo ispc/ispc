@@ -72,7 +72,7 @@ Module *m;
 
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
-                  Target *t) {
+                  bool pic, Target *t) {
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
@@ -99,6 +99,8 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         arch = "x86-64";
 
     bool error = false;
+
+    t->generatePIC = pic;
 
     // Make sure the target architecture is a known one; print an error
     // with the valid ones otherwise.
@@ -228,14 +230,17 @@ llvm::TargetMachine *
 Target::GetTargetMachine() const {
     std::string triple = GetTripleString();
 
+    llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
+                                                  llvm::Reloc::Default;
 #if defined(LLVM_3_0svn) || defined(LLVM_3_0)
     std::string featuresString = attributes;
     llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple, cpu, featuresString);
+        target->createTargetMachine(triple, cpu, featuresString, relocModel);
 #else
     std::string featuresString = cpu + std::string(",") + attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, featuresString);
+    targetMachine->setRelocationModel(relocModel);
 #endif
     assert(targetMachine != NULL);
 

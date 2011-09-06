@@ -98,6 +98,7 @@ static void usage(int ret) {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
 #endif
+    printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
     printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
@@ -184,8 +185,9 @@ int main(int Argc, char *Argv[]) {
 
     bool debugSet = false, optSet = false;
     Module::OutputType ot = Module::Object;
-
+    bool generatePIC = false;
     const char *arch = NULL, *cpu = NULL, *target = NULL;
+
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
@@ -286,6 +288,8 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
+        else if (!strcmp(argv[i], "--pic"))
+            generatePIC = true;
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             printf("Intel(r) SPMD Program Compiler (ispc) build %s (%s)\n", 
                    BUILD_DATE, BUILD_VERSION);
@@ -307,7 +311,7 @@ int main(int Argc, char *Argv[]) {
     if (debugSet && !optSet)
         g->opt.level = 0;
 
-    if (!Target::GetTarget(arch, cpu, target, &g->target))
+    if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
         usage(1);
 
     m = new Module(file);

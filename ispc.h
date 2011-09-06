@@ -162,7 +162,7 @@ struct Target {
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
     static bool GetTarget(const char *arch, const char *cpu, const char *isa,
-                          Target *);
+                          bool pic, Target *);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported target ISAs. */
@@ -215,7 +215,11 @@ struct Target {
         integer multiple of the native vector width, for example if we're
         "doubling up" and compiling 8-wide on a 4-wide SSE system. */
     int vectorWidth;
+
+    /** Indicates whether position independent code should be generated. */
+    bool generatePIC;
 };
+
 
 /** @brief Structure that collects optimization options
 
