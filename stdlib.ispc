@@ -2862,6 +2862,12 @@ static inline void seed_rng(reference uniform RNGState state, uniform unsigned i
     seed = __seed4(state, 0, seed);
     if (programCount == 8)
         __seed4(state, 4, seed ^ 0xbeeff00d);
+    if (programCount == 16) {
+        __seed4(state, 4,  seed ^ 0xbeeff00d);
+        __seed4(state, 8,  ((seed & 0xffff) << 16) | (seed >> 16));
+        __seed4(state, 12, (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                            ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24));
+    }
 }
 
 static inline void fastmath() {

@@ -9,7 +9,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 export void result(uniform float RET[]) { 
-    uniform int pc[16] = { 1, 1, 2, 1, 2, 2, 3, 1, 1, 2, 2, 3, 2, 3, 3, 4 };
+    uniform int pc[16] = { 1, 1, 2, 1,
+                           2, 2, 3, 1,
+                           2, 2, 3, 2, 
+                           3, 3, 4, 1 };
     RET[programIndex] = pc[programIndex];
 }
 

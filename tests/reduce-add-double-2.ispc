@@ -15,7 +15,7 @@ export void result(uniform float RET[]) {
     uniform int x = -1234;
     if (programCount == 4) x = 10;
     else if (programCount == 8) x = 36;
-    else if (programCount == 16) x = 124;
+    else if (programCount == 16) x = 136;
     RET[programIndex] = x;
 }
 
