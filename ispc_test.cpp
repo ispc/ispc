@@ -357,8 +357,6 @@ static bool lRunTest(const char *fn) {
 int main(int argc, char *argv[]) {
     llvm::InitializeNativeTarget();
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-    llvm::InitializeAllTargetMCs();
-    LLVMLinkInMCJIT();
     LLVMLinkInJIT();
 #endif
 
