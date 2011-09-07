@@ -131,11 +131,11 @@ static float Noise(float x, float y, float z) {
 }
 
 
-static float Turbulence(float x, float y, float z, int octaves) {
+static float Turbulence(float x, float y, float z, uniform int octaves) {
     float omega = 0.6;
 
     float sum = 0., lambda = 1., o = 1.;
-    for (int i = 0; i < octaves; ++i) {
+    for (uniform int i = 0; i < octaves; ++i) {
         sum += abs(o * Noise(lambda * x, lambda * y, lambda * z));
         lambda *= 1.99f;
         o *= omega;
