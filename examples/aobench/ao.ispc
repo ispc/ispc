@@ -232,6 +232,9 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
     // direction we do per iteration and ny the number in y.
     uniform int nx = 1, ny = 1;
 
+    // FIXME: We actually need ny to be 1 regardless of the decomposition,
+    // since the task decomposition is one scanline high.
+
     if (programCount == 8) {
         // Do two pixels at once in the x direction
         nx = 2;
@@ -240,19 +243,21 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
             ++du;
     }
     else if (programCount == 16) {
-        // Two at once in both x and y
-        nx = ny = 2;
-        if ((programIndex >= 4 && programIndex < 8) || programIndex >= 12)
+        nx = 4;
+        ny = 1;
+        if (programIndex >= 4 && programIndex < 8)
             ++du;
-        if (programIndex >= 8)  
-            ++dv;
+        if (programIndex >= 8 && programIndex < 12)
+            du += 2;
+        if (programIndex >= 12)
+            du += 3;
     }
 
     // Now loop over all of the pixels, stepping in x and y as calculated
     // above.  (Assumes that ny divides y and nx divides x...)
     for (uniform int y = y0; y < y1; y += ny) {
         for (uniform int x = 0; x < w; x += nx)  {
-            // Figur out x,y pixel in NDC
+            // Figure out x,y pixel in NDC
             float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
             float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
             float ret = 0.f;
@@ -294,7 +299,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 
             // offset to the first pixel in the image
             uniform int offset = 3 * (y * w + x);
-            for (uniform int p = 0; p < programCount; p += 4, ++offset) {
+            for (uniform int p = 0; p < programCount; p += 4, offset += 3) {
                 // Get the four sample values for this pixel
                 uniform float sumret = retArray[p] + retArray[p+1] + retArray[p+2] +
                     retArray[p+3];
