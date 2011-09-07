@@ -1,8 +1,20 @@
 
-CXX=g++ -m64
-CXXFLAGS=-Iobjs/ -O3 -Wall
+ARCH = $(shell uname)
+
+TASK_CXX=../tasks_pthreads.cpp
+TASK_LIB=-lpthread
+
+ifeq ($(ARCH), Darwin)
+  TASK_CXX=../tasks_gcd.cpp
+  TASK_LIB=
+endif
+
+TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
+
+CXX=g++
+CXXFLAGS=-Iobjs/ -O3 -Wall -m64
 ISPC=ispc
-ISPCFLAGS=-O2 --fast-math --arch=x86-64
+ISPCFLAGS=-O2 --target=sse4 --arch=x86-64
 
 default: ao
 
@@ -14,10 +26,13 @@ dirs:
 clean:
 	/bin/rm -rf objs *~ ao
 
-ao: dirs objs/ao.o objs/ao_serial.o objs/ao_ispc.o
-	$(CXX) $(CXXFLAGS) -o $@ objs/ao.o objs/ao_ispc.o objs/ao_serial.o -lm -lpthread
+ao: dirs objs/ao.o objs/ao_serial.o objs/ao_ispc.o $(TASK_OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ objs/ao.o objs/ao_ispc.o objs/ao_serial.o $(TASK_OBJ) -lm $(TASK_LIB)
 
 objs/%.o: %.cpp
+	$(CXX) $< $(CXXFLAGS) -c -o $@
+
+objs/%.o: ../%.cpp
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
 objs/ao.o: objs/ao_ispc.h 

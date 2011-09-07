@@ -203,8 +203,9 @@ ambient_occlusion(reference Isect isect, reference Plane plane,
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h, 
-                  uniform int nsubsamples, reference uniform float image[]) {
+static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
+                         uniform int h,  uniform int nsubsamples, 
+                         reference uniform float image[]) {
     static Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
     static Sphere spheres[3] = {
         { { -2.0f, 0.0f, -3.5f }, 0.5f },
@@ -314,4 +315,19 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
 export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
                     uniform float image[]) {
     ao_scanlines(0, h, w, h, nsubsamples, image);
+}
+
+
+static void task ao_task(uniform int y0, uniform int y1, uniform int width,
+                         uniform int height, uniform int nsubsamples, 
+                         uniform float image[]) {
+    ao_scanlines(y0, y1, width, height, nsubsamples, image);
+}
+
+
+export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
+                          uniform float image[]) {
+    uniform int dy = 1;
+    for (uniform int y = 0; y < h; y += dy)
+        launch < ao_task(y, y+dy, w, h, nsubsamples, image) >;
 }

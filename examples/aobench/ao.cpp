@@ -173,9 +173,29 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc]:\t\t\t[%.3f] M cycles (%d x %d image)\n", minTimeISPC, 
-           width, height);
+    printf("[aobench ispc]:\t\t\t[%.3f] M cycles (%d x %d image)\n", 
+           minTimeISPC, width, height);
     savePPM("ao-ispc.ppm", width, height); 
+
+    //
+    // Run the ispc + tasks path, test_iterations times, and report the
+    // minimum time for any of them.
+    //
+    double minTimeISPCTasks = 1e30;
+    for (unsigned int i = 0; i < test_iterations; i++) {
+        memset((void *)fimg, 0, sizeof(float) * width * height * 3);
+        assert(NSUBSAMPLES == 2);
+
+        reset_and_start_timer();
+        ao_ispc_tasks(width, height, NSUBSAMPLES, fimg);
+        double t = get_elapsed_mcycles();
+        minTimeISPCTasks = std::min(minTimeISPCTasks, t);
+    }
+
+    // Report results and save image
+    printf("[aobench ispc + tasks]:\t\t[%.3f] M cycles (%d x %d image)\n", 
+           minTimeISPCTasks, width, height);
+    savePPM("ao-ispc-tasks.ppm", width, height); 
 
     //
     // Run the serial path, again test_iteration times, and report the
@@ -193,7 +213,8 @@ int main(int argc, char **argv)
     // Report more results, save another image...
     printf("[aobench serial]:\t\t[%.3f] M cycles (%d x %d image)\n", minTimeSerial, 
            width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minTimeSerial / minTimeISPC);
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
+           minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
     savePPM("ao-serial.ppm", width, height); 
         
     return 0;
