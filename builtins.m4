@@ -1517,6 +1517,46 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
 ')
 
 
+define(`masked_store_blend_8_16_by_16', `
+define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
+                                    <16 x i32>) nounwind alwaysinline {
+  %old = load <16 x i8> * %0
+  %old128 = bitcast <16 x i8> %old to i128
+  %new128 = bitcast <16 x i8> %1 to i128
+
+  %mask8 = trunc <16 x i32> %2 to <16 x i8>
+  %mask128 = bitcast <16 x i8> %mask8 to i128
+  %notmask128 = xor i128 %mask128, -1
+
+  %newmasked = and i128 %new128, %mask128
+  %oldmasked = and i128 %old128, %notmask128
+  %result = or i128 %newmasked, %oldmasked
+
+  %resultvec = bitcast i128 %result to <16 x i8>
+  store <16 x i8> %resultvec, <16 x i8> * %0
+  ret void
+}
+
+define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
+                                     <16 x i32>) nounwind alwaysinline {
+  %old = load <16 x i16> * %0
+  %old256 = bitcast <16 x i16> %old to i256
+  %new256 = bitcast <16 x i16> %1 to i256
+
+  %mask16 = trunc <16 x i32> %2 to <16 x i16>
+  %mask256 = bitcast <16 x i16> %mask16 to i256
+  %notmask256 = xor i256 %mask256, -1
+
+  %newmasked = and i256 %new256, %mask256
+  %oldmasked = and i256 %old256, %notmask256
+  %result = or i256 %newmasked, %oldmasked
+
+  %resultvec = bitcast i256 %result to <16 x i16>
+  store <16 x i16> %resultvec, <16 x i16> * %0
+  ret void
+}
+')
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; packed load and store functions
 ;;

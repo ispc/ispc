@@ -1433,16 +1433,12 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Value *rvalue  = callInst->getArgOperand(1);
         llvm::Value *mask = callInst->getArgOperand(2);
 
-        // On SSE, we need to choose between doing the load + blend + store
-        // trick, or serializing the masked store.  On targets with a
-        // native masked store instruction, the implementations of
-        // __masked_store_blend_* should be the same as __masked_store_*,
-        // so this doesn't matter.  On SSE, blending is generally more
-        // efficient and is always safe to do on stack-allocated values.(?)
-        bool doBlend = (g->target.isa != Target::AVX &&
+        // We need to choose between doing the load + blend + store trick,
+        // or serializing the masked store.  Even on targets with a native
+        // masked store instruction, this is preferable since it lets us
+        // keep values in registers rather than going out to the stack.
+        bool doBlend = (!g->opt.disableBlendedMaskedStores ||
                         lIsStackVariablePointer(lvalue));
-        if (g->target.isa == Target::SSE4 || g->target.isa == Target::SSE2)
-            doBlend |= !g->opt.disableBlendedMaskedStores;
 
         // Generate the call to the appropriate masked store function and
         // replace the __pseudo_* one with it.
