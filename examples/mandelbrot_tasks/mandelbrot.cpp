@@ -99,14 +99,37 @@ ensureTargetISAIsSupported() {
     }
 }
 
+static void usage() {
+    fprintf(stderr, "usage: mandelbrot [--scale=<factor]\n");
+    exit(1);
+}
 
-int main() {
+int main(int argc, char *argv[]) {
     unsigned int width = 1536;
     unsigned int height = 1024;
     float x0 = -2;
     float x1 = 1;
     float y0 = -1;
     float y1 = 1;
+
+    if (argc == 1)
+        ;
+    else if (argc == 2) {
+        if (strncmp(argv[1], "--scale=", 8) == 0) {
+            float scale = atof(argv[1] + 8);
+            if (scale == 0.f)
+                usage();
+            width *= scale;
+            height *= scale;
+            // round up to multiples of 16
+            width = (width + 0xf) & ~0xf;
+            height = (height + 0xf) & ~0xf;
+        }
+        else 
+            usage();
+    }
+    else
+        usage();
 
     ensureTargetISAIsSupported();
 

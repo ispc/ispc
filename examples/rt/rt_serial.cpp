@@ -258,17 +258,21 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
 }
 
 
-void raytrace_serial(int width, int height,
+void raytrace_serial(int width, int height, int baseWidth, int baseHeight,
                      const float raster2camera[4][4], 
                      const float camera2world[4][4],
                      float image[],
                      int id[],
                      const LinearBVHNode nodes[],
                      const Triangle triangles[]) {
+    float widthScale = float(baseWidth) / float(width);
+    float heightScale = float(baseHeight) / float(height);
+
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
                 Ray ray;
-                generateRay(raster2camera, camera2world, x, y, ray);
+                generateRay(raster2camera, camera2world, x * widthScale,
+                            y * heightScale, ray);
                 BVHIntersect(nodes, triangles, ray);
 
                 int offset = y * width + x;

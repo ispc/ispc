@@ -52,7 +52,8 @@ using namespace ispc;
 
 typedef unsigned int uint;
 
-extern void raytrace_serial(int width, int height, const float raster2camera[4][4], 
+extern void raytrace_serial(int width, int height, int baseWidth, int baseHeight,
+                            const float raster2camera[4][4], 
                             const float camera2world[4][4], float image[],
                             int id[], const LinearBVHNode nodes[],
                             const Triangle triangles[]);
@@ -127,11 +128,28 @@ ensureTargetISAIsSupported() {
 }
 
 
+static void usage() {
+    fprintf(stderr, "rt [--scale=<factor>] <scene name base>\n");
+    exit(1);
+}
+
+
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "usage: rt <filename base>\n");
-        exit(1);
+    float scale = 1.f;
+    const char *filename = NULL;
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "--scale=", 8) == 0) {
+            scale = atof(argv[i] + 8);
+            if (scale == 0.f)
+                usage();
+        }
+        else if (filename != NULL)
+            usage();
+        else
+            filename = argv[i];
     }
+    if (filename == NULL)
+        usage();
 
     ensureTargetISAIsSupported();
 
@@ -145,10 +163,10 @@ int main(int argc, char *argv[]) {
     // Read the camera specification information from the camera file
     //
     char fnbuf[1024];
-    sprintf(fnbuf, "%s.camera", argv[1]);
+    sprintf(fnbuf, "%s.camera", filename);
     FILE *f = fopen(fnbuf, "rb");
     if (!f) {
-        perror(argv[1]);
+        perror(fnbuf);
         return 1;
     }
 
@@ -156,20 +174,20 @@ int main(int argc, char *argv[]) {
     // Nothing fancy, and trouble if we run on a big-endian system, just
     // fread in the bits
     //
-    int width, height;
+    int baseWidth, baseHeight;
     float camera2world[4][4], raster2camera[4][4];
-    READ(width, 1);
-    READ(height, 1);
+    READ(baseWidth, 1);
+    READ(baseHeight, 1);
     READ(camera2world[0][0], 16);
     READ(raster2camera[0][0], 16);
 
     //
     // Read in the serialized BVH 
     //
-    sprintf(fnbuf, "%s.bvh", argv[1]);
+    sprintf(fnbuf, "%s.bvh", filename);
     f = fopen(fnbuf, "rb");
     if (!f) {
-        perror(argv[2]);
+        perror(fnbuf);
         return 1;
     }
 
@@ -216,10 +234,10 @@ int main(int argc, char *argv[]) {
     }
     fclose(f);
 
-    // round image resolution up to multiple of 4 to make things easy for
+    // round image resolution up to multiple of 16 to make things easy for
     // the code that assigns pixels to ispc program instances
-    height = (height + 3) & ~3;
-    width = (width + 3) & ~3;
+    int height = (int(baseHeight * scale) + 0xf) & ~0xf;
+    int width = (int(baseWidth * scale) + 0xf) & ~0xf;
 
     // allocate images; one to hold hit object ids, one to hold depth to
     // the first interseciton
@@ -232,8 +250,8 @@ int main(int argc, char *argv[]) {
     double minTimeISPC = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
-        raytrace_ispc(width, height, raster2camera, camera2world, 
-                      image, id, nodes, triangles);
+        raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera, 
+                      camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         minTimeISPC = std::min(dt, minTimeISPC);
     }
@@ -251,8 +269,8 @@ int main(int argc, char *argv[]) {
     double minTimeISPCtasks = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
-        raytrace_ispc_tasks(width, height, raster2camera, camera2world, 
-                            image, id, nodes, triangles);
+        raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
+                            camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
     }
@@ -271,8 +289,8 @@ int main(int argc, char *argv[]) {
     double minTimeSerial = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
-        raytrace_serial(width, height, raster2camera, camera2world, 
-                        image, id, nodes, triangles);
+        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
+                        camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
         minTimeSerial = std::min(dt, minTimeSerial);
     }
