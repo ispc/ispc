@@ -1306,6 +1306,7 @@ Module::writeHeader(const char *fn) {
     default:
         FATAL("Unhandled target in header emission");
     }
+    fprintf(f, "#define ISPC_TARGET_VECTOR_WIDTH %d\n", g->target.vectorWidth);
 
     fprintf(f, "#ifdef __cplusplus\nnamespace ispc {\n#endif // __cplusplus\n\n");
 
