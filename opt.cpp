@@ -193,6 +193,7 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
+        optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(CreateGatherScatterFlattenPass());
         optPM.add(CreateLowerGatherScatterPass());
         optPM.add(CreateLowerMaskedStorePass());
