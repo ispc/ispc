@@ -457,6 +457,10 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
     // declarations, typedefs, and global variables declarations /
     // definitions.  Figure out what we've got and take care of it.
 
+    if (ds == NULL || decl == NULL)
+        // Error happened earlier during parsing
+        return;
+
     if (decl->isFunction) {
         // function declaration
         const Type *t = decl->GetType(ds);
