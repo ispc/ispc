@@ -153,6 +153,9 @@ extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
+    if (g->opt.fastMath == true)
+        llvm::UnsafeFPMath = true;
+
     // FIXME: it'd be nice to do this in the Module constructor, but this
     // function ends up calling into routines that expect the global
     // variable 'm' to be initialized and available (which it isn't until
