@@ -424,8 +424,11 @@ IntrinsicsOpt::IntrinsicsOpt()
     blendInstructions.push_back(BlendInstruction(
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse41_blendvps),
         0xf, 0, 1, 2));
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
     blendInstructions.push_back(BlendInstruction(
-        m->module->getFunction("llvm.x86.avx.blendvps"), 0xff, 0, 1, 2));
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_blendv_ps_256),
+        0xff, 0, 1, 2));
+#endif
 }
 
 
