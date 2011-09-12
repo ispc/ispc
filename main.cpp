@@ -74,7 +74,7 @@ static void usage(int ret) {
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [--fast-math]\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
-    printf("    [--fast-masked-vload]\tFaster masked vector loads on SSE (may go past end of array)\n");
+    printf("    [--fast-masked-vload]\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
