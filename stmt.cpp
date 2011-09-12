@@ -402,9 +402,12 @@ DeclStmt::Print(int indent) const {
 ///////////////////////////////////////////////////////////////////////////
 // IfStmt
 
-IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool doUnif, SourcePos p) 
+IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p) 
     : Stmt(p), test(t), trueStmts(ts), falseStmts(fs), 
-      doCoherentCheck(doUnif && !g->opt.disableCoherentControlFlow) {
+      doCoherentCheck(checkCoherence &&
+                      (test->GetType() != NULL) &&
+                      test->GetType()->IsVaryingType() &&
+                      !g->opt.disableCoherentControlFlow) {
 }
 
 
@@ -439,7 +442,7 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (isUniform) {
         ctx->StartUniformIf(ctx->GetMask());
         if (doCoherentCheck)
-            Warning(test->pos, "Uniform condition supplied to cif statement.");
+            Warning(test->pos, "Uniform condition supplied to \"cif\" statement.");
 
         // 'If' statements with uniform conditions are relatively
         // straightforward.  We evaluate the condition and then jump to

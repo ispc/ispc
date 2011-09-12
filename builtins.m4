@@ -1346,12 +1346,6 @@ i64minmax($1,max,uint64,ugt)
 
 define(`load_and_broadcast', `
 define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
-  ; must not load if the mask is all off; the address may be invalid
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
-  %any_on = icmp ne i32 %mm, 0
-  br i1 %any_on, label %load, label %skip
-
-load:
   %ptr = bitcast i8 * %0 to $2 *
   %val = load $2 * %ptr
 
@@ -1359,9 +1353,6 @@ load:
   forloop(i, 1, eval($1-1), `
   %ret`'i = insertelement <$1 x $2> %ret`'eval(i-1), $2 %val, i32 i')
   ret <$1 x $2> %ret`'eval($1-1)
-
-skip:
-  ret <$1 x $2> undef
 }
 ')
 
@@ -1383,11 +1374,9 @@ entry:
   %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
   %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
 
-  %mm_not_zero = icmp ne i32 %mm, 0
   %fast32 = call i32 @__fast_masked_vload()
   %fast_i1 = trunc i32 %fast32 to i1
-  %vload_fast = and i1 %mm_not_zero, %fast_i1
-  %can_vload_maybe_fast = or i1 %vload_fast, %can_vload
+  %can_vload_maybe_fast = or i1 %fast_i1, %can_vload
 
   ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
   %retptr = alloca <$1 x $2>
@@ -1594,7 +1583,7 @@ entry:
 
 known_mask:
   %allon = icmp eq i32 %mask, eval((1 << $1) -1)
-  br i1 %allon, label %all_on, label %not_all_on
+  br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
   ;; everyone wants to load, so just load an entire vector width in a single
@@ -1603,14 +1592,6 @@ all_on:
   %vec_load = load <$1 x i32> *%vecptr, align 4
   store <$1 x i32> %vec_load, <$1 x i32> * %val_ptr, align 4
   ret i32 $1
-
-not_all_on:
-  %alloff = icmp eq i32 %mask, 0
-  br i1 %alloff, label %all_off, label %unknown_mask
-
-all_off:
-  ;; no one wants to load
-  ret i32 0
 
 unknown_mask:
   br label %loop
@@ -1658,19 +1639,12 @@ entry:
 
 known_mask:
   %allon = icmp eq i32 %mask, eval((1 << $1) -1)
-  br i1 %allon, label %all_on, label %not_all_on
+  br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
   %vecptr = bitcast i32 *%startptr to <$1 x i32> *
   store <$1 x i32> %vals, <$1 x i32> * %vecptr, align 4
   ret i32 $1
-
-not_all_on:
-  %alloff = icmp eq i32 %mask, 0
-  br i1 %alloff, label %all_off, label %unknown_mask
-
-all_off:
-  ret i32 0
 
 unknown_mask:
   br label %loop
@@ -1721,14 +1695,6 @@ entry:
    br i1 %allon, label %check_neighbors, label %domixed
 
 domixed:
-  ; the mask is mixed on/off.  First see if the lanes are all off
-  %alloff = icmp eq i32 %mm, 0
-  br i1 %alloff, label %doalloff, label %actuallymixed
-
-doalloff:
-  ret i1 false  ;; this seems safest
-
-actuallymixed: 
   ; First, figure out which lane is the first active one
   %first = call i32 @llvm.cttz.i32(i32 %mm)
   %baseval = extractelement <$1 x $2> %v, i32 %first
@@ -1751,7 +1717,7 @@ actuallymixed:
   br label %check_neighbors
 
 check_neighbors:
-  %vec = phi <$1 x $2> [ %blendvec, %actuallymixed ], [ %v, %entry ]
+  %vec = phi <$1 x $2> [ %blendvec, %domixed ], [ %v, %entry ]
   ifelse($6, `32', `
   ; For 32-bit elements, we rotate once and compare with the vector, which ends 
   ; up comparing each element to its neighbor on the right.  Then see if
@@ -1883,7 +1849,7 @@ pl_known_mask:
   ;; the mask is known at compile time; see if it is something we can
   ;; handle more efficiently
   %pl_is_allon = icmp eq i32 %pl_mask, eval((1<<$1)-1)
-  br i1 %pl_is_allon, label %pl_all_on, label %pl_not_all_on
+  br i1 %pl_is_allon, label %pl_all_on, label %pl_unknown_mask
 
 pl_all_on:
   ;; the mask is all on--just expand the code for each lane sequentially
@@ -1891,19 +1857,14 @@ pl_all_on:
           `patsubst(`$3', `ID\|LANE', i)')
   br label %pl_done
 
-pl_not_all_on:
-  ;; not all on--see if it is all off or mixed
-  ;; for the mixed case, we just run the general case, though we could
+pl_unknown_mask:
+  ;; we just run the general case, though we could
   ;; try to be smart and just emit the code based on what it actually is,
   ;; for example by emitting the code straight-line without a loop and doing 
   ;; the lane tests explicitly, leaving later optimization passes to eliminate
   ;; the stuff that is definitely not needed.  Not clear if we will frequently 
   ;; encounter a mask that is known at compile-time but is not either all on or
   ;; all off...
-  %pl_alloff = icmp eq i32 %pl_mask, 0
-  br i1 %pl_alloff, label %pl_done, label %pl_unknown_mask
-
-pl_unknown_mask:
   br label %pl_loop
 
 pl_loop:
@@ -1959,20 +1920,6 @@ define internal <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x
 
 define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
                                            <$1 x i32> %vecmask) nounwind readonly alwaysinline {
-entry:
-  %mask = call i32 @__movmsk(<$1 x i32> %vecmask)
-
-  %maskKnown = call i1 @__is_compile_time_constant_mask(<$1 x i32> %vecmask)
-  br i1 %maskKnown, label %known_mask, label %unknown_mask
-
-known_mask:
-  %alloff = icmp eq i32 %mask, 0
-  br i1 %alloff, label %gather_all_off, label %unknown_mask
-
-gather_all_off:
-  ret <$1 x $2> undef
-
-unknown_mask:
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
   ; legal to read from (and we do indeed require that, given the benefits!) 
