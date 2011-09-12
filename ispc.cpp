@@ -255,6 +255,7 @@ Target::GetTargetMachine() const {
 Opt::Opt() {
     level = 1;
     fastMath = false;
+    fastMaskedVload = false;
     disableBlendedMaskedStores = false;
     disableCoherentControlFlow = false;
     disableUniformControlFlow = false;

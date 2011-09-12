@@ -389,6 +389,27 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 }
 
 
+
+static void
+lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
+                       SymbolTable *symbolTable) {
+    std::vector<const Type *> args;
+    FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
+    Symbol *sym = new Symbol(name, SourcePos(), ft);
+    sym->isStatic = true;
+
+    llvm::Function *func = module->getFunction(name);
+    assert(func != NULL); // it should be declared already...
+    func->addFnAttr(llvm::Attribute::AlwaysInline);
+    llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
+    llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);
+
+    sym->function = func;
+    symbolTable->AddVariable(sym);
+}
+
+
+
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     Symbol *pidx = new Symbol("programIndex", SourcePos(), 
@@ -492,6 +513,8 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
                        symbolTable);
+    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module,
+                           symbolTable);
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the

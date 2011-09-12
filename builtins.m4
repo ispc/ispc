@@ -851,6 +851,8 @@ define internal void @__prefetch_read_nt_$1($2 *) alwaysinline {
 
 define(`stdlib_core', `
 
+declare i32 @__fast_masked_vload()
+
 declare i8* @ISPCMalloc(i64, i32) nounwind
 declare i8* @ISPCFree(i8*) nounwind
 declare void @ISPCLaunch(i8*, i8*) nounwind
@@ -1375,14 +1377,22 @@ define(`load_masked', `
 define <$1 x $2> @__load_masked_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
 entry:
   %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  
   ; if the first lane and the last lane are on, then it is safe to do a vector load
   ; of the whole thing--what the lanes in the middle want turns out to not matter...
   %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
   %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
+
+  %mm_not_zero = icmp ne i32 %mm, 0
+  %fast32 = call i32 @__fast_masked_vload()
+  %fast_i1 = trunc i32 %fast32 to i1
+  %vload_fast = and i1 %mm_not_zero, %fast_i1
+  %can_vload_maybe_fast = or i1 %vload_fast, %can_vload
+
   ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
   %retptr = alloca <$1 x $2>
   %retptr32 = bitcast <$1 x $2> * %retptr to $2 *
-  br i1 %can_vload, label %load, label %loop
+  br i1 %can_vload_maybe_fast, label %load, label %loop
 
 load: 
   %ptr = bitcast i8 * %0 to <$1 x $2> *

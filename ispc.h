@@ -238,6 +238,12 @@ struct Opt {
         should be performed.  This is false by default. */
     bool fastMath;
 
+    /** Indicates whether an vector load should be issued for masked loads
+        on platforms that don't have a native masked vector load.  (This may
+        lead to accessing memory up to programCount-1 elements past the end of
+        arrays, so is unsafe in general.) */
+    bool fastMaskedVload;
+
     /** On targets that don't have a masked store instruction but do have a
         blending instruction, by default, we simulate masked stores by
         loading the old value, blending, and storing the result.  This can
