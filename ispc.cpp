@@ -256,6 +256,7 @@ Opt::Opt() {
     level = 1;
     fastMath = false;
     fastMaskedVload = false;
+    unrollLoops = true;
     disableBlendedMaskedStores = false;
     disableCoherentControlFlow = false;
     disableUniformControlFlow = false;

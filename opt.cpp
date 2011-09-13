@@ -294,7 +294,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::createStandardModulePasses(&optPM, 3, 
                                          false /* opt size */,
                                          true /* unit at a time */, 
-                                         false /* unroll loops */,
+                                         g->opt.unrollLoops,
                                          true /* simplify lib calls */,
                                          false /* may have exceptions */,
                                          llvm::createFunctionInliningPass());
@@ -309,7 +309,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::createStandardModulePasses(&optPM, 3, 
                                          false /* opt size */,
                                          true /* unit at a time */, 
-                                         false /* unroll loops */,
+                                         g->opt.unrollLoops,
                                          true /* simplify lib calls */,
                                          false /* may have exceptions */,
                                          llvm::createFunctionInliningPass());
@@ -318,6 +318,8 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::PassManagerBuilder builder;
         builder.OptLevel = 3;
         builder.Inliner = llvm::createFunctionInliningPass();
+        if (g->opt.unrollLoops == false)
+            builder.DisableUnrollLoops = true;
         builder.populateFunctionPassManager(funcPM);
         builder.populateModulePassManager(optPM);
         optPM.add(CreateIsCompileTimeConstantPass(true));

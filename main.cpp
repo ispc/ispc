@@ -73,8 +73,6 @@ static void usage(int ret) {
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
-    printf("    [--fast-math]\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
-    printf("    [--fast-masked-vload]\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
@@ -88,8 +86,11 @@ static void usage(int ret) {
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
     printf("    [-O0/-O1]\t\t\t\tSet optimization level (-O1 is default)\n");
-#if 0
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
+    printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
+    printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
+    printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
+#if 0
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
     printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
@@ -198,10 +199,15 @@ int main(int Argc, char *Argv[]) {
             arch = argv[i] + 7;
         else if (!strncmp(argv[i], "--cpu=", 6))
             cpu = argv[i] + 6;
-        else if (!strcmp(argv[i], "--fast-math"))
-            g->opt.fastMath = true;
-        else if (!strcmp(argv[i], "--fast-masked-vload"))
-            g->opt.fastMaskedVload = true;
+        else if (!strcmp(argv[i], "--fast-math")) {
+            fprintf(stderr, "--fast-math option has been renamed to --opt=fast-math!\n");
+            usage(1);
+        }
+        else if (!strcmp(argv[i], "--fast-masked-vload")) {
+            fprintf(stderr, "--fast-masked-vload option has been renamed to "
+                    "--opt=fast-masked-vload!\n");
+            usage(1);
+        }
         else if (!strcmp(argv[i], "--debug"))
             g->debugPrint = true;
         else if (!strcmp(argv[i], "--instrument"))
@@ -238,7 +244,16 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
-            if (!strcmp(opt, "disable-blended-masked-stores"))
+            if (!strcmp(opt, "fast-math"))
+                g->opt.fastMath = true;
+            else if (!strcmp(opt, "fast-masked-vload"))
+                g->opt.fastMaskedVload = true;
+            else if (!strcmp(opt, "disable-loop-unroll"))
+                g->opt.unrollLoops = false;
+
+            // These are only used for performance tests of specific
+            // optimizations
+            else if (!strcmp(opt, "disable-blended-masked-stores"))
                 g->opt.disableBlendedMaskedStores = true;
             else if (!strcmp(opt, "disable-coherent-control-flow"))
                 g->opt.disableCoherentControlFlow = true;

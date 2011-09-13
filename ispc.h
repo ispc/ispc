@@ -244,6 +244,10 @@ struct Opt {
         arrays, so is unsafe in general.) */
     bool fastMaskedVload;
 
+    /** Indicates when loops should be unrolled (when doing so seems like
+        it will make sense. */
+    bool unrollLoops;
+
     /** On targets that don't have a masked store instruction but do have a
         blending instruction, by default, we simulate masked stores by
         loading the old value, blending, and storing the result.  This can
