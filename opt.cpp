@@ -78,6 +78,12 @@
 #endif
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
+#ifdef ISPC_IS_LINUX
+  #include <alloca.h>
+#elif defined(ISPC_IS_WINDOWS)
+  #include <malloc.h>
+  #define alloca _alloca
+#endif // ISPC_IS_WINDOWS
 
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateGatherScatterFlattenPass();
@@ -1520,8 +1526,8 @@ static void lPrintVector(const char *info, llvm::Value *elements[ISPC_MAX_NVEC])
 
 
 /** Given an LLVM vector in vec, return a 'scalarized' version of the
-    vector in the provided offsets[] array.  For example, if the vector
-    value passed in is:  
+    vector in the provided scalarizedVector[] array.  For example, if the
+    vector value passed in is:
 
     add <4 x i32> %a_smear, <4 x i32> <4, 8, 12, 16>,
 
@@ -1542,28 +1548,39 @@ static void lPrintVector(const char *info, llvm::Value *elements[ISPC_MAX_NVEC])
     @param vec               Vector to be scalarized
     @param scalarizedVector  Array in which to store the individual vector 
                              elements
+    @param vectorLength      Number of elements in the given vector. (The
+                             passed scalarizedVector array must also be at least
+                             this length as well.)
     @returns                 True if the vector was successfully scalarized and
                              the values in offsets[] are valid; false otherwise
  */
 static bool
-lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC]) {
+lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
+                 int vectorLength) {
     // First initialize the values of scalarizedVector[] to NULL.
-    for (int i = 0; i < g->target.vectorWidth; ++i)
+    for (int i = 0; i < vectorLength; ++i)
         scalarizedVector[i] = NULL;
+    
+    // It may be ok for the vector to be an undef vector; these come up for
+    // example in shufflevector instructions.  As long as elements of the
+    // undef vector aren't referenced by the shuffle indices, this is fine.
+    if (llvm::isa<llvm::UndefValue>(vec))
+        return true;
 
     // ConstantVectors are easy; just pull out the individual constant
     // element values
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(vec);
     if (cv != NULL) {
-        for (int i = 0; i < g->target.vectorWidth; ++i)
+        for (int i = 0; i < vectorLength; ++i)
             scalarizedVector[i] = cv->getOperand(i);
         return true;
     }
 
     // It's also easy if it's just a vector of all zeros
-    llvm::ConstantAggregateZero *caz = llvm::dyn_cast<llvm::ConstantAggregateZero>(vec);
-    if (caz) {
-        for (int i = 0; i < g->target.vectorWidth; ++i)
+    llvm::ConstantAggregateZero *caz = 
+        llvm::dyn_cast<llvm::ConstantAggregateZero>(vec);
+    if (caz != NULL) {
+        for (int i = 0; i < vectorLength; ++i)
             scalarizedVector[i] = LLVMInt32(0);
         return true;
     }
@@ -1575,13 +1592,16 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         // scalar values we return from here are synthesized with scalar
         // versions of the original vector binary operator
         llvm::Instruction::BinaryOps opcode = bo->getOpcode();
-        llvm::Value *v0[ISPC_MAX_NVEC], *v1[ISPC_MAX_NVEC];
+        llvm::Value **v0 = 
+            (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+        llvm::Value **v1 = 
+            (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
 
-        if (!lScalarizeVector(bo->getOperand(0), v0) || 
-            !lScalarizeVector(bo->getOperand(1), v1))
+        if (!lScalarizeVector(bo->getOperand(0), v0, vectorLength) || 
+            !lScalarizeVector(bo->getOperand(1), v1, vectorLength))
             return false;
 
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
+        for (int i = 0; i < vectorLength; ++i) {
             scalarizedVector[i] = 
                 llvm::BinaryOperator::Create(opcode, v0[i], v1[i], "flat_bop", bo);
             lCopyMetadata(scalarizedVector[i], bo);
@@ -1606,7 +1626,7 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         // vaue in scalarizedVector[] based on the value being inserted.
         while (ie != NULL) {
             uint64_t iOffset = lGetIntValue(ie->getOperand(2));
-            assert((int)iOffset < g->target.vectorWidth);
+            assert((int)iOffset < vectorLength);
             assert(scalarizedVector[iOffset] == NULL);
 
             scalarizedVector[iOffset] = ie->getOperand(1);
@@ -1620,15 +1640,17 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
     }
 
     llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(vec);
-    if (ci) {
+    if (ci != NULL) {
         // Casts are similar to BinaryOperators in that we attempt to
         // scalarize the vector being cast and if successful, we apply
         // equivalent scalar cast operators to each of the values in the
         // scalarized vector.
         llvm::Instruction::CastOps op = ci->getOpcode();
 
-        llvm::Value *scalarizedTarget[ISPC_MAX_NVEC];
-        if (!lScalarizeVector(ci->getOperand(0), scalarizedTarget))
+        llvm::Value **scalarizedTarget = 
+            (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+        if (!lScalarizeVector(ci->getOperand(0), scalarizedTarget,
+                              vectorLength))
             return false;
 
         LLVM_TYPE_CONST llvm::Type *destType = ci->getDestTy();
@@ -1637,7 +1659,7 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         assert(vectorDestType != NULL);
         LLVM_TYPE_CONST llvm::Type *elementType = vectorDestType->getElementType();
 
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
+        for (int i = 0; i < vectorLength; ++i) {
             scalarizedVector[i] = 
                 llvm::CastInst::Create(op, scalarizedTarget[i], elementType,
                                        "cast", ci);
@@ -1647,16 +1669,11 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
     }
 
     llvm::ShuffleVectorInst *svi = llvm::dyn_cast<llvm::ShuffleVectorInst>(vec);
-    if (svi) {
-        // Note that the code for shufflevector instructions is untested.
-        // (We haven't yet had a case where it needs to run).  Therefore,
-        // an assert at the bottom of this routien will hit the first time
-        // it runs as a reminder that this needs to be tested further.
-
+    if (svi != NULL) {
         LLVM_TYPE_CONST llvm::VectorType *svInstType = 
             llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(svi->getType());
         assert(svInstType != NULL);
-        assert((int)svInstType->getNumElements() == g->target.vectorWidth);
+        assert((int)svInstType->getNumElements() == vectorLength);
 
         // Scalarize the two vectors being shuffled.  First figure out how
         // big they are.
@@ -1671,58 +1688,90 @@ lScalarizeVector(llvm::Value *vec, llvm::Value *scalarizedVector[ISPC_MAX_NVEC])
         int n0 = vectorType0->getNumElements();
         int n1 = vectorType1->getNumElements();
 
-        // FIXME: It's actually totally legitimate for these two to have
-        // different sizes; the final result just needs to have the native
-        // vector width.  To handle this, not only do we need to
-        // potentially dynamically allocate space for the arrays passed
-        // into lScalarizeVector, but we need to change the rest of its
-        // implementation to not key off g->target.vectorWidth everywhere
-        // to get the sizes of the arrays to iterate over, etc.
-        assert(n0 == g->target.vectorWidth && n1 == g->target.vectorWidth);
-
         // Go ahead and scalarize the two input vectors now.
-        // FIXME: it's ok if some or all of the values of these two vectors
-        // have undef values, so long as we don't try to access undef
-        // values with the vector indices provided to the instruction.
-        // Should fix lScalarizeVector so that it doesn't return false in
-        // this case and just leaves the elements of the arrays with undef
-        // values as NULL.
-        llvm::Value *v0[ISPC_MAX_NVEC], *v1[ISPC_MAX_NVEC];
-        if (!lScalarizeVector(svi->getOperand(0), v0) ||
-            !lScalarizeVector(svi->getOperand(1), v1))
+        llvm::Value **v0 = (llvm::Value **)alloca(n0 * sizeof(llvm::Value *));
+        llvm::Value **v1 = (llvm::Value **)alloca(n1 * sizeof(llvm::Value *));
+
+        if (!lScalarizeVector(svi->getOperand(0), v0, n0) ||
+            !lScalarizeVector(svi->getOperand(1), v1, n1))
             return false;
 
-        llvm::ConstantVector *shuffleIndicesVector = 
-            llvm::dyn_cast<llvm::ConstantVector>(svi->getOperand(2));
-        // I think this has to be a ConstantVector.  If this ever hits,
-        // we'll dig into what we got instead and figure out how to handle
-        // that...
-        assert(shuffleIndicesVector != NULL);
-
-        // Get the integer indices for each element of the returned vector
-        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> shuffleIndices;
-        shuffleIndicesVector->getVectorElements(shuffleIndices);
-        assert((int)shuffleIndices.size() == g->target.vectorWidth);
-
-        // And loop over the indices, setting the i'th element of the
-        // result vector with the source vector element that corresponds to
-        // the i'th shuffle index value.
-        for (unsigned int i = 0; i < shuffleIndices.size(); ++i) {
-            if (!llvm::isa<llvm::ConstantInt>(shuffleIndices[i]))
-                // I'm not sure when this case would ever happen, though..
-                return false;
-            int offset = (int)lGetIntValue(shuffleIndices[i]);
-            assert(offset >= 0 && offset < n0+n1);
-
-            if (offset < n0)
-                // Offsets from 0 to n0-1 index into the first vector
-                scalarizedVector[i] = v0[offset];
-            else
-                // And offsets from n0 to (n0+n1-1) index into the second
-                // vector
-                scalarizedVector[i] = v1[offset - n0];
+        llvm::ConstantAggregateZero *caz = 
+            llvm::dyn_cast<llvm::ConstantAggregateZero>(svi->getOperand(2));
+        if (caz != NULL) {
+            for (int i = 0; i < vectorLength; ++i)
+                scalarizedVector[i] = v0[0];
         }
-        FATAL("the above code is untested so far; check now that it's actually running");
+        else {
+            llvm::ConstantVector *shuffleIndicesVector = 
+                llvm::dyn_cast<llvm::ConstantVector>(svi->getOperand(2));
+            // I think this has to be a ConstantVector.  If this ever hits,
+            // we'll dig into what we got instead and figure out how to handle
+            // that...
+            assert(shuffleIndicesVector != NULL);
+
+            // Get the integer indices for each element of the returned vector
+            llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> shuffleIndices;
+            shuffleIndicesVector->getVectorElements(shuffleIndices);
+            assert((int)shuffleIndices.size() == vectorLength);
+
+            // And loop over the indices, setting the i'th element of the
+            // result vector with the source vector element that corresponds to
+            // the i'th shuffle index value.
+            for (unsigned int i = 0; i < shuffleIndices.size(); ++i) {
+                // I'm not sure when this case would ever happen, though..
+                assert(llvm::isa<llvm::ConstantInt>(shuffleIndices[i]));
+
+                int offset = (int)lGetIntValue(shuffleIndices[i]);
+                assert(offset >= 0 && offset < n0+n1);
+
+                if (offset < n0)
+                    // Offsets from 0 to n0-1 index into the first vector
+                    scalarizedVector[i] = v0[offset];
+                else
+                    // And offsets from n0 to (n0+n1-1) index into the second
+                    // vector
+                    scalarizedVector[i] = v1[offset - n0];
+            }
+        }
+        return true;
+    }
+
+    llvm::LoadInst *li = llvm::dyn_cast<llvm::LoadInst>(vec);
+    if (li != NULL) {
+        llvm::Value *baseAddr = li->getOperand(0);
+        llvm::Value *baseInt = new llvm::PtrToIntInst(baseAddr, LLVMTypes::Int64Type,
+                                                      "base2int", li);
+        lCopyMetadata(baseInt, li);
+
+        LLVM_TYPE_CONST llvm::PointerType *ptrType = 
+            llvm::dyn_cast<llvm::PointerType>(baseAddr->getType());
+        assert(ptrType != NULL);
+        LLVM_TYPE_CONST llvm::VectorType *vecType = 
+            llvm::dyn_cast<llvm::VectorType>(ptrType->getElementType());
+        assert(vecType != NULL);
+        LLVM_TYPE_CONST llvm::Type *elementType = vecType->getElementType();
+        uint64_t elementSize;
+        bool sizeKnown = lSizeOfIfKnown(elementType, &elementSize);
+        assert(sizeKnown == true);
+
+        LLVM_TYPE_CONST llvm::Type *eltPtrType = llvm::PointerType::get(elementType, 0);
+
+        for (int i = 0; i < vectorLength; ++i) {
+            llvm::Value *intPtrOffset = 
+                llvm::BinaryOperator::Create(llvm::Instruction::Add, baseInt,
+                                             LLVMInt64(i * elementSize), "baseoffset",
+                                             li);
+            lCopyMetadata(intPtrOffset, li);
+            llvm::Value *scalarLoadPtr = 
+                new llvm::IntToPtrInst(intPtrOffset, eltPtrType, "int2ptr", li);
+            lCopyMetadata(scalarLoadPtr, li);
+
+            llvm::Instruction *scalarLoad = 
+                new llvm::LoadInst(scalarLoadPtr, "loadelt", li);
+            lCopyMetadata(scalarLoad, li);
+            scalarizedVector[i] = scalarLoad;
+        }
         return true;
     }
 
@@ -2134,11 +2183,18 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (ce && ce->getOpcode() == llvm::Instruction::BitCast)
             base = ce->getOperand(0);
 
-        // Try to out the offsets; the i'th element of the offsetElements
-        // array should be an i32 with the value of the offset for the i'th
-        // vector lane.  This may fail; if so, just give up.
+        // Try to find out the offsets; the i'th element of the
+        // offsetElements array should be an i32 with the value of the
+        // offset for the i'th vector lane.  This may fail; if so, just
+        // give up.
+        llvm::Value *vecValue = callInst->getArgOperand(1);
+        LLVM_TYPE_CONST llvm::VectorType *vt = 
+            llvm::dyn_cast<llvm::VectorType>(vecValue->getType());
+        assert(vt != NULL);
+        int vecLength = vt->getNumElements();
+        assert(vecLength == g->target.vectorWidth);
         llvm::Value *offsetElements[ISPC_MAX_NVEC];
-        if (!lScalarizeVector(callInst->getArgOperand(1), offsetElements))
+        if (!lScalarizeVector(vecValue, offsetElements, vecLength))
             continue;
 
         llvm::Value *mask = callInst->getArgOperand((gatherInfo != NULL) ? 2 : 3);
