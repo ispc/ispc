@@ -2222,55 +2222,6 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il)
 }
 
 
-/** Starting from the function initialFunction, we're calling into
-    calledFunc.  The question is: is this a recursive call back to
-    initialFunc?  If it definitely is or if it may be, then return true.
-    Return false if it definitely is not.
- */
-static bool
-lMayBeRecursiveCall(llvm::Function *calledFunc, 
-                    llvm::Function *initialFunc,
-                    std::set<llvm::Function *> &seenFuncs) {
-    // Easy case: intrinsics aren't going to call functions themselves
-    if (calledFunc->isIntrinsic())
-        return false;
-
-    std::string name = calledFunc->getName();
-    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
-        // builtin stdlib function; none of these are recursive...
-        return false;
-
-    if (calledFunc->isDeclaration())
-        // There's visibility into what the called function does without a
-        // definition, so we have to be conservative
-        return true;
-
-    if (calledFunc == initialFunc)
-        // hello recursive call
-        return true;
-
-    // Otherwise iterate over all of the instructions in the function.  If
-    // any of them is a function call then check recursively..
-    llvm::inst_iterator iter;
-    for (iter = llvm::inst_begin(calledFunc); 
-         iter != llvm::inst_end(calledFunc); ++iter) {
-        llvm::Instruction *inst = &*iter;
-        llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst);
-        if (ci != NULL) {
-            llvm::Function *nextCalledFunc = ci->getCalledFunction();
-            // Don't repeatedly test functions we've seen before 
-            if (seenFuncs.find(nextCalledFunc) == seenFuncs.end()) {
-                seenFuncs.insert(nextCalledFunc);
-                if (lMayBeRecursiveCall(nextCalledFunc, initialFunc, 
-                                        seenFuncs))
-                    return true;
-            }
-        }
-    }
-    return false;
-}
-
-
 llvm::Value *
 FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!func || !args)
@@ -2391,47 +2342,14 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     }
 
-    // We sometimes need to check to see if the mask is all off here;
-    // specifically, if the mask is all off and we call a recursive
-    // function, then we will probably have an unsesirable infinite loop.
-    ctx->SetDebugPos(pos);
-    llvm::BasicBlock *bDoCall = ctx->CreateBasicBlock("funcall_mask_ok");
-    llvm::BasicBlock *bSkip = ctx->CreateBasicBlock("funcall_mask_off");
-    llvm::BasicBlock *bAfter = ctx->CreateBasicBlock("after_funcall");
-    llvm::Function *currentFunc = ctx->GetCurrentBasicBlock()->getParent();
-
-    // If we need to check the mask (it may be a recursive call, possibly
-    // transitively), or we're launching a task, which is expensive and
-    // thus probably always worth checking, then use the mask to choose
-    // whether to go to the bDoCallBlock or the bSkip block
-    std::set<llvm::Function *> seenFuncs;
-    seenFuncs.insert(currentFunc);
-    if (ft->isTask || lMayBeRecursiveCall(callee, currentFunc, seenFuncs)) {
-        Debug(pos, "Checking mask before function call \"%s\".", funSym->name.c_str());
-        ctx->BranchIfMaskAny(bDoCall, bSkip);
-    }
-    else
-        // If we don't need to check the mask, then always to the call;
-        // just jump to bDoCall
-        ctx->BranchInst(bDoCall);
-    
-    // And the bSkip block just jumps immediately to bAfter.  So why do we
-    // need it?  So the phi node below can easily tell what paths are
-    // going into it
-    ctx->SetCurrentBasicBlock(bSkip);
-    ctx->BranchInst(bAfter);
-
-    // Emit the code to do the function call
-    ctx->SetCurrentBasicBlock(bDoCall);
-
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
     if (ft->isTask)
         ctx->LaunchInst(callee, argVals);
     else {
         // Most of the time, the mask is passed as the last argument.  this
-        // isn't the case for things like SSE intrinsics and extern "C"
-        // functions from the application.
+        // isn't the case for things like intrinsics, builtins, and extern
+        // "C" functions from the application.
         assert(callargs.size() + 1 == callee->arg_size() ||
                callargs.size() == callee->arg_size());
 
@@ -2458,22 +2376,10 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     }
 
-    // And jump out to the 'after funciton call' basic block
-    ctx->BranchInst(bAfter);
-    ctx->SetCurrentBasicBlock(bAfter);
-
     if (isVoidFunc)
         return NULL;
-
-    // The return value for the non-void case is either undefined or the
-    // function return value, depending on whether we actually ran the code
-    // path that called the function or not.
-    LLVM_TYPE_CONST llvm::Type *lrType = ft->GetReturnType()->LLVMType(g->ctx);
-    llvm::PHINode *ret = ctx->PhiNode(lrType, 2, "fun_ret");
-    assert(retVal != NULL);
-    ret->addIncoming(llvm::UndefValue::get(lrType), bSkip);
-    ret->addIncoming(retVal, bDoCall);
-    return ret;
+    else
+        return retVal;
 }
 
 
