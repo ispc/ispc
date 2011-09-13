@@ -40,6 +40,7 @@
 
 #include <stdio.h>
 #include <algorithm>
+#include <string.h>
 #include "../timing.h"
 #include "../cpuid.h"
 #include "mandelbrot_ispc.h"
