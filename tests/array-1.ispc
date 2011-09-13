@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 
-static float x[2][1];
+static float x[1][2];
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];

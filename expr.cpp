@@ -2681,6 +2681,22 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (!basePtr)
         return NULL;
 
+    // If the array index is a compile time constant, check to see if it
+    // may lead to an out-of-bounds access.
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(index);
+    const SequentialType *seqType = dynamic_cast<const SequentialType *>(type);
+    assert(seqType != NULL);
+    int nElements = seqType->GetElementCount();
+    if (ce != NULL && nElements > 0) {
+        int32_t indices[ISPC_MAX_NVEC];
+        int count = ce->AsInt32(indices);
+        for (int i = 0; i < count; ++i) {
+            if (indices[i] < 0 || indices[i] >= nElements)
+                Warning(index->pos, "Array index \"%d\" may be out of bounds for "
+                        "\"%d\" element array.", indices[i], nElements);
+        }
+    }
+
     basePtr = lCastUniformVectorBasePtr(basePtr, ctx);
 
     ctx->SetDebugPos(pos);
