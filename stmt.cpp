@@ -404,10 +404,10 @@ DeclStmt::Print(int indent) const {
 
 IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p) 
     : Stmt(p), test(t), trueStmts(ts), falseStmts(fs), 
-      doCoherentCheck(checkCoherence &&
-                      (test->GetType() != NULL) &&
-                      test->GetType()->IsVaryingType() &&
-                      !g->opt.disableCoherentControlFlow) {
+      doAllCheck(checkCoherence &&
+                 (test->GetType() != NULL) &&
+                 test->GetType()->IsVaryingType() &&
+                 !g->opt.disableCoherentControlFlow) {
 }
 
 
@@ -439,62 +439,46 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     bool isUniform = testType->IsUniformType();
+
+    llvm::Value *testValue = test->GetValue(ctx);
+    if (testValue == NULL)
+        return;
+
     if (isUniform) {
         ctx->StartUniformIf(ctx->GetMask());
-        if (doCoherentCheck)
+        if (doAllCheck)
             Warning(test->pos, "Uniform condition supplied to \"cif\" statement.");
 
         // 'If' statements with uniform conditions are relatively
         // straightforward.  We evaluate the condition and then jump to
         // either the 'then' or 'else' clause depending on its value.
-        llvm::Value *vtest = test->GetValue(ctx);
-        if (vtest != NULL) {
-            llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then");
-            llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
-            llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
+        llvm::BasicBlock *bthen = ctx->CreateBasicBlock("if_then");
+        llvm::BasicBlock *belse = ctx->CreateBasicBlock("if_else");
+        llvm::BasicBlock *bexit = ctx->CreateBasicBlock("if_exit");
 
-            // Jump to the appropriate basic block based on the value of
-            // the 'if' test
-            ctx->BranchInst(bthen, belse, vtest);
+        // Jump to the appropriate basic block based on the value of
+        // the 'if' test
+        ctx->BranchInst(bthen, belse, testValue);
 
-            // Emit code for the 'true' case
-            ctx->SetCurrentBasicBlock(bthen);
-            lEmitIfStatements(ctx, trueStmts, "true");
-            if (ctx->GetCurrentBasicBlock()) 
-                ctx->BranchInst(bexit);
+        // Emit code for the 'true' case
+        ctx->SetCurrentBasicBlock(bthen);
+        lEmitIfStatements(ctx, trueStmts, "true");
+        if (ctx->GetCurrentBasicBlock()) 
+            ctx->BranchInst(bexit);
 
-            // Emit code for the 'false' case
-            ctx->SetCurrentBasicBlock(belse);
-            lEmitIfStatements(ctx, falseStmts, "false");
-            if (ctx->GetCurrentBasicBlock())
-                ctx->BranchInst(bexit);
+        // Emit code for the 'false' case
+        ctx->SetCurrentBasicBlock(belse);
+        lEmitIfStatements(ctx, falseStmts, "false");
+        if (ctx->GetCurrentBasicBlock())
+            ctx->BranchInst(bexit);
 
-            // Set the active basic block to the newly-created exit block
-            // so that subsequent emitted code starts there.
-            ctx->SetCurrentBasicBlock(bexit);
-        }
+        // Set the active basic block to the newly-created exit block
+        // so that subsequent emitted code starts there.
+        ctx->SetCurrentBasicBlock(bexit);
         ctx->EndIf();
     }
-    else {
-        // Code for 'If' statemnts with 'varying' conditions can be
-        // generated in two ways; one takes some care to see if all of the
-        // active program instances want to follow only the 'true' or
-        // 'false' cases, and the other always runs both cases but sets the
-        // mask appropriately.  The first case is handled by the
-        // IfStmt::emitCoherentTests() call, and the second is handled by
-        // IfStmt::emitMaskedTrueAndFalse().
-        llvm::Value *testValue = test->GetValue(ctx);
-        if (testValue) {
-            if (doCoherentCheck) 
-                emitCoherentTests(ctx, testValue);
-            else {
-                llvm::Value *oldMask = ctx->GetMask();
-                ctx->StartVaryingIf(oldMask);
-                emitMaskedTrueAndFalse(ctx, oldMask, testValue);
-                ctx->EndIf();
-            }
-        }
-    }
+    else
+        emitVaryingIf(ctx, testValue);
 }
 
 
@@ -540,7 +524,7 @@ Stmt *IfStmt::TypeCheck() {
 
 void
 IfStmt::Print(int indent) const {
-    printf("%*cIf Stmt %s", indent, ' ', doCoherentCheck ? "DO COHERENT CHECK" : "");
+    printf("%*cIf Stmt %s", indent, ' ', doAllCheck ? "DO ALL CHECK" : "");
     pos.Print();
     printf("\n%*cTest: ", indent+4, ' ');
     test->Print();
@@ -581,7 +565,7 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
     tries to be smart about jumping over code that doesn't need to be run.
  */
 void
-IfStmt::emitCoherentTests(FunctionEmitContext *ctx, llvm::Value *ltest) const {
+IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetMask();
     if (oldMask == LLVMMaskAllOn) {
         // We can tell that the mask is on statically at compile time; just
@@ -590,7 +574,7 @@ IfStmt::emitCoherentTests(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         emitMaskAllOn(ctx, ltest, bDone);
         ctx->SetCurrentBasicBlock(bDone);
     }
-    else {
+    else if (doAllCheck) {
         // We can't tell if the mask going into the if is all on at the
         // compile time.  Emit code to check for this and then either run
         // the code for the 'all on' or the 'mixed' case depending on the
@@ -616,6 +600,16 @@ IfStmt::emitCoherentTests(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         
         // And emit code for the mixed mask case
         ctx->SetCurrentBasicBlock(bMixedOn);
+        emitMaskMixed(ctx, oldMask, ltest, bDone);
+
+        // When done, set the current basic block to the block that the two
+        // paths above jump to when they're done.
+        ctx->SetCurrentBasicBlock(bDone);
+    }
+    else {
+        llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
+
+        // Emit emit code for the mixed mask case
         emitMaskMixed(ctx, oldMask, ltest, bDone);
 
         // When done, set the current basic block to the block that the two
@@ -701,7 +695,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
     // value of the test is on.  (i.e. (test&mask) == mask).  In this case,
     // we only need to run the 'true' case code, since the lanes where the
     // test was false aren't supposed to be running here anyway.
-     llvm::Value *testAllEqual = lTestMatchesMask(ctx, ltest, oldMask);
+    llvm::Value *testAllEqual = lTestMatchesMask(ctx, ltest, oldMask);
     llvm::BasicBlock *bTestAll = ctx->CreateBasicBlock("cif_mixed_test_all");
     llvm::BasicBlock *bTestAnyCheck = ctx->CreateBasicBlock("cif_mixed_test_any_check");
     ctx->BranchInst(bTestAll, bTestAnyCheck, testAllEqual);

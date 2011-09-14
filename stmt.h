@@ -103,7 +103,7 @@ private:
 class IfStmt : public Stmt {
 public:
     IfStmt(Expr *testExpr, Stmt *trueStmts, Stmt *falseStmts,
-           bool doCoherentCheck, SourcePos pos);
+           bool doAllCheck, SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -125,11 +125,11 @@ private:
         source and thus, if the emitted code should check to see if all
         active program instances want to follow just one of the 'true' or
         'false' blocks. */
-    const bool doCoherentCheck;
+    const bool doAllCheck;
 
     void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, 
                                 llvm::Value *test) const;
-    void emitCoherentTests(FunctionEmitContext *ctx, llvm::Value *test) const;
+    void emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *test) const;
     void emitMaskAllOn(FunctionEmitContext *ctx,
                        llvm::Value *test, llvm::BasicBlock *bDone) const;
     void emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask, 
