@@ -704,6 +704,7 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
 
 llvm::Value *
 FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
+#if 0
     // Compare the two masks to get a vector of i1s
     llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
                                v1, v2, "v1==v2");
@@ -711,6 +712,12 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
     cmp = I1VecToBoolVec(cmp);
     // And see if it's all on
     return All(cmp);
+#else
+    llvm::Value *mm1 = LaneMask(v1);
+    llvm::Value *mm2 = LaneMask(v2);
+    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2,
+                   "v1==v2");
+#endif
 }
 
 
