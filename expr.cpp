@@ -741,6 +741,12 @@ UnaryExpr::TypeCheck() {
 }
 
 
+int
+UnaryExpr::EstimateCost() const {
+    return (expr ? expr->EstimateCost() : 0) + COST_SIMPLE_ARITH_LOGIC_OP;
+}
+
+
 void
 UnaryExpr::Print() const {
     if (!expr || !GetType())
@@ -1445,6 +1451,15 @@ BinaryExpr::TypeCheck() {
 }
 
 
+int
+BinaryExpr::EstimateCost() const {
+    return ((arg0 ? arg0->EstimateCost() : 0) +
+            (arg1 ? arg1->EstimateCost() : 0) +
+            (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
+                                       COST_SIMPLE_ARITH_LOGIC_OP);
+}
+
+
 void
 BinaryExpr::Print() const {
     if (!arg0 || !arg1 || !GetType())
@@ -1696,6 +1711,19 @@ AssignExpr::TypeCheck() {
 }
 
 
+int
+AssignExpr::EstimateCost() const {
+    int cost = ((lvalue ? lvalue->EstimateCost() : 0) +
+                (rvalue ? rvalue->EstimateCost() : 0));
+    if (op == Assign)
+        return cost;
+    if (op == DivAssign || op == ModAssign)
+        return cost + COST_COMPLEX_ARITH_OP;
+    else
+        return cost + COST_SIMPLE_ARITH_LOGIC_OP;
+}
+
+
 void
 AssignExpr::Print() const {
     if (!lvalue || !rvalue || !GetType())
@@ -1941,6 +1969,12 @@ SelectExpr::TypeCheck() {
         return NULL;
 
     return this;
+}
+
+
+int
+SelectExpr::EstimateCost() const {
+    return COST_SELECT;
 }
 
 
@@ -2440,6 +2474,13 @@ FunctionCallExpr::TypeCheck() {
 }
 
 
+int
+FunctionCallExpr::EstimateCost() const {
+    return ((args ? args->EstimateCost() : 0) +
+            (isLaunch ? COST_TASK_LAUNCH : COST_FUNCALL));
+}
+
+
 void
 FunctionCallExpr::Print() const {
     if (!func || !args || !GetType())
@@ -2548,6 +2589,17 @@ ExprList::GetConstant(const Type *type) const {
         return llvm::ConstantArray::get(lat, cv);
     }
     return NULL;
+}
+
+
+int
+ExprList::EstimateCost() const {
+    int cost = 0;
+    for (unsigned int i = 0; i < exprs.size(); ++i) {
+        if (exprs[i] != NULL)
+            cost += exprs[i]->EstimateCost();
+    }
+    return cost;
 }
 
 
@@ -2746,6 +2798,16 @@ IndexExpr::TypeCheck() {
         return NULL;
 
     return this;
+}
+
+
+int
+IndexExpr::EstimateCost() const {
+    // be pessimistic
+    if (index && index->GetType()->IsVaryingType())
+        return COST_GATHER;
+    else
+        return COST_LOAD;
 }
 
 
@@ -3048,6 +3110,7 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos) {
     return new MemberExpr(e, id, p, idpos);
 }
 
+
 MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos) 
     : Expr(p), identifierPos(idpos) {
     expr = e;
@@ -3141,6 +3204,14 @@ MemberExpr::Optimize() {
     if (expr) 
         expr = expr->Optimize();
     return expr ? this : NULL;
+}
+
+
+int
+MemberExpr::EstimateCost() const {
+    // FIXME: return gather cost when we can tell a gather is going to be
+    // needed
+    return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
 
@@ -3936,6 +4007,12 @@ ConstExpr::Optimize() {
 Expr *
 ConstExpr::TypeCheck() {
     return this;
+}
+
+
+int
+ConstExpr::EstimateCost() const {
+    return 0;
 }
 
 
@@ -4859,6 +4936,13 @@ TypeCastExpr::Optimize() {
 }
 
 
+int
+TypeCastExpr::EstimateCost() const {
+    // FIXME: return COST_TYPECAST_COMPLEX when appropriate
+    return COST_TYPECAST_SIMPLE;
+}
+
+
 void
 TypeCastExpr::Print() const {
     printf("[%s] type cast (", GetType()->GetString().c_str());
@@ -4921,6 +5005,12 @@ ReferenceExpr::TypeCheck() {
     if (expr == NULL)
         return NULL;
     return this;
+}
+
+
+int
+ReferenceExpr::EstimateCost() const {
+    return 0;
 }
 
 
@@ -5002,6 +5092,12 @@ DereferenceExpr::Optimize() {
 }
 
 
+int
+DereferenceExpr::EstimateCost() const {
+    return COST_DEREF;
+}
+
+
 void
 DereferenceExpr::Print() const {
     if (expr == NULL || GetType() == NULL)
@@ -5073,6 +5169,15 @@ SymbolExpr::Optimize() {
 }
 
 
+int
+SymbolExpr::EstimateCost() const {
+    if (symbol->constValue != NULL)
+        return 0;
+    else
+        return COST_LOAD;
+}
+
+
 void
 SymbolExpr::Print() const {
     if (symbol == NULL || GetType() == NULL)
@@ -5126,6 +5231,12 @@ FunctionSymbolExpr::Optimize() {
 }
 
 
+int
+FunctionSymbolExpr::EstimateCost() const {
+    return 0;
+}
+
+
 void
 FunctionSymbolExpr::Print() const {
     if (!matchingFunc || !GetType())
@@ -5157,6 +5268,12 @@ SyncExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     return ctx->CallInst(fsync, noArg, "");
+}
+
+
+int
+SyncExpr::EstimateCost() const {
+    return COST_SYNC;
 }
 
 

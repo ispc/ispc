@@ -107,6 +107,12 @@ ExprStmt::Print(int indent) const {
 }
 
 
+int
+ExprStmt::EstimateCost() const {
+    return expr ? expr->EstimateCost() : 0;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // DeclStmt
 
@@ -399,6 +405,16 @@ DeclStmt::Print(int indent) const {
 }
 
 
+int
+DeclStmt::EstimateCost() const {
+    int cost = 0;
+    for (unsigned int i = 0; i < declaration->declarators.size(); ++i)
+        if (declaration->declarators[i]->initExpr)
+            cost += declaration->declarators[i]->initExpr->EstimateCost();
+    return cost;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // IfStmt
 
@@ -519,6 +535,14 @@ Stmt *IfStmt::TypeCheck() {
         falseStmts = falseStmts->TypeCheck();
 
     return this;
+}
+
+
+int
+IfStmt::EstimateCost() const {
+    return ((test ? test->EstimateCost() : 0) +
+            (trueStmts ? trueStmts->EstimateCost() : 0) +
+            (falseStmts ? falseStmts->EstimateCost() : 0));
 }
 
 
@@ -929,6 +953,13 @@ DoStmt::TypeCheck() {
 }
 
 
+int
+DoStmt::EstimateCost() const {
+    return ((testExpr ? testExpr->EstimateCost() : 0) +
+            (bodyStmts ? bodyStmts->EstimateCost() : 0));
+}
+
+
 void
 DoStmt::Print(int indent) const {
     printf("%*cDo Stmt", indent, ' ');
@@ -1136,6 +1167,20 @@ ForStmt::TypeCheck() {
 }
 
 
+int
+ForStmt::EstimateCost() const {
+    bool uniformTest = test ? test->GetType()->IsUniformType() :
+        (!g->opt.disableUniformControlFlow &&
+         !lHasVaryingBreakOrContinue(stmts));
+
+    return ((init ? init->EstimateCost() : 0) +
+            (test ? test->EstimateCost() : 0) +
+            (step ? step->EstimateCost() : 0) +
+            (stmts ? stmts->EstimateCost() : 0) +
+            uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP);
+}
+
+
 void
 ForStmt::Print(int indent) const {
     printf("%*cFor Stmt", indent, ' ');
@@ -1190,6 +1235,13 @@ BreakStmt::TypeCheck() {
 }
 
 
+int
+BreakStmt::EstimateCost() const {
+    return doCoherenceCheck ? COST_COHERENT_BREAK_CONTINE : 
+        COST_REGULAR_BREAK_CONTINUE;
+}
+
+
 void
 BreakStmt::Print(int indent) const {
     printf("%*c%sBreak Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
@@ -1225,6 +1277,13 @@ ContinueStmt::Optimize() {
 Stmt *
 ContinueStmt::TypeCheck() {
     return this;
+}
+
+
+int
+ContinueStmt::EstimateCost() const {
+    return doCoherenceCheck ? COST_COHERENT_BREAK_CONTINE : 
+        COST_REGULAR_BREAK_CONTINUE;
 }
 
 
@@ -1274,6 +1333,12 @@ ReturnStmt::TypeCheck() {
 }
 
 
+int
+ReturnStmt::EstimateCost() const {
+    return COST_RETURN + (val ? val->EstimateCost() : 0);
+}
+
+
 void
 ReturnStmt::Print(int indent) const {
     printf("%*c%sReturn Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
@@ -1316,6 +1381,16 @@ StmtList::TypeCheck() {
         if (stmts[i])
             stmts[i] = stmts[i]->TypeCheck();
     return this;
+}
+
+
+int
+StmtList::EstimateCost() const {
+    int cost = 0;
+    for (unsigned int i = 0; i < stmts.size(); ++i)
+        if (stmts[i])
+            cost += stmts[i]->EstimateCost();
+    return cost;
 }
 
 
@@ -1519,3 +1594,11 @@ PrintStmt::TypeCheck() {
         values = values->TypeCheck();
     return this;
 }
+
+
+int
+PrintStmt::EstimateCost() const {
+    return COST_FUNCALL + (values ? values->EstimateCost() : 0);
+}
+
+

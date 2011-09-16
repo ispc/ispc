@@ -148,6 +148,8 @@ public:
         pointer in place of the original ASTNode *. */
     virtual ASTNode *TypeCheck() = 0;
 
+    virtual int EstimateCost() const = 0;
+
     /** All AST nodes must track the file position where they are
         defined. */
     const SourcePos pos;
@@ -363,6 +365,25 @@ struct Globals {
     /** Arguments to pass along to the C pre-processor, if it is run on the
         program before compilation. */
     std::vector<std::string> cppArgs;
+};
+
+enum {
+    COST_FUNCALL = 4,
+    COST_TASK_LAUNCH = 16,
+    COST_SELECT = 4,
+    COST_RETURN = 4,
+    COST_SIMPLE_ARITH_LOGIC_OP = 1,
+    COST_COMPLEX_ARITH_OP = 4,
+    COST_COHERENT_BREAK_CONTINE = 4,
+    COST_REGULAR_BREAK_CONTINUE = 2,
+    COST_UNIFORM_LOOP = 4,
+    COST_VARYING_LOOP = 6,
+    COST_SYNC = 32,
+    COST_LOAD = 2,
+    COST_DEREF = 4,
+    COST_TYPECAST_SIMPLE = 1,
+    COST_TYPECAST_COMPLEX = 4,
+    COST_GATHER = 8
 };
 
 extern Globals *g;

@@ -708,7 +708,14 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
     // Finally, we can generate code for the function
     if (code != NULL) {
         bool checkMask = (ft->isTask == true) || 
-            (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false);
+            ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
+             code->EstimateCost() > 16);
+        // If the body of the function is non-trivial, then we wrap the
+        // entire thing around a varying "cif (true)" test in order to reap
+        // the side-effect benefit of checking to see if the execution mask
+        // is all on and thence having a specialized code path for that
+        // case.  If this is a simple function, then this isn't worth the
+        // code bloat / overhead.
         if (checkMask) {
             bool allTrue[ISPC_MAX_NVEC];
             for (int i = 0; i < g->target.vectorWidth; ++i)

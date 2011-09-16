@@ -121,6 +121,7 @@ public:
     void Print() const;
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     const Op op;
@@ -164,6 +165,7 @@ public:
 
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     const Op op;
@@ -196,6 +198,7 @@ public:
 
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     const Op op;
@@ -217,6 +220,7 @@ public:
 
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *test, *expr1, *expr2;
@@ -240,6 +244,7 @@ public:
     llvm::Constant *GetConstant(const Type *type) const;
     ExprList *Optimize();
     ExprList *TypeCheck();
+    int EstimateCost() const;
 
     std::vector<Expr *> exprs;
 };
@@ -257,6 +262,7 @@ public:
 
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *func;
@@ -285,6 +291,7 @@ public:
 
     Expr *Optimize();
     Expr *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *arrayOrVector, *index;
@@ -303,13 +310,15 @@ public:
     MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
                SourcePos identifierPos);
 
-    virtual llvm::Value *GetValue(FunctionEmitContext *ctx) const;
-    virtual llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    virtual const Type *GetType() const;
-    virtual Symbol *GetBaseSymbol() const;
-    virtual void Print() const;
-    virtual Expr *Optimize();
-    virtual Expr *TypeCheck();
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    Symbol *GetBaseSymbol() const;
+    void Print() const;
+    Expr *Optimize();
+    Expr *TypeCheck();
+    int EstimateCost() const;
+
     virtual int getElementNumber() const;
 
 protected:
@@ -392,6 +401,7 @@ public:
 
     Expr *TypeCheck();
     Expr *Optimize();
+    int EstimateCost() const;
 
     /** Return the ConstExpr's values as booleans, doing type conversion
         from the actual type if needed.  If forceVarying is true, then type
@@ -495,6 +505,7 @@ public:
     void Print() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    int EstimateCost() const;
 
 private:
     const Type *type;
@@ -514,6 +525,7 @@ public:
     void Print() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    int EstimateCost() const;
 
 private:
     Expr *expr;
@@ -533,6 +545,7 @@ public:
     void Print() const;
     Expr *TypeCheck();
     Expr *Optimize();
+    int EstimateCost() const;
 
 private:
     Expr *expr;
@@ -551,6 +564,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
+    int EstimateCost() const;
 
 private:
     Symbol *symbol;
@@ -571,6 +585,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
+    int EstimateCost() const;
 
 private:
     friend class FunctionCallExpr;
@@ -597,6 +612,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     void Print() const;
+    int EstimateCost() const;
 };
 
 #endif // ISPC_EXPR_H

@@ -75,6 +75,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *expr;
@@ -92,8 +93,9 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
-private:
+ private:
     Declaration *declaration;
 };
 
@@ -110,6 +112,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
     // @todo these are only public for lHasVaryingBreakOrContinue(); would
     // be nice to clean that up...
@@ -151,6 +154,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *testExpr;
@@ -172,6 +176,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     /** 'for' statment initializer; may be NULL, indicating no intitializer */
@@ -199,6 +204,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     /** This indicates whether the generated code will check to see if no
@@ -220,6 +226,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     /** This indicates whether the generated code will check to see if no
@@ -241,6 +248,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     Expr *val;
@@ -263,6 +271,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
     void Add(Stmt *s) { if (s) stmts.push_back(s); }
     const std::vector<Stmt *> &GetStatements() { return stmts; }
@@ -290,6 +299,7 @@ public:
 
     Stmt *Optimize();
     Stmt *TypeCheck();
+    int EstimateCost() const;
 
 private:
     /** Format string for the print() statement. */
