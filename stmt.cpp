@@ -670,17 +670,6 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
 }
 
 
-/** Emits code that checks to see if for all of the lanes where the mask is
-    on, the test has the value true.
- */
-static llvm::Value *
-lTestMatchesMask(FunctionEmitContext *ctx, llvm::Value *test, llvm::Value *mask) {
-    llvm::Value *testAndMask = ctx->BinaryOperator(llvm::Instruction::And, test,
-                                                   mask, "test&mask");
-    return ctx->MasksAllEqual(testAndMask, mask);
-}
-
-
 /** Emit code for an 'if' test where the lane mask is known to be mixed
     on/off going into it.
  */
