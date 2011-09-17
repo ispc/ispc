@@ -49,6 +49,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <memory.h>
+#ifdef ISPC_IS_LINUX
+#include <malloc.h>
+#endif
 
 #ifdef ISPC_HAVE_SVML
 #include <xmmintrin.h>

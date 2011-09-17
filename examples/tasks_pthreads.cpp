@@ -54,6 +54,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
+#ifdef ISPC_IS_LINUX
+#include <malloc.h>
+#endif
 
 static int initialized = 0;
 static volatile int32_t lock = 0;

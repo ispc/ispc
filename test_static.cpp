@@ -43,6 +43,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#ifdef ISPC_IS_LINUX
+#include <malloc.h>
+#endif
 
 extern "C" {
     extern int width();
