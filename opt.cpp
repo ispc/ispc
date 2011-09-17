@@ -56,13 +56,11 @@
 #include <llvm/Intrinsics.h>
 #include <llvm/Constants.h>
 #include <llvm/Analysis/ConstantFolding.h>
-#ifndef LLVM_2_8
-    #include <llvm/Target/TargetLibraryInfo.h>
-    #ifdef LLVM_2_9
-        #include <llvm/Support/StandardPasses.h>
-    #else
-        #include <llvm/Transforms/IPO/PassManagerBuilder.h>
-    #endif // LLVM_2_9
+#include <llvm/Target/TargetLibraryInfo.h>
+#ifdef LLVM_2_9
+    #include <llvm/Support/StandardPasses.h>
+#else
+    #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #endif // LLVM_2_8
 #include <llvm/ADT/Triple.h>
 #include <llvm/Transforms/Scalar.h>
@@ -73,9 +71,7 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/raw_ostream.h>
-#ifndef LLVM_2_8
 #include <llvm/Analysis/DIBuilder.h>
-#endif
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
@@ -186,11 +182,9 @@ Optimize(llvm::Module *module, int optLevel) {
     llvm::PassManager optPM;
     llvm::FunctionPassManager funcPM(module);
 
-#ifndef LLVM_2_8
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
-#endif
     optPM.add(new llvm::TargetData(module));
 
     if (optLevel == 0) {
@@ -220,7 +214,6 @@ Optimize(llvm::Module *module, int optLevel) {
         // only later in the optimization process as things like constant
         // propagation have done their thing, and then when they do kick
         // in, they can often open up new opportunities for optimization...
-#ifndef LLVM_2_8
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
         llvm::initializeScalarOpts(*registry);
@@ -231,7 +224,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstCombine(*registry);
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
-#endif
+
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
         optPM.add(CreateGatherScatterFlattenPass());
@@ -288,9 +281,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
 
-#if defined(LLVM_2_8)
-        optPM.add(CreateIsCompileTimeConstantPass(true));
-#elif defined(LLVM_2_9)
+#if defined(LLVM_2_9)
         llvm::createStandardModulePasses(&optPM, 3, 
                                          false /* opt size */,
                                          true /* unit at a time */, 

@@ -46,9 +46,7 @@
 #endif
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
-#ifndef LLVM_2_8
 #include <llvm/Analysis/DIBuilder.h>
-#endif
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Target/TargetMachine.h>
@@ -309,13 +307,9 @@ SourcePos::SourcePos(const char *n, int l, int c) {
 }
 
 llvm::DIFile SourcePos::GetDIFile() const {
-#ifdef LLVM_2_8
-    return llvm::DIFile();
-#else
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
     return m->diBuilder->createFile(filename, directory);
-#endif // LLVM_2_8
 }
 
 

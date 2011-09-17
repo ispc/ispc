@@ -91,11 +91,8 @@ public:
     /** llvm Module object into which globals and functions are added. */
     llvm::Module *module; 
 
-#ifndef LLVM_2_8
-    /** The diBuilder manages generating debugging information (only
-        supported in LLVM 2.9 and beyond...) */
+    /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
-#endif
 
     GatherBuffer *gatherBuffer;
 

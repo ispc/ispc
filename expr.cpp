@@ -2569,7 +2569,7 @@ ExprList::GetConstant(const Type *type) const {
     }
 
     if (dynamic_cast<const StructType *>(type) != NULL) {
-#if defined(LLVM_2_8) || defined(LLVM_2_9)
+#if defined(LLVM_2_9)
         return llvm::ConstantStruct::get(*g->ctx, cv, false);
 #else
         LLVM_TYPE_CONST llvm::StructType *llvmStructType =

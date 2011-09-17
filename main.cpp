@@ -40,11 +40,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
-#ifdef LLVM_2_8
-  #include <llvm/System/Signals.h>
-#else
-  #include <llvm/Support/Signals.h>
-#endif
+#include <llvm/Support/Signals.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>

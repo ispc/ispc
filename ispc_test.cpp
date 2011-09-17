@@ -81,9 +81,7 @@ extern "C" {
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
-#ifndef LLVM_2_8
 #include <llvm/Support/system_error.h>
-#endif
 
 bool shouldFail = false;
 
@@ -145,17 +143,6 @@ double Log(double x) { return log(x); }
 static bool lRunTest(const char *fn) {
     llvm::LLVMContext *ctx = new llvm::LLVMContext;
 
-#ifdef LLVM_2_8
-    std::string err;
-    llvm::MemoryBuffer *buf = llvm::MemoryBuffer::getFileOrSTDIN(fn, &err);
-    if (!buf) {
-        fprintf(stderr, "Unable to open file \"%s\": %s\n", fn, err.c_str());
-        delete ctx;
-        return false;
-    }
-    std::string bcErr;
-    llvm::Module *module = llvm::ParseBitcodeFile(buf, *ctx, &bcErr);
-#else
     llvm::OwningPtr<llvm::MemoryBuffer> buf;
     llvm::error_code err = llvm::MemoryBuffer::getFileOrSTDIN(fn, buf);
     if (err) {
@@ -165,7 +152,6 @@ static bool lRunTest(const char *fn) {
     }
     std::string bcErr;
     llvm::Module *module = llvm::ParseBitcodeFile(buf.get(), *ctx, &bcErr);
-#endif
 
     if (!module) {
         fprintf(stderr, "Bitcode reader failed for \"%s\": %s\n", fn, bcErr.c_str());

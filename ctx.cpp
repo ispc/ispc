@@ -153,7 +153,6 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
         StoreInst(llvm::Constant::getNullValue(ftype), returnValuePtr);
     }
 
-#ifndef LLVM_2_8
     if (m->diBuilder) {
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
@@ -174,7 +173,6 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
         /* And start a scope representing the initial function scope */
         StartScope();
     }
-#endif // LLVM_2_8
 
     launchedTasks = false;
 
@@ -183,7 +181,6 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
     assert(maskSymbol != NULL);
     maskSymbol->storagePtr = maskPtr;
 
-#ifndef LLVM_2_8
     // add debugging info for __mask, programIndex, ...
     if (m->diBuilder) {
         maskSymbol->pos = funcStartPos;
@@ -208,15 +205,12 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
                                            true /* static */,
                                            programCountSymbol->storagePtr);
     }
-#endif
 }
 
 
 FunctionEmitContext::~FunctionEmitContext() {
     assert(controlFlowInfo.size() == 0);
-#ifndef LLVM_2_8
     assert(debugScopes.size() == (m->diBuilder ? 1 : 0));
-#endif
 }
 
 
@@ -857,7 +851,6 @@ FunctionEmitContext::GetDebugPos() const {
 void
 FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos, 
                                  llvm::DIScope *scope) {
-#ifndef LLVM_2_8
     llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(value);
     if (inst != NULL && m->diBuilder) {
         SourcePos p = pos ? *pos : currentPos;
@@ -868,13 +861,11 @@ FunctionEmitContext::AddDebugPos(llvm::Value *value, const SourcePos *pos,
             inst->setDebugLoc(llvm::DebugLoc::get(p.first_line, p.first_column, 
                                                   scope ? *scope : GetDIScope()));
     }
-#endif
 }
 
 
 void
 FunctionEmitContext::StartScope() {
-#ifndef LLVM_2_8
     if (m->diBuilder != NULL) {
         llvm::DIScope parentScope;
         if (debugScopes.size() > 0)
@@ -888,18 +879,15 @@ FunctionEmitContext::StartScope() {
                                              currentPos.first_column);
         debugScopes.push_back(lexicalBlock);
     }
-#endif
 }
 
 
 void
 FunctionEmitContext::EndScope() {
-#ifndef LLVM_2_8
     if (m->diBuilder != NULL) {
         assert(debugScopes.size() > 0);
         debugScopes.pop_back();
     }
-#endif
 }
 
 
@@ -912,7 +900,6 @@ FunctionEmitContext::GetDIScope() const {
 
 void
 FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
-#ifndef LLVM_2_8
     if (m->diBuilder == NULL)
         return;
 
@@ -928,13 +915,11 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
     llvm::Instruction *declareInst = 
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
-#endif
 }
 
 
 void
 FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym) {
-#ifndef LLVM_2_8
     if (m->diBuilder == NULL)
         return;
 
@@ -950,7 +935,6 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym) {
     llvm::Instruction *declareInst = 
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
-#endif
 }
 
 
@@ -1508,27 +1492,15 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
 void
 FunctionEmitContext::addGSMetadata(llvm::Instruction *inst, SourcePos pos) {
     llvm::Value *str = llvm::MDString::get(*g->ctx, pos.name);
-#ifdef LLVM_2_8
-    llvm::MDNode *md = llvm::MDNode::get(*g->ctx, &str, 1);
-#else
     llvm::MDNode *md = llvm::MDNode::get(*g->ctx, str);
-#endif
     inst->setMetadata("filename", md);
 
     llvm::Value *line = LLVMInt32(pos.first_line);
-#ifdef LLVM_2_8
-    md = llvm::MDNode::get(*g->ctx, &line, 1);
-#else
     md = llvm::MDNode::get(*g->ctx, line);
-#endif
     inst->setMetadata("line", md);
 
     llvm::Value *column = LLVMInt32(pos.first_column);
-#ifdef LLVM_2_8
-    md = llvm::MDNode::get(*g->ctx, &column, 1);
-#else
     md = llvm::MDNode::get(*g->ctx, column);
-#endif
     inst->setMetadata("column", md);
 }
 
@@ -1845,9 +1817,9 @@ llvm::PHINode *
 FunctionEmitContext::PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
                              const char *name) {
     llvm::PHINode *pn = llvm::PHINode::Create(type, 
-#if !defined(LLVM_2_8) && !defined(LLVM_2_9)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
                                               count, 
-#endif // !LLVM_2_8 && !LLVM_2_9
+#endif // LLVM_3_0
                                               name ? name : "phi", bblock);
     AddDebugPos(pn);
     return pn;

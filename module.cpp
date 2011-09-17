@@ -80,12 +80,8 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Basic/TargetInfo.h>
-#ifndef LLVM_2_8
-  #include <llvm/Support/ToolOutputFile.h>
-  #include <llvm/Support/Host.h>
-#else // !LLVM_2_8
-  #include <llvm/System/Host.h>
-#endif // LLVM_2_8
+#include <llvm/Support/ToolOutputFile.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -106,14 +102,11 @@ Module::Module(const char *fn) {
 
     module->setTargetTriple(g->target.GetTripleString());
 
-#ifndef LLVM_2_8
     if (g->generateDebuggingSymbols)
         diBuilder = new llvm::DIBuilder(*module);
     else
         diBuilder = NULL;
-#endif // LLVM_2_8
 
-#ifndef LLVM_2_8
     // If we're generating debugging symbols, let the DIBuilder know that
     // we're starting a new compilation unit.
     if (diBuilder != NULL) {
@@ -139,7 +132,6 @@ Module::Module(const char *fn) {
                                          0 /* run time version */);
         }
     }
-#endif // LLVM_2_8
 }
 
 
@@ -564,7 +556,6 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
                                                          decl->sym->name.c_str());
         m->symbolTable->AddVariable(decl->sym);
 
-#ifndef LLVM_2_8
         if (diBuilder && (ds->storageClass != SC_EXTERN)) {
             llvm::DIFile file = decl->pos.GetDIFile();
             diBuilder->createGlobalVariable(decl->sym->name, 
@@ -574,7 +565,6 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
                                             (ds->storageClass == SC_STATIC),
                                             decl->sym->storagePtr);
         }
-#endif // LLVM_2_8
     }
 }
 
@@ -931,12 +921,7 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
             return true;
         }
         else {
-#ifdef LLVM_2_8
-            fprintf(stderr, "Direct object file emission not supported in this build.\n");
-            return false;
-#else
             return writeObjectFileOrAssembly(outputType, outFileName);
-#endif // LLVM_2_8
         }
     }
 }

@@ -45,9 +45,7 @@
 #include <stdio.h>
 #include <llvm/Value.h>
 #include <llvm/Module.h>
-#ifndef LLVM_2_8
 #include <llvm/Analysis/DIBuilder.h>
-#endif
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 
@@ -414,10 +412,6 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 AtomicType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     if (isUniform) {
         switch (basicType) {
         case TYPE_VOID:
@@ -484,7 +478,6 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
         uint64_t align = unifType.getAlignInBits() * g->target.vectorWidth;
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
     }
-#endif // LLVM_2_8
 }
 
 
@@ -645,10 +638,6 @@ EnumType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType 
 EnumType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     std::vector<llvm::Value *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
@@ -688,7 +677,6 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     uint64_t size =  diType.getSizeInBits()  * g->target.vectorWidth;
     uint64_t align = diType.getAlignInBits() * g->target.vectorWidth;
     return m->diBuilder->createVectorType(size, align, diType, subArray);
-#endif // !LLVM_2_8
 }
 
 
@@ -893,10 +881,6 @@ ArrayType::TotalElementCount() const {
 
 llvm::DIType
 ArrayType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     if (!child)
         return llvm::DIType();
 
@@ -923,7 +907,6 @@ ArrayType::GetDIType(llvm::DIDescriptor scope) const {
     uint64_t align = eltType.getAlignInBits();
 
     return m->diBuilder->createArrayType(size, align, eltType, subArray);
-#endif // LLVM_2_8
 }
 
 
@@ -1044,16 +1027,11 @@ SOAArrayType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 SOAArrayType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     if (!child)
         return llvm::DIType();
 
     const Type *t = soaType();
     return t->GetDIType(scope);
-#endif
 }
 
 
@@ -1217,10 +1195,6 @@ VectorType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 VectorType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     llvm::DIType eltType = base->GetDIType(scope);
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
 #ifdef LLVM_2_9
@@ -1240,7 +1214,6 @@ VectorType::GetDIType(llvm::DIDescriptor scope) const {
         align = 4 * g->target.nativeVectorWidth;
 
     return m->diBuilder->createVectorType(sizeBits, align, eltType, subArray);
-#endif // LLVM_2_8
 }
 
 
@@ -1443,10 +1416,6 @@ StructType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 StructType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     uint64_t currentSize = 0, align = 0;
 
     std::vector<llvm::Value *> elementLLVMTypes;
@@ -1500,7 +1469,6 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIFile diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, currentSize, 
                                           align, 0, elements);
-#endif // LLVM_2_8
 }
 
 
@@ -1698,13 +1666,8 @@ ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
-#ifdef LLVM_2_8
-    FATAL("debug info not supported in llvm 2.8");
-    return llvm::DIType();
-#else
     llvm::DIType diTargetType = targetType->GetDIType(scope);
     return m->diBuilder->createReferenceType(diTargetType);
-#endif // LLVM_2_8
 }
 
 
