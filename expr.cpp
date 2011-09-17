@@ -1455,8 +1455,8 @@ int
 BinaryExpr::EstimateCost() const {
     return ((arg0 ? arg0->EstimateCost() : 0) +
             (arg1 ? arg1->EstimateCost() : 0) +
-            (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
-                                       COST_SIMPLE_ARITH_LOGIC_OP);
+            ((op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
+                                        COST_SIMPLE_ARITH_LOGIC_OP));
 }
 
 

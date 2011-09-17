@@ -1177,7 +1177,7 @@ ForStmt::EstimateCost() const {
             (test ? test->EstimateCost() : 0) +
             (step ? step->EstimateCost() : 0) +
             (stmts ? stmts->EstimateCost() : 0) +
-            uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP);
+            (uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP));
 }
 
 

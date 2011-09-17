@@ -707,9 +707,12 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
 
     // Finally, we can generate code for the function
     if (code != NULL) {
+        int costEstimate = code->EstimateCost();
         bool checkMask = (ft->isTask == true) || 
             ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
-             code->EstimateCost() > 16);
+             costEstimate > 16);
+        Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
+              funSym->name.c_str(), costEstimate);
         // If the body of the function is non-trivial, then we wrap the
         // entire thing around a varying "cif (true)" test in order to reap
         // the side-effect benefit of checking to see if the execution mask
