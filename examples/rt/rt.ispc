@@ -70,9 +70,9 @@ static inline float Dot(const float3 a, const float3 b) {
 }
 
 
-static void generateRay(uniform const float raster2camera[4][4], 
-                        uniform const float camera2world[4][4],
-                        float x, float y, reference Ray ray) {
+static inline void generateRay(uniform const float raster2camera[4][4], 
+                               uniform const float camera2world[4][4],
+                               float x, float y, reference Ray ray) {
     ray.mint = 0.f;
     ray.maxt = 1e30f;
 
@@ -177,8 +177,8 @@ static inline bool TriIntersect(const reference Triangle tri, reference Ray ray)
 }
 
 
-bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[], 
-                  reference Ray r) {
+static inline bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[], 
+                                reference Ray r) {
     Ray ray = r;
     bool hit = false;
     // Follow ray through BVH nodes to find primitive intersections
@@ -226,15 +226,15 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
 }
 
 
-static void raytrace_tile(uniform int x0, uniform int x1,
-                          uniform int y0, uniform int y1, 
-                          uniform int width, uniform int height,
-                          uniform int baseWidth, uniform int baseHeight,
-                          const uniform float raster2camera[4][4], 
-                          const uniform float camera2world[4][4],
-                          uniform float image[], uniform int id[],
-                          const LinearBVHNode nodes[],
-                          const Triangle triangles[]) {
+static inline void raytrace_tile(uniform int x0, uniform int x1,
+                                 uniform int y0, uniform int y1, 
+                                 uniform int width, uniform int height,
+                                 uniform int baseWidth, uniform int baseHeight,
+                                 const uniform float raster2camera[4][4], 
+                                 const uniform float camera2world[4][4],
+                                 uniform float image[], uniform int id[],
+                                 const LinearBVHNode nodes[],
+                                 const Triangle triangles[]) {
     uniform float widthScale = (float)(baseWidth) / (float)(width);
     uniform float heightScale = (float)(baseHeight) / (float)(height);
 

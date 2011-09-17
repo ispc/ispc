@@ -32,7 +32,7 @@
 */
 
 
-static void
+static inline void
 stencil_step(uniform int x0, uniform int x1,
              uniform int y0, uniform int y1,
              uniform int z0, uniform int z1,
