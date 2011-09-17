@@ -33,12 +33,22 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
+#if defined(_WIN32) || defined(_WIN64)
+#define ISPC_IS_WINDOWS
+#elif defined(__linux__)
+#define ISPC_IS_LINUX
+#elif defined(__APPLE__)
+#define ISPC_IS_APPLE
+#endif
+
 #ifdef ISPC_IS_WINDOWS
 #define NOMINMAX
 #include <windows.h>
 #endif
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <memory.h>
 
 #ifdef ISPC_HAVE_SVML
 #include <xmmintrin.h>
@@ -103,16 +113,35 @@ void ISPCSync() {
 }
 
 
-#ifdef ISPC_IS_WINDOWS
 void *ISPCMalloc(int64_t size, int32_t alignment) {
+#ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
+#endif
+#ifdef ISPC_IS_LINUX
+    return memalign(alignment, size);
+#endif
+#ifdef ISPC_IS_APPLE
+    void *mem = malloc(size + (alignment-1) + sizeof(void*));
+    char *amem = ((char*)mem) + sizeof(void*);
+    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) &
+                                        (alignment - 1)));
+    ((void**)amem)[-1] = mem;
+    return amem;
+#endif
 }
 
 
 void ISPCFree(void *ptr) {
+#ifdef ISPC_IS_WINDOWS
     _aligned_free(ptr);
-}
 #endif
+#ifdef ISPC_IS_LINUX
+    free(ptr);
+#endif
+#ifdef ISPC_IS_APPLE
+    free(((void**)ptr)[-1]);
+#endif
+}
 
 static void usage(int ret) {
     fprintf(stderr, "usage: ispc_test\n");
@@ -186,10 +215,8 @@ static bool lRunTest(const char *fn) {
         ee->addGlobalMapping(func, (void *)FUNC)
     DO_FUNC(ISPCLaunch, "ISPCLaunch");
     DO_FUNC(ISPCSync, "ISPCSync");
-#ifdef ISPC_IS_WINDOWS
     DO_FUNC(ISPCMalloc, "ISPCMalloc");
     DO_FUNC(ISPCFree, "ISPCFree");
-#endif // ISPC_IS_WINDOWS
     DO_FUNC(putchar, "putchar");
     DO_FUNC(printf, "printf");
     DO_FUNC(fflush, "fflush");

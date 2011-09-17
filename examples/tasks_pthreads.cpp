@@ -31,6 +31,14 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#if defined(_WIN32) || defined(_WIN64)
+#define ISPC_IS_WINDOWS
+#elif defined(__linux__)
+#define ISPC_IS_LINUX
+#elif defined(__APPLE__)
+#define ISPC_IS_APPLE
+#endif
+
 #include "taskinfo.h"
 #include <pthread.h>
 #include <semaphore.h>
@@ -63,6 +71,8 @@ static pthread_cond_t tasksRunningCondition;
 extern "C" { 
     void ISPCLaunch(void *f, void *data);
     void ISPCSync();
+    void *ISPCMalloc(int64_t size, int32_t alignment);
+    void ISPCFree(void *ptr);
 }
 
 static void *lTaskEntry(void *arg);
@@ -292,3 +302,35 @@ void ISPCSync() {
         exit(1);
     }
 }
+
+
+void *ISPCMalloc(int64_t size, int32_t alignment) {
+#ifdef ISPC_IS_WINDOWS
+    return _aligned_malloc(size, alignment);
+#endif
+#ifdef ISPC_IS_LINUX
+    return memalign(alignment, size);
+#endif
+#ifdef ISPC_IS_APPLE
+    void *mem = malloc(size + (alignment-1) + sizeof(void*));
+    char *amem = ((char*)mem) + sizeof(void*);
+    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) &
+                                        (alignment - 1)));
+    ((void**)amem)[-1] = mem;
+    return amem;
+#endif
+}
+
+
+void ISPCFree(void *ptr) {
+#ifdef ISPC_IS_WINDOWS
+    _aligned_free(ptr);
+#endif
+#ifdef ISPC_IS_LINUX
+    free(ptr);
+#endif
+#ifdef ISPC_IS_APPLE
+    free(((void**)ptr)[-1]);
+#endif
+}
+

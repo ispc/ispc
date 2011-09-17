@@ -1961,17 +1961,26 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
     assert(argStructType->getNumElements() == argVals.size() + 1);
 
     int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
+    llvm::Value *argmem;
 #ifdef ISPC_IS_WINDOWS
     // Use malloc() to allocate storage on Windows, since the stack is
     // generally not big enough there to do enough allocations for lots of
     // tasks and then things crash horribly...
-    llvm::Value *argmem = EmitMalloc(argStructType, align);
+    argmem = EmitMalloc(argStructType, align);
 #else
-    // Use alloca for space for the task args on OSX And Linux.  KEY
-    // DETAIL: pass false to the call of FunctionEmitContext::AllocaInst so
-    // that the alloca doesn't happen just once at the top of the function,
-    // but happens each time the enclosing basic block executes.
-    llvm::Value *argmem = AllocaInst(argStructType, "argmem", align, false);
+    // Otherwise, use alloca for space for the task args, ** unless we're 
+    // compiling to AVX, in which case we use malloc after all **. (See
+    // http://llvm.org/bugs/show_bug.cgi?id=10841 for details.  There are
+    // limitations in LLVM with respect to dynamic allocas of this sort
+    // when the stack also has to be 32-byte aligned...).
+    if (g->target.isa == Target::AVX)
+        argmem = EmitMalloc(argStructType, align);
+    else
+        // KEY DETAIL: pass false to the call of
+        // FunctionEmitContext::AllocaInst so that the alloca doesn't
+        // happen just once at the top of the function, but happens each
+        // time the enclosing basic block executes.
+        argmem = AllocaInst(argStructType, "argmem", align, false);
 #endif // ISPC_IS_WINDOWS
     llvm::Value *voidmem = BitCastInst(argmem, LLVMTypes::VoidPointerType);
 

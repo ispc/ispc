@@ -33,10 +33,20 @@
 
 #include "taskinfo.h"
 
+#if defined(_WIN32) || defined(_WIN64)
+#define ISPC_IS_WINDOWS
+#elif defined(__linux__)
+#define ISPC_IS_LINUX
+#elif defined(__APPLE__)
+#define ISPC_IS_APPLE
+#endif
+
 /* A simple task system for ispc programs based on Apple's Grand Central
    Dispatch. */
 #include <dispatch/dispatch.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 static int initialized = 0;
 static volatile int32_t lock = 0;
@@ -47,6 +57,8 @@ static dispatch_group_t gcdGroup;
 extern "C" { 
     void ISPCLaunch(void *f, void *data);
     void ISPCSync();
+    void *ISPCMalloc(int64_t size, int32_t alignment);
+    void ISPCFree(void *ptr);
 }
 
 
@@ -97,3 +109,18 @@ void ISPCSync() {
 
     lResetTaskInfo();
 }
+
+void *ISPCMalloc(int64_t size, int32_t alignment) {
+    void *mem = malloc(size + (alignment-1) + sizeof(void*));
+    char *amem = ((char*)mem) + sizeof(void*);
+    amem = amem + uint32_t(alignment - (reinterpret_cast<uint64_t>(amem) &
+                                        (alignment - 1)));
+    ((void**)amem)[-1] = mem;
+    return amem;
+}
+
+
+void ISPCFree(void *ptr) {
+    free(((void**)ptr)[-1]);
+}
+

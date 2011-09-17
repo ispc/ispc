@@ -659,6 +659,11 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         // the code to free that memory, now that we've copied the
         // parameter values out of the structure.
         ctx->EmitFree(structParamPtr);
+#else
+        // We also do this for AVX... (See discussion in
+        // FunctionEmitContext::LaunchInst().)
+        if (g->target.isa == Target::AVX)
+            ctx->EmitFree(structParamPtr);
 #endif // ISPC_IS_WINDOWS
     }
     else {

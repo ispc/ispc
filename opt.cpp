@@ -187,6 +187,10 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(targetLibraryInfo);
     optPM.add(new llvm::TargetData(module));
 
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    optPM.add(llvm::createIndVarSimplifyPass());
+#endif
+
     if (optLevel == 0) {
         // This is more or less the minimum set of optimizations that we
         // need to do to generate code that will actually run.  (We can't
