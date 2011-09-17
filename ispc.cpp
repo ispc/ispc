@@ -237,6 +237,9 @@ Target::GetTargetMachine() const {
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, relocModel);
 #else
+#ifdef ISPC_IS_APPLE
+    relocModel = llvm::Reloc::PIC_;
+#endif // ISPC_IS_APPLE
     std::string featuresString = cpu + std::string(",") + attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, featuresString);
