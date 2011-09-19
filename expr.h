@@ -123,7 +123,6 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     const Op op;
     Expr *expr;
 };
@@ -167,7 +166,6 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     const Op op;
     Expr *arg0, *arg1;
 };
@@ -200,7 +198,6 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     const Op op;
     Expr *lvalue, *rvalue;
 };
@@ -222,7 +219,6 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *test, *expr1, *expr2;
 };
 
@@ -264,11 +260,11 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *func;
     ExprList *args;
     bool isLaunch;
 
+private:
     void resolveFunctionOverloads();
     bool tryResolve(bool (*matchFunc)(Expr *, const Type *));
 };
@@ -293,7 +289,6 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *arrayOrVector, *index;
 };
 
@@ -321,7 +316,6 @@ public:
 
     virtual int getElementNumber() const;
 
-protected:
     std::string getCandidateNearMatches() const;
 
     Expr *expr;
@@ -507,7 +501,6 @@ public:
     Expr *Optimize();
     int EstimateCost() const;
 
-private:
     const Type *type;
     Expr *expr;
 };
@@ -527,7 +520,6 @@ public:
     Expr *Optimize();
     int EstimateCost() const;
 
-private:
     Expr *expr;
 };
 
@@ -547,7 +539,6 @@ public:
     Expr *Optimize();
     int EstimateCost() const;
 
-private:
     Expr *expr;
 };
 

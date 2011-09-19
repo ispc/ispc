@@ -585,6 +585,180 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 }
 
 
+/** Similar to the Stmt variant of this function, this conservatively
+    checks to see if it's safe to run the code for the given Expr even if
+    the mask is 'all off'.
+ */
+static bool
+lSafeToRunWithAllLanesOff(Expr *expr) {
+    if (expr == NULL)
+        return false;
+
+    UnaryExpr *ue;
+    if ((ue = dynamic_cast<UnaryExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(ue->expr);
+
+    BinaryExpr *be;
+    if ((be = dynamic_cast<BinaryExpr *>(expr)) != NULL)
+        return (lSafeToRunWithAllLanesOff(be->arg0) &&
+                lSafeToRunWithAllLanesOff(be->arg1));
+
+    AssignExpr *ae;
+    if ((ae = dynamic_cast<AssignExpr *>(expr)) != NULL)
+        return (lSafeToRunWithAllLanesOff(ae->lvalue) &&
+                lSafeToRunWithAllLanesOff(ae->rvalue));
+
+    SelectExpr *se;
+    if ((se = dynamic_cast<SelectExpr *>(expr)) != NULL)
+        return (lSafeToRunWithAllLanesOff(se->test) && 
+                lSafeToRunWithAllLanesOff(se->expr1) && 
+                lSafeToRunWithAllLanesOff(se->expr2));
+
+    ExprList *el;
+    if ((el = dynamic_cast<ExprList *>(expr)) != NULL) {
+        for (unsigned int i = 0; i < el->exprs.size(); ++i)
+            if (!lSafeToRunWithAllLanesOff(el->exprs[i]))
+                return false;
+        return true;
+    }
+
+    FunctionCallExpr *fce;
+    if ((fce = dynamic_cast<FunctionCallExpr *>(expr)) != NULL)
+        // FIXME: If we could somehow determine that the function being
+        // called was safe (and all of the args Exprs were safe, then it'd
+        // be nice to be able to return true here.  (Consider a call to
+        // e.g. floatbits() in the stdlib.)  Unfortunately for now we just
+        // have to be conservative.
+        return false;
+
+    IndexExpr *ie;
+    if ((ie = dynamic_cast<IndexExpr *>(expr)) != NULL) {
+        // If we can determine at compile time the size of the array/vector
+        // and if the indices are compile-time constants, then we may be
+        // able to safely run this under a predicated if statement..
+        if (ie->arrayOrVector == NULL)
+            return false;
+
+        const Type *type = ie->arrayOrVector->GetType();
+        ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
+        if (type == NULL || ce == NULL)
+            return false;
+        if (dynamic_cast<const ReferenceType *>(type) != NULL)
+            type = type->GetReferenceTarget();
+
+        const SequentialType *seqType = 
+            dynamic_cast<const SequentialType *>(type);
+        assert(seqType != NULL);
+        int nElements = seqType->GetElementCount();
+        if (nElements == 0)
+            // Unsized array, so we can't be sure
+            return false;
+
+        int32_t indices[ISPC_MAX_NVEC];
+        int count = ce->AsInt32(indices);
+        for (int i = 0; i < count; ++i)
+            if (indices[i] < 0 || indices[i] >= nElements)
+                return false;
+
+        // All indices are in-bounds
+        return true;
+    }
+
+    MemberExpr *me;
+    if ((me = dynamic_cast<MemberExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(me->expr);
+
+    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+        return true;
+
+    TypeCastExpr *tce;
+    if ((tce = dynamic_cast<TypeCastExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(tce->expr);
+
+    ReferenceExpr *re;
+    if ((re = dynamic_cast<ReferenceExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(re->expr);
+
+    DereferenceExpr *dre;
+    if ((dre = dynamic_cast<DereferenceExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(dre->expr);
+
+    if (dynamic_cast<SymbolExpr *>(expr) != NULL ||
+        dynamic_cast<FunctionSymbolExpr *>(expr) != NULL ||
+        dynamic_cast<SyncExpr *>(expr) != NULL)
+        return true;
+
+    FATAL("Unknown Expr type in lSafeToRunWithAllLanesOff()");
+    return false;
+}
+
+
+/** Given an arbitrary statement, this function conservatively tests to see
+    if it's safe to run the code for the statement even if the mask is all
+    off.  Here we just need to determine which kind of statement we have
+    and recursively traverse it and/or the expressions inside of it.
+ */
+static bool
+lSafeToRunWithAllLanesOff(Stmt *stmt) {
+    if (stmt == NULL)
+        return true;
+
+    ExprStmt *es;
+    if ((es = dynamic_cast<ExprStmt *>(stmt)) != NULL)
+        return lSafeToRunWithAllLanesOff(es->expr);
+
+    DeclStmt *ds;
+    if ((ds = dynamic_cast<DeclStmt *>(stmt)) != NULL) {
+        for (unsigned int i = 0; i < ds->declaration->declarators.size(); ++i)
+            if (!lSafeToRunWithAllLanesOff(ds->declaration->declarators[i]->initExpr))
+                return false;
+        return true;
+    }
+
+    IfStmt *is;
+    if ((is = dynamic_cast<IfStmt *>(stmt)) != NULL)
+        return (lSafeToRunWithAllLanesOff(is->test) &&
+                lSafeToRunWithAllLanesOff(is->trueStmts) &&
+                lSafeToRunWithAllLanesOff(is->falseStmts));
+
+    DoStmt *dos;
+    if ((dos = dynamic_cast<DoStmt *>(stmt)) != NULL)
+        return (lSafeToRunWithAllLanesOff(dos->testExpr) &&
+                lSafeToRunWithAllLanesOff(dos->bodyStmts));
+
+    ForStmt *fs;
+    if ((fs = dynamic_cast<ForStmt *>(stmt)) != NULL)
+        return (lSafeToRunWithAllLanesOff(fs->init) &&
+                lSafeToRunWithAllLanesOff(fs->test) &&
+                lSafeToRunWithAllLanesOff(fs->step) &&
+                lSafeToRunWithAllLanesOff(fs->stmts));
+
+    if (dynamic_cast<BreakStmt *>(stmt) != NULL ||
+        dynamic_cast<ContinueStmt *>(stmt) != NULL)
+        return true;
+
+    ReturnStmt *rs;
+    if ((rs = dynamic_cast<ReturnStmt *>(stmt)) != NULL)
+        return lSafeToRunWithAllLanesOff(rs->val);
+
+    StmtList *sl;
+    if ((sl = dynamic_cast<StmtList *>(stmt)) != NULL) {
+        const std::vector<Stmt *> &sls = sl->GetStatements();
+        for (unsigned int i = 0; i < sls.size(); ++i)
+            if (!lSafeToRunWithAllLanesOff(sls[i]))
+                return false;
+        return true;
+    }
+
+    PrintStmt *ps;
+    if ((ps = dynamic_cast<PrintStmt *>(stmt)) != NULL)
+        return lSafeToRunWithAllLanesOff(ps->values);
+
+    FATAL("Unexpected stmt type in lSafeToRunWithAllLanesOff()");
+    return false;
+}
+
+
 /** Emit code for an if test that checks the mask and the test values and
     tries to be smart about jumping over code that doesn't need to be run.
  */
@@ -631,10 +805,41 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         ctx->SetCurrentBasicBlock(bDone);
     }
     else if (trueStmts != NULL || falseStmts != NULL) {
-        assert(doAnyCheck);
-        llvm::BasicBlock *bDone = ctx->CreateBasicBlock("if_done");
-        emitMaskMixed(ctx, oldMask, ltest, bDone);
-        ctx->SetCurrentBasicBlock(bDone);
+        // If there is nothing that is potentially unsafe to run with all
+        // lanes off in the true and false statements and if the total
+        // complexity of those two is relatively simple, then we'll go
+        // ahead and emit straightline code that runs both sides, updating
+        // the mask accordingly.  This is useful for efficiently compiling
+        // things like:
+        //
+        // if (foo) x = 0;
+        // else     ++x;
+        //
+        // Where the overhead of checking if any of the program instances wants
+        // to run one side or the other is more than the actual computation.
+        // The lSafeToRunWithAllLanesOff() checks to make sure that we don't do this
+        // for potentially dangerous code like:
+        //
+        // if (index < count) array[index] = 0;
+        //
+        // where our use of blend for conditional assignments doesn't check
+        // for the 'all lanes' off case.
+        if (lSafeToRunWithAllLanesOff(trueStmts) &&
+            lSafeToRunWithAllLanesOff(falseStmts) &&
+            (((trueStmts ? trueStmts->EstimateCost() : 0) + 
+              (falseStmts ? falseStmts->EstimateCost() : 0)) < 
+             PREDICATE_SAFE_IF_STATEMENT_COST)) {
+            ctx->StartVaryingIf(oldMask);
+            emitMaskedTrueAndFalse(ctx, oldMask, ltest);
+            assert(ctx->GetCurrentBasicBlock());
+            ctx->EndIf();
+        }
+        else {
+            assert(doAnyCheck);
+            llvm::BasicBlock *bDone = ctx->CreateBasicBlock("if_done");
+            emitMaskMixed(ctx, oldMask, ltest, bDone);
+            ctx->SetCurrentBasicBlock(bDone);
+        }
     }
 }
 

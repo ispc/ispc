@@ -705,7 +705,7 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         int costEstimate = code->EstimateCost();
         bool checkMask = (ft->isTask == true) || 
             ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
-             costEstimate > 16);
+             costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
               funSym->name.c_str(), costEstimate);
         // If the body of the function is non-trivial, then we wrap the

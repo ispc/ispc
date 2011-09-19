@@ -1715,6 +1715,7 @@ int
 AssignExpr::EstimateCost() const {
     int cost = ((lvalue ? lvalue->EstimateCost() : 0) +
                 (rvalue ? rvalue->EstimateCost() : 0));
+    cost += COST_ASSIGN;
     if (op == Assign)
         return cost;
     if (op == DivAssign || op == ModAssign)

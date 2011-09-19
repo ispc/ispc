@@ -77,7 +77,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *expr;
 };
 
@@ -95,7 +94,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
- private:
     Declaration *declaration;
 };
 
@@ -156,7 +154,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *testExpr;
     Stmt *bodyStmts;
     const bool doCoherentCheck;
@@ -178,7 +175,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-private:
     /** 'for' statment initializer; may be NULL, indicating no intitializer */
     Stmt *init;
     /** expression that returns a value indicating whether the loop should
@@ -250,7 +246,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-private:
     Expr *val;
     /** This indicates whether the generated code will check to see if no
         more program instances are currently running after the return, in
@@ -301,7 +296,6 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-private:
     /** Format string for the print() statement. */
     const std::string format;
     /** This holds the arguments passed to the print() statement.  If more
