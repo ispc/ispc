@@ -1,3 +1,29 @@
+=== v1.0.8 === (19 September 2011)
+
+A number of improvements have been made to handling of 'if' statements in
+the language:
+  - A bug was fixed where invalid memory could be incorrectly accessed even
+    if none of the running program instances wanted to execute the
+    corresponding instructions (https://github.com/ispc/ispc/issues/74).
+  - The code generated for 'if' statements is a bit simpler and thus more
+    efficient.
+
+There is now '--pic' command-line argument that causes position-independent
+code to be generated (Linux and OSX only).
+
+A number of additional performance improvements:
+  - Loops are now unrolled by default; the --opt=disable-loop-unroll
+    command-line argument can be used to disable this behavior.
+    (https://github.com/ispc/ispc/issues/78)
+  - A few more cases where gathers/scatters could be determined at compile
+    time to actually access contiguous locations have been added.
+    (https://github.com/ispc/ispc/issues/79)
+
+Finally, warnings are now issued (if possible) when it can be determined
+at compile-time that an out-of-bounds array index is being used.
+(https://github.com/ispc/ispc/issues/98).
+
+
 === v1.0.7 === (3 September 2011)
 
 The various atomic_*_global() standard library functions are generally
