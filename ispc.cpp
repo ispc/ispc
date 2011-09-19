@@ -241,7 +241,9 @@ Target::GetTargetMachine() const {
     std::string featuresString = cpu + std::string(",") + attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, featuresString);
+#ifndef ISPC_IS_WINDOWS
     targetMachine->setRelocationModel(relocModel);
+#endif // !ISPC_IS_WINDOWS
 #endif
     assert(targetMachine != NULL);
 

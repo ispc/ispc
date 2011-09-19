@@ -96,7 +96,9 @@ static void usage(int ret) {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
 #endif
+#ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
+#endif // !ISPC_IS_WINDOWS
     printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
@@ -302,8 +304,10 @@ int main(int Argc, char *Argv[]) {
             g->includeStdlib = false;
         else if (!strcmp(argv[i], "--nocpp"))
             g->runCPP = false;
+#ifndef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--pic"))
             generatePIC = true;
+#endif // !ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             printf("Intel(r) SPMD Program Compiler (ispc) build %s (%s)\n", 
                    BUILD_DATE, BUILD_VERSION);
