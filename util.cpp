@@ -344,6 +344,10 @@ StringEditDistance(const std::string &str1, const std::string &str2, int maxDist
 
 std::vector<std::string> 
 MatchStrings(const std::string &str, const std::vector<std::string> &options) {
+    if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0])))
+        // don't even try...
+        return std::vector<std::string>();
+
     const int maxDelta = 2;
     std::vector<std::string> matches[maxDelta+1];
 

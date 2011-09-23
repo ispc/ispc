@@ -928,9 +928,13 @@ parameter_list
             builtinTokens.push_back(*token);
             ++token;
         }
-        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-        std::string alts = lGetAlternates(alternates);
-        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        if (strlen(yytext) == 0)
+            Error(@1, "Syntax error--premature end of file.");
+        else {
+            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+            std::string alts = lGetAlternates(alternates);
+            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        }
         $$ = NULL;
     }
     ;
@@ -1027,9 +1031,13 @@ statement
             builtinTokens.push_back(*token);
             ++token;
         }
-        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-        std::string alts = lGetAlternates(alternates);
-        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        if (strlen(yytext) == 0)
+            Error(@1, "Syntax error--premature end of file.");
+        else {
+            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+            std::string alts = lGetAlternates(alternates);
+            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        }
         $$ = NULL;
     }
     ;
@@ -1177,9 +1185,13 @@ translation_unit
             builtinTokens.push_back(*token);
             ++token;
         }
-        std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-        std::string alts = lGetAlternates(alternates);
-        Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        if (strlen(yytext) == 0)
+            Error(@1, "Syntax error--premature end of file.");
+        else {
+            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+            std::string alts = lGetAlternates(alternates);
+            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+        }
     }
     ;
 
