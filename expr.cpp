@@ -4114,7 +4114,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // If we have a bool vector of i32 element,s first truncate
+                // If we have a bool vector of i32 elements, first truncate
                 // down to a single bit
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
             // And then do an unisgned int->float cast
@@ -4174,9 +4174,6 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType())
-                PerformanceWarning(pos, "Conversion from unsigned int64 to float is slow. "
-                                   "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
                                  exprVal, targetType, "uint2double");
             break;
