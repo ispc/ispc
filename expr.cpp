@@ -1305,6 +1305,17 @@ BinaryExpr::TypeCheck() {
     if (type0 == NULL || type1 == NULL)
         return NULL;
 
+    if (dynamic_cast<const ReferenceType *>(type0) != NULL) {
+        arg0 = new DereferenceExpr(arg0, arg0->pos);
+        type0 = arg0->GetType();
+        assert(type0 != NULL);
+    }
+    if (dynamic_cast<const ReferenceType *>(type1) != NULL) {
+        arg1 = new DereferenceExpr(arg1, arg1->pos);
+        type1 = arg1->GetType();
+        assert(type1 != NULL);
+    }
+
     switch (op) {
     case Shl:
     case Shr:
