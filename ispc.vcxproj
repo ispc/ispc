@@ -61,9 +61,9 @@
   <ItemGroup>
     <CustomBuild Include="stdlib.ispc">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">clang -E -x c %(Filename).ispc -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py &gt; gen-stdlib.cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py &gt; gen-stdlib.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-stdlib.cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">clang -E -x c %(Filename).ispc -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py &gt; gen-stdlib.cpp</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py &gt; gen-stdlib.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-stdlib.cpp</Outputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-stdlib.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-stdlib.cpp</Message>
