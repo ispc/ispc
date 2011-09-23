@@ -1833,6 +1833,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
         if (!argTypes[i])
             return NULL;
+        assert(argTypes[i] != AtomicType::Void);
 
         LLVM_TYPE_CONST llvm::Type *t = argTypes[i]->LLVMType(ctx);
         if (!t)

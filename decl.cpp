@@ -237,7 +237,7 @@ Declarator::GetType(DeclSpecs *ds) const {
                     sprintf(buf, "__anon_parameter_%d", i);
                     sym = new Symbol(buf, pos);
                     Declarator *declarator = new Declarator(sym, sym->pos);
-                    sym->type = declarator->GetType(ds);
+                    sym->type = declarator->GetType(d->declSpecs);
                     d->declarators.push_back(declarator);
                 }
                 else {
