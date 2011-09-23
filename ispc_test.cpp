@@ -75,7 +75,6 @@ extern "C" {
 #include <llvm/Instructions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
-  #include <llvm/ExecutionEngine/MCJIT.h>
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>
 #else
