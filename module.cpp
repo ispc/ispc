@@ -78,6 +78,7 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
 #include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Frontend/Utils.h>
 #include <clang/Basic/TargetInfo.h>
 #include <llvm/Support/ToolOutputFile.h>
@@ -1388,23 +1389,26 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     std::string error;
 
     inst.createFileManager();
-    inst.createDiagnostics(0, NULL);
-    clang::TargetOptions& options = inst.getTargetOpts();
 
+    llvm::raw_fd_ostream stderrRaw(2, false);
+    clang::TextDiagnosticPrinter *diagPrinter = 
+        new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
+    inst.createDiagnostics(0, NULL, diagPrinter);
+
+    clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty())
         triple.setTriple(llvm::sys::getHostTriple());
-    
     options.Triple = triple.getTriple();
 
-    clang::TargetInfo* target 
-        = clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
     inst.InitializeSourceManager(infilename);
 
-    clang::PreprocessorOptions& opts = inst.getPreprocessorOpts();
+    clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
 
     //Add defs for ISPC and PI
     opts.addMacroDef("ISPC");
@@ -1417,7 +1421,10 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         }
     }    
     inst.createPreprocessor();
+
+    clang::LangOptions langOptions;
+    diagPrinter->BeginSourceFile(langOptions, &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
                                     ostream, inst.getPreprocessorOutputOpts());
+    diagPrinter->EndSourceFile();
 }
-
