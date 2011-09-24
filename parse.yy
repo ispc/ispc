@@ -177,6 +177,7 @@ static const char *lParamListTokens[] = {
 %type <stmt> statement labeled_statement compound_statement for_init_statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
+%type <stmt> sync_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
@@ -436,8 +437,6 @@ assignment_expression
 
 expression
     : assignment_expression
-    | TOKEN_SYNC 
-      { $$ = new SyncExpr(@1); }
     | expression ',' assignment_expression
       { $$ = new BinaryExpr(BinaryExpr::Comma, $1, $3, @2); }
     ;
@@ -1023,6 +1022,7 @@ statement
     | jump_statement
     | declaration_statement
     | print_statement
+    | sync_statement
     | error
     {
         std::vector<std::string> builtinTokens;
@@ -1161,6 +1161,11 @@ jump_statement
       { $$ = new ReturnStmt(NULL, true, @1); }
     | TOKEN_CRETURN expression ';'
       { $$ = new ReturnStmt($2, true, @1); }
+    ;
+
+sync_statement
+    : TOKEN_SYNC 
+      { $$ = new ExprStmt(new SyncExpr(@1), @1); }
     ;
 
 print_statement
