@@ -17,6 +17,7 @@ import random
 import string
 import mutex
 import subprocess
+import platform
 
 parser = OptionParser()
 parser.add_option("-r", "--random-shuffle", dest="random", help="Randomly order tests",
@@ -137,8 +138,10 @@ def run_tasks_from_queue(queue):
                     gcc_arch = '-m32'
                 else:
                     gcc_arch = '-m64'
-                gcc_cmd = "g++ -Wl,-no_pie %s test_static.cpp -DTEST_SIG=%d %s.o -o %s" % \
+                gcc_cmd = "g++ %s test_static.cpp -DTEST_SIG=%d %s.o -o %s" % \
                     (gcc_arch, match, filename, exe_name)
+                if platform.system() == 'Darwin':
+                    gcc_cmd += ' -Wl,-no_pie'
                 if should_fail:
                     gcc_cmd += " -DEXPECT_FAILURE"
                     
