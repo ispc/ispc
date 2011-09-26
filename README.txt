@@ -15,8 +15,8 @@ code.
 
 ispc is an open source compiler under the BSD license; see the file
 LICENSE.txt.  ispc supports Windows, Mac, and Linux, with both x86 and
-x86-64 targets. It currently supports the SSE2 and SSE4 instruction sets,
-though support for AVX should be available soon.
+x86-64 targets.  It currently supports the SSE2, SSE4, and AVX instruction
+sets.
 
 For more information and examples, as well as a wiki and the bug database,
 see the ispc distribution site, http://ispc.github.com.

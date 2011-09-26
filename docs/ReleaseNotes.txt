@@ -1,3 +1,16 @@
+=== v1.0.9 === (26 September 2011)
+
+The binary release of v1.0.9 is the first that supports AVX code
+generation.  Two targets are provided: "avx", which runs with a
+programCount of 8, and "avx-x2" which runs 16 program instances
+simultaneously.  (This binary is also built using the in-progress LLVM 3.0
+development libraries, while previous ones have been built with the
+released 2.9 version of LLVM.)
+
+This release has no other significant changes beyond a number of small
+bugfixes (https://github.com/ispc/ispc/issues/100,
+https://github.com/ispc/ispc/issues/101, https://github.com/ispc/ispc/issues/103.)
+ 
 === v1.0.8 === (19 September 2011)
 
 A number of improvements have been made to handling of 'if' statements in
