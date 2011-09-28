@@ -569,6 +569,13 @@ static inline uniform int packed_store_active(uniform int a[], uniform int start
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// System information
+
+static inline int num_cores() {
+    return __num_cores();
+}
+
+///////////////////////////////////////////////////////////////////////////
 // Atomics and memory barriers
 
 static inline void memory_barrier() {

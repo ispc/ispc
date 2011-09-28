@@ -91,6 +91,7 @@ Contents:
   + `Conversions To and From Half-Precision Floats`_
   + `Atomic Operations and Memory Fences`_
   + `Prefetches`_
+  + `System Information`_
   + `Low-Level Bits`_
 
 * `Interoperability with the Application`_
@@ -2140,6 +2141,20 @@ be high priority to be evicted from the cache).
 
 These functions are available for all of the basic types in the
 language--``int8``, ``int16``, ``int32``, ``float``, and so forth.
+
+
+System Information
+------------------
+
+A routine is available to find the number of CPU cores available in the
+system:
+
+::
+
+    int num_cores()
+
+This value can be useful for adapting the granularity of parallel task
+decomposition depending on the number of processors in the system.
 
 
 Low-Level Bits

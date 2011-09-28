@@ -51,6 +51,12 @@
   */
 
 
+#ifdef _MSC_VER
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif // !_MSC_VER
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -138,4 +144,15 @@ void __do_print(const char *format, const char *types, int width, int mask,
         ++format;
     }
     fflush(stdout);
+}
+
+
+int __num_cores() {
+#ifdef _MSC_VER
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+    return sysInfo.dwNumberOfProcessors;
+#else
+    return sysconf(_SC_NPROCESSORS_ONLN);
+#endif // !_MSC_VER
 }
