@@ -28,7 +28,7 @@
 ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86
 </Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-ispc -O2 %(Filename).ispco %(Filename).obj -h %(Filename)_ispc.h
+ispc -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename).obj</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename).obj</Outputs>
