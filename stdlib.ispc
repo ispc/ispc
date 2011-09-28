@@ -581,6 +581,13 @@ static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
     TA ret = __atomic_##OPB##_##TB##_global(ref, value, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
+}                                                                       \
+static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
+                                               uniform TA value) {      \
+    memory_barrier();                                                   \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, (MASKTYPE)__mask); \
+    memory_barrier();                                                   \
+    return ret;                                                         \
 }
 
 #define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
@@ -589,9 +596,16 @@ static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_##TB##_global(ref, oneval, __mask);      \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ref, oneval, __mask); \
         memory_barrier();                                               \
     }                                                                   \
+    return ret;                                                         \
+}                                                                       \
+static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
+                                               uniform TA value) {      \
+    memory_barrier();                                                   \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, __mask);  \
+    memory_barrier();                                                   \
     return ret;                                                         \
 }
 
@@ -648,6 +662,13 @@ static inline TA atomic_compare_exchange_global(                           \
     TA ret = __atomic_compare_exchange_##TB##_global(ref, oldval, newval, __mask); \
     memory_barrier();                                                      \
     return ret;                                                            \
+} \
+static inline uniform TA atomic_compare_exchange_global(               \
+         uniform reference TA ref, uniform TA oldval, uniform TA newval) {                 \
+    memory_barrier();                                                   \
+    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ref, oldval, newval, __mask); \
+    memory_barrier();                                                   \
+    return ret;                                                         \
 }
 
 ATOMIC_DECL_CMPXCHG(int32, int32)

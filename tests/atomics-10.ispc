@@ -6,8 +6,9 @@ uniform unsigned int32 s = 0;
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     float b = 0;
+    float delta = 1;
     if (programIndex < 2)
-        b = atomic_add_global(s, 1);
+        b = atomic_add_global(s, delta);
     RET[programIndex] = s;
 }
 

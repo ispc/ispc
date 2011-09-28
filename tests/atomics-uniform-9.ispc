@@ -1,15 +1,14 @@
 
 export uniform int width() { return programCount; }
 
-uniform int64 s = 0;
+uniform int64 s = 100.;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
-    float delta = 1;
-    float b = atomic_add_global(s, delta);
-    RET[programIndex] = reduce_add(b);
+    uniform int64 b = atomic_compare_exchange_global(s, 100, -100);
+    RET[programIndex] = s;
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = reduce_add(programIndex);
+    RET[programIndex] = -100.;
 }

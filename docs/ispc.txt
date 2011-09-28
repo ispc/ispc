@@ -2033,12 +2033,12 @@ end.)
 
 One thing to note is that that the value being added to here is a
 ``uniform`` integer, while the increment amount and the return value are
-``varying``.  In other words, the semantics are that each running program
-instance individually issues the atomic operation with its own ``delta``
-value and gets the previous value of ``val`` back in return.  The atomics
-for the running program instances may be issued in arbitrary order; it's
-not guaranteed that they will be issued in ``programIndex`` order, for
-example.
+``varying``.  In other words, the semantics of this call are that each
+running program instance individually issues the atomic operation with its
+own ``delta`` value and gets the previous value of ``val`` back in return.
+The atomics for the running program instances may be issued in arbitrary
+order; it's not guaranteed that they will be issued in ``programIndex``
+order, for example.
 
 Here are the declarations of the ``int32`` variants of these functions.
 There are also ``int64`` equivalents as well as variants that take
@@ -2056,17 +2056,44 @@ function can be used with ``float`` and ``double`` types as well.)
   int32 atomic_xor_global(reference uniform int32 val, int32 value)
   int32 atomic_swap_global(reference uniform int32 val, int32 newval)
 
-There is also an atomic "compare and exchange" function; it atomically
-compares the value in "val" to "compare"--if they match, it assigns
-"newval" to "val".  In either case, the old value of "val" is returned.
-(As with the other atomic operations, there are also ``unsigned`` and
-64-bit variants of this function.  Furthermore, there are ``float`` and
-``double`` variants as well.)
+There are also variants of these functions that take ``uniform`` values for
+the operand and return a ``uniform`` result:
 
 ::
 
+  uniform int32 atomic_add_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_subtract_global(reference uniform int32 val,
+                                       uniform int32 value)
+  uniform int32 atomic_min_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_max_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_and_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_or_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_xor_global(reference uniform int32 val,
+                                  uniform int32 value)
+  uniform int32 atomic_swap_global(reference uniform int32 val,
+                                   uniform int32 newval)
+
+There are also an atomic swap and "compare and exchange" functions.
+Compare and exchange atomically compares the value in "val" to
+"compare"--if they match, it assigns "newval" to "val".  In either case,
+the old value of "val" is returned.  (As with the other atomic operations,
+there are also ``unsigned`` and 64-bit variants of this function.
+Furthermore, there are ``float`` and ``double`` variants as well.)
+
+::
+
+  int32 atomic_swap_global(reference uniform int32 val, int32 new)
+  uniform int32 atomic_swap_global(reference uniform int32 val,
+                                   uniform int32 new)
   int32 atomic_compare_exchange_global(reference uniform int32 val,
                                        int32 compare, int32 newval)
+  uniform int32 atomic_compare_exchange_global(reference uniform int32 val,
+                                  uniform int32 compare, uniform int32 newval)
 
 ``ispc`` also has a standard library routine that inserts a memory barrier
 into the code; it ensures that all memory reads and writes prior to be

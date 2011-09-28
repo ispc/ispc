@@ -622,40 +622,6 @@ forloop(i, 1, eval($1-1), `
 }
 ')
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic
-;; Defines the implementation of a function that handles the mapping from
-;; an ispc atomic function to the underlying LLVM intrinsics.  Specifically,
-;; the function handles loooping over the active lanes, calling the underlying
-;; scalar atomic intrinsic for each one, and assembling the vector result.
-;;
-;; Takes four parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-
-define(`global_atomic', `
-
-declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
-
-define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                                 <$1 x i32> %mask) nounwind alwaysinline {
-  %rptr = alloca <$1 x $3>
-  %rptr32 = bitcast <$1 x $3> * %rptr to $3 *
-
-  per_lane($1, <$1 x i32> %mask, `
-   %v_LANE_ID = extractelement <$1 x $3> %val, i32 LANE
-   %r_LANE_ID = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %v_LANE_ID)
-   %rp_LANE_ID = getelementptr $3 * %rptr32, i32 LANE
-   store $3 %r_LANE_ID, $3 * %rp_LANE_ID')
-
-  %r = load <$1 x $3> * %rptr
-  ret <$1 x $3> %r
-}
-')
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_associative
@@ -680,8 +646,6 @@ define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 ;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
 
 define(`global_atomic_associative', `
-
-declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
 ;; note that the mask is expected to be of type $3, so the caller must ensure
 ;; that for 64-bit types, the mask is cast to a signed int before being passed
@@ -751,7 +715,7 @@ define(`global_atomic_uniform', `
 
 declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
-define internal $3 @__atomic_$2_$4_global($3 * %ptr, $3 %val,
+define internal $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
                                           <$1 x i32> %mask) nounwind alwaysinline {
   %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
   ret $3 %r
@@ -764,9 +728,10 @@ define internal $3 @__atomic_$2_$4_global($3 * %ptr, $3 %val,
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-define(`global_swap', `
+declare i32 @llvm.atomic.swap.i32.p0i32(i32 * %ptr, i32 %val)
+declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)
 
-declare $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
+define(`global_swap', `
 
 define internal <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
@@ -781,6 +746,12 @@ define internal <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
 
   %r = load <$1 x $2> * %rptr
   ret <$1 x $2> %r
+}
+
+define internal $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
+                                                    <$1 x i32> %mask) nounwind alwaysinline {
+ %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
+ ret $2 %r
 }
 ')
 
@@ -810,6 +781,12 @@ define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $
 
   %r = load <$1 x $2> * %rptr
   ret <$1 x $2> %r
+}
+
+define internal $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+                               $2 %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
+  ret $2 %r
 }
 ')
 
@@ -1228,6 +1205,11 @@ global_atomic_associative($1, sub, i32, int32, 0)
 global_atomic_associative($1, and, i32, int32, -1)
 global_atomic_associative($1, or, i32, int32, 0)
 global_atomic_associative($1, xor, i32, int32, 0)
+global_atomic_uniform($1, add, i32, int32)
+global_atomic_uniform($1, sub, i32, int32)
+global_atomic_uniform($1, and, i32, int32)
+global_atomic_uniform($1, or, i32, int32)
+global_atomic_uniform($1, xor, i32, int32)
 global_atomic_uniform($1, min, i32, int32)
 global_atomic_uniform($1, max, i32, int32)
 global_atomic_uniform($1, umin, i32, uint32)
@@ -1238,6 +1220,11 @@ global_atomic_associative($1, sub, i64, int64, 0)
 global_atomic_associative($1, and, i64, int64, -1)
 global_atomic_associative($1, or, i64, int64, 0)
 global_atomic_associative($1, xor, i64, int64, 0)
+global_atomic_uniform($1, add, i64, int64)
+global_atomic_uniform($1, sub, i64, int64)
+global_atomic_uniform($1, and, i64, int64)
+global_atomic_uniform($1, or, i64, int64)
+global_atomic_uniform($1, xor, i64, int64)
 global_atomic_uniform($1, min, i64, int64)
 global_atomic_uniform($1, max, i64, int64)
 global_atomic_uniform($1, umin, i64, uint64)
@@ -1264,6 +1251,24 @@ define internal <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x 
   ret <$1 x double> %ret
 }
 
+define internal float @__atomic_swap_uniform_float_global(float * %ptr, float %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %ival = bitcast float %val to i32
+  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival, <$1 x i32> %mask)
+  %ret = bitcast i32 %iret to float
+  ret float %ret
+}
+
+define internal double @__atomic_swap_uniform_double_global(double * %ptr, double %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %ival = bitcast double %val to i64
+  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival, <$1 x i32> %mask)
+  %ret = bitcast i64 %iret to double
+  ret double %ret
+}
+
 global_atomic_exchange($1, i32, int32)
 global_atomic_exchange($1, i64, int64)
 
@@ -1288,6 +1293,29 @@ define internal <$1 x double> @__atomic_compare_exchange_double_global(double * 
   %ret = bitcast <$1 x i64> %iret to <$1 x double>
   ret <$1 x double> %ret
 }
+
+define internal float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp, float %val,
+                                                   <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast float * %ptr to i32 *
+  %icmp = bitcast float %cmp to i32
+  %ival = bitcast float %val to i32
+  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
+                                                                   i32 %ival, <$1 x i32> %mask)
+  %ret = bitcast i32 %iret to float
+  ret float %ret
+}
+
+define internal double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+                                            double %val, <$1 x i32> %mask) nounwind alwaysinline {
+  %iptr = bitcast double * %ptr to i64 *
+  %icmp = bitcast double %cmp to i64
+  %ival = bitcast double %val to i64
+  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp,
+                                                                   i64 %ival, <$1 x i32> %mask)
+  %ret = bitcast i64 %iret to double
+  ret double %ret
+}
+
 ')
 
 
