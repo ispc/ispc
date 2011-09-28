@@ -2568,7 +2568,7 @@ llvm::RegisterPass<MakeInternalFuncsStaticPass>
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     const char *names[] = {
-        "__do_print", "__fast_masked_vload",
+        "__do_print", "__fast_masked_vload", "__num_cores",
         "__gather_base_offsets_i8", "__gather_base_offsets_i16",
         "__gather_base_offsets_i32", "__gather_base_offsets_i64",
         "__gather_elt_8", "__gather_elt_16", 
