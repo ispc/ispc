@@ -647,16 +647,17 @@ forloop(i, 1, eval($1-1), `
 
 define(`global_atomic_associative', `
 
-;; note that the mask is expected to be of type $3, so the caller must ensure
-;; that for 64-bit types, the mask is cast to a signed int before being passed
-;; to this so that it is properly sign extended...  (The code in stdlib.ispc
-;; does do this..)
-
 define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                                 <$1 x $3> %mask) nounwind alwaysinline {
+                                                 <$1 x i32> %m) nounwind alwaysinline {
   ; first, for any lanes where the mask is off, compute a vector where those lanes
   ; hold the identity value..
 
+  ifelse($3, `i64', `%mask = sext <$1 x i32> %m to <$1 x i64>')
+  ifelse($3, `i32', `
+     %maskmem = alloca <$1 x i32>
+     store <$1 x i32> %m, <$1 x i32> * %maskmem
+     %mask = load <$1 x i32> * %maskmem'
+  )
   ; zero out any lanes that are off
   %valoff = and <$1 x $3> %val, %mask
 

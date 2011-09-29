@@ -1189,7 +1189,7 @@ BinaryExpr::Optimize() {
                     m->symbolTable->LookupFunction("rcp");
                 if (rcpFuns != NULL) {
                     assert(rcpFuns->size() == 2);
-                    Expr *rcpSymExpr = new FunctionSymbolExpr(rcpFuns, pos);
+                    Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
                                                          arg1->pos, false);
@@ -2213,7 +2213,7 @@ FunctionCallExpr::tryResolve(bool (*matchFunc)(Expr *, const Type *)) {
 
 
 void
-FunctionCallExpr::resolveFunctionOverloads() {
+FunctionCallExpr::resolveFunctionOverloads(bool exactMatchOnly) {
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
     if (!fse) 
         // error will be issued later if not calling an actual function
@@ -2227,31 +2227,33 @@ FunctionCallExpr::resolveFunctionOverloads() {
     if (tryResolve(lExactMatch))
         return;
 
-    // Try to find a single match ignoring references
-    if (tryResolve(lMatchIgnoringReferences))
-        return;
+    if (!exactMatchOnly) {
+        // Try to find a single match ignoring references
+        if (tryResolve(lMatchIgnoringReferences))
+            return;
 
-    // TODO: next, try to find an exact match via type promotion--i.e. char
-    // -> int, etc--things that don't lose data
+        // TODO: next, try to find an exact match via type promotion--i.e. char
+        // -> int, etc--things that don't lose data
 
-    // Next try to see if there's a match via just uniform -> varying
-    // promotions.  TODO: look for one with a minimal number of them?
-    if (tryResolve(lMatchIgnoringUniform))
-        return;
+        // Next try to see if there's a match via just uniform -> varying
+        // promotions.  TODO: look for one with a minimal number of them?
+        if (tryResolve(lMatchIgnoringUniform))
+            return;
 
-    // Try to find a match via type conversion, but don't change
-    // unif->varying
-    if (tryResolve(lMatchWithTypeConvSameVariability))
-        return;
+        // Try to find a match via type conversion, but don't change
+        // unif->varying
+        if (tryResolve(lMatchWithTypeConvSameVariability))
+            return;
     
-    // Last chance: try to find a match via arbitrary type conversion.
-    if (tryResolve(lMatchWithTypeConv))
-        return;
+        // Last chance: try to find a match via arbitrary type conversion.
+        if (tryResolve(lMatchWithTypeConv))
+            return;
+    }
 
     // failure :-(
     const char *funName = fse->candidateFunctions->front()->name.c_str();
-    Error(pos, "Unable to find matching overload for call to function \"%s\".",
-          funName);
+    Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
+          funName, exactMatchOnly ? " only considering exact matches" : "");
     fprintf(stderr, "Candidates are:\n");
     lPrintFunctionOverloads(*fse->candidateFunctions);
     lPrintPassedTypes(funName, args->exprs);
@@ -2264,7 +2266,15 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il)
     args = a;
     isLaunch = il;
 
-    resolveFunctionOverloads();
+    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+    // Functions with names that start with "__" should only be various
+    // builtins.  For those, we'll demand an exact match, since we'll
+    // expect whichever function in stdlib.ispc is calling out to one of
+    // those to be matching the argument types exactly; this is to be a bit
+    // extra safe to be sure that the expected builtin is in fact being
+    // called.
+    bool exactMatchOnly = (fse != NULL) && (fse->name.substr(0,2) == "__");
+    resolveFunctionOverloads(exactMatchOnly);
 }
 
 
@@ -5201,9 +5211,11 @@ SymbolExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionSymbolExpr
 
-FunctionSymbolExpr::FunctionSymbolExpr(std::vector<Symbol *> *candidates,
+FunctionSymbolExpr::FunctionSymbolExpr(const char *n,
+                                       std::vector<Symbol *> *candidates,
                                        SourcePos p) 
   : Expr(p) {
+    name = n;
     matchingFunc = NULL;
     candidateFunctions = candidates;
 }

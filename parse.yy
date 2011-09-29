@@ -222,7 +222,7 @@ primary_expression
         else {
             std::vector<Symbol *> *funs = m->symbolTable->LookupFunction(name);
             if (funs)
-                $$ = new FunctionSymbolExpr(funs, @1);
+                $$ = new FunctionSymbolExpr(name, funs, @1);
         }
         if ($$ == NULL) {
             std::vector<std::string> alternates = 

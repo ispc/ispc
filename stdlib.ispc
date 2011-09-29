@@ -369,7 +369,7 @@ static inline uniform float reduce_min(float v) {
 static inline uniform float reduce_max(float v) {
     // For the lanes where the mask is off, replace the given value with
     // negative infinity, so that it doesn't affect the result.
-    const uniform int iflt_neg_max = 0xff800000; // -infinity
+    const int iflt_neg_max = 0xff800000; // -infinity
     // Must use __floatbits_varying_int32, not floatbits(), since with the
     // latter the current mask enters into the returned result...
     return __reduce_max_float(__mask ? v : __floatbits_varying_int32(iflt_neg_max));
@@ -427,7 +427,7 @@ static inline uniform double reduce_min(double v) {
 }
 
 static inline uniform double reduce_max(double v) {
-    const uniform int64 iflt_neg_max = 0xfff0000000000000; // -infinity
+    const int64 iflt_neg_max = 0xfff0000000000000; // -infinity
     // Must use __doublebits_varying_int64, not doublebits(), since with the
     // latter the current mask enters into the returned result...
     return __reduce_max_double(__mask ? v : __doublebits_varying_int64(iflt_neg_max));
@@ -471,21 +471,21 @@ static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
     return __reduce_max_uint64(__mask ? v : 0);
 }
 
-#define REDUCE_EQUAL(TYPE, FUNCTYPE)                               \
+#define REDUCE_EQUAL(TYPE, FUNCTYPE, MASKTYPE)                     \
 static inline uniform bool reduce_equal(TYPE v) {                  \
     uniform TYPE unusedValue;                                      \
-    return __reduce_equal_##FUNCTYPE(v, unusedValue, (int32)__mask); \
+    return __reduce_equal_##FUNCTYPE(v, unusedValue, (MASKTYPE)__mask); \
 }                                                                  \
 static inline uniform bool reduce_equal(TYPE v, reference uniform TYPE value) { \
-    return __reduce_equal_##FUNCTYPE(v, value, (int32)__mask);       \
+    return __reduce_equal_##FUNCTYPE(v, value, (MASKTYPE)__mask);       \
 }
 
-REDUCE_EQUAL(int32, int32)
-REDUCE_EQUAL(unsigned int32, int32)
-REDUCE_EQUAL(float, float)
-REDUCE_EQUAL(int64, int64)
-REDUCE_EQUAL(unsigned int64, int64)
-REDUCE_EQUAL(double, double)
+REDUCE_EQUAL(int32, int32, int32)
+REDUCE_EQUAL(unsigned int32, int32, unsigned int32)
+REDUCE_EQUAL(float, float, int32)
+REDUCE_EQUAL(int64, int64, int32)
+REDUCE_EQUAL(unsigned int64, int64, unsigned int32)
+REDUCE_EQUAL(double, double, int32)
 
 static int32 exclusive_scan_add(int32 v) {
     return __exclusive_scan_add_i32(v, (int32)__mask);
@@ -549,23 +549,25 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 static inline uniform int 
 packed_load_active(uniform unsigned int a[], uniform int start,
                    reference unsigned int vals) {
-    return __packed_load_active(a, start, vals, __mask);
+    return __packed_load_active(a, (unsigned int)start, vals,
+                                (unsigned int32)__mask);
 }
 
 static inline uniform int
 packed_store_active(uniform unsigned int a[], uniform int start,
                     unsigned int vals) {
-    return __packed_store_active(a, start, vals, __mask);
+    return __packed_store_active(a, (unsigned int)start, vals,
+                                 (unsigned int32)__mask);
 }
 
 static inline uniform int packed_load_active(uniform int a[], uniform int start,
                                              reference int vals) {
-    return __packed_load_active(a, start, vals, __mask);
+    return __packed_load_active(a, start, vals, (int32)__mask);
 }
 
 static inline uniform int packed_store_active(uniform int a[], uniform int start,
                                               int vals) {
-    return __packed_store_active(a, start, vals, __mask);
+    return __packed_store_active(a, start, vals, (int32)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -597,13 +599,13 @@ static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
     return ret;                                                         \
 }
 
-#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB, MASKTYPE)                \
 static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_uniform_##TB##_global(ref, oneval, __mask); \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ref, oneval, (MASKTYPE)__mask); \
         memory_barrier();                                               \
     }                                                                   \
     return ret;                                                         \
@@ -611,15 +613,15 @@ static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, __mask);  \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
 
 DEFINE_ATOMIC_OP(int32,int32,add,add,int32)
 DEFINE_ATOMIC_OP(int32,int32,subtract,sub,int32)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min,int32)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max,int32)
 DEFINE_ATOMIC_OP(int32,int32,and,and,int32)
 DEFINE_ATOMIC_OP(int32,int32,or,or,int32)
 DEFINE_ATOMIC_OP(int32,int32,xor,xor,int32)
@@ -627,21 +629,21 @@ DEFINE_ATOMIC_OP(int32,int32,swap,swap,int32)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,int32)
-DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,int32)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
-DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,int32)
-DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,int32)
-DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,int32)
-DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap,int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,unsigned int32)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin,unsigned int32)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap,unsigned int32)
 
 DEFINE_ATOMIC_OP(float,float,swap,swap,int32)
 
 DEFINE_ATOMIC_OP(int64,int64,add,add,int32)
 DEFINE_ATOMIC_OP(int64,int64,subtract,sub,int32)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min,int32)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max,int32)
 DEFINE_ATOMIC_OP(int64,int64,and,and,int32)
 DEFINE_ATOMIC_OP(int64,int64,or,or,int32)
 DEFINE_ATOMIC_OP(int64,int64,xor,xor,int32)
@@ -649,41 +651,41 @@ DEFINE_ATOMIC_OP(int64,int64,swap,swap,int32)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,int32)
-DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,int32)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
-DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,int32)
-DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,int32)
-DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,int32)
-DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap,int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,unsigned int32)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin,unsigned int32)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,unsigned int32)
+DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap,unsigned int32)
 
 DEFINE_ATOMIC_OP(double,double,swap,swap,int32)
 
 #undef DEFINE_ATOMIC_OP
 
-#define ATOMIC_DECL_CMPXCHG(TA, TB)                                        \
+#define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline TA atomic_compare_exchange_global(                           \
          uniform reference TA ref, TA oldval, TA newval) {                 \
     memory_barrier();                                                      \
-    TA ret = __atomic_compare_exchange_##TB##_global(ref, oldval, newval, __mask); \
+    TA ret = __atomic_compare_exchange_##TB##_global(ref, oldval, newval, (MASKTYPE)__mask); \
     memory_barrier();                                                      \
     return ret;                                                            \
 } \
 static inline uniform TA atomic_compare_exchange_global(               \
          uniform reference TA ref, uniform TA oldval, uniform TA newval) {                 \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ref, oldval, newval, __mask); \
+    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ref, oldval, newval, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
 
-ATOMIC_DECL_CMPXCHG(int32, int32)
-ATOMIC_DECL_CMPXCHG(unsigned int32, int32)
-ATOMIC_DECL_CMPXCHG(float, float)
-ATOMIC_DECL_CMPXCHG(int64, int64)
-ATOMIC_DECL_CMPXCHG(unsigned int64, int64)
-ATOMIC_DECL_CMPXCHG(double, double)
+ATOMIC_DECL_CMPXCHG(int32, int32, int32)
+ATOMIC_DECL_CMPXCHG(unsigned int32, int32, unsigned int32)
+ATOMIC_DECL_CMPXCHG(float, float, int32)
+ATOMIC_DECL_CMPXCHG(int64, int64, int32)
+ATOMIC_DECL_CMPXCHG(unsigned int64, int64, unsigned int32)
+ATOMIC_DECL_CMPXCHG(double, double, int32)
 
 #undef ATOMIC_DECL_CMPXCHG
 

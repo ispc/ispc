@@ -265,7 +265,7 @@ public:
     bool isLaunch;
 
 private:
-    void resolveFunctionOverloads();
+    void resolveFunctionOverloads(bool exactMatchOnly);
     bool tryResolve(bool (*matchFunc)(Expr *, const Type *));
 };
 
@@ -567,7 +567,7 @@ private:
  */    
 class FunctionSymbolExpr : public Expr {
 public:
-    FunctionSymbolExpr(std::vector<Symbol *> *candidateFunctions, 
+    FunctionSymbolExpr(const char *name, std::vector<Symbol *> *candidateFunctions,
                        SourcePos pos);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
@@ -580,6 +580,9 @@ public:
 
 private:
     friend class FunctionCallExpr;
+
+    /** Name of the function that is being called. */
+    std::string name;
 
     /** All of the functions with the name given in the function call;
         there may be more then one, in which case we need to resolve which
