@@ -146,7 +146,7 @@ lInitTaskInfo() {
 static inline TaskInfo *
 lGetTaskInfo() {
 #ifdef ISPC_IS_WINDOWS
-    int myCoord = InterlockedAdd(&nextTaskInfoCoordinate, 1)-1;
+    int myCoord = InterlockedExchangeAdd(&nextTaskInfoCoordinate, 1);
 #else
     int myCoord = lAtomicAdd32(&nextTaskInfoCoordinate, 1);
 #endif
