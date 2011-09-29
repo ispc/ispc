@@ -652,8 +652,11 @@ define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
   ; first, for any lanes where the mask is off, compute a vector where those lanes
   ; hold the identity value..
 
+  ; for the bit tricks below, we need the mask to be sign extended to be
+  ; the size of the element type.
   ifelse($3, `i64', `%mask = sext <$1 x i32> %m to <$1 x i64>')
   ifelse($3, `i32', `
+     ; silly workaround to do %mask = %m, which is not possible directly..
      %maskmem = alloca <$1 x i32>
      store <$1 x i32> %m, <$1 x i32> * %maskmem
      %mask = load <$1 x i32> * %maskmem'
