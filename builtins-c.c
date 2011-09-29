@@ -51,9 +51,7 @@
   */
 
 
-#ifdef _MSC_VER
-#include <windows.h>
-#else
+#ifndef _MSC_VER
 #include <unistd.h>
 #endif // !_MSC_VER
 
@@ -149,7 +147,21 @@ void __do_print(const char *format, const char *types, int width, int mask,
 
 int __num_cores() {
 #ifdef _MSC_VER
-    SYSTEM_INFO sysInfo;
+	// This is quite a hack.  Including all of windows.h to get this definition
+	// pulls in a bunch of stuff that leads to undefined symbols at link time.
+	// So we don't #include <windows.h> but instead have the equivalent declarations
+	// here.  Presumably this struct declaration won't be changing in the future
+	// anyway...
+  	struct SYSTEM_INFO {
+        int pad0[2];
+        void *pad1[2];
+        int *pad2;
+        int dwNumberOfProcessors;
+        int pad3[3];
+	};
+
+    struct SYSTEM_INFO sysInfo;
+	extern void __stdcall GetSystemInfo(struct SYSTEM_INFO *);
     GetSystemInfo(&sysInfo);
     return sysInfo.dwNumberOfProcessors;
 #else
