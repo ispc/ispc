@@ -1192,7 +1192,7 @@ BinaryExpr::Optimize() {
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
-                                                         arg1->pos, false);
+                                                         arg1->pos);
                     rcpCall = rcpCall->TypeCheck();
                     if (rcpCall == NULL)
                         return NULL;
@@ -2260,11 +2260,12 @@ FunctionCallExpr::resolveFunctionOverloads(bool exactMatchOnly) {
 }
 
 
-FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, bool il) 
-    : Expr(p) {
+FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, 
+                                   bool il, Expr *lce) 
+    : Expr(p), isLaunch(il) {
     func = f;
     args = a;
-    isLaunch = il;
+    launchCountExpr = lce;
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
     // Functions with names that start with "__" should only be various
@@ -2400,8 +2401,12 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
-    if (ft->isTask)
-        ctx->LaunchInst(callee, argVals);
+    if (ft->isTask) {
+        assert(launchCountExpr != NULL);
+        llvm::Value *launchCount = launchCountExpr->GetValue(ctx);
+        if (launchCount != NULL)
+            ctx->LaunchInst(callee, argVals, launchCount);
+    }
     else {
         // Most of the time, the mask is passed as the last argument.  this
         // isn't the case for things like intrinsics, builtins, and extern
@@ -2477,10 +2482,21 @@ FunctionCallExpr::TypeCheck() {
                     if (!isLaunch)
                         Error(pos, "\"launch\" expression needed to call function "
                               "with \"task\" qualifier.");
+                    if (!launchCountExpr)
+                        return NULL;
+
+                    launchCountExpr = 
+                        launchCountExpr->TypeConv(AtomicType::UniformInt32,
+                                                  "task launch count");
+                    if (!launchCountExpr)
+                        return NULL;
                 }
-                else if (isLaunch)
-                    Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                          "qualified function.");
+                else {
+                    if (isLaunch)
+                        Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                              "qualified function.");
+                    assert(launchCountExpr == NULL);
+                }
             }
             else
                 Error(pos, "Valid function name must be used for function call.");
@@ -5281,14 +5297,8 @@ SyncExpr::GetType() const {
 llvm::Value *
 SyncExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    std::vector<llvm::Value *> noArg;
-    llvm::Function *fsync = m->module->getFunction("ISPCSync");
-    if (fsync == NULL) {
-        FATAL("Couldn't find ISPCSync declaration?!");
-        return NULL;
-    }
-
-    return ctx->CallInst(fsync, noArg, "");
+    ctx->SyncInst();
+    return NULL;
 }
 
 

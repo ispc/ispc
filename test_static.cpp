@@ -58,23 +58,26 @@ extern "C" {
     extern void f_di(float *result, double *a, int *b);
     extern void result(float *val);
     
-    void ISPCLaunch(void *f, void *d);
-    void ISPCSync();
-    void *ISPCMalloc(int64_t size, int32_t alignment);
-    void ISPCFree(void *ptr);
+    void ISPCLaunch(void **handlePtr, void *f, void *d, int);
+    void ISPCSync(void *handle);
+    void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
 }
 
-void ISPCLaunch(void *f, void *d) {
-    typedef void (*TaskFuncType)(void *, int, int);
+void ISPCLaunch(void **handle, void *f, void *d, int count) {
+    *handle = (void *)0xdeadbeef;
+    typedef void (*TaskFuncType)(void *, int, int, int, int);
     TaskFuncType func = (TaskFuncType)f;
-    func(d, 0, 1);
+    for (int i = 0; i < count; ++i)
+        func(d, 0, 1, i, count);
 }
 
-void ISPCSync() {
+void ISPCSync(void *) {
 }
 
 
-void *ISPCMalloc(int64_t size, int32_t alignment) {
+void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
+    *handle = (void *)0xdeadbeef;
+    // and now, we leak...
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -91,18 +94,6 @@ void *ISPCMalloc(int64_t size, int32_t alignment) {
 #endif
 }
 
-
-void ISPCFree(void *ptr) {
-#ifdef ISPC_IS_WINDOWS
-    _aligned_free(ptr);
-#endif
-#ifdef ISPC_IS_LINUX
-    free(ptr);
-#endif
-#ifdef ISPC_IS_APPLE
-    free(((void**)ptr)[-1]);
-#endif
-}
 
 
 int main(int argc, char *argv[]) {

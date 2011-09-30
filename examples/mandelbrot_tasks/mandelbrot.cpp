@@ -101,7 +101,7 @@ ensureTargetISAIsSupported() {
 }
 
 static void usage() {
-    fprintf(stderr, "usage: mandelbrot [--scale=<factor]\n");
+    fprintf(stderr, "usage: mandelbrot [--scale=<factor>]\n");
     exit(1);
 }
 
@@ -143,6 +143,9 @@ int main(int argc, char *argv[]) {
     //
     double minISPC = 1e30;
     for (int i = 0; i < 3; ++i) {
+        // Clear out the buffer
+        for (unsigned int i = 0; i < width * height; ++i)
+            buf[i] = 0;
         reset_and_start_timer();
         mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();
@@ -152,9 +155,6 @@ int main(int argc, char *argv[]) {
     printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
     writePPM(buf, width, height, "mandelbrot-ispc.ppm");
 
-    // Clear out the buffer
-    for (unsigned int i = 0; i < width * height; ++i)
-        buf[i] = 0;
 
     // 
     // And run the serial implementation 3 times, again reporting the
@@ -162,6 +162,9 @@ int main(int argc, char *argv[]) {
     //
     double minSerial = 1e30;
     for (int i = 0; i < 3; ++i) {
+        // Clear out the buffer
+        for (unsigned int i = 0; i < width * height; ++i)
+            buf[i] = 0;
         reset_and_start_timer();
         mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();

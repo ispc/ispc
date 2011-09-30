@@ -627,6 +627,8 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Value *structParamPtr = argIter++;
         llvm::Value *threadIndex = argIter++;
         llvm::Value *threadCount = argIter++;
+        llvm::Value *taskIndex = argIter++;
+        llvm::Value *taskCount = argIter++;
 
         // Copy the function parameter values from the structure into local
         // storage
@@ -654,18 +656,17 @@ lEmitFunctionCode(FunctionEmitContext *ctx, llvm::Function *function,
         threadCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "threadCount");
         ctx->StoreInst(threadCount, threadCountSym->storagePtr);
 
-#ifdef ISPC_IS_WINDOWS
-        // On Windows, we dynamically-allocate space for the task arguments
-        // (see FunctionEmitContext::LaunchInst().)  Here is where we emit
-        // the code to free that memory, now that we've copied the
-        // parameter values out of the structure.
-        ctx->EmitFree(structParamPtr);
-#else
-        // We also do this for AVX... (See discussion in
-        // FunctionEmitContext::LaunchInst().)
-        if (g->target.isa == Target::AVX)
-            ctx->EmitFree(structParamPtr);
-#endif // ISPC_IS_WINDOWS
+        // Copy taskIndex and taskCount into stack-allocated storage so
+        // that their symbols point to something reasonable.
+        Symbol *taskIndexSym = m->symbolTable->LookupVariable("taskIndex");
+        assert(taskIndexSym);
+        taskIndexSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex");
+        ctx->StoreInst(taskIndex, taskIndexSym->storagePtr);
+
+        Symbol *taskCountSym = m->symbolTable->LookupVariable("taskCount");
+        assert(taskCountSym);
+        taskCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
+        ctx->StoreInst(taskCount, taskCountSym->storagePtr);
     }
     else {
         // Regular, non-task function

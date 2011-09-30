@@ -283,8 +283,7 @@ export void raytrace_ispc(uniform int width, uniform int height,
 }
 
 
-task void raytrace_tile_task(uniform int x0, uniform int x1,
-                             uniform int y0, uniform int y1, 
+task void raytrace_tile_task(uniform int y0, uniform int y1, 
                              uniform int width, uniform int height,
                              uniform int baseWidth, uniform int baseHeight,
                              const uniform float raster2camera[4][4], 
@@ -292,6 +291,12 @@ task void raytrace_tile_task(uniform int x0, uniform int x1,
                              uniform float image[], uniform int id[],
                              const LinearBVHNode nodes[],
                              const Triangle triangles[]) {
+    uniform int dx = 16; // must match dx below
+    uniform int xTasks = (width + (dx-1)) / dx;
+    uniform int x0 = (taskIndex % xTasks) * dx;
+    uniform int x1 = x0 + dx;
+    x1 = min(x1, width);
+                             
     raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
@@ -306,13 +311,11 @@ export void raytrace_ispc_tasks(uniform int width, uniform int height,
                                 const LinearBVHNode nodes[],
                                 const Triangle triangles[]) {
     uniform int dx = 16, dy = 16;
+    uniform int nTasks = (width + (dx-1)) / dx;
     for (uniform int y = 0; y < height; y += dy) {
         uniform int y1 = min(y + dy, height);
-        for (uniform int x = 0; x < width; x += dx) {
-            uniform int x1 = min(x + dx, width);
-            launch < raytrace_tile_task(x, x1, y, y1, width, height, baseWidth,
-                                        baseHeight, raster2camera, camera2world, 
-                                        image, id, nodes, triangles) >;
-         }
+        launch[nTasks] < raytrace_tile_task(y, y1, width, height, baseWidth,
+                                            baseHeight, raster2camera, camera2world, 
+                                            image, id, nodes, triangles) >;
     }
 }

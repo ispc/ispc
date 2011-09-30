@@ -323,16 +323,13 @@ export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
 }
 
 
-static void task ao_task(uniform int y0, uniform int y1, uniform int width,
-                         uniform int height, uniform int nsubsamples, 
-                         uniform float image[]) {
-    ao_scanlines(y0, y1, width, height, nsubsamples, image);
+static void task ao_task(uniform int width, uniform int height, 
+                         uniform int nsubsamples, uniform float image[]) {
+    ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
 }
 
 
 export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
                           uniform float image[]) {
-    uniform int dy = 1;
-    for (uniform int y = 0; y < h; y += dy)
-        launch < ao_task(y, y+dy, w, h, nsubsamples, image) >;
+    launch[h] < ao_task(w, h, nsubsamples, image) >;
 }

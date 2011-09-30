@@ -343,11 +343,20 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
 
 
 task void
-volume_task(uniform int x0, uniform int y0, uniform int x1,
-            uniform int y1, uniform float density[], uniform int nVoxels[3], 
+volume_task(uniform float density[], uniform int nVoxels[3], 
             const uniform float raster2camera[4][4],
             const uniform float camera2world[4][4], 
             uniform int width, uniform int height, uniform float image[]) {
+    uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
+    uniform int xbuckets = (width + (dx-1)) / dx;
+    uniform int ybuckets = (height + (dy-1)) / dy;
+
+    uniform int x0 = (taskIndex % xbuckets) * dx;
+    uniform int y0 = (taskIndex / ybuckets) * dy;
+    uniform int x1 = x0 + dx, y1 = y0 + dy;
+    x1 = min(x1, width);
+    y1 = min(y1, height);
+
     volume_tile(x0, y0, x1, y1, density, nVoxels, raster2camera,
                  camera2world, width, height, image);
 }
@@ -370,9 +379,7 @@ volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
                   uniform int width, uniform int height, uniform float image[]) {
     // Launch tasks to work on (dx,dy)-sized tiles of the image
     uniform int dx = 8, dy = 8;
-    for (uniform int y = 0; y < height; y += dy)
-        for (uniform int x = 0; x < width; x += dx)
-            launch < volume_task(x, y, x+dx, y+dy, density, nVoxels, 
-                                 raster2camera, camera2world, width, height, 
-                                 image) >;
+    uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
+    launch[nTasks] < volume_task(density, nVoxels, raster2camera, camera2world, 
+                                 width, height, image) >;
 }

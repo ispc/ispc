@@ -1856,6 +1856,8 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
         callTypes.push_back(llvm::PointerType::getUnqual(st));
         callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
         callTypes.push_back(LLVMTypes::Int32Type); // threadCount
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount
     }
     else
         // Otherwise we already have the types of the arguments 

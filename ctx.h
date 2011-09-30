@@ -210,15 +210,8 @@ public:
         i32. */
     llvm::Value *I1VecToBoolVec(llvm::Value *b);
 
-    /** Emit code to call the user-supplied ISPCMalloc function to
-        allocate space for an object of thee given type.  Returns the
-        pointer value returned by the ISPCMalloc call. */
-    llvm::Value *EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align = 0);
-
-    /** Emit code to call the user-supplied ISPCFree function, passing it
-        the given pointer to storage previously allocated by an
-        EmitMalloc() call. */
-    void EmitFree(llvm::Value *ptr);
+    /** Returns the size of the given type. */
+    llvm::Value *SizeOf(LLVM_TYPE_CONST llvm::Type *ty);
 
     /** If the user has asked to compile the program with instrumentation,
         this inserts a callback to the user-supplied instrumentation
@@ -399,7 +392,10 @@ public:
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
     llvm::Instruction *LaunchInst(llvm::Function *callee, 
-                                  std::vector<llvm::Value *> &argVals);
+                                  std::vector<llvm::Value *> &argVals,
+                                  llvm::Value *launchCount);
+
+    void SyncInst();
 
     llvm::Instruction *ReturnInst();
     /** @} */
@@ -488,6 +484,11 @@ private:
 
     /** True if a 'launch' statement has been encountered in the function. */
     bool launchedTasks;
+
+    /** This is a pointer to a void * that is passed to the ISPCLaunch(),
+        ISPCAlloc(), and ISPCSync() routines as a handle to the group ot
+        tasks launched from the current function. */
+    llvm::Value *launchGroupHandlePtr;
 
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Instruction *inst, SourcePos pos);

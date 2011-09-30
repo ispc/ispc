@@ -250,7 +250,8 @@ public:
  */
 class FunctionCallExpr : public Expr {
 public:
-    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, bool isLaunch);
+    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, 
+                     bool isLaunch = false, Expr *launchCountExpr = NULL);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
@@ -263,6 +264,7 @@ public:
     Expr *func;
     ExprList *args;
     bool isLaunch;
+    Expr *launchCountExpr;
 
 private:
     void resolveFunctionOverloads(bool exactMatchOnly);

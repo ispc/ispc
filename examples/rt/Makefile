@@ -1,14 +1,8 @@
 
 ARCH = $(shell uname)
 
-TASK_CXX=../tasks_pthreads.cpp
+TASK_CXX=../tasksys.cpp
 TASK_LIB=-lpthread
-
-ifeq ($(ARCH), Darwin)
-  TASK_CXX=../tasks_gcd.cpp
-  TASK_LIB=
-endif
-
 TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
 
 CXX=g++

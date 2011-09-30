@@ -53,11 +53,14 @@ mandel(float c_re, float c_im, int count) {
    [ystart,yend).
  */
 task void
-mandelbrot_scanlines(uniform int ystart, uniform int yend,
+mandelbrot_scanlines(uniform int ybase, uniform int span,
                      uniform float x0, uniform float dx, 
                      uniform float y0, uniform float dy,
                      uniform int width, uniform int maxIterations,
                      reference uniform int output[]) {
+    uniform int ystart = ybase + taskIndex * span;
+    uniform int yend = ystart + span;
+
     for (uniform int j = ystart; j < yend; ++j) {
         for (uniform int i = 0; i < width; i += programCount) {
             float x = x0 + (programIndex + i) * dx;
@@ -70,6 +73,20 @@ mandelbrot_scanlines(uniform int ystart, uniform int yend,
 }
                                
 
+task void
+mandelbrot_chunk(uniform float x0, uniform float dx,
+                 uniform float y0, uniform float dy,
+                 uniform int width, uniform int height,
+                 uniform int maxIterations, reference uniform int output[]) {
+    uniform int ystart = taskIndex * (height/taskCount);
+    uniform int yend = (taskIndex+1) * (height/taskCount);
+    uniform int span = 1;
+
+    launch[(yend-ystart)/span] < mandelbrot_scanlines(ystart, span, x0, dx, y0, dy,
+                                                      width, maxIterations, output) >;
+}
+
+
 export void
 mandelbrot_ispc(uniform float x0, uniform float y0, 
                 uniform float x1, uniform float y1,
@@ -78,9 +95,6 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
 
-    /* Launch task to compute results for spans of 'span' scanlines. */
-    uniform int span = 2;
-    for (uniform int j = 0; j < height; j += span)
-        launch < mandelbrot_scanlines(j, j+span, x0, dx, y0, dy, width,
-                                      maxIterations, output) >;
+    launch[32] < mandelbrot_chunk(x0, dx, y0, dy, width, height,
+                                  maxIterations, output) >;
 }

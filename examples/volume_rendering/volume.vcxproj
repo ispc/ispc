@@ -143,7 +143,7 @@
   <ItemGroup>
     <ClCompile Include="volume.cpp" />
     <ClCompile Include="volume_serial.cpp" />
-    <ClCompile Include="../tasks_concrt.cpp" />
+    <ClCompile Include="../tasksys.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="volume.ispc">

@@ -144,6 +144,11 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
     returnedLanesPtr = AllocaInst(LLVMTypes::MaskType, "returned_lanes_memory");
     StoreInst(LLVMMaskAllOff, returnedLanesPtr);
 
+    launchedTasks = false;
+    launchGroupHandlePtr = AllocaInst(LLVMTypes::VoidPointerType, "launch_group_handle");
+    StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), 
+              launchGroupHandlePtr);
+
     if (!returnType || returnType == AtomicType::Void)
         returnValuePtr = NULL;
     else {
@@ -173,8 +178,6 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
         /* And start a scope representing the initial function scope */
         StartScope();
     }
-
-    launchedTasks = false;
 
     // connect the funciton's mask memory to the __mask symbol
     Symbol *maskSymbol = m->symbolTable->LookupVariable("__mask");
@@ -759,7 +762,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 
 llvm::Value *
-FunctionEmitContext::EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align) {
+FunctionEmitContext::SizeOf(LLVM_TYPE_CONST llvm::Type *ty) {
     // Emit code to compute the size of the given type using a GEP with a
     // NULL base pointer, indexing one element of the given type, and
     // casting the resulting 'pointer' to an int giving its size.
@@ -776,24 +779,7 @@ FunctionEmitContext::EmitMalloc(LLVM_TYPE_CONST llvm::Type *ty, int align) {
 #endif
     AddDebugPos(poffset);
     llvm::Value *sizeOf = PtrToIntInst(poffset, LLVMTypes::Int64Type, "offset_int");
-
-    // And given the size, call the malloc function
-    llvm::Function *fmalloc = m->module->getFunction("ISPCMalloc");
-    assert(fmalloc != NULL);
-    llvm::Value *mem = CallInst(fmalloc, sizeOf, LLVMInt32(align), 
-                                "raw_argmem");
-    // Cast the void * back to the result pointer type
-    return BitCastInst(mem, ptrType, "mem_bitcast");
-}
-
-
-void
-FunctionEmitContext::EmitFree(llvm::Value *ptr) {
-    llvm::Value *freeArg = BitCastInst(ptr, LLVMTypes::VoidPointerType,
-                                       "argmemfree");
-    llvm::Function *ffree = m->module->getFunction("ISPCFree");
-    assert(ffree != NULL);
-    CallInst(ffree, freeArg);
+    return sizeOf;
 }
 
 
@@ -1912,15 +1898,9 @@ FunctionEmitContext::CallInst(llvm::Function *func, llvm::Value *arg0,
 
 llvm::Instruction *
 FunctionEmitContext::ReturnInst() {
-    if (launchedTasks) {
-        // Automatically add a sync call at the end of any function that
-        // launched tasks
-        SourcePos noPos;
-        noPos.name = "__auto_sync";
-        ExprStmt *es = new ExprStmt(new SyncExpr(noPos), noPos);
-        es->EmitCode(this); 
-        delete es;
-    }
+    if (launchedTasks)
+        // Add a sync call at the end of any function that launched tasks
+        SyncInst();
 
     llvm::Instruction *rinst = NULL;
     if (returnValuePtr != NULL) {
@@ -1943,7 +1923,8 @@ FunctionEmitContext::ReturnInst() {
 
 llvm::Instruction *
 FunctionEmitContext::LaunchInst(llvm::Function *callee, 
-                                std::vector<llvm::Value *> &argVals) {
+                                std::vector<llvm::Value *> &argVals,
+                                llvm::Value *launchCount) {
     if (callee == NULL) {
         assert(m->errorCount > 0);
         return NULL;
@@ -1960,29 +1941,15 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
         static_cast<LLVM_TYPE_CONST llvm::StructType *>(pt->getElementType());
     assert(argStructType->getNumElements() == argVals.size() + 1);
 
+    llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+    assert(falloc != NULL);
     int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
-    llvm::Value *argmem;
-#ifdef ISPC_IS_WINDOWS
-    // Use malloc() to allocate storage on Windows, since the stack is
-    // generally not big enough there to do enough allocations for lots of
-    // tasks and then things crash horribly...
-    argmem = EmitMalloc(argStructType, align);
-#else
-    // Otherwise, use alloca for space for the task args, ** unless we're 
-    // compiling to AVX, in which case we use malloc after all **. (See
-    // http://llvm.org/bugs/show_bug.cgi?id=10841 for details.  There are
-    // limitations in LLVM with respect to dynamic allocas of this sort
-    // when the stack also has to be 32-byte aligned...).
-    if (g->target.isa == Target::AVX)
-        argmem = EmitMalloc(argStructType, align);
-    else
-        // KEY DETAIL: pass false to the call of
-        // FunctionEmitContext::AllocaInst so that the alloca doesn't
-        // happen just once at the top of the function, but happens each
-        // time the enclosing basic block executes.
-        argmem = AllocaInst(argStructType, "argmem", align, false);
-#endif // ISPC_IS_WINDOWS
-    llvm::Value *voidmem = BitCastInst(argmem, LLVMTypes::VoidPointerType);
+    std::vector<llvm::Value *> allocArgs;
+    allocArgs.push_back(launchGroupHandlePtr);
+    allocArgs.push_back(SizeOf(argStructType));
+    allocArgs.push_back(LLVMInt32(align));
+    llvm::Value *voidmem = CallInst(falloc, allocArgs, "args_ptr");
+    llvm::Value *argmem = BitCastInst(voidmem, pt);
 
     // Copy the values of the parameters into the appropriate place in
     // the argument block
@@ -2004,5 +1971,32 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
     llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
     llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
     assert(flaunch != NULL);
-    return CallInst(flaunch, fptr, voidmem, "");
+    std::vector<llvm::Value *> args;
+    args.push_back(launchGroupHandlePtr);
+    args.push_back(fptr);
+    args.push_back(voidmem);
+    args.push_back(launchCount);
+    return CallInst(flaunch, args, "");
+}
+
+
+void
+FunctionEmitContext::SyncInst() {
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr, NULL);
+    llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
+                                   llvm::CmpInst::ICMP_NE,
+                                   launchGroupHandle, nullPtrValue);
+    llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
+    llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
+    BranchInst(bSync, bPostSync, nonNull);
+
+    SetCurrentBasicBlock(bSync);
+    llvm::Function *fsync = m->module->getFunction("ISPCSync");
+    if (fsync == NULL)
+        FATAL("Couldn't find ISPCSync declaration?!");
+    CallInst(fsync, launchGroupHandle, "");
+    BranchInst(bPostSync);
+
+    SetCurrentBasicBlock(bPostSync);
 }

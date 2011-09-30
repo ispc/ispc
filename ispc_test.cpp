@@ -98,24 +98,27 @@ extern "C" {
 bool shouldFail = false;
 
 extern "C" { 
-    void ISPCLaunch(void *, void *);
-    void ISPCSync();
-    void *ISPCMalloc(int64_t size, int32_t alignment);
-    void ISPCFree(void *ptr);
+    void ISPCLaunch(void **, void *, void *, int32_t);
+    void ISPCSync(void *);
+    void *ISPCAlloc(void **, int64_t size, int32_t alignment);
 }
 
-void ISPCLaunch(void *func, void *data) {
-    typedef void (*TaskFuncType)(void *, int, int);
+void ISPCLaunch(void **handle, void *func, void *data, int32_t count) {
+    *handle = (void *)0xdeadbeef;
+    typedef void (*TaskFuncType)(void *, int, int, int, int);
     TaskFuncType tft = (TaskFuncType)(func);
-    tft(data, 0, 1);
+    for (int i = 0; i < count; ++i)
+        tft(data, 0, 1, i, count);
 }
 
 
-void ISPCSync() {
+void ISPCSync(void *) {
 }
 
 
-void *ISPCMalloc(int64_t size, int32_t alignment) {
+void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
+    *handle = (void *)0xdeadbeef;
+    // leak time!
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -132,18 +135,6 @@ void *ISPCMalloc(int64_t size, int32_t alignment) {
 #endif
 }
 
-
-void ISPCFree(void *ptr) {
-#ifdef ISPC_IS_WINDOWS
-    _aligned_free(ptr);
-#endif
-#ifdef ISPC_IS_LINUX
-    free(ptr);
-#endif
-#ifdef ISPC_IS_APPLE
-    free(((void**)ptr)[-1]);
-#endif
-}
 
 static void usage(int ret) {
     fprintf(stderr, "usage: ispc_test\n");
@@ -217,8 +208,7 @@ static bool lRunTest(const char *fn) {
         ee->addGlobalMapping(func, (void *)FUNC)
     DO_FUNC(ISPCLaunch, "ISPCLaunch");
     DO_FUNC(ISPCSync, "ISPCSync");
-    DO_FUNC(ISPCMalloc, "ISPCMalloc");
-    DO_FUNC(ISPCFree, "ISPCFree");
+    DO_FUNC(ISPCAlloc, "ISPCAlloc");
     DO_FUNC(putchar, "putchar");
     DO_FUNC(printf, "printf");
     DO_FUNC(fflush, "fflush");

@@ -21,7 +21,7 @@
   <ItemGroup>
     <ClCompile Include="ao.cpp" />
     <ClCompile Include="ao_serial.cpp" />
-    <ClCompile Include="../tasks_concrt.cpp" />
+    <ClCompile Include="../tasksys.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ao.ispc">

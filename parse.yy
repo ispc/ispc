@@ -165,7 +165,7 @@ static const char *lParamListTokens[] = {
 %token TOKEN_CBREAK TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT
 
 %type <expr> primary_expression postfix_expression
-%type <expr> unary_expression cast_expression
+%type <expr> unary_expression cast_expression launch_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
@@ -257,18 +257,32 @@ primary_expression
     | '(' expression ')' { $$ = $2; }
     ;
 
+launch_expression
+    : TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
+          $$ = new FunctionCallExpr($3, $5, @3, true, oneExpr);
+      }
+    | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
+      {
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
+          $$ = new FunctionCallExpr($3, new ExprList(@3), @3, true, oneExpr);
+       }
+    | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' argument_expression_list ')' '>'
+      { $$ = new FunctionCallExpr($6, $8, @6, true, $3); }
+    | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' ')' '>'
+      { $$ = new FunctionCallExpr($6, new ExprList(@6), @6, true, $3); }
+    ;
+
 postfix_expression
     : primary_expression
     | postfix_expression '[' expression ']'
       { $$ = new IndexExpr($1, $3, @1); }
     | postfix_expression '(' ')'
-      { $$ = new FunctionCallExpr($1, new ExprList(@1), @1, false); }
+      { $$ = new FunctionCallExpr($1, new ExprList(@1), @1); }
     | postfix_expression '(' argument_expression_list ')'
-      { $$ = new FunctionCallExpr($1, $3, @1, false); }
-    | TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
-      { $$ = new FunctionCallExpr($3, $5, @3, true); }
-    | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
-      { $$ = new FunctionCallExpr($3, new ExprList(@3), @3, true); }
+      { $$ = new FunctionCallExpr($1, $3, @1); }
+    | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
       { $$ = MemberExpr::create($1, yytext, @1, @3); }
 /*    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
@@ -1283,6 +1297,12 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
 
     Symbol *threadCountSym = new Symbol("threadCount", pos, AtomicType::UniformConstUInt32);
     m->symbolTable->AddVariable(threadCountSym);
+
+    Symbol *taskIndexSym = new Symbol("taskIndex", pos, AtomicType::UniformConstUInt32);
+    m->symbolTable->AddVariable(taskIndexSym);
+
+    Symbol *taskCountSym = new Symbol("taskCount", pos, AtomicType::UniformConstUInt32);
+    m->symbolTable->AddVariable(taskCountSym);
 }
 
 
