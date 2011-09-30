@@ -18,7 +18,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "noise", "noise\noise.vcxproj", "{0E0886D8-8B5E-4EAF-9A21-91E63DAF81FD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "volume", "volume_rendering\volume.vcxproj", "{DEE5733A-E93E-449D-9114-9BFFCAEB4DF9}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "stencil", "stencil\stencil.vcxproj", "{2EF070A1-F62F-4E6A-944B-88D140945C3C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deferred_shading", "deferred\deferred_shading.vcxproj", "{87F53C53-957E-4E91-878A-BC27828FB9EB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,6 +111,14 @@ Global
 		{2EF070A1-F62F-4E6A-944B-88D140945C3C}.Release|Win32.Build.0 = Release|Win32
 		{2EF070A1-F62F-4E6A-944B-88D140945C3C}.Release|x64.ActiveCfg = Release|x64
 		{2EF070A1-F62F-4E6A-944B-88D140945C3C}.Release|x64.Build.0 = Release|x64
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Debug|Win32.Build.0 = Debug|Win32
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Debug|x64.ActiveCfg = Debug|x64
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Debug|x64.Build.0 = Debug|x64
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|Win32.ActiveCfg = Release|Win32
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|Win32.Build.0 = Release|Win32
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|x64.ActiveCfg = Release|x64
+		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
