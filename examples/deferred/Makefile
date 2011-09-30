@@ -1,0 +1,42 @@
+
+ARCH = $(shell uname)
+
+TASK_CXX=../tasks_pthreads.cpp
+TASK_LIB=-lpthread
+
+ifeq ($(ARCH), Darwin)
+  TASK_CXX=../tasks_gcd.cpp
+  TASK_LIB=
+endif
+
+TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
+
+CXX=g++
+CXXFLAGS=-Iobjs/ -O3 -Wall -m64
+ISPC=ispc
+ISPCFLAGS=-O2 --target=sse4x2 --arch=x86-64 --math-lib=fast
+
+OBJS=objs/main.o objs/common.o objs/kernels_ispc.o objs/dynamic_c.o objs/dynamic_cilk.o
+
+default: deferred_shading
+
+.PHONY: dirs clean
+.PRECIOUS: objs/kernels_ispc.h
+
+dirs:
+	/bin/mkdir -p objs/
+
+clean:
+	/bin/rm -rf objs *~ deferred_shading
+
+deferred_shading: dirs $(OBJS) $(TASK_OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $(OBJS) $(TASK_OBJ) -lm $(TASK_LIB)
+
+objs/%.o: %.cpp objs/kernels_ispc.h deferred.h
+	$(CXX) $< $(CXXFLAGS) -c -o $@
+
+objs/%.o: ../%.cpp
+	$(CXX) $< $(CXXFLAGS) -c -o $@
+
+objs/%_ispc.h objs/%_ispc.o: %.ispc
+	$(ISPC) $(ISPCFLAGS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
