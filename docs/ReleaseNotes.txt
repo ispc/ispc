@@ -1,3 +1,25 @@
+=== v1.0.10 === (30 September 2011)
+
+This release features an extensive new example showing the application of
+ispc to a deferred shading algorithm for scenes with thousands of lights
+(examples/deferred).  This is an implementation of the algorithm that Johan
+Andersson described at SIGGRAPH 2009 and was implemented by Andrew
+Lauritzen and Jefferson Montgomery.  The basic idea is that a pre-rendered
+G-buffer is partitioned into tiles, and in each tile, the set of lights
+that contribute to the tile is computed.  Then, the pixels in the tile are
+then shaded using those light sources. (See slides 19-29 of
+http://s09.idav.ucdavis.edu/talks/04-JAndersson-ParallelFrostbite-Siggraph09.pdf
+for more details on the algorithm.)
+
+The mechanism for launching tasks from ispc code has been generalized to
+allow multiple tasks to be launched with a single launch call (see
+http://ispc.github.com/ispc.html#task-parallelism-language-syntax for more
+information.)
+
+A few new functions have been added to the standard library: num_cores()
+returns the number of cores in the system's CPU, and variants of all of the
+atomic operators that take 'uniform' values as parameters have been added.
+
 === v1.0.9 === (26 September 2011)
 
 The binary release of v1.0.9 is the first that supports AVX code
