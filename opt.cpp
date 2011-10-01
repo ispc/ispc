@@ -678,7 +678,8 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 bool
 IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
     for (unsigned int i = 0; i < maskInstructions.size(); ++i)
-        if (function == maskInstructions[i].function)
+        if (maskInstructions[i].function != NULL &&
+            function == maskInstructions[i].function)
             return true;
     return false;
 }
@@ -687,7 +688,8 @@ IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
 IntrinsicsOpt::BlendInstruction *
 IntrinsicsOpt::matchingBlendInstruction(llvm::Function *function) {
     for (unsigned int i = 0; i < blendInstructions.size(); ++i)
-        if (function == blendInstructions[i].function)
+        if (blendInstructions[i].function != NULL &&
+            function == blendInstructions[i].function)
             return &blendInstructions[i];
     return NULL;
 }
@@ -1147,7 +1149,8 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
         GSInfo *info = NULL;
         for (int i = 0; i < numGSFuncs; ++i)
-            if (callInst->getCalledFunction() == gsFuncs[i].func) {
+            if (gsFuncs[i].func != NULL &&
+                callInst->getCalledFunction() == gsFuncs[i].func) {
                 info = &gsFuncs[i];
                 break;
             }
@@ -1288,7 +1291,7 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         int nMSFuncs = sizeof(msInfo) / sizeof(msInfo[0]);
         MSInfo *info = NULL;
         for (int i = 0; i < nMSFuncs; ++i) {
-            if (called == msInfo[i].func) {
+            if (msInfo[i].func != NULL && called == msInfo[i].func) {
                 info = &msInfo[i];
                 break;
             }
@@ -1428,7 +1431,8 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
         LMSInfo *info = NULL;
         for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
-            if (callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
+            if (msInfo[i].pseudoFunc != NULL &&
+                callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
                 info = &msInfo[i];
                 break;
             }
@@ -2151,13 +2155,15 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         GatherImpInfo *gatherInfo = NULL;
         ScatterImpInfo *scatterInfo = NULL;
         for (unsigned int i = 0; i < sizeof(gInfo) / sizeof(gInfo[0]); ++i) {
-            if (calledFunc == gInfo[i].pseudoFunc) {
+            if (gInfo[i].pseudoFunc != NULL &&
+                calledFunc == gInfo[i].pseudoFunc) {
                 gatherInfo = &gInfo[i];
                 break;
             }
         }
         for (unsigned int i = 0; i < sizeof(sInfo) / sizeof(sInfo[0]); ++i) {
-            if (calledFunc == sInfo[i].pseudoFunc) {
+            if (sInfo[i].pseudoFunc != NULL &&
+                calledFunc == sInfo[i].pseudoFunc) {
                 scatterInfo = &sInfo[i];
                 break;
             }
@@ -2402,7 +2408,8 @@ LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Function *calledFunc = callInst->getCalledFunction();
         LowerGSInfo *info = NULL;
         for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
-            if (calledFunc == lgsInfo[i].pseudoFunc) {
+            if (lgsInfo[i].pseudoFunc != NULL &&
+                calledFunc == lgsInfo[i].pseudoFunc) {
                 info = &lgsInfo[i];
                 break;
             }
@@ -2488,7 +2495,7 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         int j;
         int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
         for (j = 0; j < nFuncs; ++j) {
-            if (callInst->getCalledFunction() == funcs[j]) 
+            if (funcs[j] != NULL && callInst->getCalledFunction() == funcs[j]) 
                 break;
         }
         if (j == nFuncs)
