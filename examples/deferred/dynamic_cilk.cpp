@@ -60,7 +60,7 @@
 #define DYNAMIC_MIN_LIGHTS_TO_SUBDIVIDE 1
 
 static void *
-lAlignedMalloc(int64_t size, int32_t alignment) {
+lAlignedMalloc(size_t size, int32_t alignment) {
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -395,4 +395,4 @@ DispatchDynamicCilk(InputData *input, Framebuffer *framebuffer)
     }
 }
 
-#endif // __cilkplusplus
+#endif // __cilk

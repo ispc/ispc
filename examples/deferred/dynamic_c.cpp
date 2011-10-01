@@ -60,7 +60,7 @@
 #define DYNAMIC_MIN_LIGHTS_TO_SUBDIVIDE 1
 
 static void *
-lAlignedMalloc(int64_t size, int32_t alignment) {
+lAlignedMalloc(size_t size, int32_t alignment) {
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -141,12 +141,10 @@ ComputeZBoundsRow(int tileY, int tileWidth, int tileHeight,
 {
     for (int tileX = 0; tileX < numTilesX; ++tileX) {
         float minZ, maxZ;
-        ComputeZBounds(
-            tileX * tileWidth, tileX * tileWidth + tileWidth,
-            tileY * tileHeight, tileY * tileHeight + tileHeight,
-            zBuffer, gBufferWidth,
-            cameraProj_33, cameraProj_43, cameraNear, cameraFar,
-            &minZ, &maxZ);
+        ComputeZBounds(tileX * tileWidth, tileX * tileWidth + tileWidth,
+                       tileY * tileHeight, tileY * tileHeight + tileHeight,
+                       zBuffer, gBufferWidth, cameraProj_33, cameraProj_43, 
+                       cameraNear, cameraFar, &minZ, &maxZ);
         minZArray[tileX] = minZ;
         maxZArray[tileX] = maxZ;
     }
@@ -282,8 +280,8 @@ void InitDynamicC(InputData *input) {
 }
 
 
-// numLights need not be a multiple of programCount here, but the input and output arrays
-// should be able to handle programCount-sized load/stores.
+/* We're going to split a tile into 4 sub-tiles.  This function
+   reclassifies the tile's lights with respect to the sub-tiles. */
 static void
 SplitTileMinMax(
     int tileMidX, int tileMidY,
@@ -339,7 +337,7 @@ SplitTileMinMax(
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
         
-        // Test lights again subtile z bounds
+        // Test lights again against subtile z bounds
         bool inFrustum[4];
         inFrustum[0] = (light_positionView_z - subtileMinZ[0] >= light_attenuationEndNeg) &&
             (subtileMaxZ[0] - light_positionView_z >= light_attenuationEndNeg);
@@ -414,7 +412,8 @@ Float32ToUnorm8(float f) {
 }
 
 
-static inline float half_to_float_fast(uint16_t h) {
+static inline float
+half_to_float_fast(uint16_t h) {
     uint32_t hs = h & (int32_t)0x8000u;  // Pick off sign bit
     uint32_t he = h & (int32_t)0x7C00u;  // Pick off exponent bits
     uint32_t hm = h & (int32_t)0x03FFu;  // Pick off mantissa bits

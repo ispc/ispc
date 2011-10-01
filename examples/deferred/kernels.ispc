@@ -479,7 +479,7 @@ ShadeTile(
 // Static decomposition
 
 task void
-RenderTile(uniform int g, uniform int num_groups_x, uniform int num_groups_y,
+RenderTile(uniform int num_groups_x, uniform int num_groups_y,
            reference uniform InputHeader inputHeader,
            reference uniform InputDataArrays inputData,
            uniform int visualizeLightCount,
@@ -487,15 +487,12 @@ RenderTile(uniform int g, uniform int num_groups_x, uniform int num_groups_y,
            reference uniform unsigned int8 framebuffer_r[],
            reference uniform unsigned int8 framebuffer_g[],
            reference uniform unsigned int8 framebuffer_b[]) {
-    uniform int32 group_y = g / num_groups_x;
-    uniform int32 group_x = g % num_groups_x;
+    uniform int32 group_y = taskIndex / num_groups_x;
+    uniform int32 group_x = taskIndex % num_groups_x;
     uniform int32 tile_start_x = group_x * MIN_TILE_WIDTH;
     uniform int32 tile_start_y = group_y * MIN_TILE_HEIGHT;
     uniform int32 tile_end_x = tile_start_x + MIN_TILE_WIDTH;
     uniform int32 tile_end_y = tile_start_y + MIN_TILE_HEIGHT;
-
-    uniform int sTileNumLights = 0;
-    uniform int sTileLightIndices[MAX_LIGHTS];  // Light list for the tile
 
     uniform int framebufferWidth = inputHeader.framebufferWidth;
     uniform int framebufferHeight = inputHeader.framebufferHeight;
@@ -504,8 +501,9 @@ RenderTile(uniform int g, uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_22 = inputHeader.cameraProj[2][2];
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
 
-    // Light intersection
-    sTileNumLights = 
+    // Light intersection: figure out which lights illuminate this tile.
+    uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
+    uniform int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
                                 framebufferWidth, framebufferHeight,
@@ -518,12 +516,13 @@ RenderTile(uniform int g, uniform int num_groups_x, uniform int num_groups_y,
                                 inputData.lightPositionView_y, 
                                 inputData.lightPositionView_z, 
                                 inputData.lightAttenuationEnd,
-                                sTileLightIndices);
+                                tileLightIndices);
 
+    // And now shade the tile, using the lights in tileLightIndices
     ShadeTile(tile_start_x, tile_end_x, tile_start_y, tile_end_y,
               framebufferWidth, framebufferHeight, inputData,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
-              sTileLightIndices, sTileNumLights, visualizeLightCount, 
+              tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
 }
 
@@ -542,17 +541,19 @@ RenderStatic(reference uniform InputHeader inputHeader,
                                 MIN_TILE_HEIGHT - 1) / MIN_TILE_HEIGHT;
     uniform int num_groups = num_groups_x * num_groups_y;
 
-    for (uniform int g = 0; g < num_groups; ++g)
-        launch < RenderTile(g, num_groups_x, num_groups_y,
-                            inputHeader, inputData, visualizeLightCount,
-                            framebuffer_r, framebuffer_g, framebuffer_b) >;
+    // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
+    // by MIN_TILE_HEIGHT pixels.
+    launch[num_groups] < RenderTile(num_groups_x, num_groups_y,
+                                    inputHeader, inputData, visualizeLightCount,
+                                    framebuffer_r, framebuffer_g, framebuffer_b) >;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////
 // Routines for dynamic decomposition path
 
-// tile width must be a multiple of programCount (SIMD size)
+// This computes the z min/max range for a whole row worth of tiles.
+// The tile width must be a multiple of programCount (SIMD size)
 export void
 ComputeZBoundsRow(
     uniform int32 tileY,
@@ -583,6 +584,7 @@ ComputeZBoundsRow(
 }
 
 
+// Reclassifies the lights with respect to four sub-tiles when we refine a tile.
 // numLights need not be a multiple of programCount here, but the input and output arrays
 // should be able to handle programCount-sized load/stores.
 export void

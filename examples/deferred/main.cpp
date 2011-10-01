@@ -58,10 +58,45 @@
 #include "deferred.h"
 #include "kernels_ispc.h"
 #include "../timing.h"
+#include "../cpuid.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
+// Make sure that the vector ISA used during compilation is supported by
+// the processor.  The ISPC_TARGET_* macro is set in the ispc-generated
+// header file that we include above.
+static void
+ensureTargetISAIsSupported() {
+#if defined(ISPC_TARGET_SSE2)
+    bool isaSupported = CPUSupportsSSE2();
+    const char *target = "SSE2";
+#elif defined(ISPC_TARGET_SSE4)
+    bool isaSupported = CPUSupportsSSE4();
+    const char *target = "SSE4";
+#elif defined(ISPC_TARGET_AVX)
+    bool isaSupported = CPUSupportsAVX();
+    const char *target = "AVX";
+#else
+#error "Unknown ISPC_TARGET_* value"
+#endif
+    if (!isaSupported) {
+        fprintf(stderr, "***\n*** Error: the ispc-compiled code uses the %s instruction "
+                "set, which isn't\n***        supported by this computer's CPU!\n", target);
+        fprintf(stderr, "***\n***        Please modify the "
+#ifdef _MSC_VER
+                "MSVC project file "
+#else
+                "Makefile "
+#endif
+                "to select another target (e.g. sse2)\n***\n");
+        exit(1);
+    }
+}
+
+
 int main(int argc, char** argv) {
+    ensureTargetISAIsSupported();
+
     if (argc != 2) {
         printf("usage: deferred_shading <input_file (e.g. data/pp1280x720.bin)>\n");
         return 1;
@@ -77,9 +112,9 @@ int main(int argc, char** argv) {
                             input->header.framebufferHeight);
 
     InitDynamicC(input);
-#ifdef __cilkplusplus
+#ifdef __cilk
     InitDynamicCilk(input);
-#endif // __cilkplusplus
+#endif // __cilk
 
     int nframes = 5;
     double ispcCycles = 1e30;
@@ -98,20 +133,7 @@ int main(int argc, char** argv) {
            input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
 
-    double serialCycles = 1e30;
-    for (int i = 0; i < 5; ++i) {
-        framebuffer.clear();
-        reset_and_start_timer();
-        for (int j = 0; j < nframes; ++j)
-            DispatchDynamicC(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
-        serialCycles = std::min(serialCycles, mcycles);
-    }
-    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles\n", 
-           serialCycles);
-    WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
-
-#ifdef __cilkplusplus
+#ifdef __cilk
     double dynamicCilkCycles = 1e30;
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
@@ -121,15 +143,30 @@ int main(int argc, char** argv) {
         double mcycles = get_elapsed_mcycles() / nframes;
         dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
     }
-    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles\n", 
+    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", 
            dynamicCilkCycles);
     WriteFrame("deferred-ispc-dynamic.ppm", input, framebuffer);
+#endif // __cilk
 
+    double serialCycles = 1e30;
+    for (int i = 0; i < 5; ++i) {
+        framebuffer.clear();
+        reset_and_start_timer();
+        for (int j = 0; j < nframes; ++j)
+            DispatchDynamicC(input, &framebuffer);
+        double mcycles = get_elapsed_mcycles() / nframes;
+        serialCycles = std::min(serialCycles, mcycles);
+    }
+    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", 
+           serialCycles);
+    WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
+
+#ifdef __cilk
     printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", 
            serialCycles/ispcCycles, serialCycles/dynamicCilkCycles);
 #else
     printf("\t\t\t\t(%.2fx speedup from ISPC)\n", serialCycles/ispcCycles);
-#endif // __cilkplusplus
+#endif // __cilk
 
     DeleteInputData(input);
 

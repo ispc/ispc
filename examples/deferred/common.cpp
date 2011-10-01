@@ -64,7 +64,7 @@
 ///////////////////////////////////////////////////////////////////////////
 
 static void *
-lAlignedMalloc(int64_t size, int32_t alignment) {
+lAlignedMalloc(size_t size, int32_t alignment) {
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -117,6 +117,7 @@ Framebuffer::clear() {
     memset(g, 0, nPixels);
     memset(b, 0, nPixels);
 }
+
 
 InputData *
 CreateInputDataFromFile(const char *path) {
@@ -177,8 +178,7 @@ CreateInputDataFromFile(const char *path) {
 }
 
 
-void DeleteInputData(InputData *input)
-{
+void DeleteInputData(InputData *input) {
     lAlignedFree(input->chunk);
 }
 
