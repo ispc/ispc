@@ -53,9 +53,7 @@
   #define ISPC_USE_PTHREADS
 #elif defined(__APPLE__)
   #define ISPC_IS_APPLE
-  // pthreads is noticably more efficient than GCD on OSX
-  #define ISPC_USE_PTHREADS
-  //#define ISPC_USE_GCD
+  #define ISPC_USE_GCD
 #endif
 
 #define DBG(x) 
@@ -112,7 +110,7 @@ struct TaskInfo {
 ///////////////////////////////////////////////////////////////////////////
 // TaskGroupBase
 
-#define LOG_TASK_QUEUE_CHUNK_SIZE 12
+#define LOG_TASK_QUEUE_CHUNK_SIZE 14
 #define MAX_TASK_QUEUE_CHUNKS 8
 #define TASK_QUEUE_CHUNK_SIZE (1<<LOG_TASK_QUEUE_CHUNK_SIZE)
 
@@ -159,7 +157,6 @@ private:
     int memBufferSize[NUM_MEM_BUFFERS];
     char *memBuffers[NUM_MEM_BUFFERS];
     char mem[256];
-
 };
 
 
