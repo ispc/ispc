@@ -85,7 +85,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     if (isa == NULL) {
         if (!strcasecmp(cpu, "atom"))
             isa = "sse2";
-#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
         else if (!strcasecmp(cpu, "sandybridge") ||
                  !strcasecmp(cpu, "corei7-avx"))
             isa = "avx";
@@ -174,7 +174,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 const char *
 Target::SupportedTargetCPUs() {
     return "atom, barcelona, core2, corei7, "
-#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
         "corei7-avx, "
 #endif
         "istanbul, nocona, penryn, "
@@ -194,7 +194,7 @@ Target::SupportedTargetArchs() {
 const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse4, sse4x2"
-#if defined(LLVM_3_0) || defined(LLVM_3_0_svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
         ", avx, avx-x2"
 #endif
         ;
