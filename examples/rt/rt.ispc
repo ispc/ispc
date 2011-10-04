@@ -283,19 +283,19 @@ export void raytrace_ispc(uniform int width, uniform int height,
 }
 
 
-task void raytrace_tile_task(uniform int y0, uniform int y1, 
-                             uniform int width, uniform int height,
+task void raytrace_tile_task(uniform int width, uniform int height,
                              uniform int baseWidth, uniform int baseHeight,
                              const uniform float raster2camera[4][4], 
                              const uniform float camera2world[4][4],
                              uniform float image[], uniform int id[],
                              const LinearBVHNode nodes[],
                              const Triangle triangles[]) {
-    uniform int dx = 16; // must match dx below
-    uniform int xTasks = (width + (dx-1)) / dx;
-    uniform int x0 = (taskIndex % xTasks) * dx;
-    uniform int x1 = x0 + dx;
-    x1 = min(x1, width);
+    uniform int dx = 16, dy = 16; // must match dx, dy below
+    uniform int xBuckets = (width + (dx-1)) / dx;
+    uniform int x0 = (taskIndex % xBuckets) * dx;
+    uniform int x1 = min(x0 + dx, width);
+    uniform int y0 = (taskIndex / xBuckets) * dy;
+    uniform int y1 = min(y0 + dy, height);
                              
     raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
                   raster2camera, camera2world, image,
@@ -311,11 +311,11 @@ export void raytrace_ispc_tasks(uniform int width, uniform int height,
                                 const LinearBVHNode nodes[],
                                 const Triangle triangles[]) {
     uniform int dx = 16, dy = 16;
-    uniform int nTasks = (width + (dx-1)) / dx;
-    for (uniform int y = 0; y < height; y += dy) {
-        uniform int y1 = min(y + dy, height);
-        launch[nTasks] < raytrace_tile_task(y, y1, width, height, baseWidth,
-                                            baseHeight, raster2camera, camera2world, 
-                                            image, id, nodes, triangles) >;
-    }
+    uniform int xBuckets = (width + (dx-1)) / dx;
+    uniform int yBuckets = (height + (dy-1)) / dy;
+    uniform int nTasks = xBuckets * yBuckets;
+    launch[nTasks] < raytrace_tile_task(width, height, baseWidth, baseHeight, 
+                                        raster2camera, camera2world, 
+                                        image, id, nodes, triangles) >;
 }
+
