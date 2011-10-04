@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#ifdef __cilkplusplus
+#ifdef __cilk
 
 #include "deferred.h"
 #include "kernels_ispc.h"
