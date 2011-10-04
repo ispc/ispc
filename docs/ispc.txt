@@ -55,7 +55,8 @@ Contents:
 
 * `Using The ISPC Compiler`_
 
-  + `Command-line Options`_
+  + `Basic Command-line Options`_
+  + `Selecting The Compilation Target`_
 
 * `The ISPC Language`_
 
@@ -117,6 +118,8 @@ Contents:
   + `Using Scan Operations For Variable Output`_
   + `Application-Supplied Execution Masks`_
   + `Explicit Vector Programming With Uniform Short Vector Types`_
+  + `Choosing A Target Vector Width`_
+  + `Compiling With Support For Multiple Instruction Sets`_
 
 * `Disclaimer and Legal Information`_
 
@@ -288,8 +291,8 @@ with application code, enter the following command
 compiling it.  (This functionality can be disabled with the ``--nocpp``
 command-line argument.)
 
-Command-line Options
---------------------
+Basic Command-line Options
+--------------------------
 
 The ``ispc`` executable can be run with ``--help`` to print a list of
 accepted command-line arguments.  By default, the compiler compiles the
@@ -297,56 +300,83 @@ provided program (and issues warnings and errors), but doesn't
 generate any output.  
 
 If the ``-o`` flag is given, it will generate an output file (a native
-object file by default).  To generate a text assembly file, pass
-``--emit-asm``:
+object file by default).  
 
 ::
 
-   ispc foo.ispc -o foo.s --emit-asm
+   ispc foo.ispc -o foo.obj --emit-asm
+
+To generate a text assembly file, pass ``--emit-asm``:
+
+::
+
+   ispc foo.ispc -o foo.asm --emit-asm
 
 To generate LLVM bitcode, use the ``--emit-llvm`` flag.
 
-By default, an optimized x86-64 object file tuned for Intel® Core
-processors CPUs is built.  You can use the ``--arch`` command line flag to
-specify a 32-bit x86 target:
-
-::
-
-   ispc foo.ispc -o foo.obj --arch=x86
-
-Optimizations can be turned off with ``-O0``:
+Optimizations are on by default; they can be turned off with ``-O0``:
 
 ::
 
    ispc foo.ispc -o foo.obj -O0
 
-On Mac\* and Linux\*, there is early support for generating debugging
-symbols; this is enabled with the ``-g`` command-line flag.
+On Mac\* and Linux\*, there is basic support for generating debugging
+symbols; this is enabled with the ``-g`` command-line flag.  Using ``-g``
+causes optimizations to be disabled; to compile with debugging symbols and
+optimizaion, ``-O1`` should be provided as well as the ``-g`` flag.
 
 The ``-h`` flag can also be used to direct ``ispc`` to generate a C/C++
 header file that includes C/C++ declarations of the C-callable ``ispc``
 functions and the types passed to it.
 
-On Linux\* and Mac OS\*, ``-D`` can be used to specify definitions to be
-passed along to the C pre-prcessor, which runs over the program input
-before it's compiled.  On Windows®, pre-processor definitions should be
-provided to the ``cl`` call.
-
-By default, the compiler generates x86-64 Intel® SSE4 code.  To generate
-32-bit code, you can use the ``--arch=x86`` command-line flag.  To
-select Intel® SSE2, use ``--target=sse2``.
-
-``ispc`` supports an alternative method for generating Intel® SSE4 code,
-where the program is "doubled up" and eight instances of it run in
-parallel, rather than just four.  For workloads that don't require large
-numbers of registers, this method can lead to significantly more efficient
-execution thanks to greater instruction level parallelism.  This option is
-selected with ``--target=sse4x2``.
+The ``-D`` option can be used to specify definitions to be passed along to
+the pre-processor, which runs over the program input before it's compiled.
+For example, including ``-DTEST=1`` defines the pre-processor symbol
+``TEST`` to have the value ``1`` when the program is compiled.
 
 The compiler issues a number of performance warnings for code constructs
 that compile to relatively inefficient code.  These warnings can be
 silenced with the ``--wno-perf`` flag (or by using ``--woff``, which turns
-off all warnings.)
+off all compiler warnings.)
+
+Selecting The Compilation Target
+--------------------------------
+
+There are three options that affect the compilation target: ``--arch``,
+which sets the target architecture, ``--cpu``, which sets the target CPU,
+and ``--target``, which sets the target instruction set.
+
+By default, the ``ispc`` compiler generates code for the 64-bit x86-64
+architecture (i.e. ``--arch=x86-64`.)  To compile to a 32-bit x86 target,
+supply ``-arch=x86`` on the command line:
+
+::
+
+   ispc foo.ispc -o foo.obj --arch=x86
+
+No other architectures are currently supported.
+
+The target CPU determines both the default instruction set used as well as
+which CPU architecture the code is tuned for.  ``ispc --help`` provides a
+list of a number of the supported CPUs.  By default, the CPU type of the
+system on which you're running ``ispc`` is used to determine the target
+CPU.
+
+::
+
+   ispc foo.ispc -o foo.obj --cpu=corei7-avx
+
+Finally, ``--target`` selects between the SSE2, SSE4, and AVX instruction
+sets.  (As general context, SSE2 was first introduced in processors that
+shipped in 2001, SSE4 was introduced in 2007, and processors with AVX 
+were introduced in 2010.  Consult your CPU's manual for specifics on which
+vector instruction set it supports.)
+
+By default, the target instruction set is chosen based on which ones are
+supported by the system on which you're running ``ispc``.  You can override
+this choice with the ``--target`` flag; for example, to select Intel® SSE2,
+use ``--target=sse2``.  (As with the other options in this section, see the
+output of ``ispc --help`` for a full list of supported targets.)
 
 
 The ISPC Language
@@ -3061,6 +3091,72 @@ Note that ``ispc`` doesn't currently support control-flow based on
         while (a++ < b)
             ++sum;
     }
+
+
+Choosing A Target Vector Width
+------------------------------
+
+By default, ``ispc`` compiles to the natural vector width of the target
+instruction set.  For example, for SSE2 and SSE4, it compiles four-wide,
+and for AVX, it complies 8-wide.  For some programs, higher performance may
+be seen if the program is compiled to a doubled vector width--8-wide for
+SSE and 16-wide for AVX.  
+
+For workloads that don't require many of registers, this method can lead to
+significantly more efficient execution thanks to greater instruction level
+parallelism and amortization of various overhead over more program
+instances.  For other workloads, it may lead to a slowdown due to higher
+register pressure; trying both approaches for key kernels may be
+worthwhile.
+
+This option is currently only available for the SSE4 and AVX targets, and
+is selected with the ``--target=sse4-x2`` and ``--target=avx-x2`` options,
+respectively.
+
+Compiling With Support For Multiple Instruction Sets
+----------------------------------------------------
+
+``ispc`` can also generate output that supports multiple target instruction
+sets, choosing the most appropriate one at runtime.  For example, if you
+run the command:
+
+::
+
+   ispc foo.ispc -o foo.o --target=sse2,sse4-x2,avx-x2
+
+Then four object files will be generated: ``foo_sse2.o``, ``foo_sse4.o``,
+``foo_avx.o``, and ``foo.o``.[#]_  Link all of these into your executable, and
+when you call a function in ``foo.ispc`` from your application code,
+``ispc`` will determine which instruction sets are supported by the CPU the
+code is running on and will call the most appropraite version of the
+function available.  
+
+.. [#] Similarly, if you choose to generate assembly langauage output or
+   LLVM bitcode output, multiple versions of those files will be created.
+
+In general, the version of the function that runs will be the one in the
+most general instruction set that is supported by the system.  If you only
+compile SSE2 and SSE4 variants and run on a system that supports AVX, for
+example, then the SSE4 variant will be executed.  If the system doesn't
+is not able to run any of the available variants of the function (for
+example, trying to run a function that only has SSE4 and AVX variants on a
+system that only supports SSE2), then the standard library ``abort()``
+function will be called.
+
+One subtlety is that all non-static global variables (if any) must have the
+same size and layout with all of the targets used.  For example, if you
+have the global variables:
+
+::
+
+   uniform int foo[2*programCount];
+   int bar;
+
+and compile to both SSE2 and AVX targets, both of these variables will have
+different sizes (the first due to program count having the value 4 for SSE2
+and 8 for AVX, and the second due to ``varying`` types having different
+numbers of elements with the two targets--essentially the same issue as the
+first.)
 
 
 Disclaimer and Legal Information
