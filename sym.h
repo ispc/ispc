@@ -83,6 +83,11 @@ public:
     llvm::Function *function; /*!< For symbols that represent functions,
                                    this stores the LLVM Function value for
                                    the symbol once it has been created. */ 
+    llvm::Function *exportedFunction;
+                              /*!< For symbols that represent functions with
+                                   'export' qualifiers, this points to the LLVM
+                                   Function for the application-callable version
+                                   of the function. */
     const Type *type;         /*!< The type of the symbol; if not set by the
                                    constructor, this is set after the
                                    declaration around the symbol has been parsed.  */

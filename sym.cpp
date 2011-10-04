@@ -47,7 +47,7 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
                StorageClass sc) 
   : pos(p), name(n) {
     storagePtr = NULL;
-    function = NULL;
+    function = exportedFunction = NULL;
     type = t;
     constValue = NULL;
     storageClass = sc;

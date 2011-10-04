@@ -497,7 +497,6 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
         }
 
         LLVM_TYPE_CONST llvm::Type *llvmType = decl->sym->type->LLVMType(g->ctx);
-        llvm::GlobalValue::LinkageTypes linkage =
             (ds->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
                                               llvm::GlobalValue::ExternalLinkage;
 
@@ -551,6 +550,9 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
         }
 
         bool isConst = (ds->typeQualifier & TYPEQUAL_CONST) != 0;
+        llvm::GlobalValue::LinkageTypes linkage =
+            (ds->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
+                                              llvm::GlobalValue::ExternalLinkage;
         decl->sym->storagePtr = new llvm::GlobalVariable(*module, llvmType, isConst, 
                                                          linkage, llvmInitializer, 
                                                          decl->sym->name.c_str());
@@ -843,6 +845,7 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
                                            firstStmtPos);
                     lEmitFunctionCode(&ec, appFunction, functionType, funSym, decl, code);
                     if (errorCount == 0) {
+                        funSym->exportedFunction = appFunction;
                         if (llvm::verifyFunction(*appFunction, 
                                                  llvm::ReturnStatusAction) == true) {
                             if (g->debugPrint) {
