@@ -8,9 +8,11 @@ TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
 CXX=g++
 CXXFLAGS=-Iobjs/ -O3 -Wall -m64
 ISPC=ispc
-ISPCFLAGS=-O2 --target=sse4x2 --arch=x86-64 --math-lib=fast
+ISPCFLAGS=-O2 --target=sse2,sse4-x2,avx-x2 --arch=x86-64 --math-lib=fast
 
-OBJS=objs/main.o objs/common.o objs/kernels_ispc.o objs/dynamic_c.o objs/dynamic_cilk.o
+OBJS=objs/main.o objs/common.o objs/kernels_ispc.o objs/kernels_ispc_sse2.o \
+	objs/kernels_ispc_sse4.o objs/kernels_ispc_avx.o \
+	objs/dynamic_c.o objs/dynamic_cilk.o
 
 default: deferred_shading
 
@@ -32,5 +34,5 @@ objs/%.o: %.cpp objs/kernels_ispc.h deferred.h
 objs/%.o: ../%.cpp
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-objs/%_ispc.h objs/%_ispc.o: %.ispc
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o: %.ispc
 	$(ISPC) $(ISPCFLAGS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h

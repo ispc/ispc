@@ -75,12 +75,13 @@ struct Ray {
 // Declare these in a namespace so the mangling matches
 namespace ispc {
     struct Triangle {
-        float3 p[3];
+        float p[3][4]; // extra float pad after each vertex
         int32_t id;
+        int32_t pad[3]; // make 16 x 32-bits
     };
 
     struct LinearBVHNode {
-        float3 bounds[2];
+        float bounds[2][3];
         int32_t offset;     // primitives for leaf, second child for interior
         uint8_t nPrimitives;
         uint8_t splitAxis;
@@ -140,12 +141,14 @@ static void generateRay(const float raster2camera[4][4],
 }
 
 
-static inline bool BBoxIntersect(const float3 bounds[2], 
+static inline bool BBoxIntersect(const float bounds[2][3], 
                                  const Ray &ray) {
+    float3 bounds0(bounds[0][0], bounds[0][1], bounds[0][2]);
+    float3 bounds1(bounds[1][0], bounds[1][1], bounds[1][2]);
     float t0 = ray.mint, t1 = ray.maxt;
 
-    float3 tNear = (bounds[0] - ray.origin) * ray.invDir;
-    float3 tFar  = (bounds[1] - ray.origin) * ray.invDir;
+    float3 tNear = (bounds0 - ray.origin) * ray.invDir;
+    float3 tFar  = (bounds1 - ray.origin) * ray.invDir;
     if (tNear.x > tFar.x) {
         float tmp = tNear.x;
         tNear.x = tFar.x;
@@ -176,8 +179,11 @@ static inline bool BBoxIntersect(const float3 bounds[2],
 
 
 inline bool TriIntersect(const Triangle &tri, Ray &ray) {
-    float3 e1 = tri.p[1] - tri.p[0];
-    float3 e2 = tri.p[2] - tri.p[0];
+    float3 p0(tri.p[0][0], tri.p[0][1], tri.p[0][2]);
+    float3 p1(tri.p[1][0], tri.p[1][1], tri.p[1][2]);
+    float3 p2(tri.p[2][0], tri.p[2][1], tri.p[2][2]);
+    float3 e1 = p1 - p0;
+    float3 e2 = p2 - p0;
 
     float3 s1 = Cross(ray.dir, e2);
     float divisor = Dot(s1, e1);
@@ -187,7 +193,7 @@ inline bool TriIntersect(const Triangle &tri, Ray &ray) {
     float invDivisor = 1.f / divisor;
 
     // Compute first barycentric coordinate
-    float3 d = ray.origin - tri.p[0];
+    float3 d = ray.origin - p0;
     float b1 = Dot(d, s1) * invDivisor;
     if (b1 < 0. || b1 > 1.)
         return false;

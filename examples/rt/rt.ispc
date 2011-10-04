@@ -43,12 +43,13 @@ struct Ray {
 };
 
 struct Triangle {
-    uniform float3 p[3];
+    uniform float p[3][4];
     uniform int id;
+    uniform int pad[3];
 };
 
 struct LinearBVHNode {
-    uniform float3 bounds[2];
+    uniform float bounds[2][3];
     uniform unsigned int offset;     // num primitives for leaf, second child for interior
     uniform unsigned int8 nPrimitives;
     uniform unsigned int8 splitAxis;
@@ -103,14 +104,16 @@ static void generateRay(uniform const float raster2camera[4][4],
 }
 
 
-static inline bool BBoxIntersect(const reference uniform float3 bounds[2], 
+static inline bool BBoxIntersect(const uniform float bounds[2][3], 
                                  const reference Ray ray) {
+    uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
+    uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
     float t0 = ray.mint, t1 = ray.maxt;
 
     // Check all three axis-aligned slabs.  Don't try to early out; it's
     // not worth the trouble
-    float3 tNear = (bounds[0] - ray.origin) * ray.invDir;
-    float3 tFar  = (bounds[1] - ray.origin) * ray.invDir;
+    float3 tNear = (bounds0 - ray.origin) * ray.invDir;
+    float3 tFar  = (bounds1 - ray.origin) * ray.invDir;
     if (tNear.x > tFar.x) {
         float tmp = tNear.x;
         tNear.x = tFar.x;
@@ -141,8 +144,11 @@ static inline bool BBoxIntersect(const reference uniform float3 bounds[2],
 
 
 static inline bool TriIntersect(const reference Triangle tri, reference Ray ray) {
-    uniform float3 e1 = tri.p[1] - tri.p[0];
-    uniform float3 e2 = tri.p[2] - tri.p[0];
+    uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
+    uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
+    uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
+    uniform float3 e1 = p1 - p0;
+    uniform float3 e2 = p2 - p0;
 
     float3 s1 = Cross(ray.dir, e2);
     float divisor = Dot(s1, e1);
@@ -153,7 +159,7 @@ static inline bool TriIntersect(const reference Triangle tri, reference Ray ray)
     float invDivisor = 1.f / divisor;
 
     // Compute first barycentric coordinate
-    float3 d = ray.origin - tri.p[0];
+    float3 d = ray.origin - p0;
     float b1 = Dot(d, s1) * invDivisor;
     if (b1 < 0. || b1 > 1.)
         hit = false;

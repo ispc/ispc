@@ -168,12 +168,12 @@ int main(int argc, char *argv[]) {
         // of node, the total number of int it if a leaf node, etc.
         float b[6];
         READ(b[0], 6);
-        nodes[i].bounds[0].v[0] = b[0];
-        nodes[i].bounds[0].v[1] = b[1];
-        nodes[i].bounds[0].v[2] = b[2];
-        nodes[i].bounds[1].v[0] = b[3];
-        nodes[i].bounds[1].v[1] = b[4];
-        nodes[i].bounds[1].v[2] = b[5];
+        nodes[i].bounds[0][0] = b[0];
+        nodes[i].bounds[0][1] = b[1];
+        nodes[i].bounds[0][2] = b[2];
+        nodes[i].bounds[1][0] = b[3];
+        nodes[i].bounds[1][1] = b[4];
+        nodes[i].bounds[1][2] = b[5];
         READ(nodes[i].offset, 1);
         READ(nodes[i].nPrimitives, 1);
         READ(nodes[i].splitAxis, 1);
@@ -190,9 +190,9 @@ int main(int argc, char *argv[]) {
         READ(v[0], 9);
         float *vp = v;
         for (int j = 0; j < 3; ++j) {
-            triangles[i].p[j].v[0] = *vp++;
-            triangles[i].p[j].v[1] = *vp++;
-            triangles[i].p[j].v[2] = *vp++;
+            triangles[i].p[j][0] = *vp++;
+            triangles[i].p[j][1] = *vp++;
+            triangles[i].p[j][2] = *vp++;
         }
         // And create an object id
         triangles[i].id = i+1;

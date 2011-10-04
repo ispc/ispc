@@ -66,8 +66,6 @@ struct InputHeader
     uniform int32 inputDataArrayOffsets[idaNum];
 };
 
-export void foo(reference InputHeader h) { }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // Common utility routines
