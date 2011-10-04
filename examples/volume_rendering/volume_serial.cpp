@@ -36,9 +36,6 @@
 #include <algorithm>
 
 // Just enough of a float3 class to do what we need in this file.
-#ifdef _MSC_VER
-__declspec(align(16)) 
-#endif
 struct float3 {
     float3() { }
     float3(float xx, float yy, float zz) { x = xx; y = yy; z = zz; }
@@ -298,7 +295,7 @@ volume_serial(float density[], int nVoxels[3], const float raster2camera[4][4],
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x, ++offset) {
             Ray ray;
-            generateRay(raster2camera, camera2world, x, y, ray);
+            generateRay(raster2camera, camera2world, (float)x, (float)y, ray);
             image[offset] = raymarch(density, nVoxels, ray);
         }
     }
