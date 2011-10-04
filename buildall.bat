@@ -7,11 +7,11 @@ set LLVM_INSTALL_DIR=c:\users\mmp\llvm-dev
 REM Both the LLVM binaries and python need to be in the path
 set path=%LLVM_INSTALL_DIR%\bin;%PATH%;c:\cygwin\bin
 
-msbuild ispc.vcxproj /m:4 /V:m /p:Platform=Win32 /p:Configuration=Release
+msbuild ispc.vcxproj /V:m /p:Platform=Win32 /p:Configuration=Release
 
-msbuild examples\examples.sln /m:4 /V:m /p:Platform=x64 /p:Configuration=Release
-msbuild examples\examples.sln /m:4 /V:m /p:Platform=x64 /p:Configuration=Debug
-msbuild examples\examples.sln /m:4 /V:m /p:Platform=Win32 /p:Configuration=Release
-msbuild examples\examples.sln /m:4 /V:m /p:Platform=Win32 /p:Configuration=Debug
+msbuild examples\examples.sln /V:m /p:Platform=x64 /p:Configuration=Release /t:rebuild
+msbuild examples\examples.sln /V:m /p:Platform=x64 /p:Configuration=Debug /t:rebuild
+msbuild examples\examples.sln /V:m /p:Platform=Win32 /p:Configuration=Release /t:rebuild
+msbuild examples\examples.sln /V:m /p:Platform=Win32 /p:Configuration=Debug /t:rebuild
 
 
