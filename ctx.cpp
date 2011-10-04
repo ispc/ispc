@@ -170,7 +170,7 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
                                                   diFile,
                                                   funcStartPos.first_line,
                                                   retType,
-                                                  funSym->isStatic,
+                                                  funSym->storageClass == SC_STATIC,
                                                   true, /* is definition */
                                                   flags,
                                                   g->opt.level > 0,

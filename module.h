@@ -99,15 +99,6 @@ public:
 private:
     const char *filename;
 
-    /** This member records the global variables that have been defined
-        with 'extern' linkage, so that it's easy to include their
-        declarations in generated header files.
-
-        @todo FIXME: it would be nice to eliminate this and then query the
-        symbol table or the llvm Module for them when/if we need them.
-     */
-    std::vector<Symbol *> externGlobals;
-
     bool writeHeader(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;

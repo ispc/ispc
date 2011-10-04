@@ -43,13 +43,14 @@
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, const Type *t) 
+Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, 
+               StorageClass sc) 
   : pos(p), name(n) {
     storagePtr = NULL;
     function = NULL;
     type = t;
     constValue = NULL;
-    isStatic = false;
+    storageClass = sc;
     varyingCFDepth = 0;
 }
 

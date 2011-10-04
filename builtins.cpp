@@ -377,8 +377,8 @@ lAddBitcode(const unsigned char *bitcode, int length,
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
                    SymbolTable *symbolTable) {
-    Symbol *pw = new Symbol(name, SourcePos(), AtomicType::UniformConstInt32);
-    pw->isStatic = true;
+    Symbol *pw = new Symbol(name, SourcePos(), AtomicType::UniformConstInt32,
+                            SC_STATIC);
     pw->constValue = new ConstExpr(pw->type, val, SourcePos());
     LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
@@ -395,8 +395,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
                        SymbolTable *symbolTable) {
     std::vector<const Type *> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
-    Symbol *sym = new Symbol(name, SourcePos(), ft);
-    sym->isStatic = true;
+    Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
 
     llvm::Function *func = module->getFunction(name);
     assert(func != NULL); // it should be declared already...
@@ -413,8 +412,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     Symbol *pidx = new Symbol("programIndex", SourcePos(), 
-                              AtomicType::VaryingConstInt32);
-    pidx->isStatic = true;
+                              AtomicType::VaryingConstInt32, SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target.vectorWidth; ++i)

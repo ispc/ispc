@@ -41,6 +41,7 @@
 #define ISPC_SYM_H
 
 #include "ispc.h"
+#include "decl.h"
 #include <map>
 
 class StructType;
@@ -63,7 +64,8 @@ class Symbol {
 public:
     /** The Symbol constructor takes the name of the symbol, its
         position in a source file, and its type (if known). */
-    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL);
+    Symbol(const std::string &name, SourcePos pos, const Type *t = NULL,
+           StorageClass sc = SC_NONE);
 
     /** This method should only be called for function symbols; for them,
         it returns a mangled version of the function name with the argument
@@ -93,8 +95,8 @@ public:
                                    storagePtr member will be its constant value.  (This
                                    messiness is due to needing an ispc ConstExpr for the early 
                                    constant folding optimizations). */
-    bool isStatic;            /*!< Records whether this symbol had a static qualifier in
-                                   its declaration. */
+    StorageClass storageClass;/*!< Records the storage class (if any) provided with the
+                                   symbol's declaration. */
     int varyingCFDepth;       /*!< This member records the number of levels of nested 'varying' 
                                    control flow within which the symbol was declared.  Having
                                    this value available makes it possible to avoid performing
@@ -186,6 +188,14 @@ public:
         void GetMatchingFunctions(Predicate pred, 
                                   std::vector<Symbol *> *matches) const;
 
+    /** Returns all of the variable symbols in the symbol table that match
+        the given predicate.  The predicate is defined as in the
+        GetMatchingFunctions() method.
+     */
+    template <typename Predicate> 
+        void GetMatchingVariables(Predicate pred, 
+                                  std::vector<Symbol *> *matches) const;
+
     /** Adds the named type to the symbol table.  This is used for both
         struct definitions (where <tt>struct Foo</tt> causes type \c Foo to
         be added to the symbol table) as well as for <tt>typedef</tt>s.
@@ -251,9 +261,9 @@ private:
 };
 
 
-template <typename Predicate> 
-void SymbolTable::GetMatchingFunctions(Predicate pred, 
-                                       std::vector<Symbol *> *matches) const {
+template <typename Predicate> void
+SymbolTable::GetMatchingFunctions(Predicate pred, 
+                                  std::vector<Symbol *> *matches) const {
     // Iterate through all function symbols and apply the given predicate.
     // If it returns true, add the Symbol * to the provided vector.
     std::map<std::string, std::vector<Symbol *> >::const_iterator iter;
@@ -264,6 +274,16 @@ void SymbolTable::GetMatchingFunctions(Predicate pred,
                 matches->push_back(syms[i]);
         }
     }
+}
+
+
+template <typename Predicate> void
+SymbolTable::GetMatchingVariables(Predicate pred, 
+                                  std::vector<Symbol *> *matches) const {
+    for (unsigned int i = 0; i < variables.size(); ++i)
+        for (unsigned int j = 0; j < variables[i]->size(); ++j)
+            if (pred((*variables[i])[j]))
+                matches->push_back((*variables[i])[j]);
 }
 
 #endif // ISPC_SYM_H

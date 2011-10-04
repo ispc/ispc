@@ -1497,7 +1497,7 @@ lStoreAssignResult(llvm::Value *rv, llvm::Value *lv, const Type *type,
     assert(baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore &&
         baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
-        baseSym->isStatic == false &&
+        baseSym->storageClass != SC_STATIC &&
         dynamic_cast<const ReferenceType *>(baseSym->type) == NULL) {
         // If the variable is declared at the same varying control flow
         // depth as where it's being assigned, then we don't need to do any

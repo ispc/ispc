@@ -101,9 +101,7 @@ Declarator::AddArrayDimension(int size) {
 void
 Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     sym->type = GetType(ds);
-
-    if (ds->storageClass == SC_STATIC)
-        sym->isStatic = true;
+    sym->storageClass = ds->storageClass;
 }
 
 

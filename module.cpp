@@ -505,7 +505,6 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
         // make sure it's a compile-time constant!
         llvm::Constant *llvmInitializer = NULL;
         if (ds->storageClass == SC_EXTERN || ds->storageClass == SC_EXTERN_C) {
-            externGlobals.push_back(decl->sym);
             if (decl->initExpr != NULL)
                 Error(decl->pos, "Initializer can't be provided with \"extern\" "
                       "global variable \"%s\".", decl->sym->name.c_str());
@@ -1268,6 +1267,12 @@ lIsExternC(const Symbol *sym) {
 }
 
 
+static bool
+lIsExternGlobal(const Symbol *sym) {
+    return sym->storageClass == SC_EXTERN || sym->storageClass == SC_EXTERN_C;
+}
+
+
 bool
 Module::writeHeader(const char *fn) {
     FILE *f = fopen(fn, "w");
@@ -1336,6 +1341,8 @@ Module::writeHeader(const char *fn) {
                            &exportedEnumTypes, &exportedVectorTypes);
 
     // And do the same for the 'extern' globals
+    std::vector<Symbol *> externGlobals;
+    symbolTable->GetMatchingVariables(lIsExternGlobal, &externGlobals);
     for (unsigned int i = 0; i < externGlobals.size(); ++i)
         lGetExportedTypes(externGlobals[i]->type, &exportedStructTypes,
                           &exportedEnumTypes, &exportedVectorTypes);
