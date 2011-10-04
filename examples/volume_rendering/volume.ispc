@@ -352,7 +352,7 @@ volume_task(uniform float density[], uniform int nVoxels[3],
     uniform int ybuckets = (height + (dy-1)) / dy;
 
     uniform int x0 = (taskIndex % xbuckets) * dx;
-    uniform int y0 = (taskIndex / ybuckets) * dy;
+    uniform int y0 = (taskIndex / xbuckets) * dy;
     uniform int x1 = x0 + dx, y1 = y0 + dy;
     x1 = min(x1, width);
     y1 = min(y1, height);
