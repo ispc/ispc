@@ -185,13 +185,20 @@ struct Target {
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */
     llvm::TargetMachine *GetTargetMachine() const;
+    
+    /** Returns a string like "avx" encoding the target. */
+    const char *GetISAString() const;
 
     /** llvm Target object representing this target. */
     const llvm::Target *target;
 
     /** Enumerator giving the instruction sets that the compiler can
-        target. */
-    enum ISA { SSE2, SSE4, AVX };
+        target.  These should be ordered from "worse" to "better" in that
+        if a processor supports multiple target ISAs, then the most
+        flexible/performant of them will apear last in the enumerant.  Note
+        also that __best_available_isa() needs to be updated if ISAs are
+        added or the enumerant values are reordered.  */
+    enum ISA { SSE2, SSE4, AVX, NUM_ISAS };
 
     /** Instruction set being compiled to. */
     ISA isa;
@@ -354,6 +361,10 @@ struct Globals {
     /** Indicates whether ispc should generate debugging symbols for the
         program in its output. */
     bool generateDebuggingSymbols;
+   
+    /** If true, function names are mangled by appending the target ISA and
+        vector width to them. */
+    bool mangleFunctionsWithTarget;
 
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;

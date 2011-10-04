@@ -50,7 +50,7 @@ CXX_SRC=builtins.cpp ctx.cpp decl.cpp expr.cpp ispc.cpp \
 HEADERS=builtins.h ctx.h decl.h expr.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 BUILTINS_SRC=builtins-avx.ll builtins-avx-x2.ll builtins-sse2.ll \
-	builtins-sse4.ll builtins-sse4x2.ll
+	builtins-sse4.ll builtins-sse4-x2.ll builtins-dispatch.ll
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 

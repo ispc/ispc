@@ -69,6 +69,9 @@
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/Intrinsics.h>
+#include <llvm/PassManager.h>
+#include <llvm/PassRegistry.h>
+#include <llvm/Transforms/IPO.h>
 #include <llvm/Support/FormattedStream.h>
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
@@ -333,6 +336,8 @@ lInitFunSymDecl(DeclSpecs *ds, Declarator *decl) {
         llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
     std::string functionName = ((ds->storageClass == SC_EXTERN_C) ?
                                 funSym->name : funSym->MangledName());
+    if (g->mangleFunctionsWithTarget)
+        functionName += g->target.GetISAString();
     llvm::Function *function = 
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), m->module);
 
@@ -497,8 +502,6 @@ Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
         }
 
         LLVM_TYPE_CONST llvm::Type *llvmType = decl->sym->type->LLVMType(g->ctx);
-            (ds->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
-                                              llvm::GlobalValue::ExternalLinkage;
 
         // See if we have an initializer expression for the global.  If so,
         // make sure it's a compile-time constant!
@@ -830,11 +833,14 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
                 LLVM_TYPE_CONST llvm::FunctionType *ftype = 
                     functionType->LLVMFunctionType(g->ctx);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
+                std::string functionName = funSym->name;
+                if (g->mangleFunctionsWithTarget)
+                    functionName += std::string("_") + g->target.GetISAString();
                 llvm::Function *appFunction = 
-                    llvm::Function::Create(ftype, linkage, funSym->name.c_str(), module);
+                    llvm::Function::Create(ftype, linkage, functionName.c_str(), module);
                 appFunction->setDoesNotThrow(true);
 
-                if (appFunction->getName() != funSym->name) {
+                if (appFunction->getName() != functionName) {
                     // this was a redefinition for which we already emitted an
                     // error, so don't worry about this one...
                     appFunction->eraseFromParent();
@@ -864,7 +870,7 @@ Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
 
 
 bool
-Module::WriteOutput(OutputType outputType, const char *outFileName) {
+Module::writeOutput(OutputType outputType, const char *outFileName) {
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
     if (diBuilder != NULL && outputType != Header)
         diBuilder->finalize();
@@ -904,42 +910,54 @@ Module::WriteOutput(OutputType outputType, const char *outFileName) {
     if (outputType == Header)
         return writeHeader(outFileName);
     else {
-        if (outputType == Bitcode) {
-            // Get a file descriptor corresponding to where we want the output
-            // to go.  If we open it, it'll be closed by the
-            // llvm::raw_fd_ostream destructor.
-            int fd;
-            if (!strcmp(outFileName, "-"))
-                fd = 1; // stdout
-            else {
-                int flags = O_CREAT|O_WRONLY|O_TRUNC;
-#ifdef ISPC_IS_WINDOWS
-                flags |= O_BINARY;
-                fd = _open(outFileName, flags, 0644);
-#else
-                fd = open(outFileName, flags, 0644);
-#endif // ISPC_IS_WINDOWS
-                if (fd == -1) {
-                    perror(outFileName);
-                    return false;
-                }
-            }
-
-            llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-            llvm::WriteBitcodeToFile(module, fos);
-            return true;
-        }
-        else {
+        if (outputType == Bitcode)
+            return writeBitcode(module, outFileName);
+        else
             return writeObjectFileOrAssembly(outputType, outFileName);
+    }
+}
+
+
+bool
+Module::writeBitcode(llvm::Module *module, const char *outFileName) {
+    // Get a file descriptor corresponding to where we want the output to
+    // go.  If we open it, it'll be closed by the llvm::raw_fd_ostream
+    // destructor.
+    int fd;
+    if (!strcmp(outFileName, "-"))
+        fd = 1; // stdout
+    else {
+        int flags = O_CREAT|O_WRONLY|O_TRUNC;
+#ifdef ISPC_IS_WINDOWS
+        flags |= O_BINARY;
+        fd = _open(outFileName, flags, 0644);
+#else
+        fd = open(outFileName, flags, 0644);
+#endif // ISPC_IS_WINDOWS
+        if (fd == -1) {
+            perror(outFileName);
+            return false;
         }
     }
+
+    llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+    llvm::WriteBitcodeToFile(module, fos);
+    return true;
 }
 
 
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
     llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
+    return writeObjectFileOrAssembly(targetMachine, module, outputType,
+                                     outFileName);
+}
 
+
+bool
+Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
+                                  llvm::Module *module, OutputType outputType, 
+                                  const char *outFileName) {
     // Figure out if we're generating object file or assembly output, and
     // set binary output for object files
     llvm::TargetMachine::CodeGenFileType fileType = (outputType == Object) ? 
@@ -1303,21 +1321,6 @@ Module::writeHeader(const char *fn) {
 
     fprintf(f, "#include <stdint.h>\n\n");
 
-    switch (g->target.isa) {
-    case Target::SSE2:
-        fprintf(f, "#define ISPC_TARGET_SSE2\n\n");
-        break;
-    case Target::SSE4:
-        fprintf(f, "#define ISPC_TARGET_SSE4\n\n");
-        break;
-    case Target::AVX:
-        fprintf(f, "#define ISPC_TARGET_AVX\n\n");
-        break;
-    default:
-        FATAL("Unhandled target in header emission");
-    }
-    fprintf(f, "#define ISPC_TARGET_VECTOR_WIDTH %d\n", g->target.vectorWidth);
-
     fprintf(f, "#ifdef __cplusplus\nnamespace ispc {\n#endif // __cplusplus\n\n");
 
     if (g->emitInstrumentation) {
@@ -1426,7 +1429,7 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     opts.addMacroDef("PI=3.1415926535");
 
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
-        //Sanity Check, should really begin with -D
+        // Sanity Check, should really begin with -D
         if (g->cppArgs[i].substr(0,2) == "-D") {
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
@@ -1438,4 +1441,490 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
                                     ostream, inst.getPreprocessorOutputOpts());
     diagPrinter->EndSourceFile();
+}
+
+
+// Given an output filename of the form "foo.obj", and an ISA name like
+// "avx", return a string with the ISA name inserted before the original
+// filename's suffix, like "foo_avx.obj".
+static std::string
+lGetTargetFileName(const char *outFileName, const char *isaString) {
+    char *targetOutFileName = new char[strlen(outFileName) + 16];
+    if (strrchr(outFileName, '.') != NULL) {
+        // Copy everything up to the last '.'
+        int count = strrchr(outFileName, '.') - outFileName;
+        strncpy(targetOutFileName, outFileName, count);
+        targetOutFileName[count] = '\0';
+
+        // Add the ISA name
+        strcat(targetOutFileName, "_");
+        strcat(targetOutFileName, isaString);
+
+        // And finish with the original file suffiz
+        strcat(targetOutFileName, strrchr(outFileName, '.'));
+    }
+    else {
+        // Can't find a '.' in the filename, so just append the ISA suffix
+        // to what we weregiven
+        strcpy(targetOutFileName, outFileName);
+        strcat(targetOutFileName, "_");
+        strcat(targetOutFileName, isaString);
+    }
+    return targetOutFileName;
+}
+
+
+// Given a comma-delimited string with one or more compilation targets of
+// the form "sse2,avx-x2", return a vector of strings where each returned
+// string holds one of the targets from the given string.
+static std::vector<std::string> 
+lExtractTargets(const char *target) {
+    std::vector<std::string> targets;
+    const char *tstart = target;
+    bool done = false;
+    while (!done) {
+        const char *tend = strchr(tstart, ',');
+        if (tend == NULL) {
+            done = true;
+            tend = strchr(tstart, '\0');
+        }
+        targets.push_back(std::string(tstart, tend));
+        tstart = tend+1;
+    }
+    return targets;
+}
+
+
+static bool
+lSymbolIsExported(const Symbol *s) {
+    return s->exportedFunction != NULL;
+}
+
+
+// Small structure to hold pointers to the various different versions of a
+// llvm::Function that were compiled for different compilation target ISAs.
+struct FunctionTargetVariants {
+    FunctionTargetVariants() {
+        for (int i = 0; i < Target::NUM_ISAS; ++i)
+            func[i] = NULL;
+    }
+    // The func array is indexed with the Target::ISA enumerant.  Some
+    // values may be NULL, indicating that the original function wasn't
+    // compiled to the corresponding target ISA.
+    llvm::Function *func[Target::NUM_ISAS];
+};
+
+
+// Given the symbol table for a module, return a map from function names to
+// FunctionTargetVariants for each function that was defined with the
+// 'export' qualifier in ispc.
+static void 
+lGetExportedFunctions(SymbolTable *symbolTable, 
+                      std::map<std::string, FunctionTargetVariants> &functions) {
+    std::vector<Symbol *> syms;
+    symbolTable->GetMatchingFunctions(lSymbolIsExported, &syms);
+    for (unsigned int i = 0; i < syms.size(); ++i) {
+        FunctionTargetVariants &ftv = functions[syms[i]->name];
+        ftv.func[g->target.isa] = syms[i]->exportedFunction;    
+    }
+}
+
+
+struct RewriteGlobalInfo {
+    RewriteGlobalInfo(llvm::GlobalVariable *g = NULL, llvm::Constant *i = NULL,
+                      SourcePos p = SourcePos()) {
+        gv = g;
+        init = i;
+        pos = p;
+    }
+
+    llvm::GlobalVariable *gv;
+    llvm::Constant *init;
+    SourcePos pos;
+};
+
+// Grab all of the global value definitions from the module and change them
+// to be declarations; we'll emit a single definition of each global in the
+// final module used with the dispatch functions, so that we don't have
+// multiple definitions of them, one in each of the target-specific output
+// files.
+static void
+lExtractAndRewriteGlobals(llvm::Module *module, 
+                          std::vector<RewriteGlobalInfo> *globals) {
+    llvm::Module::global_iterator iter;
+    for (iter = module->global_begin(); iter != module->global_end(); ++iter) {
+        llvm::GlobalVariable *gv = iter;
+        // Is it a global definition?
+        if (gv->getLinkage() == llvm::GlobalValue::ExternalLinkage &&
+            gv->hasInitializer()) {
+            // Turn this into an 'extern 'declaration by clearing its
+            // initializer.
+            llvm::Constant *init = gv->getInitializer();
+            gv->setInitializer(NULL);
+
+            Symbol *sym = 
+                m->symbolTable->LookupVariable(gv->getName().str().c_str());
+            assert(sym != NULL);
+            globals->push_back(RewriteGlobalInfo(gv, init, sym->pos));
+        }
+    }
+}
+
+
+// This function emits a global variable definition for each global that
+// was turned into a declaration in the target-specific output file.
+static void
+lAddExtractedGlobals(llvm::Module *module,
+                     std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS]) {
+    // Find the first element in the globals[] array that has values stored
+    // in it.  All elements of this array should either have empty vectors
+    // (if we didn't compile to the corresponding ISA or if there are no
+    // globals), or should have the same number of vector elements as the
+    // other non-empty vectors.
+    int firstActive = -1;
+    for (int i = 0; i < Target::NUM_ISAS; ++i)
+        if (globals[i].size() > 0) {
+            firstActive = i;
+            break;
+        }
+
+    if (firstActive == -1)
+        // no globals
+        return;
+
+    for (unsigned int i = 0; i < globals[firstActive].size(); ++i) {
+        RewriteGlobalInfo &rgi = globals[firstActive][i];
+        llvm::GlobalVariable *gv = rgi.gv;
+        LLVM_TYPE_CONST llvm::Type *type = gv->getType()->getElementType();
+        llvm::Constant *initializer = rgi.init;
+
+        // Create a new global in the given model that matches the original
+        // global
+        llvm::GlobalVariable *newGlobal = 
+            new llvm::GlobalVariable(*module, type, gv->isConstant(),
+                                     llvm::GlobalValue::ExternalLinkage,
+                                     initializer, gv->getName());
+        newGlobal->copyAttributesFrom(gv);
+
+        // For all of the other targets that we actually generated code
+        // for, make sure the global we just created is compatible with the
+        // global from the module for that target.
+        for (int j = firstActive + 1; j < Target::NUM_ISAS; ++j) {
+            if (globals[j].size() > 0) {
+                // There should be the same number of globals in the other
+                // vectors, in the same order.
+                assert(globals[firstActive].size() == globals[j].size());
+                llvm::GlobalVariable *gv2 = globals[j][i].gv;
+                assert(gv2->getName() == gv->getName());
+
+                // It is possible that the types may not match, though--for
+                // example, this happens with varying globals if we compile
+                // to different vector widths.
+                if (gv2->getType() != gv->getType())
+                    Error(rgi.pos, "Mismatch in size/layout of global "
+                          "variable \"%s\" with different targets. "
+                          "Globals must not include \"varying\" types or arrays "
+                          "with size based on programCount when compiling to "
+                          "targets with differing vector widths.",
+                          gv->getName().str().c_str());
+            }
+        }
+    }
+}
+
+
+/** Create the dispatch function for an exported ispc function.
+    This function checks to see which vector ISAs the system the 
+    code is running on supports and calls out to the best available
+    variant that was generated at compile time.
+
+    @param module      Module in which to create the dispatch function.
+    @param setISAFunc  Pointer to the __set_system_isa() function defined
+                       in builtins-dispatch.ll (which is linked into the
+                       given module before we get here.)
+    @param systemBestISAPtr  Pointer to the module-local __system_best_isa
+                             variable, which holds a value of the Target::ISA
+                             enumerant giving the most capable ISA that the
+                             system supports.
+    @param name        Name of the function for which we're generating a
+                       dispatch function
+    @param funcs       Target-specific variants of the exported function.
+*/
+static void
+lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
+                        llvm::Value *systemBestISAPtr, const std::string &name, 
+                        FunctionTargetVariants &funcs) {
+    // The llvm::Function pointers in funcs are pointers to functions in
+    // different llvm::Modules, so we can't call them directly.  Therefore,
+    // we'll start by generating an 'extern' declaration of each one that
+    // we have in the current module so that we can then call out to that.
+    llvm::Function *targetFuncs[Target::NUM_ISAS];
+    LLVM_TYPE_CONST llvm::FunctionType *ftype = NULL;
+
+    for (int i = 0; i < Target::NUM_ISAS; ++i) {
+        if (funcs.func[i] == NULL) {
+            targetFuncs[i] = NULL;
+            continue;
+        }
+
+        // Grab the type of the function as well.
+        if (ftype != NULL)
+            assert(ftype == funcs.func[i]->getFunctionType());
+        else
+            ftype = funcs.func[i]->getFunctionType();
+
+        targetFuncs[i] = 
+            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, 
+                                   funcs.func[i]->getName(), module);
+    }
+
+    bool voidReturn = ftype->getReturnType()->isVoidTy();
+
+    // Now we can emit the definition of the dispatch function..
+    llvm::Function *dispatchFunc = 
+        llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage, 
+                               name.c_str(), module);
+    llvm::BasicBlock *bblock = 
+        llvm::BasicBlock::Create(*g->ctx, "entry", dispatchFunc);
+
+    // Start by calling out to the function that determines the system's
+    // ISA and sets __system_best_isa, if it hasn't been set yet.
+    llvm::CallInst::Create(setISAFunc, "", bblock);
+
+    // Now we can load the system's ISA enuemrant
+    llvm::Value *systemISA = 
+        new llvm::LoadInst(systemBestISAPtr, "system_isa", bblock);
+
+    // Now emit code that works backwards though the available variants of
+    // the function.  We'll call out to the first one we find that will run
+    // successfully on the system the code is running on.  In working
+    // through the candidate ISAs here backward, we're taking advantage of
+    // the expectation that they are ordered in the Target::ISA enumerant
+    // from least to most capable.
+    for (int i = Target::NUM_ISAS-1; i >= 0; --i) {
+        if (targetFuncs[i] == NULL)
+            continue;
+
+        // Emit code to see if the system can run the current candidate
+        // variant successfully--"is the system's ISA enuemrant value >=
+        // the enumerant value of the current candidate?"
+        llvm::Value *ok = 
+            llvm::CmpInst::Create(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SGE,
+                                  systemISA, LLVMInt32(i), "isa_ok", bblock);
+        llvm::BasicBlock *callBBlock = 
+            llvm::BasicBlock::Create(*g->ctx, "do_call", dispatchFunc);
+        llvm::BasicBlock *nextBBlock = 
+            llvm::BasicBlock::Create(*g->ctx, "next_try", dispatchFunc);
+        llvm::BranchInst::Create(callBBlock, nextBBlock, ok, bblock);
+
+        // Emit the code to make the call call in callBBlock.
+        // Just pass through all of the args from the dispatch function to
+        // the target-specific function.
+        std::vector<llvm::Value *> args;
+        llvm::Function::arg_iterator argIter = dispatchFunc->arg_begin(); 
+        for (; argIter != dispatchFunc->arg_end(); ++argIter)
+            args.push_back(argIter);
+        if (voidReturn) {
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
+#else
+            llvm::CallInst::Create(targetFuncs[i], args.begin(), args.end(),
+                                   "", callBBlock);
+#endif
+            llvm::ReturnInst::Create(*g->ctx, callBBlock);
+        }
+        else {
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+            llvm::Value *retValue = 
+                llvm::CallInst::Create(targetFuncs[i], args, "ret_value", 
+                                       callBBlock);
+#else
+            llvm::Value *retValue = 
+                llvm::CallInst::Create(targetFuncs[i], args.begin(), args.end(),
+                                       "ret_value", callBBlock);
+#endif
+            llvm::ReturnInst::Create(*g->ctx, retValue, callBBlock);
+        }
+
+        // Otherwise we'll go on to the next candidate and see about that
+        // one...
+        bblock = nextBBlock;
+    }
+
+    // We couldn't find a match that the current system was capable of
+    // running.  We'll call abort(); this is a bit of a blunt hammer--it
+    // might be preferable to call a user-supplied callback--ISPCError(...)
+    // or some such, but we don't want to start imposing too much of a
+    // runtime library requirement either...
+    llvm::Function *abortFunc = module->getFunction("abort");
+    assert(abortFunc);
+    llvm::CallInst::Create(abortFunc, "", bblock);
+
+    // Return an undef value from the function here; we won't get to this
+    // point at runtime, but LLVM needs all of the basic blocks to be
+    // terminated...
+    if (voidReturn)
+        llvm::ReturnInst::Create(*g->ctx, bblock);
+    else {
+        llvm::Value *undefRet = llvm::UndefValue::get(ftype->getReturnType());
+        llvm::ReturnInst::Create(*g->ctx, undefRet, bblock);
+    }
+}
+
+
+// Given a map that holds the mapping from each of the 'export'ed functions
+// in the ispc program to the target-specific variants of the function,
+// create a llvm::Module that has a dispatch function for each exported
+// function that checks the system's capabilities and picks the most
+// appropriate compiled variant of the function.
+static llvm::Module *
+lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) {
+    llvm::Module *module = new llvm::Module("dispatch_module", *g->ctx);
+
+    // First, link in the definitions from the builtins-dispatch.ll file.
+    extern unsigned char builtins_bitcode_dispatch[];
+    extern int builtins_bitcode_dispatch_length;
+    AddBitcodeToModule(builtins_bitcode_dispatch, 
+                       builtins_bitcode_dispatch_length, module);
+
+    // Get pointers to things we need below
+    llvm::Function *setFunc = module->getFunction("__set_system_isa");
+    assert(setFunc != NULL);
+    llvm::Value *systemBestISAPtr = 
+        module->getGlobalVariable("__system_best_isa", true);
+    assert(systemBestISAPtr != NULL);
+
+    // For each exported function, create the dispatch function
+    std::map<std::string, FunctionTargetVariants>::iterator iter;
+    for (iter = functions.begin(); iter != functions.end(); ++iter)
+        lCreateDispatchFunction(module, setFunc, systemBestISAPtr,
+                                iter->first, iter->second);
+
+    // Do some rudimentary cleanup of the final result and make sure that
+    // the module is all ok.
+    llvm::PassManager optPM;
+    optPM.add(llvm::createGlobalDCEPass());
+    optPM.add(llvm::createVerifierPass());
+    optPM.run(*module);
+
+    return module;
+}
+
+
+int
+Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu, 
+                         const char *target, bool generatePIC, OutputType outputType, 
+                         const char *outFileName, const char *headerFileName) {
+    if (target == NULL || strchr(target, ',') == NULL) {
+        // We're only compiling to a single target
+        if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
+            return 1;
+
+        m = new Module(srcFile);
+        if (m->CompileFile() == 0) {
+            if (outFileName != NULL)
+                if (!m->writeOutput(outputType, outFileName))
+                    return 1;
+            if (headerFileName != NULL)
+                if (!m->writeOutput(Module::Header, headerFileName))
+                    return 1;
+        }
+        int errorCount = m->errorCount;
+        delete m;
+        m = NULL;
+
+        return errorCount > 0;
+    }
+    else {
+        // The user supplied multiple targets
+        std::vector<std::string> targets = lExtractTargets(target);
+        assert(targets.size() > 1);
+
+        if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
+            Error(SourcePos(), "Multi-target compilation can't generate output "
+                  "to stdout.  Please provide an output filename.\n");
+            return 1;
+        }
+
+        // Make sure that the function names for 'export'ed functions have
+        // the target ISA appended to them.
+        g->mangleFunctionsWithTarget = true;
+
+        llvm::TargetMachine *targetMachines[Target::NUM_ISAS];
+        for (int i = 0; i < Target::NUM_ISAS; ++i)
+            targetMachines[i] = NULL;
+
+        std::map<std::string, FunctionTargetVariants> exportedFunctions;
+        std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS];
+        int errorCount = 0;
+        for (unsigned int i = 0; i < targets.size(); ++i) {
+            if (!Target::GetTarget(arch, cpu, targets[i].c_str(), generatePIC, 
+                                   &g->target))
+                return 1;
+
+            // Issue an error if we've already compiled to a variant of
+            // this target ISA.  (It doesn't make sense to compile to both
+            // avx and avx-x2, for example.)
+            if (targetMachines[g->target.isa] != NULL) {
+                Error(SourcePos(), "Can't compile to multiple variants of %s "
+                      "target!\n", g->target.GetISAString());
+                return 1;
+            }
+            targetMachines[g->target.isa] = g->target.GetTargetMachine();
+
+            m = new Module(srcFile);
+            if (m->CompileFile() == 0) {
+                // Grab pointers to the exported functions from the module we
+                // just compiled, for use in generating the dispatch function
+                // later.
+                lGetExportedFunctions(m->symbolTable, exportedFunctions);
+
+                lExtractAndRewriteGlobals(m->module, &globals[i]);
+
+                if (outFileName != NULL) {
+                    const char *isaName = g->target.GetISAString();
+                    std::string targetOutFileName = 
+                        lGetTargetFileName(outFileName, isaName);
+                    if (!m->writeOutput(outputType, targetOutFileName.c_str()))
+                        return 1;
+                }
+            }
+            errorCount += m->errorCount;
+
+            // Only write the generate header file, if desired, the first
+            // time through the loop here.
+            if (i == 0 && headerFileName != NULL)
+                if (!m->writeOutput(Module::Header, headerFileName))
+                    return 1;
+
+            // Important: Don't delete the llvm::Module *m here; we need to
+            // keep it around so the llvm::Functions *s stay valid for when
+            // we generate the dispatch module's functions...
+        }
+
+        llvm::Module *dispatchModule = 
+            lCreateDispatchModule(exportedFunctions);
+
+        lAddExtractedGlobals(dispatchModule, globals);
+
+        // Find the first non-NULL target machine from the targets we
+        // compiled to above.  We'll use this as the target machine for
+        // compiling the dispatch module--this is safe in that it is the
+        // least-common-denominator of all of the targets we compiled to.
+        llvm::TargetMachine *firstTargetMachine = targetMachines[0];
+        int i = 1;
+        while (i < Target::NUM_ISAS && firstTargetMachine == NULL)
+            firstTargetMachine = targetMachines[i++];
+        assert(firstTargetMachine != NULL);
+
+        if (outFileName != NULL) {
+            if (outputType == Bitcode)
+                writeBitcode(dispatchModule, outFileName);
+            else
+                writeObjectFileOrAssembly(firstTargetMachine, dispatchModule,
+                                          outputType, outFileName);
+        }
+        
+        return errorCount > 0;
+    }
 }

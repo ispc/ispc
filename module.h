@@ -75,11 +75,37 @@ public:
                                     variables, and the types used by them. */
     };
 
-    /** Write the corresponding output type to the given file.  Returns
-        true on success, false if there has been an error.  The given
-        filename may be NULL, indicating that output should go to standard
-        output. */
-    bool WriteOutput(OutputType ot, const char *filename);
+    /** Compile the given source file, generating assembly, object file, or
+        LLVM bitcode output, as well as (optionally) a header file with
+        declarations of functions and types used in the ispc/application
+        interface.
+        @param srcFile      Pathname to ispc source file to compile
+        @param arch         Target architecture (e.g. "x86-64")
+        @param cpu          Target CPU (e.g. "core-i7")
+        @param targets      Target ISAs; this parameter may give a single target
+                            ISA, or may give a comma-separated list of them in
+                            case we are compiling to multiple ISAs.
+        @param generatePIC  Indicates whether position-independent code should
+                            be generated.
+        @param outputType   Type of output to generate (object files, assembly,
+                            LLVM bitcode.)
+        @param outFileName  Base name of output filename for object files, etc.
+                            If for example the multiple targets "sse2" and "avx"
+                            are specified in the "targets" parameter and if this
+                            parameter is "foo.o", then we'll generate multiple
+                            output files, like "foo.o", "foo_sse2.o", "foo_avx.o".
+        @param headerFileName If non-NULL, emit a header file suitable for
+                              inclusion from C/C++ code with declarations of
+                              types and functions exported from the given ispc
+                              source file.
+        @return             Number of errors encountered when compiling
+                            srcFile.
+     */
+    static int CompileAndOutput(const char *srcFile, const char *arch, 
+                                const char *cpu, const char *targets, 
+                                bool generatePIC, OutputType outputType, 
+                                const char *outFileName, 
+                                const char *headerFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -99,10 +125,19 @@ public:
 private:
     const char *filename;
 
+    /** Write the corresponding output type to the given file.  Returns
+        true on success, false if there has been an error.  The given
+        filename may be NULL, indicating that output should go to standard
+        output. */
+    bool writeOutput(OutputType ot, const char *filename);
     bool writeHeader(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
-    void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
+    static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
+                                          llvm::Module *module, OutputType outputType, 
+                                          const char *outFileName);
+    static bool writeBitcode(llvm::Module *module, const char *outFileName);
 
+    void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
 };
 
 #endif // ISPC_MODULE_H

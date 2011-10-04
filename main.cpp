@@ -329,20 +329,6 @@ int main(int Argc, char *Argv[]) {
     if (debugSet && !optSet)
         g->opt.level = 0;
 
-    if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
-        usage(1);
-
-    m = new Module(file);
-    if (m->CompileFile() == 0) {
-        if (outFileName != NULL)
-            if (!m->WriteOutput(ot, outFileName))
-                return 1;
-        if (headerFileName != NULL)
-            if (!m->WriteOutput(Module::Header, headerFileName))
-                return 1;
-    }
-    int errorCount = m->errorCount;
-    delete m;
-
-    return errorCount > 0;
+    return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
+                                    ot, outFileName, headerFileName);
 }

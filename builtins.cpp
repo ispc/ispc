@@ -336,9 +336,9 @@ lCheckModuleIntrinsics(llvm::Module *module) {
     @param module      Module to link the bitcode into
     @param symbolTable Symbol table to add definitions to
  */
-static void
-lAddBitcode(const unsigned char *bitcode, int length,
-            llvm::Module *module, SymbolTable *symbolTable) {
+void
+AddBitcodeToModule(const unsigned char *bitcode, int length,
+                   llvm::Module *module, SymbolTable *symbolTable) {
     std::string bcErr;
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
@@ -365,7 +365,8 @@ lAddBitcode(const unsigned char *bitcode, int length,
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
-        lAddModuleSymbols(module, symbolTable);
+        if (symbolTable != NULL)
+            lAddModuleSymbols(module, symbolTable);
         lCheckModuleIntrinsics(module);
     }
 }
@@ -435,14 +436,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     if (g->target.is32bit) {
         extern unsigned char builtins_bitcode_c_32[];
         extern int builtins_bitcode_c_32_length;
-        lAddBitcode(builtins_bitcode_c_32, builtins_bitcode_c_32_length, 
-                    module, symbolTable);
+        AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length, 
+                           module, symbolTable);
     }
     else {
         extern unsigned char builtins_bitcode_c_64[];
         extern int builtins_bitcode_c_64_length;
-        lAddBitcode(builtins_bitcode_c_64, builtins_bitcode_c_64_length, 
-                    module, symbolTable);
+        AddBitcodeToModule(builtins_bitcode_c_64, builtins_bitcode_c_64_length, 
+                           module, symbolTable);
     }
 
     // Next, add the target's custom implementations of the various needed
@@ -451,22 +452,22 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::SSE2:
         extern unsigned char builtins_bitcode_sse2[];
         extern int builtins_bitcode_sse2_length;
-        lAddBitcode(builtins_bitcode_sse2, builtins_bitcode_sse2_length, module,
-                    symbolTable);
+        AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length, 
+                           module, symbolTable);
         break;
     case Target::SSE4:
         extern unsigned char builtins_bitcode_sse4[];
         extern int builtins_bitcode_sse4_length;
-        extern unsigned char builtins_bitcode_sse4x2[];
-        extern int builtins_bitcode_sse4x2_length;
+        extern unsigned char builtins_bitcode_sse4_x2[];
+        extern int builtins_bitcode_sse4_x2_length;
         switch (g->target.vectorWidth) {
         case 4: 
-            lAddBitcode(builtins_bitcode_sse4, builtins_bitcode_sse4_length, 
-                        module, symbolTable);
+            AddBitcodeToModule(builtins_bitcode_sse4, builtins_bitcode_sse4_length, 
+                               module, symbolTable);
             break;
         case 8:
-            lAddBitcode(builtins_bitcode_sse4x2, builtins_bitcode_sse4x2_length, 
-                        module, symbolTable);
+            AddBitcodeToModule(builtins_bitcode_sse4_x2, builtins_bitcode_sse4_x2_length, 
+                               module, symbolTable);
             break;
         default:
             FATAL("logic error in DefineStdlib");
@@ -477,14 +478,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 8:
             extern unsigned char builtins_bitcode_avx[];
             extern int builtins_bitcode_avx_length;
-            lAddBitcode(builtins_bitcode_avx, builtins_bitcode_avx_length, module, 
-                        symbolTable);
+            AddBitcodeToModule(builtins_bitcode_avx, builtins_bitcode_avx_length, 
+                               module, symbolTable);
             break;
         case 16:
             extern unsigned char builtins_bitcode_avx_x2[];
             extern int builtins_bitcode_avx_x2_length;
-            lAddBitcode(builtins_bitcode_avx_x2, builtins_bitcode_avx_x2_length,
-                        module,  symbolTable);
+            AddBitcodeToModule(builtins_bitcode_avx_x2, builtins_bitcode_avx_x2_length,
+                               module,  symbolTable);
             break;
         default:
             FATAL("logic error in DefineStdlib");

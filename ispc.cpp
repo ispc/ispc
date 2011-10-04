@@ -135,7 +135,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
     }
-    else if (!strcasecmp(isa, "sse4x2")) {
+    else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2")) {
         t->isa = Target::SSE4;
         t->nativeVectorWidth = 4;
         t->vectorWidth = 8;
@@ -193,7 +193,7 @@ Target::SupportedTargetArchs() {
 
 const char *
 Target::SupportedTargetISAs() {
-    return "sse2, sse4, sse4x2"
+    return "sse2, sse4, sse4-x2"
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
         ", avx, avx-x2"
 #endif
@@ -252,6 +252,23 @@ Target::GetTargetMachine() const {
 }
 
 
+const char *
+Target::GetISAString() const {
+    switch (isa) {
+    case Target::SSE2:
+        return "sse2";
+    case Target::SSE4:
+        return "sse4";
+    case Target::AVX:
+        return "avx";
+        break;
+    default:
+        FATAL("Unhandled target in GetISAString()");
+    }
+    return "";
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Opt
 
@@ -283,6 +300,7 @@ Globals::Globals() {
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
+    mangleFunctionsWithTarget = false;
 
     ctx = new llvm::LLVMContext;
 
