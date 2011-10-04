@@ -946,7 +946,7 @@ parameter_list
         else {
             std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
             std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
         }
         $$ = NULL;
     }
@@ -1050,7 +1050,7 @@ statement
         else {
             std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
             std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
         }
         $$ = NULL;
     }
@@ -1209,7 +1209,7 @@ translation_unit
         else {
             std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
             std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unknown.%s", yytext, alts.c_str());
+            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
         }
     }
     ;

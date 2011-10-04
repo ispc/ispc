@@ -111,7 +111,10 @@ lPrintFileLineContext(SourcePos p) {
 
     int c, curLine = 1;
     while ((c = fgetc(f)) != EOF) {
-        if (curLine >= p.first_line && curLine <= p.last_line)
+        // Don't print more than three lines of context.  (More than that,
+        // and we're probably doing the wrong thing...)
+        if (curLine >= std::max(p.first_line, p.last_line-2) && 
+            curLine <= p.last_line)
             fputc(c, stderr);
         if (c == '\n')
             ++curLine;
@@ -313,6 +316,12 @@ FatalError(const char *file, int line, const char *message) {
 // http://en.wikipedia.org/wiki/Levenshtein_distance
 int
 StringEditDistance(const std::string &str1, const std::string &str2, int maxDist) {
+    // Small hack: don't return 0 if the strings are the same; if we've
+    // gotten here, there's been a parsing error, and suggesting the same
+    // string isn't going to actually help things.
+    if (str1 == str2)
+        return maxDist;
+
     int n1 = (int)str1.size(), n2 = (int)str2.size();
     int nmax = std::max(n1, n2);
 
