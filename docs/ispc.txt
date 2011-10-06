@@ -1941,12 +1941,19 @@ given value across all of the currently-executing vector lanes.
 
 ::
 
-    uniform float reduce_min(float a, float b)
-    uniform int reduce_min(int a, int b)
-    uniform unsigned int reduce_min(unsigned int a, unsigned int b)
-    uniform float reduce_max(float a, float b)
-    uniform int reduce_max(int a, int b)
-    uniform unsigned int reduce_max(unsigned int a, unsigned int b)
+    uniform float reduce_min(float a)
+    uniform int32 reduce_min(int32 a)
+    uniform unsigned int32 reduce_min(unsigned int32 a)
+    uniform double reduce_min(double a)
+    uniform int64 reduce_min(int64 a)
+    uniform unsigned int64 reduce_min(unsigned int64 a)
+
+    uniform float reduce_max(float a)
+    uniform int32 reduce_max(int32 a)
+    uniform unsigned int32 reduce_max(unsigned int32 a)
+    uniform double reduce_max(double a)
+    uniform int64 reduce_max(int64 a)
+    uniform unsigned int64 reduce_max(unsigned int64 a)
 
 Finally, you can check to see if a particular value has the same value in
 all of the currently-running program instances:
