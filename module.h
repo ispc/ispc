@@ -40,10 +40,11 @@
 #define ISPC_MODULE_H 1
 
 #include "ispc.h"
+#include "ast.h"
 
 namespace llvm
 {
-class raw_string_ostream;
+    class raw_string_ostream;
 }
 
 class Module {
@@ -120,10 +121,9 @@ public:
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
 
-    GatherBuffer *gatherBuffer;
-
 private:
     const char *filename;
+    AST *ast;
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given

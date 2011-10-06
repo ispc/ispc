@@ -59,14 +59,15 @@ struct CFInfo;
 class FunctionEmitContext {
 public:
     /** Create a new FunctionEmitContext.
-        @param returnType   The return type of the function
-        @param function     LLVM function in the current module that corresponds
+        @param function     The Function object representing the function
+        @param sym          Symbol that corresponds to the function
+        @param llvmFunction LLVM function in the current module that corresponds
                             to the function
-        @param funSym       Symbol that corresponds to the function
         @param firstStmtPos Source file position of the first statement in the
                             function
      */
-    FunctionEmitContext(const Type *returnType, llvm::Function *function, Symbol *funSym,
+    FunctionEmitContext(Function *function, Symbol *funSym, 
+                        llvm::Function *llvmFunction,
                         SourcePos firstStmtPos);
     ~FunctionEmitContext();
 
@@ -85,6 +86,8 @@ public:
      */
     /** Returns the current mask value */ 
     llvm::Value *GetMask();
+
+    void SetMaskPointer(llvm::Value *p);
 
     /** Provides the value of the mask at function entry */
     void SetEntryMask(llvm::Value *val);

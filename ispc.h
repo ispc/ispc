@@ -90,8 +90,8 @@ class Declarator;
 class FunctionEmitContext;
 class Expr;
 class ExprList;
+class Function;
 class FunctionType;
-class GatherBuffer;
 class Module;
 class Stmt;
 class Symbol;
@@ -123,37 +123,6 @@ struct SourcePos {
     bool operator==(const SourcePos &p2) const;
 };
 
-
-/** @brief Abstract base class for nodes in the abstract syntax tree (AST).
-
-    This class defines a basic interface that all abstract syntax tree
-    (AST) nodes must implement.  The base classes for both expressions
-    (Expr) and statements (Stmt) inherit from this class.
-*/
-class ASTNode {
-public:
-    ASTNode(SourcePos p) : pos(p) { }
-    virtual ~ASTNode();
-
-    /** The Optimize() method should perform any appropriate early-stage
-        optimizations on the node (e.g. constant folding).  The caller
-        should use the returned ASTNode * in place of the original node.
-        This method may return NULL if an error is encountered during
-        optimization. */
-    virtual ASTNode *Optimize() = 0;
-
-    /** Type checking should be performed by the node when this method is
-        called.  In the event of an error, a NULL value may be returned.
-        As with ASTNode::Optimize(), the caller should store the returned
-        pointer in place of the original ASTNode *. */
-    virtual ASTNode *TypeCheck() = 0;
-
-    virtual int EstimateCost() const = 0;
-
-    /** All AST nodes must track the file position where they are
-        defined. */
-    const SourcePos pos;
-};
 
 /** @brief Structure that defines a compilation target 
 

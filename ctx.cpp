@@ -37,6 +37,7 @@
 
 #include "ctx.h"
 #include "util.h"
+#include "func.h"
 #include "llvmutil.h"
 #include "type.h"
 #include "stmt.h"
@@ -123,19 +124,20 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
 
 ///////////////////////////////////////////////////////////////////////////
 
-FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *function,
-                                         Symbol *funSym, SourcePos firstStmtPos) {
+FunctionEmitContext::FunctionEmitContext(Function *function, Symbol *funSym,
+                                         llvm::Function *llvmFunction,
+                                         SourcePos firstStmtPos) {
+    const Type *rt = function->GetReturnType();
+
     /* Create a new basic block to store all of the allocas */
-    allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", function, 0);
-    bblock = llvm::BasicBlock::Create(*g->ctx, "entry", function, 0);
+    allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
+    bblock = llvm::BasicBlock::Create(*g->ctx, "entry", llvmFunction, 0);
     /* But jump from it immediately into the real entry block */
     llvm::BranchInst::Create(bblock, allocaBlock);
 
-    maskPtr = AllocaInst(LLVMTypes::MaskType, "mask_memory");
-    StoreInst(LLVMMaskAllOn, maskPtr);
-
     funcStartPos = funSym->pos;
     returnType = rt;
+    maskPtr = NULL;
     entryMask = NULL;
     loopMask = NULL;
     breakLanesPtr = continueLanesPtr = NULL;
@@ -165,7 +167,7 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
         llvm::DIType retType = rt->GetDIType(diFile);
         int flags = llvm::DIDescriptor::FlagPrototyped; // ??
         diFunction = m->diBuilder->createFunction(diFile, /* scope */
-                                                  function->getName(), // mangled
+                                                  llvmFunction->getName(), // mangled
                                                   funSym->name,
                                                   diFile,
                                                   funcStartPos.first_line,
@@ -174,20 +176,9 @@ FunctionEmitContext::FunctionEmitContext(const Type *rt, llvm::Function *functio
                                                   true, /* is definition */
                                                   flags,
                                                   g->opt.level > 0,
-                                                  function);
+                                                  llvmFunction);
         /* And start a scope representing the initial function scope */
         StartScope();
-    }
-
-    // connect the funciton's mask memory to the __mask symbol
-    Symbol *maskSymbol = m->symbolTable->LookupVariable("__mask");
-    assert(maskSymbol != NULL);
-    maskSymbol->storagePtr = maskPtr;
-
-    // add debugging info for __mask, programIndex, ...
-    if (m->diBuilder) {
-        maskSymbol->pos = funcStartPos;
-        EmitVariableDebugInfo(maskSymbol);
 
         llvm::DIFile file = funcStartPos.GetDIFile();
         Symbol *programIndexSymbol = m->symbolTable->LookupVariable("programIndex");
@@ -232,6 +223,12 @@ FunctionEmitContext::SetCurrentBasicBlock(llvm::BasicBlock *bb) {
 llvm::Value *
 FunctionEmitContext::GetMask() {
     return LoadInst(maskPtr, NULL, "load_mask");
+}
+
+
+void
+FunctionEmitContext::SetMaskPointer(llvm::Value *p) {
+    maskPtr = p;
 }
 
 

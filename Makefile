@@ -44,10 +44,10 @@ YACC=bison -d -v -t
 
 ###########################################################################
 
-CXX_SRC=builtins.cpp ctx.cpp decl.cpp expr.cpp ispc.cpp \
+CXX_SRC=ast.cpp builtins.cpp ctx.cpp decl.cpp expr.cpp func.cpp ispc.cpp \
 	llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp type.cpp \
 	util.cpp
-HEADERS=builtins.h ctx.h decl.h expr.h ispc.h llvmutil.h module.h \
+HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 BUILTINS_SRC=builtins-avx.ll builtins-avx-x2.ll builtins-sse2.ll \
 	builtins-sse4.ll builtins-sse4-x2.ll builtins-dispatch.ll

@@ -39,6 +39,7 @@
 #define ISPC_STMT_H 1
 
 #include "ispc.h"
+#include "ast.h"
 
 /** @brief Interface class for statements in the ispc language.
 

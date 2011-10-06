@@ -39,6 +39,7 @@
 #define ISPC_EXPR_H 1
 
 #include "ispc.h"
+#include "ast.h"
 #include "type.h"
 
 class FunctionSymbolExpr;
