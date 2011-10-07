@@ -99,7 +99,7 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
-    "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor", "char", 
+    "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor",
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
     "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
     "inline", "int", "int8", "int16", "int32", "int64", "launch", "print",
@@ -109,7 +109,7 @@ static const char *lBuiltinTokens[] = {
 };
 
 static const char *lParamListTokens[] = {
-    "bool", "char", "const", "double", "enum", "false", "float", "int",
+    "bool", "const", "double", "enum", "false", "float", "int",
     "int8", "int16", "int32", "int64", "reference", "struct", "true",
      "uniform", "unsigned", "varying", "void", NULL 
 };

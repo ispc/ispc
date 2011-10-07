@@ -85,7 +85,6 @@ cbreak { return TOKEN_CBREAK; }
 ccontinue { return TOKEN_CCONTINUE; }
 cdo { return TOKEN_CDO; }
 cfor { return TOKEN_CFOR; }
-char { return TOKEN_CHAR; }
 cif { return TOKEN_CIF; }
 cwhile { return TOKEN_CWHILE; }
 const { return TOKEN_CONST; }
