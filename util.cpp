@@ -295,7 +295,7 @@ Warning(SourcePos p, const char *fmt, ...) {
 
 void
 PerformanceWarning(SourcePos p, const char *fmt, ...) {
-    if (!g->emitPerfWarnings)
+    if (!g->emitPerfWarnings || strcmp(p.name, "stdlib.ispc") == 0)
         return;
 
     va_list args;
