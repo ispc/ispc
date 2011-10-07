@@ -45,6 +45,7 @@
 #include "stmt.h"
 #include "sym.h"
 #include "util.h"
+#include <stdio.h>
 
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
