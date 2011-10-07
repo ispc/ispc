@@ -251,7 +251,8 @@ Function::InitFunctionSymbol(DeclSpecs *ds, Declarator *decl) {
         return NULL;
 
     // And create the llvm::Function
-    llvm::GlobalValue::LinkageTypes linkage = ds->storageClass == SC_STATIC ?
+    llvm::GlobalValue::LinkageTypes linkage = (ds->storageClass == SC_STATIC ||
+                                               (ds->typeQualifier & TYPEQUAL_INLINE)) ?
         llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
     std::string functionName = ((ds->storageClass == SC_EXTERN_C) ?
                                 funSym->name : funSym->MangledName());
