@@ -1,3 +1,20 @@
+=== v1.0.11 === (6 October 2011)
+
+The main new feature in this release is support for generating code for
+multiple targets (e.g., SSE2, SSE4, and AVX) and having the compiled code
+select the best variant at execution time.  For more information, see
+http://ispc.github.com/ispc.html#compiling-with-support-for-multiple-instruction-sets.
+
+All of the examples now take advantage of the support for multiple
+compilation targets; thus, if one has an AVX system, it's not necessary to
+recompile the examples to use the AVX target.
+
+Performance of the built-in task system that is used in the examples has
+been improved.
+
+Finally, the print() statement now works on OSX; it had been broken for the
+last few releases.
+
 === v1.0.10 === (30 September 2011)
 
 This release features an extensive new example showing the application of
