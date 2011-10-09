@@ -120,7 +120,7 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
     *handle = (void *)0xdeadbeef;
     // leak time!
 #ifdef ISPC_IS_WINDOWS
-    return _aligned_malloc(size, alignment);
+    return _aligned_malloc((size_t)size, alignment);
 #endif
 #ifdef ISPC_IS_LINUX
     return memalign(alignment, size);

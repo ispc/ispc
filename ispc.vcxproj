@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -27,12 +27,18 @@
     <ClCompile Include="gen-bitcode-sse4-x2.cpp" />
     <ClCompile Include="gen-stdlib.cpp" />
     <ClCompile Include="ispc.cpp" />
-    <ClCompile Include="lex.cc" />
+    <ClCompile Include="lex.cc">
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="llvmutil.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opt.cpp" />
-    <ClCompile Include="parse.cc" />
+    <ClCompile Include="parse.cc">
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4146;4800;4996;4355;4624;4005;4065</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4146;4800;4996;4355;4624;4005;4065</DisableSpecificWarnings>
+    </ClCompile>
     <CustomBuild Include="builtins-c.c">
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%LLVM_INSTALL_DIR%\bin\clang -m32 -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c-32.c &gt; gen-bitcode-c-32.cpp;
 %LLVM_INSTALL_DIR%\bin\clang -m64 -emit-llvm builtins-c.c -c -o - | %LLVM_INSTALL_DIR%\bin\llvm-dis - | python bitcode2cpp.py builtins-c-64.c &gt; gen-bitcode-c-64.cpp</Command>

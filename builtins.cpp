@@ -163,7 +163,9 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
                                                       intAsUnsigned);
             if (eltType == NULL)
                 return NULL;
-            return new ReferenceType(new ArrayType(eltType, at->getNumElements()),
+            // FIXME: this needs to be fixed when arrays can have 
+            // over 4G elements...
+            return new ReferenceType(new ArrayType(eltType, (int)at->getNumElements()),
                                      false);
         }
     }
