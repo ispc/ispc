@@ -89,6 +89,7 @@ Contents:
   + `Math Functions`_
   + `Output Functions`_
   + `Cross-Program Instance Operations`_
+  + `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
   + `Packed Load and Store Operations`_
   + `Conversions To and From Half-Precision Floats`_
   + `Atomic Operations and Memory Fences`_
@@ -2022,6 +2023,97 @@ bitwise-or are available:
     unsigned int64 exclusive_scan_or(unsigned int64 v) 
 
 
+Converting Between Array-of-Structures and Structure-of-Arrays Layout
+---------------------------------------------------------------------
+
+Applications often lay data out in memory in "array of structures" form.
+Though convenient in C/C++ code, this layout can make ``ispc`` programs
+less efficient than they would be if the data was laid out in "structure of
+arrays" form.  (See the section `Understanding How to Interoperate With the
+Application's Data`_ for extended discussion of this topic.)
+
+The standard library does provide a few functions that efficiently convert
+between these two formats, for cases where it's not possible to change the
+application to use "structure of arrays layout".  Consider an array of 3D
+(x,y,z) position data laid out in a C array like:
+
+::
+
+    // C++ code
+    float pos[] = { x0, y0, z0, x1, y1, z1, x2, ... };
+
+
+In an ``ispc`` program, we might want to load a set of (x,y,z) values and
+do a computation based on them.  The natural expression of this:
+
+::
+
+    extern uniform float pos[];
+    uniform int base = ...;
+    float x = pos[base + 3 * programIndex];     // x = { x0 x1 x2 ... }
+    float y = pos[base + 1 + 3 * programIndex]; // y = { y0 y1 y2 ... }
+    float z = pos[base + 2 + 3 * programIndex]; // z = { z0 z1 z2 ... }
+
+leads to irregular memory accesses and reduced performance.  Alternatively,
+the aos_to_soa3 standard library function could be used:
+
+::
+
+    extern uniform float pos[];
+    uniform int base = ...;
+    float x, y, z;
+    aos_to_soa3(pos, base, x, y, z);
+
+This routine loads ``3*programCount`` values from the given array starting
+at the given offset, returning three ``varying`` results.  There are both
+``int32`` and ``float`` variants of this function:
+
+::
+
+    void aos_to_soa3(uniform float a[], uniform int offset, reference float v0,
+                     reference float v1, reference float v2)
+    void aos_to_soa3(uniform int32 a[], uniform int offset, reference int32 v0,
+                     reference int32 v1, reference int32 v2)
+
+After computation is done, corresponding functions convert back from the
+SoA values in ``ispc`` ``varying`` variables and write the values back to
+the given array, starting at the given offset.
+
+::
+
+    extern uniform float pos[];
+    uniform int base = ...;
+    float x, y, z;
+    aos_to_soa3(pos, base, x, y, z);
+    // do computation with x, y, z
+    soa_to_aos3(x, y, z, pos, base);
+
+::
+
+    void soa_to_aos3(float v0, float v1, float v2, uniform float a[], 
+                     uniform int offset)
+    void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[], 
+                     uniform int offset)
+
+There are also variants of these functions that convert 4-wide values
+between AoS and SoA layouts.  In other words, ``aos_to_soa4`` converts AoS
+data in memory laid out like ``r0 g0 b0 a0 r1 g1 b1 a1 ...`` to four ``varying``
+variables with values ``r0 r1...``, ``g0 g1...``, ``b0 b1...``, and ``a0
+a1...`, reading a total of ``4*programCount`` values from the given array,
+starting at the given offset.
+
+::
+
+    void aos_to_soa4(uniform float a[], uniform int offset, reference float v0,
+                     reference float v1, reference float v2, reference float v3)
+    void aos_to_soa4(uniform int32 a[], uniform int offset, reference int32 v0,
+                     reference int32 v1, reference int32 v2, reference int32 v3)
+    void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[], 
+                     uniform int offset)
+    void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[], 
+                     uniform int offset)
+
+
 Packed Load and Store Operations
 --------------------------------
 
@@ -2653,8 +2745,13 @@ values are loaded into the local ``x``, ``y``, and ``z`` variables,
 SIMD-efficient computation can proceed; getting to that point is
 relatively inefficient.
 
-An alternative would be the "structure of arrays" (SoA) layout.  In C, the
-data would be declared as:
+(As described previously in `Converting Between Array-of-Structures and
+Structure-of-Arrays Layout`_, this computation could be written more
+efficiently using standard library routines to convert from the AoS layout,
+if we were given a flat array of ``float`` values.) 
+
+An alternative data layout would be the "structure of arrays" (SoA).  In C,
+the data would be declared as:
 
 ::
 

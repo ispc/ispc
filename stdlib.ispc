@@ -316,6 +316,57 @@ static inline uniform int lanemask() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// AOS/SOA conversion
+
+static inline void
+aos_to_soa3(uniform float a[], uniform int offset, reference float v0,
+            reference float v1, reference float v2) {
+    __aos_to_soa3_float(a, offset, v0, v1, v2);
+}
+
+static inline void
+soa_to_aos3(float v0, float v1, float v2, uniform float a[], 
+            uniform int offset) {
+    __soa_to_aos3_float(v0, v1, v2, a, offset);
+}
+
+static inline void
+aos_to_soa4(uniform float a[], uniform int offset, reference float v0,
+            reference float v1, reference float v2, reference float v3) {
+    __aos_to_soa4_float(a, offset, v0, v1, v2, v3);
+}
+
+static inline void
+soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[], 
+            uniform int offset) {
+    __soa_to_aos4_float(v0, v1, v2, v3, a, offset);
+}
+
+static inline void
+aos_to_soa3(uniform int32 a[], uniform int offset, reference int32 v0,
+            reference int32 v1, reference int32 v2) {
+    __aos_to_soa3_int32(a, offset, v0, v1, v2);
+}
+
+static inline void
+soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[], 
+            uniform int offset) {
+    __soa_to_aos3_int32(v0, v1, v2, a, offset);
+}
+
+static inline void
+aos_to_soa4(uniform int32 a[], uniform int offset, reference int32 v0,
+            reference int32 v1, reference int32 v2, reference int32 v3) {
+    __aos_to_soa4_int32(a, offset, v0, v1, v2, v3);
+}
+
+static inline void
+soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[], 
+            uniform int offset) {
+    __soa_to_aos4_int32(v0, v1, v2, v3, a, offset);
+}
+
+///////////////////////////////////////////////////////////////////////////
 // Prefetching
 
 #define PREFETCHES(NAME, TYPE)                                  \
