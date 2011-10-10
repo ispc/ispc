@@ -124,10 +124,10 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
 
 ///////////////////////////////////////////////////////////////////////////
 
-FunctionEmitContext::FunctionEmitContext(Function *function, Symbol *funSym,
+FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          llvm::Function *llvmFunction,
                                          SourcePos firstStmtPos) {
-    const Type *rt = function->GetReturnType();
+    function = func;
 
     /* Create a new basic block to store all of the allocas */
     allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
@@ -136,9 +136,12 @@ FunctionEmitContext::FunctionEmitContext(Function *function, Symbol *funSym,
     llvm::BranchInst::Create(bblock, allocaBlock);
 
     funcStartPos = funSym->pos;
-    returnType = rt;
-    maskPtr = NULL;
-    entryMask = NULL;
+
+    internalMaskPointer = AllocaInst(LLVMTypes::MaskType, "internal_mask_memory");
+    StoreInst(LLVMMaskAllOn, internalMaskPointer);
+    functionMaskValue = LLVMMaskAllOn;
+    fullMaskPointer = NULL;
+
     loopMask = NULL;
     breakLanesPtr = continueLanesPtr = NULL;
     breakTarget = continueTarget = NULL;
@@ -151,6 +154,7 @@ FunctionEmitContext::FunctionEmitContext(Function *function, Symbol *funSym,
     StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), 
               launchGroupHandlePtr);
 
+    const Type *returnType = function->GetReturnType();
     if (!returnType || returnType == AtomicType::Void)
         returnValuePtr = NULL;
     else {
@@ -164,7 +168,7 @@ FunctionEmitContext::FunctionEmitContext(Function *function, Symbol *funSym,
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
         diFile = funcStartPos.GetDIFile();
-        llvm::DIType retType = rt->GetDIType(diFile);
+        llvm::DIType retType = function->GetReturnType()->GetDIType(diFile);
         int flags = llvm::DIDescriptor::FlagPrototyped; // ??
         diFunction = m->diBuilder->createFunction(diFile, /* scope */
                                                   llvmFunction->getName(), // mangled
@@ -208,6 +212,12 @@ FunctionEmitContext::~FunctionEmitContext() {
 }
 
 
+const Function *
+FunctionEmitContext::GetFunction() const {
+    return function;
+}
+
+
 llvm::BasicBlock *
 FunctionEmitContext::GetCurrentBasicBlock() {
     return bblock;
@@ -221,21 +231,41 @@ FunctionEmitContext::SetCurrentBasicBlock(llvm::BasicBlock *bb) {
 
 
 llvm::Value *
-FunctionEmitContext::GetMask() {
-    return LoadInst(maskPtr, NULL, "load_mask");
+FunctionEmitContext::GetFunctionMask() {
+    return functionMaskValue;
+}
+
+
+llvm::Value *
+FunctionEmitContext::GetInternalMask() {
+    if (VaryingCFDepth() == 0)
+        return LLVMMaskAllOn;
+    else
+        return LoadInst(internalMaskPointer, NULL, "load_mask");
+}
+
+
+llvm::Value *
+FunctionEmitContext::GetFullMask() {
+    llvm::Value *internalMask = GetInternalMask();
+    if (internalMask == LLVMMaskAllOn && functionMaskValue == LLVMMaskAllOn)
+        return LLVMMaskAllOn;
+    else
+        return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
+                              functionMaskValue, "internal_mask&function_mask");
 }
 
 
 void
 FunctionEmitContext::SetMaskPointer(llvm::Value *p) {
-    maskPtr = p;
+    fullMaskPointer = p;
 }
 
 
 void
-FunctionEmitContext::SetEntryMask(llvm::Value *value) {
-    entryMask = value;
-    SetMask(value);
+FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
+    functionMaskValue = value;
+    StoreInst(GetFullMask(), fullMaskPointer);
 }
 
 
@@ -246,33 +276,35 @@ FunctionEmitContext::SetLoopMask(llvm::Value *value) {
 
 
 void
-FunctionEmitContext::SetMask(llvm::Value *value) {
-    StoreInst(value, maskPtr);
+FunctionEmitContext::SetInternalMask(llvm::Value *value) {
+    StoreInst(value, internalMaskPointer);
+    // kludge so that __mask returns the right value in ispc code.
+    StoreInst(GetFullMask(), fullMaskPointer);
 }
 
 
 void
-FunctionEmitContext::MaskAnd(llvm::Value *oldMask, llvm::Value *test) {
+FunctionEmitContext::SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *test) {
     llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask, 
                                        test, "oldMask&test");
-    SetMask(mask);
+    SetInternalMask(mask);
 }
 
 
 void
-FunctionEmitContext::MaskAndNot(llvm::Value *oldMask, llvm::Value *test) {
+FunctionEmitContext::SetInternalMaskAndNot(llvm::Value *oldMask, llvm::Value *test) {
     llvm::Value *notTest = BinaryOperator(llvm::Instruction::Xor, test, LLVMMaskAllOn,
                                           "~test");
     llvm::Value *mask = BinaryOperator(llvm::Instruction::And, oldMask, notTest,
                                        "oldMask&~test");
-    SetMask(mask);
+    SetInternalMask(mask);
 }
 
 
 void
 FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     assert(bblock != NULL);
-    llvm::Value *any = Any(GetMask());
+    llvm::Value *any = Any(GetFullMask());
     BranchInst(btrue, bfalse, any);
     // It's illegal to add any additional instructions to the basic block
     // now that it's terminated, so set bblock to NULL to be safe
@@ -283,7 +315,7 @@ FunctionEmitContext::BranchIfMaskAny(llvm::BasicBlock *btrue, llvm::BasicBlock *
 void
 FunctionEmitContext::BranchIfMaskAll(llvm::BasicBlock *btrue, llvm::BasicBlock *bfalse) {
     assert(bblock != NULL);
-    llvm::Value *all = All(GetMask());
+    llvm::Value *all = All(GetFullMask());
     BranchInst(btrue, bfalse, all);
     // It's illegal to add any additional instructions to the basic block
     // now that it's terminated, so set bblock to NULL to be safe
@@ -303,8 +335,8 @@ FunctionEmitContext::BranchIfMaskNone(llvm::BasicBlock *btrue, llvm::BasicBlock 
 
 
 void
-FunctionEmitContext::StartUniformIf(llvm::Value *oldMask) {
-    controlFlowInfo.push_back(CFInfo::GetIf(true, oldMask));
+FunctionEmitContext::StartUniformIf() {
+    controlFlowInfo.push_back(CFInfo::GetIf(true, GetInternalMask()));
 }
 
 
@@ -343,7 +375,7 @@ FunctionEmitContext::EndIf() {
             assert(continueLanesPtr != NULL);
 
             // newMask = (oldMask & ~(breakLanes | continueLanes))
-            llvm::Value *oldMask = GetMask();
+            llvm::Value *oldMask = GetInternalMask();
             llvm::Value *breakLanes = LoadInst(breakLanesPtr, NULL, 
                                                "break_lanes");
             llvm::Value *continueLanes = LoadInst(continueLanesPtr, NULL, 
@@ -356,7 +388,7 @@ FunctionEmitContext::EndIf() {
             llvm::Value *newMask = 
                 BinaryOperator(llvm::Instruction::And, oldMask, notBreakOrContinue, 
                                "new_mask");
-            SetMask(newMask);
+            SetInternalMask(newMask);
         }
     }
 }
@@ -364,9 +396,10 @@ FunctionEmitContext::EndIf() {
 
 void
 FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct, 
-                               bool uniformCF, llvm::Value *oldMask) {
+                               bool uniformCF) {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
+    llvm::Value *oldMask = GetInternalMask();
     controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, breakTarget, 
                                               continueTarget, breakLanesPtr,
                                               continueLanesPtr, oldMask, loopMask));
@@ -426,7 +459,7 @@ FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
     llvm::Value *notReturned = NotOperator(returnedLanes, "~returned_lanes");
     llvm::Value *newMask = BinaryOperator(llvm::Instruction::And,
                                           oldMask, notReturned, "new_mask");
-    SetMask(newMask);
+    SetInternalMask(newMask);
 }
 
 
@@ -440,7 +473,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     // If all of the enclosing 'if' tests in the loop have uniform control
     // flow or if we can tell that the mask is all on, then we can just
     // jump to the break location.
-    if (ifsInLoopAllUniform() || GetMask() == LLVMMaskAllOn) {
+    if (ifsInLoopAllUniform() || GetInternalMask() == LLVMMaskAllOn) {
         BranchInst(breakTarget);
         if (ifsInLoopAllUniform() && doCoherenceCheck)
             Warning(currentPos, "Coherent break statement not necessary in fully uniform "
@@ -453,7 +486,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // executed a 'break' statement:
         // breakLanes = breakLanes | mask
         assert(breakLanesPtr != NULL);
-        llvm::Value *mask = GetMask();
+        llvm::Value *mask = GetInternalMask();
         llvm::Value *breakMask = LoadInst(breakLanesPtr, NULL, "break_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
                                               mask, breakMask, "mask|break_mask");
@@ -463,7 +496,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // statements in the same scope after the 'break'.  Most of time
         // this will be optimized away since we'll likely end the scope of
         // an 'if' statement and restore the mask then.
-        SetMask(LLVMMaskAllOff);
+        SetInternalMask(LLVMMaskAllOff);
 
         if (doCoherenceCheck)
             // If the user has indicated that this is a 'coherent' break
@@ -486,7 +519,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         return;
     }
 
-    if (ifsInLoopAllUniform() || GetMask() == LLVMMaskAllOn) {
+    if (ifsInLoopAllUniform() || GetInternalMask() == LLVMMaskAllOn) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
         // loop or if we can tell that the mask is all on.
@@ -501,7 +534,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         // Otherwise update the stored value of which lanes have 'continue'd.
         // continueLanes = continueLanes | mask
         assert(continueLanesPtr);
-        llvm::Value *mask = GetMask();
+        llvm::Value *mask = GetInternalMask();
         llvm::Value *continueMask = 
             LoadInst(continueLanesPtr, NULL, "continue_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
@@ -510,7 +543,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
 
         // And set the current mask to be all off in case there are any
         // statements in the same scope after the 'continue'
-        SetMask(LLVMMaskAllOff);
+        SetInternalMask(LLVMMaskAllOff);
 
         if (doCoherenceCheck) 
             // If this is a 'coherent continue' statement, then emit the
@@ -582,11 +615,11 @@ FunctionEmitContext::RestoreContinuedLanes() {
         return;
 
     // mask = mask & continueFlags
-    llvm::Value *mask = GetMask();
+    llvm::Value *mask = GetInternalMask();
     llvm::Value *continueMask = LoadInst(continueLanesPtr, NULL, "continue_mask");
     llvm::Value *orMask = BinaryOperator(llvm::Instruction::Or,
                                          mask, continueMask, "mask|continue_mask");
-    SetMask(orMask);
+    SetInternalMask(orMask);
 
     // continueLanes = 0
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
@@ -605,6 +638,7 @@ FunctionEmitContext::VaryingCFDepth() const {
 
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
+    const Type *returnType = function->GetReturnType();
     if (returnType == AtomicType::Void) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
@@ -623,7 +657,8 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         Expr *r = expr->TypeConv(returnType, "return statement");
         if (r != NULL) {
             llvm::Value *retVal = r->GetValue(this);
-            StoreInst(retVal, returnValuePtr, GetMask(), returnType);
+            if (retVal != NULL)
+                StoreInst(retVal, returnValuePtr, GetInternalMask(), returnType);
         }
     }
 
@@ -639,15 +674,16 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         // the current lane mask.
         llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, NULL,
                                                  "old_returned_lanes");
-        llvm::Value *newReturnedLanes = BinaryOperator(llvm::Instruction::Or, 
-                                                       oldReturnedLanes, 
-                                                       GetMask(), "old_mask|returned_lanes");
+        llvm::Value *newReturnedLanes = 
+            BinaryOperator(llvm::Instruction::Or, oldReturnedLanes, 
+                           GetInternalMask(), "old_mask|returned_lanes");
         
         // For 'coherent' return statements, emit code to check if all
         // lanes have returned
         if (doCoherenceCheck) {
-            // if newReturnedLanes == entryMask, get out of here!
-            llvm::Value *cmp = MasksAllEqual(entryMask, newReturnedLanes);
+            // if newReturnedLanes == functionMaskValue, get out of here!
+            llvm::Value *cmp = MasksAllEqual(functionMaskValue, 
+                                             newReturnedLanes);
             llvm::BasicBlock *bDoReturn = CreateBasicBlock("do_return");
             llvm::BasicBlock *bNoReturn = CreateBasicBlock("no_return");
             BranchInst(bDoReturn, bNoReturn, cmp);
@@ -663,7 +699,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         // same scope after the return have no effect
         StoreInst(newReturnedLanes, returnedLanesPtr);
         AddInstrumentationPoint("return: some but not all lanes have returned");
-        SetMask(LLVMMaskAllOff);
+        SetInternalMask(LLVMMaskAllOff);
     }
 }
 
@@ -812,7 +848,7 @@ FunctionEmitContext::AddInstrumentationPoint(const char *note) {
     // arg 3: line number
     args.push_back(LLVMInt32(currentPos.first_line));
     // arg 4: current mask, movmsk'ed down to an int32
-    args.push_back(LaneMask(GetMask()));
+    args.push_back(LaneMask(GetFullMask()));
 
     llvm::Function *finst = m->module->getFunction("ISPCInstrument");
     CallInst(finst, args, "");
@@ -1437,7 +1473,7 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
     // do the actual gather
     AddInstrumentationPoint("gather");
 
-    llvm::Value *mask = GetMask();
+    llvm::Value *mask = GetFullMask();
     llvm::Function *gather = NULL;
     // Figure out which gather function to call based on the size of
     // the elements.
@@ -1899,6 +1935,7 @@ FunctionEmitContext::ReturnInst() {
         // Add a sync call at the end of any function that launched tasks
         SyncInst();
 
+    const Type *returnType = function->GetReturnType();
     llvm::Instruction *rinst = NULL;
     if (returnValuePtr != NULL) {
         // We have value(s) to return; load them from their storage
@@ -1957,7 +1994,7 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
     }
 
     // copy in the mask
-    llvm::Value *mask = GetMask();
+    llvm::Value *mask = GetFullMask();
     llvm::Value *ptr = GetElementPtrInst(argmem, 0, argVals.size(),
                                          "funarg_mask");
     StoreInst(mask, ptr);

@@ -505,7 +505,12 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
 #endif
 
     // And store the result out to the lvalue
-    ctx->StoreInst(binop, lvalue, ctx->GetMask(), type);
+    Symbol *baseSym = expr->GetBaseSymbol();
+    assert(baseSym != NULL);
+    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
+                         baseSym->storageClass != SC_STATIC) ? 
+        ctx->GetInternalMask() : ctx->GetFullMask();
+    ctx->StoreInst(binop, lvalue, mask, type);
 
     // And then if it's a pre increment/decrement, return the final
     // computed result; otherwise return the previously-grabbed expression
@@ -1509,8 +1514,12 @@ lStoreAssignResult(llvm::Value *rv, llvm::Value *lv, const Type *type,
         // goes out of scope.
         ctx->StoreInst(rv, lv, LLVMMaskAllOn, type);
     }
-    else
-        ctx->StoreInst(rv, lv, ctx->GetMask(), type);
+    else {
+        llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
+                             baseSym->storageClass != SC_STATIC) ? 
+            ctx->GetInternalMask() : ctx->GetFullMask();
+        ctx->StoreInst(rv, lv, mask, type);
+    }
 }
 
 
@@ -1844,12 +1853,12 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // element-wise select to get the result
         llvm::Value *testVal = test->GetValue(ctx);
         assert(testVal->getType() == LLVMTypes::MaskType);
-        llvm::Value *oldMask = ctx->GetMask();
-        ctx->MaskAnd(oldMask, testVal);
+        llvm::Value *oldMask = ctx->GetInternalMask();
+        ctx->SetInternalMaskAnd(oldMask, testVal);
         llvm::Value *expr1Val = expr1->GetValue(ctx);
-        ctx->MaskAndNot(oldMask, testVal);
+        ctx->SetInternalMaskAndNot(oldMask, testVal);
         llvm::Value *expr2Val = expr2->GetValue(ctx);
-        ctx->SetMask(oldMask);
+        ctx->SetInternalMask(oldMask);
 
         return lEmitVaryingSelect(ctx, testVal, expr1Val, expr2Val, type);
     }
@@ -2415,7 +2424,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
                callargs.size() == callee->arg_size());
 
         if (callargs.size() + 1 == callee->arg_size())
-            argVals.push_back(ctx->GetMask());
+            argVals.push_back(ctx->GetFullMask());
 
         retVal = ctx->CallInst(callee, argVals, isVoidFunc ? "" : "calltmp");
     }
@@ -2430,10 +2439,19 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
             assert(rt != NULL);
             llvm::Value *load = ctx->LoadInst(ptr, rt->GetReferenceTarget(),
                                               "load_ref");
-            // FIXME: apply the "don't do blending" optimization here if
-            // appropriate?
-            ctx->StoreInst(load, argValLValues[i], ctx->GetMask(), 
-                           rt->GetReferenceTarget());
+
+            Symbol *baseSym = callargs[i]->GetBaseSymbol();
+            assert(baseSym != NULL);
+//CO            if (baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
+//CO                baseSym->storageClass != SC_STATIC)
+//CO                ctx->StoreInst(load, argValLValues[i], LLVMMaskAllOn,
+//CO                               rt->GetReferenceTarget());
+//CO            else {
+                llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() &&
+                                     baseSym->storageClass != SC_STATIC) ? 
+                    ctx->GetInternalMask() : ctx->GetFullMask();
+                ctx->StoreInst(load, argValLValues[i], mask, rt->GetReferenceTarget());
+//CO            }
         }
     }
 
@@ -5206,10 +5224,9 @@ SymbolExpr::Optimize() {
 
 int
 SymbolExpr::EstimateCost() const {
-    if (symbol->constValue != NULL)
-        return 0;
-    else
-        return COST_LOAD;
+    // Be optimistic and assume it's in a register or can be used as a
+    // memory operand..
+    return 0;
 }
 
 

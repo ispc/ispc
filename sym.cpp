@@ -52,6 +52,7 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
     constValue = NULL;
     storageClass = sc;
     varyingCFDepth = 0;
+    parentFunction = NULL;
 }
 
 

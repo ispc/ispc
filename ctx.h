@@ -71,6 +71,10 @@ public:
                         SourcePos firstStmtPos);
     ~FunctionEmitContext();
 
+    /** Returns the Function * corresponding to the function that we're
+        currently generating code for. */
+    const Function *GetFunction() const;
+
     /** @name Current basic block management
         @{
      */
@@ -84,22 +88,33 @@ public:
     /** @name Mask management
         @{
      */
-    /** Returns the current mask value */ 
-    llvm::Value *GetMask();
+    /** Returns the mask value at entry to the current function. */ 
+    llvm::Value *GetFunctionMask();
 
+    /** Returns the mask value corresponding to "varying" control flow
+        within the current function.  (i.e. this doesn't include the effect
+        of the mask at function entry. */
+    llvm::Value *GetInternalMask();
+
+    /** Returns the complete current mask value--i.e. the logical AND of
+        the function entry mask and the internal mask. */ 
+    llvm::Value *GetFullMask();
+
+    /** Provides the alloca'd pointer to memory to store the full function
+        mask.  This is only used to wire up the __mask builtin variable. */
     void SetMaskPointer(llvm::Value *p);
 
     /** Provides the value of the mask at function entry */
-    void SetEntryMask(llvm::Value *val);
+    void SetFunctionMask(llvm::Value *val);
 
-    /** Sets the mask to a new value */
-    void SetMask(llvm::Value *val);
+    /** Sets the internal mask to a new value */
+    void SetInternalMask(llvm::Value *val);
 
-    /** Sets the mask to (oldMask & val) */
-    void MaskAnd(llvm::Value *oldMask, llvm::Value *val);
+    /** Sets the internal mask to (oldMask & val) */
+    void SetInternalMaskAnd(llvm::Value *oldMask, llvm::Value *val);
 
-    /** Sets the mask to (oldMask & ~val) */
-    void MaskAndNot(llvm::Value *oldMask, llvm::Value *test);
+    /** Sets the internal mask to (oldMask & ~val) */
+    void SetInternalMaskAndNot(llvm::Value *oldMask, llvm::Value *test);
 
     /** Emits a branch instruction to the basic block btrue if any of the
         lanes of current mask are on and bfalse if none are on. */
@@ -118,9 +133,8 @@ public:
         @{
     */
     /** Notifies the FunctionEmitContext that we're starting emission of an
-        'if' statement with a uniform test.  The value of the mask going
-        into the 'if' statement is provided in the oldMask parameter. */
-    void StartUniformIf(llvm::Value *oldMask);
+        'if' statement with a uniform test.  */
+    void StartUniformIf();
 
     /** Notifies the FunctionEmitContext that we're starting emission of an
         'if' statement with a varying test.  The value of the mask going
@@ -135,10 +149,9 @@ public:
         for a loop.  Basic blocks are provides for where 'break' and
         'continue' statements should jump to (if all running lanes want to
         break or continue), uniformControlFlow indicates whether the loop
-        condition is 'uniform', and oldMask provides the current mask going
-        into the loop. */
+        condition is 'uniform'. */
     void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget, 
-                   bool uniformControlFlow, llvm::Value *oldMask);
+                   bool uniformControlFlow);
 
     /** Informs FunctionEmitContext of the value of the mask at the start
         of a loop body. */
@@ -404,6 +417,9 @@ public:
     /** @} */
 
 private:
+    /** Pointer to the Function for which we're currently generating code. */
+    Function *function;
+
     /** The basic block into which we add any alloca instructions that need
         to go at the very start of the function. */
     llvm::BasicBlock *allocaBlock;
@@ -413,8 +429,16 @@ private:
     llvm::BasicBlock *bblock;
 
     /** Pointer to stack-allocated memory that stores the current value of
-        the program mask. */
-    llvm::Value *maskPtr;
+        the full program mask. */
+    llvm::Value *fullMaskPointer;
+
+    /** Pointer to stack-allocated memory that stores the current value of
+        the program mask representing varying control flow within the
+        function. */
+    llvm::Value *internalMaskPointer;
+
+    /** Value of the program mask when the function starts execution.  */
+    llvm::Value *functionMaskValue;
 
     /** Current source file position; if debugging information is being
         generated, this position is used to set file/line information for
@@ -424,12 +448,6 @@ private:
     /** Source file position where the function definition started.  Used
         for error messages and debugging symbols. */
     SourcePos funcStartPos;
-
-    /** Type of result that the current function returns. */
-    const Type *returnType;
-
-    /** Value of the program mask when the function starts execution.  */
-    llvm::Value *entryMask;
 
     /** If currently in a loop body, the value of the mask at the start of
         the loop. */

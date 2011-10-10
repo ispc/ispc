@@ -108,6 +108,10 @@ public:
                                    masked stores when modifying the symbol's value when the
                                    store is done at the same 'varying' control flow depth as 
                                    the one where the symbol was originally declared. */
+    const Function *parentFunction; 
+                              /*!< For symbols that are parameters to functions or are 
+                                   variables declared inside functions, this gives the
+                                   function they're in. */
 };
 
 

@@ -322,6 +322,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
             // And then get it initialized...
+            sym->parentFunction = ctx->GetFunction();
             lInitSymbol(sym->storagePtr, sym->name.c_str(), type, decl->initExpr,
                         ctx, sym->pos);
         }
@@ -461,7 +462,7 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     if (isUniform) {
-        ctx->StartUniformIf(ctx->GetMask());
+        ctx->StartUniformIf();
         if (doAllCheck)
             Warning(test->pos, "Uniform condition supplied to \"cif\" statement.");
 
@@ -571,14 +572,14 @@ void
 IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, 
                                llvm::Value *test) const {
     if (trueStmts) {
-        ctx->MaskAnd(oldMask, test);
+        ctx->SetInternalMaskAnd(oldMask, test);
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
         // under varying control flow,, returns can't stop instruction
         // emission, so this better be non-NULL...
         assert(ctx->GetCurrentBasicBlock()); 
     }
     if (falseStmts) {
-        ctx->MaskAndNot(oldMask, test);
+        ctx->SetInternalMaskAndNot(oldMask, test);
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
         assert(ctx->GetCurrentBasicBlock());
     }
@@ -764,8 +765,8 @@ lSafeToRunWithAllLanesOff(Stmt *stmt) {
  */
 void
 IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
-    llvm::Value *oldMask = ctx->GetMask();
-    if (oldMask == LLVMMaskAllOn) {
+    llvm::Value *oldMask = ctx->GetInternalMask();
+    if (ctx->GetFullMask() == LLVMMaskAllOn) {
         // We can tell that the mask is on statically at compile time; just
         // emit code for the 'if test with the mask all on' path
         llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
@@ -782,18 +783,11 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
 
         // Jump to either bAllOn or bMixedOn, depending on the mask's value 
-        llvm::Value *maskAllQ = ctx->All(oldMask);
+        llvm::Value *maskAllQ = ctx->All(ctx->GetFullMask());
         ctx->BranchInst(bAllOn, bMixedOn, maskAllQ);
 
         // Emit code for the 'mask all on' case
         ctx->SetCurrentBasicBlock(bAllOn);
-        // We start by explicitly storing "all on" into the mask mask.
-        // Note that this doesn't change its actual value, but doing so
-        // lets the compiler see what's going on so that subsequent
-        // optimizations for code emitted here can operate with the
-        // knowledge that the mask is definitely all on (until it modifies
-        // the mask itself).
-        ctx->SetMask(LLVMMaskAllOn);
         emitMaskAllOn(ctx, ltest, bDone);
         
         // And emit code for the mixed mask case
@@ -845,11 +839,20 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
 
 
 /** Emits code for 'if' tests under the case where we know that the program
-    mask is all on.
+    mask is all on going into the 'if'.
  */
 void
 IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest, 
                       llvm::BasicBlock *bDone) const {
+    // We start by explicitly storing "all on" into the mask mask.  Note
+    // that this doesn't change its actual value, but doing so lets the
+    // compiler see what's going on so that subsequent optimizations for
+    // code emitted here can operate with the knowledge that the mask is
+    // definitely all on (until it modifies the mask itself).
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+    ctx->SetFunctionMask(LLVMMaskAllOn);
+
     // First, check the value of the test.  If it's all on, then we jump to
     // a basic block that will only have code for the true case.
     llvm::BasicBlock *bTestAll = ctx->CreateBasicBlock("cif_test_all");
@@ -896,6 +899,9 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     assert(ctx->GetCurrentBasicBlock());
     ctx->EndIf();
     ctx->BranchInst(bDone);
+
+    ctx->SetCurrentBasicBlock(bDone);
+    ctx->SetFunctionMask(oldFunctionMask);
 }
 
 
@@ -909,11 +915,11 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
     llvm::BasicBlock *bNext = ctx->CreateBasicBlock("safe_if_after_true");
     if (trueStmts != NULL) {
         llvm::BasicBlock *bRunTrue = ctx->CreateBasicBlock("safe_if_run_true");
-        ctx->MaskAnd(oldMask, ltest);
+        ctx->SetInternalMaskAnd(oldMask, ltest);
 
         // Do any of the program instances want to run the 'true'
         // block?  If not, jump ahead to bNext.
-        llvm::Value *maskAnyQ = ctx->Any(ctx->GetMask());
+        llvm::Value *maskAnyQ = ctx->Any(ctx->GetFullMask());
         ctx->BranchInst(bRunTrue, bNext, maskAnyQ);
 
         // Emit statements for true
@@ -926,11 +932,11 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
     if (falseStmts != NULL) {
         llvm::BasicBlock *bRunFalse = ctx->CreateBasicBlock("safe_if_run_false");
         bNext = ctx->CreateBasicBlock("safe_if_after_false");
-        ctx->MaskAndNot(oldMask, ltest);
+        ctx->SetInternalMaskAndNot(oldMask, ltest);
 
         // Similarly, check to see if any of the instances want to
         // run the 'false' block...
-        llvm::Value *maskAnyQ = ctx->Any(ctx->GetMask());
+        llvm::Value *maskAnyQ = ctx->Any(ctx->GetFullMask());
         ctx->BranchInst(bRunFalse, bNext, maskAnyQ);
 
         // Emit code for false
@@ -1019,14 +1025,14 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
     llvm::BasicBlock *btest = ctx->CreateBasicBlock("do_test");
 
-    ctx->StartLoop(bexit, btest, uniformTest, ctx->GetMask());
+    ctx->StartLoop(bexit, btest, uniformTest);
 
     // Start by jumping into the loop body
     ctx->BranchInst(bloop);
 
     // And now emit code for the loop body
     ctx->SetCurrentBasicBlock(bloop);
-    ctx->SetLoopMask(ctx->GetMask());
+    ctx->SetLoopMask(ctx->GetInternalMask());
     ctx->SetDebugPos(pos);
     // FIXME: in the StmtList::EmitCode() method takes starts/stops a new
     // scope around the statements in the list.  So if the body is just a
@@ -1047,10 +1053,13 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         // IfStmt::emitCoherentTests()), and then emit the code for the
         // loop body.
         ctx->SetCurrentBasicBlock(bAllOn);
-        ctx->SetMask(LLVMMaskAllOn);
+        ctx->SetInternalMask(LLVMMaskAllOn);
+        llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+        ctx->SetFunctionMask(LLVMMaskAllOn);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
         assert(ctx->GetCurrentBasicBlock());
+        ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(btest);
 
         // The mask is mixed.  Just emit the code for the loop body.
@@ -1093,8 +1102,8 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         // For the varying case, update the mask based on the value of the
         // test.  If any program instances still want to be running, jump
         // to the top of the loop.  Otherwise, jump out.
-        llvm::Value *mask = ctx->GetMask();
-        ctx->MaskAnd(mask, testValue);
+        llvm::Value *mask = ctx->GetInternalMask();
+        ctx->SetInternalMaskAnd(mask, testValue);
         ctx->BranchIfMaskAny(bloop, bexit);
     }
 
@@ -1203,7 +1212,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         (!g->opt.disableUniformControlFlow &&
          !lHasVaryingBreakOrContinue(stmts));
 
-    ctx->StartLoop(bexit, bstep, uniformTest, ctx->GetMask());
+    ctx->StartLoop(bexit, bstep, uniformTest);
     ctx->SetDebugPos(pos);
 
     // If we have an initiailizer statement, start by emitting the code for
@@ -1215,17 +1224,6 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         init->EmitCode(ctx);
     }
     ctx->BranchInst(btest);
-
-    assert(ctx->GetCurrentBasicBlock());
-#if 0
-    if (!ctx->GetCurrentBasicBlock()) {
-        // when does this happen??
-        if (init)
-            ctx->EndScope();
-        ctx->EndLoop();
-        return;
-    }
-#endif
 
     // Emit code to get the value of the loop test.  If no test expression
     // was provided, just go with a true value.
@@ -1253,14 +1251,14 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->BranchInst(bloop, bexit, ltest);
     }
     else {
-        llvm::Value *mask = ctx->GetMask();
-        ctx->MaskAnd(mask, ltest);
+        llvm::Value *mask = ctx->GetInternalMask();
+        ctx->SetInternalMaskAnd(mask, ltest);
         ctx->BranchIfMaskAny(bloop, bexit);
     }
 
     // On to emitting the code for the loop body.
     ctx->SetCurrentBasicBlock(bloop);
-    ctx->SetLoopMask(ctx->GetMask());
+    ctx->SetLoopMask(ctx->GetInternalMask());
     ctx->AddInstrumentationPoint("for loop body");
     if (!dynamic_cast<StmtList *>(stmts))
         ctx->StartScope();
@@ -1278,10 +1276,13 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         // the runtime test has passed, make this fact clear for code
         // generation at compile time here.)
         ctx->SetCurrentBasicBlock(bAllOn);
-        ctx->SetMask(LLVMMaskAllOn);
+        ctx->SetInternalMask(LLVMMaskAllOn);
+        llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+        ctx->SetFunctionMask(LLVMMaskAllOn);
         if (stmts)
             stmts->EmitCode(ctx);
         assert(ctx->GetCurrentBasicBlock());
+        ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(bstep);
 
         // Emit code for the mask being mixed.  We should never run the
@@ -1773,7 +1774,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     args[0] = ctx->GetStringPtr(format);
     args[1] = ctx->GetStringPtr(argTypes);
     args[2] = LLVMInt32(g->target.vectorWidth);
-    args[3] = ctx->LaneMask(ctx->GetMask());
+    args[3] = ctx->LaneMask(ctx->GetFullMask());
     std::vector<llvm::Value *> argVec(&args[0], &args[5]);
     ctx->CallInst(printFunc, argVec, "");
 }

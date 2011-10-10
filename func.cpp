@@ -104,7 +104,10 @@ Function::Function(DeclSpecs *ds, Declarator *decl, Stmt *c) {
         for (unsigned int i = 0; i < decl->functionArgs->size(); ++i) {
             Declaration *pdecl = (*decl->functionArgs)[i];
             assert(pdecl->declarators.size() == 1);
-            args.push_back(pdecl->declarators[0]->sym);
+            Symbol *sym = pdecl->declarators[0]->sym;
+            if (dynamic_cast<const ReferenceType *>(sym->type) == NULL)
+                sym->parentFunction = this;
+            args.push_back(sym);
         }
     }
 
@@ -462,7 +465,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Value *ptr = ctx->GetElementPtrInst(structParamPtr, 0, nArgs,
                                                   "task_struct_mask");
         llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
-        ctx->SetEntryMask(ptrval);
+        ctx->SetFunctionMask(ptrval);
 
         // Copy threadIndex and threadCount into stack-allocated storage so
         // that their symbols point to something reasonable.
@@ -500,12 +503,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // happens for exmaple with 'export'ed functions that the app
         // calls.
         if (argIter == function->arg_end())
-            ctx->SetEntryMask(LLVMMaskAllOn);
+            ctx->SetFunctionMask(LLVMMaskAllOn);
         else {
             // Otherwise use the mask to set the entry mask value
             argIter->setName("__mask");
             assert(argIter->getType() == LLVMTypes::MaskType);
-            ctx->SetEntryMask(argIter);
+            ctx->SetFunctionMask(argIter);
             assert(++argIter == function->arg_end());
         }
     }
