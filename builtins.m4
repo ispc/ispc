@@ -182,6 +182,34 @@ define(`unary1to4', `
   ret <4 x $1> %ret_3
 ')
 
+define(`unary1to8', `
+  %v_0 = extractelement <8 x $1> %0, i32 0
+  %r_0 = call $1 $2($1 %v_0)
+  %ret_0 = insertelement <8 x $1> undef, $1 %r_0, i32 0
+  %v_1 = extractelement <8 x $1> %0, i32 1
+  %r_1 = call $1 $2($1 %v_1)
+  %ret_1 = insertelement <8 x $1> %ret_0, $1 %r_1, i32 1
+  %v_2 = extractelement <8 x $1> %0, i32 2
+  %r_2 = call $1 $2($1 %v_2)
+  %ret_2 = insertelement <8 x $1> %ret_1, $1 %r_2, i32 2
+  %v_3 = extractelement <8 x $1> %0, i32 3
+  %r_3 = call $1 $2($1 %v_3)
+  %ret_3 = insertelement <8 x $1> %ret_2, $1 %r_3, i32 3
+  %v_4 = extractelement <8 x $1> %0, i32 4
+  %r_4 = call $1 $2($1 %v_4)
+  %ret_4 = insertelement <8 x $1> %ret_3, $1 %r_4, i32 4
+  %v_5 = extractelement <8 x $1> %0, i32 5
+  %r_5 = call $1 $2($1 %v_5)
+  %ret_5 = insertelement <8 x $1> %ret_4, $1 %r_5, i32 5
+  %v_6 = extractelement <8 x $1> %0, i32 6
+  %r_6 = call $1 $2($1 %v_6)
+  %ret_6 = insertelement <8 x $1> %ret_5, $1 %r_6, i32 6
+  %v_7 = extractelement <8 x $1> %0, i32 7
+  %r_7 = call $1 $2($1 %v_7)
+  %ret_7 = insertelement <8 x $1> %ret_6, $1 %r_7, i32 7
+  ret <8 x $1> %ret_7
+')
+
 ;; Given a unary function that takes a 2-wide vector and a 4-wide vector
 ;; that we'd like to apply it to, extract 2 2-wide vectors from the 4-wide
 ;; vector, apply it, and return the corresponding 4-wide vector result

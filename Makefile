@@ -49,7 +49,7 @@ CXX_SRC=ast.cpp builtins.cpp ctx.cpp decl.cpp expr.cpp func.cpp ispc.cpp \
 	util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-BUILTINS_SRC=builtins-avx.ll builtins-avx-x2.ll builtins-sse2.ll \
+BUILTINS_SRC=builtins-avx.ll builtins-avx-x2.ll builtins-sse2.ll builtins-sse2-x2.ll \
 	builtins-sse4.ll builtins-sse4-x2.ll builtins-dispatch.ll
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
@@ -111,7 +111,7 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-%.cpp: builtins-%.ll builtins.m4 builtins-sse.ll builtins-avx-common.ll
+objs/builtins-%.cpp: builtins-%.ll
 	@echo Creating C++ source from builtin definitions file $<
 	@m4 -DLLVM_VERSION=$(LLVM_VERSION) builtins.m4 $< | ./bitcode2cpp.py $< > $@
 
@@ -142,3 +142,10 @@ objs/stdlib_ispc.cpp: stdlib.ispc
 objs/stdlib_ispc.o: objs/stdlib_ispc.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+objs/builtins-sse2.cpp: builtins.m4 builtins-sse2-common.ll builtins-sse2.ll
+objs/builtins-sse2-x2.cpp: builtins.m4 builtins-sse2-common.ll builtins-sse2-x2.ll
+objs/builtins-sse4.cpp: builtins.m4 builtins-sse4-common.ll builtins-sse4.ll
+objs/builtins-sse4-x2.cpp: builtins.m4 builtins-sse4-common.ll builtins-sse4-x2.ll
+objs/builtins-avx.cpp: builtins.m4 builtins-avx-common.ll builtins-avx.ll
+objs/builtins-avx-x2.cpp: builtins.m4 builtins-avx-common.ll builtins-avx-x2.ll

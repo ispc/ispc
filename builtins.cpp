@@ -458,8 +458,20 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::SSE2:
         extern unsigned char builtins_bitcode_sse2[];
         extern int builtins_bitcode_sse2_length;
-        AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length, 
-                           module, symbolTable);
+        extern unsigned char builtins_bitcode_sse2_x2[];
+        extern int builtins_bitcode_sse2_x2_length;
+        switch (g->target.vectorWidth) {
+        case 4: 
+            AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length, 
+                               module, symbolTable);
+            break;
+        case 8:
+            AddBitcodeToModule(builtins_bitcode_sse2_x2, builtins_bitcode_sse2_x2_length, 
+                               module, symbolTable);
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
         break;
     case Target::SSE4:
         extern unsigned char builtins_bitcode_sse4[];

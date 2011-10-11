@@ -3213,9 +3213,10 @@ instances.  For other workloads, it may lead to a slowdown due to higher
 register pressure; trying both approaches for key kernels may be
 worthwhile.
 
-This option is currently only available for the SSE4 and AVX targets, and
-is selected with the ``--target=sse4-x2`` and ``--target=avx-x2`` options,
-respectively.
+This option is only available for each of the SSE2, SSE4 and AVX targets.
+It is selected with the ``--target=sse2-x2``, ``--target=sse4-x2`` and
+``--target=avx-x2`` options, respectively.
+
 
 Compiling With Support For Multiple Instruction Sets
 ----------------------------------------------------

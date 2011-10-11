@@ -36,9 +36,9 @@
 stdlib_core(4)
 packed_load_and_store(4)
 scans(4)
+int64minmax(4)
 
-; Include the various definitions of things that only require SSE1 and SSE2
-include(`builtins-sse.ll')
+include(`builtins-sse2-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding
@@ -75,19 +75,6 @@ define internal <4 x float> @__round_varying_float(<4 x float>) nounwind readonl
   ret <4 x float> %int_to_float_bitcast.i.i.i
 }
 
-define internal float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast float %0 to i32
-  %bitop.i.i = and i32 %float_to_int_bitcast.i.i.i.i, -2147483648
-  %bitop.i = xor i32 %bitop.i.i, %float_to_int_bitcast.i.i.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast i32 %bitop.i to float
-  %binop.i = fadd float %int_to_float_bitcast.i.i40.i, 8.388608e+06
-  %binop21.i = fadd float %binop.i, -8.388608e+06
-  %float_to_int_bitcast.i.i.i = bitcast float %binop21.i to i32
-  %bitop31.i = xor i32 %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop31.i to float
-  ret float %int_to_float_bitcast.i.i.i
-}
-
 ;; Similarly, for implementations of the __floor* functions below, we have the
 ;; bitcode from compiling the following source code...
 
@@ -109,16 +96,6 @@ define internal <4 x float> @__floor_varying_float(<4 x float>) nounwind readonl
   %int_to_float_bitcast.i.i.i = bitcast <4 x i32> %bitop.i to <4 x float>
   %binop.i = fadd <4 x float> %calltmp.i, %int_to_float_bitcast.i.i.i
   ret <4 x float> %binop.i
-}
-
-define internal float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-  %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
-  %bincmp.i = fcmp ogt float %calltmp.i, %0
-  %selectexpr.i = sext i1 %bincmp.i to i32
-  %bitop.i = and i32 %selectexpr.i, -1082130432
-  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop.i to float
-  %binop.i = fadd float %calltmp.i, %int_to_float_bitcast.i.i.i
-  ret float %binop.i
 }
 
 ;; And here is the code we compiled to get the __ceil* functions below
@@ -143,48 +120,19 @@ define internal <4 x float> @__ceil_varying_float(<4 x float>) nounwind readonly
   ret <4 x float> %binop.i
 }
 
-define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-  %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
-  %bincmp.i = fcmp olt float %calltmp.i, %0
-  %selectexpr.i = sext i1 %bincmp.i to i32
-  %bitop.i = and i32 %selectexpr.i, 1065353216
-  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop.i to float
-  %binop.i = fadd float %calltmp.i, %int_to_float_bitcast.i.i.i
-  ret float %binop.i
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare double @round(double)
-declare double @floor(double)
-declare double @ceil(double)
-
 define internal <4 x double> @__round_varying_double(<4 x double>) nounwind readonly alwaysinline {
   unary1to4(double, @round)
-}
-
-define internal double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @round(double %0)
-  ret double %r
 }
 
 define internal <4 x double> @__floor_varying_double(<4 x double>) nounwind readonly alwaysinline {
   unary1to4(double, @floor)
 }
 
-define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @floor(double %0)
-  ret double %r
-}
-
 define internal <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alwaysinline {
   unary1to4(double, @ceil)
-}
-
-define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  %r = call double @ceil(double %0)
-  ret double %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -277,19 +225,13 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i32 @llvm.ctpop.i32(i32)
-declare i64 @llvm.ctpop.i64(i64)
+declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 
-define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %val = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %val
+define internal i32 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  ret i32 %v
 }
-
-define internal i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
-  %val = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %val
-}
-
 
 define internal float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
@@ -300,6 +242,96 @@ define internal float @__reduce_add_float(<4 x float> %v) nounwind readonly alwa
   %sum = fadd float %m1a, %m1b
   ret float %sum
 }
+
+define internal float @__reduce_min_float(<4 x float>) nounwind readnone {
+  reduce4(float, @__min_varying_float, @__min_uniform_float)
+}
+
+define internal float @__reduce_max_float(<4 x float>) nounwind readnone {
+  reduce4(float, @__max_varying_float, @__max_uniform_float)
+}
+
+define internal i32 @__reduce_add_int32(<4 x i32> %v) nounwind readnone {
+  %v1 = shufflevector <4 x i32> %v, <4 x i32> undef,
+                      <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %m1 = add <4 x i32> %v1, %v
+  %m1a = extractelement <4 x i32> %m1, i32 0
+  %m1b = extractelement <4 x i32> %m1, i32 1
+  %sum = add i32 %m1a, %m1b
+  ret i32 %sum
+}
+
+define internal i32 @__reduce_min_int32(<4 x i32>) nounwind readnone {
+  reduce4(i32, @__min_varying_int32, @__min_uniform_int32)
+}
+
+define internal i32 @__reduce_max_int32(<4 x i32>) nounwind readnone {
+  reduce4(i32, @__max_varying_int32, @__max_uniform_int32)
+}
+
+define internal i32 @__reduce_add_uint32(<4 x i32> %v) nounwind readnone {
+  %r = call i32 @__reduce_add_int32(<4 x i32> %v)
+  ret i32 %r
+}
+
+define internal i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone {
+  reduce4(i32, @__min_varying_uint32, @__min_uniform_uint32)
+}
+
+define internal i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone {
+  reduce4(i32, @__max_varying_uint32, @__max_uniform_uint32)
+ }
+
+
+define internal double @__reduce_add_double(<4 x double>) nounwind readnone {
+  %v0 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x double> %0, <4 x double> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = fadd <2 x double> %v0, %v1
+  %e0 = extractelement <2 x double> %sum, i32 0
+  %e1 = extractelement <2 x double> %sum, i32 1
+  %m = fadd double %e0, %e1
+  ret double %m
+}
+
+define internal double @__reduce_min_double(<4 x double>) nounwind readnone {
+  reduce4(double, @__min_varying_double, @__min_uniform_double)
+}
+
+define internal double @__reduce_max_double(<4 x double>) nounwind readnone {
+  reduce4(double, @__max_varying_double, @__max_uniform_double)
+}
+
+define internal i64 @__reduce_add_int64(<4 x i64>) nounwind readnone {
+  %v0 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 0, i32 1>
+  %v1 = shufflevector <4 x i64> %0, <4 x i64> undef,
+                      <2 x i32> <i32 2, i32 3>
+  %sum = add <2 x i64> %v0, %v1
+  %e0 = extractelement <2 x i64> %sum, i32 0
+  %e1 = extractelement <2 x i64> %sum, i32 1
+  %m = add i64 %e0, %e1
+  ret i64 %m
+}
+
+define internal i64 @__reduce_min_int64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__min_varying_int64, @__min_uniform_int64)
+}
+
+define internal i64 @__reduce_max_int64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__max_varying_int64, @__max_uniform_int64)
+}
+
+define internal i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__min_varying_uint64, @__min_uniform_uint64)
+}
+
+define internal i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
+  reduce4(i64, @__max_varying_uint64, @__max_uniform_uint64)
+}
+
+reduce_equal(4)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -355,3 +387,187 @@ define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   ret void
 }
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp
+
+declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>) nounwind readnone
+
+define internal <4 x float> @__rcp_varying_float(<4 x float>) nounwind readonly alwaysinline {
+  %call = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %0)
+  ; do one N-R iteration to improve precision
+  ;  float iv = __rcp_v(v);
+  ;  return iv * (2. - v * iv);
+  %v_iv = fmul <4 x float> %0, %call
+  %two_minus = fsub <4 x float> <float 2., float 2., float 2., float 2.>, %v_iv  
+  %iv_mul = fmul <4 x float> %call, %two_minus
+  ret <4 x float> %iv_mul
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; rsqrt
+
+declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
+
+define internal <4 x float> @__rsqrt_varying_float(<4 x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  %is = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %v)
+  ; Newton-Raphson iteration to improve precision
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <4 x float> %v, %is
+  %v_is_is = fmul <4 x float> %v_is, %is
+  %three_sub = fsub <4 x float> <float 3., float 3., float 3., float 3.>, %v_is_is
+  %is_mul = fmul <4 x float> %is, %three_sub
+  %half_scale = fmul <4 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <4 x float> %half_scale
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; sqrt
+
+declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
+
+define internal <4 x float> @__sqrt_varying_float(<4 x float>) nounwind readonly alwaysinline {
+  %call = call <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float> %0)
+  ret <4 x float> %call
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; svml stuff
+
+declare <4 x float> @__svml_sinf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_cosf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_sincosf4(<4 x float> *, <4 x float>) nounwind readnone
+declare <4 x float> @__svml_tanf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_atanf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_atan2f4(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @__svml_expf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_logf4(<4 x float>) nounwind readnone
+declare <4 x float> @__svml_powf4(<4 x float>, <4 x float>) nounwind readnone
+
+
+define internal <4 x float> @__svml_sin(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_sinf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_cos(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_cosf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal void @__svml_sincos(<4 x float>, <4 x float> *, <4 x float> *) nounwind readnone alwaysinline {
+  %s = call <4 x float> @__svml_sincosf4(<4 x float> * %2, <4 x float> %0)
+  store <4 x float> %s, <4 x float> * %1
+  ret void
+}
+
+define internal <4 x float> @__svml_tan(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_tanf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_atan(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_atanf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_atan2(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_atan2f4(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_exp(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_expf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_log(<4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_logf4(<4 x float> %0)
+  ret <4 x float> %ret
+}
+
+define internal <4 x float> @__svml_pow(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
+  %ret = call <4 x float> @__svml_powf4(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; float min/max
+
+declare <4 x float> @llvm.x86.sse.max.ps(<4 x float>, <4 x float>) nounwind readnone
+declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>) nounwind readnone
+
+define internal <4 x float> @__max_varying_float(<4 x float>, <4 x float>) nounwind readonly alwaysinline {
+  %call = call <4 x float> @llvm.x86.sse.max.ps(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %call
+}
+
+define internal <4 x float> @__min_varying_float(<4 x float>, <4 x float>) nounwind readonly alwaysinline {
+  %call = call <4 x float> @llvm.x86.sse.min.ps(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %call
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision sqrt
+
+declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
+
+define internal <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
+  unary2to4(ret, double, @llvm.x86.sse2.sqrt.pd, %0)
+  ret <4 x double> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision min/max
+
+declare <2 x double> @llvm.x86.sse2.max.pd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
+
+define internal <4 x double> @__min_varying_double(<4 x double>, <4 x double>) nounwind readnone {
+  binary2to4(ret, double, @llvm.x86.sse2.min.pd, %0, %1)
+  ret <4 x double> %ret
+}
+
+define internal <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind readnone {
+  binary2to4(ret, double, @llvm.x86.sse2.max.pd, %0, %1)
+  ret <4 x double> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; masked store
+
+masked_store_blend_8_16_by_4()
+
+gen_masked_store(4, i8, 8)
+gen_masked_store(4, i16, 16)
+gen_masked_store(4, i32, 32)
+gen_masked_store(4, i64, 64)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; unaligned loads/loads+broadcasts
+
+load_and_broadcast(4, i8, 8)
+load_and_broadcast(4, i16, 16)
+load_and_broadcast(4, i32, 32)
+load_and_broadcast(4, i64, 64)
+
+load_masked(4, i8,  8,  1)
+load_masked(4, i16, 16, 2)
+load_masked(4, i32, 32, 4)
+load_masked(4, i64, 64, 8)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; gather/scatter
+
+; define these with the macros from stdlib.m4
+
+gen_gather(4, i8)
+gen_gather(4, i16)
+gen_gather(4, i32)
+gen_gather(4, i64)
+
+gen_scatter(4, i8)
+gen_scatter(4, i16)
+gen_scatter(4, i32)
+gen_scatter(4, i64)

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -23,6 +23,7 @@
     <ClCompile Include="gen-bitcode-c-64.cpp" />
     <ClCompile Include="gen-bitcode-dispatch.cpp" />
     <ClCompile Include="gen-bitcode-sse2.cpp" />
+    <ClCompile Include="gen-bitcode-sse2-x2.cpp" />
     <ClCompile Include="gen-bitcode-sse4.cpp" />
     <ClCompile Include="gen-bitcode-sse4-x2.cpp" />
     <ClCompile Include="gen-stdlib.cpp" />
@@ -87,10 +88,10 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-sse4.ll | python bitcode2cpp.py builtins-sse4.ll &gt; gen-bitcode-sse4.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-sse4.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse4-common.ll</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-sse4.ll | python bitcode2cpp.py builtins-sse4.ll &gt; gen-bitcode-sse4.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-sse4.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse4-common.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-sse4.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-sse4.cpp</Message>
     </CustomBuild>
@@ -113,10 +114,10 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-sse4-x2.ll | python bitcode2cpp.py builtins-sse4-x2.ll &gt; gen-bitcode-sse4-x2.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-sse4-x2.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse4-common.ll</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-sse4-x2.ll | python bitcode2cpp.py builtins-sse4-x2.ll &gt; gen-bitcode-sse4-x2.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-sse4-x2.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse4-common.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-sse4-x2.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-sse4-x2.cpp</Message>
     </CustomBuild>
@@ -126,12 +127,25 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-sse2.ll | python bitcode2cpp.py builtins-sse2.ll &gt; gen-bitcode-sse2.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-sse2.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse2-common.ll</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-sse2.ll | python bitcode2cpp.py builtins-sse2.ll &gt; gen-bitcode-sse2.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-sse2.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse2-common.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-sse2.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-sse2.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins-sse2-x2.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-sse2-x2.ll | python bitcode2cpp.py builtins-sse2-x2.ll &gt; gen-bitcode-sse2-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-sse2-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse2-common.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-sse2-x2.ll | python bitcode2cpp.py builtins-sse2-x2.ll &gt; gen-bitcode-sse2-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-sse2-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse2-common.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-sse2-x2.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-sse2-x2.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -139,10 +153,10 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 builtins.m4 builtins-avx.ll | python bitcode2cpp.py builtins-avx.ll &gt; gen-bitcode-avx.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-avx.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins.m4;builtins-avx-common.ll</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 builtins.m4 builtins-avx.ll | python bitcode2cpp.py builtins-avx.ll &gt; gen-bitcode-avx.cpp</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-avx.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-sse.ll</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins.m4;builtins-avx-common.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx.cpp</Message>
     </CustomBuild>

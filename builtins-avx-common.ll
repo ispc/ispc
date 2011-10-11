@@ -30,11 +30,7 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; *** Untested *** AVX target implementation.
-;;
-;; The LLVM AVX code generator is incomplete, so the ispc AVX target
-;; hasn't yet been tested.  There is therefore a higher-than-normal
-;; chance that there are bugs in the code in this file.
+;; AVX target implementation.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

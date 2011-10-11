@@ -129,6 +129,12 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
     }
+    else if (!strcasecmp(isa, "sse2-x2")) {
+        t->isa = Target::SSE2;
+        t->nativeVectorWidth = 4;
+        t->vectorWidth = 8;
+        t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+    }
     else if (!strcasecmp(isa, "sse4")) {
         t->isa = Target::SSE4;
         t->nativeVectorWidth = 4;
@@ -193,7 +199,7 @@ Target::SupportedTargetArchs() {
 
 const char *
 Target::SupportedTargetISAs() {
-    return "sse2, sse4, sse4-x2"
+    return "sse2, sse2-x2, sse4, sse4-x2"
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn)
         ", avx, avx-x2"
 #endif

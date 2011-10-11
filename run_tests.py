@@ -26,7 +26,7 @@ parser.add_option("-s", "--static-exe", dest="static_exe",
                   help="Create and run a regular executable for each test (rather than using the LLVM JIT).",
                   default=False, action="store_true")
 parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (sse2, sse4, sse4-x2, avx, avx-x2)',
+                  help='Set compilation target (sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2)',
                   default="sse4")
 parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (x86, x86-64)',
