@@ -365,7 +365,11 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         bcModule->setTargetTriple(mTriple.str());
 
         std::string(linkError);
-        if (llvm::Linker::LinkModules(module, bcModule, &linkError))
+        if (llvm::Linker::LinkModules(module, bcModule, 
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+                                      llvm::Linker::DestroySource,
+#endif // LLVM_3_0
+                                      &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
         if (symbolTable != NULL)
             lAddModuleSymbols(module, symbolTable);
