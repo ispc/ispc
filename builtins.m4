@@ -1553,12 +1553,15 @@ define internal void
   call void @__aos_to_soa3_float4(<4 x float> %v0a, <4 x float> %v0b,
          <4 x float> %v0c, <4 x float> * %out0a, <4 x float> * %out1a,
          <4 x float> * %out2a)
-  call void @__aos_to_soa3_float4(<4 x float> %v1a, <4 x float> %v1b,
-         <4 x float> %v1c, <4 x float> * %out0b, <4 x float> * %out1b,
+  call void @__aos_to_soa3_float4(<4 x float> %v0d, <4 x float> %v1a,
+         <4 x float> %v1b, <4 x float> * %out0b, <4 x float> * %out1b,
          <4 x float> * %out2b)
-  call void @__aos_to_soa3_float4(<4 x float> %v2a, <4 x float> %v2b,
-         <4 x float> %v2c, <4 x float> * %out0c, <4 x float> * %out1c,
+  call void @__aos_to_soa3_float4(<4 x float> %v1c, <4 x float> %v1d,
+         <4 x float> %v2a, <4 x float> * %out0c, <4 x float> * %out1c,
          <4 x float> * %out2c)
+  call void @__aos_to_soa3_float4(<4 x float> %v2b, <4 x float> %v2c,
+         <4 x float> %v2d, <4 x float> * %out0d, <4 x float> * %out1d,
+         <4 x float> * %out2d)
   ret void
 }
 
