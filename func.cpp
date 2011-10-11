@@ -95,8 +95,9 @@ Function::Function(DeclSpecs *ds, Declarator *decl, Stmt *c) {
     type = dynamic_cast<const FunctionType *>(decl->GetType(ds));
     assert(type != NULL);
     sym = m->symbolTable->LookupFunction(decl->sym->name.c_str(), type);
-    assert(sym != NULL);
-    sym->pos = decl->pos;
+    if (sym != NULL)
+        // May be NULL due to error earlier in compilation
+        sym->pos = decl->pos;
 
     isExported = (ds->storageClass == SC_EXPORT);
 
@@ -572,6 +573,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 
 void
 Function::GenerateIR() {
+    if (sym == NULL)
+        // May be NULL due to error earlier in compilation
+        return;
+
     llvm::Function *function = sym->function;
     assert(function != NULL);
 

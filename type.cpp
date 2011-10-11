@@ -730,7 +730,7 @@ ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
 
 bool
 ArrayType::IsUniformType() const {
-    return child->IsUniformType(); 
+    return child ? child->IsUniformType() : true;
 }
 
 
@@ -760,7 +760,7 @@ ArrayType::IsBoolType() const {
 
 bool
 ArrayType::IsConstType() const {
-    return child->IsConstType(); 
+    return child ? child->IsConstType() : false;
 }
 
 
@@ -779,30 +779,40 @@ ArrayType::GetBaseType() const {
 
 const ArrayType *
 ArrayType::GetAsVaryingType() const {
+    if (child == NULL)
+        return NULL;
     return new ArrayType(child->GetAsVaryingType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsUniformType() const {
+    if (child == NULL)
+        return NULL;
     return new ArrayType(child->GetAsUniformType(), numElements);
 }
 
 
 const Type *
 ArrayType::GetSOAType(int width) const {
+    if (child == NULL)
+        return NULL;
     return new ArrayType(child->GetSOAType(width), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsConstType() const {
+    if (child == NULL)
+        return NULL;
     return new ArrayType(child->GetAsConstType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsNonConstType() const {
+    if (child == NULL)
+        return NULL;
     return new ArrayType(child->GetAsNonConstType(), numElements);
 }
 
@@ -841,6 +851,8 @@ ArrayType::GetString() const {
 
 std::string
 ArrayType::Mangle() const {
+    if (child == NULL)
+        return "(error)";
     std::string s = child->Mangle();
     char buf[16];
     if (numElements > 0)
