@@ -1906,7 +1906,8 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         bool anyAdds = false, allAdds = true;
         for (int i = 0; i < g->target.vectorWidth; ++i) {
             llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(v[i]);
-            if (ce->getOpcode() == llvm::Instruction::Add)
+            if (ce->getOpcode() == llvm::Instruction::Add ||
+                ce->getOpcode() == llvm::Instruction::Sub)
                 anyAdds = true;
             else 
                 allAdds = false;
@@ -1938,9 +1939,20 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
                         otherBit[i] = ce->getOperand(0);
                     }
                 }
+                else if (ce->getOpcode() == llvm::Instruction::Sub) {
+                    // Treat subtraction as an add with a negative value..
+                    if (llvm::isa<llvm::ConstantInt>(ce->getOperand(0))) {
+                        intBit[i] = ce->getOperand(0);
+                        otherBit[i] = llvm::ConstantExpr::getNeg(ce->getOperand(1));
+                    }
+                    else {
+                        intBit[i] = ce->getOperand(1);
+                        otherBit[i] = llvm::ConstantExpr::getNeg(ce->getOperand(0));
+                    }
+                }
                 else {
-                    // We don't have an Add, so pretend we have an add with
-                    // zero.
+                    // We don't have an Add or a Sub, so pretend we have an
+                    // add with zero.
                     intBit[i] = LLVMInt32(0);
                     otherBit[i] = v[i];
                 }
@@ -1975,14 +1987,20 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         // FIXME: here, too, what about cases with v[0] being a load or something
         // and then everything after element 0 being a binary operator with an add.
         // That won't get caught by this case??
-        bool anyAdd = false;
+        bool anyAdd = false, anySub = false;
         for (int i = 0; i < g->target.vectorWidth; ++i) {
             llvm::BinaryOperator *bopi = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
-            if (bopi && bopi->getOpcode() == llvm::Instruction::Add)
-                anyAdd = true;
+            if (bopi) {
+                if (bopi->getOpcode() == llvm::Instruction::Add)
+                    anyAdd = true;
+                else if (bopi->getOpcode() == llvm::Instruction::Sub)
+                    anySub = true;
+            }
         }
 
-        if (anyAdd) {
+        if (anyAdd && anySub)
+            return false;
+        if (anyAdd || anySub) {
             // is one of the operands the same for all elements?  if so, then just
             // need to check this case for the other operand...
 
@@ -1993,38 +2011,51 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             // more robust to switching the ordering of operands, in case
             // that ever happens...
             for (int operand = 0; operand <= 1; ++operand) {
-                llvm::Value *addOperandValues[ISPC_MAX_NVEC];
+                llvm::Value *addSubOperandValues[ISPC_MAX_NVEC];
                 // Go through the vector elements and grab the operand'th
                 // one if this is an add or the v
                 for (int i = 0; i < g->target.vectorWidth; ++i) {
                     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
-                    if (bop->getOpcode() == llvm::Instruction::Add)
-                        addOperandValues[i] = bop->getOperand(operand);
+                    if (bop->getOpcode() == llvm::Instruction::Add ||
+                        bop->getOpcode() == llvm::Instruction::Sub)
+                        addSubOperandValues[i] = bop->getOperand(operand);
                     else
-                        // The other guys are adds, so we'll treat this as
-                        // an "add 0" in the below, so just grab the value
-                        // v[i] itself
-                        addOperandValues[i] = v[i];
+                        // The other guys are adds or subtracts, so we'll
+                        // treat this as an "add 0" in the below, so just
+                        // grab the value v[i] itself
+                        addSubOperandValues[i] = v[i];
                 }
 
-                if (lVectorValuesAllEqual(addOperandValues)) {
+                if (lVectorValuesAllEqual(addSubOperandValues) && 
+                    (anyAdd || operand == 1)) {
                     // If this operand's values are all equal, then the
-                    // overall result is a linear sequence if the second
-                    // operand's values are themselves a linear sequence...
+                    // overall result is an ascending linear sequence if
+                    // the other operand's values are themselves a linear
+                    // sequence and if either this is an add or we're
+                    // looking at the 2nd operand.  i.e.:
+                    //
+                    // unif + programIndex -> ascending linear sequence
+                    // programIndex + unif -> ascending linear seqeuence
+                    // programIndex - unif -> ascending linear seqeuence
+                    // unif - programIndex -> *descending* linear seqeuence
+                    //
+                    // We don't match the descending case for now; at some
+                    // future point we could generate code for that as a
+                    // vector load + shuffle.
                     int otherOperand = operand ^ 1;
                     for (int i = 0; i < g->target.vectorWidth; ++i) {
                         llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
-                        if (bop->getOpcode() == llvm::Instruction::Add)
-                            addOperandValues[i] = bop->getOperand(otherOperand);
+                        if (bop->getOpcode() == llvm::Instruction::Add ||
+                            bop->getOpcode() == llvm::Instruction::Sub)
+                            addSubOperandValues[i] = bop->getOperand(otherOperand);
                         else
-                            addOperandValues[i] = LLVMInt32(0);
+                            addSubOperandValues[i] = LLVMInt32(0);
                     }
-                    return lVectorIsLinear(addOperandValues, stride);
+                    return lVectorIsLinear(addSubOperandValues, stride);
                 }
             }
         }
-
-        if (bop->getOpcode() == llvm::Instruction::Mul) {
+        else if (bop->getOpcode() == llvm::Instruction::Mul) {
             // Finally, if we have a multiply, then if one of the operands
             // has the same value for all elements and if the other operand
             // is a linear sequence such that the scale times the sequence
