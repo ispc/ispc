@@ -453,6 +453,36 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 }
 
 
+/** Store the result of an assignment to the given location. 
+ */
+static void
+lStoreAssignResult(llvm::Value *rv, llvm::Value *lv, const Type *type, 
+                   FunctionEmitContext *ctx, Symbol *baseSym) {
+    assert(baseSym != NULL &&
+           baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
+    if (!g->opt.disableMaskedStoreToStore &&
+        baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
+        baseSym->storageClass != SC_STATIC &&
+        dynamic_cast<const ReferenceType *>(baseSym->type) == NULL) {
+        // If the variable is declared at the same varying control flow
+        // depth as where it's being assigned, then we don't need to do any
+        // masking but can just do the assignment as if all the lanes were
+        // known to be on.  While this may lead to random/garbage values
+        // written into the lanes that are off, by definition they will
+        // never be accessed, since those lanes aren't executing, and won't
+        // be executing at this scope or any other one before the variable
+        // goes out of scope.
+        ctx->StoreInst(rv, lv, LLVMMaskAllOn, type);
+    }
+    else {
+        llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
+                             baseSym->storageClass != SC_STATIC) ? 
+            ctx->GetInternalMask() : ctx->GetFullMask();
+        ctx->StoreInst(rv, lv, mask, type);
+    }
+}
+
+
 /** Utility routine to emit code to do a {pre,post}-{inc,dec}rement of the
     given expresion.
  */
@@ -506,11 +536,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
 
     // And store the result out to the lvalue
     Symbol *baseSym = expr->GetBaseSymbol();
-    assert(baseSym != NULL);
-    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
-                         baseSym->storageClass != SC_STATIC) ? 
-        ctx->GetInternalMask() : ctx->GetFullMask();
-    ctx->StoreInst(binop, lvalue, mask, type);
+    lStoreAssignResult(binop, lvalue, type, ctx, baseSym);
 
     // And then if it's a pre increment/decrement, return the final
     // computed result; otherwise return the previously-grabbed expression
@@ -1493,36 +1519,6 @@ BinaryExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // AssignExpr
 
-
-/** Store the result of an assignment to the given location. 
- */
-static void
-lStoreAssignResult(llvm::Value *rv, llvm::Value *lv, const Type *type, 
-                   FunctionEmitContext *ctx, Symbol *baseSym) {
-    assert(baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
-    if (!g->opt.disableMaskedStoreToStore &&
-        baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
-        baseSym->storageClass != SC_STATIC &&
-        dynamic_cast<const ReferenceType *>(baseSym->type) == NULL) {
-        // If the variable is declared at the same varying control flow
-        // depth as where it's being assigned, then we don't need to do any
-        // masking but can just do the assignment as if all the lanes were
-        // known to be on.  While this may lead to random/garbage values
-        // written into the lanes that are off, by definition they will
-        // never be accessed, since those lanes aren't executing, and won't
-        // be executing at this scope or any other one before the variable
-        // goes out of scope.
-        ctx->StoreInst(rv, lv, LLVMMaskAllOn, type);
-    }
-    else {
-        llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
-                             baseSym->storageClass != SC_STATIC) ? 
-            ctx->GetInternalMask() : ctx->GetFullMask();
-        ctx->StoreInst(rv, lv, mask, type);
-    }
-}
-
-
 /** Emit code to do an "assignment + operation" operator, e.g. "+=".
  */
 static llvm::Value *
@@ -2441,17 +2437,8 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
                                               "load_ref");
 
             Symbol *baseSym = callargs[i]->GetBaseSymbol();
-            assert(baseSym != NULL);
-//CO            if (baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
-//CO                baseSym->storageClass != SC_STATIC)
-//CO                ctx->StoreInst(load, argValLValues[i], LLVMMaskAllOn,
-//CO                               rt->GetReferenceTarget());
-//CO            else {
-                llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() &&
-                                     baseSym->storageClass != SC_STATIC) ? 
-                    ctx->GetInternalMask() : ctx->GetFullMask();
-                ctx->StoreInst(load, argValLValues[i], mask, rt->GetReferenceTarget());
-//CO            }
+            lStoreAssignResult(load, argValLValues[i], rt->GetReferenceTarget(),
+                               ctx, baseSym);
         }
     }
 
