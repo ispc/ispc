@@ -44,6 +44,8 @@
 #include "llvmutil.h"
 
 #include <stdio.h>
+#include <map>
+#include <set>
 
 #include <llvm/Pass.h>
 #include <llvm/Module.h>
@@ -1558,7 +1560,7 @@ static void lPrintVector(const char *info, llvm::Value *elements[ISPC_MAX_NVEC])
  */
 static bool
 lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
-                 int vectorLength) {
+                 int vectorLength, std::map<llvm::PHINode *, llvm::Value **> &phiMap) {
     // First initialize the values of scalarizedVector[] to NULL.
     for (int i = 0; i < vectorLength; ++i)
         scalarizedVector[i] = NULL;
@@ -1599,8 +1601,8 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         llvm::Value **v1 = 
             (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
 
-        if (!lScalarizeVector(bo->getOperand(0), v0, vectorLength) || 
-            !lScalarizeVector(bo->getOperand(1), v1, vectorLength))
+        if (!lScalarizeVector(bo->getOperand(0), v0, vectorLength, phiMap) || 
+            !lScalarizeVector(bo->getOperand(1), v1, vectorLength, phiMap))
             return false;
 
         for (int i = 0; i < vectorLength; ++i) {
@@ -1652,7 +1654,7 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         llvm::Value **scalarizedTarget = 
             (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
         if (!lScalarizeVector(ci->getOperand(0), scalarizedTarget,
-                              vectorLength))
+                              vectorLength, phiMap))
             return false;
 
         LLVM_TYPE_CONST llvm::Type *destType = ci->getDestTy();
@@ -1694,8 +1696,8 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         llvm::Value **v0 = (llvm::Value **)alloca(n0 * sizeof(llvm::Value *));
         llvm::Value **v1 = (llvm::Value **)alloca(n1 * sizeof(llvm::Value *));
 
-        if (!lScalarizeVector(svi->getOperand(0), v0, n0) ||
-            !lScalarizeVector(svi->getOperand(1), v1, n1))
+        if (!lScalarizeVector(svi->getOperand(0), v0, n0, phiMap) ||
+            !lScalarizeVector(svi->getOperand(1), v1, n1, phiMap))
             return false;
 
         llvm::ConstantAggregateZero *caz = 
@@ -1777,6 +1779,55 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         return true;
     }
 
+    llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(vec);
+    if (phi != NULL) {
+        // If we've seen this phi node during an earlier recursive step,
+        // then don't re-scalarize it, but return the already allocated
+        // pointer values.  (This both avoids an infinite loop and ensures
+        // that we point back to ourself properly for cases where some of
+        // the incoming values end up being derived from the phi node...
+        if (phiMap.find(phi) != phiMap.end()) {
+            llvm::Value **v = phiMap[phi];
+            for (int i = 0; i < vectorLength; ++i)
+                scalarizedVector[i] = v[i];
+            return true;
+        }
+
+        LLVM_TYPE_CONST llvm::VectorType *vecType = 
+            llvm::dyn_cast<llvm::VectorType>(phi->getType());
+        LLVM_TYPE_CONST llvm::Type *eltType = vecType->getElementType();
+        assert(vecType != NULL);
+        unsigned int numIncoming = phi->getNumIncomingValues();
+
+        // First allocate all of the scalarized phi nodes, so that we can
+        // get them into the map<> before making recursive calls to
+        // lScalarizeVector.
+        for (int i = 0; i < vectorLength; ++i) {
+            scalarizedVector[i] =
+                llvm::PHINode::Create(eltType, numIncoming, "phi", phi);
+            lCopyMetadata(scalarizedVector[i], phi);
+        }
+
+        phiMap[phi] = scalarizedVector;
+
+        llvm::Value **vin = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+        // Now, for each incoming value, scalarize it recursively and then
+        // update the scalarized phi node for this element.
+        for (unsigned int i = 0; i < numIncoming; ++i) {
+            if (!lScalarizeVector(phi->getIncomingValue(i), vin, vectorLength, phiMap))
+                return false;
+            llvm::BasicBlock *bbin = phi->getIncomingBlock(i);
+
+            for (int j = 0; j < vectorLength; ++j) {
+                llvm::PHINode *phi = (llvm::PHINode *)scalarizedVector[j];
+                phi->addIncoming(vin[j], bbin);
+            }
+        }
+
+        phiMap.erase(phiMap.find(phi));
+        return true;
+    }
+
 #if 0
     fprintf(stderr, "flatten vector fixme\n");
     vec->dump();
@@ -1798,7 +1849,9 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
     won't get all of them.
  */
 static bool
-lValuesAreEqual(llvm::Value *v0, llvm::Value *v1) {
+lValuesAreEqual(llvm::Value *v0, llvm::Value *v1, 
+                std::vector<llvm::PHINode *> &seenPhi0,
+                std::vector<llvm::PHINode *> &seenPhi1) {
     // Thanks to the fact that LLVM hashes and returns the same pointer for
     // constants (of all sorts, even constant expressions), this first test
     // actually catches a lot of cases.  LLVM's SSA form also helps a lot
@@ -1806,13 +1859,49 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1) {
     if (v0 == v1)
         return true;
 
+    assert(seenPhi0.size() == seenPhi1.size());
+    for (unsigned int i = 0; i < seenPhi0.size(); ++i)
+        if (v0 == seenPhi0[i] && v1 == seenPhi1[i])
+            return true;
+
     llvm::BinaryOperator *bo0 = llvm::dyn_cast<llvm::BinaryOperator>(v0);
     llvm::BinaryOperator *bo1 = llvm::dyn_cast<llvm::BinaryOperator>(v1);
-    if (bo0 && bo1) {
+    if (bo0 != NULL && bo1 != NULL) {
         if (bo0->getOpcode() != bo1->getOpcode())
             return false;
-        return (lValuesAreEqual(bo0->getOperand(0), bo1->getOperand(0)) &&
-                lValuesAreEqual(bo0->getOperand(1), bo1->getOperand(1)));
+        return (lValuesAreEqual(bo0->getOperand(0), bo1->getOperand(0),
+                                seenPhi0, seenPhi1) &&
+                lValuesAreEqual(bo0->getOperand(1), bo1->getOperand(1),
+                                seenPhi0, seenPhi1));
+    }
+
+    llvm::PHINode *phi0 = llvm::dyn_cast<llvm::PHINode>(v0);
+    llvm::PHINode *phi1 = llvm::dyn_cast<llvm::PHINode>(v1);
+    if (phi0 != NULL && phi1 != NULL) {
+        if (phi0->getNumIncomingValues() !=
+            phi1->getNumIncomingValues())
+            return false;
+
+        seenPhi0.push_back(phi0);
+        seenPhi1.push_back(phi1);
+
+        unsigned int numIncoming = phi0->getNumIncomingValues();
+        // Check all of the incoming values: if all of them are all equal,
+        // then we're good.
+        bool anyFailure = false;
+        for (unsigned int i = 0; i < numIncoming; ++i) {
+            assert(phi0->getIncomingBlock(i) == phi1->getIncomingBlock(i));
+            if (!lValuesAreEqual(phi0->getIncomingValue(i), 
+                                 phi1->getIncomingValue(i), seenPhi0, seenPhi1)) {
+                anyFailure = true;
+                break;
+            }
+        }
+
+        seenPhi0.pop_back();
+        seenPhi1.pop_back();
+
+        return !anyFailure;
     }
 
     return false;
@@ -1824,9 +1913,10 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1) {
     arrays where the values are actually all equal.
  */
 static bool
-lVectorValuesAllEqual(llvm::Value *v[ISPC_MAX_NVEC]) {
-    for (int i = 0; i < g->target.vectorWidth-1; ++i)
-        if (!lValuesAreEqual(v[i], v[i+1]))
+lVectorValuesAllEqual(llvm::Value **v, int vectorLength) {
+    std::vector<llvm::PHINode *> seenPhi0, seenPhi1;
+    for (int i = 0; i < vectorLength-1; ++i)
+        if (!lValuesAreEqual(v[i], v[i+1], seenPhi0, seenPhi1))
             return false;
     return true;
 }
@@ -1838,7 +1928,7 @@ lVectorValuesAllEqual(llvm::Value *v[ISPC_MAX_NVEC]) {
     elements.
  */
 static bool
-lVectorIsLinearConstantInts(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
+lVectorIsLinearConstantInts(llvm::Value **v, int vectorLength, int stride) {
     llvm::ConstantInt *prev = llvm::dyn_cast<llvm::ConstantInt>(v[0]);
     if (!prev)
         return false;
@@ -1847,7 +1937,7 @@ lVectorIsLinearConstantInts(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
     // For each element in the array, see if it is both a ConstantInt and
     // if the difference between it and the value of the previous element
     // is stride.  If not, fail.
-    for (int i = 1; i < g->target.vectorWidth; ++i) {
+    for (int i = 1; i < vectorLength; ++i) {
         llvm::ConstantInt *next = llvm::dyn_cast<llvm::ConstantInt>(v[i]);
         if (!next) 
             return false;
@@ -1874,14 +1964,15 @@ lVectorIsLinearConstantInts(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
     back an array of all zeros?
  */
 static bool
-lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
+lVectorIsLinear(llvm::Value **v, int vectorLength, int stride,
+                std::set<llvm::PHINode *> &seenPhis) {
 #if 0
     lPrintVector("called lVectorIsLinear", v);
 #endif
 
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
-    if (lVectorIsLinearConstantInts(v, stride))
+    if (lVectorIsLinearConstantInts(v, vectorLength, stride))
         return true;
 
     // ConstantExprs need a bit of deconstruction to figure out
@@ -1893,7 +1984,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         // some sort.  If not, give up.
         // FIXME: are we potentially missing cases here, e.g. a mixture of
         // ConstantExprs and ConstantInts?
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
+        for (int i = 0; i < vectorLength; ++i) {
             if (!llvm::isa<llvm::ConstantExpr>(v[i]))
                 return false;
         }
@@ -1904,7 +1995,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         // "foo", so we need to deal with cases where element 0 is "foo",
         // element 1 is add(4, foo), etc...
         bool anyAdds = false, allAdds = true;
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
+        for (int i = 0; i < vectorLength; ++i) {
             llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(v[i]);
             if (ce->getOpcode() == llvm::Instruction::Add ||
                 ce->getOpcode() == llvm::Instruction::Sub)
@@ -1924,8 +2015,9 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             //    are an add with 0 as the other operand.
             // 2. Extract the ConstInt operand of the add into the intBit[]
             //    array and put the other operand in the otherBit[] array.
-            llvm::Value *intBit[ISPC_MAX_NVEC], *otherBit[ISPC_MAX_NVEC];
-            for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value **intBit = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+            llvm::Value **otherBit = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+            for (int i = 0; i < vectorLength; ++i) {
                 llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(v[i]);
                 if (ce->getOpcode() == llvm::Instruction::Add) {
                     // The ConstantInt may be either of the two operands of
@@ -1962,8 +2054,8 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             // we're adding constant values with the desired stride to the
             // same base value.  If so, we know we have a linear set of
             // locations.
-            return (lVectorIsLinear(intBit, stride) &&
-                    lVectorValuesAllEqual(otherBit));
+            return (lVectorIsLinear(intBit, vectorLength, stride, seenPhis) &&
+                    lVectorValuesAllEqual(otherBit, vectorLength));
         }
 
         // If this ever hits, the assertion can just be commented out and
@@ -1972,7 +2064,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         // up and possibly hurting performance of the final code.
         FATAL("Unexpected case with a ConstantExpr in lVectorIsLinear");
 #if 0
-        for (int i = 0; i < g->target.vectorWidth; ++i)
+        for (int i = 0; i < vectorLength; ++i)
             v[i]->dump();
         FATAL("FIXME");
 #endif
@@ -1988,7 +2080,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
         // and then everything after element 0 being a binary operator with an add.
         // That won't get caught by this case??
         bool anyAdd = false, anySub = false;
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
+        for (int i = 0; i < vectorLength; ++i) {
             llvm::BinaryOperator *bopi = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
             if (bopi) {
                 if (bopi->getOpcode() == llvm::Instruction::Add)
@@ -2010,11 +2102,13 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             // two operands matches the one we started with?  That would be
             // more robust to switching the ordering of operands, in case
             // that ever happens...
+            llvm::Value **addSubOperandValues = 
+                (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+
             for (int operand = 0; operand <= 1; ++operand) {
-                llvm::Value *addSubOperandValues[ISPC_MAX_NVEC];
                 // Go through the vector elements and grab the operand'th
                 // one if this is an add or the v
-                for (int i = 0; i < g->target.vectorWidth; ++i) {
+                for (int i = 0; i < vectorLength; ++i) {
                     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
                     if (bop->getOpcode() == llvm::Instruction::Add ||
                         bop->getOpcode() == llvm::Instruction::Sub)
@@ -2026,7 +2120,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
                         addSubOperandValues[i] = v[i];
                 }
 
-                if (lVectorValuesAllEqual(addSubOperandValues) && 
+                if (lVectorValuesAllEqual(addSubOperandValues, vectorLength) && 
                     (anyAdd || operand == 1)) {
                     // If this operand's values are all equal, then the
                     // overall result is an ascending linear sequence if
@@ -2043,7 +2137,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
                     // future point we could generate code for that as a
                     // vector load + shuffle.
                     int otherOperand = operand ^ 1;
-                    for (int i = 0; i < g->target.vectorWidth; ++i) {
+                    for (int i = 0; i < vectorLength; ++i) {
                         llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
                         if (bop->getOpcode() == llvm::Instruction::Add ||
                             bop->getOpcode() == llvm::Instruction::Sub)
@@ -2051,7 +2145,7 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
                         else
                             addSubOperandValues[i] = LLVMInt32(0);
                     }
-                    return lVectorIsLinear(addSubOperandValues, stride);
+                    return lVectorIsLinear(addSubOperandValues, vectorLength, stride, seenPhis);
                 }
             }
         }
@@ -2094,8 +2188,8 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             if ((stride % mulScale) != 0)
                 return false;
 
-            llvm::Value *otherValue[ISPC_MAX_NVEC];
-            for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value **otherValue = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+            for (int i = 0; i < vectorLength; ++i) {
                 llvm::BinaryOperator *eltBop = llvm::dyn_cast<llvm::BinaryOperator>(v[i]);
                 // Give up if it's not matching the desired pattern of "all
                 // mul ops with the scaleOperand being a constant with the
@@ -2109,8 +2203,62 @@ lVectorIsLinear(llvm::Value *v[ISPC_MAX_NVEC], int stride) {
             }
             // Now see if the sequence of values being scaled gives us
             // something with the desired stride.
-            return lVectorIsLinear(otherValue, stride / mulScale);
+            return lVectorIsLinear(otherValue, vectorLength, stride / mulScale, seenPhis);
         }
+    }
+
+    if (llvm::dyn_cast<llvm::PHINode>(v[0]) != NULL) {
+        int found = 0;
+        // If all of them have made it back to a phi node we've seen
+        // before, then we're good.
+        for (int i = 0; i < vectorLength; ++i) {
+            llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v[i]);
+            assert(phi != NULL);
+            if (seenPhis.find(phi) != seenPhis.end())
+                ++found;
+        }
+        assert(found == 0 || found == vectorLength);
+        if (found == vectorLength)
+            return true;
+
+        // Otherwise record that we've seen these guys before.
+        for (int i = 0; i < vectorLength; ++i) {
+            llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v[i]);
+            seenPhis.insert(phi);
+        }
+
+        llvm::Value **vin = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
+        llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v[0]);
+        unsigned int numIncoming = phi->getNumIncomingValues();
+        llvm::BasicBlock *bb = NULL;
+        bool anyFailure = false;
+        // Check each incoming value; if all of them are linear, then success.
+        for (unsigned int i = 0; i < numIncoming; ++i) {
+            for (int j = 0; j < vectorLength; ++j) {
+                llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v[j]);
+                assert(phi != NULL);
+                vin[j] = phi->getIncomingValue(i);
+                
+                if (j == 0)
+                    bb = phi->getIncomingBlock(i);
+                else
+                    assert(bb == phi->getIncomingBlock(i));
+            }
+
+            if (!lVectorIsLinear(vin, vectorLength, stride, seenPhis)) {
+                // Don't return false immediately, since we need to remove
+                // the PHINode *s from v[] from seenPhis before we return.
+                anyFailure = true;
+                break;
+            }
+        }
+
+        for (int i = 0; i < vectorLength; ++i) {
+            llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v[i]);
+            seenPhis.erase(phi);
+        }
+
+        return !anyFailure;
     }
 
     return false;
@@ -2229,12 +2377,13 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         int vecLength = vt->getNumElements();
         assert(vecLength == g->target.vectorWidth);
         llvm::Value *offsetElements[ISPC_MAX_NVEC];
-        if (!lScalarizeVector(vecValue, offsetElements, vecLength))
+        std::map<llvm::PHINode *, llvm::Value **> phiMap;
+        if (!lScalarizeVector(vecValue, offsetElements, vecLength, phiMap))
             continue;
 
         llvm::Value *mask = callInst->getArgOperand((gatherInfo != NULL) ? 2 : 3);
 
-        if (lVectorValuesAllEqual(offsetElements)) {
+        if (lVectorValuesAllEqual(offsetElements, g->target.vectorWidth)) {
             // If all the offsets are equal, then compute the single
             // pointer they all represent based on the first one of them
             // (arbitrarily).
@@ -2302,7 +2451,8 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
 
         int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
-        if (lVectorIsLinear(offsetElements, step)) {
+        std::set<llvm::PHINode *> seenPhis;
+        if (lVectorIsLinear(offsetElements, g->target.vectorWidth, step, seenPhis)) {
             // We have a linear sequence of memory locations being accessed
             // starting with the location given by the offset from
             // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
