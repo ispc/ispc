@@ -889,6 +889,74 @@ lGetTypeSize(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) 
 
 
 static llvm::Value *
+lTraverseConstantExpr(llvm::Constant *value, llvm::Value **offsetPtr,
+                      LLVM_TYPE_CONST llvm::Type **scaleType, 
+                      bool *leafIsVarying, llvm::Instruction *insertBefore) {
+    llvm::GlobalVariable *gv = NULL;
+    llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(value);
+    if (ce != NULL) {
+        switch (ce->getOpcode()) {
+        case llvm::Instruction::BitCast:
+            *offsetPtr = LLVMInt32(0);
+            return lTraverseConstantExpr(ce->getOperand(0), offsetPtr, 
+                                         scaleType, leafIsVarying, insertBefore);
+        case llvm::Instruction::GetElementPtr: {
+            gv = llvm::dyn_cast<llvm::GlobalVariable>(ce->getOperand(0));
+            assert(gv != NULL);
+
+            assert(lGetIntValue(ce->getOperand(1)) == 0);
+            LLVM_TYPE_CONST llvm::PointerType *targetPtrType = 
+                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(ce->getOperand(0)->getType());
+            assert(targetPtrType);
+            LLVM_TYPE_CONST llvm::Type *targetType = targetPtrType->getElementType();
+
+            if (llvm::isa<const llvm::StructType>(targetType)) {
+                *offsetPtr = lStructOffset(targetType, lGetIntValue(ce->getOperand(2)),
+                                           insertBefore);
+                *offsetPtr = new llvm::TruncInst(*offsetPtr, LLVMTypes::Int32Type, "member32", 
+                                                 insertBefore);
+//CO                lCopyMetadata(*offset, insertBefore);
+                *scaleType = LLVMTypes::Int8Type; // aka char aka sizeof(1)
+            }
+            else {
+                *offsetPtr = ce->getOperand(2);
+                assert(*scaleType == NULL || *scaleType == targetType);
+                *scaleType = targetType;
+            }
+            break;
+        }
+        default:
+            FATAL("Unexpected opcode in constant expression!");
+            //printf("other op %s\n", ce->getOpcodeName());
+            break;
+        }
+    }
+
+    if (gv == NULL)
+        gv = llvm::dyn_cast<llvm::GlobalVariable>(value);
+
+    if (gv != NULL) {
+        // FIXME: is this broken for arrays of varying???!? (I think so).
+        // IF so, then why does the other copy if it work.  (Or is that
+        // broken, too?!?!?)
+        if (leafIsVarying != NULL) {
+            LLVM_TYPE_CONST llvm::Type *pt = value->getType();
+            LLVM_TYPE_CONST llvm::PointerType *ptrType = 
+                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(pt);
+            assert(ptrType);
+            LLVM_TYPE_CONST llvm::Type *eltType = ptrType->getElementType();
+            *leafIsVarying = llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(eltType);
+            //printf("decided that leaf %s varying!\n", *leafIsVarying ? "is" : "is not");
+        }
+
+        return gv;
+    }
+
+    return NULL;
+}
+
+
+static llvm::Value *
 lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset, 
                   LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
                   llvm::Instruction *insertBefore) {
@@ -973,11 +1041,31 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
 
     @todo All of the additional indexing magic for varying stuff should
     happen in the front end.
- */
+*/
 static llvm::Value *
 lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
                      LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
                      llvm::Instruction *insertBefore) {
+    // The pointer values may be an array of constant pointers (this
+    // happens, for example, when indexing into global arrays.)  In that
+    // case, we have llvm::ConstantExprs to deconstruct to dig out the
+    // common base pointer and the per-lane offsets.
+    llvm::ConstantArray *ca = llvm::dyn_cast<llvm::ConstantArray>(ptrs);
+    if (ca != NULL) {
+        assert((int)ca->getNumOperands() == g->target.vectorWidth);
+        llvm::Value *base = NULL;
+        for (int i = 0; i < g->target.vectorWidth; ++i) {
+            llvm::Value *b = lTraverseConstantExpr(ca->getOperand(i), &offsets[i],
+                                                   scaleType, leafIsVarying, 
+                                                   insertBefore);
+            if (i == 0) 
+                base = b;
+            else
+                assert(base == b);
+        }
+        return base;
+    }
+
     // This depends on the front-end constructing the arrays of pointers
     // via InsertValue instructions.  (Which it does do in
     // FunctionEmitContext::GetElementPtrInst()).
@@ -1029,7 +1117,7 @@ lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
 
     @todo Using shufflevector to do this seems more idiomatic (and would be
     just a single instruction).  Switch to that?
- */
+*/
 static llvm::Value *
 lSmearScalar(llvm::Value *scalar, llvm::Instruction *insertBefore) {
     LLVM_TYPE_CONST llvm::Type *vectorType = llvm::VectorType::get(scalar->getType(), 
@@ -1237,7 +1325,7 @@ CreateGatherScatterFlattenPass() {
     This optimization detects cases where masked stores can be replaced
     with regular stores or removed entirely, for the cases of an 'all on'
     mask and an 'all off' mask, respectively.
- */
+*/
 class MaskedStoreOptPass : public llvm::BasicBlockPass {
 public:
     static char ID;
@@ -1353,7 +1441,7 @@ CreateMaskedStoreOptPass() {
     __pseudo_masked_store_{8,16,32,64} call as a placeholder.  This pass
     lowers these calls to either __masked_store_{8,16,32,64} or
     __masked_store_blend_{8,16,32,64} calls.
-  */
+*/
 class LowerMaskedStorePass : public llvm::BasicBlockPass {
 public:
     static char ID;
@@ -1376,7 +1464,7 @@ llvm::RegisterPass<LowerMaskedStorePass> lms("masked-store-lower",
     false for memory that actually is stack allocated.  The basic strategy
     is to traverse through the operands and see if the pointer originally
     comes from an AllocaInst.
- */
+*/
 static bool
 lIsStackVariablePointer(llvm::Value *lvalue) {
     llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
@@ -1498,7 +1586,7 @@ CreateLowerMaskedStorePass() {
     look for, including things that could be handled with a vector load +
     shuffle or things that could be handled with hybrids of e.g. 2 4-wide
     vector loads with AVX, etc.
- */
+*/
 class GSImprovementsPass : public llvm::BasicBlockPass {
 public:
     static char ID;
@@ -1551,13 +1639,13 @@ static void lPrintVector(const char *info, llvm::Value *elements[ISPC_MAX_NVEC])
 
     @param vec               Vector to be scalarized
     @param scalarizedVector  Array in which to store the individual vector 
-                             elements
+    elements
     @param vectorLength      Number of elements in the given vector. (The
-                             passed scalarizedVector array must also be at least
-                             this length as well.)
+    passed scalarizedVector array must also be at least
+    this length as well.)
     @returns                 True if the vector was successfully scalarized and
-                             the values in offsets[] are valid; false otherwise
- */
+    the values in offsets[] are valid; false otherwise
+*/
 static bool
 lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
                  int vectorLength, std::map<llvm::PHINode *, llvm::Value **> &phiMap) {
@@ -1847,7 +1935,7 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
     practice, but it's be nice to make it a little more robust/general.  In
     general, though, a little something called the halting problem means we
     won't get all of them.
- */
+*/
 static bool
 lValuesAreEqual(llvm::Value *v0, llvm::Value *v1, 
                 std::vector<llvm::PHINode *> &seenPhi0,
@@ -1911,7 +1999,7 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
 /** Tests to see if all of the llvm::Values in the array are equal.  Like
     lValuesAreEqual, this is a conservative test and may return false for
     arrays where the values are actually all equal.
- */
+*/
 static bool
 lVectorValuesAllEqual(llvm::Value **v, int vectorLength) {
     std::vector<llvm::PHINode *> seenPhi0, seenPhi1;
@@ -1926,7 +2014,7 @@ lVectorValuesAllEqual(llvm::Value **v, int vectorLength) {
     linear sequence of compile-time constant integers starting from an
     arbirary value but then having a step of value "stride" between
     elements.
- */
+*/
 static bool
 lVectorIsLinearConstantInts(llvm::Value **v, int vectorLength, int stride) {
     llvm::ConstantInt *prev = llvm::dyn_cast<llvm::ConstantInt>(v[0]);
@@ -1962,7 +2050,7 @@ lVectorIsLinearConstantInts(llvm::Value **v, int vectorLength, int stride) {
     subtract the constants [v[0], v[0]+stride, v[0]+2*stride, ...] from the
     given values, throw the LLVM optimizer at those, and then see if we get
     back an array of all zeros?
- */
+*/
 static bool
 lVectorIsLinear(llvm::Value **v, int vectorLength, int stride,
                 std::set<llvm::PHINode *> &seenPhis) {
