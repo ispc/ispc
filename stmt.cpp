@@ -541,9 +541,15 @@ Stmt *IfStmt::TypeCheck() {
 
 int
 IfStmt::EstimateCost() const {
-    return ((test ? test->EstimateCost() : 0) +
-            (trueStmts ? trueStmts->EstimateCost() : 0) +
-            (falseStmts ? falseStmts->EstimateCost() : 0));
+    int ifcost = 0;
+    const Type *type;
+    if (test && (type = test->GetType()) != NULL)
+        ifcost = type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
+
+    return ifcost +
+        ((test ? test->EstimateCost() : 0) +
+         (trueStmts ? trueStmts->EstimateCost() : 0) +
+         (falseStmts ? falseStmts->EstimateCost() : 0));
 }
 
 
