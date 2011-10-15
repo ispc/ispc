@@ -1891,8 +1891,13 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         // get them into the map<> before making recursive calls to
         // lScalarizeVector.
         for (int i = 0; i < vectorLength; ++i) {
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
             scalarizedVector[i] =
                 llvm::PHINode::Create(eltType, numIncoming, "phi", phi);
+#else
+            scalarizedVector[i] =
+                llvm::PHINode::Create(eltType, "phi", phi);
+#endif // LLVM_3_0
             lCopyMetadata(scalarizedVector[i], phi);
         }
 
