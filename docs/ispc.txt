@@ -57,6 +57,7 @@ Contents:
 
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
+  + `The Preprocessor`_
 
 * `The ISPC Language`_
 
@@ -288,10 +289,6 @@ with application code, enter the following command
 
    ispc foo.ispc -o foo.o
 
-``ispc`` automatically runs the C preprocessor on your input program before
-compiling it.  (This functionality can be disabled with the ``--nocpp``
-command-line argument.)
-
 Basic Command-line Options
 --------------------------
 
@@ -378,6 +375,23 @@ supported by the system on which you're running ``ispc``.  You can override
 this choice with the ``--target`` flag; for example, to select Intel® SSE2,
 use ``--target=sse2``.  (As with the other options in this section, see the
 output of ``ispc --help`` for a full list of supported targets.)
+
+
+The Preprocessor
+----------------
+
+``ispc`` automatically runs the C preprocessor on your input program before
+compiling it.  Thus, you can use ``#ifdef``, ``#define``', and so forth in
+your ispc programs (This functionality can be disabled with the ``--nocpp``
+command-line argument.)
+
+Three preprocessor symbols are automatically defined before the
+preprocessor runs.  First, ``ISPC`` is defined, so that it can be detected
+that the ``ispc`` compiler is running over the program.  Next, a symbol
+indicating the target instruction set is defined.  With an SSE2 target,
+``ISPC_TARGET_SSE2`` is defined; ``ISPC_TARGET_SSE4`` is defined for SSE4,
+and ``ISPC_TARGET_AVX`` for AVX.  Finally, ``PI`` is defined for
+convenience, having the value 3.1415926535.
 
 
 The ISPC Language

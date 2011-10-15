@@ -909,12 +909,27 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
 
-    //Add defs for ISPC and PI
+    // Add defs for ISPC and PI
     opts.addMacroDef("ISPC");
     opts.addMacroDef("PI=3.1415926535");
 
+    // Add #define for current compilation target
+    switch (g->target.isa) {
+    case Target::SSE2:
+        opts.addMacroDef("ISPC_TARGET_SSE2");
+        break;
+    case Target::SSE4:
+        opts.addMacroDef("ISPC_TARGET_SSE4");
+        break;
+    case Target::AVX:
+        opts.addMacroDef("ISPC_TARGET_AVX");
+        break;
+    default:
+        FATAL("Unhandled target ISA in preprocessor symbol definition");
+    }
+
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
-        // Sanity Check, should really begin with -D
+        // Sanity check--should really begin with -D
         if (g->cppArgs[i].substr(0,2) == "-D") {
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
