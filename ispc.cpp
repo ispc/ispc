@@ -283,6 +283,7 @@ Opt::Opt() {
     fastMath = false;
     fastMaskedVload = false;
     unrollLoops = true;
+    disableAsserts = false;
     disableBlendedMaskedStores = false;
     disableCoherentControlFlow = false;
     disableUniformControlFlow = false;

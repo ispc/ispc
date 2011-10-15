@@ -1778,6 +1778,43 @@ prefetch_read(varying_float, <$1 x float>)
 prefetch_read(varying_double, <$1 x double>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; assert
+
+declare i32 @printf(i8*, ...)
+declare void @abort() noreturn
+
+define internal void @__do_assert_uniform(i8 *%str, i1 %test, <$1 x i32> %mask) {
+  br i1 %test, label %ok, label %fail
+
+fail:
+  %call = call i32 (i8*, ...)* @printf(i8* %str)
+  call void @abort() noreturn
+  unreachable
+
+ok:
+  ret void
+}
+
+
+define internal void @__do_assert_varying(i8 *%str, <$1 x i32> %test,
+                                          <$1 x i32> %mask) {
+  %nottest = xor <$1 x i32> %test,
+                 < forloop(i, 1, eval($1-1), `i32 -1, ') i32 -1 >
+  %nottest_and_mask = and <$1 x i32> %nottest, %mask
+  %mm = call i32 @__movmsk(<$1 x i32> %nottest_and_mask)
+  %all_ok = icmp eq i32 %mm, 0
+  br i1 %all_ok, label %ok, label %fail
+
+fail:
+  %call = call i32 (i8*, ...)* @printf(i8* %str)
+  call void @abort() noreturn
+  unreachable
+
+ok:
+  ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals
 ;;
 ;; These functions provide entrypoints that call out to the libm 

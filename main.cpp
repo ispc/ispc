@@ -83,6 +83,7 @@ static void usage(int ret) {
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
     printf("    [-O0/-O1]\t\t\t\tSet optimization level (-O1 is default)\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
+    printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
@@ -246,6 +247,8 @@ int main(int Argc, char *Argv[]) {
                 g->opt.fastMath = true;
             else if (!strcmp(opt, "fast-masked-vload"))
                 g->opt.fastMaskedVload = true;
+            else if (!strcmp(opt, "disable-assertions"))
+                g->opt.disableAsserts = true;
             else if (!strcmp(opt, "disable-loop-unroll"))
                 g->opt.unrollLoops = false;
 

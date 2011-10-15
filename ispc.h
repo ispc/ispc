@@ -226,6 +226,10 @@ struct Opt {
         it will make sense. */
     bool unrollLoops;
 
+    /** Indicates whether assert() statements should be ignored (for
+        performance in the generated code). */
+    bool disableAsserts;
+
     /** On targets that don't have a masked store instruction but do have a
         blending instruction, by default, we simulate masked stores by
         loading the old value, blending, and storing the result.  This can
@@ -365,6 +369,7 @@ enum {
     COST_TYPECAST_SIMPLE = 1,
     COST_UNIFORM_LOOP = 4,
     COST_VARYING_LOOP = 6,
+    COST_ASSERT = 8,
 
     CHECK_MASK_AT_FUNCTION_START_COST = 16,
     PREDICATE_SAFE_IF_STATEMENT_COST = 6,

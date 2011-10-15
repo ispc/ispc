@@ -305,4 +305,29 @@ public:
 };
 
 
+/** @brief Representation of an assert statement in the program.
+
+    Like print() above, since we don't have strings as first-class types in
+    the language, we need to do some gymnastics to support it.  Like
+    assert() in C, assert checks the given condition and prints an error
+    and calls abort if the condition fails.  For varying conditions, the
+    assert triggers if it's true for any of the program instances.
+*/
+class AssertStmt : public Stmt {
+public:
+    AssertStmt(const std::string &msg, Expr *e, SourcePos p);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Message to print if the assertion fails. */
+    const std::string message;
+    /** The expression to be evaluated (that is asserted to be true). */
+    Expr *expr;
+};
+
 #endif // ISPC_STMT_H

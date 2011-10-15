@@ -161,8 +161,8 @@ static const char *lParamListTokens[] = {
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
-%token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
-%token TOKEN_CBREAK TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT
+%token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
+%token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
 %type <expr> primary_expression postfix_expression
 %type <expr> unary_expression cast_expression launch_expression
@@ -177,7 +177,7 @@ static const char *lParamListTokens[] = {
 %type <stmt> statement labeled_statement compound_statement for_init_statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
-%type <stmt> sync_statement
+%type <stmt> assert_statement sync_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
@@ -1036,6 +1036,7 @@ statement
     | jump_statement
     | declaration_statement
     | print_statement
+    | assert_statement
     | sync_statement
     | error
     {
@@ -1190,6 +1191,13 @@ print_statement
     | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')'
       {
            $$ = new PrintStmt(*$3, $5, @1); 
+      }
+    ;
+
+assert_statement
+    : TOKEN_ASSERT '(' string_constant ',' expression ')'
+      {
+          $$ = new AssertStmt(*$3, $5, @1);
       }
     ;
 

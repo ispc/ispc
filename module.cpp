@@ -928,6 +928,13 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         FATAL("Unhandled target ISA in preprocessor symbol definition");
     }
 
+    if (g->includeStdlib) {
+        if (g->opt.disableAsserts) 
+            opts.addMacroDef("assert(x)=");
+        else
+            opts.addMacroDef("assert(x)=__assert(#x, x)");
+    }
+
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
         // Sanity check--should really begin with -D
         if (g->cppArgs[i].substr(0,2) == "-D") {

@@ -89,6 +89,7 @@ Contents:
 
   + `Math Functions`_
   + `Output Functions`_
+  + `Assertions`_
   + `Cross-Program Instance Operations`_
   + `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
   + `Packed Load and Store Operations`_
@@ -1838,6 +1839,35 @@ print statement, which was called under control flow in the function
 first two program instances entered the ``if`` block.  Therefore, the
 values for the inactive program instances aren't printed.  (In other cases,
 they may have garbage values or be otherwise undefined.)
+
+
+Assertions
+----------
+
+The ``ispc`` standard library includes a mechanism for adding ``assert()``
+statements to ``ispc`` program code.  Like ``assert()`` in C, the
+``assert()`` function takes a single boolean expression as an argument.  If
+the expression evaluates to true at runtime, then a diagnostic error
+message printed and the ``abort()`` function is called.
+
+When called with a ``varying`` quantity, an assertion triggers if the
+expression evaluates to true for any any of the executing program instances
+at the point where it is called.  Thus, given code like:
+
+::
+
+    int x = programIndex - 2;  // (-2, -1, 0, ... )
+    if (x > 0)
+        assert(x > 0);
+
+The ``assert()`` statement will not trigger, since the condition isn't true
+for any of the executing program instances at that point.  (If this
+``assert()`` statement was outside of this ``if``, then it would of course
+trigger.)
+
+To disable all of the assertions in a file that is being compiled (e.g.,
+for an optimized release build), use the ``--opt=disable-assertions``
+command-line argument.
 
 
 Cross-Program Instance Operations

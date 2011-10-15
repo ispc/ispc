@@ -755,6 +755,13 @@ lSafeToRunWithAllLanesOff(Stmt *stmt) {
     if ((ps = dynamic_cast<PrintStmt *>(stmt)) != NULL)
         return lSafeToRunWithAllLanesOff(ps->values);
 
+    AssertStmt *as;
+    if ((as = dynamic_cast<AssertStmt *>(stmt)) != NULL)
+        // While this is fine for varying tests, it's not going to be
+        // desirable to check an assert on a uniform variable if all of the
+        // lanes are off.
+        return false;
+
     FATAL("Unexpected stmt type in lSafeToRunWithAllLanesOff()");
     return false;
 }
@@ -1807,4 +1814,101 @@ PrintStmt::EstimateCost() const {
     return COST_FUNCALL + (values ? values->EstimateCost() : 0);
 }
 
+
+///////////////////////////////////////////////////////////////////////////
+// AssertStmt
+
+AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p) 
+    : Stmt(p), message(msg), expr(e) {
+}
+
+
+void
+AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (expr == NULL)
+        return;
+    const Type *type = expr->GetType();
+    if (type == NULL)
+        return;
+    bool isUniform = type->IsUniformType();
+
+    // The actual functionality to do the check and then handle falure is
+    // done via a builtin written in bitcode in builtins.m4.
+    llvm::Function *assertFunc = 
+        isUniform ? m->module->getFunction("__do_assert_uniform") :
+                    m->module->getFunction("__do_assert_varying");
+    assert(assertFunc != NULL);
+
+#ifdef ISPC_IS_WINDOWS
+    char errorString[2048];
+    if (sprintf_s(errorString, sizeof(errorString),
+                  "%s(%d): Assertion failed: %s\n", pos.name,
+                  pos.first_line, message.c_str()) == -1) {
+        Error(pos, "Fatal error in sprintf_s() call when generating assert "
+              "string.");
+        return;
+    }
+#else
+    char *errorString;
+    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s\n", 
+                 pos.name, pos.first_line, pos.first_column, 
+                 message.c_str()) == -1) {
+        Error(pos, "Fatal error when generating assert string: asprintf() "
+              "unable to allocate memory!");
+        return;
+    }
+#endif
+
+    std::vector<llvm::Value *> args;
+    args.push_back(ctx->GetStringPtr(errorString));
+    args.push_back(expr->GetValue(ctx));
+    args.push_back(ctx->GetFullMask());
+    ctx->CallInst(assertFunc, args, "");
+
+#ifndef ISPC_IS_WINDOWS
+    free(errorString);
+#endif // !ISPC_IS_WINDOWS
+}
+
+
+void
+AssertStmt::Print(int indent) const {
+    printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str());
+}
+
+
+Stmt *
+AssertStmt::Optimize() {
+    if (expr)
+        expr = expr->Optimize();
+    return this;
+}
+
+
+Stmt *
+AssertStmt::TypeCheck() {
+    if (expr)
+        expr = expr->TypeCheck();
+    if (expr) {
+        const Type *type = expr->GetType();
+        if (type) {
+            bool isUniform = type->IsUniformType();
+            if (!type->IsNumericType() && !type->IsBoolType()) {
+                Error(expr->pos, "Type \"%s\" can't be converted to boolean for \"assert\".",
+                      type->GetString().c_str());
+                return NULL;
+            }
+            expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
+                                                AtomicType::VaryingBool, 
+                                    expr, expr->pos);
+        }
+    }
+    return this;
+}
+
+
+int
+AssertStmt::EstimateCost() const {
+    return (expr ? expr->EstimateCost() : 0) + COST_ASSERT;
+}
 

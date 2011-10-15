@@ -78,6 +78,7 @@ ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 "/*"            { lCComment(yylloc); }
 "//"            { lCppComment(yylloc); }
 
+__assert { return TOKEN_ASSERT; }
 bool { return TOKEN_BOOL; }
 break { return TOKEN_BREAK; }
 case { return TOKEN_CASE; }
