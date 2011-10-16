@@ -885,14 +885,22 @@ void
 Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostream) const
 {
     clang::CompilerInstance inst;
-    std::string error;
-
     inst.createFileManager();
 
     llvm::raw_fd_ostream stderrRaw(2, false);
+
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+    clang::TextDiagnosticPrinter *diagPrinter =
+        new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
+    llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
+    clang::DiagnosticsEngine *diagEngine = 
+        new clang::DiagnosticsEngine(diagIDs, diagPrinter);
+    inst.setDiagnostics(diagEngine);
+#else
     clang::TextDiagnosticPrinter *diagPrinter = 
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
     inst.createDiagnostics(0, NULL, diagPrinter);
+#endif
 
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
