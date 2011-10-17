@@ -269,7 +269,7 @@ public:
 
 private:
     void resolveFunctionOverloads(bool exactMatchOnly);
-    bool tryResolve(bool (*matchFunc)(Expr *, const Type *));
+    bool tryResolve(int (*matchFunc)(Expr *, const Type *));
 };
 
 

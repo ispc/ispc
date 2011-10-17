@@ -956,10 +956,16 @@ a given type are found, an error is issued.
 * All parameter types match exactly.
 * All parameter types match exactly, where any ``reference``-qualified
   parameters are considered equivalent to their underlying type.
+* Parameters match with only type conversions that don't risk losing any
+  information (for example, converting an ``int16`` value to an ``int32``
+  parameter value.)
 * Parameters match with only promotions from ``uniform`` to ``varying``
-  type.
-* Parameters match using standard type conversion (``int`` to ``float``,
+  types.
+* Parameters match using arbitrary type conversion, without changing
+  variability from ``uniform`` to ``varying`` (e.g., ``int`` to ``float``,
   ``float`` to ``int``.)
+* Parameters match using arbitrary type conversion, including also changing
+  variability from ``uniform`` to ``varying`` as needed.
 
 Also like C, arrays are passed to functions by reference.
 
