@@ -836,7 +836,9 @@ lSizeOf(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
                                                            "offset_ptr", insertBefore);
 #endif
     lCopyMetadata(poffset, insertBefore);
-    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, LLVMTypes::Int64Type, 
+    LLVM_TYPE_CONST llvm::Type *intPtrType = g->target.is32bit ? 
+        LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, intPtrType, 
                                                      "offset_int", insertBefore);
     lCopyMetadata(inst, insertBefore);
     return inst;
@@ -866,7 +868,9 @@ lStructOffset(LLVM_TYPE_CONST llvm::Type *type, uint64_t member,
                                                            "member_ptr", insertBefore);
 #endif
     lCopyMetadata(poffset, insertBefore);
-    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, LLVMTypes::Int64Type, 
+    LLVM_TYPE_CONST llvm::Type *intPtrType = g->target.is32bit ? 
+        LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, intPtrType, 
                                                      "member_int", insertBefore);
     lCopyMetadata(inst, insertBefore);
     return inst;
@@ -1832,7 +1836,9 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
     llvm::LoadInst *li = llvm::dyn_cast<llvm::LoadInst>(vec);
     if (li != NULL) {
         llvm::Value *baseAddr = li->getOperand(0);
-        llvm::Value *baseInt = new llvm::PtrToIntInst(baseAddr, LLVMTypes::Int64Type,
+        LLVM_TYPE_CONST llvm::Type *intPtrType = g->target.is32bit ? 
+            LLVMTypes::Int32Type : LLVMTypes::Int64Type;
+        llvm::Value *baseInt = new llvm::PtrToIntInst(baseAddr, intPtrType,
                                                       "base2int", li);
         lCopyMetadata(baseInt, li);
 
@@ -1850,10 +1856,11 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         LLVM_TYPE_CONST llvm::Type *eltPtrType = llvm::PointerType::get(elementType, 0);
 
         for (int i = 0; i < vectorLength; ++i) {
+            llvm::Value *offset = g->target.is32bit ? LLVMInt32(i * elementSize) :
+                LLVMInt64(i * elementSize);
             llvm::Value *intPtrOffset = 
                 llvm::BinaryOperator::Create(llvm::Instruction::Add, baseInt,
-                                             LLVMInt64(i * elementSize), "baseoffset",
-                                             li);
+                                             offset, "baseoffset", li);
             lCopyMetadata(intPtrOffset, li);
             llvm::Value *scalarLoadPtr = 
                 new llvm::IntToPtrInst(intPtrOffset, eltPtrType, "int2ptr", li);
