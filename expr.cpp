@@ -83,6 +83,7 @@ Expr::GetBaseSymbol() const {
 }
 
 
+#if 0
 /** If a conversion from 'fromAtomicType' to 'toAtomicType' may cause lost
     precision, issue a warning.  Don't warn for conversions to bool and
     conversions between signed and unsigned integers of the same size.
@@ -122,7 +123,7 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
         FATAL("logic error in lMaybeIssuePrecisionWarning()");
     }
 }
-
+#endif
 
 Expr *
 Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
@@ -314,9 +315,12 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
         return NULL;
     }
 
+#if 0
+    // Disable: it's not clear this is actually all that useful
     if (!failureOk && issuePrecisionWarnings)
         lMaybeIssuePrecisionWarning(toAtomicType, fromAtomicType, pos, 
                                     errorMsgBase);
+#endif
 
     return new TypeCastExpr(toType, this, pos);
 }
