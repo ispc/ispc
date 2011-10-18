@@ -342,13 +342,13 @@ public:
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, int v0, int v1,
                                    const char *name = NULL);
 
-    /** Load from the memory location(s) given by lvalue.  The lvalue may
-        be varying, in which case this corresponds to a gather from the
-        multiple memory locations given by the array of pointer values
-        given by the lvalue.  If the lvalue is not varying, then the type
-        parameter may be NULL. */
-    llvm::Value *LoadInst(llvm::Value *lvalue, const Type *type,
-                          const char *name = NULL);
+    /** Load from the memory location(s) given by lvalue, using the given
+        mask.  The lvalue may be varying, in which case this corresponds to
+        a gather from the multiple memory locations given by the array of
+        pointer values given by the lvalue.  If the lvalue is not varying,
+        then both the mask pointer and the type pointer may be NULL. */
+    llvm::Value *LoadInst(llvm::Value *lvalue, llvm::Value *mask,
+                          const Type *type, const char *name = NULL);
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -521,8 +521,8 @@ private:
 
     void scatter(llvm::Value *rvalue, llvm::Value *lvalue, 
                  llvm::Value *maskPtr, const Type *rvalueType);
-    llvm::Value *gather(llvm::Value *lvalue, const Type *type,
-                        const char *name);
+    llvm::Value *gather(llvm::Value *lvalue, llvm::Value *mask,
+                        const Type *type, const char *name);
     void maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
                      const Type *rvalueType, llvm::Value *maskPtr);
 };

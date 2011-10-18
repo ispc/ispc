@@ -418,7 +418,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
-    llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, sym->name.c_str());
+    llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, NULL, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
     ctx->EmitFunctionParameterDebugInfo(sym);
 }
@@ -465,7 +465,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // The mask is the last parameter in the argument structure
         llvm::Value *ptr = ctx->GetElementPtrInst(structParamPtr, 0, nArgs,
                                                   "task_struct_mask");
-        llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, "mask");
+        llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, NULL, "mask");
         ctx->SetFunctionMask(ptrval);
 
         // Copy threadIndex and threadCount into stack-allocated storage so

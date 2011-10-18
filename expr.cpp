@@ -457,6 +457,15 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 }
 
 
+static llvm::Value *
+lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
+    llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
+                         baseSym->storageClass != SC_STATIC) ? 
+        ctx->GetInternalMask() : ctx->GetFullMask();
+    return mask;
+}
+
+
 /** Store the result of an assignment to the given location. 
  */
 static void
@@ -479,10 +488,7 @@ lStoreAssignResult(llvm::Value *rv, llvm::Value *lv, const Type *type,
         ctx->StoreInst(rv, lv, LLVMMaskAllOn, type);
     }
     else {
-        llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
-                             baseSym->storageClass != SC_STATIC) ? 
-            ctx->GetInternalMask() : ctx->GetFullMask();
-        ctx->StoreInst(rv, lv, mask, type);
+        ctx->StoreInst(rv, lv, lMaskForSymbol(baseSym, ctx), type);
     }
 }
 
@@ -1540,7 +1546,8 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     // operator and load the current value on the left-hand side.
     llvm::Value *rvalue = arg1->GetValue(ctx);
     ctx->SetDebugPos(pos);
-    llvm::Value *oldLHS = ctx->LoadInst(lv, type, "opassign_load");
+    llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
+    llvm::Value *oldLHS = ctx->LoadInst(lv, mask, type, "opassign_load");
 
     // Map the operator to the corresponding BinaryExpr::Op operator
     BinaryExpr::Op basicop;
@@ -1794,7 +1801,7 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
     ctx->StoreInst(expr2, resultPtr);
     // Use masking to conditionally store the expr1 values
     ctx->StoreInst(expr1, resultPtr, test, type);
-    return ctx->LoadInst(resultPtr, type, "selectexpr_final");
+    return ctx->LoadInst(resultPtr, LLVMMaskAllOn, type, "selectexpr_final");
 }
 
 
@@ -2573,7 +2580,8 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
             const Type *type = rt->GetReferenceTarget();
 
             llvm::Value *ptr = ctx->AllocaInst(type->LLVMType(g->ctx), "arg");
-            llvm::Value *val = ctx->LoadInst(argValue, type);
+            llvm::Value *mask = lMaskForSymbol(argExpr->GetBaseSymbol(), ctx);
+            llvm::Value *val = ctx->LoadInst(argValue, mask, type);
             ctx->StoreInst(val, ptr);
             storedArgValPtrs.push_back(ptr);
             argValLValues.push_back(argValue);
@@ -2615,9 +2623,8 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
             const ReferenceType *rt = 
                 dynamic_cast<const ReferenceType *>(callargs[i]->GetType());
             assert(rt != NULL);
-            llvm::Value *load = ctx->LoadInst(ptr, rt->GetReferenceTarget(),
+            llvm::Value *load = ctx->LoadInst(ptr, NULL, rt->GetReferenceTarget(),
                                               "load_ref");
-
             Symbol *baseSym = callargs[i]->GetBaseSymbol();
             lStoreAssignResult(load, argValLValues[i], rt->GetReferenceTarget(),
                                ctx, baseSym);
@@ -2885,7 +2892,8 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     llvm::Value *lvalue = GetLValue(ctx);
-    if (!lvalue) {
+    llvm::Value *mask = NULL;
+    if (lvalue == NULL) {
         // We may be indexing into a temporary that hasn't hit memory, so
         // get the full value and stuff it into temporary alloca'd space so
         // that we can index from there...
@@ -2900,10 +2908,16 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->StoreInst(val, ptr);
         ptr = lCastUniformVectorBasePtr(ptr, ctx);
         lvalue = ctx->GetElementPtrInst(ptr, LLVMInt32(0), index->GetValue(ctx));
+        mask = LLVMMaskAllOn;
+    }
+    else {
+        Symbol *baseSym = GetBaseSymbol();
+        assert(baseSym != NULL);
+        mask = lMaskForSymbol(baseSym, ctx);
     }
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(lvalue, GetType(), "index");
+    return ctx->LoadInst(lvalue, mask, GetType(), "index");
 }
 
 
@@ -3172,6 +3186,7 @@ VectorMemberExpr::GetType() const {
     }
 }
 
+
 llvm::Value*
 VectorMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
     if (identifier.length() == 1) {
@@ -3180,6 +3195,7 @@ VectorMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
         return NULL;
     }
 }
+
 
 llvm::Value*
 VectorMemberExpr::GetValue(FunctionEmitContext* ctx) const {
@@ -3214,12 +3230,12 @@ VectorMemberExpr::GetValue(FunctionEmitContext* ctx) const {
                 ctx->GetElementPtrInst(basePtr , 0,
                                        indices[i], "orig_offset");
             llvm::Value *initValue =
-                ctx->LoadInst(initLValue, memberType->GetElementType(),
+                ctx->LoadInst(initLValue, NULL, memberType->GetElementType(),
                               "vec_element");
             ctx->StoreInst(initValue, ptmp);
         }
 
-        return ctx->LoadInst(ltmp, memberType, "swizzle_vec");
+        return ctx->LoadInst(ltmp, NULL, memberType, "swizzle_vec");
     }
 }
 
@@ -3349,7 +3365,8 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
 
     llvm::Value *lvalue = GetLValue(ctx);
-    if (!lvalue) {
+    llvm::Value *mask = NULL;
+    if (lvalue == NULL) {
         // As in the array case, this may be a temporary that hasn't hit
         // memory; get the full value and stuff it into a temporary array
         // so that we can index from there...
@@ -3368,10 +3385,16 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         if (elementNumber == -1)
             return NULL;
         lvalue = ctx->GetElementPtrInst(ptr, 0, elementNumber);
+        mask = LLVMMaskAllOn;
+    }
+    else {
+        Symbol *baseSym = GetBaseSymbol();
+        assert(baseSym != NULL);
+        mask = lMaskForSymbol(baseSym, ctx);
     }
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(lvalue, GetType(), "structelement");
+    return ctx->LoadInst(lvalue, mask, GetType(), "structelement");
 }
 
 
@@ -5269,7 +5292,7 @@ DereferenceExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(ptr, type, "reference_load");
+    return ctx->LoadInst(ptr, NULL, type, "reference_load");
 }
 
 
@@ -5347,7 +5370,7 @@ SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!symbol || !symbol->storagePtr)
         return NULL;
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(symbol->storagePtr, GetType(), symbol->name.c_str());
+    return ctx->LoadInst(symbol->storagePtr, NULL, NULL, symbol->name.c_str());
 }
 
 

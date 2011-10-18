@@ -241,7 +241,7 @@ FunctionEmitContext::GetInternalMask() {
     if (VaryingCFDepth() == 0)
         return LLVMMaskAllOn;
     else
-        return LoadInst(internalMaskPointer, NULL, "load_mask");
+        return LoadInst(internalMaskPointer, NULL, NULL, "load_mask");
 }
 
 
@@ -376,9 +376,9 @@ FunctionEmitContext::EndIf() {
 
             // newMask = (oldMask & ~(breakLanes | continueLanes))
             llvm::Value *oldMask = GetInternalMask();
-            llvm::Value *breakLanes = LoadInst(breakLanesPtr, NULL, 
+            llvm::Value *breakLanes = LoadInst(breakLanesPtr, NULL, NULL,
                                                "break_lanes");
-            llvm::Value *continueLanes = LoadInst(continueLanesPtr, NULL, 
+            llvm::Value *continueLanes = LoadInst(continueLanesPtr, NULL, NULL, 
                                                   "continue_lanes");
             llvm::Value *breakOrContinueLanes = 
                 BinaryOperator(llvm::Instruction::Or, breakLanes, continueLanes,
@@ -455,7 +455,8 @@ FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
     // Restore the mask to the given old mask, but leave off any lanes that
     // executed a return statement.
     // newMask = (oldMask & ~returnedLanes)
-    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr, NULL, "returned_lanes");
+    llvm::Value *returnedLanes = LoadInst(returnedLanesPtr, NULL, NULL,
+                                          "returned_lanes");
     llvm::Value *notReturned = NotOperator(returnedLanes, "~returned_lanes");
     llvm::Value *newMask = BinaryOperator(llvm::Instruction::And,
                                           oldMask, notReturned, "new_mask");
@@ -487,7 +488,8 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // breakLanes = breakLanes | mask
         assert(breakLanesPtr != NULL);
         llvm::Value *mask = GetInternalMask();
-        llvm::Value *breakMask = LoadInst(breakLanesPtr, NULL, "break_mask");
+        llvm::Value *breakMask = LoadInst(breakLanesPtr, NULL, NULL, 
+                                          "break_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
                                               mask, breakMask, "mask|break_mask");
         StoreInst(newMask, breakLanesPtr);
@@ -536,7 +538,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         assert(continueLanesPtr);
         llvm::Value *mask = GetInternalMask();
         llvm::Value *continueMask = 
-            LoadInst(continueLanesPtr, NULL, "continue_mask");
+            LoadInst(continueLanesPtr, NULL, NULL, "continue_mask");
         llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
                                               mask, continueMask, "mask|continueMask");
         StoreInst(newMask, continueLanesPtr);
@@ -580,9 +582,12 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     // Check to see if (returned lanes | continued lanes | break lanes) is
     // equal to the value of mask at the start of the loop iteration.  If
     // so, everyone is done and we can jump to the given target
-    llvm::Value *returned = LoadInst(returnedLanesPtr, NULL, "returned_lanes");
-    llvm::Value *continued = LoadInst(continueLanesPtr, NULL, "continue_lanes");
-    llvm::Value *breaked = LoadInst(breakLanesPtr, NULL, "break_lanes");
+    llvm::Value *returned = LoadInst(returnedLanesPtr, NULL, NULL,
+                                     "returned_lanes");
+    llvm::Value *continued = LoadInst(continueLanesPtr, NULL, NULL,
+                                      "continue_lanes");
+    llvm::Value *breaked = LoadInst(breakLanesPtr, NULL, NULL,
+                                    "break_lanes");
     llvm::Value *returnedOrContinued = BinaryOperator(llvm::Instruction::Or, 
                                                       returned, continued,
                                                       "returned|continued");
@@ -616,7 +621,8 @@ FunctionEmitContext::RestoreContinuedLanes() {
 
     // mask = mask & continueFlags
     llvm::Value *mask = GetInternalMask();
-    llvm::Value *continueMask = LoadInst(continueLanesPtr, NULL, "continue_mask");
+    llvm::Value *continueMask = LoadInst(continueLanesPtr, NULL, NULL,
+                                         "continue_mask");
     llvm::Value *orMask = BinaryOperator(llvm::Instruction::Or,
                                          mask, continueMask, "mask|continue_mask");
     SetInternalMask(orMask);
@@ -672,7 +678,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     else {
         // Otherwise we update the returnedLanes value by ANDing it with
         // the current lane mask.
-        llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, NULL,
+        llvm::Value *oldReturnedLanes = LoadInst(returnedLanesPtr, NULL, NULL,
                                                  "old_returned_lanes");
         llvm::Value *newReturnedLanes = 
             BinaryOperator(llvm::Instruction::Or, oldReturnedLanes, 
@@ -1373,8 +1379,8 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, int v0, int v1,
     
 
 llvm::Value *
-FunctionEmitContext::LoadInst(llvm::Value *lvalue, const Type *type, 
-                              const char *name) {
+FunctionEmitContext::LoadInst(llvm::Value *lvalue, llvm::Value *mask,
+                              const Type *type, const char *name) {
     if (lvalue == NULL) {
         assert(m->errorCount > 0);
         return NULL;
@@ -1406,16 +1412,16 @@ FunctionEmitContext::LoadInst(llvm::Value *lvalue, const Type *type,
         // gather path here (we can't reliably figure out all of the type
         // information we need from the LLVM::Type, so have to carry the
         // ispc type in through this path..
-        assert(type != NULL);
+        assert(type != NULL && mask != NULL);
         assert(llvm::isa<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()));
-        return gather(lvalue, type, name);
+        return gather(lvalue, mask, type, name);
     }
 }
 
 
 llvm::Value *
-FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type, 
-                            const char *name) {
+FunctionEmitContext::gather(llvm::Value *lvalue, llvm::Value *mask,
+                            const Type *type, const char *name) {
     // We should have a varying lvalue if we get here...
     assert(llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lvalue->getType()));
 
@@ -1429,8 +1435,8 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
         for (int i = 0; i < st->GetElementCount(); ++i) {
             llvm::Value *eltPtrs = GetElementPtrInst(lvalue, 0, i);
             // This in turn will be another gather
-            llvm::Value *eltValues = LoadInst(eltPtrs, st->GetElementType(i), 
-                                              name);
+            llvm::Value *eltValues = 
+                LoadInst(eltPtrs, mask, st->GetElementType(i), name);
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
         return retValue;
@@ -1451,7 +1457,8 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
 
         for (int i = 0; i < vt->GetElementCount(); ++i) {
             llvm::Value *eltPtrs = GetElementPtrInst(lvalue, 0, i);
-            llvm::Value *eltValues = LoadInst(eltPtrs, vt->GetBaseType(), name);
+            llvm::Value *eltValues = LoadInst(eltPtrs, mask, vt->GetBaseType(), 
+                                              name);
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
         return retValue;
@@ -1463,7 +1470,8 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
         llvm::Value *retValue = llvm::UndefValue::get(retType);
         for (int i = 0; i < at->GetElementCount(); ++i) {
             llvm::Value *eltPtrs = GetElementPtrInst(lvalue, 0, i);
-            llvm::Value *eltValues = LoadInst(eltPtrs, at->GetElementType(), name);
+            llvm::Value *eltValues = LoadInst(eltPtrs, mask, 
+                                              at->GetElementType(), name);
             retValue = InsertInst(retValue, eltValues, i, "set_value");
         }
         return retValue;
@@ -1473,7 +1481,6 @@ FunctionEmitContext::gather(llvm::Value *lvalue, const Type *type,
     // do the actual gather
     AddInstrumentationPoint("gather");
 
-    llvm::Value *mask = GetFullMask();
     llvm::Function *gather = NULL;
     // Figure out which gather function to call based on the size of
     // the elements.
@@ -1935,17 +1942,16 @@ FunctionEmitContext::ReturnInst() {
         // Add a sync call at the end of any function that launched tasks
         SyncInst();
 
-    const Type *returnType = function->GetReturnType();
     llvm::Instruction *rinst = NULL;
     if (returnValuePtr != NULL) {
         // We have value(s) to return; load them from their storage
         // location
-        llvm::Value *retVal = LoadInst(returnValuePtr, returnType,
+        llvm::Value *retVal = LoadInst(returnValuePtr, NULL, NULL,
                                        "return_value");
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     }
     else {
-        assert(returnType == AtomicType::Void);
+        assert(function->GetReturnType() == AtomicType::Void);
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 
@@ -2016,7 +2022,7 @@ FunctionEmitContext::LaunchInst(llvm::Function *callee,
 
 void
 FunctionEmitContext::SyncInst() {
-    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr, NULL);
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr, NULL, NULL);
     llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
                                    llvm::CmpInst::ICMP_NE,
