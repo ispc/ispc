@@ -126,6 +126,7 @@ unsigned { return TOKEN_UNSIGNED; }
 varying { return TOKEN_VARYING; }
 void { return TOKEN_VOID; }
 while { return TOKEN_WHILE; }
+\"C\" { return TOKEN_STRING_C_LITERAL; }
 
 L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL; }
 

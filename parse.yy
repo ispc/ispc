@@ -144,7 +144,7 @@ static const char *lParamListTokens[] = {
 
 
 %token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT TOKEN_INT64_CONSTANT
-%token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT
+%token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -577,12 +577,7 @@ init_declarator
 storage_class_specifier
     : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
     | TOKEN_EXTERN { $$ = SC_EXTERN; }
-    | TOKEN_EXTERN TOKEN_STRING_LITERAL  { 
-          if (*(yylval.stringVal) != "C")
-              Error(@2, "String constant \"%s\" illegal after \"extern\" qualifier.  "
-                    "(Expected \"C\".)", yylval.stringVal->c_str());
-          $$ = SC_EXTERN_C; 
-      }
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
     | TOKEN_EXPORT { $$ = SC_EXPORT; }
     | TOKEN_STATIC { $$ = SC_STATIC; }
     ;
@@ -1224,7 +1219,7 @@ translation_unit
 
 external_declaration
     : function_definition
-    | TOKEN_EXTERN TOKEN_STRING_LITERAL '{' declaration '}' // FIXME: make sure string=="C"
+    | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
     | declaration 
     { 
         if ($1 != NULL)
