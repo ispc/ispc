@@ -84,9 +84,6 @@ namespace llvm {
 
 class ArrayType;
 class AtomicType;
-class DeclSpecs;
-class Declaration;
-class Declarator;
 class FunctionEmitContext;
 class Expr;
 class ExprList;
@@ -97,6 +94,7 @@ class Stmt;
 class Symbol;
 class SymbolTable;
 class Type;
+struct VariableDeclaration;
 
 /** @brief Representation of a range of positions in a source file.
 

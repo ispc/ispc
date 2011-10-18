@@ -36,9 +36,7 @@
 */
 
 #include "ast.h"
-#include "decl.h"
 #include "func.h"
-#include "type.h"
 #include "sym.h"
 
 ///////////////////////////////////////////////////////////////////////////
@@ -52,8 +50,8 @@ ASTNode::~ASTNode() {
 // AST
 
 void
-AST::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
-    functions.push_back(new Function(ds, decl, code));
+AST::AddFunction(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code) {
+    functions.push_back(new Function(sym, args, code));
 }
 
 

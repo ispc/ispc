@@ -58,13 +58,24 @@ public:
         SymbolTable.  Returns the number of errors during compilation.  */
     int CompileFile();
 
-    /** Adds the global variable described by the declaration information to
-        the module. */
-    void AddGlobal(DeclSpecs *ds, Declarator *decl);
+    /** Add a named type definition to the module. */
+    void AddTypeDef(Symbol *sym);
+
+    /** Add a new global variable corresponding to the given Symbol to the
+        module.  If non-NULL, initExpr gives the initiailizer expression
+        for the global's inital value. */ 
+    void AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst);
+
+    /** Add a declaration of the function defined by the given function
+        symbol with given arguments to the module. */
+    void AddFunctionDeclaration(Symbol *funSym, 
+                                const std::vector<VariableDeclaration> &args,
+                                bool isInline);
 
     /** Adds the function described by the declaration information and the
         provided statements to the module. */
-    void AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code);
+    void AddFunctionDefinition(Symbol *sym, const std::vector<Symbol *> &args,
+                               Stmt *code);
 
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */

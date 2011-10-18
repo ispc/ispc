@@ -37,7 +37,6 @@
 
 #include "func.h"
 #include "ctx.h"
-#include "decl.h"
 #include "expr.h"
 #include "llvmutil.h"
 #include "module.h"
@@ -67,7 +66,9 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Assembly/PrintModulePass.h>
 
-Function::Function(DeclSpecs *ds, Declarator *decl, Stmt *c) {
+Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
+    sym = s;
+    args = a;
     code = c;
 
     maskSymbol = m->symbolTable->LookupVariable("__mask");
@@ -80,37 +81,17 @@ Function::Function(DeclSpecs *ds, Declarator *decl, Stmt *c) {
     }
 
     if (g->debugPrint) {
-        printf("Add Function\n");
-        ds->Print();
-        printf("\n");
-        decl->Print();
-        printf("\n");
+        printf("Add Function %s\n", sym->name.c_str());
         code->Print(0);
         printf("\n\n\n");
     }
 
-    // Get the symbol for the function from the symbol table.  (It should
-    // already have been added to the symbol table by AddGlobal() by the
-    // time we get here.)
-    type = dynamic_cast<const FunctionType *>(decl->GetType(ds));
+    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
     assert(type != NULL);
-    sym = m->symbolTable->LookupFunction(decl->sym->name.c_str(), type);
-    if (sym != NULL)
-        // May be NULL due to error earlier in compilation
-        sym->pos = decl->pos;
 
-    isExported = (ds->storageClass == SC_EXPORT);
-
-    if (decl->functionArgs != NULL) {
-        for (unsigned int i = 0; i < decl->functionArgs->size(); ++i) {
-            Declaration *pdecl = (*decl->functionArgs)[i];
-            assert(pdecl->declarators.size() == 1);
-            Symbol *sym = pdecl->declarators[0]->sym;
-            if (dynamic_cast<const ReferenceType *>(sym->type) == NULL)
-                sym->parentFunction = this;
-            args.push_back(sym);
-        }
-    }
+    for (unsigned int i = 0; i < args.size(); ++i)
+        if (dynamic_cast<const ReferenceType *>(args[i]->type) == NULL)
+            args[i]->parentFunction = this;
 
     if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
@@ -127,264 +108,18 @@ Function::Function(DeclSpecs *ds, Declarator *decl, Stmt *c) {
 }
 
 
-/** Given an arbitrary type, see if it or any of the types contained in it
-    are varying.  Returns true if so, false otherwise. 
-*/
-static bool
-lRecursiveCheckVarying(const Type *t) {
-    t = t->GetBaseType();
-    if (t->IsVaryingType()) return true;
-
-    const StructType *st = dynamic_cast<const StructType *>(t);
-    if (st) {
-        for (int i = 0; i < st->GetElementCount(); ++i)
-            if (lRecursiveCheckVarying(st->GetElementType(i)))
-                return true;
-    }
-    return false;
-}
-
-
-/** Given a Symbol representing a function parameter, see if it or any
-    contained types are varying.  If so, issue an error.  (This function
-    should only be called for parameters to 'export'ed functions, where
-    varying parameters is illegal.
- */
-static void
-lCheckForVaryingParameter(Symbol *sym) {
-    if (lRecursiveCheckVarying(sym->type)) {
-        const Type *t = sym->type->GetBaseType();
-        if (dynamic_cast<const StructType *>(t))
-            Error(sym->pos, "Struct parameter \"%s\" with varying member(s) is illegal "
-                  "in an exported function.",
-                  sym->name.c_str());
-        else
-            Error(sym->pos, "Varying parameter \"%s\" is illegal in an exported function.",
-                  sym->name.c_str());
-    }
-}
-
-
-/** Given a function type, loop through the function parameters and see if
-    any are StructTypes.  If so, issue an error (this seems to be broken
-    currently).
-
-    @todo Fix passing structs from C/C++ to ispc functions.
- */
-static void
-lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
-    const std::vector<const Type *> &argTypes = ftype->GetArgumentTypes();
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        const Type *type = argTypes[i];
-        if (dynamic_cast<const StructType *>(type) != NULL) {
-            Error(pos, "Passing structs to/from application functions is currently broken. "
-                  "Use a reference or const reference instead for now.");
-            return;
-        }
-    }
-}
-
-
-/** We've got a declaration for a function to process.  This function does
-    all the work of creating the corresponding llvm::Function instance,
-    adding the symbol for the function to the symbol table and doing
-    various sanity checks.  This function returns true upon success and
-    false if any errors were encountered.
- */
-Symbol *
-Function::InitFunctionSymbol(DeclSpecs *ds, Declarator *decl) {
-    // Make sure that we've got what we expect here
-    Symbol *funSym = decl->sym;
-    assert(decl->isFunction);
-    assert(decl->arraySize.size() == 0);
-
-    // So far, so good.  Go ahead and set the type of the function symbol
-    funSym->type = decl->GetType(ds);
-
-    // If a global variable with the same name has already been declared
-    // issue an error.
-    if (m->symbolTable->LookupVariable(funSym->name.c_str()) != NULL) {
-        Error(decl->pos, "Function \"%s\" shadows previously-declared global variable. "
-              "Ignoring this definition.",
-              funSym->name.c_str());
-        return NULL;
-    }
-
-    if (ds->storageClass == SC_EXTERN_C) {
-        // Make sure the user hasn't supplied both an 'extern "C"' and a
-        // 'task' qualifier with the function
-        if (ds->typeQualifier & TYPEQUAL_TASK) {
-            Error(funSym->pos, "\"task\" qualifier is illegal with C-linkage extern "
-                  "function \"%s\".  Ignoring this function.", funSym->name.c_str());
-            return NULL;
-        }
-        std::vector<Symbol *> *funcs;
-        funcs = m->symbolTable->LookupFunction(decl->sym->name.c_str());
-        if (funcs != NULL) {
-            if (funcs->size() > 1) {
-                // Multiple functions with this name have already been declared; 
-                // can't overload here
-                Error(funSym->pos, "Can't overload extern \"C\" function \"%s\"; "
-                      "%d functions with the same name have already been declared.",
-                      funSym->name.c_str(), (int)funcs->size());
-                return NULL;
-            }
-
-            // One function with the same name has been declared; see if it
-            // has the same type as this one, in which case it's ok.
-            if (Type::Equal((*funcs)[0]->type, funSym->type))
-                return (*funcs)[0];
-            else {
-                Error(funSym->pos, "Can't overload extern \"C\" function \"%s\".",
-                      funSym->name.c_str());
-                return NULL;
-            }
-        }
-    }
-
-    // We should have gotten a FunctionType back from the GetType() call above.
-    const FunctionType *functionType = 
-        dynamic_cast<const FunctionType *>(funSym->type);
-    assert(functionType != NULL);
-
-    // Get the LLVM FunctionType
-    bool includeMask = (ds->storageClass != SC_EXTERN_C);
-    LLVM_TYPE_CONST llvm::FunctionType *llvmFunctionType = 
-        functionType->LLVMFunctionType(g->ctx, includeMask);
-    if (llvmFunctionType == NULL)
-        return NULL;
-
-    // And create the llvm::Function
-    llvm::GlobalValue::LinkageTypes linkage = (ds->storageClass == SC_STATIC ||
-                                               (ds->typeQualifier & TYPEQUAL_INLINE)) ?
-        llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
-    std::string functionName = ((ds->storageClass == SC_EXTERN_C) ?
-                                funSym->name : funSym->MangledName());
-    if (g->mangleFunctionsWithTarget)
-        functionName += g->target.GetISAString();
-    llvm::Function *function = 
-        llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), m->module);
-
-    // Set function attributes: we never throw exceptions, and want to
-    // inline everything we can
-    function->setDoesNotThrow(true);
-    if (!(ds->storageClass == SC_EXTERN_C) && !g->generateDebuggingSymbols &&
-        (ds->typeQualifier & TYPEQUAL_INLINE))
-        function->addFnAttr(llvm::Attribute::AlwaysInline);
-    if (functionType->isTask)
-        // This also applies transitively to members I think? 
-        function->setDoesNotAlias(1, true);
-
-    // Make sure that the return type isn't 'varying' if the function is
-    // 'export'ed.
-    if (ds->storageClass == SC_EXPORT && 
-        lRecursiveCheckVarying(functionType->GetReturnType()))
-        Error(decl->pos, "Illegal to return a \"varying\" type from exported function \"%s\"",
-              funSym->name.c_str());
-
-    if (functionType->isTask && (functionType->GetReturnType() != AtomicType::Void))
-        Error(funSym->pos, "Task-qualified functions must have void return type.");
-
-    if (functionType->isExported || functionType->isExternC)
-        lCheckForStructParameters(functionType, funSym->pos);
-
-    // Loop over all of the arguments; process default values if present
-    // and do other checks and parameter attribute setting.
-    bool seenDefaultArg = false;
-    std::vector<ConstExpr *> argDefaults;
-    int nArgs = decl->functionArgs ? decl->functionArgs->size() : 0;
-    for (int i = 0; i < nArgs; ++i) {
-        Declaration *pdecl = (*decl->functionArgs)[i];
-        assert(pdecl->declarators.size() == 1);
-        Symbol *sym = pdecl->declarators[0]->sym;
-
-        // If the function is exported, make sure that the parameter
-        // doesn't have any varying stuff going on in it.
-        if (ds->storageClass == SC_EXPORT)
-            lCheckForVaryingParameter(sym);
-
-        // ISPC assumes that all memory passed in is aligned to the native
-        // width and that no pointers alias.  (It should be possible to
-        // specify when this is not the case, but this should be the
-        // default.)  Set parameter attributes accordingly.
-        if (!functionType->isTask && dynamic_cast<const ReferenceType *>(sym->type) != NULL) {
-            // NOTE: LLVM indexes function parameters starting from 1.
-            // This is unintuitive.
-            function->setDoesNotAlias(i+1, true);
-            int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
-            function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
-        }
-
-        if (m->symbolTable->LookupFunction(sym->name.c_str()) != NULL)
-            Warning(sym->pos, "Function parameter \"%s\" shadows a function "
-                    "declared in global scope.", sym->name.c_str());
-        
-        // See if a default argument value was provided with the parameter
-        Expr *defaultValue = pdecl->declarators[0]->initExpr;
-        if (defaultValue != NULL) {
-            // If we have one, make sure it's a compile-time constant
-            seenDefaultArg = true;
-            defaultValue = defaultValue->TypeCheck();
-            defaultValue = defaultValue->Optimize();
-            defaultValue = dynamic_cast<ConstExpr *>(defaultValue);
-            if (!defaultValue) {
-                Error(sym->pos, "Default value for parameter \"%s\" must be "
-                      "a compile-time constant.", sym->name.c_str());
-                return NULL;
-            }
-        }
-        else if (seenDefaultArg) {
-            // Once one parameter has provided a default value, then all of
-            // the following ones must have them as well.
-            Error(sym->pos, "Parameter \"%s\" is missing default: all parameters after "
-                  "the first parameter with a default value must have default values "
-                  "as well.", sym->name.c_str());
-        }
-
-        // Add the default value to argDefaults.  Note that we make this
-        // call for all parameters, even those where no default value was
-        // provided.  In that case, a NULL value is stored here.  This
-        // approach means that we can always just look at the i'th entry of
-        // argDefaults to find the default value for the i'th parameter.
-        argDefaults.push_back(dynamic_cast<ConstExpr *>(defaultValue));
-    }
-
-    // And only now can we set the default values in the FunctionType
-    functionType->SetArgumentDefaults(argDefaults);
-
-    // If llvm gave us back a Function * with a different name than the one
-    // we asked for, then there's already a function with that same
-    // (mangled) name in the llvm::Module.  In that case, erase the one we
-    // tried to add and just work with the one it already had.
-    if (function->getName() != functionName) {
-        function->eraseFromParent();
-        function = m->module->getFunction(functionName);
-    }
-    funSym->function = function;
-
-    // But if that function has a definition, we don't want to redefine it.
-    if (!function->empty()) {
-        Warning(funSym->pos, "Ignoring redefinition of function \"%s\".", 
-                funSym->name.c_str());
-        return NULL;
-    }
-
-    // Finally, we know all is good and we can add the function to the
-    // symbol table
-    bool ok = m->symbolTable->AddFunction(funSym);
-    assert(ok);
-    return funSym;
-}
-
-
 const Type *
 Function::GetReturnType() const {
+    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    assert(type != NULL);
     return type->GetReturnType();
 }
 
 
 const FunctionType *
 Function::GetType() const {
+    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    assert(type != NULL);
     return type;
 }
 
@@ -444,6 +179,8 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif
+    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    assert(type != NULL);
     if (type->isTask == true) {
         // For tasks, we there should always be three parmeters: the
         // pointer to the structure that holds all of the arguments, the
@@ -612,7 +349,9 @@ Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        if (isExported) {
+        const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+        assert(type != NULL);
+        if (type->isExported) {
             if (!type->isTask) {
                 LLVM_TYPE_CONST llvm::FunctionType *ftype = 
                     type->LLVMFunctionType(g->ctx);

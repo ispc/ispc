@@ -82,11 +82,19 @@ public:
 };
 
 
+struct VariableDeclaration {
+    VariableDeclaration(Symbol *s = NULL, Expr *i = NULL) { 
+        sym = s; init = i; 
+    }
+    Symbol *sym;
+    Expr *init;
+};
+
 /** @brief Statement representing a single declaration (which in turn may declare
     a number of variables. */
 class DeclStmt : public Stmt {
 public:
-    DeclStmt(SourcePos pos, Declaration *declaration, SymbolTable *symbolTable);
+    DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -95,7 +103,7 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-    Declaration *declaration;
+    std::vector<VariableDeclaration> vars;
 };
 
 

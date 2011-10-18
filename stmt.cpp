@@ -40,7 +40,6 @@
 #include "util.h"
 #include "expr.h"
 #include "type.h"
-#include "decl.h"
 #include "sym.h"
 #include "module.h"
 #include "llvmutil.h"
@@ -116,9 +115,8 @@ ExprStmt::EstimateCost() const {
 ///////////////////////////////////////////////////////////////////////////
 // DeclStmt
 
-DeclStmt::DeclStmt(SourcePos p, Declaration *d, SymbolTable *s)
-        : Stmt(p), declaration(d) {
-    declaration->AddSymbols(s);
+DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p)
+    : Stmt(p), vars(v) {
 }
 
 
@@ -240,16 +238,13 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) 
         return;
 
-    for (unsigned int i = 0; i < declaration->declarators.size(); ++i) {
-        Declarator *decl = declaration->declarators[i];
-        if (!decl || decl->isFunction) 
-            continue;
-
-        Symbol *sym = decl->sym;
-        assert(decl->sym != NULL);
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        Symbol *sym = vars[i].sym;
+        assert(sym != NULL);
         const Type *type = sym->type;
-        if (!type)
+        if (type == NULL)
             continue;
+        Expr *initExpr = vars[i].init;
 
         // Now that we're in the thick of emitting code, it's easy for us
         // to find out the level of nesting of varying control flow we're
@@ -265,7 +260,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         // initializer list to finally set the array's size.
         const ArrayType *at = dynamic_cast<const ArrayType *>(type);
         if (at && at->GetElementCount() == 0) {
-            ExprList *exprList = dynamic_cast<ExprList *>(decl->initExpr);
+            ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
             if (exprList) {
                 ArrayType *t = at->GetSizedArray(exprList->exprs.size());
                 assert(t != NULL);
@@ -280,7 +275,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         // References must have initializer expressions as well.
-        if (dynamic_cast<const ReferenceType *>(type) && decl->initExpr == NULL) {
+        if (dynamic_cast<const ReferenceType *>(type) && initExpr == NULL) {
             Error(sym->pos,
                   "Must provide initializer for reference-type variable \"%s\".",
                   sym->name.c_str());
@@ -290,18 +285,18 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
         assert(llvmType != NULL);
 
-        if (declaration->declSpecs->storageClass == SC_STATIC) {
+        if (sym->storageClass == SC_STATIC) {
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
             llvm::Constant *cinit = NULL;
-            if (decl->initExpr) {
-                cinit = decl->initExpr->GetConstant(type);
-                if (!cinit)
+            if (initExpr != NULL) {
+                cinit = initExpr->GetConstant(type);
+                if (cinit == NULL)
                     Error(sym->pos, "Initializer for static variable \"%s\" must be a constant.",
                           sym->name.c_str());
             }
-            if (!cinit)
+            if (cinit == NULL)
                 cinit = llvm::Constant::getNullValue(llvmType);
 
             // Allocate space for the static variable in global scope, so
@@ -323,7 +318,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EmitVariableDebugInfo(sym);
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
-            lInitSymbol(sym->storagePtr, sym->name.c_str(), type, decl->initExpr,
+            lInitSymbol(sym->storagePtr, sym->name.c_str(), type, initExpr,
                         ctx, sym->pos);
         }
     }
@@ -332,10 +327,10 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 DeclStmt::Optimize() {
-    for (unsigned int i = 0; i < declaration->declarators.size(); ++i) {
-        Declarator *decl = declaration->declarators[i];
-        if (decl && decl->initExpr) {
-            decl->initExpr = decl->initExpr->Optimize();
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        if (vars[i].init != NULL) {
+            vars[i].init = vars[i].init->Optimize();
+            Expr *init = vars[i].init;
 
             // If the variable is const-qualified, after we've optimized
             // the initializer expression, see if we have a ConstExpr.  If
@@ -352,11 +347,11 @@ DeclStmt::Optimize() {
             // is definitely a compile-time constant for things like
             // computing array sizes from non-trivial expressions is
             // consequently limited.
-            Symbol *sym = decl->sym;
-            if (sym->type && sym->type->IsConstType() && decl->initExpr && 
-                dynamic_cast<ExprList *>(decl->initExpr) == NULL &&
-                Type::Equal(decl->initExpr->GetType(), sym->type))
-                sym->constValue = dynamic_cast<ConstExpr *>(decl->initExpr);
+            Symbol *sym = vars[i].sym;
+            if (sym->type && sym->type->IsConstType() && init != NULL && 
+                dynamic_cast<ExprList *>(init) == NULL &&
+                Type::Equal(init->GetType(), sym->type))
+                sym->constValue = dynamic_cast<ConstExpr *>(init);
         }
     }
     return this;
@@ -366,30 +361,29 @@ DeclStmt::Optimize() {
 Stmt *
 DeclStmt::TypeCheck() {
     bool encounteredError = false;
-    for (unsigned int i = 0; i < declaration->declarators.size(); ++i) {
-        Declarator *decl = declaration->declarators[i];
-        if (!decl) {
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        if (!vars[i].sym) {
             encounteredError = true;
             continue;
         }
 
-        if (!decl->initExpr)
+        if (vars[i].init == NULL)
             continue;
-        decl->initExpr = decl->initExpr->TypeCheck();
-        if (!decl->initExpr)
+        vars[i].init = vars[i].init->TypeCheck();
+        if (vars[i].init == NULL)
             continue;
 
         // get the right type for stuff like const float foo = 2; so that
         // the int->float type conversion is in there and we don't return
         // an int as the constValue later...
-        const Type *type = decl->sym->type;
+        const Type *type = vars[i].sym->type;
         if (dynamic_cast<const AtomicType *>(type) != NULL ||
             dynamic_cast<const EnumType *>(type) != NULL) {
             // If it's an expr list with an atomic type, we'll later issue
             // an error.  Need to leave decl->initExpr as is in that case so it
             // is in fact caught later, though.
-            if (dynamic_cast<ExprList *>(decl->initExpr) == NULL)
-                decl->initExpr = decl->initExpr->TypeConv(type, "initializer");
+            if (dynamic_cast<ExprList *>(vars[i].init) == NULL)
+                vars[i].init = vars[i].init->TypeConv(type, "initializer");
         }
     }
     return encounteredError ? NULL : this;
@@ -400,8 +394,16 @@ void
 DeclStmt::Print(int indent) const {
     printf("%*cDecl Stmt:", indent, ' ');
     pos.Print();
-    if (declaration) 
-        declaration->Print();
+    for (unsigned int i = 0; i < vars.size(); ++i) {
+        printf("%*cVariable %s (%s)", indent+4, ' ', 
+               vars[i].sym->name.c_str(),
+               vars[i].sym->type->GetString().c_str());
+        if (vars[i].init != NULL) {
+            printf(" = ");
+            vars[i].init->Print();
+        }
+        printf("\n");
+    }
     printf("\n");
 }
 
@@ -409,9 +411,9 @@ DeclStmt::Print(int indent) const {
 int
 DeclStmt::EstimateCost() const {
     int cost = 0;
-    for (unsigned int i = 0; i < declaration->declarators.size(); ++i)
-        if (declaration->declarators[i]->initExpr)
-            cost += declaration->declarators[i]->initExpr->EstimateCost();
+    for (unsigned int i = 0; i < vars.size(); ++i)
+        if (vars[i].init != NULL)
+            cost += vars[i].init->EstimateCost();
     return cost;
 }
 
@@ -716,8 +718,8 @@ lSafeToRunWithAllLanesOff(Stmt *stmt) {
 
     DeclStmt *ds;
     if ((ds = dynamic_cast<DeclStmt *>(stmt)) != NULL) {
-        for (unsigned int i = 0; i < ds->declaration->declarators.size(); ++i)
-            if (!lSafeToRunWithAllLanesOff(ds->declaration->declarators[i]->initExpr))
+        for (unsigned int i = 0; i < ds->vars.size(); ++i)
+            if (!lSafeToRunWithAllLanesOff(ds->vars[i].init))
                 return false;
         return true;
     }

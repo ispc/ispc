@@ -80,7 +80,8 @@ class AST {
 public:
     /** Add the AST for a function described by the given declaration
         information and source code. */
-    void AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code);
+    void AddFunction(Symbol *sym, const std::vector<Symbol *> &args, 
+                     Stmt *code);
 
     /** Generate LLVM IR for all of the functions into the current
         module. */

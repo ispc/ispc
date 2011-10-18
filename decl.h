@@ -56,6 +56,11 @@
 
 #include "ispc.h"
 
+struct VariableDeclaration;
+
+class Declaration;
+class Declarator;
+
 enum StorageClass {
     SC_NONE,
     SC_EXTERN,
@@ -137,6 +142,9 @@ public:
         DeclSpecs */
     const Type *GetType(DeclSpecs *ds) const;
 
+    void GetFunctionInfo(DeclSpecs *ds, Symbol **sym, 
+                         std::vector<Symbol *> *args);
+
     void Print() const;
 
     const SourcePos pos;
@@ -157,26 +165,12 @@ public:
  */
 class Declaration {
 public:
-    Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL) {
-        declSpecs = ds;
-        if (dlist != NULL)
-            declarators = *dlist;
-        for (unsigned int i = 0; i < declarators.size(); ++i)
-            if (declarators[i] != NULL)
-                declarators[i]->InitFromDeclSpecs(declSpecs);
-    }
-    Declaration(DeclSpecs *ds, Declarator *d) {
-        declSpecs = ds;
-        if (d) {
-            d->InitFromDeclSpecs(ds);
-            declarators.push_back(d);
-        }
-    }
+    Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
+    Declaration(DeclSpecs *ds, Declarator *d);
 
-    /** Adds the symbols for the variables in the declaration to the symbol
-        table. */
-    void AddSymbols(SymbolTable *st) const;
     void Print() const;
+
+    std::vector<VariableDeclaration> GetVariableDeclarations() const;
 
     DeclSpecs *declSpecs;
     std::vector<Declarator *> declarators;

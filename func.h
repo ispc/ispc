@@ -43,9 +43,7 @@
 
 class Function {
 public:
-    Function(DeclSpecs *ds, Declarator *decl, Stmt *code);
-
-    static Symbol *InitFunctionSymbol(DeclSpecs *ds, Declarator *decl);
+    Function(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code);
 
     const Type *GetReturnType() const;
     const FunctionType *GetType() const;
@@ -58,10 +56,8 @@ private:
                   SourcePos firstStmtPos);
 
     Symbol *sym;
-    const FunctionType *type;
     std::vector<Symbol *> args;
     Stmt *code;
-    bool isExported;
     Symbol *maskSymbol;
     Symbol *threadIndexSym, *threadCountSym;
     Symbol *taskIndexSym, *taskCountSym;

@@ -38,10 +38,13 @@
 
 #include "decl.h"
 #include "util.h"
+#include "module.h"
 #include "sym.h"
 #include "type.h"
+#include "stmt.h"
 #include "expr.h"
 #include <stdio.h>
+#include <llvm/Module.h>
 
 ///////////////////////////////////////////////////////////////////////////
 // DeclSpecs
@@ -114,6 +117,30 @@ Declarator::Print() const {
         printf(")");
     }
     pos.Print();
+}
+
+
+void
+Declarator::GetFunctionInfo(DeclSpecs *ds, Symbol **funSym, 
+                            std::vector<Symbol *> *funArgs) {
+    // Get the symbol for the function from the symbol table.  (It should
+    // already have been added to the symbol table by AddGlobal() by the
+    // time we get here.)
+    const FunctionType *type = 
+        dynamic_cast<const FunctionType *>(GetType(ds));
+    assert(type != NULL);
+    *funSym = m->symbolTable->LookupFunction(sym->name.c_str(), type);
+    if (*funSym != NULL)
+        // May be NULL due to error earlier in compilation
+        (*funSym)->pos = pos;
+
+    if (functionArgs != NULL) {
+        for (unsigned int i = 0; i < functionArgs->size(); ++i) {
+            Declaration *pdecl = (*functionArgs)[i];
+            assert(pdecl->declarators.size() == 1);
+            funArgs->push_back(pdecl->declarators[0]->sym);
+        }
+    }
 }
 
 
@@ -292,13 +319,43 @@ Declarator::GetType(DeclSpecs *ds) const {
 ///////////////////////////////////////////////////////////////////////////
 // Declaration
 
-void
-Declaration::AddSymbols(SymbolTable *st) const {
-    assert(declSpecs->storageClass != SC_TYPEDEF);
-
+Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
+    declSpecs = ds;
+    if (dlist != NULL)
+        declarators = *dlist;
     for (unsigned int i = 0; i < declarators.size(); ++i)
-       if (declarators[i])
-           st->AddVariable(declarators[i]->sym);
+        if (declarators[i] != NULL)
+            declarators[i]->InitFromDeclSpecs(declSpecs);
+}
+
+
+Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
+    declSpecs = ds;
+    if (d) {
+        d->InitFromDeclSpecs(ds);
+        declarators.push_back(d);
+    }
+}
+
+
+std::vector<VariableDeclaration>
+Declaration::GetVariableDeclarations() const {
+    assert(declSpecs->storageClass != SC_TYPEDEF);
+    std::vector<VariableDeclaration> vars;
+
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        if (declarators[i] == NULL)
+            continue;
+        Declarator *decl = declarators[i];
+        if (!decl || decl->isFunction) 
+            continue;
+
+        m->symbolTable->AddVariable(declarators[i]->sym);
+
+        vars.push_back(VariableDeclaration(declarators[i]->sym,
+                                           declarators[i]->initExpr));
+    }
+    return vars;
 }
 
 

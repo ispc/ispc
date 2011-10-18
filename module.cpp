@@ -41,7 +41,6 @@
 #include "ctx.h"
 #include "func.h"
 #include "builtins.h"
-#include "decl.h"
 #include "type.h"
 #include "expr.h"
 #include "sym.h"
@@ -95,9 +94,10 @@
 // Module
 
 Module::Module(const char *fn) {
-    // FIXME: It's a hack to do this here, but it must be done after the
-    // target information has been set (so e.g. the vector width is
-    // known...)
+    // It's a hack to do this here, but it must be done after the target
+    // information has been set (so e.g. the vector width is known...)  In
+    // particular, if we're compiling to multiple targets with different
+    // vector widths, this needs to be redone each time through.
     InitLLVMUtil(g->ctx, g->target);
 
     filename = fn;
@@ -209,130 +209,358 @@ Module::CompileFile() {
 
 
 void
-Module::AddGlobal(DeclSpecs *ds, Declarator *decl) {
-    // This function is called for a number of cases: function
-    // declarations, typedefs, and global variables declarations /
-    // definitions.  Figure out what we've got and take care of it.
+Module::AddTypeDef(Symbol *sym) {
+    // Typedefs are easy; just add the mapping between the given name and
+    // the given type.
+    symbolTable->AddType(sym->name.c_str(), sym->type, sym->pos);
+}
 
-    if (ds == NULL || decl == NULL)
-        // Error happened earlier during parsing
+
+void
+Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
+    // These may be NULL due to errors in parsing; just gracefully return
+    // here if so.
+    if (sym == NULL || sym->type == NULL) {
+        // But if these are NULL and there haven't been any previous
+        // errors, something surprising is going on
+        assert(errorCount > 0);
         return;
-
-    if (decl->isFunction) {
-        // function declaration
-        const Type *t = decl->GetType(ds);
-        const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
-        assert(ft != NULL);
-        if (m->symbolTable->LookupFunction(decl->sym->name.c_str(), ft) != NULL)
-            // Ignore redeclaration of a function with the same name and type
-            return;
-        // Otherwise do all of the llvm Module and SymbolTable work..
-        Function::InitFunctionSymbol(ds, decl);
     }
-    else if (ds->storageClass == SC_TYPEDEF) {
-        // Typedefs are easy; just add the mapping between the given name
-        // and the given type.
-        m->symbolTable->AddType(decl->sym->name.c_str(), decl->sym->type,
-                                decl->sym->pos);
+
+    if (symbolTable->LookupFunction(sym->name.c_str()) != NULL) {
+        Error(sym->pos, "Global variable \"%s\" shadows previously-declared function.",
+              sym->name.c_str());
+        return;
     }
-    else {
-        // global variable
-        if (m->symbolTable->LookupFunction(decl->sym->name.c_str()) != NULL) {
-            Error(decl->pos, "Global variable \"%s\" shadows previously-declared function.",
-                  decl->sym->name.c_str());
-            return;
-        }
 
-        // These may be NULL due to errors in parsing; just gracefully
-        // return here if so.
-        if (!decl->sym || !decl->sym->type) {
-            // But if these are NULL and there haven't been any previous
-            // errors, something surprising is going on
-            assert(errorCount > 0);
-            return;
-        }
+    if (sym->storageClass == SC_EXTERN_C) {
+        Error(sym->pos, "extern \"C\" qualifier can only be used for functions.");
+        return;
+    }
 
-        if (ds->storageClass == SC_EXTERN_C) {
-            Error(decl->pos, "extern \"C\" qualifier can only be used for functions.");
-            return;
-        }
+    LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = decl->sym->type->LLVMType(g->ctx);
+    // See if we have an initializer expression for the global.  If so,
+    // make sure it's a compile-time constant!
+    llvm::Constant *llvmInitializer = NULL;
+    if (sym->storageClass == SC_EXTERN || sym->storageClass == SC_EXTERN_C) {
+        if (initExpr != NULL)
+            Error(sym->pos, "Initializer can't be provided with \"extern\" "
+                  "global variable \"%s\".", sym->name.c_str());
+    }
+    else if (initExpr != NULL) {
+        initExpr = initExpr->TypeCheck();
+        if (initExpr != NULL) {
+            // We need to make sure the initializer expression is
+            // the same type as the global.  (But not if it's an
+            // ExprList; they don't have types per se / can't type
+            // convert themselves anyway.)
+            if (dynamic_cast<ExprList *>(initExpr) == NULL)
+                initExpr = initExpr->TypeConv(sym->type, "initializer");
 
-        // See if we have an initializer expression for the global.  If so,
-        // make sure it's a compile-time constant!
-        llvm::Constant *llvmInitializer = NULL;
-        if (ds->storageClass == SC_EXTERN || ds->storageClass == SC_EXTERN_C) {
-            if (decl->initExpr != NULL)
-                Error(decl->pos, "Initializer can't be provided with \"extern\" "
-                      "global variable \"%s\".", decl->sym->name.c_str());
-        }
-        else {
-            if (decl->initExpr != NULL) {
-                decl->initExpr = decl->initExpr->TypeCheck();
-                if (decl->initExpr != NULL) {
-                    // We need to make sure the initializer expression is
-                    // the same type as the global.  (But not if it's an
-                    // ExprList; they don't have types per se / can't type
-                    // convert themselves anyway.)
-                    if (dynamic_cast<ExprList *>(decl->initExpr) == NULL)
-                        decl->initExpr = 
-                            decl->initExpr->TypeConv(decl->sym->type, "initializer");
+            if (initExpr != NULL) {
+                initExpr = initExpr->Optimize();
+                // Fingers crossed, now let's see if we've got a
+                // constant value..
+                llvmInitializer = initExpr->GetConstant(sym->type);
 
-                    if (decl->initExpr != NULL) {
-                        decl->initExpr = decl->initExpr->Optimize();
-                        // Fingers crossed, now let's see if we've got a
-                        // constant value..
-                        llvmInitializer = decl->initExpr->GetConstant(decl->sym->type);
-
-                        if (llvmInitializer != NULL) {
-                            if (decl->sym->type->IsConstType())
-                                // Try to get a ConstExpr associated with
-                                // the symbol.  This dynamic_cast can
-                                // validly fail, for example for types like
-                                // StructTypes where a ConstExpr can't
-                                // represent their values.
-                                decl->sym->constValue = 
-                                    dynamic_cast<ConstExpr *>(decl->initExpr);
-                        }
-                        else
-                            Error(decl->pos, "Initializer for global variable \"%s\" "
-                                  "must be a constant.", decl->sym->name.c_str());
-                    }
+                if (llvmInitializer != NULL) {
+                    if (sym->type->IsConstType())
+                        // Try to get a ConstExpr associated with
+                        // the symbol.  This dynamic_cast can
+                        // validly fail, for example for types like
+                        // StructTypes where a ConstExpr can't
+                        // represent their values.
+                        sym->constValue = 
+                            dynamic_cast<ConstExpr *>(initExpr);
                 }
+                else
+                    Error(sym->pos, "Initializer for global variable \"%s\" "
+                          "must be a constant.", sym->name.c_str());
             }
-
-            // If no initializer was provided or if we couldn't get a value
-            // above, initialize it with zeros..
-            if (llvmInitializer == NULL)
-                llvmInitializer = llvm::Constant::getNullValue(llvmType);
         }
+    }
 
-        bool isConst = (ds->typeQualifier & TYPEQUAL_CONST) != 0;
-        llvm::GlobalValue::LinkageTypes linkage =
-            (ds->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
-                                              llvm::GlobalValue::ExternalLinkage;
-        decl->sym->storagePtr = new llvm::GlobalVariable(*module, llvmType, isConst, 
-                                                         linkage, llvmInitializer, 
-                                                         decl->sym->name.c_str());
-        m->symbolTable->AddVariable(decl->sym);
+    // If no initializer was provided or if we couldn't get a value
+    // above, initialize it with zeros..
+    if (llvmInitializer == NULL)
+        llvmInitializer = llvm::Constant::getNullValue(llvmType);
 
-        if (diBuilder && (ds->storageClass != SC_EXTERN)) {
-            llvm::DIFile file = decl->pos.GetDIFile();
-            diBuilder->createGlobalVariable(decl->sym->name, 
-                                            file,
-                                            decl->pos.first_line,
-                                            decl->sym->type->GetDIType(file),
-                                            (ds->storageClass == SC_STATIC),
-                                            decl->sym->storagePtr);
+    llvm::GlobalValue::LinkageTypes linkage =
+        (sym->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
+        llvm::GlobalValue::ExternalLinkage;
+    sym->storagePtr = new llvm::GlobalVariable(*module, llvmType, isConst, 
+                                               linkage, llvmInitializer, 
+                                               sym->name.c_str());
+    symbolTable->AddVariable(sym);
+
+    if (diBuilder && (sym->storageClass != SC_EXTERN)) {
+        llvm::DIFile file = sym->pos.GetDIFile();
+        diBuilder->createGlobalVariable(sym->name, 
+                                        file,
+                                        sym->pos.first_line,
+                                        sym->type->GetDIType(file),
+                                        (sym->storageClass == SC_STATIC),
+                                        sym->storagePtr);
+    }
+}
+
+
+
+
+/** Given an arbitrary type, see if it or any of the types contained in it
+    are varying.  Returns true if so, false otherwise. 
+*/
+static bool
+lRecursiveCheckVarying(const Type *t) {
+    t = t->GetBaseType();
+    if (t->IsVaryingType()) return true;
+
+    const StructType *st = dynamic_cast<const StructType *>(t);
+    if (st) {
+        for (int i = 0; i < st->GetElementCount(); ++i)
+            if (lRecursiveCheckVarying(st->GetElementType(i)))
+                return true;
+    }
+    return false;
+}
+
+
+/** Given a Symbol representing a function parameter, see if it or any
+    contained types are varying.  If so, issue an error.  (This function
+    should only be called for parameters to 'export'ed functions, where
+    varying parameters is illegal.
+ */
+static void
+lCheckForVaryingParameter(Symbol *sym) {
+    if (lRecursiveCheckVarying(sym->type)) {
+        const Type *t = sym->type->GetBaseType();
+        if (dynamic_cast<const StructType *>(t))
+            Error(sym->pos, "Struct parameter \"%s\" with varying member(s) is illegal "
+                  "in an exported function.",
+                  sym->name.c_str());
+        else
+            Error(sym->pos, "Varying parameter \"%s\" is illegal in an exported function.",
+                  sym->name.c_str());
+    }
+}
+
+
+/** Given a function type, loop through the function parameters and see if
+    any are StructTypes.  If so, issue an error (this seems to be broken
+    currently).
+
+    @todo Fix passing structs from C/C++ to ispc functions.
+ */
+static void
+lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
+    const std::vector<const Type *> &argTypes = ftype->GetArgumentTypes();
+    for (unsigned int i = 0; i < argTypes.size(); ++i) {
+        const Type *type = argTypes[i];
+        if (dynamic_cast<const StructType *>(type) != NULL) {
+            Error(pos, "Passing structs to/from application functions is currently broken. "
+                  "Use a reference or const reference instead for now.");
+            return;
         }
     }
 }
 
 
+/** We've got a declaration for a function to process.  This function does
+    all the work of creating the corresponding llvm::Function instance,
+    adding the symbol for the function to the symbol table and doing
+    various sanity checks.  This function returns true upon success and
+    false if any errors were encountered.
+ */
 void
-Module::AddFunction(DeclSpecs *ds, Declarator *decl, Stmt *code) {
-    ast->AddFunction(ds, decl, code);
+Module::AddFunctionDeclaration(Symbol *funSym, 
+                               const std::vector<VariableDeclaration> &args,
+                               bool isInline) {
+    // We should have gotten a FunctionType back from the GetType() call above.
+    const FunctionType *functionType = 
+        dynamic_cast<const FunctionType *>(funSym->type);
+    assert(functionType != NULL);
+
+    // If a global variable with the same name has already been declared
+    // issue an error.
+    if (symbolTable->LookupVariable(funSym->name.c_str()) != NULL) {
+        Error(funSym->pos, "Function \"%s\" shadows previously-declared global variable. "
+              "Ignoring this definition.",
+              funSym->name.c_str());
+        return;
+    }
+
+    if (symbolTable->LookupFunction(funSym->name.c_str(), 
+                                    functionType) != NULL)
+        // Ignore redeclaration of a function with the same name and type
+        return;
+
+    if (funSym->storageClass == SC_EXTERN_C) {
+        // Make sure the user hasn't supplied both an 'extern "C"' and a
+        // 'task' qualifier with the function
+        if (functionType->isTask) {
+            Error(funSym->pos, "\"task\" qualifier is illegal with C-linkage extern "
+                  "function \"%s\".  Ignoring this function.", funSym->name.c_str());
+            return;
+        }
+
+        std::vector<Symbol *> *funcs =
+            symbolTable->LookupFunction(funSym->name.c_str());
+        if (funcs != NULL) {
+            if (funcs->size() > 1) {
+                // Multiple functions with this name have already been declared; 
+                // can't overload here
+                Error(funSym->pos, "Can't overload extern \"C\" function \"%s\"; "
+                      "%d functions with the same name have already been declared.",
+                      funSym->name.c_str(), (int)funcs->size());
+                return;
+            }
+
+            // One function with the same name has been declared; see if it
+            // has the same type as this one, in which case it's ok.
+            if (Type::Equal((*funcs)[0]->type, funSym->type))
+                return;
+            else {
+                Error(funSym->pos, "Can't overload extern \"C\" function \"%s\".",
+                      funSym->name.c_str());
+                return;
+            }
+        }
+    }
+
+    // Get the LLVM FunctionType
+    bool includeMask = (funSym->storageClass != SC_EXTERN_C);
+    LLVM_TYPE_CONST llvm::FunctionType *llvmFunctionType = 
+        functionType->LLVMFunctionType(g->ctx, includeMask);
+    if (llvmFunctionType == NULL)
+        return;
+
+    // And create the llvm::Function
+    llvm::GlobalValue::LinkageTypes linkage = (funSym->storageClass == SC_STATIC ||
+                                               isInline) ?
+        llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
+    std::string functionName = ((funSym->storageClass == SC_EXTERN_C) ?
+                                funSym->name : funSym->MangledName());
+    if (g->mangleFunctionsWithTarget)
+        functionName += g->target.GetISAString();
+    llvm::Function *function = 
+        llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), 
+                               module);
+
+    // Set function attributes: we never throw exceptions, and want to
+    // inline everything we can
+    function->setDoesNotThrow(true);
+    if (!(funSym->storageClass == SC_EXTERN_C) && 
+        !g->generateDebuggingSymbols &&
+        isInline)
+        function->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (functionType->isTask)
+        // This also applies transitively to members I think? 
+        function->setDoesNotAlias(1, true);
+
+    // Make sure that the return type isn't 'varying' if the function is
+    // 'export'ed.
+    if (funSym->storageClass == SC_EXPORT && 
+        lRecursiveCheckVarying(functionType->GetReturnType()))
+        Error(funSym->pos, "Illegal to return a \"varying\" type from exported "
+              "function \"%s\"", funSym->name.c_str());
+
+    if (functionType->isTask && (functionType->GetReturnType() != AtomicType::Void))
+        Error(funSym->pos, "Task-qualified functions must have void return type.");
+
+    if (functionType->isExported || functionType->isExternC)
+        lCheckForStructParameters(functionType, funSym->pos);
+
+    // Loop over all of the arguments; process default values if present
+    // and do other checks and parameter attribute setting.
+    bool seenDefaultArg = false;
+    std::vector<ConstExpr *> argDefaults;
+    for (unsigned int i = 0; i < args.size(); ++i) {
+        Symbol *argSym = args[i].sym;
+
+        // If the function is exported, make sure that the parameter
+        // doesn't have any varying stuff going on in it.
+        if (funSym->storageClass == SC_EXPORT)
+            lCheckForVaryingParameter(argSym);
+
+        // ISPC assumes that all memory passed in is aligned to the native
+        // width and that no pointers alias.  (It should be possible to
+        // specify when this is not the case, but this should be the
+        // default.)  Set parameter attributes accordingly.
+        if (!functionType->isTask && 
+            dynamic_cast<const ReferenceType *>(argSym->type) != NULL) {
+            // NOTE: LLVM indexes function parameters starting from 1.
+            // This is unintuitive.
+            function->setDoesNotAlias(i+1, true);
+            int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
+            function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
+        }
+
+        if (symbolTable->LookupFunction(argSym->name.c_str()) != NULL)
+            Warning(argSym->pos, "Function parameter \"%s\" shadows a function "
+                    "declared in global scope.", argSym->name.c_str());
+        
+        // See if a default argument value was provided with the parameter
+        Expr *defaultValue = args[i].init;
+        if (defaultValue != NULL) {
+            // If we have one, make sure it's a compile-time constant
+            seenDefaultArg = true;
+            defaultValue = defaultValue->TypeCheck();
+            defaultValue = defaultValue->Optimize();
+            defaultValue = dynamic_cast<ConstExpr *>(defaultValue);
+            if (!defaultValue) {
+                Error(argSym->pos, "Default value for parameter \"%s\" must be "
+                      "a compile-time constant.", argSym->name.c_str());
+                return;
+            }
+        }
+        else if (seenDefaultArg) {
+            // Once one parameter has provided a default value, then all of
+            // the following ones must have them as well.
+            Error(argSym->pos, "Parameter \"%s\" is missing default: all "
+                  "parameters after the first parameter with a default value "
+                  "must have default values as well.", argSym->name.c_str());
+        }
+
+        // Add the default value to argDefaults.  Note that we make this
+        // call for all parameters, even those where no default value was
+        // provided.  In that case, a NULL value is stored here.  This
+        // approach means that we can always just look at the i'th entry of
+        // argDefaults to find the default value for the i'th parameter.
+        argDefaults.push_back(dynamic_cast<ConstExpr *>(defaultValue));
+    }
+
+    // And only now can we set the default values in the FunctionType
+    functionType->SetArgumentDefaults(argDefaults);
+
+    // If llvm gave us back a Function * with a different name than the one
+    // we asked for, then there's already a function with that same
+    // (mangled) name in the llvm::Module.  In that case, erase the one we
+    // tried to add and just work with the one it already had.
+    if (function->getName() != functionName) {
+        function->eraseFromParent();
+        function = module->getFunction(functionName);
+    }
+    funSym->function = function;
+
+    // But if that function has a definition, we don't want to redefine it.
+    if (!function->empty()) {
+        Warning(funSym->pos, "Ignoring redefinition of function \"%s\".", 
+                funSym->name.c_str());
+        return;
+    }
+
+    // Finally, we know all is good and we can add the function to the
+    // symbol table
+    bool ok = symbolTable->AddFunction(funSym);
+    assert(ok);
+}
+
+
+void
+Module::AddFunctionDefinition(Symbol *sym, const std::vector<Symbol *> &args,
+                              Stmt *code) {
+    ast->AddFunction(sym, args, code);
 }
 
 
@@ -722,24 +950,6 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
         fprintf(file, "    extern %s;\n", decl.c_str());
     }
     fprintf(file, "#ifdef __cplusplus\n}\n#endif // __cplusplus\n");
-}
-
-
-/** Given an arbitrary type, see if it or any of the types contained in it
-    are varying.  Returns true if so, false otherwise. 
-*/
-static bool
-lRecursiveCheckVarying(const Type *t) {
-    t = t->GetBaseType();
-    if (t->IsVaryingType()) return true;
-
-    const StructType *st = dynamic_cast<const StructType *>(t);
-    if (st) {
-        for (int i = 0; i < st->GetElementCount(); ++i)
-            if (lRecursiveCheckVarying(st->GetElementType(i)))
-                return true;
-    }
-    return false;
 }
 
 

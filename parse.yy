@@ -89,6 +89,7 @@ extern char *yytext;
 
 void yyerror(const char *s) { fprintf(stderr, "Parse error: %s\n", s); }
 
+static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
 static void lAddMaskToSymbolTable(SourcePos pos);
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
@@ -460,7 +461,11 @@ constant_expression
     ;
 
 declaration_statement
-    : declaration     { $$ = new DeclStmt(@1, $1, m->symbolTable); }
+    : declaration     
+    {
+        std::vector<VariableDeclaration> vars = $1->GetVariableDeclarations();
+        $$ = new DeclStmt(vars, @1); 
+    }
     ;
 
 declaration
@@ -1224,14 +1229,14 @@ external_declaration
     { 
         if ($1 != NULL)
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
-                m->AddGlobal($1->declSpecs, $1->declarators[i]);
+                lAddDeclaration($1->declSpecs, $1->declarators[i]);
     }
     ;
 
 function_definition
     : declaration_specifiers declarator 
     {
-        m->AddGlobal($1, $2);
+        lAddDeclaration($1, $2);
         lAddFunctionParams($2); 
         lAddMaskToSymbolTable(@2);
         if ($1->typeQualifier & TYPEQUAL_TASK)
@@ -1239,20 +1244,65 @@ function_definition
     } 
     compound_statement
     {
-        m->AddFunction($1, $2, $4);
+        Symbol *sym;
+        std::vector<Symbol *> args;
+        $2->GetFunctionInfo($1, &sym, &args);
+        m->AddFunctionDefinition(sym, args, $4);
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 /* function with no declared return type??
 func(...) 
     | declarator { lAddFunctionParams($1); } compound_statement
     {
-        m->AddFunction(new DeclSpecs(, $1, $3);
+        m->AddFunction(new DeclSpecs(XXX, $1, $3);
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 */
     ;
 
 %%
+
+
+static void
+lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
+    if (ds == NULL || decl == NULL)
+        // Error happened earlier during parsing
+        return;
+
+    if (decl->isFunction) {
+        // function declaration
+        const Type *t = decl->GetType(ds);
+        const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
+        assert(ft != NULL);
+
+        // Make sure that we've got what we expect here
+        Symbol *funSym = decl->sym;
+        assert(decl->isFunction);
+        assert(decl->arraySize.size() == 0);
+
+        // So far, so good.  Go ahead and set the type of the function symbol
+        funSym->type = decl->GetType(ds);
+        funSym->storageClass = ds->storageClass;
+
+        std::vector<VariableDeclaration> args;
+        int nArgs = decl->functionArgs ? decl->functionArgs->size() : 0;
+        for (int i = 0; i < nArgs; ++i) {
+            Declaration *pdecl = (*decl->functionArgs)[i];
+            assert(pdecl->declarators.size() == 1);
+            Symbol *sym = pdecl->declarators[0]->sym;
+            Expr *defaultExpr = pdecl->declarators[0]->initExpr;
+            args.push_back(VariableDeclaration(sym, defaultExpr));
+        }
+
+        bool isInline = (ds->typeQualifier & TYPEQUAL_INLINE);
+        m->AddFunctionDeclaration(funSym, args, isInline);
+    }
+    else if (ds->storageClass == SC_TYPEDEF)
+        m->AddTypeDef(decl->sym);
+    else
+        m->AddGlobalVariable(decl->sym, decl->initExpr,
+                             (ds->typeQualifier & TYPEQUAL_CONST) != 0);
+}
 
 
 /** We're about to start parsing the body of a function; add all of the
