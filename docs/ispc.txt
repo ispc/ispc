@@ -123,6 +123,7 @@ Contents:
   + `Explicit Vector Programming With Uniform Short Vector Types`_
   + `Choosing A Target Vector Width`_
   + `Compiling With Support For Multiple Instruction Sets`_
+  + `Implementing Reductions Efficiently `+
 
 * `Disclaimer and Legal Information`_
 
@@ -3312,6 +3313,86 @@ different sizes (the first due to program count having the value 4 for SSE2
 and 8 for AVX, and the second due to ``varying`` types having different
 numbers of elements with the two targets--essentially the same issue as the
 first.)
+
+
+Implementing Reductions Efficiently
+-----------------------------------
+
+It's often necessary to compute a "reduction" over a data set--for example,
+one might want to add all of the values in an array, compute their minimum,
+etc.  ``ispc`` provides a few capabilities that make it easy to efficiently
+compute reductions like these.  However, it's important to use these
+capabilities appropriately for best results.
+
+As an example, consider the task of computing the sum of all of the values
+in an array.  In C code, we might have:
+
+::
+
+    /* C implementation of a sum reduction */
+    float sum(const float array[], int count) {
+        float sum = 0;
+        for (int i = 0; i < count; ++i)
+            sum += array[i];
+        return sum;
+    } 
+
+Of course, exactly this computation could also be expressed in ``ispc``,
+though without any benefit from vectorization:
+
+::
+
+    /* inefficient ispc implementation of a sum reduction */
+    uniform float sum(const uniform float array[], uniform int count) {
+        uniform float sum = 0;
+        for (uniform int i = 0; i < count; ++i)
+            sum += array[i];
+        return sum;
+    } 
+
+As a first try, one might try using the ``reduce_add()`` function from the
+``ispc`` standard library; it takes a ``varying`` value and returns the sum
+of that value across all of the active program instances (see
+`Cross-Program Instance Operations`_ for more details).
+
+::
+
+    /* inefficient ispc implementation of a sum reduction */
+    uniform float sum(const uniform float array[], uniform int count) {
+        uniform float sum = 0;
+        // Assumes programCount evenly divides count
+        for (uniform int i = 0; i < count; i += programCount)
+            sum += reduce_add(array[i+programIndex]);
+        return sum;
+    } 
+
+This implementation loads a set of ``programCount`` values from the array,
+one for each of the program instances, and then uses ``reduce_add`` to
+reduce across the program instances and then update the sum.  Unfortunately
+this approach loses most benefit from vectorization, as it does more work
+on the cross-program instance ``reduce_add()`` call than it saves from the
+vector load of values.
+
+The most efficient approach is to do the reduction in two phases: rather
+than using a ``uniform`` variable to store the sum, we maintain a varying
+value, such that each program instance is effectively computing a local
+partial sum on the subset of array values that it has loaded from the
+array.  When the loop over array elements concludes, a single call to
+``reduce_add()`` computes the final reduction across each of the program
+instances' elements of ``sum``.  This approach effectively compiles to a
+single vector load and a single vector add for each ``programCount`` worth
+of values--very efficient code in the end.
+
+::
+
+    /* good ispc implementation of a sum reduction */
+    uniform float sum(const uniform float array[], uniform int count) {
+        float sum = 0;
+        // Assumes programCount evenly divides count
+        for (uniform int i = 0; i < count; i += programCount)
+            sum += array[i+programIndex];
+        return reduce_add(sum);
+    } 
 
 
 Disclaimer and Legal Information
