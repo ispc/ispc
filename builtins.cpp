@@ -366,7 +366,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                                       llvm::Linker::DestroySource,
 #endif // LLVM_3_0
                                       &linkError))

@@ -52,7 +52,7 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>
 #else
@@ -85,7 +85,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     if (isa == NULL) {
         if (!strcasecmp(cpu, "atom"))
             isa = "sse2";
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         else if (!strcasecmp(cpu, "sandybridge") ||
                  !strcasecmp(cpu, "corei7-avx"))
             isa = "avx";
@@ -147,7 +147,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
     }
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     else if (!strcasecmp(isa, "avx")) {
         t->isa = Target::AVX;
         t->nativeVectorWidth = 8;
@@ -180,7 +180,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 const char *
 Target::SupportedTargetCPUs() {
     return "atom, barcelona, core2, corei7, "
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         "corei7-avx, "
 #endif
         "istanbul, nocona, penryn, "
@@ -200,7 +200,7 @@ Target::SupportedTargetArchs() {
 const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2"
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         ", avx, avx-x2"
 #endif
         ;
@@ -236,7 +236,7 @@ Target::GetTargetMachine() const {
 
     llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
                                                   llvm::Reloc::Default;
-#if defined(LLVM_3_0svn) || defined(LLVM_3_0)
+#if defined(LLVM_3_0svn) || defined(LLVM_3_1svn) || defined(LLVM_3_0)
     std::string featuresString = attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, relocModel);

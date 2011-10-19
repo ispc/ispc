@@ -74,7 +74,7 @@ extern "C" {
 #include <llvm/DerivedTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>
 #else
@@ -182,7 +182,7 @@ static bool lRunTest(const char *fn) {
     }
 
     std::string eeError;
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::EngineBuilder engineBuilder(module);
     engineBuilder.setErrorStr(&eeError);
     engineBuilder.setEngineKind(llvm::EngineKind::JIT);
@@ -361,7 +361,7 @@ static bool lRunTest(const char *fn) {
 
 int main(int argc, char *argv[]) {
     llvm::InitializeNativeTarget();
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     LLVMLinkInJIT();
 #endif
 

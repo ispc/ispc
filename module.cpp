@@ -566,7 +566,7 @@ Module::AddFunctionDefinition(Symbol *sym, const std::vector<Symbol *> &args,
 
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     if (diBuilder != NULL && outputType != Header)
         diBuilder->finalize();
 #endif // LLVM_3_0
@@ -1099,7 +1099,7 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
@@ -1450,7 +1450,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         for (; argIter != dispatchFunc->arg_end(); ++argIter)
             args.push_back(argIter);
         if (voidReturn) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
 #else
             llvm::CallInst::Create(targetFuncs[i], args.begin(), args.end(),
@@ -1459,7 +1459,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
         }
         else {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::Value *retValue = 
                 llvm::CallInst::Create(targetFuncs[i], args, "ret_value", 
                                        callBBlock);

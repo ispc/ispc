@@ -808,7 +808,7 @@ FunctionEmitContext::SizeOf(LLVM_TYPE_CONST llvm::Type *ty) {
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(ty, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
                                                            "offset_ptr", bblock);
@@ -830,7 +830,7 @@ lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  llvm::GlobalValue::InternalLinkage,
                                                  sConstant, s);
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
 #else
@@ -1316,7 +1316,7 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = { index0, index1 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
         llvm::Instruction *inst = 
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
@@ -1843,7 +1843,7 @@ llvm::PHINode *
 FunctionEmitContext::PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
                              const char *name) {
     llvm::PHINode *pn = llvm::PHINode::Create(type, 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                                               count, 
 #endif // LLVM_3_0
                                               name ? name : "phi", bblock);
@@ -1877,7 +1877,7 @@ FunctionEmitContext::CallInst(llvm::Function *func,
         return NULL;
     }
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, args, name ? name : "", bblock);
 #else
@@ -1898,7 +1898,7 @@ FunctionEmitContext::CallInst(llvm::Function *func, llvm::Value *arg,
         return NULL;
     }
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, arg, name ? name : "", bblock);
 #else
@@ -1921,7 +1921,7 @@ FunctionEmitContext::CallInst(llvm::Function *func, llvm::Value *arg0,
     }
 
     llvm::Value *args[] = { arg0, arg1 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> argArrayRef(&args[0], &args[2]);
     llvm::Instruction *ci = 
         llvm::CallInst::Create(func, argArrayRef, name ? name : "", 

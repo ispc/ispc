@@ -76,7 +76,7 @@ namespace llvm {
 }
 
 // llvm::Type *s are no longer const in llvm 3.0
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
 #define LLVM_TYPE_CONST
 #else
 #define LLVM_TYPE_CONST const

@@ -189,7 +189,7 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(targetLibraryInfo);
     optPM.add(new llvm::TargetData(module));
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     optPM.add(llvm::createIndVarSimplifyPass());
 #endif
 
@@ -419,7 +419,7 @@ IntrinsicsOpt::IntrinsicsOpt()
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
     maskInstructions.push_back(sseMovmsk);
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Function *avxMovmsk = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
     assert(avxMovmsk != NULL);
@@ -430,7 +430,7 @@ IntrinsicsOpt::IntrinsicsOpt()
     blendInstructions.push_back(BlendInstruction(
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse41_blendvps),
         0xf, 0, 1, 2));
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     blendInstructions.push_back(BlendInstruction(
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_blendv_ps_256),
         0xff, 0, 1, 2));
@@ -522,7 +522,7 @@ lIsUndef(llvm::Value *value) {
 
 bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Function *avxMaskedLoad32 = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
     llvm::Function *avxMaskedLoad64 = 
@@ -605,7 +605,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                  callInst->getCalledFunction() == avxMaskedLoad64) {
             llvm::Value *factor = callInst->getArgOperand(1);
@@ -827,7 +827,7 @@ lSizeOf(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[1] = { LLVMInt32(1) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
                                                            "offset_ptr", insertBefore);
@@ -859,7 +859,7 @@ lStructOffset(LLVM_TYPE_CONST llvm::Type *type, uint64_t member,
     LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
     llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
     llvm::Value *index[2] = { LLVMInt32(0), LLVMInt32((int32_t)member) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[2]);
     llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
                                                            "member_ptr", insertBefore);
@@ -1274,7 +1274,7 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
             llvm::Value *newArgs[3] = { basePtr, offsetVector, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[3]);
             llvm::Instruction *newCall = 
                 llvm::CallInst::Create(info->baseOffsetsFunc, newArgArray,
@@ -1295,7 +1295,7 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
             llvm::Value *newArgs[4] = { basePtr, offsetVector, rvalue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[4]);
             llvm::Instruction *newCall = 
                 llvm::CallInst::Create(info->baseOffsetsFunc, newArgArray, "", 
@@ -1550,7 +1550,7 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // replace the __pseudo_* one with it.
         llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
         llvm::Value *args[3] = { lvalue, rvalue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
         llvm::Instruction *inst = llvm::CallInst::Create(fms, newArgArray, "", 
                                                          callInst);
@@ -1898,7 +1898,7 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
         // get them into the map<> before making recursive calls to
         // lScalarizeVector.
         for (int i = 0; i < vectorLength; ++i) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             scalarizedVector[i] =
                 llvm::PHINode::Create(eltType, numIncoming, "phi", phi);
 #else
@@ -2492,7 +2492,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 new llvm::BitCastInst(base, LLVMTypes::VoidPointerType,
                                       "base2i8", callInst);
             lCopyMetadata(basei8, callInst);
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[1]);
             llvm::Value *ptr = 
                 llvm::GetElementPtrInst::Create(basei8, arrayRef, "ptr", callInst);
@@ -2512,7 +2512,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // be invalid in that case).
                 Debug(pos, "Transformed gather to scalar load and broadcast!");
                 llvm::Value *args[2] = { ptr, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                 llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(gatherInfo->loadBroadcastFunc, newArgArray,
@@ -2563,7 +2563,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             llvm::Value *basei8 =
                 new llvm::BitCastInst(base, LLVMTypes::VoidPointerType, "base2i8", callInst);
             lCopyMetadata(basei8, callInst);
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[1]);
             llvm::Value *ptr = 
                 llvm::GetElementPtrInst::Create(basei8, arrayRef, "ptr", callInst);
@@ -2577,7 +2577,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (gatherInfo != NULL) {
                 Debug(pos, "Transformed gather to unaligned vector load!");
                 llvm::Value *args[2] = { ptr, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                 llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(gatherInfo->loadMaskedFunc, argArray, 
@@ -2597,7 +2597,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                             callInst);
 
                 llvm::Value *args[3] = { ptr, rvalue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                 llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
                 llvm::Instruction *newCall = 
                     llvm::CallInst::Create(scatterInfo->maskedStoreFunc, argArray,

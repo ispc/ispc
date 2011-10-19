@@ -41,7 +41,7 @@
 #include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
   #include <llvm/Support/TargetRegistry.h>
   #include <llvm/Support/TargetSelect.h>
 #else
@@ -172,7 +172,7 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeX86AsmPrinter();
     LLVMInitializeX86AsmParser();
     LLVMInitializeX86Disassembler();
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     LLVMInitializeX86TargetMC();
 #endif
 
