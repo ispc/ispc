@@ -60,7 +60,7 @@ class FunctionEmitContext {
 public:
     /** Create a new FunctionEmitContext.
         @param function     The Function object representing the function
-        @param sym          Symbol that corresponds to the function
+        @param funSym       Symbol that corresponds to the function
         @param llvmFunction LLVM function in the current module that corresponds
                             to the function
         @param firstStmtPos Source file position of the first statement in the

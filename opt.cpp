@@ -1643,10 +1643,13 @@ static void lPrintVector(const char *info, llvm::Value *elements[ISPC_MAX_NVEC])
 
     @param vec               Vector to be scalarized
     @param scalarizedVector  Array in which to store the individual vector 
-    elements
+                             elements
     @param vectorLength      Number of elements in the given vector. (The
-    passed scalarizedVector array must also be at least
-    this length as well.)
+                             passed scalarizedVector array must also be at least
+                             this length as well.)
+    @param phiMap            STL map from pointers to PHINodes that we've already
+                             scalarized to the array of Value *s that they were
+                             scalarized into.
     @returns                 True if the vector was successfully scalarized and
     the values in offsets[] are valid; false otherwise
 */
