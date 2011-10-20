@@ -1,3 +1,29 @@
+=== v1.0.12 === (20 October 2011)
+
+This release includes a new "double-pumped" 8-wide target for SSE2,
+"sse2-x2".  Like the sse4-x2 and avx-x2 targets, this target may deliver
+higher performance for some workloads than the regular sse2 target.  (For
+other workloads, it may be slower.)
+
+The ispc language now includes an "assert()" statement.  See
+http://ispc.github.com/ispc.html#assertions for more information.
+
+The compiler now sets a preprocessor #define based on the target ISA; for
+example, ISPC_TARGET_SSE4 is defined for the sse4 targets, and so forth.
+
+The standard library now provides high-performance routines for converting
+between some "array of structures" and "structure of arrays" formats.
+See
+http://ispc.github.com/ispc.html#converting-between-array-of-structures-and-structure-of-arrays-layout
+for more information.
+
+Inline functions now have static linkage.
+
+A number of improvements have been made to the optimization passes that
+detect when gathers and scatters can be transformed into vector stores and
+loads, respectively.  In particular, these passes now handle variables that
+are used as loop induction variables much better.
+
 === v1.0.11 === (6 October 2011)
 
 The main new feature in this release is support for generating code for

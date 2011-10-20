@@ -123,7 +123,7 @@ Contents:
   + `Explicit Vector Programming With Uniform Short Vector Types`_
   + `Choosing A Target Vector Width`_
   + `Compiling With Support For Multiple Instruction Sets`_
-  + `Implementing Reductions Efficiently `+
+  + `Implementing Reductions Efficiently`_
 
 * `Disclaimer and Legal Information`_
 
