@@ -284,6 +284,7 @@ Opt::Opt() {
     fastMaskedVload = false;
     unrollLoops = true;
     disableAsserts = false;
+    disableHandlePseudoMemoryOps = false;
     disableBlendedMaskedStores = false;
     disableCoherentControlFlow = false;
     disableUniformControlFlow = false;

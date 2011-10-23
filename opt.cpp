@@ -201,8 +201,10 @@ Optimize(llvm::Module *module, int optLevel) {
         // them into something that can actually execute.
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(CreateGatherScatterFlattenPass());
-        optPM.add(CreateLowerGatherScatterPass());
-        optPM.add(CreateLowerMaskedStorePass());
+        if (g->opt.disableHandlePseudoMemoryOps == false) {
+            optPM.add(CreateLowerGatherScatterPass());
+            optPM.add(CreateLowerMaskedStorePass());
+        }
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
@@ -282,8 +284,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateLowerMaskedStorePass());
         if (!g->opt.disableGatherScatterOptimizations)
             optPM.add(CreateGatherScatterImprovementsPass());
-        optPM.add(CreateLowerMaskedStorePass());
-        optPM.add(CreateLowerGatherScatterPass());
+        if (g->opt.disableHandlePseudoMemoryOps == false) {
+            optPM.add(CreateLowerMaskedStorePass());
+            optPM.add(CreateLowerGatherScatterPass());
+        }
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());

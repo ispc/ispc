@@ -88,6 +88,7 @@ static void usage(int ret) {
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
 #if 0
+    printf("        disable-handle-pseudo-memory-ops\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
     printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
@@ -254,6 +255,8 @@ int main(int Argc, char *Argv[]) {
 
             // These are only used for performance tests of specific
             // optimizations
+            else if (!strcmp(opt, "disable-handle-pseudo-memory-ops"))
+                g->opt.disableHandlePseudoMemoryOps = true;
             else if (!strcmp(opt, "disable-blended-masked-stores"))
                 g->opt.disableBlendedMaskedStores = true;
             else if (!strcmp(opt, "disable-coherent-control-flow"))

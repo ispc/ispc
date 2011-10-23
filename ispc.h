@@ -227,6 +227,12 @@ struct Opt {
     /** Indicates whether assert() statements should be ignored (for
         performance in the generated code). */
     bool disableAsserts;
+    
+    /** If enabled, the various __pseudo* memory ops (gather/scatter,
+        masked load/store) are left in their __pseudo* form, for better
+        understanding of the structure of generated code when reading
+        it. */
+    bool disableHandlePseudoMemoryOps;
 
     /** On targets that don't have a masked store instruction but do have a
         blending instruction, by default, we simulate masked stores by
