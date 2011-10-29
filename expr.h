@@ -42,8 +42,6 @@
 #include "ast.h"
 #include "type.h"
 
-class FunctionSymbolExpr;
-
 /** @brief Expr is the abstract base class that defines the interface that
     all expression types must implement.
  */
@@ -266,10 +264,6 @@ public:
     ExprList *args;
     bool isLaunch;
     Expr *launchCountExpr;
-
-private:
-    void resolveFunctionOverloads(bool exactMatchOnly);
-    bool tryResolve(int (*matchFunc)(Expr *, const Type *));
 };
 
 
@@ -495,7 +489,8 @@ private:
     probably-different type. */
 class TypeCastExpr : public Expr {
 public:
-    TypeCastExpr(const Type *t, Expr *e, SourcePos p);
+    TypeCastExpr(const Type *t, Expr *e, bool preserveUniformity,
+                 SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
@@ -506,6 +501,7 @@ public:
 
     const Type *type;
     Expr *expr;
+    bool preserveUniformity;
 };
 
 
@@ -581,8 +577,12 @@ public:
     void Print() const;
     int EstimateCost() const;
 
+    bool ResolveOverloads(const std::vector<Expr *> &args);
+    Symbol *GetMatchingFunction();
+
 private:
-    friend class FunctionCallExpr;
+    bool tryResolve(int (*matchFunc)(Expr *, const Type *),
+                    const std::vector<Expr *> &args);
 
     /** Name of the function that is being called. */
     std::string name;
@@ -592,8 +592,7 @@ private:
         overload is the best match. */
     std::vector<Symbol *> *candidateFunctions;
 
-    /** The actual matching function found after overload resolution; this
-        value is set by FunctionCallExpr::resolveFunctionOverloads() */
+    /** The actual matching function found after overload resolution. */
     Symbol *matchingFunc;
 };
 

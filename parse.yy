@@ -326,19 +326,13 @@ cast_expression
     : unary_expression
     | '(' type_name ')' cast_expression
       {
-          // If type_name isn't explicitly a varying, We do a GetUniform() 
-          // call here so that things like:
+          // Pass true here to try to preserve uniformity 
+          // so that things like:
           // uniform int y = ...;
           // uniform float x = 1. / (float)y;
           // don't issue an error due to (float)y being inadvertently
           // and undesirably-to-the-user "varying"...
-          if ($2 == NULL || $4 == NULL || $4->GetType() == NULL)
-              $$ = NULL;
-          else {
-              if ($4->GetType()->IsUniformType())
-                 $2 = $2->GetAsUniformType();
-              $$ = new TypeCastExpr($2, $4, @1); 
-          }
+          $$ = new TypeCastExpr($2, $4, true, @1); 
       }
     ;
 
@@ -1463,7 +1457,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                the actual enum type here and optimize it, which will have
                us end up with a ConstExpr with the desired EnumType... */
             Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
-                                              enums[i]->pos);
+                                              false, enums[i]->pos);
             castExpr = castExpr->Optimize();
             enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
             assert(enums[i]->constValue != NULL);

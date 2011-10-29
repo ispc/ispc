@@ -165,7 +165,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
     if (Type::Equal(toType, fromType->GetAsConstType()))
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
     
     if (dynamic_cast<const ReferenceType *>(fromType)) {
         if (dynamic_cast<const ReferenceType *>(toType)) {
@@ -173,13 +173,13 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             // this is handled by TypeCastExpr
             if (Type::Equal(toType->GetReferenceTarget(),
                             fromType->GetReferenceTarget()->GetAsConstType()))
-                return new TypeCastExpr(toType, this, pos);
+                return new TypeCastExpr(toType, this, false, pos);
 
             const ArrayType *atFrom = dynamic_cast<const ArrayType *>(fromType->GetReferenceTarget());
             const ArrayType *atTo = dynamic_cast<const ArrayType *>(toType->GetReferenceTarget());
             if (atFrom != NULL && atTo != NULL && 
                 Type::Equal(atFrom->GetElementType(), atTo->GetElementType()))
-                return new TypeCastExpr(toType, this, pos);
+                return new TypeCastExpr(toType, this, false, pos);
 
             else {
                 if (!failureOk)
@@ -206,7 +206,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
     }
     else if (Type::Equal(toType, fromType->GetAsNonConstType()))
         // convert: const T -> T (as long as T isn't a reference)
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
 
     fromType = fromType->GetReferenceTarget();
     toType = toType->GetReferenceTarget();
@@ -217,16 +217,19 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
     const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
     const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
     if (toArrayType && fromArrayType) {
-        if (Type::Equal(toArrayType->GetElementType(), fromArrayType->GetElementType())) {
+        if (Type::Equal(toArrayType->GetElementType(), 
+                        fromArrayType->GetElementType())) {
             // the case of different element counts should have returned
             // out earlier, yes??
             assert(toArrayType->GetElementCount() != fromArrayType->GetElementCount());
-            return new TypeCastExpr(new ReferenceType(toType, false), this, pos);
+            return new TypeCastExpr(new ReferenceType(toType, false), this, 
+                                    false, pos);
         }
         else if (Type::Equal(toArrayType->GetElementType(), 
                              fromArrayType->GetElementType()->GetAsConstType())) {
             // T[x] -> const T[x]
-            return new TypeCastExpr(new ReferenceType(toType, false), this, pos);
+            return new TypeCastExpr(new ReferenceType(toType, false), this, 
+                                    false, pos);
         }
         else {
             if (!failureOk)
@@ -248,7 +251,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                       toType->GetString().c_str(), errorMsgBase);
             return NULL;
         }
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
     }
 
     const StructType *toStructType = dynamic_cast<const StructType *>(toType);
@@ -263,7 +266,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             return NULL;
         }
 
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
     }
 
     const EnumType *toEnumType = dynamic_cast<const EnumType *>(toType);
@@ -279,7 +282,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             return NULL;
         }
 
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
     }
 
     const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
@@ -288,7 +291,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
     // enum -> atomic (integer, generally...) is always ok
     if (fromEnumType != NULL) {
         assert(toAtomicType != NULL || toVectorType != NULL);
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
     }
 
     // from here on out, the from type can only be atomic something or
@@ -303,7 +306,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
 
     // scalar -> short-vector conversions
     if (toVectorType != NULL)
-        return new TypeCastExpr(toType, this, pos);
+        return new TypeCastExpr(toType, this, false, pos);
 
     // ok, it better be a scalar->scalar conversion of some sort by now
     if (toAtomicType == NULL) {
@@ -322,7 +325,7 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                                     errorMsgBase);
 #endif
 
-    return new TypeCastExpr(toType, this, pos);
+    return new TypeCastExpr(toType, this, false, pos);
 }
 
 
@@ -2025,451 +2028,12 @@ SelectExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionCallExpr
 
-static std::string
-lGetFunctionDeclaration(const std::string &name, const FunctionType *type) {
-    std::string ret;
-    ret += type->GetReturnType()->GetString();
-    ret += " ";
-    ret += name;
-    ret += "(";
-
-    const std::vector<const Type *> &argTypes = type->GetArgumentTypes();
-    const std::vector<ConstExpr *> &argDefaults = type->GetArgumentDefaults();
-
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        // If the parameter is a reference to an array, just print its type
-        // as the array type, since we always pass arrays by reference.
-        if (dynamic_cast<const ReferenceType *>(argTypes[i]) &&
-            dynamic_cast<const ArrayType *>(argTypes[i]->GetReferenceTarget()))
-            ret += argTypes[i]->GetReferenceTarget()->GetString();
-        else
-            ret += argTypes[i]->GetString();
-        ret += " ";
-        ret += type->GetArgumentName(i);
-
-        // Print the default value if present
-        if (argDefaults[i] != NULL) {
-            char buf[32];
-            if (argTypes[i]->IsFloatType()) {
-                double val;
-                int count = argDefaults[i]->AsDouble(&val);
-                assert(count == 1);
-                sprintf(buf, " = %g", val);
-            }
-            else if (argTypes[i]->IsBoolType()) {
-                bool val;
-                int count = argDefaults[i]->AsBool(&val);
-                assert(count == 1);
-                sprintf(buf, " = %s", val ? "true" : "false");
-            }
-            else if (argTypes[i]->IsUnsignedType()) {
-                uint64_t val;
-                int count = argDefaults[i]->AsUInt64(&val);
-                assert(count == 1);
-#ifdef ISPC_IS_LINUX
-                sprintf(buf, " = %lu", val);
-#else
-                sprintf(buf, " = %llu", val);
-#endif
-            }
-            else { 
-                int64_t val;
-                int count = argDefaults[i]->AsInt64(&val);
-                assert(count == 1);
-#ifdef ISPC_IS_LINUX
-                sprintf(buf, " = %ld", val);
-#else
-                sprintf(buf, " = %lld", val);
-#endif
-            }
-            ret += buf;
-        }
-        if (i != argTypes.size() - 1)
-            ret += ", ";
-    }
-    ret += ")";
-    return ret;
-}
-
-
-static void
-lPrintFunctionOverloads(const std::string &name,
-                        const std::vector<std::pair<int, Symbol *> > &matches) {
-    fprintf(stderr, "Matching functions:\n");
-    int minCost = matches[0].first;
-    for (unsigned int i = 1; i < matches.size(); ++i)
-        minCost = std::min(minCost, matches[i].first);
-
-    for (unsigned int i = 0; i < matches.size(); ++i) {
-        const FunctionType *t = 
-            dynamic_cast<const FunctionType *>(matches[i].second->type);
-        assert(t != NULL);
-        if (matches[i].first == minCost)
-            fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
-    }
-}
-
-
-static void
-lPrintFunctionOverloads(const std::string &name,
-                        const std::vector<Symbol *> &funcs) {
-    fprintf(stderr, "Candidate functions:\n");
-    for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *t = 
-            dynamic_cast<const FunctionType *>(funcs[i]->type);
-        assert(t != NULL);
-        fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
-    }
-}
-
-
-static void
-lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
-    fprintf(stderr, "Passed types: %*c(", (int)strlen(funName), ' ');
-    for (unsigned int i = 0; i < argExprs.size(); ++i) {
-        const Type *t;
-        if (argExprs[i] != NULL && (t = argExprs[i]->GetType()) != NULL)
-            fprintf(stderr, "%s%s", t->GetString().c_str(),
-                    (i < argExprs.size()-1) ? ", " : ")\n\n");
-        else
-            fprintf(stderr, "(unknown type)%s", 
-                    (i < argExprs.size()-1) ? ", " : ")\n\n");
-    }
-}
-
-             
-/** Helper function used for function overload resolution: returns zero
-    cost if the call argument's type exactly matches the function argument
-    type (modulo a conversion to a const type if needed), otherwise reports
-    failure.
- */ 
-static int
-lExactMatch(Expr *callArg, const Type *funcArgType) {
-    const Type *callType = callArg->GetType();
-
-    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = callType->GetAsNonConstType();
-    if (dynamic_cast<const ReferenceType *>(funcArgType) != NULL && 
-        dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = new ReferenceType(callType, funcArgType->IsConstType());
-
-    return Type::Equal(callType, funcArgType) ? 0 : -1;
-}
-
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if the call argument type and the function argument type match,
-    modulo conversion to a reference type if needed.
- */
-static int
-lMatchIgnoringReferences(Expr *callArg, const Type *funcArgType) {
-    int prev = lExactMatch(callArg, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    const Type *callType = callArg->GetType()->GetReferenceTarget();
-    if (funcArgType->IsConstType())
-        callType = callType->GetAsConstType();
-
-    return Type::Equal(callType,
-                       funcArgType->GetReferenceTarget()) ? 1 : -1;
-}
-
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if converting the argument to the call type only requires a type
-    conversion that won't lose information.  Otherwise reports failure.
-*/
-static int
-lMatchWithTypeWidening(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchIgnoringReferences(callArg, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    const Type *callType = callArg->GetType();
-    const AtomicType *callAt = dynamic_cast<const AtomicType *>(callType);
-    const AtomicType *funcAt = dynamic_cast<const AtomicType *>(funcArgType);
-    if (callAt == NULL || funcAt == NULL)
-        return -1;
-
-    if (callAt->IsUniformType() != funcAt->IsUniformType())
-        return -1;
-
-    switch (callAt->basicType) {
-    case AtomicType::TYPE_BOOL:
-        return 1;
-    case AtomicType::TYPE_INT8:
-    case AtomicType::TYPE_UINT8:
-        return (funcAt->basicType != AtomicType::TYPE_BOOL) ? 1 : -1;
-    case AtomicType::TYPE_INT16:
-    case AtomicType::TYPE_UINT16:
-        return (funcAt->basicType != AtomicType::TYPE_BOOL &&
-                funcAt->basicType != AtomicType::TYPE_INT8 &&
-                funcAt->basicType != AtomicType::TYPE_UINT8) ? 1 : -1;
-    case AtomicType::TYPE_INT32:
-    case AtomicType::TYPE_UINT32:
-        return (funcAt->basicType == AtomicType::TYPE_INT32 ||
-                funcAt->basicType == AtomicType::TYPE_UINT32 ||
-                funcAt->basicType == AtomicType::TYPE_INT64 ||
-                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
-    case AtomicType::TYPE_FLOAT:
-        return (funcAt->basicType == AtomicType::TYPE_DOUBLE) ? 1 : -1;
-    case AtomicType::TYPE_INT64:
-    case AtomicType::TYPE_UINT64:
-        return (funcAt->basicType == AtomicType::TYPE_INT64 ||
-                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
-    case AtomicType::TYPE_DOUBLE:
-        return -1;
-    default:
-        FATAL("Unhandled atomic type");
-        return -1;
-    }
-}
-
-
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if the call argument type and the function argument type match if
-    we only do a uniform -> varying type conversion but otherwise have
-    exactly the same type.
- */
-static int
-lMatchIgnoringUniform(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchWithTypeWidening(callArg, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    const Type *callType = callArg->GetType();
-    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = callType->GetAsNonConstType();
-
-    return (callType->IsUniformType() && 
-            funcArgType->IsVaryingType() &&
-            Type::Equal(callType->GetAsVaryingType(), funcArgType)) ? 1 : -1;
-}
-
-
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if we can type convert from the call argument type to the function
-    argument type, but without doing a uniform -> varying conversion.
- */
-static int
-lMatchWithTypeConvSameVariability(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchIgnoringUniform(callArg, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    Expr *te = callArg->TypeConv(funcArgType, 
-                                 "function call argument", true);
-    if (te != NULL && 
-        te->GetType()->IsUniformType() == callArg->GetType()->IsUniformType())
-        return 1;
-    else
-        return -1;
-}
-
-
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if there is any type conversion that gets us from the caller
-    argument type to the function argument type.
- */
-static int
-lMatchWithTypeConv(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchWithTypeConvSameVariability(callArg, funcArgType);
-    if (prev != -1)
-        return prev;
-        
-    Expr *te = callArg->TypeConv(funcArgType, 
-                                 "function call argument", true);
-    return (te != NULL) ? 0 : -1;
-}
-
-
-/** Given a set of potential matching functions and their associated cost,
-    return the one with the lowest cost, if unique.  Otherwise, if multiple
-    functions match with the same cost, return NULL.
- */
-static Symbol *
-lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
-    assert(matches.size() > 0);
-    int minCost = matches[0].first;
-
-    for (unsigned int i = 1; i < matches.size(); ++i)
-        minCost = std::min(minCost, matches[i].first);
-
-    Symbol *match = NULL;
-    for (unsigned int i = 0; i < matches.size(); ++i) {
-        if (matches[i].first == minCost) {
-            if (match != NULL)
-                // multiple things had the same cost
-                return NULL;
-            else
-                match = matches[i].second;
-        }
-    }
-    return match;
-}
-
-
-/** See if we can find a single function from the set of overload options
-    based on the predicate function passed in.  Returns true if no more
-    tries should be made to find a match, either due to success from
-    finding a single overloaded function that matches or failure due to
-    finding multiple ambiguous matches.
- */
-bool
-FunctionCallExpr::tryResolve(int (*matchFunc)(Expr *, const Type *)) {
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-
-    const char *funName = fse->candidateFunctions->front()->name.c_str();
-    std::vector<Expr *> &callArgs = args->exprs;
-
-    std::vector<std::pair<int, Symbol *> > matches;
-    std::vector<Symbol *>::iterator iter;
-    for (iter = fse->candidateFunctions->begin(); 
-         iter != fse->candidateFunctions->end(); ++iter) {
-        // Loop over the set of candidate functions and try each one
-        Symbol *candidateFunction = *iter;
-        const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(candidateFunction->type);
-        assert(ft != NULL);
-        const std::vector<const Type *> &funcArgTypes = ft->GetArgumentTypes();
-        const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
-
-        // There's no way to match if the caller is passing more arguments
-        // than this function instance takes.
-        if (callArgs.size() > funcArgTypes.size())
-            continue;
-
-        unsigned int i;
-        // Note that we're looping over the caller arguments, not the
-        // function arguments; it may be ok to have more arguments to the
-        // function than are passed, if the function has default argument
-        // values.  This case is handled below.
-        int cost = 0;
-        for (i = 0; i < callArgs.size(); ++i) {
-            // This may happen if there's an error earlier in compilation.
-            // It's kind of a silly to redundantly discover this for each
-            // potential match versus detecting this earlier in the
-            // matching process and just giving up.
-            if (!callArgs[i] || !callArgs[i]->GetType() || !funcArgTypes[i] ||
-                dynamic_cast<const FunctionType *>(callArgs[i]->GetType()) != NULL)
-                return false;
-            
-            int argCost = matchFunc(callArgs[i], funcArgTypes[i]);
-            if (argCost == -1)
-                // If the predicate function returns -1, we have failed no
-                // matter what else happens, so we stop trying
-                break;
-            cost += argCost;
-        }
-        if (i == callArgs.size()) {
-            // All of the arguments matched!
-            if (i == funcArgTypes.size())
-                // And we have exactly as many arguments as the function
-                // wants, so we're done.
-                matches.push_back(std::make_pair(cost, candidateFunction));
-            else if (i < funcArgTypes.size() && argumentDefaults[i] != NULL)
-                // Otherwise we can still make it if there are default
-                // arguments for the rest of the arguments!  Because in
-                // Module::AddFunction() we have verified that once the
-                // default arguments start, then all of the following ones
-                // have them as well.  Therefore, we just need to check if
-                // the arg we stopped at has a default value and we're
-                // done.
-                matches.push_back(std::make_pair(cost, candidateFunction));
-            // otherwise, we don't have a match
-        }
-    }
-
-    if (matches.size() == 0)
-        return false;
-    else if ((fse->matchingFunc = lGetBestMatch(matches)) != NULL) {
-        // We have a match--fill in with any default argument values
-        // needed.
-        const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(fse->matchingFunc->type);
-        assert(ft != NULL);
-        const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
-        const std::vector<const Type *> &argTypes = ft->GetArgumentTypes();
-        assert(argumentDefaults.size() == argTypes.size());
-        for (unsigned int i = callArgs.size(); i < argTypes.size(); ++i) {
-            assert(argumentDefaults[i] != NULL);
-            args->exprs.push_back(argumentDefaults[i]);
-        }
-        return true;
-    }
-    else {
-        Error(fse->pos, "Multiple overloaded instances of function \"%s\" matched.",
-              funName);
-        lPrintFunctionOverloads(funName, matches);
-        lPrintPassedTypes(funName, args->exprs);
-        // Stop trying to find more matches after failure
-        return true;
-    }
-}
-
-
-void
-FunctionCallExpr::resolveFunctionOverloads(bool exactMatchOnly) {
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    if (!fse) 
-        // error will be issued later if not calling an actual function
-        return;
-    assert(args);
-    
-    // Is there an exact match that doesn't require any argument type
-    // conversion (other than converting type -> reference type)?
-    if (tryResolve(lExactMatch))
-        return;
-
-    if (!exactMatchOnly) {
-        // Try to find a single match ignoring references
-        if (tryResolve(lMatchIgnoringReferences))
-            return;
-
-        // Try to find an exact match via type widening--i.e. int8 ->
-        // int16, etc.--things that don't lose data.
-        if (tryResolve(lMatchWithTypeWidening))
-            return;
-
-        // Next try to see if there's a match via just uniform -> varying
-        // promotions.
-        if (tryResolve(lMatchIgnoringUniform))
-            return;
-
-        // Try to find a match via type conversion, but don't change
-        // unif->varying
-        if (tryResolve(lMatchWithTypeConvSameVariability))
-            return;
-    
-        // Last chance: try to find a match via arbitrary type conversion.
-        if (tryResolve(lMatchWithTypeConv))
-            return;
-    }
-
-    // failure :-(
-    const char *funName = fse->candidateFunctions->front()->name.c_str();
-    Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
-          funName, exactMatchOnly ? " only considering exact matches" : "");
-    lPrintFunctionOverloads(funName, *fse->candidateFunctions);
-    lPrintPassedTypes(funName, args->exprs);
-}
-
-
 FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p, 
                                    bool il, Expr *lce) 
     : Expr(p), isLaunch(il) {
     func = f;
     args = a;
     launchCountExpr = lce;
-
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    // Functions with names that start with "__" should only be various
-    // builtins.  For those, we'll demand an exact match, since we'll
-    // expect whichever function in stdlib.ispc is calling out to one of
-    // those to be matching the argument types exactly; this is to be a bit
-    // extra safe to be sure that the expected builtin is in fact being
-    // called.
-    bool exactMatchOnly = (fse != NULL) && (fse->name.substr(0,2) == "__");
-    resolveFunctionOverloads(exactMatchOnly);
 }
 
 
@@ -2481,18 +2045,16 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    if (!fse) {
-        Error(pos, "No valid function available for function call.");
-        return NULL;
-    }
+    assert(fse != NULL); // should be caught during typechecking
 
-    if (!fse->matchingFunc) 
-        // no overload match was found, get out of here..
+    Symbol *funSym = fse->GetMatchingFunction();
+    if (funSym == NULL)
+        // No match was found; an error should have been issued earlier, so
+        // just return.
         return NULL;
 
-    Symbol *funSym = fse->matchingFunc;
     llvm::Function *callee = funSym->function;
-    if (!callee) {
+    if (callee == NULL) {
         Error(pos, "Symbol \"%s\" is not a function.", funSym->name.c_str());
         return NULL;
     }
@@ -2510,7 +2072,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     bool err = false;
     for (unsigned int i = 0; i < callargs.size(); ++i) {
         Expr *argExpr = callargs[i];
-        if (!argExpr)
+        if (argExpr == NULL)
             continue;
 
         // All arrays should already have been converted to reference types
@@ -2545,6 +2107,19 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     if (err)
         return NULL;
+
+    // Fill in any default argument values needed.
+    // FIXME: should we do this during type checking?
+    const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
+    for (unsigned int i = callargs.size(); i < argumentDefaults.size(); ++i) {
+        assert(argumentDefaults[i] != NULL);
+        Expr *defaultExpr = argumentDefaults[i]->TypeConv(argTypes[i], 
+                                                          "function call default argument");
+        if (defaultExpr == NULL)
+            return NULL;
+
+        callargs.push_back(defaultExpr);
+    }
 
     // Now evaluate the values of all of the parameters being passed.  We
     // need to evaluate these first here, since their GetValue() calls may
@@ -2594,6 +2169,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
     }
 
+
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
     if (ft->isTask) {
@@ -2641,14 +2217,16 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 const Type *
 FunctionCallExpr::GetType() const {
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    if (fse && fse->matchingFunc) {
-        const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(fse->matchingFunc->type);
-        assert(ft != NULL);
-        return ft->GetReturnType();
-    }
-    else
+    if (fse == NULL)
         return NULL;
+
+    Symbol *sym = fse->GetMatchingFunction();
+    if (sym == NULL)
+        return NULL;
+
+    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
+    assert(ft != NULL);
+    return ft->GetReturnType();
 }
 
 
@@ -2667,40 +2245,51 @@ FunctionCallExpr::Optimize() {
 
 Expr *
 FunctionCallExpr::TypeCheck() {
-    if (func) {
-        func = func->TypeCheck();
-        if (func != NULL) {
-            const FunctionType *ft = dynamic_cast<const FunctionType *>(func->GetType());
-            if (ft != NULL) {
-                if (ft->isTask) {
-                    if (!isLaunch)
-                        Error(pos, "\"launch\" expression needed to call function "
-                              "with \"task\" qualifier.");
-                    if (!launchCountExpr)
-                        return NULL;
+    if (args != NULL) 
+        args = args->TypeCheck();
 
-                    launchCountExpr = 
-                        launchCountExpr->TypeConv(AtomicType::UniformInt32,
-                                                  "task launch count");
-                    if (!launchCountExpr)
-                        return NULL;
+    if (args != NULL && func != NULL) {
+        FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+
+        if (fse == NULL) {
+            Error(pos, "No valid function available for function call.");
+            return NULL;
+        }
+
+        if (fse->ResolveOverloads(args->exprs) == true) {
+            func = fse->TypeCheck();
+
+            if (func != NULL) {
+                const FunctionType *ft = 
+                    dynamic_cast<const FunctionType *>(func->GetType());
+                if (ft != NULL) {
+                    if (ft->isTask) {
+                        if (!isLaunch)
+                            Error(pos, "\"launch\" expression needed to call function "
+                                  "with \"task\" qualifier.");
+                        if (!launchCountExpr)
+                            return NULL;
+
+                        launchCountExpr = 
+                            launchCountExpr->TypeConv(AtomicType::UniformInt32,
+                                                      "task launch count");
+                        if (!launchCountExpr)
+                            return NULL;
+                    }
+                    else {
+                        if (isLaunch)
+                            Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                                  "qualified function.");
+                        assert(launchCountExpr == NULL);
+                    }
                 }
-                else {
-                    if (isLaunch)
-                        Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                              "qualified function.");
-                    assert(launchCountExpr == NULL);
-                }
+                else
+                    Error(pos, "Valid function name must be used for function call.");
             }
-            else
-                Error(pos, "Valid function name must be used for function call.");
         }
     }
 
-    if (args) 
-        args = args->TypeCheck();
-
-    if (!func || !args)
+    if (func == NULL || args == NULL)
         return NULL;
     return this;
 }
@@ -4324,10 +3913,11 @@ ConstExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // TypeCastExpr
 
-TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) 
+TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, bool pu, SourcePos p) 
   : Expr(p) {
     type = t;
     expr = e;
+    preserveUniformity = pu;
 }
 
 
@@ -5029,6 +4619,13 @@ TypeCastExpr::TypeCheck() {
     if (toType == NULL || fromType == NULL)
         return NULL;
 
+    if (preserveUniformity == true && fromType->IsUniformType() &&
+        toType->IsVaryingType()) {
+        TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(),
+                                             expr, false, pos);
+        return tce->TypeCheck();
+    }
+
     const char *toTypeString = toType->GetString().c_str();
     const char *fromTypeString = fromType->GetString().c_str();
 
@@ -5491,6 +5088,434 @@ FunctionSymbolExpr::Print() const {
     printf("[%s] fun sym (%s)", GetType()->GetString().c_str(),
            matchingFunc->name.c_str());
     pos.Print();
+}
+
+
+
+static std::string
+lGetFunctionDeclaration(const std::string &name, const FunctionType *type) {
+    std::string ret;
+    ret += type->GetReturnType()->GetString();
+    ret += " ";
+    ret += name;
+    ret += "(";
+
+    const std::vector<const Type *> &argTypes = type->GetArgumentTypes();
+    const std::vector<ConstExpr *> &argDefaults = type->GetArgumentDefaults();
+
+    for (unsigned int i = 0; i < argTypes.size(); ++i) {
+        // If the parameter is a reference to an array, just print its type
+        // as the array type, since we always pass arrays by reference.
+        if (dynamic_cast<const ReferenceType *>(argTypes[i]) &&
+            dynamic_cast<const ArrayType *>(argTypes[i]->GetReferenceTarget()))
+            ret += argTypes[i]->GetReferenceTarget()->GetString();
+        else
+            ret += argTypes[i]->GetString();
+        ret += " ";
+        ret += type->GetArgumentName(i);
+
+        // Print the default value if present
+        if (argDefaults[i] != NULL) {
+            char buf[32];
+            if (argTypes[i]->IsFloatType()) {
+                double val;
+                int count = argDefaults[i]->AsDouble(&val);
+                assert(count == 1);
+                sprintf(buf, " = %g", val);
+            }
+            else if (argTypes[i]->IsBoolType()) {
+                bool val;
+                int count = argDefaults[i]->AsBool(&val);
+                assert(count == 1);
+                sprintf(buf, " = %s", val ? "true" : "false");
+            }
+            else if (argTypes[i]->IsUnsignedType()) {
+                uint64_t val;
+                int count = argDefaults[i]->AsUInt64(&val);
+                assert(count == 1);
+#ifdef ISPC_IS_LINUX
+                sprintf(buf, " = %lu", val);
+#else
+                sprintf(buf, " = %llu", val);
+#endif
+            }
+            else { 
+                int64_t val;
+                int count = argDefaults[i]->AsInt64(&val);
+                assert(count == 1);
+#ifdef ISPC_IS_LINUX
+                sprintf(buf, " = %ld", val);
+#else
+                sprintf(buf, " = %lld", val);
+#endif
+            }
+            ret += buf;
+        }
+        if (i != argTypes.size() - 1)
+            ret += ", ";
+    }
+    ret += ")";
+    return ret;
+}
+
+
+static void
+lPrintFunctionOverloads(const std::string &name,
+                        const std::vector<std::pair<int, Symbol *> > &matches) {
+    fprintf(stderr, "Matching functions:\n");
+    int minCost = matches[0].first;
+    for (unsigned int i = 1; i < matches.size(); ++i)
+        minCost = std::min(minCost, matches[i].first);
+
+    for (unsigned int i = 0; i < matches.size(); ++i) {
+        const FunctionType *t = 
+            dynamic_cast<const FunctionType *>(matches[i].second->type);
+        assert(t != NULL);
+        if (matches[i].first == minCost)
+            fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
+    }
+}
+
+
+static void
+lPrintFunctionOverloads(const std::string &name,
+                        const std::vector<Symbol *> &funcs) {
+    fprintf(stderr, "Candidate functions:\n");
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *t = 
+            dynamic_cast<const FunctionType *>(funcs[i]->type);
+        assert(t != NULL);
+        fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
+    }
+}
+
+
+static void
+lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
+    fprintf(stderr, "Passed types: %*c(", (int)strlen(funName), ' ');
+    for (unsigned int i = 0; i < argExprs.size(); ++i) {
+        const Type *t;
+        if (argExprs[i] != NULL && (t = argExprs[i]->GetType()) != NULL)
+            fprintf(stderr, "%s%s", t->GetString().c_str(),
+                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+        else
+            fprintf(stderr, "(unknown type)%s", 
+                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+    }
+}
+
+             
+/** Helper function used for function overload resolution: returns zero
+    cost if the call argument's type exactly matches the function argument
+    type (modulo a conversion to a const type if needed), otherwise reports
+    failure.
+ */ 
+static int
+lExactMatch(Expr *callArg, const Type *funcArgType) {
+    const Type *callType = callArg->GetType();
+
+    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
+        callType = callType->GetAsNonConstType();
+    if (dynamic_cast<const ReferenceType *>(funcArgType) != NULL && 
+        dynamic_cast<const ReferenceType *>(callType) == NULL)
+        callType = new ReferenceType(callType, funcArgType->IsConstType());
+
+    return Type::Equal(callType, funcArgType) ? 0 : -1;
+}
+
+
+/** Helper function used for function overload resolution: returns a cost
+    of 1 if the call argument type and the function argument type match,
+    modulo conversion to a reference type if needed.
+ */
+static int
+lMatchIgnoringReferences(Expr *callArg, const Type *funcArgType) {
+    int prev = lExactMatch(callArg, funcArgType);
+    if (prev != -1)
+        return prev;
+
+    const Type *callType = callArg->GetType()->GetReferenceTarget();
+    if (funcArgType->IsConstType())
+        callType = callType->GetAsConstType();
+
+    return Type::Equal(callType,
+                       funcArgType->GetReferenceTarget()) ? 1 : -1;
+}
+
+/** Helper function used for function overload resolution: returns a cost
+    of 1 if converting the argument to the call type only requires a type
+    conversion that won't lose information.  Otherwise reports failure.
+*/
+static int
+lMatchWithTypeWidening(Expr *callArg, const Type *funcArgType) {
+    int prev = lMatchIgnoringReferences(callArg, funcArgType);
+    if (prev != -1)
+        return prev;
+
+    const Type *callType = callArg->GetType();
+    const AtomicType *callAt = dynamic_cast<const AtomicType *>(callType);
+    const AtomicType *funcAt = dynamic_cast<const AtomicType *>(funcArgType);
+    if (callAt == NULL || funcAt == NULL)
+        return -1;
+
+    if (callAt->IsUniformType() != funcAt->IsUniformType())
+        return -1;
+
+    switch (callAt->basicType) {
+    case AtomicType::TYPE_BOOL:
+        return 1;
+    case AtomicType::TYPE_INT8:
+    case AtomicType::TYPE_UINT8:
+        return (funcAt->basicType != AtomicType::TYPE_BOOL) ? 1 : -1;
+    case AtomicType::TYPE_INT16:
+    case AtomicType::TYPE_UINT16:
+        return (funcAt->basicType != AtomicType::TYPE_BOOL &&
+                funcAt->basicType != AtomicType::TYPE_INT8 &&
+                funcAt->basicType != AtomicType::TYPE_UINT8) ? 1 : -1;
+    case AtomicType::TYPE_INT32:
+    case AtomicType::TYPE_UINT32:
+        return (funcAt->basicType == AtomicType::TYPE_INT32 ||
+                funcAt->basicType == AtomicType::TYPE_UINT32 ||
+                funcAt->basicType == AtomicType::TYPE_INT64 ||
+                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
+    case AtomicType::TYPE_FLOAT:
+        return (funcAt->basicType == AtomicType::TYPE_DOUBLE) ? 1 : -1;
+    case AtomicType::TYPE_INT64:
+    case AtomicType::TYPE_UINT64:
+        return (funcAt->basicType == AtomicType::TYPE_INT64 ||
+                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
+    case AtomicType::TYPE_DOUBLE:
+        return -1;
+    default:
+        FATAL("Unhandled atomic type");
+        return -1;
+    }
+}
+
+
+/** Helper function used for function overload resolution: returns a cost
+    of 1 if the call argument type and the function argument type match if
+    we only do a uniform -> varying type conversion but otherwise have
+    exactly the same type.
+ */
+static int
+lMatchIgnoringUniform(Expr *callArg, const Type *funcArgType) {
+    int prev = lMatchWithTypeWidening(callArg, funcArgType);
+    if (prev != -1)
+        return prev;
+
+    const Type *callType = callArg->GetType();
+    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
+        callType = callType->GetAsNonConstType();
+
+    return (callType->IsUniformType() && 
+            funcArgType->IsVaryingType() &&
+            Type::Equal(callType->GetAsVaryingType(), funcArgType)) ? 1 : -1;
+}
+
+
+/** Helper function used for function overload resolution: returns a cost
+    of 1 if we can type convert from the call argument type to the function
+    argument type, but without doing a uniform -> varying conversion.
+ */
+static int
+lMatchWithTypeConvSameVariability(Expr *callArg, const Type *funcArgType) {
+    int prev = lMatchIgnoringUniform(callArg, funcArgType);
+    if (prev != -1)
+        return prev;
+
+    Expr *te = callArg->TypeConv(funcArgType, 
+                                 "function call argument", true);
+    if (te != NULL && 
+        te->GetType()->IsUniformType() == callArg->GetType()->IsUniformType())
+        return 1;
+    else
+        return -1;
+}
+
+
+/** Helper function used for function overload resolution: returns a cost
+    of 1 if there is any type conversion that gets us from the caller
+    argument type to the function argument type.
+ */
+static int
+lMatchWithTypeConv(Expr *callArg, const Type *funcArgType) {
+    int prev = lMatchWithTypeConvSameVariability(callArg, funcArgType);
+    if (prev != -1)
+        return prev;
+        
+    Expr *te = callArg->TypeConv(funcArgType, 
+                                 "function call argument", true);
+    return (te != NULL) ? 0 : -1;
+}
+
+
+/** Given a set of potential matching functions and their associated cost,
+    return the one with the lowest cost, if unique.  Otherwise, if multiple
+    functions match with the same cost, return NULL.
+ */
+static Symbol *
+lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
+    assert(matches.size() > 0);
+    int minCost = matches[0].first;
+
+    for (unsigned int i = 1; i < matches.size(); ++i)
+        minCost = std::min(minCost, matches[i].first);
+
+    Symbol *match = NULL;
+    for (unsigned int i = 0; i < matches.size(); ++i) {
+        if (matches[i].first == minCost) {
+            if (match != NULL)
+                // multiple things had the same cost
+                return NULL;
+            else
+                match = matches[i].second;
+        }
+    }
+    return match;
+}
+
+
+/** See if we can find a single function from the set of overload options
+    based on the predicate function passed in.  Returns true if no more
+    tries should be made to find a match, either due to success from
+    finding a single overloaded function that matches or failure due to
+    finding multiple ambiguous matches.
+ */
+bool
+FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
+                               const std::vector<Expr *> &callArgs) {
+    const char *funName = candidateFunctions->front()->name.c_str();
+
+    std::vector<std::pair<int, Symbol *> > matches;
+    std::vector<Symbol *>::iterator iter;
+    for (iter = candidateFunctions->begin(); 
+         iter != candidateFunctions->end(); ++iter) {
+        // Loop over the set of candidate functions and try each one
+        Symbol *candidateFunction = *iter;
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(candidateFunction->type);
+        assert(ft != NULL);
+        const std::vector<const Type *> &funcArgTypes = ft->GetArgumentTypes();
+        const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
+
+        // There's no way to match if the caller is passing more arguments
+        // than this function instance takes.
+        if (callArgs.size() > funcArgTypes.size())
+            continue;
+
+        unsigned int i;
+        // Note that we're looping over the caller arguments, not the
+        // function arguments; it may be ok to have more arguments to the
+        // function than are passed, if the function has default argument
+        // values.  This case is handled below.
+        int cost = 0;
+        for (i = 0; i < callArgs.size(); ++i) {
+            // This may happen if there's an error earlier in compilation.
+            // It's kind of a silly to redundantly discover this for each
+            // potential match versus detecting this earlier in the
+            // matching process and just giving up.
+            if (!callArgs[i] || !callArgs[i]->GetType() || !funcArgTypes[i] ||
+                dynamic_cast<const FunctionType *>(callArgs[i]->GetType()) != NULL)
+                return false;
+            
+            int argCost = matchFunc(callArgs[i], funcArgTypes[i]);
+            if (argCost == -1)
+                // If the predicate function returns -1, we have failed no
+                // matter what else happens, so we stop trying
+                break;
+            cost += argCost;
+        }
+        if (i == callArgs.size()) {
+            // All of the arguments matched!
+            if (i == funcArgTypes.size())
+                // And we have exactly as many arguments as the function
+                // wants, so we're done.
+                matches.push_back(std::make_pair(cost, candidateFunction));
+            else if (i < funcArgTypes.size() && argumentDefaults[i] != NULL)
+                // Otherwise we can still make it if there are default
+                // arguments for the rest of the arguments!  Because in
+                // Module::AddFunction() we have verified that once the
+                // default arguments start, then all of the following ones
+                // have them as well.  Therefore, we just need to check if
+                // the arg we stopped at has a default value and we're
+                // done.
+                matches.push_back(std::make_pair(cost, candidateFunction));
+            // otherwise, we don't have a match
+        }
+    }
+
+    if (matches.size() == 0)
+        return false;
+    else if ((matchingFunc = lGetBestMatch(matches)) != NULL)
+        // We have a match!
+        return true;
+    else {
+        Error(pos, "Multiple overloaded instances of function \"%s\" matched.",
+              funName);
+        lPrintFunctionOverloads(funName, matches);
+        lPrintPassedTypes(funName, callArgs);
+        // Stop trying to find more matches after an ambigious set of
+        // matches.
+        return true;
+    }
+}
+
+
+bool
+FunctionSymbolExpr::ResolveOverloads(const std::vector<Expr *> &callArgs) {
+    // Functions with names that start with "__" should only be various
+    // builtins.  For those, we'll demand an exact match, since we'll
+    // expect whichever function in stdlib.ispc is calling out to one of
+    // those to be matching the argument types exactly; this is to be a bit
+    // extra safe to be sure that the expected builtin is in fact being
+    // called.
+    bool exactMatchOnly = (name.substr(0,2) == "__");
+
+    // Is there an exact match that doesn't require any argument type
+    // conversion (other than converting type -> reference type)?
+    if (tryResolve(lExactMatch, callArgs))
+        return true;
+
+    if (exactMatchOnly == false) {
+        // Try to find a single match ignoring references
+        if (tryResolve(lMatchIgnoringReferences, callArgs))
+            return true;
+
+        // Try to find an exact match via type widening--i.e. int8 ->
+        // int16, etc.--things that don't lose data.
+        if (tryResolve(lMatchWithTypeWidening, callArgs))
+            return true;
+
+        // Next try to see if there's a match via just uniform -> varying
+        // promotions.
+        if (tryResolve(lMatchIgnoringUniform, callArgs))
+            return true;
+
+        // Try to find a match via type conversion, but don't change
+        // unif->varying
+        if (tryResolve(lMatchWithTypeConvSameVariability,
+                       callArgs))
+            return true;
+    
+        // Last chance: try to find a match via arbitrary type conversion.
+        if (tryResolve(lMatchWithTypeConv, callArgs))
+            return true;
+    }
+
+    // failure :-(
+    const char *funName = candidateFunctions->front()->name.c_str();
+    Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
+          funName, exactMatchOnly ? " only considering exact matches" : "");
+    lPrintFunctionOverloads(funName, *candidateFunctions);
+    lPrintPassedTypes(funName, callArgs);
+    return false;
+}
+
+
+Symbol *
+FunctionSymbolExpr::GetMatchingFunction() {
+    return matchingFunc;
 }
 
 

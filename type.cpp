@@ -1887,6 +1887,15 @@ FunctionType::SetArgumentDefaults(const std::vector<ConstExpr *> &d) const {
 }
 
 
+std::string
+FunctionType::GetArgumentName(int i) const { 
+    if (i >= (int)argNames.size())
+        return "";
+    else
+        return argNames[i]; 
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Type
 

@@ -519,15 +519,16 @@ Stmt *IfStmt::TypeCheck() {
         if (test) {
             const Type *testType = test->GetType();
             if (testType) {
-                bool isUniform = testType->IsUniformType() && !g->opt.disableUniformControlFlow;
+                bool isUniform = (testType->IsUniformType() && 
+                                  !g->opt.disableUniformControlFlow);
                 if (!testType->IsNumericType() && !testType->IsBoolType()) {
-                    Error(test->pos, "Type \"%s\" can't be converted to boolean for \"if\" test.",
-                          testType->GetString().c_str());
+                    Error(test->pos, "Type \"%s\" can't be converted to boolean "
+                          "for \"if\" test.", testType->GetString().c_str());
                     return NULL;
                 }
                 test = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
-                                        AtomicType::VaryingBool, 
-                                        test, test->pos);
+                                                    AtomicType::VaryingBool, 
+                                        test, false, test->pos);
                 assert(test);
             }
         }
@@ -1171,7 +1172,7 @@ DoStmt::TypeCheck() {
                                     !lHasVaryingBreakOrContinue(bodyStmts));
                 testExpr = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
                                                           AtomicType::VaryingBool,
-                                            testExpr, testExpr->pos);
+                                            testExpr, false, testExpr->pos);
             }
         }
     }
@@ -1373,7 +1374,7 @@ ForStmt::TypeCheck() {
                                     !lHasVaryingBreakOrContinue(stmts));
                 test = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
                                                       AtomicType::VaryingBool,
-                                        test, test->pos);
+                                        test, false, test->pos);
             }
         }
     }
@@ -1685,7 +1686,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
         baseType == AtomicType::UniformUInt16) {
         expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
                                                         AtomicType::VaryingInt32, 
-                                expr, expr->pos);
+                                expr, false, expr->pos);
         type = expr->GetType();
     }
         
@@ -1908,7 +1909,7 @@ AssertStmt::TypeCheck() {
             }
             expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
                                                 AtomicType::VaryingBool, 
-                                    expr, expr->pos);
+                                    expr, false, expr->pos);
         }
     }
     return this;

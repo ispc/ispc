@@ -677,7 +677,7 @@ public:
 
     const std::vector<const Type *> &GetArgumentTypes() const { return argTypes; }
     const std::vector<ConstExpr *> &GetArgumentDefaults() const { return argDefaults; }
-    const std::string &GetArgumentName(int i) const { return argNames[i]; }
+    std::string GetArgumentName(int i) const;
 
     /** @todo It would be nice to pull this information together and pass
         it when the constructor is called; it's kind of ugly to set it like
