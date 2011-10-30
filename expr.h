@@ -89,14 +89,6 @@ public:
 
     /** Prints the expression to standard output (used for debugging). */
     virtual void Print() const = 0;
-
-    /** This method tries to convert the expression to the given type.  In
-        the event of failure, if the failureOk parameter is true, then no
-        error is issued.  If failureOk is false, then an error is printed
-        that incorporates the given error message string.  In either
-        failure case, NULL is returned.  */
-    Expr *TypeConv(const Type *type, const char *errorMsgBase = NULL, 
-                   bool failureOk = false, bool issuePrecisionWarnings = true);
 };
 
 
@@ -577,12 +569,12 @@ public:
     void Print() const;
     int EstimateCost() const;
 
-    bool ResolveOverloads(const std::vector<Expr *> &args);
+    bool ResolveOverloads(const std::vector<const Type *> &argTypes);
     Symbol *GetMatchingFunction();
 
 private:
-    bool tryResolve(int (*matchFunc)(Expr *, const Type *),
-                    const std::vector<Expr *> &args);
+    bool tryResolve(int (*matchFunc)(const Type *, const Type *),
+                    const std::vector<const Type *> &argTypes);
 
     /** Name of the function that is being called. */
     std::string name;
@@ -610,5 +602,20 @@ public:
     void Print() const;
     int EstimateCost() const;
 };
+
+
+/** This function indicates whether it's legal to convert from fromType to
+    toType.
+ */
+bool CanConvertTypes(const Type *fromType, const Type *toType);
+
+/** This function attempts to convert the given expression to the given
+    type, returning a pointer to a new expression that is the result.  If
+    the required type conversion is illegal, it returns NULL and prints an
+    error message using the provided string to indicate the context for
+    which type conversion was being applied (e.g. "function call
+    parameter").
+ */
+Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase);
 
 #endif // ISPC_EXPR_H

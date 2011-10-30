@@ -652,18 +652,19 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     }
     else {
         if (expr == NULL) {
-            Error(funcStartPos,
-                  "Must provide return value for return statement for non-void function.");
+            Error(funcStartPos, "Must provide return value for return "
+                  "statement for non-void function.");
             return;
         }
         
-        // Use a masked store to store the value of the expression in the
-        // return value memory; this preserves the return values from other
-        // lanes that may have executed return statements previously.
-        Expr *r = expr->TypeConv(returnType, "return statement");
-        if (r != NULL) {
-            llvm::Value *retVal = r->GetValue(this);
+        expr = TypeConvertExpr(expr, returnType, "return statement");
+        if (expr != NULL) {
+            llvm::Value *retVal = expr->GetValue(this);
             if (retVal != NULL)
+                // Use a masked store to store the value of the expression
+                // in the return value memory; this preserves the return
+                // values from other lanes that may have executed return
+                // statements previously.
                 StoreInst(retVal, returnValuePtr, GetInternalMask(), returnType);
         }
     }

@@ -146,9 +146,9 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *type,
     // ExprList, then we'll see if we can type convert it to the type of
     // the variable.
     if (dynamic_cast<ExprList *>(initExpr) == NULL) {
-        Expr *tcInit = initExpr->TypeConv(type, "inititalizer", true);
-        if (tcInit != NULL) {
-            llvm::Value *initializerValue = tcInit->GetValue(ctx);
+        initExpr = TypeConvertExpr(initExpr, type, "initializer");
+        if (initExpr != NULL) {
+            llvm::Value *initializerValue = initExpr->GetValue(ctx);
             if (initializerValue != NULL)
                 // Bingo; store the value in the variable's storage
                 ctx->StoreInst(initializerValue, lvalue);
@@ -380,10 +380,14 @@ DeclStmt::TypeCheck() {
         if (dynamic_cast<const AtomicType *>(type) != NULL ||
             dynamic_cast<const EnumType *>(type) != NULL) {
             // If it's an expr list with an atomic type, we'll later issue
-            // an error.  Need to leave decl->initExpr as is in that case so it
-            // is in fact caught later, though.
-            if (dynamic_cast<ExprList *>(vars[i].init) == NULL)
-                vars[i].init = vars[i].init->TypeConv(type, "initializer");
+            // an error.  Need to leave vars[i].init as is in that case so
+            // it is in fact caught later, though.
+            if (dynamic_cast<ExprList *>(vars[i].init) == NULL) {
+                vars[i].init = TypeConvertExpr(vars[i].init, type,
+                                               "initializer");
+                if (vars[i].init == NULL)
+                    encounteredError = true;
+            }
         }
     }
     return encounteredError ? NULL : this;

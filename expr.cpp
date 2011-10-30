@@ -125,33 +125,34 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 }
 #endif
 
-Expr *
-Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
-               bool issuePrecisionWarnings) {
+///////////////////////////////////////////////////////////////////////////
+
+static bool
+lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
+            bool failureOk, const char *errorMsgBase, SourcePos pos) {
     /* This function is way too long and complex.  Is type conversion stuff
        always this messy, or can this be cleaned up somehow? */
     assert(failureOk || errorMsgBase != NULL);
 
-    const Type *fromType = GetType();
     if (toType == NULL || fromType == NULL)
-        return this;
+        return false;
 
     // The types are equal; there's nothing to do
     if (Type::Equal(toType, fromType))
-        return this;
+        return true;
 
     if (fromType == AtomicType::Void) {
         if (!failureOk)
             Error(pos, "Can't convert from \"void\" to \"%s\" for %s.",
                   toType->GetString().c_str(), errorMsgBase);
-        return NULL;
+        return false;
     }
 
     if (toType == AtomicType::Void) {
         if (!failureOk)
             Error(pos, "Can't convert type \"%s\" to \"void\" for %s.",
                   fromType->GetString().c_str(), errorMsgBase);
-        return NULL;
+        return false;
     }
 
     if (toType->IsUniformType() && fromType->IsVaryingType()) {
@@ -159,13 +160,24 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             Error(pos, "Can't convert from varying type \"%s\" to uniform "
                   "type \"%s\" for %s.", fromType->GetString().c_str(), 
                   toType->GetString().c_str(), errorMsgBase);
-        return NULL;
+        return false;
     }
+
+    const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
+    const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
+    const VectorType *toVectorType = dynamic_cast<const VectorType *>(toType);
+    const VectorType *fromVectorType = dynamic_cast<const VectorType *>(fromType);
+    const StructType *toStructType = dynamic_cast<const StructType *>(toType);
+    const StructType *fromStructType = dynamic_cast<const StructType *>(fromType);
+    const EnumType *toEnumType = dynamic_cast<const EnumType *>(toType);
+    const EnumType *fromEnumType = dynamic_cast<const EnumType *>(fromType);
+    const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
+    const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
 
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
     if (Type::Equal(toType, fromType->GetAsConstType()))
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
     
     if (dynamic_cast<const ReferenceType *>(fromType)) {
         if (dynamic_cast<const ReferenceType *>(toType)) {
@@ -173,75 +185,91 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             // this is handled by TypeCastExpr
             if (Type::Equal(toType->GetReferenceTarget(),
                             fromType->GetReferenceTarget()->GetAsConstType()))
-                return new TypeCastExpr(toType, this, false, pos);
+                goto typecast_ok;
 
-            const ArrayType *atFrom = dynamic_cast<const ArrayType *>(fromType->GetReferenceTarget());
-            const ArrayType *atTo = dynamic_cast<const ArrayType *>(toType->GetReferenceTarget());
+            const ArrayType *atFrom = 
+                dynamic_cast<const ArrayType *>(fromType->GetReferenceTarget());
+            const ArrayType *atTo = 
+                dynamic_cast<const ArrayType *>(toType->GetReferenceTarget());
+
             if (atFrom != NULL && atTo != NULL && 
-                Type::Equal(atFrom->GetElementType(), atTo->GetElementType()))
-                return new TypeCastExpr(toType, this, false, pos);
-
+                Type::Equal(atFrom->GetElementType(), atTo->GetElementType())) {
+                goto typecast_ok;
+            }
             else {
                 if (!failureOk)
                     Error(pos, "Can't convert between incompatible reference types \"%s\" "
                           "and \"%s\" for %s.", fromType->GetString().c_str(),
                           toType->GetString().c_str(), errorMsgBase);
-                return NULL;
+                return false;
             }
         }
         else {
             // convert from a reference T -> T
-            Expr *fromExpr = new DereferenceExpr(this, pos);
-            if (fromExpr->GetType() == NULL)
-                return NULL;
-            return fromExpr->TypeConv(toType, errorMsgBase, failureOk);
+            if (expr != NULL) {
+                Expr *drExpr = new DereferenceExpr(*expr, pos);
+                if (lDoTypeConv(drExpr->GetType(), toType, &drExpr, failureOk, 
+                                errorMsgBase, pos) == true) {
+                    *expr = drExpr;
+                    return true;
+                }
+                return false;
+            }
+            else
+                return lDoTypeConv(fromType->GetReferenceTarget(), toType, NULL,
+                                   failureOk, errorMsgBase, pos);
         }
     }
     else if (dynamic_cast<const ReferenceType *>(toType)) {
         // T -> reference T
-        Expr *fromExpr = new ReferenceExpr(this, pos);
-        if (fromExpr->GetType() == NULL)
-            return NULL;
-        return fromExpr->TypeConv(toType, errorMsgBase, failureOk);
+        if (expr != NULL) {
+            Expr *rExpr = new ReferenceExpr(*expr, pos);
+            if (lDoTypeConv(rExpr->GetType(), toType, &rExpr, failureOk,
+                            errorMsgBase, pos) == true) {
+                *expr = rExpr;
+                return true;
+            }
+            return false;
+        }
+        else
+            return lDoTypeConv(new ReferenceType(fromType, toType->IsConstType()),
+                               toType, NULL, failureOk, errorMsgBase, pos);
     }
     else if (Type::Equal(toType, fromType->GetAsNonConstType()))
         // convert: const T -> T (as long as T isn't a reference)
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
 
     fromType = fromType->GetReferenceTarget();
     toType = toType->GetReferenceTarget();
-    // I don't think this is necessary
-//CO    if (Type::Equal(toType, fromType))
-//CO        return fromExpr;
 
-    const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
-    const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
     if (toArrayType && fromArrayType) {
         if (Type::Equal(toArrayType->GetElementType(), 
                         fromArrayType->GetElementType())) {
             // the case of different element counts should have returned
             // out earlier, yes??
             assert(toArrayType->GetElementCount() != fromArrayType->GetElementCount());
-            return new TypeCastExpr(new ReferenceType(toType, false), this, 
-                                    false, pos);
+            if (expr != NULL)
+                *expr = new TypeCastExpr(new ReferenceType(toType, false), 
+                                         *expr, false, pos);
+            return true;
         }
         else if (Type::Equal(toArrayType->GetElementType(), 
                              fromArrayType->GetElementType()->GetAsConstType())) {
             // T[x] -> const T[x]
-            return new TypeCastExpr(new ReferenceType(toType, false), this, 
-                                    false, pos);
+            if (expr != NULL)
+                *expr = new TypeCastExpr(new ReferenceType(toType, false), 
+                                         *expr, false, pos);
+            return true;
         }
         else {
             if (!failureOk)
                 Error(pos, "Array type \"%s\" can't be converted to type \"%s\" for %s.",
                       fromType->GetString().c_str(), toType->GetString().c_str(),
                       errorMsgBase);
-            return NULL;
+            return false;
         }
     }
 
-    const VectorType *toVectorType = dynamic_cast<const VectorType *>(toType);
-    const VectorType *fromVectorType = dynamic_cast<const VectorType *>(fromType);
     if (toVectorType && fromVectorType) {
         // converting e.g. int<n> -> float<n>
         if (fromVectorType->GetElementCount() != toVectorType->GetElementCount()) {
@@ -249,13 +277,11 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                 Error(pos, "Can't convert between differently sized vector types "
                       "\"%s\" -> \"%s\" for %s.", fromType->GetString().c_str(),
                       toType->GetString().c_str(), errorMsgBase);
-            return NULL;
+            return false;
         }
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
     }
 
-    const StructType *toStructType = dynamic_cast<const StructType *>(toType);
-    const StructType *fromStructType = dynamic_cast<const StructType *>(fromType);
     if (toStructType && fromStructType) {
         if (!Type::Equal(toStructType->GetAsUniformType()->GetAsConstType(),
                          fromStructType->GetAsUniformType()->GetAsConstType())) {
@@ -263,14 +289,11 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                 Error(pos, "Can't convert between different struct types "
                       "\"%s\" -> \"%s\".", fromStructType->GetString().c_str(),
                       toStructType->GetString().c_str());
-            return NULL;
+            return false;
         }
-
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
     }
 
-    const EnumType *toEnumType = dynamic_cast<const EnumType *>(toType);
-    const EnumType *fromEnumType = dynamic_cast<const EnumType *>(fromType);
     if (toEnumType != NULL && fromEnumType != NULL) {
         // No implicit conversions between different enum types
         if (!Type::Equal(toEnumType->GetAsUniformType()->GetAsConstType(),
@@ -279,19 +302,15 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                 Error(pos, "Can't convert between different enum types "
                       "\"%s\" -> \"%s\".", fromEnumType->GetString().c_str(),
                       toEnumType->GetString().c_str());
-            return NULL;
+            return false;
         }
-
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
     }
-
-    const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
-    const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
 
     // enum -> atomic (integer, generally...) is always ok
     if (fromEnumType != NULL) {
         assert(toAtomicType != NULL || toVectorType != NULL);
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
     }
 
     // from here on out, the from type can only be atomic something or
@@ -301,12 +320,12 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
             Error(pos, "Type conversion only possible from atomic types, not "
                   "from \"%s\" to \"%s\", for %s.", fromType->GetString().c_str(), 
                   toType->GetString().c_str(), errorMsgBase);
-        return NULL;
+        return false;
     }
 
     // scalar -> short-vector conversions
     if (toVectorType != NULL)
-        return new TypeCastExpr(toType, this, false, pos);
+        goto typecast_ok;
 
     // ok, it better be a scalar->scalar conversion of some sort by now
     if (toAtomicType == NULL) {
@@ -315,17 +334,34 @@ Expr::TypeConv(const Type *toType, const char *errorMsgBase, bool failureOk,
                   "from \"%s\" to \"%s\", for %s.",
                   fromType->GetString().c_str(), toType->GetString().c_str(), 
                   errorMsgBase);
-        return NULL;
+        return false;
     }
 
-#if 0
-    // Disable: it's not clear this is actually all that useful
-    if (!failureOk && issuePrecisionWarnings)
-        lMaybeIssuePrecisionWarning(toAtomicType, fromAtomicType, pos, 
-                                    errorMsgBase);
-#endif
+ typecast_ok:
+    if (expr != NULL)
+        *expr = new TypeCastExpr(toType, *expr, false, pos);
+    return true;
+}
 
-    return new TypeCastExpr(toType, this, false, pos);
+
+bool
+CanConvertTypes(const Type *fromType, const Type *toType) {
+    return lDoTypeConv(fromType, toType, NULL, true, NULL, SourcePos());
+}
+
+
+Expr *
+TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
+    if (expr == NULL)
+        return NULL;
+
+    const Type *fromType = expr->GetType();
+    Expr *e = expr;
+    if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, 
+                    expr->pos))
+        return e;
+    else
+        return NULL;
 }
 
 
@@ -770,8 +806,8 @@ UnaryExpr::TypeCheck() {
     }
     else if (op == LogicalNot) {
         const Type *boolType = lMatchingBoolType(type);
-        expr = expr->TypeConv(boolType, "logical not");
-        if (!expr)
+        expr = TypeConvertExpr(expr, boolType, "logical not");
+        if (expr == NULL)
             return NULL;
     }
     else if (op == BitNot) {
@@ -1383,10 +1419,13 @@ BinaryExpr::TypeCheck() {
             bool isVarying = (type0->IsVaryingType() ||
                               type1->IsVaryingType());
             if (isVarying) {
-                arg0 = arg0->TypeConv(type0->GetAsVaryingType(), "shift operator");
+                arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), 
+                                       "shift operator");
+                if (arg0 == NULL)
+                    return NULL;
                 type0 = arg0->GetType();
             }
-            arg1 = arg1->TypeConv(type0, "shift operator", false, false);
+            arg1 = TypeConvertExpr(arg1, type0, "shift operator");
             if (arg1 == NULL)
                 return NULL;
         }
@@ -1396,8 +1435,8 @@ BinaryExpr::TypeCheck() {
             if (promotedType == NULL)
                 return NULL;
 
-            arg0 = arg0->TypeConv(promotedType, "binary bit op");
-            arg1 = arg1->TypeConv(promotedType, "binary bit op");
+            arg0 = TypeConvertExpr(arg0, promotedType, "binary bit op");
+            arg1 = TypeConvertExpr(arg1, promotedType, "binary bit op");
             if (arg0 == NULL || arg1 == NULL)
                 return NULL;
         }
@@ -1431,9 +1470,9 @@ BinaryExpr::TypeCheck() {
         if (promotedType == NULL)
             return NULL;
 
-        arg0 = arg0->TypeConv(promotedType, lOpString(op));
-        arg1 = arg1->TypeConv(promotedType, lOpString(op));
-        if (!arg0 || !arg1)
+        arg0 = TypeConvertExpr(arg0, promotedType, lOpString(op));
+        arg1 = TypeConvertExpr(arg1, promotedType, lOpString(op));
+        if (arg0 == NULL || arg1 == NULL)
             return NULL;
         return this;
     }
@@ -1459,9 +1498,9 @@ BinaryExpr::TypeCheck() {
         if (promotedType == NULL)
             return NULL;
 
-        arg0 = arg0->TypeConv(promotedType, lOpString(op));
-        arg1 = arg1->TypeConv(promotedType, lOpString(op));
-        if (!arg0 || !arg1)
+        arg0 = TypeConvertExpr(arg0, promotedType, lOpString(op));
+        arg1 = TypeConvertExpr(arg1, promotedType, lOpString(op));
+        if (arg0 == NULL || arg1 == NULL)
             return NULL;
         return this;
     }
@@ -1490,10 +1529,10 @@ BinaryExpr::TypeCheck() {
             destType = new VectorType(boolType, vtype1->GetElementCount());
         else
             destType = boolType;
-            
-        arg0 = arg0->TypeConv(destType, lOpString(op));
-        arg1 = arg1->TypeConv(destType, lOpString(op));
-        if (!arg0 || !arg1)
+
+        arg0 = TypeConvertExpr(arg0, destType, lOpString(op));
+        arg1 = TypeConvertExpr(arg1, destType, lOpString(op));
+        if (arg0 == NULL || arg1 == NULL)
             return NULL;
         return this;
     }
@@ -1726,9 +1765,11 @@ AssignExpr::TypeCheck() {
         lvalue = lvalue->TypeCheck();
     if (rvalue != NULL) 
         rvalue = rvalue->TypeCheck();
-    if (rvalue != NULL && lvalue != NULL) 
-        rvalue = rvalue->TypeConv(lvalue->GetType(), "assignment");
-    if (rvalue == NULL || lvalue == NULL) 
+    if (lvalue == NULL || rvalue == NULL) 
+        return NULL;
+
+    rvalue = TypeConvertExpr(rvalue, lvalue->GetType(), "assignment");
+    if (rvalue == NULL)
         return NULL;
 
     if (lvalue->GetType()->IsConstType()) {
@@ -1982,8 +2023,8 @@ SelectExpr::TypeCheck() {
     const Type *testType = test->GetType();
     if (testType == NULL)
         return NULL;
-    test = test->TypeConv(lMatchingBoolType(testType), "select");
-    if (testType == NULL)
+    test = TypeConvertExpr(test, lMatchingBoolType(testType), "select");
+    if (test == NULL)
         return NULL;
     testType = test->GetType();
 
@@ -1994,9 +2035,9 @@ SelectExpr::TypeCheck() {
     if (promotedType == NULL)
         return NULL;
 
-    expr1 = expr1->TypeConv(promotedType, "select");
-    expr2 = expr2->TypeConv(promotedType, "select");
-    if (!expr1 || !expr2)
+    expr1 = TypeConvertExpr(expr1, promotedType, "select");
+    expr2 = TypeConvertExpr(expr2, promotedType, "select");
+    if (expr1 == NULL || expr2 == NULL)
         return NULL;
 
     return this;
@@ -2099,7 +2140,8 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         // Do whatever type conversion is needed
-        argExpr = argExpr->TypeConv(argTypes[i], "function call argument");
+        argExpr = TypeConvertExpr(argExpr, argTypes[i], 
+                                  "function call argument");
         // The function overload resolution code should have ensured that
         // we can successfully do any type conversions needed here.
         assert(argExpr != NULL);
@@ -2112,13 +2154,11 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     // FIXME: should we do this during type checking?
     const std::vector<ConstExpr *> &argumentDefaults = ft->GetArgumentDefaults();
     for (unsigned int i = callargs.size(); i < argumentDefaults.size(); ++i) {
-        assert(argumentDefaults[i] != NULL);
-        Expr *defaultExpr = argumentDefaults[i]->TypeConv(argTypes[i], 
-                                                          "function call default argument");
-        if (defaultExpr == NULL)
+        Expr * d = TypeConvertExpr(argumentDefaults[i], argTypes[i],
+                                   "function call default argument");
+        if (d == NULL)
             return NULL;
-
-        callargs.push_back(defaultExpr);
+        callargs.push_back(d);
     }
 
     // Now evaluate the values of all of the parameters being passed.  We
@@ -2256,7 +2296,17 @@ FunctionCallExpr::TypeCheck() {
             return NULL;
         }
 
-        if (fse->ResolveOverloads(args->exprs) == true) {
+        std::vector<const Type *> argTypes;
+        for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+            if (args->exprs[i] == NULL)
+                return NULL;
+            const Type *t = args->exprs[i]->GetType();
+            if (t == NULL)
+                return NULL;
+            argTypes.push_back(t);
+        }
+
+        if (fse->ResolveOverloads(argTypes) == true) {
             func = fse->TypeCheck();
 
             if (func != NULL) {
@@ -2271,9 +2321,9 @@ FunctionCallExpr::TypeCheck() {
                             return NULL;
 
                         launchCountExpr = 
-                            launchCountExpr->TypeConv(AtomicType::UniformInt32,
-                                                      "task launch count");
-                        if (!launchCountExpr)
+                            TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
+                                            "task launch count");
+                        if (launchCountExpr == NULL)
                             return NULL;
                     }
                     else {
@@ -2621,8 +2671,8 @@ IndexExpr::TypeCheck() {
                       !g->opt.disableUniformMemoryOptimizations);
     const Type *indexType = isUniform ? AtomicType::UniformInt32 : 
                                         AtomicType::VaryingInt32;
-    index = index->TypeConv(indexType, "array index");
-    if (!index)
+    index = TypeConvertExpr(index, indexType, "array index");
+    if (index == NULL)
         return NULL;
 
     return this;
@@ -5191,16 +5241,16 @@ lPrintFunctionOverloads(const std::string &name,
 
 
 static void
-lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
+lPrintPassedTypes(const char *funName, 
+                  const std::vector<const Type *> &argTypes) {
     fprintf(stderr, "Passed types: %*c(", (int)strlen(funName), ' ');
-    for (unsigned int i = 0; i < argExprs.size(); ++i) {
-        const Type *t;
-        if (argExprs[i] != NULL && (t = argExprs[i]->GetType()) != NULL)
-            fprintf(stderr, "%s%s", t->GetString().c_str(),
-                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+    for (unsigned int i = 0; i < argTypes.size(); ++i) {
+        if (argTypes[i] != NULL)
+            fprintf(stderr, "%s%s", argTypes[i]->GetString().c_str(),
+                    (i < argTypes.size()-1) ? ", " : ")\n\n");
         else
             fprintf(stderr, "(unknown type)%s", 
-                    (i < argExprs.size()-1) ? ", " : ")\n\n");
+                    (i < argTypes.size()-1) ? ", " : ")\n\n");
     }
 }
 
@@ -5211,9 +5261,7 @@ lPrintPassedTypes(const char *funName, const std::vector<Expr *> &argExprs) {
     failure.
  */ 
 static int
-lExactMatch(Expr *callArg, const Type *funcArgType) {
-    const Type *callType = callArg->GetType();
-
+lExactMatch(const Type *callType, const Type *funcArgType) {
     if (dynamic_cast<const ReferenceType *>(callType) == NULL)
         callType = callType->GetAsNonConstType();
     if (dynamic_cast<const ReferenceType *>(funcArgType) != NULL && 
@@ -5229,12 +5277,12 @@ lExactMatch(Expr *callArg, const Type *funcArgType) {
     modulo conversion to a reference type if needed.
  */
 static int
-lMatchIgnoringReferences(Expr *callArg, const Type *funcArgType) {
-    int prev = lExactMatch(callArg, funcArgType);
+lMatchIgnoringReferences(const Type *callType, const Type *funcArgType) {
+    int prev = lExactMatch(callType, funcArgType);
     if (prev != -1)
         return prev;
 
-    const Type *callType = callArg->GetType()->GetReferenceTarget();
+    callType = callType->GetReferenceTarget();
     if (funcArgType->IsConstType())
         callType = callType->GetAsConstType();
 
@@ -5247,12 +5295,11 @@ lMatchIgnoringReferences(Expr *callArg, const Type *funcArgType) {
     conversion that won't lose information.  Otherwise reports failure.
 */
 static int
-lMatchWithTypeWidening(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchIgnoringReferences(callArg, funcArgType);
+lMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
+    int prev = lMatchIgnoringReferences(callType, funcArgType);
     if (prev != -1)
         return prev;
 
-    const Type *callType = callArg->GetType();
     const AtomicType *callAt = dynamic_cast<const AtomicType *>(callType);
     const AtomicType *funcAt = dynamic_cast<const AtomicType *>(funcArgType);
     if (callAt == NULL || funcAt == NULL)
@@ -5299,12 +5346,11 @@ lMatchWithTypeWidening(Expr *callArg, const Type *funcArgType) {
     exactly the same type.
  */
 static int
-lMatchIgnoringUniform(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchWithTypeWidening(callArg, funcArgType);
+lMatchIgnoringUniform(const Type *callType, const Type *funcArgType) {
+    int prev = lMatchWithTypeWidening(callType, funcArgType);
     if (prev != -1)
         return prev;
 
-    const Type *callType = callArg->GetType();
     if (dynamic_cast<const ReferenceType *>(callType) == NULL)
         callType = callType->GetAsNonConstType();
 
@@ -5319,15 +5365,14 @@ lMatchIgnoringUniform(Expr *callArg, const Type *funcArgType) {
     argument type, but without doing a uniform -> varying conversion.
  */
 static int
-lMatchWithTypeConvSameVariability(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchIgnoringUniform(callArg, funcArgType);
+lMatchWithTypeConvSameVariability(const Type *callType,
+                                  const Type *funcArgType) {
+    int prev = lMatchIgnoringUniform(callType, funcArgType);
     if (prev != -1)
         return prev;
 
-    Expr *te = callArg->TypeConv(funcArgType, 
-                                 "function call argument", true);
-    if (te != NULL && 
-        te->GetType()->IsUniformType() == callArg->GetType()->IsUniformType())
+    if (CanConvertTypes(callType, funcArgType) &&
+        (callType->IsUniformType() == funcArgType->IsUniformType()))
         return 1;
     else
         return -1;
@@ -5339,14 +5384,12 @@ lMatchWithTypeConvSameVariability(Expr *callArg, const Type *funcArgType) {
     argument type to the function argument type.
  */
 static int
-lMatchWithTypeConv(Expr *callArg, const Type *funcArgType) {
-    int prev = lMatchWithTypeConvSameVariability(callArg, funcArgType);
+lMatchWithTypeConv(const Type *callType, const Type *funcArgType) {
+    int prev = lMatchWithTypeConvSameVariability(callType, funcArgType);
     if (prev != -1)
         return prev;
         
-    Expr *te = callArg->TypeConv(funcArgType, 
-                                 "function call argument", true);
-    return (te != NULL) ? 0 : -1;
+    return CanConvertTypes(callType, funcArgType) ? 0 : -1;
 }
 
 
@@ -5383,8 +5426,8 @@ lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
     finding multiple ambiguous matches.
  */
 bool
-FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
-                               const std::vector<Expr *> &callArgs) {
+FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
+                               const std::vector<const Type *> &callTypes) {
     const char *funName = candidateFunctions->front()->name.c_str();
 
     std::vector<std::pair<int, Symbol *> > matches;
@@ -5401,7 +5444,7 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
 
         // There's no way to match if the caller is passing more arguments
         // than this function instance takes.
-        if (callArgs.size() > funcArgTypes.size())
+        if (callTypes.size() > funcArgTypes.size())
             continue;
 
         unsigned int i;
@@ -5410,23 +5453,23 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
         // function than are passed, if the function has default argument
         // values.  This case is handled below.
         int cost = 0;
-        for (i = 0; i < callArgs.size(); ++i) {
+        for (i = 0; i < callTypes.size(); ++i) {
             // This may happen if there's an error earlier in compilation.
             // It's kind of a silly to redundantly discover this for each
             // potential match versus detecting this earlier in the
             // matching process and just giving up.
-            if (!callArgs[i] || !callArgs[i]->GetType() || !funcArgTypes[i] ||
-                dynamic_cast<const FunctionType *>(callArgs[i]->GetType()) != NULL)
+            if (callTypes[i] == NULL || funcArgTypes[i] == NULL ||
+                dynamic_cast<const FunctionType *>(callTypes[i]) != NULL)
                 return false;
             
-            int argCost = matchFunc(callArgs[i], funcArgTypes[i]);
+            int argCost = matchFunc(callTypes[i], funcArgTypes[i]);
             if (argCost == -1)
                 // If the predicate function returns -1, we have failed no
                 // matter what else happens, so we stop trying
                 break;
             cost += argCost;
         }
-        if (i == callArgs.size()) {
+        if (i == callTypes.size()) {
             // All of the arguments matched!
             if (i == funcArgTypes.size())
                 // And we have exactly as many arguments as the function
@@ -5454,7 +5497,7 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
         Error(pos, "Multiple overloaded instances of function \"%s\" matched.",
               funName);
         lPrintFunctionOverloads(funName, matches);
-        lPrintPassedTypes(funName, callArgs);
+        lPrintPassedTypes(funName, callTypes);
         // Stop trying to find more matches after an ambigious set of
         // matches.
         return true;
@@ -5463,7 +5506,7 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(Expr *, const Type *),
 
 
 bool
-FunctionSymbolExpr::ResolveOverloads(const std::vector<Expr *> &callArgs) {
+FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes) {
     // Functions with names that start with "__" should only be various
     // builtins.  For those, we'll demand an exact match, since we'll
     // expect whichever function in stdlib.ispc is calling out to one of
@@ -5474,32 +5517,32 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<Expr *> &callArgs) {
 
     // Is there an exact match that doesn't require any argument type
     // conversion (other than converting type -> reference type)?
-    if (tryResolve(lExactMatch, callArgs))
+    if (tryResolve(lExactMatch, argTypes))
         return true;
 
     if (exactMatchOnly == false) {
         // Try to find a single match ignoring references
-        if (tryResolve(lMatchIgnoringReferences, callArgs))
+        if (tryResolve(lMatchIgnoringReferences, argTypes))
             return true;
 
         // Try to find an exact match via type widening--i.e. int8 ->
         // int16, etc.--things that don't lose data.
-        if (tryResolve(lMatchWithTypeWidening, callArgs))
+        if (tryResolve(lMatchWithTypeWidening, argTypes))
             return true;
 
         // Next try to see if there's a match via just uniform -> varying
         // promotions.
-        if (tryResolve(lMatchIgnoringUniform, callArgs))
+        if (tryResolve(lMatchIgnoringUniform, argTypes))
             return true;
 
         // Try to find a match via type conversion, but don't change
         // unif->varying
         if (tryResolve(lMatchWithTypeConvSameVariability,
-                       callArgs))
+                       argTypes))
             return true;
     
         // Last chance: try to find a match via arbitrary type conversion.
-        if (tryResolve(lMatchWithTypeConv, callArgs))
+        if (tryResolve(lMatchWithTypeConv, argTypes))
             return true;
     }
 
@@ -5508,7 +5551,7 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<Expr *> &callArgs) {
     Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
           funName, exactMatchOnly ? " only considering exact matches" : "");
     lPrintFunctionOverloads(funName, *candidateFunctions);
-    lPrintPassedTypes(funName, callArgs);
+    lPrintPassedTypes(funName, argTypes);
     return false;
 }
 

@@ -256,8 +256,8 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
             // ExprList; they don't have types per se / can't type
             // convert themselves anyway.)
             if (dynamic_cast<ExprList *>(initExpr) == NULL)
-                initExpr = initExpr->TypeConv(sym->type, "initializer");
-
+                initExpr = TypeConvertExpr(initExpr, sym->type, "initializer");
+            
             if (initExpr != NULL) {
                 initExpr = initExpr->Optimize();
                 // Fingers crossed, now let's see if we've got a
