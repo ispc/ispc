@@ -2288,7 +2288,7 @@ lVectorIsLinear(llvm::Value **v, int vectorLength, int stride,
             // set of integer values will give a sequence with the desired
             // stride.
             int mulScale = (int)scaleValue->getZExtValue();
-            if ((stride % mulScale) != 0)
+            if (mulScale == 0 || (stride % mulScale) != 0)
                 return false;
 
             llvm::Value **otherValue = (llvm::Value **)alloca(vectorLength * sizeof(llvm::Value *));
