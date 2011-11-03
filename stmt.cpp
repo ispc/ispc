@@ -428,9 +428,8 @@ DeclStmt::EstimateCost() const {
 IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p) 
     : Stmt(p), test(t), trueStmts(ts), falseStmts(fs), 
       doAllCheck(checkCoherence &&
-                 !g->opt.disableCoherentControlFlow),
-      doAnyCheck(test->GetType() != NULL &&
-                 test->GetType()->IsVaryingType()) {
+                 !g->opt.disableCoherentControlFlow) {
+    // have to wait until after type checking to initialize doAnyCheck.
 }
 
 
@@ -849,7 +848,6 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
             ctx->EndIf();
         }
         else {
-            assert(doAnyCheck);
             llvm::BasicBlock *bDone = ctx->CreateBasicBlock("if_done");
             emitMaskMixed(ctx, oldMask, ltest, bDone);
             ctx->SetCurrentBasicBlock(bDone);

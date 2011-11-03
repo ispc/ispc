@@ -136,7 +136,6 @@ private:
         active program instances want to follow just one of the 'true' or
         'false' blocks. */
     const bool doAllCheck;
-    const bool doAnyCheck;
 
     void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, 
                                 llvm::Value *test) const;
