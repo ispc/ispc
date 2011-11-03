@@ -4590,13 +4590,8 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
     // If we also want to go from uniform to varying, replicate out the
     // value across the vector elements..
-    if (toType->IsVaryingType() && fromType->IsUniformType()) {
-        LLVM_TYPE_CONST llvm::Type *vtype = toType->LLVMType(g->ctx);
-        llvm::Value *castVec = llvm::UndefValue::get(vtype);
-        for (int i = 0; i < g->target.vectorWidth; ++i)
-            castVec = ctx->InsertInst(castVec, cast, i, "smearinsert");
-        return castVec;
-    }
+    if (toType->IsVaryingType() && fromType->IsUniformType())
+        return ctx->SmearScalar(cast);
     else
         return cast;
 }
@@ -4631,9 +4626,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     // Otherwise we must have a uniform AtomicType, so smear its value
     // across the vector lanes.
     assert(dynamic_cast<const AtomicType *>(type) != NULL);
-    for (int i = 0; i < g->target.vectorWidth; ++i)
-        retValue = ctx->InsertInst(retValue, value, i, "smearinsert");
-    return retValue;
+    return ctx->SmearScalar(value);
 }
 
 

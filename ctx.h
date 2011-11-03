@@ -312,12 +312,23 @@ public:
                          llvm::CmpInst::Predicate pred,
                          llvm::Value *v0, llvm::Value *v1, const char *name = NULL);
 
+    /** Given a scalar value, return a vector of the same type (or an
+        array, for pointer types). */
+    llvm::Value *SmearScalar(llvm::Value *value, const char *name = NULL);
+
     llvm::Value *BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                              const char *name = NULL);
     llvm::Value *PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
     llvm::Value *IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
+    /** Given a value of some array type, return the corresponding value of
+        vector type. */
+    llvm::Value *ArrayToVectorInst(llvm::Value *value);
+    /** Given a value of some vector type, return the corresponding value of
+        array type. */
+    llvm::Value *VectorToArrayInst(llvm::Value *value);
+
     llvm::Instruction *TruncInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                  const char *name = NULL);
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,

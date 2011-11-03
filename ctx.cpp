@@ -1108,6 +1108,33 @@ FunctionEmitContext::CmpInst(llvm::Instruction::OtherOps inst,
 
 
 llvm::Value *
+FunctionEmitContext::SmearScalar(llvm::Value *value, const char *name) {
+    if (value == NULL) {
+        assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Value *ret = NULL;
+    LLVM_TYPE_CONST llvm::Type *eltType = value->getType();
+    LLVM_TYPE_CONST llvm::PointerType *pt = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(eltType);
+    if (pt != NULL)
+        ret = llvm::UndefValue::get(llvm::ArrayType::get(eltType,
+                                                         g->target.vectorWidth));
+    else
+        ret = llvm::UndefValue::get(llvm::VectorType::get(eltType,
+                                                          g->target.vectorWidth));
+
+    for (int i = 0; i < g->target.vectorWidth; ++i) {
+        llvm::Twine n = llvm::Twine("smear.") + llvm::Twine(name ? name : "") + 
+            llvm::Twine(i);
+        ret = InsertInst(ret, value, i, n.str().c_str());
+    }
+    return ret;
+}
+                                    
+
+llvm::Value *
 FunctionEmitContext::BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                  const char *name) {
     if (value == NULL) {
