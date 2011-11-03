@@ -699,6 +699,169 @@ EnumType::GetEnumerator(int i) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// PointerType
+
+PointerType *PointerType::Void = new PointerType(AtomicType::Void, true, true);
+
+PointerType::PointerType(const Type *t, bool iu, bool ic) 
+    : isUniform(iu), isConst(ic) {
+    baseType = t;
+}
+
+
+bool
+PointerType::IsUniformType() const {
+    return isUniform;
+}
+
+
+bool
+PointerType::IsBoolType() const {
+    return false;
+}
+
+
+bool
+PointerType::IsFloatType() const {
+    return false;
+}
+
+
+bool
+PointerType::IsIntType() const {
+    return false;
+}
+
+
+bool
+PointerType::IsUnsignedType() const {
+    return false;
+}
+
+
+bool
+PointerType::IsConstType() const {
+    return isConst;
+}
+
+
+const Type *
+PointerType::GetBaseType() const {
+    return baseType;
+}
+
+
+const PointerType *
+PointerType::GetAsVaryingType() const {
+    if (isUniform == false)
+        return this;
+    else
+        return new PointerType(baseType, false, isConst);
+}
+
+
+const PointerType *
+PointerType::GetAsUniformType() const {
+    if (isUniform == true)
+        return this;
+    else
+        return new PointerType(baseType, true, isConst);
+}
+
+
+const Type *
+PointerType::GetSOAType(int width) const {
+    FATAL("Unimplemented.");
+    return NULL;
+}
+
+
+const PointerType *
+PointerType::GetAsConstType() const {
+    if (isConst == true)
+        return this;
+    else
+        return new PointerType(baseType, isUniform, true);
+}
+
+
+const PointerType *
+PointerType::GetAsNonConstType() const {
+    if (isConst == false)
+        return this;
+    else
+        return new PointerType(baseType, isUniform, false);
+}
+
+
+std::string 
+PointerType::GetString() const {
+    if (baseType == NULL)
+        return "";
+
+    std::string ret;
+    if (isConst) ret += "const ";
+    if (isUniform) ret += "uniform ";
+    return ret + std::string("*") + baseType->GetString();
+}
+
+
+std::string
+PointerType::Mangle() const {
+    if (baseType == NULL)
+        return "";
+
+    return std::string("ptr<") + baseType->Mangle() + std::string(">");
+}
+
+
+std::string
+PointerType::GetCDeclaration(const std::string &name) const {
+    if (baseType == NULL)
+        return "";
+
+    std::string ret;
+    if (isConst) ret += "const ";
+    return ret + std::string("*") + baseType->GetCDeclaration(name);
+}
+
+
+LLVM_TYPE_CONST llvm::Type *
+PointerType::LLVMType(llvm::LLVMContext *ctx) const {
+    if (baseType == NULL)
+        return NULL;
+
+    LLVM_TYPE_CONST llvm::Type *ptype = NULL;
+    const FunctionType *ftype = dynamic_cast<const FunctionType *>(baseType);
+    if (ftype != NULL) 
+        // Get the type of the function variant that takes the mask as the
+        // last parameter--i.e. we don't allow taking function pointers of
+        // exported functions.
+        ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx, true), 0);
+    else
+        ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
+
+    if (isUniform)
+        return ptype;
+    else
+        // Varying pointers are represented as arrays of pointers since
+        // LLVM doesn't allow vectors of pointers.
+        return llvm::ArrayType::get(ptype, g->target.vectorWidth);
+}
+
+
+llvm::DIType
+PointerType::GetDIType(llvm::DIDescriptor scope) const {
+    if (baseType == NULL)
+        return llvm::DIType();
+
+    llvm::DIType diTargetType = baseType->GetDIType(scope);
+    int bitsSize = g->target.is32bit ? 32 : 64;
+    return m->diBuilder->createPointerType(diTargetType, bitsSize);
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // SequentialType
 
 const Type *SequentialType::GetElementType(int index) const {
@@ -1697,37 +1860,37 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
 
 bool
 FunctionType::IsUniformType() const {
-    return returnType->IsUniformType(); 
+    return true;
 }
 
 
 bool
 FunctionType::IsFloatType() const {
-    return returnType->IsFloatType(); 
+    return false;
 }
 
 
 bool
 FunctionType::IsIntType() const {
-    return returnType->IsIntType(); 
+    return false;
 }
 
 
 bool
 FunctionType::IsBoolType() const {
-    return returnType->IsBoolType(); 
+    return false;
 }
 
 
 bool
 FunctionType::IsUnsignedType() const {
-    return returnType->IsUnsignedType(); 
+    return false;
 }
 
 
 bool
 FunctionType::IsConstType() const {
-    return returnType->IsConstType(); 
+    return false;
 }
 
 
@@ -1965,11 +2128,38 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
     // Are they both the same type?  If so, we're done, QED.
     if (Type::Equal(t0, t1)) 
         return t0;
+    
+    // If they're function types, it's hopeless if they didn't match in the
+    // Type::Equal() call above.  Fail here so that we don't get into
+    // trouble calling GetAsConstType()...
+    if (dynamic_cast<const FunctionType *>(t0) ||
+        dynamic_cast<const FunctionType *>(t1)) {
+        Error(pos, "Incompatible function types \"%s\" and \"%s\" in %s.",
+              t0->GetString().c_str(), t1->GetString().c_str(), reason);
+        return NULL;
+    }
 
     // Not the same types, but only a const/non-const difference?  Return
     // the non-const type as the more general one.
     if (Type::Equal(t0->GetAsConstType(), t1->GetAsConstType()))
         return t0->GetAsNonConstType();
+
+    const PointerType *pt0 = dynamic_cast<const PointerType *>(t0);
+    const PointerType *pt1 = dynamic_cast<const PointerType *>(t1);
+    if (pt0 != NULL && pt1 != NULL) {
+        if (Type::Equal(pt0->GetAsUniformType()->GetAsConstType(),
+                        PointerType::Void))
+            return pt1;
+        else if (Type::Equal(pt1->GetAsUniformType()->GetAsConstType(),
+                             PointerType::Void))
+            return pt0;
+        else {
+            Error(pos, "Conversion between incompatible pointer types \"%s\" "
+                  "and \"%s\" isn't possible.", t0->GetString().c_str(),
+                  t1->GetString().c_str());
+            return NULL;
+        }
+    }
 
     const VectorType *vt0 = dynamic_cast<const VectorType *>(t0);
     const VectorType *vt1 = dynamic_cast<const VectorType *>(t1);
@@ -2135,6 +2325,11 @@ Type::Equal(const Type *a, const Type *b) {
         if (!Equal(fta->GetReturnType(), ftb->GetReturnType()))
             return false;
 
+        if (fta->isTask != ftb->isTask ||
+            fta->isExported != ftb->isExported ||
+            fta->isExternC != ftb->isExternC)
+            return false;
+
         const std::vector<const Type *> &aargs = fta->GetArgumentTypes();
         const std::vector<const Type *> &bargs = ftb->GetArgumentTypes();
         if (aargs.size() != bargs.size())
@@ -2144,6 +2339,13 @@ Type::Equal(const Type *a, const Type *b) {
                 return false;
         return true;
     }
+
+    const PointerType *pta = dynamic_cast<const PointerType *>(a);
+    const PointerType *ptb = dynamic_cast<const PointerType *>(b);
+    if (pta != NULL && ptb != NULL)
+        return (pta->IsConstType() == ptb->IsConstType() &&
+                pta->IsUniformType() == ptb->IsUniformType() &&
+                Type::Equal(pta->GetBaseType(), ptb->GetBaseType()));
 
     return false;
 }

@@ -63,6 +63,7 @@ Contents:
 
   + `Lexical Structure`_
   + `Basic Types and Type Qualifiers`_
+  + `Function Pointer Types`_
   + `Enumeration Types`_
   + `Short Vector Types`_
   + `Struct and Array Types`_
@@ -82,6 +83,7 @@ Contents:
   + `Program Instance Convergence`_
   + `Data Races`_
   + `Uniform Variables and Varying Control Flow`_
+  + `Function Pointers`_
   + `Task Parallelism: Language Syntax`_
   + `Task Parallelism: Runtime Requirements`_
 
@@ -620,7 +622,34 @@ results or modify existing variables.
         ++f;
     }
 
-``ispc`` doesn't currently support pointer types.
+``ispc`` doesn't currently support pointer types, except for functions, as
+described below.
+
+Function Pointer Types
+----------------------
+
+``ispc`` does allow function pointers to be taken and used as in C and
+C++.  The syntax for declaring function pointer types is the same as in
+those languages; it's generally easiest to use a ``typedef`` to help:
+
+::
+
+    int inc(int v) { return v+1; }
+    int dec(int v) { return v-1; }
+
+    typedef int (*FPType)(int);
+    FPType fptr = inc;
+
+Given a function pointer, the function it points to can be called:
+
+::
+
+    int x = fptr(1);
+
+Note that ``ispc`` doesn't currently support the "address-of" operator
+``&`` or the "derefernce" operator ``*``, so it's not necessary to take the
+address of a function to assign it to a function pointer or to dereference
+it to call the function.
 
 
 Enumeration Types
@@ -1437,6 +1466,26 @@ When possible, ``ispc`` detects that the control flow is varying and issues
 an warning if a uniform variable is modified in this case.  Here, ``a`` may
 be modified in the above code even if *none* of the program instances
 evaluated a true value for the test, given the ``ispc`` execution model.
+
+
+Function Pointers
+-----------------
+
+As with other variables, a function pointer in ``ispc`` may be of
+``uniform`` or ``varying`` type.  If a function pointer is ``uniform``, it
+has the same value for all of the executing program instances, and thus all
+active program instances will call the same function if the function
+pointer is used.
+
+If a function pointer is ``varying``, then it has a possibly-different
+value for all running program instances.  Given a call to a varying
+function pointer, ``ispc`` maintains as much execution convergence as
+possible; the code executed finds the set of unique function pointers over
+the currently running program instances and calls each one just once, such
+that the executing program instances when it is called are the set of
+active program instances that had that function pointer value.  The order
+in which the various function pointers are called in this case is
+indefined.
 
 
 Task Parallelism: Language Syntax

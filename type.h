@@ -300,6 +300,40 @@ private:
     std::vector<Symbol *> enumerators;
 };
 
+/** @brief Type implementation for pointers to other types
+ */
+class PointerType : public Type {
+public:
+    PointerType(const Type *t, bool isUniform, bool isConst);
+
+    bool IsUniformType() const;
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const PointerType *GetAsVaryingType() const;
+    const PointerType *GetAsUniformType() const;
+    const Type *GetSOAType(int width) const;
+    const PointerType *GetAsConstType() const;
+    const PointerType *GetAsNonConstType() const;
+
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+
+    static PointerType *Void;
+
+private:
+    const bool isUniform, isConst;
+    const Type *baseType;
+};
+
 
 /** @brief Abstract base class for types that represent collections of
     other types.

@@ -91,6 +91,7 @@ Declarator::Declarator(Symbol *s, SourcePos p)
     functionArgs = NULL;
     isFunction = false;
     initExpr = NULL;
+    pointerCount = 0;
 }
 
 
@@ -104,6 +105,14 @@ Declarator::AddArrayDimension(int size) {
 void
 Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     sym->type = GetType(ds);
+    for (int i = 0; i < pointerCount; ++i) {
+        // Only function pointers for now...
+        if (dynamic_cast<const FunctionType *>(sym->type) == NULL)
+            Error(pos, "Only pointers to functions are currently allowed, "
+                  "not pointers to \"%s\".", sym->type->GetString().c_str());
+        else
+            sym->type = new PointerType(sym->type, true, false);
+    }
     sym->storageClass = ds->storageClass;
 }
 

@@ -490,6 +490,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     const Type *type;
     Expr *expr;
@@ -568,6 +569,7 @@ public:
     Expr *Optimize();
     void Print() const;
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     bool ResolveOverloads(const std::vector<const Type *> &argTypes);
     Symbol *GetMatchingFunction();
@@ -586,6 +588,8 @@ private:
 
     /** The actual matching function found after overload resolution. */
     Symbol *matchingFunc;
+
+    bool triedToResolve;
 };
 
 
@@ -595,6 +599,20 @@ class SyncExpr : public Expr {
 public:
     SyncExpr(SourcePos p) : Expr(p) { }
 
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    Expr *TypeCheck();
+    Expr *Optimize();
+    void Print() const;
+    int EstimateCost() const;
+};
+
+
+/** @brief An expression that represents a NULL pointer. */
+class NullPointerExpr : public Expr {
+public:
+    NullPointerExpr(SourcePos p) : Expr(p) { }
+    
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     Expr *TypeCheck();

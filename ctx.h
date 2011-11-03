@@ -367,8 +367,9 @@ public:
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */ 
-    llvm::Value *AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, const char *name = NULL,
-                            int align = 0, bool atEntryBlock = true);
+    llvm::Value *AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, 
+                            const char *name = NULL, int align = 0, 
+                            bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue. */
@@ -403,24 +404,28 @@ public:
     llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
                                   llvm::Value *val1, const char *name = NULL);
 
-    llvm::Instruction *CallInst(llvm::Function *func, 
-                                const std::vector<llvm::Value *> &args,
-                                const char *name = NULL);
+    /** Emits IR to do a function call with the given arguments.  The
+        function return type must be provided in returnType. */
+    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+                          const std::vector<llvm::Value *> &args,
+                          const char *name = NULL);
+
     /** This is a convenience method that issues a call instruction to a
         function that takes just a single argument. */
-    llvm::Instruction *CallInst(llvm::Function *func, llvm::Value *arg,
-                                const char *name = NULL);
+    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+                          llvm::Value *arg, const char *name = NULL);
 
     /** This is a convenience method that issues a call instruction to a
         function that takes two arguments. */
-    llvm::Instruction *CallInst(llvm::Function *func, llvm::Value *arg0,
-                                llvm::Value *arg1, const char *name = NULL);
+    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+                          llvm::Value *arg0, llvm::Value *arg1,
+                          const char *name = NULL);
 
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
-    llvm::Instruction *LaunchInst(llvm::Function *callee, 
-                                  std::vector<llvm::Value *> &argVals,
-                                  llvm::Value *launchCount);
+    llvm::Value *LaunchInst(llvm::Value *callee, 
+                            std::vector<llvm::Value *> &argVals,
+                            llvm::Value *launchCount);
 
     void SyncInst();
 
@@ -523,7 +528,7 @@ private:
     llvm::Value *launchGroupHandlePtr;
 
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
-    static void addGSMetadata(llvm::Instruction *inst, SourcePos pos);
+    static void addGSMetadata(llvm::Value *inst, SourcePos pos);
     bool ifsInLoopAllUniform() const;
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);

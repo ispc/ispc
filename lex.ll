@@ -110,6 +110,7 @@ int16 { return TOKEN_INT16; }
 int32 { return TOKEN_INT; }
 int64 { return TOKEN_INT64; }
 launch { return TOKEN_LAUNCH; }
+NULL { return TOKEN_NULL; }
 print { return TOKEN_PRINT; }
 reference { return TOKEN_REFERENCE; }
 return { return TOKEN_RETURN; }

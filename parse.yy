@@ -103,8 +103,8 @@ static const char *lBuiltinTokens[] = {
     "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor",
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
     "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
-    "inline", "int", "int8", "int16", "int32", "int64", "launch", "print",
-    "reference", "return",
+    "inline", "int", "int8", "int16", "int32", "int64", "launch", "NULL",
+    "print", "reference", "return",
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
@@ -146,7 +146,7 @@ static const char *lParamListTokens[] = {
 
 %token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT TOKEN_INT64_CONSTANT
 %token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
-%token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME
+%token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
@@ -252,6 +252,9 @@ primary_expression
     }
     | TOKEN_FALSE {
         $$ = new ConstExpr(AtomicType::UniformConstBool, false, @1);
+    }
+    | TOKEN_NULL {
+        $$ = new NullPointerExpr(@1);
     }
 /*    | TOKEN_STRING_LITERAL
        { UNIMPLEMENTED }*/
@@ -458,8 +461,15 @@ constant_expression
 declaration_statement
     : declaration     
     {
-        std::vector<VariableDeclaration> vars = $1->GetVariableDeclarations();
-        $$ = new DeclStmt(vars, @1); 
+        if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+            for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
+                m->AddTypeDef($1->declarators[i]->sym);
+            }
+        }
+        else {
+            std::vector<VariableDeclaration> vars = $1->GetVariableDeclarations();
+            $$ = new DeclStmt(vars, @1);
+        }
     }
     ;
 
@@ -857,6 +867,11 @@ type_qualifier
 
 declarator
     : direct_declarator
+    | '*' direct_declarator
+    {
+        $2->pointerCount++;
+        $$ = $2;
+    }
     ;
 
 int_constant
@@ -1265,7 +1280,9 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         // Error happened earlier during parsing
         return;
 
-    if (decl->isFunction) {
+    if (ds->storageClass == SC_TYPEDEF)
+        m->AddTypeDef(decl->sym);
+    else if (decl->isFunction) {
         // function declaration
         const Type *t = decl->GetType(ds);
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
@@ -1293,8 +1310,6 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         bool isInline = (ds->typeQualifier & TYPEQUAL_INLINE);
         m->AddFunctionDeclaration(funSym, args, isInline);
     }
-    else if (ds->storageClass == SC_TYPEDEF)
-        m->AddTypeDef(decl->sym);
     else
         m->AddGlobalVariable(decl->sym, decl->initExpr,
                              (ds->typeQualifier & TYPEQUAL_CONST) != 0);

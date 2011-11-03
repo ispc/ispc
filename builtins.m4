@@ -1081,6 +1081,14 @@ define internal <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone al
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; count trailing zeros
+
+define internal i32 @__count_trailing_zeros(i32) nounwind readnone alwaysinline {
+  %c = call i32 @llvm.cttz.i32(i32 %0)
+  ret i32 %c
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AOS/SOA conversion primitives
 
 ;; take 4 4-wide vectors laid out like <r0 g0 b0 a0> <r1 g1 b1 a1> ...
@@ -2457,7 +2465,7 @@ done:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
-; count leading zeros
+; count trailing zeros
 declare i32 @llvm.cttz.i32(i32)
 
 define(`reduce_equal_aux', `

@@ -133,6 +133,8 @@ void __do_print(const char *format, const char *types, int width, int mask,
                 case 'V': PRINT_VECTOR("%llu", unsigned long long);
                 case 'd': PRINT_SCALAR("%f", double);
                 case 'D': PRINT_VECTOR("%f", double);
+                case 'p': PRINT_SCALAR("%p", void *);
+                case 'P': PRINT_VECTOR("%p", void *);
                 default:
                     printf("UNKNOWN TYPE ");
                     putchar(*types);

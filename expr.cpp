@@ -174,6 +174,43 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
     const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
 
+    const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
+    const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
+    if (fromPointerType != NULL) {
+        if (dynamic_cast<const AtomicType *>(toType) != NULL &&
+            toType->IsBoolType())
+            // Allow implicit conversion of pointers to bools
+            goto typecast_ok;
+
+        if (toPointerType == NULL) {
+            if (!failureOk)
+                Error(pos, "Can't convert between from pointer type "
+                      "\"%s\" to non-pointer type \"%s\".", 
+                      fromType->GetString().c_str(),
+                      toType->GetString().c_str());
+            return false;
+        }
+        else if (Type::Equal(fromPointerType->GetAsUniformType()->GetAsConstType(),
+                             PointerType::Void)) {
+            // void *s can be converted to any other pointer type
+            goto typecast_ok;
+        }
+        else if (!Type::Equal(fromPointerType->GetBaseType(), 
+                              toPointerType->GetBaseType())) {
+            if (!failureOk)
+                Error(pos, "Can't convert between incompatible pointer types "
+                      "\"%s\" and \"%s\".", fromPointerType->GetString().c_str(),
+                      toPointerType->GetString().c_str());
+            return false;
+        }
+
+        if (toType->IsVaryingType() && fromType->IsUniformType())
+            goto typecast_ok;
+
+        // Otherwise there's nothing to do
+        return true;
+    }
+
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
     if (Type::Equal(toType, fromType->GetAsConstType()))
@@ -380,7 +417,8 @@ lMatchingBoolType(const Type *type) {
     if (vt != NULL)
         return new VectorType(boolBase, vt->GetElementCount());
     else {
-        assert(dynamic_cast<const AtomicType *>(type) != NULL);
+        assert(dynamic_cast<const AtomicType *>(type) != NULL ||
+               dynamic_cast<const PointerType *>(type) != NULL);
         return boolBase;
     }
 }
@@ -1068,6 +1106,10 @@ BinaryExpr::GetType() const {
     if (type0 == NULL || type1 == NULL)
         return NULL;
 
+#if 0
+    // FIXME: I think these are redundant given the checks in
+    // BinaryExpr::TypeCheck().  They should either be removed or updated
+    // to handle the cases where pointer == and != tests are ok.
     if (!type0->IsBoolType() && !type0->IsNumericType()) {
         Error(arg0->pos, "First operand to binary operator \"%s\" is of invalid "
               "type \"%s\".", lOpString(op), type0->GetString().c_str());
@@ -1079,6 +1121,7 @@ BinaryExpr::GetType() const {
               "type \"%s\".", lOpString(op), type1->GetString().c_str());
         return NULL;
     }
+#endif
 
     const Type *promotedType = Type::MoreGeneralType(type0, type1, pos, 
                                                      lOpString(op));
@@ -1167,8 +1210,8 @@ lConstFoldBinLogicalOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *c
         return NULL;
     }
 
-    const Type *rType = carg0->GetType()->IsUniformType() ? AtomicType::UniformBool : 
-                                                        AtomicType::VaryingBool;
+    const Type *rType = carg0->GetType()->IsUniformType() ? 
+        AtomicType::UniformBool : AtomicType::VaryingBool;
     return new ConstExpr(rType, result, carg0->pos);
 }
 
@@ -1478,19 +1521,23 @@ BinaryExpr::TypeCheck() {
     }
     case Equal:
     case NotEqual: {
-        if (!type0->IsBoolType() && !type0->IsNumericType()) {
-            Error(arg0->pos,
-                  "First operand to equality operator \"%s\" is of "
-                  "non-comparable type \"%s\".", lOpString(op), 
-                  type0->GetString().c_str());
-            return NULL;
-        }
-        if (!type1->IsBoolType() && !type1->IsNumericType()) {
-            Error(arg1->pos,
-                  "Second operand to equality operator \"%s\" is of "
-                  "non-comparable type \"%s\".", lOpString(op), 
-                  type1->GetString().c_str());
-            return NULL;
+        const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
+        const PointerType *pt1 = dynamic_cast<const PointerType *>(type1);
+        if (pt0 == NULL && pt1 == NULL) {
+            if (!type0->IsBoolType() && !type0->IsNumericType()) {
+                Error(arg0->pos,
+                      "First operand to equality operator \"%s\" is of "
+                      "non-comparable type \"%s\".", lOpString(op), 
+                      type0->GetString().c_str());
+                return NULL;
+            }
+            if (!type1->IsBoolType() && !type1->IsNumericType()) {
+                Error(arg1->pos,
+                      "Second operand to equality operator \"%s\" is of "
+                      "non-comparable type \"%s\".", lOpString(op), 
+                      type1->GetString().c_str());
+                return NULL;
+            }
         }
 
         const Type *promotedType = 
@@ -1750,9 +1797,16 @@ AssignExpr::GetType() const {
 
 Expr *
 AssignExpr::TypeCheck() {
-    bool lvalueIsReference = lvalue &&
+    if (lvalue != NULL) 
+        lvalue = lvalue->TypeCheck();
+    if (rvalue != NULL) 
+        rvalue = rvalue->TypeCheck();
+    if (lvalue == NULL || rvalue == NULL) 
+        return NULL;
+
+    bool lvalueIsReference = 
         dynamic_cast<const ReferenceType *>(lvalue->GetType()) != NULL;
-    bool rvalueIsReference = rvalue &&
+    bool rvalueIsReference = 
         dynamic_cast<const ReferenceType *>(rvalue->GetType()) != NULL;
 
     // hack to allow asigning array references e.g. in a struct...
@@ -1761,12 +1815,25 @@ AssignExpr::TypeCheck() {
           dynamic_cast<const ArrayType *>(rvalue->GetType()->GetReferenceTarget())))
         lvalue = new DereferenceExpr(lvalue, lvalue->pos);
 
-    if (lvalue != NULL) 
-        lvalue = lvalue->TypeCheck();
-    if (rvalue != NULL) 
-        rvalue = rvalue->TypeCheck();
-    if (lvalue == NULL || rvalue == NULL) 
-        return NULL;
+    FunctionSymbolExpr *fse;
+    if ((fse = dynamic_cast<FunctionSymbolExpr *>(rvalue)) != NULL) {
+        // Special case to use the type of the LHS to resolve function
+        // overloads when we're assigning a function pointer where the
+        // function is overloaded.
+        const Type *lvalueType = lvalue->GetType();
+        const FunctionType *ftype;
+        if (dynamic_cast<const PointerType *>(lvalueType) == NULL ||
+            (ftype = dynamic_cast<const FunctionType *>(lvalueType->GetBaseType())) == NULL) {
+            Error(pos, "Can't assign function pointer to type \"%s\".",
+                  lvalue->GetType()->GetString().c_str());
+            return NULL;
+        }
+        if (!fse->ResolveOverloads(ftype->GetArgumentTypes())) {
+            Error(pos, "Unable to find overloaded function for function "
+                  "pointer assignment.");
+            return NULL;
+        }
+    }
 
     rvalue = TypeConvertExpr(rvalue, lvalue->GetType(), "assignment");
     if (rvalue == NULL)
@@ -1862,9 +1929,6 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
            testType->GetBaseType() == AtomicType::VaryingBool);
 
     const Type *type = expr1->GetType();
-    // Type checking should also make sure this is the case
-    assert(Type::Equal(type->GetAsNonConstType(), 
-                       expr2->GetType()->GetAsNonConstType()));
 
     if (testType == AtomicType::UniformBool) {
         // Simple case of a single uniform bool test expression; we just
@@ -2075,29 +2139,40 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p,
 }
 
 
+static const FunctionType *
+lGetFunctionType(Expr *func) {
+    if (func == NULL)
+        return NULL;
+
+    const Type *type = func->GetType();
+    if (type == NULL)
+        return NULL;
+
+    const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+    if (ftype == NULL) {
+        // Not a regular function symbol--is it a function pointer?
+        if (dynamic_cast<const PointerType *>(type) != NULL)
+            ftype = dynamic_cast<const FunctionType *>(type->GetBaseType());
+    }
+    return ftype;
+}
+
+
 llvm::Value *
 FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
-    if (!func || !args)
+    if (func == NULL || args == NULL)
         return NULL;
 
     ctx->SetDebugPos(pos);
 
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    assert(fse != NULL); // should be caught during typechecking
+    llvm::Value *callee = func->GetValue(ctx);
 
-    Symbol *funSym = fse->GetMatchingFunction();
-    if (funSym == NULL)
-        // No match was found; an error should have been issued earlier, so
-        // just return.
-        return NULL;
-
-    llvm::Function *callee = funSym->function;
     if (callee == NULL) {
-        Error(pos, "Symbol \"%s\" is not a function.", funSym->name.c_str());
+        assert(m->errorCount > 0);
         return NULL;
     }
 
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(funSym->type);
+    const FunctionType *ft = lGetFunctionType(func);
     assert(ft != NULL);
     bool isVoidFunc = (ft->GetReturnType() == AtomicType::Void);
 
@@ -2127,8 +2202,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
                     // store the expr's value to alloca'ed memory and then
                     // pass a reference to that...
                     Error(pos, "Can't pass non-lvalue as \"reference\" parameter \"%s\" "
-                          "to function \"%s\".", ft->GetArgumentName(i).c_str(), 
-                          funSym->name.c_str());
+                          "to function.", ft->GetArgumentName(i).c_str());
                     err = true;
                 }
                 else
@@ -2215,18 +2289,9 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
         if (launchCount != NULL)
             ctx->LaunchInst(callee, argVals, launchCount);
     }
-    else {
-        // Most of the time, the mask is passed as the last argument.  this
-        // isn't the case for things like intrinsics, builtins, and extern
-        // "C" functions from the application.
-        assert(callargs.size() + 1 == callee->arg_size() ||
-               callargs.size() == callee->arg_size());
-
-        if (callargs.size() + 1 == callee->arg_size())
-            argVals.push_back(ctx->GetFullMask());
-
-        retVal = ctx->CallInst(callee, argVals, isVoidFunc ? "" : "calltmp");
-    }
+    else
+        retVal = ctx->CallInst(callee, ft->GetReturnType(), argVals, 
+                               isVoidFunc ? "" : "calltmp");
 
     // For anything we had to do as pass by value/result, copy the
     // corresponding reference values back out
@@ -2253,17 +2318,8 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 FunctionCallExpr::GetType() const {
-    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-    if (fse == NULL)
-        return NULL;
-
-    Symbol *sym = fse->GetMatchingFunction();
-    if (sym == NULL)
-        return NULL;
-
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
-    assert(ft != NULL);
-    return ft->GetReturnType();
+    const FunctionType *ftype = lGetFunctionType(func);
+    return ftype ? ftype->GetReturnType() : NULL;
 }
 
 
@@ -2282,56 +2338,78 @@ FunctionCallExpr::Optimize() {
 
 Expr *
 FunctionCallExpr::TypeCheck() {
+    if (func != NULL)
+        func = func->TypeCheck();
     if (args != NULL) 
         args = args->TypeCheck();
 
     if (args != NULL && func != NULL) {
         FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+        if (fse != NULL) {
+            std::vector<const Type *> argTypes;
+            for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+                if (args->exprs[i] == NULL)
+                    return NULL;
+                const Type *t = args->exprs[i]->GetType();
+                if (t == NULL)
+                    return NULL;
+                argTypes.push_back(t);
+            }
 
-        if (fse == NULL) {
-            Error(pos, "No valid function available for function call.");
-            return NULL;
-        }
+            if (fse->ResolveOverloads(argTypes) == true) {
+                func = fse->TypeCheck();
 
-        std::vector<const Type *> argTypes;
-        for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-            if (args->exprs[i] == NULL)
-                return NULL;
-            const Type *t = args->exprs[i]->GetType();
-            if (t == NULL)
-                return NULL;
-            argTypes.push_back(t);
-        }
+                if (func != NULL) {
+                    const PointerType *pt = 
+                        dynamic_cast<const PointerType *>(func->GetType());
+                    const FunctionType *ft = (pt == NULL) ? NULL : 
+                        dynamic_cast<const FunctionType *>(pt->GetBaseType());
+                    if (ft != NULL) {
+                        if (ft->isTask) {
+                            if (!isLaunch)
+                                Error(pos, "\"launch\" expression needed to call function "
+                                      "with \"task\" qualifier.");
+                            if (!launchCountExpr)
+                                return NULL;
 
-        if (fse->ResolveOverloads(argTypes) == true) {
-            func = fse->TypeCheck();
-
-            if (func != NULL) {
-                const FunctionType *ft = 
-                    dynamic_cast<const FunctionType *>(func->GetType());
-                if (ft != NULL) {
-                    if (ft->isTask) {
-                        if (!isLaunch)
-                            Error(pos, "\"launch\" expression needed to call function "
-                                  "with \"task\" qualifier.");
-                        if (!launchCountExpr)
-                            return NULL;
-
-                        launchCountExpr = 
-                            TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
-                                            "task launch count");
-                        if (launchCountExpr == NULL)
-                            return NULL;
+                            launchCountExpr = 
+                                TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
+                                                "task launch count");
+                            if (launchCountExpr == NULL)
+                                return NULL;
+                        }
+                        else {
+                            if (isLaunch)
+                                Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                                      "qualified function.");
+                            assert(launchCountExpr == NULL);
+                        }
                     }
-                    else {
-                        if (isLaunch)
-                            Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                                  "qualified function.");
-                        assert(launchCountExpr == NULL);
-                    }
+                    else
+                        Error(pos, "Valid function name must be used for function call.");
                 }
-                else
-                    Error(pos, "Valid function name must be used for function call.");
+            }
+        }
+        else {
+            const Type *funcType = func->GetType();
+            if (funcType == NULL)
+                return NULL;
+
+            if (dynamic_cast<const PointerType *>(funcType) == NULL ||
+                dynamic_cast<const FunctionType *>(funcType->GetBaseType()) == NULL) {
+                Error(pos, "Must provide function name or function pointer for "
+                      "function call expression.");
+                return NULL;
+            }
+
+            if (funcType->IsVaryingType()) {
+                const FunctionType *ft =  
+                    dynamic_cast<const FunctionType *>(funcType->GetBaseType());
+                if (ft->GetReturnType()->IsUniformType()) {
+                    Error(pos, "Illegal to call a varying function pointer that "
+                          "points to a function with a uniform return type.");
+                    return NULL;
+                }
             }
         }
     }
@@ -2344,8 +2422,25 @@ FunctionCallExpr::TypeCheck() {
 
 int
 FunctionCallExpr::EstimateCost() const {
-    return ((args ? args->EstimateCost() : 0) +
-            (isLaunch ? COST_TASK_LAUNCH : COST_FUNCALL));
+    int callCost = 0;
+    if (isLaunch) 
+        callCost = COST_TASK_LAUNCH;
+    else if (dynamic_cast<FunctionSymbolExpr *>(func) == NULL) {
+        // it's going through a function pointer
+        const Type *fpType = func->GetType();
+        if (fpType != NULL) {
+            assert(dynamic_cast<const PointerType *>(fpType) != NULL);
+            if (fpType->IsUniformType())
+                callCost = COST_FUNPTR_UNIFORM;
+            else 
+                callCost = COST_FUNPTR_VARYING;
+        }
+    }
+    else
+        // regular function call
+        callCost = COST_FUNCALL;
+
+    return (args ? args->EstimateCost() : 0) + callCost;
 }
 
 
@@ -2544,7 +2639,8 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
     // If the result of the indexing isn't a varying atomic type, then
     // nothing to do here.
     if (returnType->IsVaryingType() == false ||
-        dynamic_cast<const AtomicType *>(returnType) == NULL)
+        (dynamic_cast<const AtomicType *>(returnType) == NULL &&
+         dynamic_cast<const PointerType *>(returnType) == NULL))
         return ptr;
 
     // We should now have an array of pointer values, represing in a
@@ -2562,7 +2658,9 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
     // above, and no additional offset is needed.  Otherwise we have
     // pointers to varying atomic types--e.g. ptr->getType() == 
     // [8 x <8 x float> *]
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(pt->getElementType()) == false)
+    if (pt->getElementType()->isIntegerTy() || 
+        pt->getElementType()->isFloatingPointTy() ||
+        pt->getElementType()->isPointerTy())
         return ptr;
 
     // But not so fast: if the reason we have a vector of pointers is that
@@ -2785,7 +2883,7 @@ IndexExpr::Print() const {
 
 /** Map one character ids to vector element numbers.  Allow a few different
     conventions--xyzw, rgba, uv.
- */
+*/
 static int
 lIdentifierToVectorElement(char id) {
     switch (id) {
@@ -4643,6 +4741,22 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // an error should have been issued elsewhere in this case
         return NULL;
 
+    const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
+    const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
+    if (fromPointerType != NULL && toPointerType != NULL) {
+        llvm::Value *value = expr->GetValue(ctx);
+        if (value == NULL)
+            return NULL;
+
+        // bitcast from NULL to actual pointer type...
+        value = ctx->BitCastInst(value, toType->GetAsUniformType()->LLVMType(g->ctx));
+
+        if (fromType->IsUniformType() && toType->IsVaryingType())
+            return ctx->SmearScalar(value);
+        else
+            return value;
+    }
+
     if (Type::Equal(toType->GetAsConstType(), fromType->GetAsConstType()))
         // There's nothing to do, just return the value.  (LLVM's type
         // system doesn't worry about constiness.)
@@ -4735,6 +4849,32 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // treat it as an uint32 type for the below and all will be good.
         toType = toEnum->IsUniformType() ? AtomicType::UniformUInt32 :
             AtomicType::VaryingUInt32;
+
+    if (fromPointerType != NULL) {
+        // convert pointer to bool
+        assert(dynamic_cast<const AtomicType *>(toType) &&
+               toType->IsBoolType());
+        LLVM_TYPE_CONST llvm::Type *lfu = 
+            fromType->GetAsUniformType()->LLVMType(g->ctx);
+        LLVM_TYPE_CONST llvm::PointerType *llvmFromUnifType = 
+            llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(lfu);
+
+        llvm::Value *nullPtrValue = llvm::ConstantPointerNull::get(llvmFromUnifType);
+        if (fromType->IsVaryingType())
+            nullPtrValue = ctx->SmearScalar(nullPtrValue);
+
+        llvm::Value *cmp = ctx->CmpInst(llvm::Instruction::ICmp, 
+                                        llvm::CmpInst::ICMP_NE,
+                                        exprVal, nullPtrValue, "ptr_ne_NULL");
+
+        if (toType->IsVaryingType()) {
+            if (fromType->IsUniformType())
+                cmp = ctx->SmearScalar(cmp);
+            cmp = ctx->I1VecToBoolVec(cmp);
+        }
+
+        return cmp;
+    }
 
     const AtomicType *fromAtomic = dynamic_cast<const AtomicType *>(fromType);
     // at this point, coming from an atomic type is all that's left...
@@ -4951,6 +5091,35 @@ TypeCastExpr::Print() const {
     expr->Print();
     printf(")");
     pos.Print();
+}
+
+
+llvm::Constant *
+TypeCastExpr::GetConstant(const Type *constType) const {
+    // We don't need to worry about most the basic cases where the type
+    // cast can resolve to a constant here, since the
+    // TypeCastExpr::Optimize() method ends up doing the type conversion
+    // and returning a ConstExpr, which in turn will have its GetConstant()
+    // method called.  Thus, the only case we do need to worry about here
+    // is converting a uniform function pointer to a varying function
+    // pointer of the same type.
+    assert(Type::Equal(constType, type));
+    const FunctionType *ft = NULL;
+    if (dynamic_cast<const PointerType *>(type) == NULL ||
+        (ft = dynamic_cast<const FunctionType *>(type->GetBaseType())) == NULL)
+        return NULL;
+
+    llvm::Constant *ec = expr->GetConstant(expr->GetType());
+    if (ec == NULL)
+        return NULL;
+
+    std::vector<llvm::Constant *> smear;
+    for (int i = 0; i < g->target.vectorWidth; ++i)
+        smear.push_back(ec);
+    LLVM_TYPE_CONST llvm::ArrayType *llvmVaryingType =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type->LLVMType(g->ctx));
+    assert(llvmVaryingType != NULL);
+    return llvm::ConstantArray::get(llvmVaryingType, smear);
 }
 
 
@@ -5198,21 +5367,28 @@ FunctionSymbolExpr::FunctionSymbolExpr(const char *n,
                                        SourcePos p) 
   : Expr(p) {
     name = n;
-    matchingFunc = NULL;
     candidateFunctions = candidates;
+    matchingFunc = (candidates && candidates->size() == 1) ? 
+        (*candidates)[0] : NULL;
+    triedToResolve = false;
 }
 
 
 const Type *
 FunctionSymbolExpr::GetType() const {
-    return matchingFunc ? matchingFunc->type : NULL;
+    if (triedToResolve == false && matchingFunc == NULL) {
+        Error(pos, "Ambiguous use of overloaded function \"%s\".", 
+              name.c_str());
+        return NULL;
+    }
+
+    return matchingFunc ? new PointerType(matchingFunc->type, true, true) : NULL;
 }
 
 
 llvm::Value *
 FunctionSymbolExpr::GetValue(FunctionEmitContext *ctx) const {
-    assert("!should not call FunctionSymbolExpr::GetValue()");
-    return NULL;
+    return matchingFunc ? matchingFunc->function : NULL;
 }
 
 
@@ -5250,6 +5426,18 @@ FunctionSymbolExpr::Print() const {
     pos.Print();
 }
 
+
+llvm::Constant *
+FunctionSymbolExpr::GetConstant(const Type *type) const {
+    assert(type->IsUniformType());
+    assert(GetType()->IsUniformType());
+
+    if (Type::Equal(type->GetAsConstType(),
+                    GetType()->GetAsConstType()) == false)
+        return NULL;
+
+    return matchingFunc ? matchingFunc->function : NULL;
+}
 
 
 static std::string
@@ -5617,6 +5805,8 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
 
 bool
 FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes) {
+    triedToResolve = true;
+
     // Functions with names that start with "__" should only be various
     // builtins.  For those, we'll demand an exact match, since we'll
     // expect whichever function in stdlib.ispc is calling out to one of
@@ -5712,3 +5902,44 @@ Expr *
 SyncExpr::Optimize() {
     return this;
 }
+
+
+///////////////////////////////////////////////////////////////////////////
+// NullPointerExpr
+
+llvm::Value *
+NullPointerExpr::GetValue(FunctionEmitContext *ctx) const {
+    return llvm::ConstantPointerNull::get(LLVMTypes::VoidPointerType);
+}
+
+
+const Type *
+NullPointerExpr::GetType() const {
+    return PointerType::Void;
+}
+
+
+Expr *
+NullPointerExpr::TypeCheck() {
+    return this;
+}
+
+
+Expr *
+NullPointerExpr::Optimize() {
+    return this;
+}
+
+
+void
+NullPointerExpr::Print() const {
+    printf("NULL");
+    pos.Print();
+}
+
+
+int
+NullPointerExpr::EstimateCost() const {
+    return 0;
+}
+

@@ -156,6 +156,7 @@ public:
     /** Initialization expression for the variable.  May be NULL. */
     Expr *initExpr;
     bool isFunction;
+    int pointerCount;
     std::vector<Declaration *> *functionArgs;
 };
 
