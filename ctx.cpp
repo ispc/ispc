@@ -1302,7 +1302,7 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
     }
 
     // FIXME: do we need need to handle the case of the first index being
-    // varying?  It's currently needed...
+    // varying?  It's not currently needed...
     assert(!llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index0->getType()));
 
     LLVM_TYPE_CONST llvm::Type *basePtrType = basePtr->getType();
@@ -1498,6 +1498,8 @@ FunctionEmitContext::gather(llvm::Value *lvalue, llvm::Value *mask,
         gather = m->module->getFunction("__pseudo_gather_8");
     }
     assert(gather != NULL);
+
+    lvalue = addVaryingOffsetsIfNeeded(lvalue, type);
 
     llvm::Value *voidlvalue = BitCastInst(lvalue, LLVMTypes::VoidPointerType);
     llvm::Instruction *call = CallInst(gather, voidlvalue, mask, name);
@@ -1715,6 +1717,8 @@ FunctionEmitContext::scatter(llvm::Value *rvalue, llvm::Value *lvalue,
     assert(func != NULL);
     
     AddInstrumentationPoint("scatter");
+
+    lvalue = addVaryingOffsetsIfNeeded(lvalue, rvalueType);
 
     llvm::Value *voidlvalue = BitCastInst(lvalue, LLVMTypes::VoidPointerType);
     std::vector<llvm::Value *> args;
@@ -2040,4 +2044,45 @@ FunctionEmitContext::SyncInst() {
     BranchInst(bPostSync);
 
     SetCurrentBasicBlock(bPostSync);
+}
+
+
+/** When we gathering from or scattering to a varying atomic type, we need
+    to add an appropraite toffset to the final address for each lane right
+    before we use it.  Given a varying pointer we're about to use and its
+    type, this function determines whether these offsets are needed and
+    returns an updated pointer that incorporates these offsets if needed.
+ */
+llvm::Value *
+FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *type) {
+    // We should only have varying pointers here, which are represented as
+    // arrays of pointers in ispc.
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(ptr->getType());
+    assert(at != NULL);
+    LLVM_TYPE_CONST llvm::PointerType *pt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(at->getElementType());
+    assert(pt != NULL);
+
+    // If we have pointers to vector types, e.g. [8 x <8 x float> *], then
+    // the data we're gathering from/scattering to is varying in memory.
+    // If we have pointers to scalar types, e.g. [8 x float *], then the
+    // data is uniform in memory and doesn't need any additional offsets.
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(pt->getElementType()) == false)
+        return ptr;
+
+    llvm::Value *varyingOffsets = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+    for (int i = 0; i < g->target.vectorWidth; ++i)
+        varyingOffsets = InsertInst(varyingOffsets, LLVMInt32(i), i,
+                                    "varying_delta");
+
+    // Cast the pointer type to the corresponding uniform type--e.g. cast
+    // <8 x float> * to float *s.
+    LLVM_TYPE_CONST llvm::Type *unifType = type->GetAsUniformType()->LLVMType(g->ctx);
+    LLVM_TYPE_CONST llvm::PointerType *ptrCastType = 
+        llvm::PointerType::get(llvm::ArrayType::get(unifType, 0), 0);
+    ptr = BitCastInst(ptr, ptrCastType, "ptr2unif");
+
+    // And now we can do the per-lane offsets...
+    return GetElementPtrInst(ptr, LLVMInt32(0), varyingOffsets);
 }

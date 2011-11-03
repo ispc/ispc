@@ -899,7 +899,7 @@ lGetTypeSize(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) 
 static llvm::Value *
 lTraverseConstantExpr(llvm::Constant *value, llvm::Value **offsetPtr,
                       LLVM_TYPE_CONST llvm::Type **scaleType, 
-                      bool *leafIsVarying, llvm::Instruction *insertBefore) {
+                      llvm::Instruction *insertBefore) {
     llvm::GlobalVariable *gv = NULL;
     llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(value);
     if (ce != NULL) {
@@ -907,7 +907,7 @@ lTraverseConstantExpr(llvm::Constant *value, llvm::Value **offsetPtr,
         case llvm::Instruction::BitCast:
             *offsetPtr = LLVMInt32(0);
             return lTraverseConstantExpr(ce->getOperand(0), offsetPtr, 
-                                         scaleType, leafIsVarying, insertBefore);
+                                         scaleType, insertBefore);
         case llvm::Instruction::GetElementPtr: {
             gv = llvm::dyn_cast<llvm::GlobalVariable>(ce->getOperand(0));
             assert(gv != NULL);
@@ -943,30 +943,13 @@ lTraverseConstantExpr(llvm::Constant *value, llvm::Value **offsetPtr,
     if (gv == NULL)
         gv = llvm::dyn_cast<llvm::GlobalVariable>(value);
 
-    if (gv != NULL) {
-        // FIXME: is this broken for arrays of varying???!? (I think so).
-        // IF so, then why does the other copy if it work.  (Or is that
-        // broken, too?!?!?)
-        if (leafIsVarying != NULL) {
-            LLVM_TYPE_CONST llvm::Type *pt = value->getType();
-            LLVM_TYPE_CONST llvm::PointerType *ptrType = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(pt);
-            assert(ptrType);
-            LLVM_TYPE_CONST llvm::Type *eltType = ptrType->getElementType();
-            *leafIsVarying = llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(eltType);
-            //printf("decided that leaf %s varying!\n", *leafIsVarying ? "is" : "is not");
-        }
-
-        return gv;
-    }
-
-    return NULL;
+    return gv;
 }
 
 
 static llvm::Value *
 lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset, 
-                  LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
+                  LLVM_TYPE_CONST llvm::Type **scaleType,
                   llvm::Instruction *insertBefore) {
     if (!llvm::isa<llvm::GetElementPtrInst>(value)) {
         assert(llvm::isa<llvm::BitCastInst>(value));
@@ -984,15 +967,6 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
         }
     
         value = iv->getOperand(1);
-    }
-
-    if (leafIsVarying != NULL) {
-        LLVM_TYPE_CONST llvm::Type *pt = value->getType();
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = 
-            llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(pt);
-        assert(ptrType);
-        LLVM_TYPE_CONST llvm::Type *eltType = ptrType->getElementType();
-        *leafIsVarying = llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(eltType);
     }
 
     llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(value);
@@ -1041,18 +1015,13 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
     deconstructs the LLVM array, storing the offset from the base pointer
     as an llvm::Value for the i'th element into the i'th element of the
     offsets[] array passed in to the function.  It returns a scale factor
-    for the offsets via *scaleType, and sets *leafIsVarying to true if the
-    leaf data type being indexed into is a 'varying' ispc type.  The
-    return value is either the base pointer or the an array of pointers for
-    the next dimension of indexing (that we'll in turn deconstruct with
-    this function).
-
-    @todo All of the additional indexing magic for varying stuff should
-    happen in the front end.
+    for the offsets via *scaleType.  The return value is either the base
+    pointer or the an array of pointers for the next dimension of indexing
+    (that we'll in turn deconstruct with this function).
 */
 static llvm::Value *
 lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
-                     LLVM_TYPE_CONST llvm::Type **scaleType, bool *leafIsVarying,
+                     LLVM_TYPE_CONST llvm::Type **scaleType,
                      llvm::Instruction *insertBefore) {
     // The pointer values may be an array of constant pointers (this
     // happens, for example, when indexing into global arrays.)  In that
@@ -1064,8 +1033,7 @@ lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
         llvm::Value *base = NULL;
         for (int i = 0; i < g->target.vectorWidth; ++i) {
             llvm::Value *b = lTraverseConstantExpr(ca->getOperand(i), &offsets[i],
-                                                   scaleType, leafIsVarying, 
-                                                   insertBefore);
+                                                   scaleType, insertBefore);
             if (i == 0) 
                 base = b;
             else
@@ -1102,7 +1070,7 @@ lTraverseInsertChain(llvm::Value *ptrs, llvm::Value *offsets[ISPC_MAX_NVEC],
         // array being indexed into.
         llvm::Value *myNext = lGetOffsetForLane(elementIndex, ivInst->getOperand(1), 
                                                 &offsets[elementIndex], scaleType,
-                                                leafIsVarying, insertBefore);
+                                                insertBefore);
         if (nextChain == NULL)
             nextChain = myNext;
         else
@@ -1144,7 +1112,6 @@ static llvm::Value *
 lGetPtrAndOffsets(llvm::Value *ptrs, llvm::Value **basePtr, 
                   llvm::Instruction *insertBefore, int eltSize) {
     llvm::Value *offset = LLVMInt32Vector(0);
-    bool firstLoop = true, leafIsVarying;
 
     while (ptrs != NULL) {
         llvm::Value *offsets[ISPC_MAX_NVEC];
@@ -1153,8 +1120,7 @@ lGetPtrAndOffsets(llvm::Value *ptrs, llvm::Value **basePtr,
         LLVM_TYPE_CONST llvm::Type *scaleType = NULL;
 
         llvm::Value *nextChain = 
-            lTraverseInsertChain(ptrs, offsets, &scaleType,
-                                 firstLoop ? &leafIsVarying : NULL, insertBefore);
+            lTraverseInsertChain(ptrs, offsets, &scaleType, insertBefore);
 
         for (int i = 0; i < g->target.vectorWidth; ++i)
             assert(offsets[i] != NULL);
@@ -1185,22 +1151,6 @@ lGetPtrAndOffsets(llvm::Value *ptrs, llvm::Value **basePtr,
             *basePtr = nextChain;
             break;
         }
-        firstLoop = false;
-    }
-
-    // handle varying stuff...
-    if (leafIsVarying) {
-        llvm::Value *deltaVector = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int i = 0; i < g->target.vectorWidth; ++i) {
-            deltaVector = 
-                llvm::InsertElementInst::Create(deltaVector, LLVMInt32(eltSize*i),
-                                                LLVMInt32(i), "delta", insertBefore);
-            lCopyMetadata(deltaVector, insertBefore);
-        }
-        offset = llvm::BinaryOperator::Create(llvm::Instruction::Add, offset, 
-                                              deltaVector, "offset_varying_delta", 
-                                              insertBefore);
-        lCopyMetadata(offset, insertBefore);
     }
 
     return offset;

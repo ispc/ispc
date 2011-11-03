@@ -525,6 +525,7 @@ private:
                         const Type *type, const char *name);
     void maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
                      const Type *rvalueType, llvm::Value *maskPtr);
+    llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *value, const Type *type);
 };
 
 #endif // ISPC_CTX_H

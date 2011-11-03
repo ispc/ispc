@@ -12,12 +12,12 @@ export void f_fi(uniform float RET[], uniform float a[], uniform int bFOO[]) {
     uniform int i;
     for (i = 0; i < 17; ++i) {
         myFoo[i].x = i;
-        myFoo[i].f = 2*i;
+        myFoo[i].f = 17+2*i;
     }
     RET[programIndex] = myFoo[b/2].f;
 }
 
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 2 + 2 * programIndex;
+    RET[programIndex] = 19 + 2 * programIndex;
 }

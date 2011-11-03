@@ -303,8 +303,8 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-    virtual int getElementNumber() const;
-
+    virtual int getElementNumber() const = 0;
+    virtual const Type *getElementType() const = 0;
     std::string getCandidateNearMatches() const;
 
     Expr *expr;
