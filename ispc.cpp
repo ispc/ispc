@@ -328,7 +328,9 @@ SourcePos::SourcePos(const char *n, int l, int c) {
     first_column = last_column = c;
 }
 
-llvm::DIFile SourcePos::GetDIFile() const {
+
+llvm::DIFile
+SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
     return m->diBuilder->createFile(filename, directory);
@@ -351,3 +353,17 @@ SourcePos::operator==(const SourcePos &p2) const {
             last_column == p2.last_column);
 }
 
+
+SourcePos
+Union(const SourcePos &p1, const SourcePos &p2) {
+    if (strcmp(p1.name, p2.name) != 0)
+        return p1;
+
+    SourcePos ret;
+    ret.name = p1.name;
+    ret.first_line = std::min(p1.first_line, p2.first_line);
+    ret.first_column = std::min(p1.first_column, p2.first_column);
+    ret.last_line = std::max(p1.last_line, p2.last_line);
+    ret.last_column = std::max(p1.last_column, p2.last_column);
+    return ret;
+}

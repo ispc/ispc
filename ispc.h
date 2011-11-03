@@ -121,6 +121,10 @@ struct SourcePos {
     bool operator==(const SourcePos &p2) const;
 };
 
+/** Returns a SourcePos that encompasses the extent of both of the given
+    extents. */
+SourcePos Union(const SourcePos &p1, const SourcePos &p2);
+
 
 /** @brief Structure that defines a compilation target 
 

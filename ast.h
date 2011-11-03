@@ -69,7 +69,7 @@ public:
 
     /** All AST nodes must track the file position where they are
         defined. */
-    const SourcePos pos;
+    SourcePos pos;
 };
 
 

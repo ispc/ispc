@@ -262,37 +262,37 @@ launch_expression
     : TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
       { 
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
-          $$ = new FunctionCallExpr($3, $5, @3, true, oneExpr);
+          $$ = new FunctionCallExpr($3, $5, Union(@3, @6), true, oneExpr);
       }
     | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
       {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
-          $$ = new FunctionCallExpr($3, new ExprList(@3), @3, true, oneExpr);
+          $$ = new FunctionCallExpr($3, new ExprList(Union(@4,@5)), Union(@3, @5), true, oneExpr);
        }
     | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' argument_expression_list ')' '>'
-      { $$ = new FunctionCallExpr($6, $8, @6, true, $3); }
+      { $$ = new FunctionCallExpr($6, $8, Union(@6,@9), true, $3); }
     | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' ')' '>'
-      { $$ = new FunctionCallExpr($6, new ExprList(@6), @6, true, $3); }
+      { $$ = new FunctionCallExpr($6, new ExprList(Union(@6,@7)), Union(@6,@8), true, $3); }
     ;
 
 postfix_expression
     : primary_expression
     | postfix_expression '[' expression ']'
-      { $$ = new IndexExpr($1, $3, @1); }
+      { $$ = new IndexExpr($1, $3, Union(@1,@4)); }
     | postfix_expression '(' ')'
-      { $$ = new FunctionCallExpr($1, new ExprList(@1), @1); }
+      { $$ = new FunctionCallExpr($1, new ExprList(Union(@1,@2)), Union(@1,@3)); }
     | postfix_expression '(' argument_expression_list ')'
-      { $$ = new FunctionCallExpr($1, $3, @1); }
+      { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
     | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
-      { $$ = MemberExpr::create($1, yytext, @1, @3); }
+      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3); }
 /*    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
       { UNIMPLEMENTED }
 */
     | postfix_expression TOKEN_INC_OP
-      { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, @1); }
+      { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
     | postfix_expression TOKEN_DEC_OP
-      { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, @1); }
+      { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
     ;
 
 argument_expression_list
@@ -302,6 +302,7 @@ argument_expression_list
           ExprList *argList = dynamic_cast<ExprList *>($1);
           assert(argList != NULL);
           argList->exprs.push_back($3);
+          argList->pos = Union(argList->pos, @3);
           $$ = argList;
       }
     ;
@@ -309,17 +310,17 @@ argument_expression_list
 unary_expression
     : postfix_expression
     | TOKEN_INC_OP unary_expression   
-      { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, @2); }
+      { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression   
-      { $$ = new UnaryExpr(UnaryExpr::PreDec, $2, @2); }
+      { $$ = new UnaryExpr(UnaryExpr::PreDec, $2, Union(@1, @2)); }
     | '+' cast_expression 
       { $$ = $2; }
     | '-' cast_expression 
-      { $$ = new UnaryExpr(UnaryExpr::Negate, $2, @2); }
+      { $$ = new UnaryExpr(UnaryExpr::Negate, $2, Union(@1, @2)); }
     | '~' cast_expression 
-      { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, @2); }
+      { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
     | '!' cast_expression 
-      { $$ = new UnaryExpr(UnaryExpr::LogicalNot, $2, @2); }
+      { $$ = new UnaryExpr(UnaryExpr::LogicalNot, $2, Union(@1, @2)); }
     ;
 
 cast_expression
@@ -332,122 +333,122 @@ cast_expression
           // uniform float x = 1. / (float)y;
           // don't issue an error due to (float)y being inadvertently
           // and undesirably-to-the-user "varying"...
-          $$ = new TypeCastExpr($2, $4, true, @1); 
+          $$ = new TypeCastExpr($2, $4, true, Union(@1,@4)); 
       }
     ;
 
 multiplicative_expression
     : cast_expression
     | multiplicative_expression '*' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '/' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '%' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
     ;
 
 additive_expression
     : multiplicative_expression
     | additive_expression '+' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
     | additive_expression '-' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
     ;
 
 shift_expression
     : additive_expression
     | shift_expression TOKEN_LEFT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, @1); }
+      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1,@3)); }
     | shift_expression TOKEN_RIGHT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, @1); }
+      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1,@3)); }
     ;
 
 relational_expression
     : shift_expression
     | relational_expression '<' shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Lt, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Lt, $1, $3, Union(@1, @3)); }
     | relational_expression '>' shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Gt, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Gt, $1, $3, Union(@1, @3)); }
     | relational_expression TOKEN_LE_OP shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Le, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Le, $1, $3, Union(@1, @3)); }
     | relational_expression TOKEN_GE_OP shift_expression
-      { $$ = new BinaryExpr(BinaryExpr::Ge, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Ge, $1, $3, Union(@1, @3)); }
     ;
 
 equality_expression
     : relational_expression
     | equality_expression TOKEN_EQ_OP relational_expression
-      { $$ = new BinaryExpr(BinaryExpr::Equal, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Equal, $1, $3, Union(@1,@3)); }
     | equality_expression TOKEN_NE_OP relational_expression
-      { $$ = new BinaryExpr(BinaryExpr::NotEqual, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::NotEqual, $1, $3, Union(@1,@3)); }
     ;
 
 and_expression
     : equality_expression
     | and_expression '&' equality_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitAnd, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::BitAnd, $1, $3, Union(@1, @3)); }
     ;
 
 exclusive_or_expression
     : and_expression
     | exclusive_or_expression '^' and_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitXor, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::BitXor, $1, $3, Union(@1, @3)); }
     ;
 
 inclusive_or_expression
     : exclusive_or_expression
     | inclusive_or_expression '|' exclusive_or_expression
-      { $$ = new BinaryExpr(BinaryExpr::BitOr, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::BitOr, $1, $3, Union(@1, @3)); }
     ;
 
 logical_and_expression
     : inclusive_or_expression
     | logical_and_expression TOKEN_AND_OP inclusive_or_expression
-      { $$ = new BinaryExpr(BinaryExpr::LogicalAnd, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::LogicalAnd, $1, $3, Union(@1, @3)); }
     ;
 
 logical_or_expression
     : logical_and_expression
     | logical_or_expression TOKEN_OR_OP logical_and_expression
-      { $$ = new BinaryExpr(BinaryExpr::LogicalOr, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::LogicalOr, $1, $3, Union(@1, @3)); }
     ;
 
 conditional_expression
     : logical_or_expression
     | logical_or_expression '?' expression ':' conditional_expression
-      { $$ = new SelectExpr($1, $3, $5, @1); }
+      { $$ = new SelectExpr($1, $3, $5, Union(@1,@5)); }
     ;
 
 assignment_expression
     : conditional_expression
     | unary_expression '=' assignment_expression
-      { $$ = new AssignExpr(AssignExpr::Assign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::Assign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_MUL_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::MulAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::MulAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_DIV_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::DivAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::DivAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_MOD_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::ModAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::ModAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_ADD_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::AddAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::AddAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_SUB_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::SubAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::SubAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_LEFT_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::ShlAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::ShlAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_RIGHT_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::ShrAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::ShrAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_AND_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::AndAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::AndAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_XOR_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::XorAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::XorAssign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_OR_ASSIGN assignment_expression
-      { $$ = new AssignExpr(AssignExpr::OrAssign, $1, $3, @2); }
+      { $$ = new AssignExpr(AssignExpr::OrAssign, $1, $3, Union(@1, @3)); }
     ;
 
 expression
     : assignment_expression
     | expression ',' assignment_expression
-      { $$ = new BinaryExpr(BinaryExpr::Comma, $1, $3, @2); }
+      { $$ = new BinaryExpr(BinaryExpr::Comma, $1, $3, Union(@1, @3)); }
     ;
 
 constant_expression
@@ -1016,6 +1017,7 @@ initializer_list
               ExprList *exprList = dynamic_cast<ExprList *>($1);
               assert(exprList);
               exprList->exprs.push_back($3);
+              exprList->pos = Union(exprList->pos, @3);
               $$ = exprList;
           }
       }

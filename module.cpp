@@ -275,7 +275,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
                             dynamic_cast<ConstExpr *>(initExpr);
                 }
                 else
-                    Error(sym->pos, "Initializer for global variable \"%s\" "
+                    Error(initExpr->pos, "Initializer for global variable \"%s\" "
                           "must be a constant.", sym->name.c_str());
             }
         }

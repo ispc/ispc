@@ -1966,15 +1966,11 @@ SelectExpr::GetType() const {
         dynamic_cast<const VectorType *>(testType)->GetElementCount() : 0;
     int expr1VecSize = dynamic_cast<const VectorType *>(expr1Type) != NULL ?
         dynamic_cast<const VectorType *>(expr1Type)->GetElementCount() : 0;
-//CO    int expr2VecSize = dynamic_cast<const VectorType *>(expr2Type) != NULL ?
-//CO        dynamic_cast<const VectorType *>(expr2Type)->GetElementCount() : 0;
-//CO    assert(testVecSize == expr1VecSize && expr1VecSize == expr2VecSize);
-    // REMOVE? old test
     assert(!(testVecSize != 0 && expr1VecSize != 0 && testVecSize != expr1VecSize));
     
     int vectorSize = std::max(testVecSize, expr1VecSize);
-    return Type::MoreGeneralType(expr1Type, expr2Type, pos, "select expression", 
-                                 becomesVarying, vectorSize);
+    return Type::MoreGeneralType(expr1Type, expr2Type, Union(expr1->pos, expr2->pos),
+                                 "select expression", becomesVarying, vectorSize);
 }
 
 
@@ -2030,8 +2026,9 @@ SelectExpr::TypeCheck() {
 
     int testVecSize = dynamic_cast<const VectorType *>(testType) ?
         dynamic_cast<const VectorType *>(testType)->GetElementCount() : 0;
-    const Type *promotedType = Type::MoreGeneralType(type1, type2, pos, "select expression", 
-                                                     testType->IsVaryingType(), testVecSize);
+    const Type *promotedType = 
+        Type::MoreGeneralType(type1, type2, Union(expr1->pos, expr2->pos),
+                              "select expression", testType->IsVaryingType(), testVecSize);
     if (promotedType == NULL)
         return NULL;
 
