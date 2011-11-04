@@ -211,7 +211,11 @@ std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
     // Start with the host triple as the default
+#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
+    triple.setTriple(llvm::sys::getDefaultTargetTriple());
+#else
     triple.setTriple(llvm::sys::getHostTriple());
+#endif
 
     // And override the arch in the host triple based on what the user
     // specified.  Here we need to deal with the fact that LLVM uses one

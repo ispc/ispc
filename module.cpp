@@ -1114,8 +1114,13 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
-    if (triple.getTriple().empty())
+    if (triple.getTriple().empty()) {
+#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
+#else
         triple.setTriple(llvm::sys::getHostTriple());
+#endif
+    }
     options.Triple = triple.getTriple();
 
     clang::TargetInfo *target =
