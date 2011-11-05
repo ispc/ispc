@@ -318,11 +318,13 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                 // FIXME: we only need this for function pointers; it was
                 // already done for atomic types and enums in
                 // DeclStmt::TypeCheck()...
-                initExpr = TypeConvertExpr(initExpr, type, "initializer");
-                // FIXME: and this is only needed to re-establish
-                // constant-ness so that GetConstant below works for
-                // constant artithmetic expressions...
-                initExpr = initExpr->Optimize();
+                if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+                    initExpr = TypeConvertExpr(initExpr, type, "initializer");
+                    // FIXME: and this is only needed to re-establish
+                    // constant-ness so that GetConstant below works for
+                    // constant artithmetic expressions...
+                    initExpr = initExpr->Optimize();
+                }
 
                 cinit = initExpr->GetConstant(type);
                 if (cinit == NULL)
