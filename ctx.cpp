@@ -160,8 +160,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     else {
         LLVM_TYPE_CONST llvm::Type *ftype = returnType->LLVMType(g->ctx);
         returnValuePtr = AllocaInst(ftype, "return_value_memory");
-        // FIXME: don't do this store???
-        StoreInst(llvm::Constant::getNullValue(ftype), returnValuePtr);
     }
 
     if (m->diBuilder) {
