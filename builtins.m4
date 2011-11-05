@@ -555,7 +555,7 @@ divert`'dnl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`shuffles', `
-define internal <$1 x $2> @__broadcast_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
+define <$1 x $2> @__broadcast_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
   %v = extractelement <$1 x $2> %0, i32 %1
   %r_0 = insertelement <$1 x $2> undef, $2 %v, i32 0
 forloop(i, 1, eval($1-1), `  %r_`'i = insertelement <$1 x $2> %r_`'eval(i-1), $2 %v, i32 i
@@ -563,7 +563,7 @@ forloop(i, 1, eval($1-1), `  %r_`'i = insertelement <$1 x $2> %r_`'eval(i-1), $2
   ret <$1 x $2> %r_`'eval($1-1)
 }
 
-define internal <$1 x $2> @__rotate_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
+define <$1 x $2> @__rotate_$3(<$1 x $2>, i32) nounwind readnone alwaysinline {
   %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
   br i1 %isc, label %is_const, label %not_const
 
@@ -596,7 +596,7 @@ not_const:
   ret <$1 x $2> %result
 }
 
-define internal <$1 x $2> @__shuffle_$3(<$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
+define <$1 x $2> @__shuffle_$3(<$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
 forloop(i, 0, eval($1-1), `  
   %index_`'i = extractelement <$1 x i32> %1, i32 i')
 forloop(i, 0, eval($1-1), `  
@@ -608,7 +608,7 @@ forloop(i, 1, eval($1-1), `  %ret_`'i = insertelement <$1 x $2> %ret_`'eval(i-1)
   ret <$1 x $2> %ret_`'eval($1-1)
 }
 
-define internal <$1 x $2> @__shuffle2_$3(<$1 x $2>, <$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
+define <$1 x $2> @__shuffle2_$3(<$1 x $2>, <$1 x $2>, <$1 x i32>) nounwind readnone alwaysinline {
   %v2 = shufflevector <$1 x $2> %0, <$1 x $2> %1, <eval(2*$1) x i32> <
       forloop(i, 0, eval(2*$1-2), `i32 i, ') i32 eval(2*$1-1)
   >
@@ -675,7 +675,7 @@ forloop(i, 1, eval($1-1), `
 
 define(`global_atomic_associative', `
 
-define internal <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
+define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
                                                  <$1 x i32> %m) nounwind alwaysinline {
   ; first, for any lanes where the mask is off, compute a vector where those lanes
   ; hold the identity value..
@@ -747,7 +747,7 @@ define(`global_atomic_uniform', `
 
 declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
-define internal $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
                                           <$1 x i32> %mask) nounwind alwaysinline {
   %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
   ret $3 %r
@@ -765,7 +765,7 @@ declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)
 
 define(`global_swap', `
 
-define internal <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
+define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %rptr = alloca <$1 x $2>
   %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
@@ -780,7 +780,7 @@ define internal <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
   ret <$1 x $2> %r
 }
 
-define internal $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
+define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
                                                     <$1 x i32> %mask) nounwind alwaysinline {
  %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
  ret $2 %r
@@ -798,7 +798,7 @@ define(`global_atomic_exchange', `
 
 declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
 
-define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
                                <$1 x $2> %val, <$1 x i32> %mask) nounwind alwaysinline {
   %rptr = alloca <$1 x $2>
   %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
@@ -815,7 +815,7 @@ define internal <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $
   ret <$1 x $2> %r
 }
 
-define internal $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
                                $2 %val, <$1 x i32> %mask) nounwind alwaysinline {
   %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
   ret $2 %r
@@ -834,22 +834,22 @@ define internal $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cm
 declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
 
 define(`prefetch_read', `
-define internal void @__prefetch_read_1_$1($2 *) alwaysinline {
+define void @__prefetch_read_1_$1($2 *) alwaysinline {
   %ptr8 = bitcast $2 * %0 to i8 *
   call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 3)
   ret void
 }
-define internal void @__prefetch_read_2_$1($2 *) alwaysinline {
+define void @__prefetch_read_2_$1($2 *) alwaysinline {
   %ptr8 = bitcast $2 * %0 to i8 *
   call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 2)
   ret void
 }
-define internal void @__prefetch_read_3_$1($2 *) alwaysinline {
+define void @__prefetch_read_3_$1($2 *) alwaysinline {
   %ptr8 = bitcast $2 * %0 to i8 *
   call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 1)
   ret void
 }
-define internal void @__prefetch_read_nt_$1($2 *) alwaysinline {
+define void @__prefetch_read_nt_$1($2 *) alwaysinline {
   %ptr8 = bitcast $2 * %0 to i8 *
   call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 0)
   ret void
@@ -966,45 +966,45 @@ declare void @__pseudo_scatter_base_offsets_64(i8 * nocapture, <$1 x i32>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
 
-define internal i8 @__extract_int8(<$1 x i8>, i32) nounwind readnone alwaysinline {
+define i8 @__extract_int8(<$1 x i8>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <$1 x i8> %0, i32 %1
   ret i8 %extract
 }
 
-define internal <$1 x i8> @__insert_int8(<$1 x i8>, i32, 
+define <$1 x i8> @__insert_int8(<$1 x i8>, i32, 
                                            i8) nounwind readnone alwaysinline {
   %insert = insertelement <$1 x i8> %0, i8 %2, i32 %1
   ret <$1 x i8> %insert
 }
 
-define internal i16 @__extract_int16(<$1 x i16>, i32) nounwind readnone alwaysinline {
+define i16 @__extract_int16(<$1 x i16>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <$1 x i16> %0, i32 %1
   ret i16 %extract
 }
 
-define internal <$1 x i16> @__insert_int16(<$1 x i16>, i32, 
+define <$1 x i16> @__insert_int16(<$1 x i16>, i32, 
                                            i16) nounwind readnone alwaysinline {
   %insert = insertelement <$1 x i16> %0, i16 %2, i32 %1
   ret <$1 x i16> %insert
 }
 
-define internal i32 @__extract_int32(<$1 x i32>, i32) nounwind readnone alwaysinline {
+define i32 @__extract_int32(<$1 x i32>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <$1 x i32> %0, i32 %1
   ret i32 %extract
 }
 
-define internal <$1 x i32> @__insert_int32(<$1 x i32>, i32, 
+define <$1 x i32> @__insert_int32(<$1 x i32>, i32, 
                                            i32) nounwind readnone alwaysinline {
   %insert = insertelement <$1 x i32> %0, i32 %2, i32 %1
   ret <$1 x i32> %insert
 }
 
-define internal i64 @__extract_int64(<$1 x i64>, i32) nounwind readnone alwaysinline {
+define i64 @__extract_int64(<$1 x i64>, i32) nounwind readnone alwaysinline {
   %extract = extractelement <$1 x i64> %0, i32 %1
   ret i64 %extract
 }
 
-define internal <$1 x i64> @__insert_int64(<$1 x i64>, i32, 
+define <$1 x i64> @__insert_int64(<$1 x i64>, i32, 
                                            i64) nounwind readnone alwaysinline {
   %insert = insertelement <$1 x i64> %0, i64 %2, i32 %1
   ret <$1 x i64> %insert
@@ -1020,70 +1020,70 @@ shuffles($1, i64, int64, 8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; various bitcasts from one type to another
 
-define internal <$1 x i32> @__intbits_varying_float(<$1 x float>) nounwind readnone alwaysinline {
+define <$1 x i32> @__intbits_varying_float(<$1 x float>) nounwind readnone alwaysinline {
   %float_to_int_bitcast = bitcast <$1 x float> %0 to <$1 x i32>
   ret <$1 x i32> %float_to_int_bitcast
 }
 
-define internal i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
+define i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
   %float_to_int_bitcast = bitcast float %0 to i32
   ret i32 %float_to_int_bitcast
 }
 
-define internal <$1 x i64> @__intbits_varying_double(<$1 x double>) nounwind readnone alwaysinline {
+define <$1 x i64> @__intbits_varying_double(<$1 x double>) nounwind readnone alwaysinline {
   %double_to_int_bitcast = bitcast <$1 x double> %0 to <$1 x i64>
   ret <$1 x i64> %double_to_int_bitcast
 }
 
-define internal i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
+define i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
   %double_to_int_bitcast = bitcast double %0 to i64
   ret i64 %double_to_int_bitcast
 }
 
-define internal <$1 x float> @__floatbits_varying_int32(<$1 x i32>) nounwind readnone alwaysinline {
+define <$1 x float> @__floatbits_varying_int32(<$1 x i32>) nounwind readnone alwaysinline {
   %int_to_float_bitcast = bitcast <$1 x i32> %0 to <$1 x float>
   ret <$1 x float> %int_to_float_bitcast
 }
 
-define internal float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
+define float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
   %int_to_float_bitcast = bitcast i32 %0 to float
   ret float %int_to_float_bitcast
 }
 
-define internal <$1 x double> @__doublebits_varying_int64(<$1 x i64>) nounwind readnone alwaysinline {
+define <$1 x double> @__doublebits_varying_int64(<$1 x i64>) nounwind readnone alwaysinline {
   %int_to_double_bitcast = bitcast <$1 x i64> %0 to <$1 x double>
   ret <$1 x double> %int_to_double_bitcast
 }
 
-define internal double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
+define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
   %int_to_double_bitcast = bitcast i64 %0 to double
   ret double %int_to_double_bitcast
 }
 
-define internal <$1 x float> @__undef_varying() nounwind readnone alwaysinline {
+define <$1 x float> @__undef_varying() nounwind readnone alwaysinline {
   ret <$1 x float> undef
 }
 
-define internal float @__undef_uniform() nounwind readnone alwaysinline {
+define float @__undef_uniform() nounwind readnone alwaysinline {
   ret float undef
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; sign extension
 
-define internal i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
+define i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
   %r = sext i1 %0 to i32
   ret i32 %r
 }
 
-define internal <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone alwaysinline {
+define <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone alwaysinline {
   ret <$1 x i32> %0
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; count trailing zeros
 
-define internal i32 @__count_trailing_zeros(i32) nounwind readnone alwaysinline {
+define i32 @__count_trailing_zeros(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.cttz.i32(i32 %0)
   ret i32 %c
 }
@@ -1094,7 +1094,7 @@ define internal i32 @__count_trailing_zeros(i32) nounwind readnone alwaysinline 
 ;; take 4 4-wide vectors laid out like <r0 g0 b0 a0> <r1 g1 b1 a1> ...
 ;; and reorder them to <r0 r1 r2 r3> <g0 g1 g2 g3> ...
 
-define internal void
+define void
 @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0, 
         <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
@@ -1129,7 +1129,7 @@ define internal void
 ;; This is the exact same set of operations that __soa_to_soa4_float4 does
 ;; (a 4x4 transpose), so just call that...
 
-define internal void
+define void
 @__soa_to_aos4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0, 
         <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
@@ -1145,7 +1145,7 @@ define internal void
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>, transpose to
 ;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3>.
 
-define internal void
+define void
 @__aos_to_soa3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
         <4 x float> * noalias %out2) nounwind alwaysinline { 
@@ -1176,7 +1176,7 @@ define internal void
 ;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3> to
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>.
 
-define internal void
+define void
 @__soa_to_aos3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
         <4 x float> * noalias %out2) nounwind alwaysinline { 
@@ -1206,7 +1206,7 @@ define internal void
 ;; routines above.  These implementations are all built on top of the 4-wide
 ;; vector versions.
  
-define internal void
+define void
 @__aos_to_soa4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> %v3, <8 x float> * noalias %out0, 
         <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
@@ -1256,7 +1256,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> %v3, <8 x float> * noalias %out0, 
         <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
@@ -1305,7 +1305,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__aos_to_soa3_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> * noalias %out0, <8 x float> * noalias %out1,
         <8 x float> * noalias %out2) nounwind alwaysinline {
@@ -1339,7 +1339,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos3_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> * noalias %out0, <8 x float> * noalias %out1,
         <8 x float> * noalias %out2) nounwind alwaysinline {
@@ -1374,7 +1374,7 @@ define internal void
 
 ;; 16-wide
 
-define internal void
+define void
 @__aos_to_soa4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> %v3, <16 x float> * noalias %out0, 
         <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
@@ -1445,7 +1445,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> %v3, <16 x float> * noalias %out0, 
         <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
@@ -1516,7 +1516,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__aos_to_soa3_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> * noalias %out0, <16 x float> * noalias %out1,
         <16 x float> * noalias %out2) nounwind alwaysinline {
@@ -1574,7 +1574,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos3_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> * noalias %out0, <16 x float> * noalias %out1,
         <16 x float> * noalias %out2) nounwind alwaysinline {
@@ -1633,7 +1633,7 @@ define internal void
 
 ;; versions to be called from stdlib
 
-define internal void
+define void
 @__aos_to_soa4_float([0 x float] * noalias %base, i32 %offset,
         <$1 x float> * noalias %out0, <$1 x float> * noalias %out1,
         <$1 x float> * noalias %out2, <$1 x float> * noalias %out3)
@@ -1655,7 +1655,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__aos_to_soa4_int32([0 x i32] * noalias %base, i32 %offset,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2, <$1 x i32> * noalias %out3)
@@ -1672,7 +1672,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos4_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
              <$1 x float> %v3, [0 x float] * noalias %base,
              i32 %offset) nounwind alwaysinline { 
@@ -1689,7 +1689,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos4_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
              <$1 x i32> %v3, [0 x i32] * noalias %base,
              i32 %offset) nounwind alwaysinline { 
@@ -1705,7 +1705,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__aos_to_soa3_float([0 x float] * noalias %base, i32 %offset,
         <$1 x float> * %out0, <$1 x float> * %out1,
         <$1 x float> * %out2) nounwind alwaysinline { 
@@ -1724,7 +1724,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__aos_to_soa3_int32([0 x i32] * noalias %base, i32 %offset,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2) nounwind alwaysinline { 
@@ -1738,7 +1738,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos3_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
              [0 x float] * noalias %base, i32 %offset) nounwind alwaysinline { 
   %pf = bitcast [0 x float] * %base to float *
@@ -1753,7 +1753,7 @@ define internal void
 }
 
 
-define internal void
+define void
 @__soa_to_aos3_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
              [0 x i32] * noalias %base, i32 %offset) nounwind alwaysinline { 
   %fv0 = bitcast <$1 x i32> %v0 to <$1 x float>
@@ -1791,7 +1791,7 @@ prefetch_read(varying_double, <$1 x double>)
 declare i32 @printf(i8*, ...)
 declare void @abort() noreturn
 
-define internal void @__do_assert_uniform(i8 *%str, i1 %test, <$1 x i32> %mask) {
+define void @__do_assert_uniform(i8 *%str, i1 %test, <$1 x i32> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
@@ -1804,7 +1804,7 @@ ok:
 }
 
 
-define internal void @__do_assert_varying(i8 *%str, <$1 x i32> %test,
+define void @__do_assert_varying(i8 *%str, <$1 x i32> %test,
                                           <$1 x i32> %mask) {
   %nottest = xor <$1 x i32> %test,
                  < forloop(i, 1, eval($1-1), `i32 -1, ') i32 -1 >
@@ -1839,47 +1839,47 @@ declare float @expf(float) nounwind readnone
 declare float @logf(float) nounwind readnone
 declare float @powf(float, float) nounwind readnone
 
-define internal float @__stdlib_sinf(float) nounwind readnone alwaysinline {
+define float @__stdlib_sinf(float) nounwind readnone alwaysinline {
   %r = call float @sinf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_cosf(float) nounwind readnone alwaysinline {
+define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
   %r = call float @cosf(float %0)
   ret float %r
 }
 
-define internal void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
+define void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
 }
 
-define internal float @__stdlib_tanf(float) nounwind readnone alwaysinline {
+define float @__stdlib_tanf(float) nounwind readnone alwaysinline {
   %r = call float @tanf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_atanf(float) nounwind readnone alwaysinline {
+define float @__stdlib_atanf(float) nounwind readnone alwaysinline {
   %r = call float @atanf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_atan2f(float, float) nounwind readnone alwaysinline {
+define float @__stdlib_atan2f(float, float) nounwind readnone alwaysinline {
   %r = call float @atan2f(float %0, float %1)
   ret float %r
 }
 
-define internal float @__stdlib_logf(float) nounwind readnone alwaysinline {
+define float @__stdlib_logf(float) nounwind readnone alwaysinline {
   %r = call float @logf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_expf(float) nounwind readnone alwaysinline {
+define float @__stdlib_expf(float) nounwind readnone alwaysinline {
   %r = call float @expf(float %0)
   ret float %r
 }
 
-define internal float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
+define float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
   %r = call float @powf(float %0, float %1)
   ret float %r
 }
@@ -1894,47 +1894,47 @@ declare double @exp(double) nounwind readnone
 declare double @log(double) nounwind readnone
 declare double @pow(double, double) nounwind readnone
 
-define internal double @__stdlib_sin(double) nounwind readnone alwaysinline {
+define double @__stdlib_sin(double) nounwind readnone alwaysinline {
   %r = call double @sin(double %0)
   ret double %r
 }
 
-define internal double @__stdlib_cos(double) nounwind readnone alwaysinline {
+define double @__stdlib_cos(double) nounwind readnone alwaysinline {
   %r = call double @cos(double %0)
   ret double %r
 }
 
-define internal void @__stdlib_sincos(double, double *, double *) nounwind readnone alwaysinline {
+define void @__stdlib_sincos(double, double *, double *) nounwind readnone alwaysinline {
   call void @sincos(double %0, double *%1, double *%2)
   ret void
 }
 
-define internal double @__stdlib_tan(double) nounwind readnone alwaysinline {
+define double @__stdlib_tan(double) nounwind readnone alwaysinline {
   %r = call double @tan(double %0)
   ret double %r
 }
 
-define internal double @__stdlib_atan(double) nounwind readnone alwaysinline {
+define double @__stdlib_atan(double) nounwind readnone alwaysinline {
   %r = call double @atan(double %0)
   ret double %r
 }
 
-define internal double @__stdlib_atan2(double, double) nounwind readnone alwaysinline {
+define double @__stdlib_atan2(double, double) nounwind readnone alwaysinline {
   %r = call double @atan2(double %0, double %1)
   ret double %r
 }
 
-define internal double @__stdlib_log(double) nounwind readnone alwaysinline {
+define double @__stdlib_log(double) nounwind readnone alwaysinline {
   %r = call double @log(double %0)
   ret double %r
 }
 
-define internal double @__stdlib_exp(double) nounwind readnone alwaysinline {
+define double @__stdlib_exp(double) nounwind readnone alwaysinline {
   %r = call double @exp(double %0)
   ret double %r
 }
 
-define internal double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
+define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
   %r = call double @pow(double %0, double %1)
   ret double %r
 }
@@ -1945,7 +1945,7 @@ define internal double @__stdlib_pow(double, double) nounwind readnone alwaysinl
 declare void @llvm.memory.barrier(i1 %loadload, i1 %loadstore, i1 %storeload,
                                   i1 %storestore, i1 %device)
 
-define internal void @__memory_barrier() nounwind readnone alwaysinline {
+define void @__memory_barrier() nounwind readnone alwaysinline {
   ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
   ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
   ;; in the case where the first 4 args are true but it is false.
@@ -1987,7 +1987,7 @@ global_atomic_uniform($1, umax, i64, uint64)
 global_swap($1, i32, int32)
 global_swap($1, i64, int64)
 
-define internal <$1 x float> @__atomic_swap_float_global(float * %ptr, <$1 x float> %val,
+define <$1 x float> @__atomic_swap_float_global(float * %ptr, <$1 x float> %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %ival = bitcast <$1 x float> %val to <$1 x i32>
@@ -1996,7 +1996,7 @@ define internal <$1 x float> @__atomic_swap_float_global(float * %ptr, <$1 x flo
   ret <$1 x float> %ret
 }
 
-define internal <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x double> %val,
+define <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x double> %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %ival = bitcast <$1 x double> %val to <$1 x i64>
@@ -2005,7 +2005,7 @@ define internal <$1 x double> @__atomic_swap_double_global(double * %ptr, <$1 x 
   ret <$1 x double> %ret
 }
 
-define internal float @__atomic_swap_uniform_float_global(float * %ptr, float %val,
+define float @__atomic_swap_uniform_float_global(float * %ptr, float %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %ival = bitcast float %val to i32
@@ -2014,7 +2014,7 @@ define internal float @__atomic_swap_uniform_float_global(float * %ptr, float %v
   ret float %ret
 }
 
-define internal double @__atomic_swap_uniform_double_global(double * %ptr, double %val,
+define double @__atomic_swap_uniform_double_global(double * %ptr, double %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %ival = bitcast double %val to i64
@@ -2026,7 +2026,7 @@ define internal double @__atomic_swap_uniform_double_global(double * %ptr, doubl
 global_atomic_exchange($1, i32, int32)
 global_atomic_exchange($1, i64, int64)
 
-define internal <$1 x float> @__atomic_compare_exchange_float_global(float * %ptr,
+define <$1 x float> @__atomic_compare_exchange_float_global(float * %ptr,
                       <$1 x float> %cmp, <$1 x float> %val, <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast <$1 x float> %cmp to <$1 x i32>
@@ -2037,7 +2037,7 @@ define internal <$1 x float> @__atomic_compare_exchange_float_global(float * %pt
   ret <$1 x float> %ret
 }
 
-define internal <$1 x double> @__atomic_compare_exchange_double_global(double * %ptr,
+define <$1 x double> @__atomic_compare_exchange_double_global(double * %ptr,
                       <$1 x double> %cmp, <$1 x double> %val, <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast <$1 x double> %cmp to <$1 x i64>
@@ -2048,7 +2048,7 @@ define internal <$1 x double> @__atomic_compare_exchange_double_global(double * 
   ret <$1 x double> %ret
 }
 
-define internal float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp, float %val,
+define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp, float %val,
                                                    <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast float %cmp to i32
@@ -2059,7 +2059,7 @@ define internal float @__atomic_compare_exchange_uniform_float_global(float * %p
   ret float %ret
 }
 
-define internal double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
                                             double %val, <$1 x i32> %mask) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast double %cmp to i64
@@ -2084,13 +2084,13 @@ define internal double @__atomic_compare_exchange_uniform_double_global(double *
 ;; $4: {slt,sgt} comparison operator to used
 
 define(`i64minmax', `
-define internal i64 @__$2_uniform_$3(i64, i64) nounwind alwaysinline readnone {
+define i64 @__$2_uniform_$3(i64, i64) nounwind alwaysinline readnone {
   %c = icmp $4 i64 %0, %1
   %r = select i1 %c, i64 %0, i64 %1
   ret i64 %r
 }
 
-define internal <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline readnone {
+define <$1 x i64> @__$2_varying_$3(<$1 x i64>, <$1 x i64>) nounwind alwaysinline readnone {
   %rptr = alloca <$1 x i64>
   %r64ptr = bitcast <$1 x i64> * %rptr to i64 *
 
@@ -2469,7 +2469,7 @@ done:
 declare i32 @llvm.cttz.i32(i32)
 
 define(`reduce_equal_aux', `
-define internal i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
+define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                                       <$1 x i32> %mask) nounwind alwaysinline {
 entry:
    %mm = call i32 @__movmsk(<$1 x i32> %mask)
@@ -2557,7 +2557,7 @@ reduce_equal_aux($1, double, double, i64, fcmp, 64)
 ; $6: suffix for function (e.g. add_float)
 
 define(`exclusive_scan', `
-define internal <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
+define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
                                   <$1 x i32> %mask) nounwind alwaysinline {
   ; first, set the value of any off lanes to the identity value
   %ptr = alloca <$1 x $2>
@@ -2686,7 +2686,7 @@ pl_done:
 define(`gen_gather', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
-define internal <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret,
+define <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret,
                                            i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
@@ -2735,7 +2735,7 @@ define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
 define(`gen_scatter', `
 ;; Define the function that descripes the work to do to scatter a single
 ;; value
-define internal void @__scatter_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values,
+define void @__scatter_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values,
                                        i32 %lane) nounwind alwaysinline {
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
   %offset64 = zext i32 %offset32 to i64

@@ -2814,11 +2814,11 @@ llvm::RegisterPass<MakeInternalFuncsStaticPass>
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     const char *names[] = {
-        "__do_print", "__fast_masked_vload", "__num_cores",
+        "__fast_masked_vload", 
         "__gather_base_offsets_i8", "__gather_base_offsets_i16",
         "__gather_base_offsets_i32", "__gather_base_offsets_i64",
-        "__gather_elt_8", "__gather_elt_16", 
-        "__gather_elt_32", "__gather_elt_64", 
+        "__gather_elt_i8", "__gather_elt_i16", 
+        "__gather_elt_i32", "__gather_elt_i64", 
         "__load_and_broadcast_8", "__load_and_broadcast_16",
         "__load_and_broadcast_32", "__load_and_broadcast_64",
         "__load_masked_8", "__load_masked_16",
@@ -2827,11 +2827,10 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__masked_store_32", "__masked_store_64",
         "__masked_store_blend_8", "__masked_store_blend_16",
         "__masked_store_blend_32", "__masked_store_blend_64",
-        "__packed_load_active", "__packed_store_active",
         "__scatter_base_offsets_i8", "__scatter_base_offsets_i16",
         "__scatter_base_offsets_i32", "__scatter_base_offsets_i64",
-        "__scatter_elt_8", "__scatter_elt_16", 
-        "__scatter_elt_32", "__scatter_elt_64", 
+        "__scatter_elt_i8", "__scatter_elt_i16", 
+        "__scatter_elt_i32", "__scatter_elt_i64", 
     };
 
     bool modifiedAny = false;

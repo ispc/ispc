@@ -44,7 +44,7 @@ include(`builtins-avx-common.ll')
 
 declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 
-define internal <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
+define <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonly alwaysinline {
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
 
@@ -64,17 +64,17 @@ define internal <16 x float> @__rcp_varying_float(<16 x float>) nounwind readonl
 
 declare <8 x float> @llvm.x86.avx.round.ps.256(<8 x float>, i32) nounwind readnone
 
-define internal <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
+define <16 x float> @__round_varying_float(<16 x float>) nounwind readonly alwaysinline {
   ; roundps, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
   round8to16(%0, 8)
 }
 
-define internal <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
+define <16 x float> @__floor_varying_float(<16 x float>) nounwind readonly alwaysinline {
   ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   round8to16(%0, 9)
 }
 
-define internal <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline {
+define <16 x float> @__ceil_varying_float(<16 x float>) nounwind readonly alwaysinline {
   ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   round8to16(%0, 10)
 }
@@ -84,15 +84,15 @@ define internal <16 x float> @__ceil_varying_float(<16 x float>) nounwind readon
 
 declare <4 x double> @llvm.x86.avx.round.pd.256(<4 x double>, i32) nounwind readnone
 
-define internal <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
+define <16 x double> @__round_varying_double(<16 x double>) nounwind readonly alwaysinline {
   round4to16double(%0, 8)
 }
 
-define internal <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
+define <16 x double> @__floor_varying_double(<16 x double>) nounwind readonly alwaysinline {
   round4to16double(%0, 9)
 }
 
-define internal <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
+define <16 x double> @__ceil_varying_double(<16 x double>) nounwind readonly alwaysinline {
   round4to16double(%0, 10)
 }
 
@@ -102,7 +102,7 @@ define internal <16 x double> @__ceil_varying_double(<16 x double>) nounwind rea
 
 declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
 
-define internal <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
+define <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   unary8to16(is, float, @llvm.x86.avx.rsqrt.ps.256, %v)
   ;  return 0.5 * is * (3. - (v * is) * is);
@@ -125,7 +125,7 @@ define internal <16 x float> @__rsqrt_varying_float(<16 x float> %v) nounwind re
 
 declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
 
-define internal <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly alwaysinline {
+define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly alwaysinline {
   unary8to16(call, float, @llvm.x86.avx.sqrt.ps.256, %0)
   ret <16 x float> %call
 }
@@ -153,13 +153,13 @@ declare <16 x float> @__svml_pow(<16 x float>, <16 x float>)
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone
 declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
-define internal <16 x float> @__max_varying_float(<16 x float>,
+define <16 x float> @__max_varying_float(<16 x float>,
                                                   <16 x float>) nounwind readonly alwaysinline {
   binary8to16(call, float, @llvm.x86.avx.max.ps.256, %0, %1)
   ret <16 x float> %call
 }
 
-define internal <16 x float> @__min_varying_float(<16 x float>,
+define <16 x float> @__min_varying_float(<16 x float>,
                                                   <16 x float>) nounwind readonly alwaysinline {
   binary8to16(call, float, @llvm.x86.avx.min.ps.256, %0, %1)
   ret <16 x float> %call
@@ -169,12 +169,12 @@ define internal <16 x float> @__min_varying_float(<16 x float>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 
-define internal <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
   binary4to16(ret, i32, @llvm.x86.sse41.pminsd, %0, %1)
   ret <16 x i32> %ret
 }
 
-define internal <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
   binary4to16(ret, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
   ret <16 x i32> %ret
 }
@@ -183,12 +183,12 @@ define internal <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unsigned int min/max
 
-define internal <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
   binary4to16(ret, i32, @llvm.x86.sse41.pminud, %0, %1)
   ret <16 x i32> %ret
 }
 
-define internal <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
   binary4to16(ret, i32, @llvm.x86.sse41.pmaxud, %0, %1)
   ret <16 x i32> %ret
 }
@@ -198,7 +198,7 @@ define internal <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwin
 
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
-define internal i32 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
   %floatmask = bitcast <16 x i32> %0 to <16 x float>
   %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -217,7 +217,7 @@ define internal i32 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
 
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
-define internal float @__reduce_add_float(<16 x float>) nounwind readonly alwaysinline {
+define float @__reduce_add_float(<16 x float>) nounwind readonly alwaysinline {
   %va = shufflevector <16 x float> %0, <16 x float> undef,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %vb = shufflevector <16 x float> %0, <16 x float> undef,
@@ -232,12 +232,12 @@ define internal float @__reduce_add_float(<16 x float>) nounwind readonly always
 }
 
 
-define internal float @__reduce_min_float(<16 x float>) nounwind readnone alwaysinline {
+define float @__reduce_min_float(<16 x float>) nounwind readnone alwaysinline {
   reduce16(float, @__min_varying_float, @__min_uniform_float)
 }
 
 
-define internal float @__reduce_max_float(<16 x float>) nounwind readnone alwaysinline {
+define float @__reduce_max_float(<16 x float>) nounwind readnone alwaysinline {
   reduce16(float, @__max_varying_float, @__max_uniform_float)
 }
 
@@ -246,28 +246,28 @@ reduce_equal(16)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
 
-define internal <16 x i32> @__add_varying_int32(<16 x i32>,
+define <16 x i32> @__add_varying_int32(<16 x i32>,
                                                 <16 x i32>) nounwind readnone alwaysinline {
   %s = add <16 x i32> %0, %1
   ret <16 x i32> %s
 }
 
-define internal i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
+define i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   %s = add i32 %0, %1
   ret i32 %s
 }
 
-define internal i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_add_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__add_varying_int32, @__add_uniform_int32)
 }
 
 
-define internal i32 @__reduce_min_int32(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_min_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_int32, @__min_uniform_int32)
 }
 
 
-define internal i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
@@ -275,17 +275,17 @@ define internal i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
 
-define internal i32 @__reduce_add_uint32(<16 x i32> %v) nounwind readnone alwaysinline {
+define i32 @__reduce_add_uint32(<16 x i32> %v) nounwind readnone alwaysinline {
   %r = call i32 @__reduce_add_int32(<16 x i32> %v)
   ret i32 %r
 }
 
-define internal i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
 
-define internal i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
 
@@ -295,7 +295,7 @@ define internal i32 @__reduce_max_uint32(<16 x i32>) nounwind readnone alwaysinl
 
 declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
-define internal double @__reduce_add_double(<16 x double>) nounwind readonly alwaysinline {
+define double @__reduce_add_double(<16 x double>) nounwind readonly alwaysinline {
   %va = shufflevector <16 x double> %0, <16 x double> undef,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %vb = shufflevector <16 x double> %0, <16 x double> undef,
@@ -315,12 +315,12 @@ define internal double @__reduce_add_double(<16 x double>) nounwind readonly alw
   ret double %sum
 }
 
-define internal double @__reduce_min_double(<16 x double>) nounwind readnone alwaysinline {
+define double @__reduce_min_double(<16 x double>) nounwind readnone alwaysinline {
   reduce16(double, @__min_varying_double, @__min_uniform_double)
 }
 
 
-define internal double @__reduce_max_double(<16 x double>) nounwind readnone alwaysinline {
+define double @__reduce_max_double(<16 x double>) nounwind readnone alwaysinline {
   reduce16(double, @__max_varying_double, @__max_uniform_double)
 }
 
@@ -328,28 +328,28 @@ define internal double @__reduce_max_double(<16 x double>) nounwind readnone alw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int64 ops
 
-define internal <16 x i64> @__add_varying_int64(<16 x i64>,
+define <16 x i64> @__add_varying_int64(<16 x i64>,
                                                 <16 x i64>) nounwind readnone alwaysinline {
   %s = add <16 x i64> %0, %1
   ret <16 x i64> %s
 }
 
-define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
+define i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
   %s = add i64 %0, %1
   ret i64 %s
 }
 
-define internal i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
+define i64 @__reduce_add_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__add_varying_int64, @__add_uniform_int64)
 }
 
 
-define internal i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
+define i64 @__reduce_min_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_int64, @__min_uniform_int64)
 }
 
 
-define internal i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
+define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__max_varying_int64, @__max_uniform_int64)
 }
 
@@ -357,17 +357,17 @@ define internal i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinli
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
 
-define internal i64 @__reduce_add_uint64(<16 x i64> %v) nounwind readnone alwaysinline {
+define i64 @__reduce_add_uint64(<16 x i64> %v) nounwind readnone alwaysinline {
   %r = call i64 @__reduce_add_int64(<16 x i64> %v)
   ret i64 %r
 }
 
-define internal i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
+define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)
 }
 
 
-define internal i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
+define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
@@ -635,7 +635,7 @@ gen_scatter(16, i64)
 
 declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
 
-define internal <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
+define <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alwaysinline {
   unary4to16(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
   ret <16 x double> %ret
 }
@@ -647,12 +647,12 @@ define internal <16 x double> @__sqrt_varying_double(<16 x double>) nounwind alw
 declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
 declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
-define internal <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
+define <16 x double> @__min_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
   binary4to16(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
   ret <16 x double> %ret
 }
 
-define internal <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
+define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwind readnone alwaysinline {
   binary4to16(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
   ret <16 x double> %ret
 }

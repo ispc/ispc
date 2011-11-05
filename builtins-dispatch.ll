@@ -75,7 +75,7 @@ declare void @abort() noreturn
 
 %0 = type { i32, i32, i32, i32 }
 
-define internal i32 @__get_system_isa() nounwind ssp {
+define i32 @__get_system_isa() nounwind ssp {
   %1 = tail call %0 asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
   %2 = extractvalue %0 %1, 2
   %3 = extractvalue %0 %1, 3
@@ -106,7 +106,7 @@ define internal i32 @__get_system_isa() nounwind ssp {
 ;; This function is called by each of the dispatch functions we generate;
 ;; it sets @__system_best_isa if it is unset.
 
-define internal void @__set_system_isa() {
+define void @__set_system_isa() {
 entry:
   %bi = load i32* @__system_best_isa
   %unset = icmp eq i32 %bi, -1

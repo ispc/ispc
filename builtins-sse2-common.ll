@@ -34,7 +34,7 @@
 
 declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
 
-define internal float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
+define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
   ; do the rcpss call
   %vecval = insertelement <4 x float> undef, float %0, i32 0
   %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
@@ -53,7 +53,7 @@ define internal float @__rcp_uniform_float(float) nounwind readonly alwaysinline
 
 declare <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float>) nounwind readnone
 
-define internal float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
+define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   ;  uniform float is = extract(__rsqrt_u(v), 0);
   %v = insertelement <4 x float> undef, float %0, i32 0
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
@@ -76,7 +76,7 @@ define internal float @__rsqrt_uniform_float(float) nounwind readonly alwaysinli
 declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
 
-define internal float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
+define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
   sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
   ret float %ret
 }
@@ -87,7 +87,7 @@ define internal float @__sqrt_uniform_float(float) nounwind readonly alwaysinlin
 declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
 declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
 
-define internal void @__fastmath() nounwind alwaysinline {
+define void @__fastmath() nounwind alwaysinline {
   %ptr = alloca i32
   %ptr8 = bitcast i32 * %ptr to i8 *
   call void @llvm.x86.sse.stmxcsr(i8 * %ptr8)
@@ -106,13 +106,13 @@ define internal void @__fastmath() nounwind alwaysinline {
 declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind readnone
 declare <4 x float> @llvm.x86.sse.min.ss(<4 x float>, <4 x float>) nounwind readnone
 
-define internal float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
+define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, float, @llvm.x86.sse.max.ss, %0, %1)
   ret float %ret
 }
 
 
-define internal float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
+define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
   ret float %ret
 }
@@ -122,7 +122,7 @@ define internal float @__min_uniform_float(float, float) nounwind readonly alway
 
 declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 
-define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
+define double @__sqrt_uniform_double(double) nounwind alwaysinline {
   sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
   ret double %ret
 }
@@ -134,12 +134,12 @@ define internal double @__sqrt_uniform_double(double) nounwind alwaysinline {
 declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
 declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
 
-define internal double @__min_uniform_double(double, double) nounwind readnone {
+define double @__min_uniform_double(double, double) nounwind readnone {
   sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
   ret double %ret
 }
 
-define internal double @__max_uniform_double(double, double) nounwind readnone {
+define double @__max_uniform_double(double, double) nounwind readnone {
   sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
   ret double %ret
 }
@@ -166,7 +166,7 @@ define internal double @__max_uniform_double(double, double) nounwind readnone {
 ;    return x;
 ;}
 
-define internal float @__round_uniform_float(float) nounwind readonly alwaysinline {
+define float @__round_uniform_float(float) nounwind readonly alwaysinline {
   %float_to_int_bitcast.i.i.i.i = bitcast float %0 to i32
   %bitop.i.i = and i32 %float_to_int_bitcast.i.i.i.i, -2147483648
   %bitop.i = xor i32 %bitop.i.i, %float_to_int_bitcast.i.i.i.i
@@ -192,7 +192,7 @@ define internal float @__round_uniform_float(float) nounwind readonly alwaysinli
 ;    return y + delta;
 ;}
 
-define internal float @__floor_uniform_float(float) nounwind readonly alwaysinline {
+define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
   %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
   %bincmp.i = fcmp ogt float %calltmp.i, %0
   %selectexpr.i = sext i1 %bincmp.i to i32
@@ -214,7 +214,7 @@ define internal float @__floor_uniform_float(float) nounwind readonly alwaysinli
 ;    return y + delta;
 ;}
 
-define internal float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
+define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
   %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
   %bincmp.i = fcmp olt float %calltmp.i, %0
   %selectexpr.i = sext i1 %bincmp.i to i32
@@ -232,17 +232,17 @@ declare double @round(double)
 declare double @floor(double)
 declare double @ceil(double)
 
-define internal double @__round_uniform_double(double) nounwind readonly alwaysinline {
+define double @__round_uniform_double(double) nounwind readonly alwaysinline {
   %r = call double @round(double %0)
   ret double %r
 }
 
-define internal double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
   %r = call double @floor(double %0)
   ret double %r
 }
 
-define internal double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
   %r = call double @ceil(double %0)
   ret double %r
 }
@@ -253,12 +253,12 @@ define internal double @__ceil_uniform_double(double) nounwind readonly alwaysin
 declare i32 @llvm.ctpop.i32(i32)
 declare i64 @llvm.ctpop.i64(i64)
 
-define internal i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
+define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
   %val = call i32 @llvm.ctpop.i32(i32 %0)
   ret i32 %val
 }
 
-define internal i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
+define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
   %val = call i64 @llvm.ctpop.i64(i64 %0)
   ret i64 %val
 }

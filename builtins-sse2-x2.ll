@@ -48,7 +48,7 @@ include(`builtins-sse2-common.ll')
 
 declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>) nounwind readnone
 
-define internal <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
 
@@ -66,7 +66,7 @@ define internal <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly 
 
 declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>) nounwind readnone
 
-define internal <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
+define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   unary4to8(is, float, @llvm.x86.sse.rsqrt.ps, %v)
   ;  return 0.5 * is * (3. - (v * is) * is);
@@ -85,7 +85,7 @@ define internal <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind read
 
 declare <4 x float> @llvm.x86.sse.sqrt.ps(<4 x float>) nounwind readnone
 
-define internal <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysinline {
   unary4to8(call, float, @llvm.x86.sse.sqrt.ps, %0)
   ret <8 x float> %call
 }
@@ -104,17 +104,17 @@ declare <4 x float> @__svml_logf4(<4 x float>) nounwind readnone
 declare <4 x float> @__svml_powf4(<4 x float>, <4 x float>) nounwind readnone
 
 
-define internal <8 x float> @__svml_sin(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_sin(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_sinf4, %0)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_cos(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_cos(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_cosf4, %0)
   ret <8 x float> %ret
 }
 
-define internal void @__svml_sincos(<8 x float>, <8 x float> *,
+define void @__svml_sincos(<8 x float>, <8 x float> *,
                                     <8 x float> *) nounwind readnone alwaysinline {
   ; call svml_sincosf4 two times with the two 4-wide sub-vectors
   %a = shufflevector <8 x float> %0, <8 x float> undef,
@@ -143,33 +143,33 @@ define internal void @__svml_sincos(<8 x float>, <8 x float> *,
   ret void
 }
 
-define internal <8 x float> @__svml_tan(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_tan(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_tanf4, %0)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_atan(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_atan(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_atanf4, %0)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_atan2(<8 x float>,
+define <8 x float> @__svml_atan2(<8 x float>,
                                           <8 x float>) nounwind readnone alwaysinline {
   binary4to8(ret, float, @__svml_atan2f4, %0, %1)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_exp(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_exp(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_expf4, %0)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_log(<8 x float>) nounwind readnone alwaysinline {
+define <8 x float> @__svml_log(<8 x float>) nounwind readnone alwaysinline {
   unary4to8(ret, float, @__svml_logf4, %0)
   ret <8 x float> %ret
 }
 
-define internal <8 x float> @__svml_pow(<8 x float>,
+define <8 x float> @__svml_pow(<8 x float>,
                                         <8 x float>) nounwind readnone alwaysinline {
   binary4to8(ret, float, @__svml_powf4, %0, %1)
   ret <8 x float> %ret
@@ -182,12 +182,12 @@ define internal <8 x float> @__svml_pow(<8 x float>,
 declare <4 x float> @llvm.x86.sse.max.ps(<4 x float>, <4 x float>) nounwind readnone
 declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>) nounwind readnone
 
-define internal <8 x float> @__max_varying_float(<8 x float>, <8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__max_varying_float(<8 x float>, <8 x float>) nounwind readonly alwaysinline {
   binary4to8(call, float, @llvm.x86.sse.max.ps, %0, %1)
   ret <8 x float> %call
 }
 
-define internal <8 x float> @__min_varying_float(<8 x float>, <8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__min_varying_float(<8 x float>, <8 x float>) nounwind readonly alwaysinline {
   binary4to8(call, float, @llvm.x86.sse.min.ps, %0, %1)
   ret <8 x float> %call
 }
@@ -200,7 +200,7 @@ define internal <8 x float> @__min_varying_float(<8 x float>, <8 x float>) nounw
 ; vector element, if the mask is on, we return the corresponding value
 ; from %1, and otherwise return the value from %0.
 
-define internal <8 x i32> @__vselect_i32(<8 x i32>, <8 x i32> ,
+define <8 x i32> @__vselect_i32(<8 x i32>, <8 x i32> ,
                                          <8 x i32> %mask) nounwind readnone alwaysinline {
   %notmask = xor <8 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
   %cleared_old = and <8 x i32> %0, %notmask
@@ -209,7 +209,7 @@ define internal <8 x i32> @__vselect_i32(<8 x i32>, <8 x i32> ,
   ret <8 x i32> %new
 }
 
-define internal <8 x float> @__vselect_float(<8 x float>, <8 x float>,
+define <8 x float> @__vselect_float(<8 x float>, <8 x float>,
                                              <8 x i32> %mask) nounwind readnone alwaysinline {
   %v0 = bitcast <8 x float> %0 to <8 x i32>
   %v1 = bitcast <8 x float> %1 to <8 x i32>
@@ -223,27 +223,27 @@ define internal <8 x float> @__vselect_float(<8 x float>, <8 x float>,
 ; extend the i1 vector result to an i32 mask.  The __vselect does the
 ; rest...
 
-define internal <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+define <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
   %c = icmp slt <8 x i32> %0, %1
   %mask = sext <8 x i1> %c to <8 x i32>
   %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
   ret <8 x i32> %v
 }
 
-define internal i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
   %c = icmp slt i32 %0, %1
   %r = select i1 %c, i32 %0, i32 %1
   ret i32 %r
 }
 
-define internal <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+define <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
   %c = icmp sgt <8 x i32> %0, %1
   %mask = sext <8 x i1> %c to <8 x i32>
   %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
   ret <8 x i32> %v
 }
 
-define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
   %c = icmp sgt i32 %0, %1
   %r = select i1 %c, i32 %0, i32 %1
   ret i32 %r
@@ -252,27 +252,27 @@ define internal i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinlin
 ; The functions for unsigned ints are similar, just with unsigned
 ; comparison functions...
 
-define internal <8 x i32> @__min_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+define <8 x i32> @__min_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
   %c = icmp ult <8 x i32> %0, %1
   %mask = sext <8 x i1> %c to <8 x i32>
   %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
   ret <8 x i32> %v
 }
 
-define internal i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   %c = icmp ult i32 %0, %1
   %r = select i1 %c, i32 %0, i32 %1
   ret i32 %r
 }
 
-define internal <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+define <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
   %c = icmp ugt <8 x i32> %0, %1
   %mask = sext <8 x i1> %c to <8 x i32>
   %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
   ret <8 x i32> %v
 }
 
-define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   %c = icmp ugt i32 %0, %1
   %r = select i1 %c, i32 %0, i32 %1
   ret i32 %r
@@ -283,7 +283,7 @@ define internal i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinli
 
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 
-define internal i32 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ; first do two 4-wide movmsk calls
   %floatmask = bitcast <8 x i32> %0 to <8 x float>
   %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
@@ -300,118 +300,118 @@ define internal i32 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ret i32 %v
 }
 
-define internal <4 x float> @__vec4_add_float(<4 x float> %v0,
+define <4 x float> @__vec4_add_float(<4 x float> %v0,
                                             <4 x float> %v1) nounwind readnone alwaysinline {
   %v = fadd <4 x float> %v0, %v1
   ret <4 x float> %v
 }
 
-define internal float @__add_float(float, float) nounwind readnone alwaysinline {
+define float @__add_float(float, float) nounwind readnone alwaysinline {
   %v = fadd float %0, %1
   ret float %v
 }
 
-define internal float @__reduce_add_float(<8 x float>) nounwind readnone alwaysinline {
+define float @__reduce_add_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8by4(float, @__vec4_add_float, @__add_float)
 }
 
-define internal float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
+define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8(float, @__min_varying_float, @__min_uniform_float)
 }
 
-define internal float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
+define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8(float, @__max_varying_float, @__max_uniform_float)
 }
 
 ; helper function for reduce_add_int32
-define internal <4 x i32> @__vec4_add_int32(<4 x i32> %v0,
+define <4 x i32> @__vec4_add_int32(<4 x i32> %v0,
                                             <4 x i32> %v1) nounwind readnone alwaysinline {
   %v = add <4 x i32> %v0, %v1
   ret <4 x i32> %v
 }
 
 ; helper function for reduce_add_int32
-define internal i32 @__add_int32(i32, i32) nounwind readnone alwaysinline {
+define i32 @__add_int32(i32, i32) nounwind readnone alwaysinline {
   %v = add i32 %0, %1
   ret i32 %v
 }
 
-define internal i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8by4(i32, @__vec4_add_int32, @__add_int32)
 }
 
-define internal i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_int32, @__min_uniform_int32)
 }
 
-define internal i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
-define internal i32 @__reduce_add_uint32(<8 x i32> %v) nounwind readnone alwaysinline {
+define i32 @__reduce_add_uint32(<8 x i32> %v) nounwind readnone alwaysinline {
   %r = call i32 @__reduce_add_int32(<8 x i32> %v)
   ret i32 %r
 }
 
-define internal i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
-define internal i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
+define i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
 
-define internal <4 x double> @__add_varying_double(<4 x double>,
+define <4 x double> @__add_varying_double(<4 x double>,
                                      <4 x double>) nounwind readnone alwaysinline {
   %r = fadd <4 x double> %0, %1
   ret <4 x double> %r
 }
 
-define internal double @__add_uniform_double(double, double) nounwind readnone alwaysinline {
+define double @__add_uniform_double(double, double) nounwind readnone alwaysinline {
   %r = fadd double %0, %1
   ret double %r
 }
 
-define internal double @__reduce_add_double(<8 x double>) nounwind readnone {
+define double @__reduce_add_double(<8 x double>) nounwind readnone {
   reduce8by4(double, @__add_varying_double, @__add_uniform_double)
 }
 
-define internal double @__reduce_min_double(<8 x double>) nounwind readnone {
+define double @__reduce_min_double(<8 x double>) nounwind readnone {
   reduce8(double, @__min_varying_double, @__min_uniform_double)
 }
 
-define internal double @__reduce_max_double(<8 x double>) nounwind readnone {
+define double @__reduce_max_double(<8 x double>) nounwind readnone {
   reduce8(double, @__max_varying_double, @__max_uniform_double)
 }
 
-define internal <4 x i64> @__add_varying_int64(<4 x i64>,
+define <4 x i64> @__add_varying_int64(<4 x i64>,
                                                <4 x i64>) nounwind readnone alwaysinline {
   %r = add <4 x i64> %0, %1
   ret <4 x i64> %r
 }
 
-define internal i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
+define i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
   %r = add i64 %0, %1
   ret i64 %r
 }
 
-define internal i64 @__reduce_add_int64(<8 x i64>) nounwind readnone {
+define i64 @__reduce_add_int64(<8 x i64>) nounwind readnone {
   reduce8by4(i64, @__add_varying_int64, @__add_uniform_int64)
 }
 
-define internal i64 @__reduce_min_int64(<8 x i64>) nounwind readnone {
+define i64 @__reduce_min_int64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__min_varying_int64, @__min_uniform_int64)
 }
 
-define internal i64 @__reduce_max_int64(<8 x i64>) nounwind readnone {
+define i64 @__reduce_max_int64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__max_varying_int64, @__max_uniform_int64)
 }
 
-define internal i64 @__reduce_min_uint64(<8 x i64>) nounwind readnone {
+define i64 @__reduce_min_uint64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__min_varying_uint64, @__min_uniform_uint64)
 }
 
-define internal i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone {
+define i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone {
   reduce8(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
@@ -468,7 +468,7 @@ gen_scatter(8, i64)
 ;    return x;
 ;}
 
-define internal <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
   %float_to_int_bitcast.i.i.i.i = bitcast <8 x float> %0 to <8 x i32>
   %bitop.i.i = and <8 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
   %bitop.i = xor <8 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
@@ -494,7 +494,7 @@ define internal <8 x float> @__round_varying_float(<8 x float>) nounwind readonl
 ;    return y + delta;
 ;}
 
-define internal <8 x float> @__floor_varying_float(<8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__floor_varying_float(<8 x float>) nounwind readonly alwaysinline {
   %calltmp.i = tail call <8 x float> @__round_varying_float(<8 x float> %0) nounwind
   %bincmp.i = fcmp ogt <8 x float> %calltmp.i, %0
   %val_to_boolvec32.i = sext <8 x i1> %bincmp.i to <8 x i32>
@@ -516,7 +516,7 @@ define internal <8 x float> @__floor_varying_float(<8 x float>) nounwind readonl
 ;    return y + delta;
 ;}
 
-define internal <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysinline {
+define <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysinline {
   %calltmp.i = tail call <8 x float> @__round_varying_float(<8 x float> %0) nounwind
   %bincmp.i = fcmp olt <8 x float> %calltmp.i, %0
   %val_to_boolvec32.i = sext <8 x i1> %bincmp.i to <8 x i32>
@@ -530,15 +530,15 @@ define internal <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-define internal <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
+define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
   unary1to8(double, @round)
 }
 
-define internal <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
+define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
   unary1to8(double, @floor)
 }
 
-define internal <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
+define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
   unary1to8(double, @ceil)
 }
 
@@ -609,7 +609,7 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
 
 declare <2 x double> @llvm.x86.sse2.sqrt.pd(<2 x double>) nounwind readnone
 
-define internal <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
+define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
   unary2to8(ret, double, @llvm.x86.sse2.sqrt.pd, %0)
   ret <8 x double> %ret
 }
@@ -620,12 +620,12 @@ define internal <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alway
 declare <2 x double> @llvm.x86.sse2.max.pd(<2 x double>, <2 x double>) nounwind readnone
 declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
 
-define internal <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
+define <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
   binary2to8(ret, double, @llvm.x86.sse2.min.pd, %0, %1)
   ret <8 x double> %ret
 }
 
-define internal <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
+define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
   binary2to8(ret, double, @llvm.x86.sse2.max.pd, %0, %1)
   ret <8 x double> %ret
 }
