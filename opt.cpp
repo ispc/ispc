@@ -759,128 +759,6 @@ lGetIntValue(llvm::Value *offset) {
 }
 
 
-/** Returns the size of the given llvm::Type as an llvm::Value, if the size
-    can be easily determined at compile type.  If it's not easy to figure
-    out the size, this just returns NULL and we handle finding its size
-    differently.
- */
-static bool
-lSizeOfIfKnown(const llvm::Type *type, uint64_t *size) {
-    if (type == LLVMTypes::Int8Type) {
-        *size = 1;
-        return true;
-    }
-    if (type == LLVMTypes::Int8VectorType) {
-        *size = g->target.vectorWidth * 1;
-        return true;
-    }
-    else if (type == LLVMTypes::Int16Type) {
-        *size = 2;
-        return true;
-    }
-    if (type == LLVMTypes::Int16VectorType) {
-        *size = g->target.vectorWidth * 2;
-        return true;
-    }
-    else if (type == LLVMTypes::FloatType || type == LLVMTypes::Int32Type) {
-        *size = 4;
-        return true;
-    }
-    else if (type == LLVMTypes::FloatVectorType || type == LLVMTypes::Int32VectorType) {
-        *size = g->target.vectorWidth * 4;
-        return true;
-    }
-    else if (type == LLVMTypes::DoubleType || type == LLVMTypes::Int64Type) {
-        *size = 8;
-        return true;
-    }
-    else if (type == LLVMTypes::DoubleVectorType || type == LLVMTypes::Int64VectorType) {
-        *size = g->target.vectorWidth * 8;
-        return true;
-    }
-    else if (llvm::isa<const llvm::ArrayType>(type)) {
-        const llvm::ArrayType *at = llvm::dyn_cast<const llvm::ArrayType>(type);
-        uint64_t eltSize;
-        if (lSizeOfIfKnown(at->getElementType(), &eltSize)) {
-            *size = eltSize * at->getNumElements();
-            return true;
-        }
-        else
-            return false;
-    }
-    return false;
-}
-
-
-/** This function returns an llvm::Value giving the size of the given type.
-    If any instructions need to be generated to compute the size, they are
-    inserted before insertBefore.
- */
-static llvm::Value *
-lSizeOf(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
-    // First try the easy case and see if we can get it as a simple
-    // constant..
-    uint64_t size;
-    if (lSizeOfIfKnown(type, &size))
-        return LLVMInt64(size);
-
-    // Otherwise use the trick of doing a GEP with a NULL pointer to get
-    // the pointer to the second element of an array of items of this type.
-    // Then convert that pointer to an int and we've got the offset to the
-    // second element in the array, a.k.a. the size of the type.
-    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
-    llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
-    llvm::Value *index[1] = { LLVMInt32(1) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
-                                                           "offset_ptr", insertBefore);
-#else
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
-                                                           "offset_ptr", insertBefore);
-#endif
-    lCopyMetadata(poffset, insertBefore);
-    LLVM_TYPE_CONST llvm::Type *intPtrType = g->target.is32bit ? 
-        LLVMTypes::Int32Type : LLVMTypes::Int64Type;
-    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, intPtrType, 
-                                                     "offset_int", insertBefore);
-    lCopyMetadata(inst, insertBefore);
-    return inst;
-}
-
-
-/** This function returns a value that gives the offset in bytes from the
-    start of the given structure type to the given struct member.  The
-    instructions that compute this value are inserted before insertBefore.
- */
-static llvm::Value *
-lStructOffset(LLVM_TYPE_CONST llvm::Type *type, uint64_t member, 
-              llvm::Instruction *insertBefore) {
-    // Do a similar trick to the one done in lSizeOf above; compute the
-    // pointer to the member starting from a NULL base pointer and then
-    // cast that 'pointer' to an int...
-    assert(llvm::isa<const llvm::StructType>(type));
-    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(type, 0);
-    llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
-    llvm::Value *index[2] = { LLVMInt32(0), LLVMInt32((int32_t)member) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[2]);
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
-                                                           "member_ptr", insertBefore);
-#else
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[2],
-                                                           "member_ptr", insertBefore);
-#endif
-    lCopyMetadata(poffset, insertBefore);
-    LLVM_TYPE_CONST llvm::Type *intPtrType = g->target.is32bit ? 
-        LLVMTypes::Int32Type : LLVMTypes::Int64Type;
-    llvm::Instruction *inst = new llvm::PtrToIntInst(poffset, intPtrType, 
-                                                     "member_int", insertBefore);
-    lCopyMetadata(inst, insertBefore);
-    return inst;
-}
-
-
 static llvm::Value *
 lGetTypeSize(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) {
     LLVM_TYPE_CONST llvm::ArrayType *arrayType =  
@@ -888,11 +766,13 @@ lGetTypeSize(LLVM_TYPE_CONST llvm::Type *type, llvm::Instruction *insertBefore) 
     if (arrayType != NULL)
         type = arrayType->getElementType();
 
-    llvm::Value *scale = lSizeOf(type, insertBefore);
-    llvm::Instruction *inst = new llvm::TruncInst(scale, LLVMTypes::Int32Type, "sizeof32", 
-                                                  insertBefore);
-    lCopyMetadata(inst, insertBefore);
-    return inst;
+    llvm::Value *scale = g->target.SizeOf(type);
+    if (g->target.is32bit == false) {
+        scale = new llvm::TruncInst(scale, LLVMTypes::Int32Type, "sizeof32", 
+                                    insertBefore);
+        lCopyMetadata(scale, insertBefore);
+    }
+    return scale;
 }
 
 
@@ -919,11 +799,8 @@ lTraverseConstantExpr(llvm::Constant *value, llvm::Value **offsetPtr,
             LLVM_TYPE_CONST llvm::Type *targetType = targetPtrType->getElementType();
 
             if (llvm::isa<const llvm::StructType>(targetType)) {
-                *offsetPtr = lStructOffset(targetType, lGetIntValue(ce->getOperand(2)),
-                                           insertBefore);
-                *offsetPtr = new llvm::TruncInst(*offsetPtr, LLVMTypes::Int32Type, "member32", 
-                                                 insertBefore);
-//CO                lCopyMetadata(*offset, insertBefore);
+                *offsetPtr = g->target.StructOffset(targetType, 
+                                                    lGetIntValue(ce->getOperand(2)));
                 *scaleType = LLVMTypes::Int8Type; // aka char aka sizeof(1)
             }
             else {
@@ -979,10 +856,7 @@ lGetOffsetForLane(int lane, llvm::Value *value, llvm::Value **offset,
     LLVM_TYPE_CONST llvm::Type *targetType = targetPtrType->getElementType();
 
     if (llvm::isa<const llvm::StructType>(targetType)) {
-        *offset = lStructOffset(targetType, lGetIntValue(gep->getOperand(2)),
-                                insertBefore);
-        *offset = new llvm::TruncInst(*offset, LLVMTypes::Int32Type, "member32", 
-                                      insertBefore);
+        *offset = g->target.StructOffset(targetType, lGetIntValue(gep->getOperand(2)));
         lCopyMetadata(*offset, insertBefore);
         *scaleType = LLVMTypes::Int8Type; // aka char aka sizeof(1)
     }
@@ -1806,15 +1680,17 @@ lScalarizeVector(llvm::Value *vec, llvm::Value **scalarizedVector,
             llvm::dyn_cast<llvm::VectorType>(ptrType->getElementType());
         assert(vecType != NULL);
         LLVM_TYPE_CONST llvm::Type *elementType = vecType->getElementType();
-        uint64_t elementSize;
-        bool sizeKnown = lSizeOfIfKnown(elementType, &elementSize);
-        assert(sizeKnown == true);
+
+        llvm::Value *elementSize = g->target.SizeOf(elementType);
 
         LLVM_TYPE_CONST llvm::Type *eltPtrType = llvm::PointerType::get(elementType, 0);
 
         for (int i = 0; i < vectorLength; ++i) {
-            llvm::Value *offset = g->target.is32bit ? LLVMInt32(i * elementSize) :
-                LLVMInt64(i * elementSize);
+            llvm::Value *offset =
+                llvm::BinaryOperator::Create(llvm::Instruction::Mul, elementSize,
+                                             g->target.is32bit ? LLVMInt32(i) :
+                                                                 LLVMInt64(i),
+                                             "elt_offset", li);
             llvm::Value *intPtrOffset = 
                 llvm::BinaryOperator::Create(llvm::Instruction::Add, baseInt,
                                              offset, "baseoffset", li);

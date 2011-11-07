@@ -226,9 +226,6 @@ public:
         i32. */
     llvm::Value *I1VecToBoolVec(llvm::Value *b);
 
-    /** Returns the size of the given type. */
-    llvm::Value *SizeOf(LLVM_TYPE_CONST llvm::Type *ty);
-
     /** If the user has asked to compile the program with instrumentation,
         this inserts a callback to the user-supplied instrumentation
         function at the current point in the code. */

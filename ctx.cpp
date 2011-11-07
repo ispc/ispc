@@ -799,28 +799,6 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 }
 
 
-llvm::Value *
-FunctionEmitContext::SizeOf(LLVM_TYPE_CONST llvm::Type *ty) {
-    // Emit code to compute the size of the given type using a GEP with a
-    // NULL base pointer, indexing one element of the given type, and
-    // casting the resulting 'pointer' to an int giving its size.
-    LLVM_TYPE_CONST llvm::Type *ptrType = llvm::PointerType::get(ty, 0);
-    llvm::Value *nullPtr = llvm::Constant::getNullValue(ptrType);
-    llvm::Value *index[1] = { LLVMInt32(1) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, arrayRef,
-                                                           "offset_ptr", bblock);
-#else
-    llvm::Value *poffset = llvm::GetElementPtrInst::Create(nullPtr, &index[0], &index[1],
-                                                           "offset_ptr", bblock);
-#endif
-    AddDebugPos(poffset);
-    llvm::Value *sizeOf = PtrToIntInst(poffset, LLVMTypes::Int64Type, "offset_int");
-    return sizeOf;
-}
-
-
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
     llvm::Constant *sConstant = llvm::ConstantArray::get(*g->ctx, s);
@@ -2266,7 +2244,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
     std::vector<llvm::Value *> allocArgs;
     allocArgs.push_back(launchGroupHandlePtr);
-    allocArgs.push_back(SizeOf(argStructType));
+    allocArgs.push_back(g->target.SizeOf(argStructType));
     allocArgs.push_back(LLVMInt32(align));
     llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
     llvm::Value *argmem = BitCastInst(voidmem, pt);

@@ -160,6 +160,14 @@ struct Target {
     /** Returns a string like "avx" encoding the target. */
     const char *GetISAString() const;
 
+    /** Returns the size of the given type */
+    llvm::Value *SizeOf(LLVM_TYPE_CONST llvm::Type *type);
+    /** Given a structure type and an element number in the structure,
+        returns a value corresponding to the number of bytes from the start
+        of the structure where the element is located. */
+    llvm::Value *StructOffset(LLVM_TYPE_CONST llvm::Type *type,
+                              int element);
+
     /** llvm Target object representing this target. */
     const llvm::Target *target;
 

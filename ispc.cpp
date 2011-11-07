@@ -38,6 +38,7 @@
 #include "ispc.h"
 #include "module.h"
 #include "util.h"
+#include "llvmutil.h"
 #include <stdio.h>
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
@@ -276,6 +277,28 @@ Target::GetISAString() const {
         FATAL("Unhandled target in GetISAString()");
     }
     return "";
+}
+
+
+llvm::Value *
+Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
+    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
+    assert(td != NULL);
+    return is32bit ? LLVMInt32(td->getTypeSizeInBits(type) / 8) :
+        LLVMInt64(td->getTypeSizeInBits(type) / 8);
+}
+
+
+llvm::Value *
+Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element) {
+    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
+    assert(td != NULL);
+    LLVM_TYPE_CONST llvm::StructType *structType = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    assert(structType != NULL);
+    const llvm::StructLayout *sl = td->getStructLayout(structType);
+    assert(sl != NULL);
+    return LLVMInt32(sl->getElementOffset(element));
 }
 
 
