@@ -244,7 +244,9 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         const Type *returnType = lLLVMTypeToISPCType(ftype->getReturnType(),
                                                      intAsUnsigned);
         if (returnType == NULL) {
-            Debug(SourcePos(), "Failed: return type not representable.");
+            Debug(SourcePos(), "Failed: return type not representable for "
+                  "builtin %s.", name.c_str());
+            ftype->dump();
             // return type not representable in ispc -> not callable from ispc
             return false;
         }
@@ -257,7 +259,8 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
             if (type == NULL) {
-                Debug(SourcePos(), "Failed: type of parameter %d not representable", j);
+                Debug(SourcePos(), "Failed: type of parameter %d not "
+                      "representable for builtin %s", j, name.c_str());
                 return false;
             }
             anyIntArgs |= 
