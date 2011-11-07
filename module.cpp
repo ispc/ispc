@@ -108,14 +108,11 @@ Module::Module(const char *fn) {
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target.GetTripleString());
 
-    if (g->generateDebuggingSymbols)
+    if (g->generateDebuggingSymbols) {
         diBuilder = new llvm::DIBuilder(*module);
-    else
-        diBuilder = NULL;
 
-    // If we're generating debugging symbols, let the DIBuilder know that
-    // we're starting a new compilation unit.
-    if (diBuilder != NULL) {
+        // Let the DIBuilder know that we're starting a new compilation
+        // unit.
         if (filename == NULL) {
             // Unfortunately we can't yet call Error() since the global 'm'
             // variable hasn't been initialized yet.
@@ -138,6 +135,8 @@ Module::Module(const char *fn) {
                                          0 /* run time version */);
         }
     }
+    else
+        diBuilder = NULL;
 }
 
 
