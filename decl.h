@@ -97,7 +97,7 @@ public:
     StorageClass storageClass;
 
     /** Zero or more of the TYPEQUAL_* values, ANDed together. */
-    int typeQualifier;
+    int typeQualifiers;
 
     /** The basic type provided in the declaration; this should be an
         AtomicType, a StructType, or a VectorType; other types (like
@@ -105,6 +105,8 @@ public:
         has an array size, etc.
     */
     const Type *baseType;
+
+    const Type *GetBaseType(SourcePos pos) const;
 
     /** If this is a declaration with a vector type, this gives the vector
         width.  For non-vector types, this is zero.
@@ -118,6 +120,13 @@ public:
 };
 
 
+enum DeclaratorKind {
+    DK_BASE,
+    DK_POINTER,
+    DK_ARRAY,
+    DK_FUNCTION
+};
+
 /** @brief Representation of the declaration of a single variable.  
 
     In conjunction with an instance of the DeclSpecs, this gives us
@@ -125,13 +134,7 @@ public:
  */
 class Declarator {
 public:
-    Declarator(Symbol *s, SourcePos p);
-
-    /** As the parser peels off array dimension declarations after the
-        symbol name, it calls this method to provide them to the
-        Declarator.
-     */
-    void AddArrayDimension(int size);
+    Declarator(DeclaratorKind dk, SourcePos p);
 
     /** Once a DeclSpecs instance is available, this method completes the
         initialization of the Symbol, setting its Type accordingly.
@@ -141,23 +144,31 @@ public:
     /** Get the actual type of the combination of Declarator and the given
         DeclSpecs */
     const Type *GetType(DeclSpecs *ds) const;
+    const Type *GetType(const Type *base, DeclSpecs *ds) const;
 
     void GetFunctionInfo(DeclSpecs *ds, Symbol **sym, 
                          std::vector<Symbol *> *args);
 
+    Symbol *GetSymbol();
+
     void Print() const;
 
     const SourcePos pos;
+
+    const DeclaratorKind kind;
+
+    Declarator *child;
+
+    int typeQualifiers;
+
+    int arraySize;
+
     Symbol *sym;
-    /** If this declarator includes an array specification, the sizes of
-        the array dimensions are represented here.
-     */
-    std::vector<int> arraySize;
+
     /** Initialization expression for the variable.  May be NULL. */
     Expr *initExpr;
-    bool isFunction;
-    int pointerCount;
-    std::vector<Declaration *> *functionArgs;
+
+    std::vector<Declaration *> functionArgs;
 };
 
 

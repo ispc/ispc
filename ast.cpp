@@ -51,6 +51,8 @@ ASTNode::~ASTNode() {
 
 void
 AST::AddFunction(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code) {
+    if (sym == NULL)
+        return;
     functions.push_back(new Function(sym, args, code));
 }
 

@@ -67,10 +67,8 @@ public:
     void AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst);
 
     /** Add a declaration of the function defined by the given function
-        symbol with given arguments to the module. */
-    void AddFunctionDeclaration(Symbol *funSym, 
-                                const std::vector<VariableDeclaration> &args,
-                                bool isInline);
+        symbol to the module. */
+    void AddFunctionDeclaration(Symbol *funSym, bool isInline);
 
     /** Adds the function described by the declaration information and the
         provided statements to the module. */

@@ -183,11 +183,6 @@ lCreateSymbol(const std::string &name, const Type *returnType,
     noPos.name = "__stdlib";
 
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-    // set NULL default arguments
-    std::vector<ConstExpr *> defaults;
-    for (unsigned int j = 0; j < ftype->getNumParams(); ++j)
-        defaults.push_back(NULL);
-    funcType->SetArgumentDefaults(defaults);
 
     Symbol *sym = new Symbol(name, noPos, funcType);
     sym->function = func;
@@ -222,11 +217,8 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         const Type *returnType = AtomicType::VaryingInt32;
         std::vector<const Type *> argTypes;
         argTypes.push_back(AtomicType::VaryingBool);
-        std::vector<ConstExpr *> defaults;
-        defaults.push_back(NULL);
 
         FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
-        funcType->SetArgumentDefaults(defaults);
 
         Symbol *sym = new Symbol(name, noPos, funcType);
         sym->function = func;

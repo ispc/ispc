@@ -183,7 +183,8 @@ static const char *lParamListTokens[] = {
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
 %type <declarationList> parameter_list parameter_type_list
-%type <declarator> declarator init_declarator direct_declarator struct_declarator
+%type <declarator> declarator pointer init_declarator direct_declarator struct_declarator
+%type <declarator> abstract_declarator direct_abstract_declarator
 
 %type <structDeclaratorList> struct_declarator_list
 %type <structDeclaration> struct_declaration
@@ -198,7 +199,7 @@ static const char *lParamListTokens[] = {
 %type <type> short_vec_specifier
 %type <atomicType> atomic_var_type_specifier
 
-%type <typeQualifier> type_qualifier
+%type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers 
 
@@ -553,7 +554,7 @@ declaration_specifiers
       {
           DeclSpecs *ds = (DeclSpecs *)$2;
           if (ds != NULL)
-              ds->typeQualifier |= $1;
+              ds->typeQualifiers |= $1;
           $$ = ds;
       }
     ;
@@ -731,8 +732,6 @@ specifier_qualifier_list
         else
             $$ = NULL;
     }
-/* K&R--implicit int type--e.g. "static foo" -> foo is an int */
-/*    | type_qualifier { UNIMPLEMENTED; }*/
     ;
 
 
@@ -865,13 +864,27 @@ type_qualifier
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
     ;
 
-declarator
-    : direct_declarator
-    | '*' direct_declarator
+type_qualifier_list
+    : type_qualifier
     {
-        $2->pointerCount++;
-        $$ = $2;
+        $$ = $1;
     }
+    | type_qualifier_list type_qualifier 
+    {
+        $$ = $1 | $2;
+    }
+    ;
+
+declarator
+    : pointer direct_declarator
+    {
+        Declarator *tail = $1;
+        while (tail->child != NULL)
+           tail = tail->child;
+        tail->child = $2;
+        $$ = $1;
+    }
+    | direct_declarator
     ;
 
 int_constant
@@ -881,41 +894,83 @@ int_constant
 direct_declarator
     : TOKEN_IDENTIFIER
       {
-          Symbol *sym = new Symbol(yytext, @1);
-          $$ = new Declarator(sym, @1);
+          Declarator *d = new Declarator(DK_BASE, @1);
+          d->sym = new Symbol(yytext, @1);
+          $$ = d;
       }
-    | '(' declarator ')' { $$ = $2; }
+    | '(' declarator ')' 
+    {
+        $$ = $2; 
+    }
     | direct_declarator '[' constant_expression ']'
     {
         int size;
         if ($1 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
-            $1->AddArrayDimension(size);
-            $$ = $1;
+            Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+            d->arraySize = size;
+            d->child = $1;
+            $$ = d;
         }
         else
             $$ = NULL;
     }
     | direct_declarator '[' ']'
     {
-        if ($1 != NULL)
-            $1->AddArrayDimension(-1); // unsized
-        $$ = $1;
+        if ($1 != NULL) {
+            Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+            d->arraySize = 0; // unsize
+            d->child = $1;
+            $$ = d;
+        }
+        else
+            $$ = NULL;
     }
     | direct_declarator '(' parameter_type_list ')'
       {
-          Declarator *d = (Declarator *)$1;
-          if (d != NULL) {
-              d->isFunction = true;
-              d->functionArgs = $3;
+          if ($1 != NULL) {
+              Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
+              d->child = $1;
+              d->functionArgs = *$3;
+              $$ = d;
           }
-          $$ = d;
+          else
+              $$ = NULL;
       }
-/* K&R?   | direct_declarator '(' identifier_list ')' */
     | direct_declarator '(' ')'
       {
-          Declarator *d = (Declarator *)$1;
-          if (d != NULL)
-              d->isFunction = true;
+          if ($1 != NULL) {
+              Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
+              d->child = $1;
+              $$ = d;
+          }
+          else
+              $$ = NULL;
+      }
+    ;
+
+
+pointer
+    : '*' 
+    {
+        $$ = new Declarator(DK_POINTER, @1); 
+    }
+    | '*' type_qualifier_list
+      {
+          Declarator *d = new Declarator(DK_POINTER, Union(@1, @2));
+          d->typeQualifiers = $2;
+          $$ = d;
+      }
+    | '*' pointer
+      {
+          Declarator *d = new Declarator(DK_POINTER, Union(@1, @2));
+          d->child = $2;
+          $$ = d;
+      }
+    | '*' type_qualifier_list pointer
+      {
+          Declarator *d = new Declarator(DK_POINTER, Union(@1, @3));
+          d->typeQualifiers = $2;
+          d->child = $3;
           $$ = d;
       }
     ;
@@ -976,7 +1031,7 @@ parameter_declaration
     }
     | declaration_specifiers abstract_declarator
     {
-        UNIMPLEMENTED;
+        $$ = new Declaration($1, $2);
     }
     | declaration_specifiers
     {
@@ -994,25 +1049,85 @@ identifier_list
 type_name
     : specifier_qualifier_list
     | specifier_qualifier_list abstract_declarator
+    {
+        $$ = $2->GetType($1, NULL);
+    }
     ;
 
 abstract_declarator
-/*    : pointer
+    : pointer
+      {
+          Declarator *d = new Declarator(DK_POINTER, @1);
+          $$ = d;
+      }
     | direct_abstract_declarator
-    | pointer direct_abstract_declarator */
-    : direct_abstract_declarator { UNIMPLEMENTED; }
+    | pointer direct_abstract_declarator
+      {
+          Declarator *d = new Declarator(DK_POINTER, Union(@1, @2));
+          d->child = $2;
+          $$ = d;
+      }
     ;
 
 direct_abstract_declarator
     : '(' abstract_declarator ')'
-/*     | '[' ']' */
+      { $$ = $2; }
+    | '[' ']'
+      {
+          Declarator *d = new Declarator(DK_ARRAY, Union(@1, @2));
+          d->arraySize = 0;
+          $$ = d;
+      }
     | '[' constant_expression ']'
-/*    | direct_abstract_declarator '[' ']' */
+      {
+        int size;
+        if (lGetConstantInt($2, &size, @2, "Array dimension")) {
+            Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+            d->arraySize = size;
+            $$ = d;
+        }
+        else
+            $$ = NULL;
+      }
+    | direct_abstract_declarator '[' ']'
+      {
+          Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+          d->arraySize = 0;
+          d->child = $1;
+          $$ = d;
+      }
     | direct_abstract_declarator '[' constant_expression ']'
+      {
+          int size;
+          if (lGetConstantInt($3, &size, @3, "Array dimension")) {
+              Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+              d->arraySize = size;
+              d->child = $1;
+              $$ = d;
+          }
+          else
+              $$ = NULL;
+      }
     | '(' ')'
+      { $$ = new Declarator(DK_FUNCTION, Union(@1, @2)); }
     | '(' parameter_type_list ')'
+      {
+          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
+          d->functionArgs = *$2;
+      }
     | direct_abstract_declarator '(' ')'
+      {
+          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
+          d->child = $1;
+          $$ = d;
+      }
     | direct_abstract_declarator '(' parameter_type_list ')'
+      {
+          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
+          d->child = $1;
+          d->functionArgs = *$3;
+          $$ = d;
+      }
     ;
 
 initializer
@@ -1250,7 +1365,7 @@ function_definition
         lAddDeclaration($1, $2);
         lAddFunctionParams($2); 
         lAddMaskToSymbolTable(@2);
-        if ($1->typeQualifier & TYPEQUAL_TASK)
+        if ($1->typeQualifiers & TYPEQUAL_TASK)
             lAddThreadIndexCountToSymbolTable(@2);
     } 
     compound_statement
@@ -1281,38 +1396,26 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         return;
 
     if (ds->storageClass == SC_TYPEDEF)
-        m->AddTypeDef(decl->sym);
-    else if (decl->isFunction) {
+        m->AddTypeDef(decl->GetSymbol());
+    else if (decl->kind == DK_FUNCTION) {
         // function declaration
         const Type *t = decl->GetType(ds);
+        if (t == NULL)
+            return;
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
         assert(ft != NULL);
 
-        // Make sure that we've got what we expect here
-        Symbol *funSym = decl->sym;
-        assert(decl->isFunction);
-        assert(decl->arraySize.size() == 0);
-
-        // So far, so good.  Go ahead and set the type of the function symbol
-        funSym->type = decl->GetType(ds);
+        Symbol *funSym = decl->GetSymbol();
+        assert(funSym != NULL);
+        funSym->type = ft;
         funSym->storageClass = ds->storageClass;
 
-        std::vector<VariableDeclaration> args;
-        int nArgs = decl->functionArgs ? decl->functionArgs->size() : 0;
-        for (int i = 0; i < nArgs; ++i) {
-            Declaration *pdecl = (*decl->functionArgs)[i];
-            assert(pdecl->declarators.size() == 1);
-            Symbol *sym = pdecl->declarators[0]->sym;
-            Expr *defaultExpr = pdecl->declarators[0]->initExpr;
-            args.push_back(VariableDeclaration(sym, defaultExpr));
-        }
-
-        bool isInline = (ds->typeQualifier & TYPEQUAL_INLINE);
-        m->AddFunctionDeclaration(funSym, args, isInline);
+        bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+        m->AddFunctionDeclaration(funSym, isInline);
     }
     else
-        m->AddGlobalVariable(decl->sym, decl->initExpr,
-                             (ds->typeQualifier & TYPEQUAL_CONST) != 0);
+        m->AddGlobalVariable(decl->GetSymbol(), decl->initExpr,
+                             (ds->typeQualifiers & TYPEQUAL_CONST) != 0);
 }
 
 
@@ -1324,20 +1427,18 @@ lAddFunctionParams(Declarator *decl) {
     m->symbolTable->PushScope();
 
     // wire up arguments
-    if (decl->functionArgs) {
-        for (unsigned int i = 0; i < decl->functionArgs->size(); ++i) {
-            Declaration *pdecl = (*decl->functionArgs)[i];
-            if (pdecl == NULL)
-                continue;
-            assert(pdecl->declarators.size() == 1);
-            Symbol *sym = pdecl->declarators[0]->sym;
+    for (unsigned int i = 0; i < decl->functionArgs.size(); ++i) {
+        Declaration *pdecl = decl->functionArgs[i];
+        if (pdecl == NULL)
+            continue;
+        assert(pdecl->declarators.size() == 1);
+        Symbol *sym = pdecl->declarators[0]->GetSymbol();
 #ifndef NDEBUG
-            bool ok = m->symbolTable->AddVariable(sym);
-            assert(ok); // or error message?
+        bool ok = m->symbolTable->AddVariable(sym);
+        assert(ok); // or error message?
 #else
-            m->symbolTable->AddVariable(sym);
+        m->symbolTable->AddVariable(sym);
 #endif
-        }
     }
 
     // The corresponding pop scope happens in function_definition rules

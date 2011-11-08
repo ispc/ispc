@@ -406,6 +406,7 @@ public:
     const Type *GetBaseType() const;
     const ArrayType *GetAsVaryingType() const;
     const ArrayType *GetAsUniformType() const;
+    const ArrayType *GetAsUnsignedType() const;
     const Type *GetSOAType(int width) const;
     const ArrayType *GetAsConstType() const;
     const ArrayType *GetAsNonConstType() const;
@@ -674,10 +675,13 @@ private:
 class FunctionType : public Type {
 public:
     FunctionType(const Type *returnType, 
+                 const std::vector<const Type *> &argTypes, SourcePos pos);
+    FunctionType(const Type *returnType, 
                  const std::vector<const Type *> &argTypes, SourcePos pos,
-                 const std::vector<std::string> *argNames = NULL,
-                 bool isTask = false, bool isExported = false, 
-                 bool isExternC = false);
+                 const std::vector<std::string> &argNames,
+                 const std::vector<ConstExpr *> &argDefaults,
+                 const std::vector<SourcePos> &argPos,
+                 bool isTask, bool isExported, bool isExternC);
 
     bool IsUniformType() const;
     bool IsBoolType() const;
@@ -709,14 +713,12 @@ public:
     LLVM_TYPE_CONST llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
                                                          bool includeMask = false) const;
 
+    int GetNumParameters() const { return (int)argTypes.size(); }
     const std::vector<const Type *> &GetArgumentTypes() const { return argTypes; }
     const std::vector<ConstExpr *> &GetArgumentDefaults() const { return argDefaults; }
-    std::string GetArgumentName(int i) const;
+    const std::vector<SourcePos> &GetArgumentSourcePos() const { return argPos; }
 
-    /** @todo It would be nice to pull this information together and pass
-        it when the constructor is called; it's kind of ugly to set it like
-        this later. */
-    void SetArgumentDefaults(const std::vector<ConstExpr *> &d) const;
+    std::string GetArgumentName(int i) const;
 
     /** This value is true if the function had a 'task' qualifier in the
         source program. */
@@ -733,6 +735,7 @@ public:
 private:
     const Type * const returnType;
     const std::vector<const Type *> argTypes;
+    const std::vector<std::string> argNames;
     /** Default values of the functions arguments.  For arguments without
         default values provided, NULL is stored; this means that the length
         of this array is the same as the argTypes member, and the i'th
@@ -742,7 +745,7 @@ private:
         function's signature.  These should only be used for error messages
         and the like and shouldn't affect testing function types for
         equality, etc. */
-    const std::vector<std::string> argNames;
+    const std::vector<SourcePos> argPos;
     const SourcePos pos;
 };
 

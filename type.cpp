@@ -799,10 +799,12 @@ PointerType::GetString() const {
     if (baseType == NULL)
         return "";
 
-    std::string ret;
-    if (isConst) ret += "const ";
-    if (isUniform) ret += "uniform ";
-    return ret + std::string("*") + baseType->GetString();
+    std::string ret = baseType->GetString();
+
+    ret += std::string(" *");
+    if (isConst) ret += " const";
+    if (isUniform) ret += " uniform";
+    return ret;
 }
 
 
@@ -820,9 +822,10 @@ PointerType::GetCDeclaration(const std::string &name) const {
     if (baseType == NULL)
         return "";
 
-    std::string ret;
-    if (isConst) ret += "const ";
-    return ret + std::string("*") + baseType->GetCDeclaration(name);
+    std::string ret = baseType->GetCDeclaration(name);
+    ret += std::string(" *");
+    if (isConst) ret += " const";
+    return ret;
 }
 
 
@@ -953,6 +956,14 @@ ArrayType::GetAsUniformType() const {
     if (child == NULL)
         return NULL;
     return new ArrayType(child->GetAsUniformType(), numElements);
+}
+
+
+const ArrayType *
+ArrayType::GetAsUnsignedType() const {
+    if (child == NULL)
+        return NULL;
+    return new ArrayType(child->GetAsUnsignedType(), numElements);
 }
 
 
@@ -1850,10 +1861,26 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
 // FunctionType
 
 FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
-                           SourcePos p, const std::vector<std::string> *an, 
+                           SourcePos p)
+    : isTask(false), isExported(false), isExternC(false), returnType(r), 
+      argTypes(a), argNames(std::vector<std::string>(a.size(), "")),
+      argDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
+      argPos(std::vector<SourcePos>(a.size(), p)),
+      pos(p) {
+    assert(returnType != NULL);
+}
+
+
+FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
+                           SourcePos p, const std::vector<std::string> &an, 
+                           const std::vector<ConstExpr *> &ad,
+                           const std::vector<SourcePos> &ap,
                            bool it, bool is, bool ec) 
     : isTask(it), isExported(is), isExternC(ec), returnType(r), argTypes(a), 
-      argNames(an ? *an : std::vector<std::string>()), pos(p) {
+      argNames(an), argDefaults(ad), argPos(ap), pos(p) {
+    assert(argTypes.size() == argNames.size() && 
+           argNames.size() == argDefaults.size() &&
+           argDefaults.size() == argPos.size());
     assert(returnType != NULL);
 }
 
@@ -1969,7 +1996,7 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
     ret += fname;
     ret += "(";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        if (argNames.size())
+        if (argNames[i] != "")
             ret += argTypes[i]->GetCDeclaration(argNames[i]);
         else
             ret += argTypes[i]->GetString();
@@ -2042,20 +2069,10 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
 }
 
 
-void
-FunctionType::SetArgumentDefaults(const std::vector<ConstExpr *> &d) const {
-    assert(argDefaults.size() == 0);
-    assert(d.size() == argTypes.size());
-    argDefaults = d;
-}
-
-
 std::string
 FunctionType::GetArgumentName(int i) const { 
-    if (i >= (int)argNames.size())
-        return "";
-    else
-        return argNames[i]; 
+    assert(i < (int)argNames.size());
+    return argNames[i]; 
 }
 
 

@@ -331,16 +331,16 @@ lRecursiveCheckVarying(const Type *t) {
     varying parameters is illegal.
  */
 static void
-lCheckForVaryingParameter(Symbol *sym) {
-    if (lRecursiveCheckVarying(sym->type)) {
-        const Type *t = sym->type->GetBaseType();
+lCheckForVaryingParameter(const Type *type, const std::string &name, 
+                          SourcePos pos) {
+    if (lRecursiveCheckVarying(type)) {
+        const Type *t = type->GetBaseType();
         if (dynamic_cast<const StructType *>(t))
-            Error(sym->pos, "Struct parameter \"%s\" with varying member(s) is illegal "
-                  "in an exported function.",
-                  sym->name.c_str());
+            Error(pos, "Struct parameter \"%s\" with varying member(s) is illegal "
+                  "in an exported function.", name.c_str());
         else
-            Error(sym->pos, "Varying parameter \"%s\" is illegal in an exported function.",
-                  sym->name.c_str());
+            Error(pos, "Varying parameter \"%s\" is illegal in an exported function.",
+                  name.c_str());
     }
 }
 
@@ -372,10 +372,7 @@ lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
     false if any errors were encountered.
  */
 void
-Module::AddFunctionDeclaration(Symbol *funSym, 
-                               const std::vector<VariableDeclaration> &args,
-                               bool isInline) {
-    // We should have gotten a FunctionType back from the GetType() call above.
+Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     const FunctionType *functionType = 
         dynamic_cast<const FunctionType *>(funSym->type);
     assert(functionType != NULL);
@@ -446,8 +443,7 @@ Module::AddFunctionDeclaration(Symbol *funSym,
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), 
                                module);
 
-    // Set function attributes: we never throw exceptions, and want to
-    // inline everything we can
+    // Set function attributes: we never throw exceptions
     function->setDoesNotThrow(true);
     if (!(funSym->storageClass == SC_EXTERN_C) && 
         !g->generateDebuggingSymbols &&
@@ -473,21 +469,24 @@ Module::AddFunctionDeclaration(Symbol *funSym,
     // Loop over all of the arguments; process default values if present
     // and do other checks and parameter attribute setting.
     bool seenDefaultArg = false;
-    std::vector<ConstExpr *> argDefaults;
-    for (unsigned int i = 0; i < args.size(); ++i) {
-        Symbol *argSym = args[i].sym;
+    int nArgs = functionType->GetNumParameters();
+    for (int i = 0; i < nArgs; ++i) {
+        const Type *argType = (functionType->GetArgumentTypes())[i];
+        const std::string &argName = functionType->GetArgumentName(i);
+        ConstExpr *defaultValue = (functionType->GetArgumentDefaults())[i];
+        const SourcePos &argPos = (functionType->GetArgumentSourcePos())[i];
 
         // If the function is exported, make sure that the parameter
         // doesn't have any varying stuff going on in it.
         if (funSym->storageClass == SC_EXPORT)
-            lCheckForVaryingParameter(argSym);
+            lCheckForVaryingParameter(argType, argName, argPos);
 
         // ISPC assumes that all memory passed in is aligned to the native
         // width and that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
         // default.)  Set parameter attributes accordingly.
         if (!functionType->isTask && 
-            dynamic_cast<const ReferenceType *>(argSym->type) != NULL) {
+            dynamic_cast<const ReferenceType *>(argType) != NULL) {
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
             function->setDoesNotAlias(i+1, true);
@@ -495,42 +494,20 @@ Module::AddFunctionDeclaration(Symbol *funSym,
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
         }
 
-        if (symbolTable->LookupFunction(argSym->name.c_str()) != NULL)
-            Warning(argSym->pos, "Function parameter \"%s\" shadows a function "
-                    "declared in global scope.", argSym->name.c_str());
+        if (symbolTable->LookupFunction(argName.c_str()) != NULL)
+            Warning(argPos, "Function parameter \"%s\" shadows a function "
+                    "declared in global scope.", argName.c_str());
         
-        // See if a default argument value was provided with the parameter
-        Expr *defaultValue = args[i].init;
-        if (defaultValue != NULL) {
-            // If we have one, make sure it's a compile-time constant
+        if (defaultValue != NULL)
             seenDefaultArg = true;
-            defaultValue = defaultValue->TypeCheck();
-            defaultValue = defaultValue->Optimize();
-            defaultValue = dynamic_cast<ConstExpr *>(defaultValue);
-            if (!defaultValue) {
-                Error(argSym->pos, "Default value for parameter \"%s\" must be "
-                      "a compile-time constant.", argSym->name.c_str());
-                return;
-            }
-        }
         else if (seenDefaultArg) {
             // Once one parameter has provided a default value, then all of
             // the following ones must have them as well.
-            Error(argSym->pos, "Parameter \"%s\" is missing default: all "
+            Error(argPos, "Parameter \"%s\" is missing default: all "
                   "parameters after the first parameter with a default value "
-                  "must have default values as well.", argSym->name.c_str());
+                  "must have default values as well.", argName.c_str());
         }
-
-        // Add the default value to argDefaults.  Note that we make this
-        // call for all parameters, even those where no default value was
-        // provided.  In that case, a NULL value is stored here.  This
-        // approach means that we can always just look at the i'th entry of
-        // argDefaults to find the default value for the i'th parameter.
-        argDefaults.push_back(dynamic_cast<ConstExpr *>(defaultValue));
     }
-
-    // And only now can we set the default values in the FunctionType
-    functionType->SetArgumentDefaults(argDefaults);
 
     // If llvm gave us back a Function * with a different name than the one
     // we asked for, then there's already a function with that same

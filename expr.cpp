@@ -594,7 +594,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
 
     if (lvalue == NULL) {
         // If we can't get a lvalue, then we have an error here 
-        Error(expr->pos, "Can't %s-%s non-lvalues.",
+        Error(pos, "Can't %s-%s non-lvalues.",
               (op == UnaryExpr::PreInc || op == UnaryExpr::PreDec) ? "pre" : "post",
               (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) ? "increment" : "decrement");
         return NULL;
