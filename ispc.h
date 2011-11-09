@@ -337,6 +337,10 @@ struct Globals {
     /** Indicates whether all warning messages should be surpressed. */
     bool disableWarnings;
 
+    /** Indicates whether line wrapping of error messages to the terminal
+        width should be disabled. */
+    bool disableLineWrap;
+
     /** Indicates whether additional warnings should be issued about
         possible performance pitfalls. */
     bool emitPerfWarnings;

@@ -332,6 +332,7 @@ Globals::Globals() {
     runCPP = true;
     debugPrint = false;
     disableWarnings = false;
+    disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;

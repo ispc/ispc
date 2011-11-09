@@ -280,6 +280,8 @@ int main(int Argc, char *Argv[]) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
         }
+        else if (!strcmp(argv[i], "--nowrap"))
+            g->disableLineWrap = true;
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
             g->emitPerfWarnings = false;
         else if (!strcmp(argv[i], "-o")) {

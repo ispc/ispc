@@ -17,6 +17,7 @@ import random
 import string
 import mutex
 import subprocess
+import shlex
 import platform
 
 parser = OptionParser()
@@ -101,6 +102,33 @@ def run_tasks_from_queue(queue):
         filename = queue.get()
         if (filename == 'STOP'):
             sys.exit(error_count)
+
+        # is this a test to make sure an error is issued?
+        want_error = (filename.find("tests_errors") != -1)
+        if want_error == True:
+            ispc_cmd = "ispc --nowrap --woff %s --arch=%s --target=%s" % \
+                ( filename, options.arch, options.target)
+            sp = subprocess.Popen(shlex.split(ispc_cmd), stdin=None, stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE)
+            output = sp.communicate()[1]
+            got_error = (sp.returncode != 0)
+
+            # figure out the error message we're expecting
+            file = open(filename, 'r')
+            firstline = file.readline()
+            firstline = string.replace(firstline, "//", "")
+            firstline = string.lstrip(firstline)
+            firstline = string.rstrip(firstline)
+            file.close()
+
+            if (output.find(firstline) == -1):
+                print "Didn't see expected error message \"%s\" from test %s.\nActual outout: %s" % \
+                    (firstline, filename, output)
+                error_count += 1
+            elif got_error == False:
+                print "Unexpectedly no errors issued from test %s" % filename
+                error_count += 1
+            continue
 
         # do we expect this test to fail?
         should_fail = (filename.find("failing_") != -1)

@@ -69,6 +69,9 @@
  */
 static int
 lTerminalWidth() {
+    if (g->disableLineWrap)
+        return 1<<30;
+
 #if defined(ISPC_IS_WINDOWS)
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE || h == NULL)
