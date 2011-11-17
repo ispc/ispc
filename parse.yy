@@ -1435,7 +1435,8 @@ lAddFunctionParams(Declarator *decl) {
         Symbol *sym = pdecl->declarators[0]->GetSymbol();
 #ifndef NDEBUG
         bool ok = m->symbolTable->AddVariable(sym);
-        assert(ok); // or error message?
+        if (ok == false)
+            assert(m->errorCount > 0);
 #else
         m->symbolTable->AddVariable(sym);
 #endif
