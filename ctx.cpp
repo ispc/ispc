@@ -1598,13 +1598,21 @@ FunctionEmitContext::addGSMetadata(llvm::Value *v, SourcePos pos) {
     llvm::MDNode *md = llvm::MDNode::get(*g->ctx, str);
     inst->setMetadata("filename", md);
 
-    llvm::Value *line = LLVMInt32(pos.first_line);
-    md = llvm::MDNode::get(*g->ctx, line);
-    inst->setMetadata("line", md);
+    llvm::Value *first_line = LLVMInt32(pos.first_line);
+    md = llvm::MDNode::get(*g->ctx, first_line);
+    inst->setMetadata("first_line", md);
 
-    llvm::Value *column = LLVMInt32(pos.first_column);
-    md = llvm::MDNode::get(*g->ctx, column);
-    inst->setMetadata("column", md);
+    llvm::Value *first_column = LLVMInt32(pos.first_column);
+    md = llvm::MDNode::get(*g->ctx, first_column);
+    inst->setMetadata("first_column", md);
+
+    llvm::Value *last_line = LLVMInt32(pos.last_line);
+    md = llvm::MDNode::get(*g->ctx, last_line);
+    inst->setMetadata("last_line", md);
+
+    llvm::Value *last_column = LLVMInt32(pos.last_column);
+    md = llvm::MDNode::get(*g->ctx, last_column);
+    inst->setMetadata("last_column", md);
 }
 
 

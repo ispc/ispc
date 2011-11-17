@@ -350,10 +350,12 @@ Globals::Globals() {
 ///////////////////////////////////////////////////////////////////////////
 // SourcePos
 
-SourcePos::SourcePos(const char *n, int l, int c) {
+SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
     name = n ? n : m->module->getModuleIdentifier().c_str();
-    first_line = last_line = l;
-    first_column = last_column = c;
+    first_line = fl;
+    first_column = fc;
+    last_line = ll != 0 ? ll : fl;
+    last_column = lc != 0 ? lc : fc;
 }
 
 

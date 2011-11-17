@@ -142,23 +142,33 @@ lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
 static bool
 lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     llvm::MDNode *filename = inst->getMetadata("filename");
-    llvm::MDNode *line = inst->getMetadata("line");
-    llvm::MDNode *column = inst->getMetadata("column");
-    if (!filename || !line || !column)
+    llvm::MDNode *first_line = inst->getMetadata("first_line");
+    llvm::MDNode *first_column = inst->getMetadata("first_column");
+    llvm::MDNode *last_line = inst->getMetadata("last_line");
+    llvm::MDNode *last_column = inst->getMetadata("last_column");
+    if (!filename || !first_line || !first_column || !last_line || !last_column)
         return false;
 
     // All of these asserts are things that FunctionEmitContext::addGSMetadata() is
     // expected to have done in its operation
-    assert(filename->getNumOperands() == 1 && line->getNumOperands() == 1);
     llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
     assert(str);
-    llvm::ConstantInt *lnum = llvm::dyn_cast<llvm::ConstantInt>(line->getOperand(0));
-    assert(lnum);
-    llvm::ConstantInt *colnum = llvm::dyn_cast<llvm::ConstantInt>(column->getOperand(0));
-    assert(column);
+    llvm::ConstantInt *first_lnum = 
+        llvm::dyn_cast<llvm::ConstantInt>(first_line->getOperand(0));
+    assert(first_lnum);
+    llvm::ConstantInt *first_colnum = 
+        llvm::dyn_cast<llvm::ConstantInt>(first_column->getOperand(0));
+    assert(first_column);
+    llvm::ConstantInt *last_lnum = 
+        llvm::dyn_cast<llvm::ConstantInt>(last_line->getOperand(0));
+    assert(last_lnum);
+    llvm::ConstantInt *last_colnum = 
+        llvm::dyn_cast<llvm::ConstantInt>(last_column->getOperand(0));
+    assert(last_column);
 
-    *pos = SourcePos(str->getString().data(), (int)lnum->getZExtValue(),
-                   (int)colnum->getZExtValue());
+    *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(),
+                     (int)first_colnum->getZExtValue(), (int)last_lnum->getZExtValue(),
+                     (int)last_colnum->getZExtValue());
     return true;
 }
 
