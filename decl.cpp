@@ -272,10 +272,23 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                 }
             }
 
-            // Arrays are passed by reference, so convert array
-            // parameters to be references here.
-            if (dynamic_cast<const ArrayType *>(sym->type) != NULL)
+            const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
+            if (at != NULL) {
+                // Arrays are passed by reference, so convert array
+                // parameters to be references here.
                 sym->type = new ReferenceType(sym->type, sym->type->IsConstType());
+
+                // Make sure there are no unsized arrays (other than the
+                // first dimension) in function parameter lists.
+                at = dynamic_cast<const ArrayType *>(at->GetElementType());
+                while (at != NULL) {
+                    if (at->GetElementCount() == 0)
+                        Error(sym->pos, "Arrays with unsized dimensions in "
+                              "dimensions after the first one are illegal in "
+                              "function parameter lists.");
+                    at = dynamic_cast<const ArrayType *>(at->GetElementType());
+                }
+            }
 
             args.push_back(sym->type);
             argNames.push_back(sym->name);

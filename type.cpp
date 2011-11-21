@@ -1103,6 +1103,44 @@ ArrayType::GetSizedArray(int sz) const {
 }
 
 
+const Type *
+ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
+    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    if (at == NULL)
+        return type;
+
+    ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
+    if (exprList == NULL || exprList->exprs.size() == 0)
+        return type;
+    
+    if (at->GetElementCount() == 0)
+        type = at->GetSizedArray(exprList->exprs.size());
+
+    ExprList *nextList = dynamic_cast<ExprList *>(exprList->exprs[0]);
+    if (nextList == NULL)
+        return type;
+
+    unsigned int nextSize = nextList->exprs.size();
+    for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
+        if (exprList->exprs[i] == NULL) {
+            assert(m->errorCount > 0);
+            continue;
+        }
+
+        ExprList *el = dynamic_cast<ExprList *>(exprList->exprs[i]);
+        if (el == NULL || el->exprs.size() != nextSize) {
+            Error(Union(exprList->exprs[0]->pos, exprList->exprs[i]->pos), 
+                  "Inconsistent expression list lengths found in initializer "
+                  "list.");
+            return NULL;
+        }
+    }
+
+    return new ArrayType(SizeUnsizedArrays(at->GetElementType(), nextList),
+                         exprList->exprs.size());
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // SOAArrayType
 

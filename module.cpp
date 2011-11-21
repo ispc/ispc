@@ -237,6 +237,18 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
         return;
     }
 
+    sym->type = ArrayType::SizeUnsizedArrays(sym->type, initExpr);
+    if (sym->type == NULL)
+        return;
+
+    const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
+    if (at != NULL && at->TotalElementCount() == 0) {
+        Error(sym->pos, "Illegal to declare a global variable with unsized "
+              "array dimensions that aren't set with an initializer "
+              "expression.");
+        return;
+    }
+        
     LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
 
     // See if we have an initializer expression for the global.  If so,

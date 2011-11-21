@@ -255,6 +255,19 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *symType,
 }
 
 
+static bool
+lHasUnsizedArrays(const Type *type) {
+    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    if (at == NULL)
+        return false;
+
+    if (at->GetElementCount() == 0)
+        return true;
+    else
+        return lHasUnsizedArrays(at->GetElementType());
+}
+    
+
 void
 DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) 
@@ -263,8 +276,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
     for (unsigned int i = 0; i < vars.size(); ++i) {
         Symbol *sym = vars[i].sym;
         assert(sym != NULL);
-        const Type *type = sym->type;
-        if (type == NULL)
+        if (sym->type == NULL)
             continue;
         Expr *initExpr = vars[i].init;
 
@@ -280,32 +292,29 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         // If it's an array that was declared without a size but has an
         // initializer list, then use the number of elements in the
         // initializer list to finally set the array's size.
-        const ArrayType *at = dynamic_cast<const ArrayType *>(type);
-        if (at && at->GetElementCount() == 0) {
-            ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
-            if (exprList) {
-                ArrayType *t = at->GetSizedArray(exprList->exprs.size());
-                assert(t != NULL);
-                sym->type = type = t;
-            }
-            else {
-                Error(sym->pos, "Can't declare an unsized array as a local "
-                      "variable without providing an initializer expression to "
-                      "set its size.");
-                continue;
-            }
+        sym->type = ArrayType::SizeUnsizedArrays(sym->type, initExpr);
+        if (sym->type == NULL)
+            continue;
+
+        if (lHasUnsizedArrays(sym->type)) {
+            Error(pos, "Illegal to declare an unsized array variable without "
+                  "providing an initializer expression to set its size.");
+            continue;
         }
 
         // References must have initializer expressions as well.
-        if (dynamic_cast<const ReferenceType *>(type) && initExpr == NULL) {
+        if (dynamic_cast<const ReferenceType *>(sym->type) && initExpr == NULL) {
             Error(sym->pos,
                   "Must provide initializer for reference-type variable \"%s\".",
                   sym->name.c_str());
             continue;
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
-        assert(llvmType != NULL);
+        LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+        if (llvmType == NULL) {
+            assert(m->errorCount > 0);
+            return;
+        }
 
         if (sym->storageClass == SC_STATIC) {
             // For static variables, we need a compile-time constant value
@@ -313,20 +322,21 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // zero value.
             llvm::Constant *cinit = NULL;
             if (initExpr != NULL) {
-                if (lPossiblyResolveFunctionOverloads(initExpr, type) == false)
+                if (lPossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
                     continue;
                 // FIXME: we only need this for function pointers; it was
                 // already done for atomic types and enums in
                 // DeclStmt::TypeCheck()...
                 if (dynamic_cast<ExprList *>(initExpr) == NULL) {
-                    initExpr = TypeConvertExpr(initExpr, type, "initializer");
+                    initExpr = TypeConvertExpr(initExpr, sym->type,
+                                               "initializer");
                     // FIXME: and this is only needed to re-establish
                     // constant-ness so that GetConstant below works for
                     // constant artithmetic expressions...
                     initExpr = initExpr->Optimize();
                 }
 
-                cinit = initExpr->GetConstant(type);
+                cinit = initExpr->GetConstant(sym->type);
                 if (cinit == NULL)
                     Error(initExpr->pos, "Initializer for static variable "
                           "\"%s\" must be a constant.", sym->name.c_str());
@@ -337,7 +347,8 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // Allocate space for the static variable in global scope, so
             // that it persists across function calls
             sym->storagePtr =
-                new llvm::GlobalVariable(*m->module, llvmType, type->IsConstType(),
+                new llvm::GlobalVariable(*m->module, llvmType, 
+                                         sym->type->IsConstType(),
                                          llvm::GlobalValue::InternalLinkage, cinit,
                                          llvm::Twine("static.") +
                                          llvm::Twine(sym->pos.first_line) + 
@@ -353,8 +364,8 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EmitVariableDebugInfo(sym);
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
-            lInitSymbol(sym->storagePtr, sym->name.c_str(), type, initExpr,
-                        ctx, sym->pos);
+            lInitSymbol(sym->storagePtr, sym->name.c_str(), sym->type, 
+                        initExpr, ctx, sym->pos);
         }
     }
 }

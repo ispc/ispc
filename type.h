@@ -429,6 +429,8 @@ public:
         length. */
     virtual ArrayType *GetSizedArray(int length) const;
 
+    static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
+
 private:
     friend class SOAArrayType;
     /** Type of the elements of the array. */
