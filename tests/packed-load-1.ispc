@@ -5,7 +5,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform unsigned int a[programCount];
     a[programIndex] = aFOO[programIndex];
     unsigned int aa;
-    packed_load_active(a, 0, aa);
+    packed_load_active(a, 0, &aa);
     RET[programIndex] = aa;
 }
 

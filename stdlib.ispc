@@ -319,85 +319,89 @@ static inline uniform int lanemask() {
 // AOS/SOA conversion
 
 static inline void
-aos_to_soa3(uniform float a[], uniform int offset, reference float v0,
-            reference float v1, reference float v2) {
-    __aos_to_soa3_float(a, offset, v0, v1, v2);
+aos_to_soa3(uniform float a[], uniform int offset, float * uniform v0,
+            float * uniform v1, float * uniform v2) {
+    __aos_to_soa3_float(&a[0], offset, v0, v1, v2);
 }
 
 static inline void
 soa_to_aos3(float v0, float v1, float v2, uniform float a[], 
             uniform int offset) {
-    __soa_to_aos3_float(v0, v1, v2, a, offset);
+    __soa_to_aos3_float(v0, v1, v2, &a[0], offset);
 }
 
 static inline void
-aos_to_soa4(uniform float a[], uniform int offset, reference float v0,
-            reference float v1, reference float v2, reference float v3) {
-    __aos_to_soa4_float(a, offset, v0, v1, v2, v3);
+aos_to_soa4(uniform float a[], uniform int offset, float * uniform v0,
+            float * uniform v1, float * uniform v2, float * uniform v3) {
+    __aos_to_soa4_float(&a[0], offset, v0, v1, v2, v3);
 }
 
 static inline void
 soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[], 
             uniform int offset) {
-    __soa_to_aos4_float(v0, v1, v2, v3, a, offset);
+    __soa_to_aos4_float(v0, v1, v2, v3, &a[0], offset);
 }
 
 static inline void
-aos_to_soa3(uniform int32 a[], uniform int offset, reference int32 v0,
-            reference int32 v1, reference int32 v2) {
-    __aos_to_soa3_int32(a, offset, v0, v1, v2);
+aos_to_soa3(uniform int32 a[], uniform int offset, int32 * uniform v0,
+            int32 * uniform v1, int32 * uniform v2) {
+    __aos_to_soa3_int32(&a[0], offset, v0, v1, v2);
 }
 
 static inline void
 soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[], 
             uniform int offset) {
-    __soa_to_aos3_int32(v0, v1, v2, a, offset);
+    __soa_to_aos3_int32(v0, v1, v2, &a[0], offset);
 }
 
 static inline void
-aos_to_soa4(uniform int32 a[], uniform int offset, reference int32 v0,
-            reference int32 v1, reference int32 v2, reference int32 v3) {
-    __aos_to_soa4_int32(a, offset, v0, v1, v2, v3);
+aos_to_soa4(uniform int32 a[], uniform int offset, int32 * uniform v0,
+            int32 * uniform v1, int32 * uniform v2, int32 * uniform v3) {
+    __aos_to_soa4_int32(&a[0], offset, v0, v1, v2, v3);
 }
 
 static inline void
 soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[], 
             uniform int offset) {
-    __soa_to_aos4_int32(v0, v1, v2, v3, a, offset);
+    __soa_to_aos4_int32(v0, v1, v2, v3, &a[0], offset);
 }
 
 ///////////////////////////////////////////////////////////////////////////
 // Prefetching
 
-#define PREFETCHES(NAME, TYPE)                                  \
-static inline void prefetch_l1(const reference TYPE ptr) {      \
-    __prefetch_read_1_##NAME##_refsconst(ptr);                  \
-}                                                               \
-static inline void prefetch_l2(const reference TYPE ptr) {      \
-    __prefetch_read_2_##NAME##_refsconst(ptr);                  \
-}                                                               \
-static inline void prefetch_l3(const reference TYPE ptr) {      \
-    __prefetch_read_3_##NAME##_refsconst(ptr);                  \
-}                                                               \
- static inline void prefetch_nt(const reference TYPE ptr) {     \
-     __prefetch_read_nt_##NAME##_refsconst(ptr);                \
+static inline void prefetch_l1(const void * uniform ptr) {
+    __prefetch_read_uniform_1((uniform int8 * uniform)ptr);
 }
 
-PREFETCHES(uniform_int8, uniform int8)
-PREFETCHES(uniform_int16, uniform int16)
-PREFETCHES(uniform_int32, uniform int32)
-PREFETCHES(uniform_int64, uniform int64)
-PREFETCHES(uniform_float, uniform float)
-PREFETCHES(uniform_double, uniform double)
+static inline void prefetch_l2(const void * uniform ptr) {
+    __prefetch_read_uniform_2((uniform int8 * uniform)ptr);
+}
 
-PREFETCHES(varying_int8, int8)
-PREFETCHES(varying_int16, int16)
-PREFETCHES(varying_int32, int32)
-PREFETCHES(varying_int64, int64)
-PREFETCHES(varying_float, float)
-PREFETCHES(varying_double, double)
+static inline void prefetch_l3(const void * uniform ptr) {
+    __prefetch_read_uniform_3((uniform int8 * uniform)ptr);
+}
 
-#undef PREFETCHES
+static inline void prefetch_nt(const void * uniform ptr) {
+     __prefetch_read_uniform_nt((uniform int8 * uniform)ptr);
+}
+
+#if 0
+static inline void prefetch_l1(const void * varying ptr) {
+    __prefetch_read_varying_1((varying int8 * varying)ptr);
+}
+
+static inline void prefetch_l2(const void * varying ptr) {
+    __prefetch_read_varying_2((varying int8 * varying)ptr);
+}
+
+static inline void prefetch_l3(const void * varying ptr) {
+    __prefetch_read_varying_3((varying int8 * varying)ptr);
+}
+
+static inline void prefetch_nt(const void * varying ptr) {
+     __prefetch_read_varying_nt((varying int8 * varying)ptr);
+}
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
@@ -525,9 +529,9 @@ static inline uniform unsigned int64 reduce_max(unsigned int64 v) {
 #define REDUCE_EQUAL(TYPE, FUNCTYPE, MASKTYPE)                     \
 static inline uniform bool reduce_equal(TYPE v) {                  \
     uniform TYPE unusedValue;                                      \
-    return __reduce_equal_##FUNCTYPE(v, unusedValue, (MASKTYPE)__mask); \
+    return __reduce_equal_##FUNCTYPE(v, &unusedValue, (MASKTYPE)__mask); \
 }                                                                  \
-static inline uniform bool reduce_equal(TYPE v, reference uniform TYPE value) { \
+static inline uniform bool reduce_equal(TYPE v, uniform TYPE * uniform value) { \
     return __reduce_equal_##FUNCTYPE(v, value, (MASKTYPE)__mask);       \
 }
 
@@ -599,26 +603,26 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 
 static inline uniform int 
 packed_load_active(uniform unsigned int a[], uniform int start,
-                   reference unsigned int vals) {
-    return __packed_load_active(a, (unsigned int)start, vals,
+                   unsigned int * uniform vals) {
+    return __packed_load_active(&a[0], (unsigned int)start, vals,
                                 (unsigned int32)__mask);
 }
 
 static inline uniform int
 packed_store_active(uniform unsigned int a[], uniform int start,
                     unsigned int vals) {
-    return __packed_store_active(a, (unsigned int)start, vals,
+    return __packed_store_active(&a[0], (unsigned int)start, vals,
                                  (unsigned int32)__mask);
 }
 
 static inline uniform int packed_load_active(uniform int a[], uniform int start,
-                                             reference int vals) {
-    return __packed_load_active(a, start, vals, (int32)__mask);
+                                             int * uniform vals) {
+    return __packed_load_active(&a[0], start, vals, (int32)__mask);
 }
 
 static inline uniform int packed_store_active(uniform int a[], uniform int start,
                                               int vals) {
-    return __packed_store_active(a, start, vals, (int32)__mask);
+    return __packed_store_active(&a[0], start, vals, (int32)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -636,35 +640,35 @@ static inline void memory_barrier() {
 }
 
 #define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE)                        \
-static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
+static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     memory_barrier();                                                   \
-    TA ret = __atomic_##OPB##_##TB##_global(ref, value, (MASKTYPE)__mask); \
+    TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
-static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
+static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
 
 #define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB, MASKTYPE)                \
-static inline TA atomic_##OPA##_global(uniform reference TA ref, TA value) { \
+static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_uniform_##TB##_global(ref, oneval, (MASKTYPE)__mask); \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval, (MASKTYPE)__mask); \
         memory_barrier();                                               \
     }                                                                   \
     return ret;                                                         \
 }                                                                       \
-static inline uniform TA atomic_##OPA##_global(uniform reference TA ref, \
+static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ref, value, (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
@@ -717,16 +721,16 @@ DEFINE_ATOMIC_OP(double,double,swap,swap,int32)
 
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline TA atomic_compare_exchange_global(                           \
-         uniform reference TA ref, TA oldval, TA newval) {                 \
+         uniform TA * uniform ptr, TA oldval, TA newval) {                 \
     memory_barrier();                                                      \
-    TA ret = __atomic_compare_exchange_##TB##_global(ref, oldval, newval, (MASKTYPE)__mask); \
+    TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval, (MASKTYPE)__mask); \
     memory_barrier();                                                      \
     return ret;                                                            \
 } \
 static inline uniform TA atomic_compare_exchange_global(               \
-         uniform reference TA ref, uniform TA oldval, uniform TA newval) {                 \
+         uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) {                 \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ref, oldval, newval, (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval, (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
@@ -1162,22 +1166,22 @@ static inline uniform float ldexp(uniform float x, uniform int n) {
     return floatbits(ix);
 }
 
-static inline float frexp(float x, reference int pw2) {
+static inline float frexp(float x, int * uniform pw2) {
     unsigned int ex = 0x7F800000u;              // exponent mask
     unsigned int ix = intbits(x);
     ex &= ix;
     ix &= ~0x7F800000u;  // clear exponent
-    pw2 = (int)(ex >> 23) - 126; // compute exponent
+    *pw2 = (int)(ex >> 23) - 126; // compute exponent
     ix |= 0x3F000000u;         // insert exponent +1 in x
     return floatbits(ix);
 }
 
-static inline uniform float frexp(uniform float x, reference uniform int pw2) {
+static inline uniform float frexp(uniform float x, uniform int * uniform pw2) {
     uniform unsigned int ex = 0x7F800000u;              // exponent mask
     uniform unsigned int ix = intbits(x);
     ex &= ix;
     ix &= ~0x7F800000u;  // clear exponent
-    pw2 = (uniform int)(ex >> 23) - 126; // compute exponent
+    *pw2 = (uniform int)(ex >> 23) - 126; // compute exponent
     ix |= 0x3F000000u;         // insert exponent +1 in x
     return floatbits(ix);
 }
@@ -1441,7 +1445,8 @@ static inline uniform float cos(uniform float x_full) {
 }
 
 
-static inline void sincos(float x_full, reference float sin_result, reference float cos_result) {
+static inline void sincos(float x_full, float * uniform sin_result, 
+                          float * uniform cos_result) {
     if (__math_lib == __math_lib_svml) {
         __svml_sincos(x_full, sin_result, cos_result);
     }
@@ -1451,9 +1456,9 @@ static inline void sincos(float x_full, reference float sin_result, reference fl
             if ((mask & (1 << i)) == 0)
                 continue;
             uniform float s, c;
-            __stdlib_sincosf(extract(x_full, i), s, c);
-            sin_result = insert(sin_result, i, s);
-            cos_result = insert(cos_result, i, c);
+            __stdlib_sincosf(extract(x_full, i), &s, &c);
+            *sin_result = insert(*sin_result, i, s);
+            *cos_result = insert(*cos_result, i, c);
         }
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -1503,17 +1508,17 @@ static inline void sincos(float x_full, reference float sin_result, reference fl
 
         sin_formula *= x;
 
-        sin_result = sin_usecos ? cos_formula : sin_formula;
-        cos_result = cos_usecos ? cos_formula : sin_formula;
+        *sin_result = sin_usecos ? cos_formula : sin_formula;
+        *cos_result = cos_usecos ? cos_formula : sin_formula;
 
-        sin_result = sin_flipsign ? -sin_result : sin_result;
-        cos_result = cos_flipsign ? -cos_result : cos_result;
+        *sin_result = sin_flipsign ? -*sin_result : *sin_result;
+        *cos_result = cos_flipsign ? -*cos_result : *cos_result;
     }
 }
 
 
-static inline void sincos(uniform float x_full, reference uniform float sin_result,
-                          reference uniform float cos_result) {
+static inline void sincos(uniform float x_full, uniform float * uniform sin_result,
+                          uniform float * uniform cos_result) {
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         __stdlib_sincosf(x_full, sin_result, cos_result);
@@ -1565,11 +1570,11 @@ static inline void sincos(uniform float x_full, reference uniform float sin_resu
 
         sin_formula *= x;
 
-        sin_result = sin_usecos ? cos_formula : sin_formula;
-        cos_result = cos_usecos ? cos_formula : sin_formula;
+        *sin_result = sin_usecos ? cos_formula : sin_formula;
+        *cos_result = cos_usecos ? cos_formula : sin_formula;
 
-        sin_result = sin_flipsign ? -sin_result : sin_result;
-        cos_result = cos_flipsign ? -cos_result : cos_result;
+        *sin_result = sin_flipsign ? -*sin_result : *sin_result;
+        *cos_result = cos_flipsign ? -*cos_result : *cos_result;
     }
 }
 
@@ -2038,7 +2043,8 @@ static inline uniform float exp(uniform float x_full) {
 // Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
 // * log(2) + log(y) where y is the reduced range (usually in [1/2,
 // 1)).
-static inline void __range_reduce_log(float input, reference float reduced, reference int exponent) {
+static inline void __range_reduce_log(float input, float * uniform reduced, 
+                                      int * uniform exponent) {
     int int_version = intbits(input);
     // single precision = SEEE EEEE EMMM MMMM MMMM MMMM MMMM MMMM
     // exponent mask    = 0111 1111 1000 0000 0000 0000 0000 0000
@@ -2057,28 +2063,28 @@ static inline void __range_reduce_log(float input, reference float reduced, refe
     int biased_exponent = int_version >> 23; // This number is [0, 255] but it means [-127, 128]
 
     int offset_exponent = biased_exponent + 1; // Treat the number as if it were 2^{e+1} * (1.m)/2
-    exponent = offset_exponent - 127; // get the real value
+    *exponent = offset_exponent - 127; // get the real value
 
     // Blend the offset_exponent with the original input (do this in
     // int for now, until I decide if float can have & and &not)
     int blended = (int_version & nonexponent_mask) | (exponent_neg1);
-    reduced = floatbits(blended);
+    *reduced = floatbits(blended);
 }
 
 
 
-static inline void __range_reduce_log(uniform float input, reference uniform float reduced, 
-                                      reference uniform int exponent) {
+static inline void __range_reduce_log(uniform float input, uniform float * uniform reduced, 
+                                      uniform int * uniform exponent) {
     uniform int int_version = intbits(input);
     static const uniform int nonexponent_mask = 0x807FFFFF;
 
     static const uniform int exponent_neg1 = (126 << 23);
     uniform int biased_exponent = int_version >> 23;
     uniform int offset_exponent = biased_exponent + 1;
-    exponent = offset_exponent - 127; // get the real value
+    *exponent = offset_exponent - 127; // get the real value
 
     uniform int blended = (int_version & nonexponent_mask) | (exponent_neg1);
-    reduced = floatbits(blended);
+    *reduced = floatbits(blended);
 }
 
 
@@ -2099,7 +2105,7 @@ static inline float log(float x_full) {
     }
     else if (__math_lib == __math_lib_ispc_fast) {
         int e;
-        x_full = frexp(x_full, e);
+        x_full = frexp(x_full, &e);
     
         int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
         e += x_smaller_SQRTHF;
@@ -2139,7 +2145,7 @@ static inline float log(float x_full) {
         const float one = 1.0;
 
         float patched = exceptional ? one : x_full;
-        __range_reduce_log(patched, reduced, exponent);
+        __range_reduce_log(patched, &reduced, &exponent);
 
         const float ln2 = 0.693147182464599609375;
 
@@ -2179,7 +2185,7 @@ static inline uniform float log(uniform float x_full) {
     }
     else if (__math_lib == __math_lib_ispc_fast) {
         uniform int e;
-        x_full = frexp(x_full, e);
+        x_full = frexp(x_full, &e);
     
         uniform int x_smaller_SQRTHF = (0.707106781186547524f > x_full) ? 0xffffffff : 0;
         e += x_smaller_SQRTHF;
@@ -2219,7 +2225,7 @@ static inline uniform float log(uniform float x_full) {
         const uniform float one = 1.0;
 
         uniform float patched = exceptional ? one : x_full;
-        __range_reduce_log(patched, reduced, exponent);
+        __range_reduce_log(patched, &reduced, &exponent);
 
         const uniform float ln2 = 0.693147182464599609375;
 
@@ -2315,22 +2321,22 @@ static inline uniform double ldexp(uniform double x, uniform int n) {
     return doublebits(ix);
 }
 
-static inline double frexp(double x, reference int pw2) {
+static inline double frexp(double x, int * uniform pw2) {
     unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
     unsigned int64 ix = intbits(x);
     ex &= ix;
     ix &= ~0x7ff0000000000000;  // clear exponent
-    pw2 = (int)(ex >> 52) - 1022; // compute exponent
+    *pw2 = (int)(ex >> 52) - 1022; // compute exponent
     ix |= 0x3fe0000000000000;         // insert exponent +1 in x
     return doublebits(ix);
 }
 
-static inline uniform double frexp(uniform double x, reference uniform int pw2) {
+static inline uniform double frexp(uniform double x, uniform int * uniform pw2) {
     uniform unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
     uniform unsigned int64 ix = intbits(x);
     ex &= ix;
     ix &= ~0x7ff0000000000000;  // clear exponent
-    pw2 = (int)(ex >> 52) - 1022; // compute exponent
+    *pw2 = (int)(ex >> 52) - 1022; // compute exponent
     ix |= 0x3fe0000000000000;         // insert exponent +1 in x
     return doublebits(ix);
 }
@@ -2381,13 +2387,13 @@ static inline uniform double cos(uniform double x) {
         return __stdlib_cos(x);
 }
 
-static inline void sincos(double x, reference double sin_result,
-                          reference double cos_result) {
+static inline void sincos(double x, double * uniform sin_result,
+                          double * uniform cos_result) {
     if (__math_lib == __math_lib_ispc_fast) {
         float sr, cr;
-        sincos((float)x, sr, cr);
-        sin_result = sr;
-        cos_result = cr;
+        sincos((float)x, &sr, &cr);
+        *sin_result = sr;
+        *cos_result = cr;
     }
     else {
         uniform int mask = lanemask();
@@ -2395,20 +2401,20 @@ static inline void sincos(double x, reference double sin_result,
             uniform double sr, cr;
             if ((mask & (1 << i)) == 0)
                 continue;
-            __stdlib_sincos(extract(x, i), sr, cr);
-            sin_result = insert(sin_result, i, sr);
-            cos_result = insert(cos_result, i, cr);
+            __stdlib_sincos(extract(x, i), &sr, &cr);
+            *sin_result = insert(*sin_result, i, sr);
+            *cos_result = insert(*cos_result, i, cr);
         }
     }
 }
 
-static inline void sincos(uniform double x, reference uniform double sin_result,
-                          reference uniform double cos_result) {
+static inline void sincos(uniform double x, uniform double * uniform sin_result,
+                          uniform double * uniform cos_result) {
     if (__math_lib == __math_lib_ispc_fast) {
         uniform float sr, cr;
-        sincos((uniform float)x, sr, cr);
-        sin_result = sr;
-        cos_result = cr;
+        sincos((uniform float)x, &sr, &cr);
+        *sin_result = sr;
+        *cos_result = cr;
     }
     else
         __stdlib_sincos(x, sin_result, cos_result);
@@ -2883,63 +2889,64 @@ struct RNGState {
     unsigned int z1, z2, z3, z4;
 };
 
-static inline unsigned int random(reference RNGState state)
+static inline unsigned int random(RNGState * uniform state)
 {
     unsigned int b;
 
-    b  = ((state.z1 << 6) ^ state.z1) >> 13;
-    state.z1 = ((state.z1 & 4294967294U) << 18) ^ b;
-    b  = ((state.z2 << 2) ^ state.z2) >> 27; 
-    state.z2 = ((state.z2 & 4294967288U) << 2) ^ b;
-    b  = ((state.z3 << 13) ^ state.z3) >> 21;
-    state.z3 = ((state.z3 & 4294967280U) << 7) ^ b;
-    b  = ((state.z4 << 3) ^ state.z4) >> 12;
-    state.z4 = ((state.z4 & 4294967168U) << 13) ^ b;
-    return (state.z1 ^ state.z2 ^ state.z3 ^ state.z4);
+    // FIXME: state->z1, etc..
+    b  = (((*state).z1 << 6) ^ (*state).z1) >> 13;
+    (*state).z1 = (((*state).z1 & 4294967294U) << 18) ^ b;
+    b  = (((*state).z2 << 2) ^ (*state).z2) >> 27; 
+    (*state).z2 = (((*state).z2 & 4294967288U) << 2) ^ b;
+    b  = (((*state).z3 << 13) ^ (*state).z3) >> 21;
+    (*state).z3 = (((*state).z3 & 4294967280U) << 7) ^ b;
+    b  = (((*state).z4 << 3) ^ (*state).z4) >> 12;
+    (*state).z4 = (((*state).z4 & 4294967168U) << 13) ^ b;
+    return ((*state).z1 ^ (*state).z2 ^ (*state).z3 ^ (*state).z4);
 }
 
-static inline float frandom(reference RNGState state)
+static inline float frandom(RNGState * uniform state)
 {
     unsigned int irand = random(state);
     irand &= (1<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
-static inline uniform unsigned int __seed4(reference RNGState state, 
+static inline uniform unsigned int __seed4(RNGState * uniform state, 
                                            uniform int start,
                                            uniform unsigned int seed) {
     uniform unsigned int c1 = 0xf0f0f0f0;
     uniform unsigned int c2 = 0x0f0f0f0f;
 
-    state.z1 = insert(state.z1, start + 0, seed);
-    state.z1 = insert(state.z1, start + 1, seed ^ c1);
-    state.z1 = insert(state.z1, start + 2, (seed << 3) ^ c1);
-    state.z1 = insert(state.z1, start + 3, (seed << 2) ^ c2);
+    (*state).z1 = insert((*state).z1, start + 0, seed);
+    (*state).z1 = insert((*state).z1, start + 1, seed ^ c1);
+    (*state).z1 = insert((*state).z1, start + 2, (seed << 3) ^ c1);
+    (*state).z1 = insert((*state).z1, start + 3, (seed << 2) ^ c2);
 
     seed += 131;
-    state.z2 = insert(state.z2, start + 0, seed);
-    state.z2 = insert(state.z2, start + 1, seed ^ c1);
-    state.z2 = insert(state.z2, start + 2, (seed << 3) ^ c1);
-    state.z2 = insert(state.z2, start + 3, (seed << 2) ^ c2);
+    (*state).z2 = insert((*state).z2, start + 0, seed);
+    (*state).z2 = insert((*state).z2, start + 1, seed ^ c1);
+    (*state).z2 = insert((*state).z2, start + 2, (seed << 3) ^ c1);
+    (*state).z2 = insert((*state).z2, start + 3, (seed << 2) ^ c2);
 
-    seed ^= extract(state.z2, 2);
-    state.z3 = insert(state.z3, start + 0, seed);
-    state.z3 = insert(state.z3, start + 1, seed ^ c1);
-    state.z3 = insert(state.z3, start + 2, (seed << 3) ^ c1);
-    state.z3 = insert(state.z3, start + 3, (seed << 2) ^ c2);
+    seed ^= extract((*state).z2, 2);
+    (*state).z3 = insert((*state).z3, start + 0, seed);
+    (*state).z3 = insert((*state).z3, start + 1, seed ^ c1);
+    (*state).z3 = insert((*state).z3, start + 2, (seed << 3) ^ c1);
+    (*state).z3 = insert((*state).z3, start + 3, (seed << 2) ^ c2);
 
     seed <<= 4;
     seed += 3;
-    seed ^= extract(state.z1, 3);
-    state.z4 = insert(state.z4, start + 0, seed);
-    state.z4 = insert(state.z4, start + 1, seed ^ c1);
-    state.z4 = insert(state.z4, start + 2, (seed << 3) ^ c1);
-    state.z4 = insert(state.z4, start + 3, (seed << 2) ^ c2);
+    seed ^= extract((*state).z1, 3);
+    (*state).z4 = insert((*state).z4, start + 0, seed);
+    (*state).z4 = insert((*state).z4, start + 1, seed ^ c1);
+    (*state).z4 = insert((*state).z4, start + 2, (seed << 3) ^ c1);
+    (*state).z4 = insert((*state).z4, start + 3, (seed << 2) ^ c2);
 
     return seed;
 }
 
-static inline void seed_rng(reference uniform RNGState state, uniform unsigned int seed) {
+static inline void seed_rng(uniform RNGState * uniform state, uniform unsigned int seed) {
     seed = __seed4(state, 0, seed);
     if (programCount == 8)
         __seed4(state, 4, seed ^ 0xbeeff00d);

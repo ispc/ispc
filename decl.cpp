@@ -46,12 +46,14 @@
 #include <stdio.h>
 #include <llvm/Module.h>
 
+/** Given a Type and a set of type qualifiers, apply the type qualifiers to
+    the type, returning the type that is the result. 
+*/
 static const Type *
 lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if (type == NULL)
         return NULL;
 
-    // Account for 'unsigned' and 'const' qualifiers in the type
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
         const Type *unsignedType = type->GetAsUnsignedType();
         if (unsignedType != NULL)
@@ -60,23 +62,21 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
               type->GetString().c_str());
     }
+
     if ((typeQualifiers & TYPEQUAL_CONST) != 0)
         type = type->GetAsConstType();
 
-    // if uniform/varying is specified explicitly, then go with that
-    if (dynamic_cast<const FunctionType *>(type) == NULL) {
-        if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
+    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
+        type = type->GetAsUniformType();
+    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
+        type = type->GetAsVaryingType();
+    else {
+        // otherwise, structs are uniform by default and everything
+        // else is varying by default
+        if (dynamic_cast<const StructType *>(type->GetBaseType()) != NULL)
             type = type->GetAsUniformType();
-        else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
+        else
             type = type->GetAsVaryingType();
-        else {
-            // otherwise, structs are uniform by default and everything
-            // else is varying by default
-            if (dynamic_cast<const StructType *>(type->GetBaseType()) != NULL)
-                type = type->GetAsUniformType();
-            else
-                type = type->GetAsVaryingType();
-        }
     }
 
     return type;
@@ -127,7 +127,6 @@ DeclSpecs::Print() const {
     if (typeQualifiers & TYPEQUAL_UNIFORM)   printf("uniform ");
     if (typeQualifiers & TYPEQUAL_VARYING)   printf("varying ");
     if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
-    if (typeQualifiers & TYPEQUAL_REFERENCE) printf("reference ");
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
 
     printf("%s", baseType->GetString().c_str());
@@ -161,8 +160,10 @@ Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
 
 
 Symbol *
-Declarator::GetSymbol() {
-    Declarator *d = this;
+Declarator::GetSymbol() const {
+    // The symbol lives at the last child in the chain, so walk down there
+    // and return the one there.
+    const Declarator *d = this;
     while (d->child != NULL)
         d = d->child;
     return d->sym;
@@ -171,7 +172,12 @@ Declarator::GetSymbol() {
 
 void
 Declarator::Print() const {
-    printf("%s", sym->name.c_str());
+    Symbol *sym = GetSymbol();
+    if (sym != NULL)
+        printf("%s", sym->name.c_str());
+    else
+        printf("(null symbol)");
+
     if (initExpr != NULL) {
         printf(" = (");
         initExpr->Print();
@@ -181,28 +187,39 @@ Declarator::Print() const {
 }
 
 
-void
-Declarator::GetFunctionInfo(DeclSpecs *ds, Symbol **funSym, 
-                            std::vector<Symbol *> *funArgs) {
-    // Get the symbol for the function from the symbol table.  (It should
-    // already have been added to the symbol table by AddGlobal() by the
-    // time we get here.)
+Symbol *
+Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
     const FunctionType *type = 
         dynamic_cast<const FunctionType *>(GetType(ds));
     if (type == NULL)
-        return;
+        return NULL;
+
     Symbol *declSym = GetSymbol();
     assert(declSym != NULL);
-    *funSym = m->symbolTable->LookupFunction(declSym->name.c_str(), type);
-    if (*funSym != NULL)
-        // May be NULL due to error earlier in compilation
-        (*funSym)->pos = pos;
 
-    for (unsigned int i = 0; i < functionArgs.size(); ++i) {
-        Declaration *pdecl = functionArgs[i];
+    // Get the symbol for the function from the symbol table.  (It should
+    // already have been added to the symbol table by AddGlobal() by the
+    // time we get here.)
+    Symbol *funSym = m->symbolTable->LookupFunction(declSym->name.c_str(), type);
+    if (funSym != NULL)
+        // May be NULL due to error earlier in compilation
+        funSym->pos = pos;
+
+    // Walk down to the declarator for the function.  (We have to get past
+    // the stuff that specifies the function's return type before we get to
+    // the function's declarator.)
+    Declarator *d = this;
+    while (d != NULL && d->kind != DK_FUNCTION)
+        d = d->child;
+    assert(d != NULL);
+
+    for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
+        Declaration *pdecl = d->functionParams[i];
         assert(pdecl->declarators.size() == 1);
         funArgs->push_back(pdecl->declarators[0]->GetSymbol());
     }
+
+    return funSym;
 }
 
 
@@ -211,7 +228,6 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
     bool isTask =         ((typeQualifiers & TYPEQUAL_TASK) != 0);
-    bool isReference =    ((typeQualifiers & TYPEQUAL_REFERENCE) != 0);
     bool isConst =        ((typeQualifiers & TYPEQUAL_CONST) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
@@ -224,13 +240,36 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     const Type *type = base;
     switch (kind) {
     case DK_BASE:
+        // All of the type qualifiers should be in the DeclSpecs for the
+        // base declarator
         assert(typeQualifiers == 0);
         assert(child == NULL);
         return type;
 
     case DK_POINTER:
         type = new PointerType(type, hasUniformQual, isConst);
-        if (child)
+        if (child != NULL)
+            return child->GetType(type, ds);
+        else
+            return type;
+        break;
+
+    case DK_REFERENCE:
+        if (hasUniformQual)
+            Error(pos, "\"uniform\" qualifier is illegal to apply to references.");
+        if (hasVaryingQual)
+            Error(pos, "\"varying\" qualifier is illegal to apply to references.");
+        if (isConst)
+            Error(pos, "\"const\" qualifier is to illegal apply to references.");
+
+        // The parser should disallow this already, but double check.
+        if (dynamic_cast<const ReferenceType *>(type) != NULL) {
+            Error(pos, "References to references are illegal.");
+            return NULL;
+        }
+
+        type = new ReferenceType(type);
+        if (child != NULL)
             return child->GetType(type, ds);
         else
             return type;
@@ -250,10 +289,12 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         std::vector<ConstExpr *> argDefaults;
         std::vector<SourcePos> argPos;
 
-        // Loop over the function arguments and get names and types for
-        // each one in the args and argNames arrays
-        for (unsigned int i = 0; i < functionArgs.size(); ++i) {
-            Declaration *d = functionArgs[i];
+        // Loop over the function arguments and store the names, types,
+        // default values (if any), and source file positions each one in
+        // the corresponding vector.
+        for (unsigned int i = 0; i < functionParams.size(); ++i) {
+            Declaration *d = functionParams[i];
+
             char buf[32];
             Symbol *sym;
             if (d->declarators.size() == 0) {
@@ -266,6 +307,8 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             else {
                 sym = d->declarators[0]->GetSymbol();
                 if (sym == NULL) {
+                    // Handle more complex anonymous declarations like
+                    // float (float **).
                     sprintf(buf, "__anon_parameter_%d", i);
                     sym = new Symbol(buf, pos);
                     sym->type = d->declarators[0]->GetType(d->declSpecs);
@@ -274,9 +317,15 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
 
             const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
             if (at != NULL) {
-                // Arrays are passed by reference, so convert array
-                // parameters to be references here.
-                sym->type = new ReferenceType(sym->type, sym->type->IsConstType());
+                // As in C, arrays are passed to functions as pointers to
+                // their element type.  We'll just immediately make this
+                // change now.  (One shortcoming of losing the fact that
+                // the it was originally an array is that any warnings or
+                // errors later issued that print the function type will
+                // report this differently than it was originally declared
+                // in the function, but it's not clear that this is a
+                // significant problem.)
+                sym->type = PointerType::GetUniform(at->GetElementType());
 
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
@@ -296,6 +345,8 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
 
             ConstExpr *init = NULL;
             if (d->declarators.size()) {
+                // Try to find an initializer expression; if there is one,
+                // it lives down to the base declarator.
                 Declarator *decl = d->declarators[0];
                 while (decl->child != NULL) {
                     assert(decl->initExpr == NULL);
@@ -314,11 +365,6 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             argDefaults.push_back(init);
         }
 
-        if (isReference) {
-            Error(pos, "Function return types can't be reference types.");
-            return NULL;
-        }
-
         const Type *returnType = type;
         if (returnType == NULL) {
             Error(pos, "No return type provided in function declaration.");
@@ -328,6 +374,23 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         bool isExported = ds && (ds->storageClass == SC_EXPORT);
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
+
+        if (isExported && isTask) {
+            Error(pos, "Function can't have both \"task\" and \"export\" "
+                  "qualifiers");
+            return NULL;
+        }
+        if (isExternC && isTask) {
+            Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
+                  "qualifiers");
+            return NULL;
+        }
+        if (isExternC && isExported) {
+            Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
+                  "qualifiers");
+            return NULL;
+        }
+
         Type *functionType = 
             new FunctionType(returnType, args, pos, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
@@ -367,12 +430,6 @@ const Type *
 Declarator::GetType(DeclSpecs *ds) const {
     const Type *baseType = ds->GetBaseType(pos);
     const Type *type = GetType(baseType, ds);
-
-    if ((ds->typeQualifiers & TYPEQUAL_REFERENCE) != 0) {
-        bool hasConstQual = ((ds->typeQualifiers & TYPEQUAL_CONST) != 0);
-        type = new ReferenceType(type, hasConstQual);
-    }
-
     return type;
 }
 
@@ -392,7 +449,7 @@ Declaration::Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist) {
 
 Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
     declSpecs = ds;
-    if (d) {
+    if (d != NULL) {
         d->InitFromDeclSpecs(ds);
         declarators.push_back(d);
     }
@@ -409,6 +466,8 @@ Declaration::GetVariableDeclarations() const {
             continue;
         Declarator *decl = declarators[i];
         if (decl == NULL || decl->kind == DK_FUNCTION) 
+            // Ignore earlier errors or external function declarations
+            // inside other functions.
             continue;
 
         Symbol *sym = decl->GetSymbol();
@@ -452,14 +511,18 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             Declarator *d = (*sd[i]->declarators)[j];
             d->InitFromDeclSpecs(&ds);
 
-            // if it's an unsized array, make it a reference to an unsized
-            // array, so the caller can pass a pointer...
             Symbol *sym = d->GetSymbol();
-            const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
-            if (at && at->GetElementCount() == 0)
-                sym->type = new ReferenceType(sym->type, type->IsConstType());
 
-            elementTypes->push_back(sym->type);
+            const ArrayType *arrayType = 
+                dynamic_cast<const ArrayType *>(sym->type);
+            if (arrayType != NULL && arrayType->GetElementCount() == 0) {
+                Error(d->pos, "Unsized arrays aren't allowed in struct "
+                      "definitions.");
+                elementTypes->push_back(NULL);
+            }
+            else
+                elementTypes->push_back(sym->type);
+
             elementNames->push_back(sym->name);
             elementPositions->push_back(sym->pos);
         }

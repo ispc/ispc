@@ -75,7 +75,7 @@ static inline vec vcross(vec v0, vec v1) {
     return ret;
 }
 
-static inline void vnormalize(reference vec v) {
+static inline void vnormalize(vec &v) {
     float len2 = dot(v, v);
     float invlen = rsqrt(len2);
     v *= invlen;
@@ -83,8 +83,7 @@ static inline void vnormalize(reference vec v) {
 
 
 static inline void
-ray_plane_intersect(reference Isect isect, reference Ray ray, 
-                    reference Plane plane) {
+ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
@@ -104,8 +103,7 @@ ray_plane_intersect(reference Isect isect, reference Ray ray,
 
 
 static inline void
-ray_sphere_intersect(reference Isect isect, reference Ray ray, 
-                     reference Sphere sphere) {
+ray_sphere_intersect(Isect &isect, Ray &ray, Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
     float B = dot(rs, ray.dir);
@@ -127,7 +125,7 @@ ray_sphere_intersect(reference Isect isect, reference Ray ray,
 
 
 static inline void
-orthoBasis(reference vec basis[3], vec n) {
+orthoBasis(vec basis[3], vec n) {
     basis[2] = n;
     basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
 
@@ -150,8 +148,8 @@ orthoBasis(reference vec basis[3], vec n) {
 
 
 static inline float
-ambient_occlusion(reference Isect isect, reference Plane plane, 
-                  reference Sphere spheres[3], reference RNGState rngstate) {
+ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3], 
+                  RNGState &rngstate) {
     float eps = 0.0001f;
     vec p, n;
     vec basis[3];
@@ -168,8 +166,8 @@ ambient_occlusion(reference Isect isect, reference Plane plane,
             Ray ray;
             Isect occIsect;
 
-            float theta = sqrt(frandom(rngstate));
-            float phi   = 2.0f * M_PI * frandom(rngstate);
+            float theta = sqrt(frandom(&rngstate));
+            float phi   = 2.0f * M_PI * frandom(&rngstate);
             float x = cos(phi) * theta;
             float y = sin(phi) * theta;
             float z = sqrt(1.0 - theta * theta);
@@ -205,7 +203,7 @@ ambient_occlusion(reference Isect isect, reference Plane plane,
  */
 static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
                          uniform int h,  uniform int nsubsamples, 
-                         reference uniform float image[]) {
+                         uniform float image[]) {
     static Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
     static Sphere spheres[3] = {
         { { -2.0f, 0.0f, -3.5f }, 0.5f },
@@ -213,7 +211,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
         { { 1.0f, 0.0f, -2.2f }, 0.5f } };
     RNGState rngstate;
 
-    seed_rng(rngstate, y0);
+    seed_rng(&rngstate, y0);
 
     // Compute the mapping between the 'programCount'-wide program
     // instances running in parallel and samples in the image.  

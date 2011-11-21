@@ -187,7 +187,7 @@ struct Target {
     std::string arch;
 
     /** Is the target architecture 32 or 64 bit */
-    bool is32bit;
+    bool is32Bit;
 
     /** Target CPU. (e.g. "corei7", "corei7-avx", ..) */
     std::string cpu;
@@ -236,6 +236,12 @@ struct Opt {
     /** Indicates when loops should be unrolled (when doing so seems like
         it will make sense. */
     bool unrollLoops;
+
+    /** Indicates if addressing math will be done with 32-bit math, even on
+        64-bit systems.  (This is generally noticably more efficient,
+        though at the cost of addressing >2GB).
+     */ 
+    bool force32BitAddressing;
 
     /** Indicates whether assert() statements should be ignored (for
         performance in the generated code). */

@@ -75,7 +75,7 @@ static inline vec vcross(vec v0, vec v1) {
     return ret;
 }
 
-static inline void vnormalize(reference vec v) {
+static inline void vnormalize(vec &v) {
     float len2 = dot(v, v);
     float invlen = rsqrt(len2);
     v *= invlen;
@@ -83,8 +83,7 @@ static inline void vnormalize(reference vec v) {
 
 
 static inline void
-ray_plane_intersect(reference Isect isect, reference Ray ray, 
-                    reference Plane plane) {
+ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
@@ -104,8 +103,7 @@ ray_plane_intersect(reference Isect isect, reference Ray ray,
 
 
 static inline void
-ray_sphere_intersect(reference Isect isect, reference Ray ray, 
-                     reference Sphere sphere) {
+ray_sphere_intersect(Isect &isect, Ray &ray, Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
     float B = dot(rs, ray.dir);
@@ -127,7 +125,7 @@ ray_sphere_intersect(reference Isect isect, reference Ray ray,
 
 
 static inline void
-orthoBasis(reference vec basis[3], vec n) {
+orthoBasis(vec basis[3], vec n) {
     basis[2] = n;
     basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
 
@@ -150,8 +148,8 @@ orthoBasis(reference vec basis[3], vec n) {
 
 
 static inline float
-ambient_occlusion(reference Isect isect, reference Plane plane, 
-                  reference Sphere spheres[3], reference RNGState rngstate) {
+ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3], 
+                  RNGState &rngstate) {
     float eps = 0.0001f;
     vec p, n;
     vec basis[3];
@@ -168,8 +166,8 @@ ambient_occlusion(reference Isect isect, reference Plane plane,
             Ray ray;
             Isect occIsect;
 
-            float theta = sqrt(frandom(rngstate));
-            float phi   = 2.0f * M_PI * frandom(rngstate);
+            float theta = sqrt(frandom(&rngstate));
+            float phi   = 2.0f * M_PI * frandom(&rngstate);
             float x = cos(phi) * theta;
             float y = sin(phi) * theta;
             float z = sqrt(1.0 - theta * theta);
@@ -203,8 +201,9 @@ ambient_occlusion(reference Isect isect, reference Plane plane,
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h, 
-                  uniform int nsubsamples, reference uniform float image[]) {
+static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
+                         uniform int h,  uniform int nsubsamples, 
+                         uniform float image[]) {
     static Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
     static Sphere spheres[3] = {
         { { -2.0f, 0.0f, -3.5f }, 0.5f },
@@ -212,7 +211,7 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
         { { 1.0f, 0.0f, -2.2f }, 0.5f } };
     RNGState rngstate;
 
-    seed_rng(rngstate, y0);
+    seed_rng(&rngstate, y0);
 
     // Compute the mapping between the 'programCount'-wide program
     // instances running in parallel and samples in the image.  
@@ -231,6 +230,9 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
     // direction we do per iteration and ny the number in y.
     uniform int nx = 1, ny = 1;
 
+    // FIXME: We actually need ny to be 1 regardless of the decomposition,
+    // since the task decomposition is one scanline high.
+
     if (programCount == 8) {
         // Do two pixels at once in the x direction
         nx = 2;
@@ -239,19 +241,21 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
             ++du;
     }
     else if (programCount == 16) {
-        // Two at once in both x and y
-        nx = ny = 2;
-        if ((programIndex >= 4 && programIndex < 8) || programIndex >= 12)
+        nx = 4;
+        ny = 1;
+        if (programIndex >= 4 && programIndex < 8)
             ++du;
-        if (programIndex >= 8)  
-            ++dv;
+        if (programIndex >= 8 && programIndex < 12)
+            du += 2;
+        if (programIndex >= 12)
+            du += 3;
     }
 
     // Now loop over all of the pixels, stepping in x and y as calculated
     // above.  (Assumes that ny divides y and nx divides x...)
     for (uniform int y = y0; y < y1; y += ny) {
         for (uniform int x = 0; x < w; x += nx)  {
-            // Figur out x,y pixel in NDC
+            // Figure out x,y pixel in NDC
             float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
             float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
             float ret = 0.f;
@@ -293,7 +297,7 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
 
             // offset to the first pixel in the image
             uniform int offset = 3 * (y * w + x);
-            for (uniform int p = 0; p < programCount; p += 4, ++offset) {
+            for (uniform int p = 0; p < programCount; p += 4, offset += 3) {
                 // Get the four sample values for this pixel
                 uniform float sumret = retArray[p] + retArray[p+1] + retArray[p+2] +
                     retArray[p+3];
@@ -314,4 +318,16 @@ void ao_scanlines(uniform int y0, uniform int y1, uniform int w, uniform int h,
 export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
                     uniform float image[]) {
     ao_scanlines(0, h, w, h, nsubsamples, image);
+}
+
+
+static void task ao_task(uniform int width, uniform int height, 
+                         uniform int nsubsamples, uniform float image[]) {
+    ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
+}
+
+
+export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
+                          uniform float image[]) {
+    launch[h] < ao_task(w, h, nsubsamples, image) >;
 }

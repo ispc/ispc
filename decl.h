@@ -79,9 +79,8 @@ enum StorageClass {
 #define TYPEQUAL_UNIFORM    (1<<1)
 #define TYPEQUAL_VARYING    (1<<2)
 #define TYPEQUAL_TASK       (1<<3)
-#define TYPEQUAL_REFERENCE  (1<<4)
-#define TYPEQUAL_UNSIGNED   (1<<5)
-#define TYPEQUAL_INLINE     (1<<6)
+#define TYPEQUAL_UNSIGNED   (1<<4)
+#define TYPEQUAL_INLINE     (1<<5)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 
@@ -100,7 +99,7 @@ public:
     int typeQualifiers;
 
     /** The basic type provided in the declaration; this should be an
-        AtomicType, a StructType, or a VectorType; other types (like
+        AtomicType, EnumType, StructType, or VectorType; other types (like
         ArrayTypes) will end up being created if a particular declaration
         has an array size, etc.
     */
@@ -123,6 +122,7 @@ public:
 enum DeclaratorKind {
     DK_BASE,
     DK_POINTER,
+    DK_REFERENCE,
     DK_ARRAY,
     DK_FUNCTION
 };
@@ -142,33 +142,51 @@ public:
     void InitFromDeclSpecs(DeclSpecs *ds);
 
     /** Get the actual type of the combination of Declarator and the given
-        DeclSpecs */
+        DeclSpecs.  If an explicit base type is provided, the declarator is
+        applied to that type; otherwise the base type from the DeclSpecs is
+        used. */
     const Type *GetType(DeclSpecs *ds) const;
     const Type *GetType(const Type *base, DeclSpecs *ds) const;
 
-    void GetFunctionInfo(DeclSpecs *ds, Symbol **sym, 
-                         std::vector<Symbol *> *args);
+    /** Returns the symbol corresponding to the function declared by this
+        declarator and symbols for its arguments in *args. */
+    Symbol *GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *args);
 
-    Symbol *GetSymbol();
+    /** Returns the symbol associated with the declarator. */
+    Symbol *GetSymbol() const;
 
     void Print() const;
 
+    /** Position of the declarator in the source program. */
     const SourcePos pos;
 
+    /** The kind of this declarator; complex declarations are assembled as
+        a hierarchy of Declarators.  (For example, a pointer to an int
+        would have a root declarator with kind DK_POINTER and with the
+        Declarator::child member pointing to a DK_BASE declarator for the
+        int). */
     const DeclaratorKind kind;
 
+    /** Child pointer if needed; this can only be non-NULL if the
+        declarator's kind isn't DK_BASE. */
     Declarator *child;
 
+    /** Type qualifiers provided with the declarator. */
     int typeQualifiers;
 
+    /** For array declarators, this gives the declared size of the array.
+        Unsized arrays have arraySize == 0. */ 
     int arraySize;
 
+    /** Symbol associated with the declarator. */
     Symbol *sym;
 
     /** Initialization expression for the variable.  May be NULL. */
     Expr *initExpr;
 
-    std::vector<Declaration *> functionArgs;
+    /** For function declarations, this holds the Declaration *s for the
+        funciton's parameters. */
+    std::vector<Declaration *> functionParams;
 };
 
 
@@ -182,6 +200,11 @@ public:
 
     void Print() const;
 
+    /** This method walks through all of the Declarators in a declaration
+        and returns a fully-initialized Symbol and (possibly) and
+        initialization expression for each one.  (This allows the rest of
+        the system to not have to worry about the mess of the general
+        Declarator representation.) */
     std::vector<VariableDeclaration> GetVariableDeclarations() const;
 
     DeclSpecs *declSpecs;

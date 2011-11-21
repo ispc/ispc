@@ -112,9 +112,12 @@ int64 { return TOKEN_INT64; }
 launch { return TOKEN_LAUNCH; }
 NULL { return TOKEN_NULL; }
 print { return TOKEN_PRINT; }
-reference { return TOKEN_REFERENCE; }
+reference { Error(*yylloc, "\"reference\" qualifier is no longer supported; "
+                           "please use C++-style '&' syntax for references "
+                           "instead."); }
 return { return TOKEN_RETURN; }
 soa { return TOKEN_SOA; }
+sizeof { return TOKEN_SIZEOF; }
 static { return TOKEN_STATIC; }
 struct { return TOKEN_STRUCT; }
 switch { return TOKEN_SWITCH; }
@@ -223,6 +226,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 "&=" { return TOKEN_AND_ASSIGN; }
 "^=" { return TOKEN_XOR_ASSIGN; }
 "|=" { return TOKEN_OR_ASSIGN; }
+"->" { return TOKEN_PTR_OP; }
 ";"             { return ';'; }
 ("{"|"<%")      { return '{'; }
 ("}"|"%>")      { return '}'; }
@@ -266,8 +270,6 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 
 %%
 
-/*sizeof { return TOKEN_SIZEOF; }*/
-/*"->" { return TOKEN_PTR_OP; }*/
 /*short { return TOKEN_SHORT; }*/
 /*long { return TOKEN_LONG; }*/
 /*signed { return TOKEN_SIGNED; }*/

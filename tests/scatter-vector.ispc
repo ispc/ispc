@@ -8,9 +8,6 @@ struct Foo {
     float y;
 };
 
-extern void aa(reference Foo f);
-extern void bb(reference Foo f[]);
-
 typedef float<3> float3;
 
 void set(uniform float3 f[], int offset, float3 val) {

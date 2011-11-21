@@ -65,6 +65,10 @@ public:
     /** Returns the Type of the expression. */
     virtual const Type *GetType() const = 0;
 
+    /** Returns the type of the value returned by GetLValueType(); this
+        should be a pointer type of some sort (uniform or varying). */
+    virtual const Type *GetLValueType() const;
+
     /** For expressions that have values based on a symbol (e.g. regular
         symbol references, array indexing, etc.), this returns a pointer to
         that symbol. */
@@ -266,11 +270,12 @@ public:
 */
 class IndexExpr : public Expr {
 public:
-    IndexExpr(Expr *arrayOrVector, Expr *index, SourcePos p);
+    IndexExpr(Expr *baseExpr, Expr *index, SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
 
@@ -278,7 +283,7 @@ public:
     Expr *TypeCheck();
     int EstimateCost() const;
 
-    Expr *arrayOrVector, *index;
+    Expr *baseExpr, *index;
 };
 
 
@@ -288,15 +293,13 @@ public:
  */
 class MemberExpr : public Expr {
 public:
-    static MemberExpr* create(Expr *expr, const char *identifier,
-                              SourcePos pos, SourcePos identifierPos);
-
-    MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
-               SourcePos identifierPos);
-
+    static MemberExpr *create(Expr *expr, const char *identifier,
+                              SourcePos pos, SourcePos identifierPos,
+                              bool derefLvalue);
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
     Expr *Optimize();
@@ -310,6 +313,15 @@ public:
     Expr *expr;
     std::string identifier;
     const SourcePos identifierPos;
+
+protected:
+    MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
+               SourcePos identifierPos, bool derefLValue);
+
+    /** Indicates whether the expression should be dereferenced before the
+        member is found.  (i.e. this is true if the MemberExpr was a '->'
+        operator, and is false if it was a '.' operator. */
+    bool dereferenceExpr;
 };
 
 
@@ -506,6 +518,7 @@ public:
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
     Expr *TypeCheck();
@@ -525,6 +538,7 @@ public:
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
     Expr *TypeCheck();
@@ -532,6 +546,44 @@ public:
     int EstimateCost() const;
 
     Expr *expr;
+};
+
+
+/** Expression that represents taking the address of an expression. */
+class AddressOfExpr : public Expr {
+public:
+    AddressOfExpr(Expr *e, SourcePos p);
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    Symbol *GetBaseSymbol() const;
+    void Print() const;
+    Expr *TypeCheck();
+    Expr *Optimize();
+    int EstimateCost() const;
+
+    Expr *expr;
+};
+
+
+/** Expression that returns the size of the given expression or type in
+    bytes. */
+class SizeOfExpr : public Expr {
+public:
+    SizeOfExpr(Expr *e, SourcePos p);
+    SizeOfExpr(const Type *t, SourcePos p);
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    void Print() const;
+    Expr *TypeCheck();
+    Expr *Optimize();
+    int EstimateCost() const;
+
+    /* One of expr or type should be non-NULL (but not both of them).  The
+       SizeOfExpr returns the size of whichever one of them isn't NULL. */
+    Expr *expr;
+    const Type *type;
 };
 
 
@@ -543,6 +595,7 @@ public:
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     Expr *TypeCheck();
     Expr *Optimize();
@@ -623,9 +676,13 @@ public:
 
 
 /** This function indicates whether it's legal to convert from fromType to
-    toType.
+    toType.  If the optional errorMsgBase and source position parameters
+    are provided, then an error message is issued if the type conversion
+    isn't possible.
  */
-bool CanConvertTypes(const Type *fromType, const Type *toType);
+bool CanConvertTypes(const Type *fromType, const Type *toType,
+                     const char *errorMsgBase = NULL,
+                     SourcePos pos = SourcePos());
 
 /** This function attempts to convert the given expression to the given
     type, returning a pointer to a new expression that is the result.  If

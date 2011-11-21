@@ -823,40 +823,6 @@ define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; prefetch definitions
-
-; prefetch has a new parameter in LLVM3.0, to distinguish between instruction
-; and data caches--the declaration is now:
-; declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
-;                             i32 %cachetype)  (cachetype 1 == data cache)
-; however, the version below seems to still work...
-
-declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
-
-define(`prefetch_read', `
-define void @__prefetch_read_1_$1($2 *) alwaysinline {
-  %ptr8 = bitcast $2 * %0 to i8 *
-  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 3)
-  ret void
-}
-define void @__prefetch_read_2_$1($2 *) alwaysinline {
-  %ptr8 = bitcast $2 * %0 to i8 *
-  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 2)
-  ret void
-}
-define void @__prefetch_read_3_$1($2 *) alwaysinline {
-  %ptr8 = bitcast $2 * %0 to i8 *
-  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 1)
-  ret void
-}
-define void @__prefetch_read_nt_$1($2 *) alwaysinline {
-  %ptr8 = bitcast $2 * %0 to i8 *
-  call void @llvm.prefetch(i8 * %ptr8, i32 0, i32 0)
-  ret void
-}
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`stdlib_core', `
 
@@ -916,15 +882,25 @@ declare void @__pseudo_masked_store_64(<$1 x i64> * nocapture, <$1 x i64>, <$1 x
 ; converts them to native gather functions or converts them to vector
 ; loads, if equivalent.
 
-declare <$1 x i8>  @__pseudo_gather_8([$1 x i8 *], <$1 x i32>) nounwind readonly
-declare <$1 x i16> @__pseudo_gather_16([$1 x i8 *], <$1 x i32>) nounwind readonly
-declare <$1 x i32> @__pseudo_gather_32([$1 x i8 *], <$1 x i32>) nounwind readonly
-declare <$1 x i64> @__pseudo_gather_64([$1 x i8 *], <$1 x i32>) nounwind readonly
+declare <$1 x i8>  @__pseudo_gather32_8(<$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather32_16(<$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather32_32(<$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather32_64(<$1 x i32>, <$1 x i32>) nounwind readonly
 
-declare <$1 x i8>  @__pseudo_gather_base_offsets_8(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
-declare <$1 x i16> @__pseudo_gather_base_offsets_16(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
-declare <$1 x i32> @__pseudo_gather_base_offsets_32(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
-declare <$1 x i64> @__pseudo_gather_base_offsets_64(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i8>  @__pseudo_gather64_8(<$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather64_16(<$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather64_32(<$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather64_64(<$1 x i64>, <$1 x i32>) nounwind readonly
+
+declare <$1 x i8>  @__pseudo_gather_base_offsets32_8(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather_base_offsets32_16(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather_base_offsets32_32(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather_base_offsets32_64(i8 *, <$1 x i32>, <$1 x i32>) nounwind readonly
+
+declare <$1 x i8>  @__pseudo_gather_base_offsets64_8(i8 *, <$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i16> @__pseudo_gather_base_offsets64_16(i8 *, <$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i32> @__pseudo_gather_base_offsets64_32(i8 *, <$1 x i64>, <$1 x i32>) nounwind readonly
+declare <$1 x i64> @__pseudo_gather_base_offsets64_64(i8 *, <$1 x i64>, <$1 x i32>) nounwind readonly
 
 ; Similarly to the pseudo-gathers defined above, we also declare undefined
 ; pseudo-scatter instructions with signatures:
@@ -949,19 +925,33 @@ declare <$1 x i64> @__pseudo_gather_base_offsets_64(i8 *, <$1 x i32>, <$1 x i32>
 ; And the GSImprovementsPass in turn converts these to actual native
 ; scatters or masked stores.  
 
-declare void @__pseudo_scatter_8([$1 x i8 *], <$1 x i8>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_16([$1 x i8 *], <$1 x i16>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_32([$1 x i8 *], <$1 x i32>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_64([$1 x i8 *], <$1 x i64>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter32_8(<$1 x i32>, <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter32_16(<$1 x i32>, <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter32_32(<$1 x i32>, <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter32_64(<$1 x i32>, <$1 x i64>, <$1 x i32>) nounwind
 
-declare void @__pseudo_scatter_base_offsets_8(i8 * nocapture, <$1 x i32>,
-                                              <$1 x i8>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_base_offsets_16(i8 * nocapture, <$1 x i32>,
-                                               <$1 x i16>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_base_offsets_32(i8 * nocapture, <$1 x i32>,
-                                               <$1 x i32>, <$1 x i32>) nounwind
-declare void @__pseudo_scatter_base_offsets_64(i8 * nocapture, <$1 x i32>,
-                                               <$1 x i64>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter64_8(<$1 x i64>, <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter64_16(<$1 x i64>, <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter64_32(<$1 x i64>, <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter64_64(<$1 x i64>, <$1 x i64>, <$1 x i32>) nounwind
+
+declare void @__pseudo_scatter_base_offsets32_8(i8 * nocapture, <$1 x i32>,
+                                                <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets32_16(i8 * nocapture, <$1 x i32>,
+                                                 <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets32_32(i8 * nocapture, <$1 x i32>,
+                                                 <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets32_64(i8 * nocapture, <$1 x i32>,
+                                                 <$1 x i64>, <$1 x i32>) nounwind
+
+declare void @__pseudo_scatter_base_offsets64_8(i8 * nocapture, <$1 x i64>,
+                                                <$1 x i8>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets64_16(i8 * nocapture, <$1 x i64>,
+                                                 <$1 x i16>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <$1 x i64>,
+                                                 <$1 x i32>, <$1 x i32>) nounwind
+declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <$1 x i64>,
+                                                 <$1 x i64>, <$1 x i32>) nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
@@ -1634,11 +1624,10 @@ define void
 ;; versions to be called from stdlib
 
 define void
-@__aos_to_soa4_float([0 x float] * noalias %base, i32 %offset,
+@__aos_to_soa4_float(float * noalias %pf, i32 %offset,
         <$1 x float> * noalias %out0, <$1 x float> * noalias %out1,
         <$1 x float> * noalias %out2, <$1 x float> * noalias %out3)
         nounwind alwaysinline { 
-  %pf = bitcast [0 x float] * %base to float *
   %p = getelementptr float * %pf, i32 %offset
   %p0 = bitcast float * %p to <$1 x float> *
   %v0 = load <$1 x float> * %p0, align 4
@@ -1656,16 +1645,16 @@ define void
 
 
 define void
-@__aos_to_soa4_int32([0 x i32] * noalias %base, i32 %offset,
+@__aos_to_soa4_int32(i32 * noalias %base, i32 %offset,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2, <$1 x i32> * noalias %out3)
         nounwind alwaysinline { 
-  %fbase = bitcast [0 x i32] * %base to [0 x float] *
+  %fbase = bitcast i32 * %base to float *
   %fout0 = bitcast <$1 x i32> * %out0 to <$1 x float> *
   %fout1 = bitcast <$1 x i32> * %out1 to <$1 x float> *
   %fout2 = bitcast <$1 x i32> * %out2 to <$1 x float> *
   %fout3 = bitcast <$1 x i32> * %out3 to <$1 x float> *
-  call void @__aos_to_soa4_float([0 x float] * %fbase, i32 %offset,
+  call void @__aos_to_soa4_float(float * %fbase, i32 %offset,
       <$1 x float> * %fout0, <$1 x float> * %fout1, <$1 x float> * %fout2, 
       <$1 x float> * %fout3)
   ret void
@@ -1674,9 +1663,8 @@ define void
 
 define void
 @__soa_to_aos4_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
-             <$1 x float> %v3, [0 x float] * noalias %base,
+             <$1 x float> %v3, float * noalias %pf,
              i32 %offset) nounwind alwaysinline { 
-  %pf = bitcast [0 x float] * %base to float *
   %p = getelementptr float * %pf, i32 %offset
   %out0 = bitcast float * %p to <$1 x float> *
   %out1 = getelementptr <$1 x float> * %out0, i32 1
@@ -1691,25 +1679,24 @@ define void
 
 define void
 @__soa_to_aos4_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
-             <$1 x i32> %v3, [0 x i32] * noalias %base,
+             <$1 x i32> %v3, i32 * noalias %base,
              i32 %offset) nounwind alwaysinline { 
   %fv0 = bitcast <$1 x i32> %v0 to <$1 x float>
   %fv1 = bitcast <$1 x i32> %v1 to <$1 x float>
   %fv2 = bitcast <$1 x i32> %v2 to <$1 x float>
   %fv3 = bitcast <$1 x i32> %v3 to <$1 x float>
-  %fbase = bitcast [0 x i32] * %base to [0 x float] *
+  %fbase = bitcast i32 * %base to float *
   call void @__soa_to_aos4_float(<$1 x float> %fv0, <$1 x float> %fv1, 
-      <$1 x float> %fv2, <$1 x float> %fv3, [0 x float] * %fbase,
+      <$1 x float> %fv2, <$1 x float> %fv3, float * %fbase,
       i32 %offset)
   ret void
 }
 
 
 define void
-@__aos_to_soa3_float([0 x float] * noalias %base, i32 %offset,
+@__aos_to_soa3_float(float * noalias %pf, i32 %offset,
         <$1 x float> * %out0, <$1 x float> * %out1,
         <$1 x float> * %out2) nounwind alwaysinline { 
-  %pf = bitcast [0 x float] * %base to float *
   %p = getelementptr float * %pf, i32 %offset
   %p0 = bitcast float * %p to <$1 x float> *
   %v0 = load <$1 x float> * %p0, align 4
@@ -1725,14 +1712,14 @@ define void
 
 
 define void
-@__aos_to_soa3_int32([0 x i32] * noalias %base, i32 %offset,
+@__aos_to_soa3_int32(i32 * noalias %base, i32 %offset,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2) nounwind alwaysinline { 
-  %fbase = bitcast [0 x i32] * %base to [0 x float] *
+  %fbase = bitcast i32 * %base to float *
   %fout0 = bitcast <$1 x i32> * %out0 to <$1 x float> *
   %fout1 = bitcast <$1 x i32> * %out1 to <$1 x float> *
   %fout2 = bitcast <$1 x i32> * %out2 to <$1 x float> *
-  call void @__aos_to_soa3_float([0 x float] * %fbase, i32 %offset,
+  call void @__aos_to_soa3_float(float * %fbase, i32 %offset,
       <$1 x float> * %fout0, <$1 x float> * %fout1, <$1 x float> * %fout2)
   ret void
 }
@@ -1740,8 +1727,7 @@ define void
 
 define void
 @__soa_to_aos3_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
-             [0 x float] * noalias %base, i32 %offset) nounwind alwaysinline { 
-  %pf = bitcast [0 x float] * %base to float *
+                     float * noalias %pf, i32 %offset) nounwind alwaysinline { 
   %p = getelementptr float * %pf, i32 %offset
   %out0 = bitcast float * %p to <$1 x float> *
   %out1 = getelementptr <$1 x float> * %out0, i32 1
@@ -1755,13 +1741,13 @@ define void
 
 define void
 @__soa_to_aos3_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
-             [0 x i32] * noalias %base, i32 %offset) nounwind alwaysinline { 
+                     i32 * noalias %base, i32 %offset) nounwind alwaysinline { 
   %fv0 = bitcast <$1 x i32> %v0 to <$1 x float>
   %fv1 = bitcast <$1 x i32> %v1 to <$1 x float>
   %fv2 = bitcast <$1 x i32> %v2 to <$1 x float>
-  %fbase = bitcast [0 x i32] * %base to [0 x float] *
+  %fbase = bitcast i32 * %base to float *
   call void @__soa_to_aos3_float(<$1 x float> %fv0, <$1 x float> %fv1, 
-      <$1 x float> %fv2, [0 x float] * %fbase, i32 %offset)
+      <$1 x float> %fv2, float * %fbase, i32 %offset)
   ret void
 }
 
@@ -1769,21 +1755,34 @@ define void
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetching
 
-prefetch_read(uniform_bool, i1)
-prefetch_read(uniform_int8, i8)
-prefetch_read(uniform_int16, i16)
-prefetch_read(uniform_int32, i32)
-prefetch_read(uniform_int64, i64)
-prefetch_read(uniform_float, float)
-prefetch_read(uniform_double, double)
+; prefetch has a new parameter in LLVM3.0, to distinguish between instruction
+; and data caches--the declaration is now:
+; declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
+;                             i32 %cachetype)  (cachetype 1 == data cache)
+; however, the version below seems to still work...
 
-prefetch_read(varying_bool, <$1 x i32>)
-prefetch_read(varying_int8, <$1 x i8>)
-prefetch_read(varying_int16, <$1 x i16>)
-prefetch_read(varying_int32, <$1 x i32>)
-prefetch_read(varying_int64, <$1 x i64>)
-prefetch_read(varying_float, <$1 x float>)
-prefetch_read(varying_double, <$1 x double>)
+declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
+
+define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 3)
+  ret void
+}
+
+define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 2)
+  ret void
+}
+
+define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 1)
+  ret void
+}
+
+define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 0)
+  ret void
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
@@ -2354,11 +2353,10 @@ define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
 
 define(`packed_load_and_store', `
 
-define i32 @__packed_load_active([0 x i32] *, i32 %start_offset, <$1 x i32> * %val_ptr,
+define i32 @__packed_load_active(i32 * %baseptr, i32 %start_offset, <$1 x i32> * %val_ptr,
                                  <$1 x i32> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i32 @__movmsk(<$1 x i32> %full_mask)
-  %baseptr = bitcast [0 x i32] * %0 to i32 *
   %startptr = getelementptr i32 * %baseptr, i32 %start_offset
   %mask_known = call i1 @__is_compile_time_constant_mask(<$1 x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
@@ -2410,11 +2408,10 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active([0 x i32] *, i32 %start_offset, <$1 x i32> %vals,
+define i32 @__packed_store_active(i32 * %baseptr, i32 %start_offset, <$1 x i32> %vals,
                                   <$1 x i32> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i32 @__movmsk(<$1 x i32> %full_mask)
-  %baseptr = bitcast [0 x i32] * %0 to i32 *
   %startptr = getelementptr i32 * %baseptr, i32 %start_offset
   %mask_known = call i1 @__is_compile_time_constant_mask(<$1 x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
@@ -2686,8 +2683,8 @@ pl_done:
 define(`gen_gather', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
-define <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret,
-                                           i32 %lane) nounwind readonly alwaysinline {
+define <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
   %ptroffset = getelementptr i8 * %ptr, i32 %offset32
@@ -2699,9 +2696,22 @@ define <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %offsets, <$1 x $2> %ret
   ret <$1 x $2> %updatedret
 }
 
+define <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %offsets, <$1 x $2> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
+  ; compute address for this one from the base
+  %offset32 = extractelement <$1 x i64> %offsets, i32 %lane
+  %ptroffset = getelementptr i8 * %ptr, i64 %offset32
+  %ptrcast = bitcast i8 * %ptroffset to $2 *
 
-define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
-                                           <$1 x i32> %vecmask) nounwind readonly alwaysinline {
+  ; load value and insert into returned value
+  %val = load $2 *%ptrcast
+  %updatedret = insertelement <$1 x $2> %ret, $2 %val, i32 %lane
+  ret <$1 x $2> %updatedret
+}
+
+
+define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets,
+                                             <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
   ; legal to read from (and we do indeed require that, given the benefits!) 
@@ -2713,13 +2723,67 @@ define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i32> * %offsetsPtr
 
-  %ret0 = call <$1 x $2> @__gather_elt_$2(i8 * %ptr, <$1 x i32> %newOffsets,
-                                          <$1 x $2> undef, i32 0)
+  %ret0 = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %newOffsets,
+                                            <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
-          `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt_$2(i8 * %ptr, 
+          `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, 
                                 <$1 x i32> %newOffsets, <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)
+}
+
+define <$1 x $2> @__gather_base_offsets64_$2(i8 * %ptr, <$1 x i64> %offsets,
+                                             <$1 x i32> %vecmask) nounwind readonly alwaysinline {
+  ; We can be clever and avoid the per-lane stuff for gathers if we are willing
+  ; to require that the 0th element of the array being gathered from is always
+  ; legal to read from (and we do indeed require that, given the benefits!) 
+  ;
+  ; Set the offset to zero for lanes that are off
+  %offsetsPtr = alloca <$1 x i64>
+  store <$1 x i64> zeroinitializer, <$1 x i64> * %offsetsPtr
+  call void @__masked_store_blend_64(<$1 x i64> * %offsetsPtr, <$1 x i64> %offsets, 
+                                     <$1 x i32> %vecmask)
+  %newOffsets = load <$1 x i64> * %offsetsPtr
+
+  %ret0 = call <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %newOffsets,
+                                            <$1 x $2> undef, i32 0)
+  forloop(lane, 1, eval($1-1), 
+          `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt64_$2(i8 * %ptr, 
+                                <$1 x i64> %newOffsets, <$1 x $2> %retPREV, i32 LANE)
+                    ', `LANE', lane), `PREV', eval(lane-1))')
+  ret <$1 x $2> %ret`'eval($1-1)
+}
+
+; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
+define <$1 x $2> @__gather32_$2(<$1 x i32> %ptrs, 
+                                <$1 x i32> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <$1 x $2>
+  per_lane($1, <$1 x i32> %vecmask, `
+  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
+  %val_ID = load $2 * %ptr_ID
+  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_ID, $2 * %store_ptr_ID
+ ')
+
+  %ret = load <$1 x $2> * %ret_ptr
+  ret <$1 x $2> %ret
+}
+
+; fully general 64-bit gather, takes array of pointers encoded as vector of i32s
+define <$1 x $2> @__gather64_$2(<$1 x i64> %ptrs, 
+                                <$1 x i32> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <$1 x $2>
+  per_lane($1, <$1 x i32> %vecmask, `
+  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
+  %val_ID = load $2 * %ptr_ID
+  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_ID, $2 * %store_ptr_ID
+ ')
+
+  %ret = load <$1 x $2> * %ret_ptr
+  ret <$1 x $2> %ret
 }
 '
 )
@@ -2735,8 +2799,8 @@ define <$1 x $2> @__gather_base_offsets_$2(i8 * %ptr, <$1 x i32> %offsets,
 define(`gen_scatter', `
 ;; Define the function that descripes the work to do to scatter a single
 ;; value
-define void @__scatter_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values,
-                                       i32 %lane) nounwind alwaysinline {
+define void @__scatter_elt32_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values,
+                                i32 %lane) nounwind alwaysinline {
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
   %offset64 = zext i32 %offset32 to i64
   %ptrdelta = add i64 %ptr64, %offset64
@@ -2746,13 +2810,57 @@ define void @__scatter_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values
   ret void
 }
 
-define void @__scatter_base_offsets_$2(i8* %base, <$1 x i32> %offsets, <$1 x $2> %values,
-                                       <$1 x i32> %mask) nounwind alwaysinline {
+define void @__scatter_elt64_$2(i64 %ptr64, <$1 x i64> %offsets, <$1 x $2> %values,
+                                i32 %lane) nounwind alwaysinline {
+  %offset64 = extractelement <$1 x i64> %offsets, i32 %lane
+  %ptrdelta = add i64 %ptr64, %offset64
+  %ptr = inttoptr i64 %ptrdelta to $2 *
+  %storeval = extractelement <$1 x $2> %values, i32 %lane
+  store $2 %storeval, $2 * %ptr
+  ret void
+}
+
+define void @__scatter_base_offsets32_$2(i8* %base, <$1 x i32> %offsets, <$1 x $2> %values,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
   ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
   %ptr64 = ptrtoint i8 * %base to i64
   per_lane($1, <$1 x i32> %mask, `
-      call void @__scatter_elt_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values, i32 LANE)')
+      call void @__scatter_elt32_$2(i64 %ptr64, <$1 x i32> %offsets, <$1 x $2> %values, i32 LANE)')
   ret void
 }
+
+define void @__scatter_base_offsets64_$2(i8* %base, <$1 x i64> %offsets, <$1 x $2> %values,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
+  ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
+  %ptr64 = ptrtoint i8 * %base to i64
+  per_lane($1, <$1 x i32> %mask, `
+      call void @__scatter_elt64_$2(i64 %ptr64, <$1 x i64> %offsets, <$1 x $2> %values, i32 LANE)')
+  ret void
+}
+
+; fully general 32-bit scatter, takes array of pointers encoded as vector of i32s
+define void @__scatter32_$2(<$1 x i32> %ptrs, <$1 x $2> %values,
+                            <$1 x i32> %mask) nounwind alwaysinline {
+  per_lane($1, <$1 x i32> %mask, `
+  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
+  %val_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_ID, $2 * %ptr_ID
+ ')
+  ret void
+}
+
+; fully general 64-bit scatter, takes array of pointers encoded as vector of i64s
+define void @__scatter64_$2(<$1 x i64> %ptrs, <$1 x $2> %values,
+                            <$1 x i32> %mask) nounwind alwaysinline {
+  per_lane($1, <$1 x i32> %mask, `
+  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
+  %val_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_ID, $2 * %ptr_ID
+ ')
+  ret void
+}
+
 '
 )

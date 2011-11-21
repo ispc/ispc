@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 
-float foo(reference float a) {
+float foo(float & a) {
     a = 0;
 }
 

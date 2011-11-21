@@ -104,15 +104,15 @@ static const char *lBuiltinTokens[] = {
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
     "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
     "inline", "int", "int8", "int16", "int32", "int64", "launch", "NULL",
-    "print", "reference", "return",
+    "print", "return", "sizeof",
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
     "bool", "const", "double", "enum", "false", "float", "int",
-    "int8", "int16", "int32", "int64", "reference", "struct", "true",
-     "uniform", "unsigned", "varying", "void", NULL 
+    "int8", "int16", "int32", "int64", "struct", "true",
+    "uniform", "unsigned", "varying", "void", NULL 
 };
     
 %}
@@ -152,12 +152,13 @@ static const char *lParamListTokens[] = {
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
 %token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN 
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
+%token TOKEN_SIZEOF
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK 
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
 %token TOKEN_CHAR TOKEN_INT TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
-%token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE TOKEN_REFERENCE
+%token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH
@@ -183,7 +184,8 @@ static const char *lParamListTokens[] = {
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
 %type <declarationList> parameter_list parameter_type_list
-%type <declarator> declarator pointer init_declarator direct_declarator struct_declarator
+%type <declarator> declarator pointer reference
+%type <declarator> init_declarator direct_declarator struct_declarator
 %type <declarator> abstract_declarator direct_abstract_declarator
 
 %type <structDeclaratorList> struct_declarator_list
@@ -289,10 +291,9 @@ postfix_expression
       { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
     | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
-      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3); }
-/*    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
-      { UNIMPLEMENTED }
-*/
+      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false); }
+    | postfix_expression TOKEN_PTR_OP TOKEN_IDENTIFIER
+      { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, true); }
     | postfix_expression TOKEN_INC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
     | postfix_expression TOKEN_DEC_OP
@@ -317,6 +318,10 @@ unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression   
       { $$ = new UnaryExpr(UnaryExpr::PreDec, $2, Union(@1, @2)); }
+    | '&' unary_expression
+      { $$ = new AddressOfExpr($2, Union(@1, @2)); }
+    | '*' unary_expression
+      { $$ = new DereferenceExpr($2, Union(@1, @2)); }
     | '+' cast_expression 
       { $$ = $2; }
     | '-' cast_expression 
@@ -325,6 +330,10 @@ unary_expression
       { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
     | '!' cast_expression 
       { $$ = new UnaryExpr(UnaryExpr::LogicalNot, $2, Union(@1, @2)); }
+    | TOKEN_SIZEOF unary_expression
+      { $$ = new SizeOfExpr($2, Union(@1, @2)); }
+    | TOKEN_SIZEOF '(' type_name ')'
+      { $$ = new SizeOfExpr($3, Union(@1, @4)); }
     ;
 
 cast_expression
@@ -711,8 +720,6 @@ specifier_qualifier_list
                 $$ = $2->GetAsUniformType();
             else if ($1 == TYPEQUAL_VARYING)
                 $$ = $2->GetAsVaryingType();
-            else if ($1 == TYPEQUAL_REFERENCE)
-                $$ = new ReferenceType($2, false);
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
             else if ($1 == TYPEQUAL_UNSIGNED) {
@@ -860,7 +867,6 @@ type_qualifier
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
-    | TOKEN_REFERENCE  { $$ = TYPEQUAL_REFERENCE; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
     ;
 
@@ -877,6 +883,14 @@ type_qualifier_list
 
 declarator
     : pointer direct_declarator
+    {
+        Declarator *tail = $1;
+        while (tail->child != NULL)
+           tail = tail->child;
+        tail->child = $2;
+        $$ = $1;
+    }
+    | reference direct_declarator
     {
         Declarator *tail = $1;
         while (tail->child != NULL)
@@ -930,7 +944,7 @@ direct_declarator
           if ($1 != NULL) {
               Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
               d->child = $1;
-              d->functionArgs = *$3;
+              if ($3 != NULL) d->functionParams = *$3;
               $$ = d;
           }
           else
@@ -973,6 +987,14 @@ pointer
           d->child = $3;
           $$ = d;
       }
+    ;
+
+
+reference
+    : '&' 
+    {
+        $$ = new Declarator(DK_REFERENCE, @1); 
+    }
     ;
 
 
@@ -1067,6 +1089,17 @@ abstract_declarator
           d->child = $2;
           $$ = d;
       }
+    | reference
+      {
+          Declarator *d = new Declarator(DK_REFERENCE, @1);
+          $$ = d;
+      }
+    | reference direct_abstract_declarator
+      {
+          Declarator *d = new Declarator(DK_REFERENCE, Union(@1, @2));
+          d->child = $2;
+          $$ = d;
+      }
     ;
 
 direct_abstract_declarator
@@ -1113,7 +1146,7 @@ direct_abstract_declarator
     | '(' parameter_type_list ')'
       {
           Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
-          d->functionArgs = *$2;
+          if ($2 != NULL) d->functionParams = *$2;
       }
     | direct_abstract_declarator '(' ')'
       {
@@ -1125,7 +1158,7 @@ direct_abstract_declarator
       {
           Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
           d->child = $1;
-          d->functionArgs = *$3;
+          if ($3 != NULL) d->functionParams = *$3;
           $$ = d;
       }
     ;
@@ -1370,10 +1403,10 @@ function_definition
     } 
     compound_statement
     {
-        Symbol *sym;
         std::vector<Symbol *> args;
-        $2->GetFunctionInfo($1, &sym, &args);
-        m->AddFunctionDefinition(sym, args, $4);
+        Symbol *sym = $2->GetFunctionInfo($1, &args);
+        if (sym != NULL)
+            m->AddFunctionDefinition(sym, args, $4);
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 /* function with no declared return type??
@@ -1397,25 +1430,24 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 
     if (ds->storageClass == SC_TYPEDEF)
         m->AddTypeDef(decl->GetSymbol());
-    else if (decl->kind == DK_FUNCTION) {
-        // function declaration
+    else {
         const Type *t = decl->GetType(ds);
         if (t == NULL)
             return;
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
-        assert(ft != NULL);
+        if (ft != NULL) {
+            Symbol *funSym = decl->GetSymbol();
+            assert(funSym != NULL);
+            funSym->type = ft;
+            funSym->storageClass = ds->storageClass;
 
-        Symbol *funSym = decl->GetSymbol();
-        assert(funSym != NULL);
-        funSym->type = ft;
-        funSym->storageClass = ds->storageClass;
-
-        bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
-        m->AddFunctionDeclaration(funSym, isInline);
+            bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
+            m->AddFunctionDeclaration(funSym, isInline);
+        }
+        else
+            m->AddGlobalVariable(decl->GetSymbol(), decl->initExpr,
+                                 (ds->typeQualifiers & TYPEQUAL_CONST) != 0);
     }
-    else
-        m->AddGlobalVariable(decl->GetSymbol(), decl->initExpr,
-                             (ds->typeQualifiers & TYPEQUAL_CONST) != 0);
 }
 
 
@@ -1426,9 +1458,14 @@ static void
 lAddFunctionParams(Declarator *decl) {
     m->symbolTable->PushScope();
 
-    // wire up arguments
-    for (unsigned int i = 0; i < decl->functionArgs.size(); ++i) {
-        Declaration *pdecl = decl->functionArgs[i];
+    // walk down to the declarator for the function itself 
+    while (decl->kind != DK_FUNCTION && decl->child != NULL)
+        decl = decl->child;
+    assert(decl->kind == DK_FUNCTION);
+
+    // now loop over its parameters and add them to the symbol table
+    for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
+        Declaration *pdecl = decl->functionParams[i];
         if (pdecl == NULL)
             continue;
         assert(pdecl->declarators.size() == 1);

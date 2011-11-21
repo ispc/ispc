@@ -74,10 +74,32 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
     maskSymbol = m->symbolTable->LookupVariable("__mask");
     assert(maskSymbol != NULL);
 
-    if (code) {
+    if (code != NULL) {
+        if (g->debugPrint) {
+            fprintf(stderr, "Creating function \"%s\".  Initial code:\n", 
+                    sym->name.c_str());
+            code->Print(0);
+            fprintf(stderr, "---------------------\n");
+        }
+
         code = code->TypeCheck();
-        if (code)
+
+        if (code != NULL && g->debugPrint) {
+            fprintf(stderr, "After typechecking function \"%s\":\n", 
+                    sym->name.c_str());
+            code->Print(0);
+            fprintf(stderr, "---------------------\n");
+        }
+
+        if (code != NULL) {
             code = code->Optimize();
+            if (g->debugPrint) {
+                fprintf(stderr, "After optimizing function \"%s\":\n", 
+                        sym->name.c_str());
+                code->Print(0);
+                fprintf(stderr, "---------------------\n");
+            }
+        }
     }
 
     if (g->debugPrint) {
@@ -149,11 +171,11 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
     sym->storagePtr = ctx->AllocaInst(argType, sym->name.c_str());
 
     // get a pointer to the value in the struct
-    llvm::Value *ptr = ctx->GetElementPtrInst(structArgPtr, 0, i, sym->name.c_str());
+    llvm::Value *ptr = ctx->AddElementOffset(structArgPtr, i, NULL, sym->name.c_str());
 
     // and copy the value from the struct and into the local alloca'ed
     // memory
-    llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, NULL, sym->name.c_str());
+    llvm::Value *ptrval = ctx->LoadInst(ptr, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
     ctx->EmitFunctionParameterDebugInfo(sym);
 }
@@ -200,9 +222,9 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // Copy in the mask as well.
         int nArgs = (int)args.size();
         // The mask is the last parameter in the argument structure
-        llvm::Value *ptr = ctx->GetElementPtrInst(structParamPtr, 0, nArgs,
+        llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL,
                                                   "task_struct_mask");
-        llvm::Value *ptrval = ctx->LoadInst(ptr, NULL, NULL, "mask");
+        llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
         ctx->SetFunctionMask(ptrval);
 
         // Copy threadIndex and threadCount into stack-allocated storage so
@@ -236,7 +258,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         }
 
         // If the number of actual function arguments is equal to the
-        // number of declared arguments in decl->functionArgs, then we
+        // number of declared arguments in decl->functionParams, then we
         // don't have a mask parameter, so set it to be all on.  This
         // happens for exmaple with 'export'ed functions that the app
         // calls.
@@ -338,11 +360,8 @@ Function::GenerateIR() {
 
     if (m->errorCount == 0) {
         if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
-            if (g->debugPrint) {
-                llvm::PassManager ppm;
-                ppm.add(llvm::createPrintModulePass(&llvm::outs()));
-                ppm.run(*m->module);
-            }
+            if (g->debugPrint)
+                function->dump();
             FATAL("Function verificication failed");
         }
 
@@ -376,11 +395,8 @@ Function::GenerateIR() {
                         sym->exportedFunction = appFunction;
                         if (llvm::verifyFunction(*appFunction, 
                                                  llvm::ReturnStatusAction) == true) {
-                            if (g->debugPrint) {
-                                llvm::PassManager ppm;
-                                ppm.add(llvm::createPrintModulePass(&llvm::outs()));
-                                ppm.run(*m->module);
-                            }
+                            if (g->debugPrint)
+                                appFunction->dump();
                             FATAL("Function verificication failed");
                         }
                     }

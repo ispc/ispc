@@ -52,6 +52,7 @@
 struct LLVMTypes {
     static LLVM_TYPE_CONST llvm::Type *VoidType;
     static LLVM_TYPE_CONST llvm::PointerType *VoidPointerType;
+    static LLVM_TYPE_CONST llvm::Type *PointerIntType;
     static LLVM_TYPE_CONST llvm::Type *BoolType;
 
     static LLVM_TYPE_CONST llvm::Type *Int8Type;
@@ -86,7 +87,7 @@ struct LLVMTypes {
     static LLVM_TYPE_CONST llvm::Type *FloatVectorPointerType;
     static LLVM_TYPE_CONST llvm::Type *DoubleVectorPointerType;
 
-    static LLVM_TYPE_CONST llvm::ArrayType *VoidPointerVectorType;
+    static LLVM_TYPE_CONST llvm::VectorType *VoidPointerVectorType;
 };
 
 /** These variables hold the corresponding LLVM constant values as a
@@ -203,11 +204,5 @@ extern llvm::Constant *LLVMDoubleVector(const double *f);
 extern llvm::Constant *LLVMMaskAllOn;
 /** LLVM constant value representing an 'all off' SIMD lane mask */
 extern llvm::Constant *LLVMMaskAllOff;
-
-/** Given an LLVM type, returns the corresponding type for a vector of
-    pointers to that type.  (In practice, an array of pointers, since LLVM
-    prohibits vectors of pointers.
- */
-extern LLVM_TYPE_CONST llvm::ArrayType *LLVMPointerVectorType(LLVM_TYPE_CONST llvm::Type *t);
 
 #endif // ISPC_LLVMUTIL_H

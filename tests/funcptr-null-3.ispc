@@ -8,7 +8,7 @@ float foo(float a, float b) {
 }
 
 static float bar(float a, float b) {
-    return min(a, b);
+    return a < b ? a : b;
 }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

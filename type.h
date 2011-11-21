@@ -143,6 +143,10 @@ public:
         the same, false otherwise. */
     static bool Equal(const Type *a, const Type *b);
 
+    /** Checks two types for equality.  Returns true if they are exactly
+        the same (ignoring const-ness of the type), false otherwise. */
+    static bool EqualIgnoringConst(const Type *a, const Type *b);
+
     /** Given two types, returns the least general Type that is more general
         than both of them.  (i.e. that can represent their values without
         any loss of data.)  If there is no such Type, return NULL.
@@ -306,6 +310,14 @@ class PointerType : public Type {
 public:
     PointerType(const Type *t, bool isUniform, bool isConst);
 
+    /** Helper method to return a uniform pointer to the given type. */
+    static PointerType *GetUniform(const Type *t);
+    /** Helper method to return a varying pointer to the given type. */
+    static PointerType *GetVarying(const Type *t);
+
+    /** Returns true if the given type is a void * type. */
+    static bool IsVoidPointer(const Type *t);
+
     bool IsUniformType() const;
     bool IsBoolType() const;
     bool IsFloatType() const;
@@ -429,6 +441,12 @@ public:
         length. */
     virtual ArrayType *GetSizedArray(int length) const;
 
+    /** If the given type is a (possibly multi-dimensional) array type and
+        the initializer expression is an expression list, set the size of
+        any array dimensions that are unsized according to the number of
+        elements in the corresponding sectoin of the initializer
+        expression.
+     */ 
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
 private:
@@ -633,7 +651,7 @@ private:
  */
 class ReferenceType : public Type {
 public:
-    ReferenceType(const Type *targetType, bool isConst);
+    ReferenceType(const Type *targetType);
 
     bool IsUniformType() const;
     bool IsBoolType() const;
@@ -658,7 +676,6 @@ public:
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
 private:
-    const bool isConst;
     const Type * const targetType;
 };
 
@@ -715,12 +732,11 @@ public:
     LLVM_TYPE_CONST llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
                                                          bool includeMask = false) const;
 
-    int GetNumParameters() const { return (int)argTypes.size(); }
-    const std::vector<const Type *> &GetArgumentTypes() const { return argTypes; }
-    const std::vector<ConstExpr *> &GetArgumentDefaults() const { return argDefaults; }
-    const std::vector<SourcePos> &GetArgumentSourcePos() const { return argPos; }
-
-    std::string GetArgumentName(int i) const;
+    int GetNumParameters() const { return (int)paramTypes.size(); }
+    const Type *GetParameterType(int i) const;
+    ConstExpr * GetParameterDefault(int i) const;
+    const SourcePos &GetParameterSourcePos(int i) const;
+    const std::string &GetParameterName(int i) const;
 
     /** This value is true if the function had a 'task' qualifier in the
         source program. */
@@ -736,19 +752,18 @@ public:
 
 private:
     const Type * const returnType;
-    const std::vector<const Type *> argTypes;
-    const std::vector<std::string> argNames;
-    /** Default values of the functions arguments.  For arguments without
-        default values provided, NULL is stored; this means that the length
-        of this array is the same as the argTypes member, and the i'th
-        elements of them correspond with each other. */
-    mutable std::vector<ConstExpr *> argDefaults;
+    // The following four vectors should all have the same length (which is
+    // in turn the length returned by GetNumParameters()).
+    const std::vector<const Type *> paramTypes;
+    const std::vector<std::string> paramNames;
+    /** Default values of the function's arguments.  For arguments without
+        default values provided, NULL is stored. */
+    mutable std::vector<ConstExpr *> paramDefaults;
     /** The names provided (if any) with the function arguments in the
         function's signature.  These should only be used for error messages
-        and the like and shouldn't affect testing function types for
-        equality, etc. */
-    const std::vector<SourcePos> argPos;
-    const SourcePos pos;
+        and the like and so not affect testing function types for equality,
+        etc. */
+    const std::vector<SourcePos> paramPositions;
 };
 
 #endif // ISPC_TYPE_H

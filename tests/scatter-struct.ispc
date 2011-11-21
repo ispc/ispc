@@ -8,8 +8,8 @@ struct Foo {
     float y;
 };
 
-extern void aa(reference Foo f);
-extern void bb(reference Foo f[]);
+extern void aa(Foo * uniform f);
+extern void bb(Foo f[]);
 
 void set(Foo f[], int offset, Foo val) {
     f[offset] = val;

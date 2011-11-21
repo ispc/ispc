@@ -14,10 +14,10 @@ export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     varying int3 vv = array[a];
     ++vv.y;
     array[a] = vv;
-//CO    print("fin %\n", array[programIndex].y);
     ret[programIndex] = array[programIndex].y;
 }
 
 export void result(uniform float ret[]) {
-    ret[programIndex] = 100+programIndex;
+    ret[programIndex] = 101+programIndex;
+    ret[0] = 100;
 }

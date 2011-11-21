@@ -250,6 +250,8 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
     }
         
     LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+    if (llvmType == NULL)
+        return;
 
     // See if we have an initializer expression for the global.  If so,
     // make sure it's a compile-time constant!
@@ -365,12 +367,12 @@ lCheckForVaryingParameter(const Type *type, const std::string &name,
  */
 static void
 lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
-    const std::vector<const Type *> &argTypes = ftype->GetArgumentTypes();
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        const Type *type = argTypes[i];
+    for (int i = 0; i < ftype->GetNumParameters(); ++i) {
+        const Type *type = ftype->GetParameterType(i);
         if (dynamic_cast<const StructType *>(type) != NULL) {
-            Error(pos, "Passing structs to/from application functions is currently broken. "
-                  "Use a reference or const reference instead for now.");
+            Error(pos, "Passing structs to/from application functions is "
+                  "currently broken. Use a pointer or const pointer to the "
+                  "struct instead for now.");
             return;
         }
     }
@@ -483,27 +485,32 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     bool seenDefaultArg = false;
     int nArgs = functionType->GetNumParameters();
     for (int i = 0; i < nArgs; ++i) {
-        const Type *argType = (functionType->GetArgumentTypes())[i];
-        const std::string &argName = functionType->GetArgumentName(i);
-        ConstExpr *defaultValue = (functionType->GetArgumentDefaults())[i];
-        const SourcePos &argPos = (functionType->GetArgumentSourcePos())[i];
+        const Type *argType = functionType->GetParameterType(i);
+        const std::string &argName = functionType->GetParameterName(i);
+        ConstExpr *defaultValue = functionType->GetParameterDefault(i);
+        const SourcePos &argPos = functionType->GetParameterSourcePos(i);
 
         // If the function is exported, make sure that the parameter
         // doesn't have any varying stuff going on in it.
         if (funSym->storageClass == SC_EXPORT)
             lCheckForVaryingParameter(argType, argName, argPos);
 
-        // ISPC assumes that all memory passed in is aligned to the native
-        // width and that no pointers alias.  (It should be possible to
+        // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
-        // default.)  Set parameter attributes accordingly.
+        // default.)  Set parameter attributes accordingly.  (Only for
+        // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && 
-            dynamic_cast<const ReferenceType *>(argType) != NULL) {
+            ((dynamic_cast<const PointerType *>(argType) != NULL &&
+              argType->IsUniformType()) ||
+             dynamic_cast<const ReferenceType *>(argType) != NULL)) {
+
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
             function->setDoesNotAlias(i+1, true);
+#if 0
             int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
+#endif
         }
 
         if (symbolTable->LookupFunction(argName.c_str()) != NULL)
@@ -887,6 +894,9 @@ lGetExportedTypes(const Type *type,
     if (dynamic_cast<const ReferenceType *>(type) != NULL)
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, 
                           exportedEnumTypes, exportedVectorTypes);
+    else if (dynamic_cast<const PointerType *>(type) != NULL)
+        lGetExportedTypes(type->GetBaseType(), exportedStructTypes,
+                          exportedEnumTypes, exportedVectorTypes);
     else if (arrayType != NULL)
         lGetExportedTypes(arrayType->GetElementType(), exportedStructTypes, 
                           exportedEnumTypes, exportedVectorTypes);
@@ -920,9 +930,8 @@ lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                           exportedEnumTypes, exportedVectorTypes);
 
         // And now the parameter types...
-        const std::vector<const Type *> &argTypes = ftype->GetArgumentTypes();
-        for (unsigned int j = 0; j < argTypes.size(); ++j)
-            lGetExportedTypes(argTypes[j], exportedStructTypes,
+        for (int j = 0; j < ftype->GetNumParameters(); ++j)
+            lGetExportedTypes(ftype->GetParameterType(j), exportedStructTypes,
                               exportedEnumTypes, exportedVectorTypes);
     }
 }

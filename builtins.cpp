@@ -114,61 +114,39 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
     // pointers to uniform
     else if (t == LLVMTypes::Int8PointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt8 :
-                                                 AtomicType::UniformInt8, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt8 :
+                                       AtomicType::UniformInt8);
     else if (t == LLVMTypes::Int16PointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt16 :
-                                                 AtomicType::UniformInt16, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt16 :
+                                       AtomicType::UniformInt16);
     else if (t == LLVMTypes::Int32PointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt32 :
-                                                 AtomicType::UniformInt32, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt32 :
+                                       AtomicType::UniformInt32);
     else if (t == LLVMTypes::Int64PointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::UniformUInt64 :
-                                                 AtomicType::UniformInt64, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::UniformUInt64 :
+                                       AtomicType::UniformInt64);
     else if (t == LLVMTypes::FloatPointerType)
-        return new ReferenceType(AtomicType::UniformFloat, false);
+        return PointerType::GetUniform(AtomicType::UniformFloat);
     else if (t == LLVMTypes::DoublePointerType)
-        return new ReferenceType(AtomicType::UniformDouble, false);
+        return PointerType::GetUniform(AtomicType::UniformDouble);
 
     // pointers to varying
     else if (t == LLVMTypes::Int8VectorPointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt8 :
-                                                 AtomicType::VaryingInt8, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt8 :
+                                       AtomicType::VaryingInt8);
     else if (t == LLVMTypes::Int16VectorPointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt16 :
-                                                 AtomicType::VaryingInt16, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt16 :
+                                       AtomicType::VaryingInt16);
     else if (t == LLVMTypes::Int32VectorPointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt32 :
-                                                 AtomicType::VaryingInt32, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt32 :
+                                       AtomicType::VaryingInt32);
     else if (t == LLVMTypes::Int64VectorPointerType)
-        return new ReferenceType(intAsUnsigned ? AtomicType::VaryingUInt64 :
-                                                 AtomicType::VaryingInt64, false);
+        return PointerType::GetUniform(intAsUnsigned ? AtomicType::VaryingUInt64 :
+                                       AtomicType::VaryingInt64);
     else if (t == LLVMTypes::FloatVectorPointerType)
-        return new ReferenceType(AtomicType::VaryingFloat, false);
+        return PointerType::GetUniform(AtomicType::VaryingFloat);
     else if (t == LLVMTypes::DoubleVectorPointerType)
-        return new ReferenceType(AtomicType::VaryingDouble, false);
-
-    // arrays
-    else if (llvm::isa<const llvm::PointerType>(t)) {
-        const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(t);
-
-        // Is it a pointer to an unsized array of objects?  If so, then
-        // create the equivalent ispc type.  Note that it has to be a
-        // reference to an array, since ispc passes arrays to functions by
-        // reference.
-        const llvm::ArrayType *at = 
-            llvm::dyn_cast<const llvm::ArrayType>(pt->getElementType());
-        if (at != NULL) {
-            const Type *eltType = lLLVMTypeToISPCType(at->getElementType(),
-                                                      intAsUnsigned);
-            if (eltType == NULL)
-                return NULL;
-            // FIXME: this needs to be fixed when arrays can have 
-            // over 4G elements...
-            return new ReferenceType(new ArrayType(eltType, (int)at->getNumElements()),
-                                     false);
-        }
-    }
+        return PointerType::GetUniform(AtomicType::VaryingDouble);
 
     return NULL;
 }
@@ -183,6 +161,9 @@ lCreateSymbol(const std::string &name, const Type *returnType,
     noPos.name = "__stdlib";
 
     FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
+
+    Debug(noPos, "Created builtin symbol \"%s\" [%s]\n", name.c_str(),
+          funcType->GetString().c_str());
 
     Symbol *sym = new Symbol(name, noPos, funcType);
     sym->function = func;
@@ -244,7 +225,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
 
         // Iterate over the arguments and try to find their equivalent ispc
         // types.  Track if any of the arguments has an integer type.
-        bool anyIntArgs = false, anyReferenceArgs = false;
+        bool anyIntArgs = false;
         std::vector<const Type *> argTypes;
         for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
@@ -256,7 +237,6 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
             }
             anyIntArgs |= 
                 (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
-            anyReferenceArgs |= (dynamic_cast<const ReferenceType *>(type) != NULL);
             argTypes.push_back(type);
         }
 
@@ -264,19 +244,6 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         // so that we get symbols for things with no integer types!
         if (i == 0 || anyIntArgs == true)
             lCreateSymbol(name, returnType, argTypes, ftype, func, symbolTable);
-
-        // If there are any reference types, also make a variant of the
-        // symbol that has them as const references.  This obviously
-        // doesn't make sense for many builtins, but we'll give the stdlib
-        // the option to call one if it needs one.
-        if (anyReferenceArgs == true) {
-            for (unsigned int j = 0; j < argTypes.size(); ++j) {
-                if (dynamic_cast<const ReferenceType *>(argTypes[j]) != NULL)
-                    argTypes[j] = argTypes[j]->GetAsConstType();
-                lCreateSymbol(name + "_refsconst", returnType, argTypes, 
-                              ftype, func, symbolTable);
-            }
-        }
     }
 
     return true;
@@ -476,62 +443,10 @@ lSetInternalFunctions(llvm::Module *module) {
         "__packed_store_active",
         "__popcnt_int32",
         "__popcnt_int64",
-        "__prefetch_read_1_uniform_bool",
-        "__prefetch_read_1_uniform_double",
-        "__prefetch_read_1_uniform_float",
-        "__prefetch_read_1_uniform_int16",
-        "__prefetch_read_1_uniform_int32",
-        "__prefetch_read_1_uniform_int64",
-        "__prefetch_read_1_uniform_int8",
-        "__prefetch_read_1_varying_bool",
-        "__prefetch_read_1_varying_double",
-        "__prefetch_read_1_varying_float",
-        "__prefetch_read_1_varying_int16",
-        "__prefetch_read_1_varying_int32",
-        "__prefetch_read_1_varying_int64",
-        "__prefetch_read_1_varying_int8",
-        "__prefetch_read_2_uniform_bool",
-        "__prefetch_read_2_uniform_double",
-        "__prefetch_read_2_uniform_float",
-        "__prefetch_read_2_uniform_int16",
-        "__prefetch_read_2_uniform_int32",
-        "__prefetch_read_2_uniform_int64",
-        "__prefetch_read_2_uniform_int8",
-        "__prefetch_read_2_varying_bool",
-        "__prefetch_read_2_varying_double",
-        "__prefetch_read_2_varying_float",
-        "__prefetch_read_2_varying_int16",
-        "__prefetch_read_2_varying_int32",
-        "__prefetch_read_2_varying_int64",
-        "__prefetch_read_2_varying_int8",
-        "__prefetch_read_3_uniform_bool",
-        "__prefetch_read_3_uniform_double",
-        "__prefetch_read_3_uniform_float",
-        "__prefetch_read_3_uniform_int16",
-        "__prefetch_read_3_uniform_int32",
-        "__prefetch_read_3_uniform_int64",
-        "__prefetch_read_3_uniform_int8",
-        "__prefetch_read_3_varying_bool",
-        "__prefetch_read_3_varying_double",
-        "__prefetch_read_3_varying_float",
-        "__prefetch_read_3_varying_int16",
-        "__prefetch_read_3_varying_int32",
-        "__prefetch_read_3_varying_int64",
-        "__prefetch_read_3_varying_int8",
-        "__prefetch_read_nt_uniform_bool",
-        "__prefetch_read_nt_uniform_double",
-        "__prefetch_read_nt_uniform_float",
-        "__prefetch_read_nt_uniform_int16",
-        "__prefetch_read_nt_uniform_int32",
-        "__prefetch_read_nt_uniform_int64",
-        "__prefetch_read_nt_uniform_int8",
-        "__prefetch_read_nt_varying_bool",
-        "__prefetch_read_nt_varying_double",
-        "__prefetch_read_nt_varying_float",
-        "__prefetch_read_nt_varying_int16",
-        "__prefetch_read_nt_varying_int32",
-        "__prefetch_read_nt_varying_int64",
-        "__prefetch_read_nt_varying_int8",
+        "__prefetch_read_uniform_1",
+        "__prefetch_read_uniform_2",
+        "__prefetch_read_uniform_3",
+        "__prefetch_read_uniform_nt",
         "__rcp_uniform_float",
         "__rcp_varying_float",
         "__reduce_add_double",
@@ -747,7 +662,7 @@ void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
     // Add the definitions from the compiled builtins-c.c file
-    if (g->target.is32bit) {
+    if (g->target.is32Bit) {
         extern unsigned char builtins_bitcode_c_32[];
         extern int builtins_bitcode_c_32_length;
         AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length, 

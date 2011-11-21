@@ -5,7 +5,7 @@ export uniform int width() { return programCount; }
 
 struct Foo { float f; };
 
-void f(reference uniform Foo foo[], float a) {
+void f(uniform Foo foo[], float a) {
     ++foo[a].f;
 }
 

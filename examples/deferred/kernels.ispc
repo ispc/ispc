@@ -35,22 +35,22 @@
 
 struct InputDataArrays
 {
-    uniform float zBuffer[];
-    uniform unsigned int16 normalEncoded_x[]; // half float
-    uniform unsigned int16 normalEncoded_y[]; // half float
-    uniform unsigned int16 specularAmount[]; // half float
-    uniform unsigned int16 specularPower[]; // half float
-    uniform unsigned int8 albedo_x[]; // unorm8
-    uniform unsigned int8 albedo_y[]; // unorm8
-    uniform unsigned int8 albedo_z[]; // unorm8
-    uniform float lightPositionView_x[];
-    uniform float lightPositionView_y[];
-    uniform float lightPositionView_z[];
-    uniform float lightAttenuationBegin[];
-    uniform float lightColor_x[];
-    uniform float lightColor_y[];
-    uniform float lightColor_z[];
-    uniform float lightAttenuationEnd[];
+    uniform float * uniform zBuffer;
+    uniform unsigned int16 * uniform normalEncoded_x; // half float
+    uniform unsigned int16 * uniform normalEncoded_y; // half float
+    uniform unsigned int16 * uniform specularAmount; // half float
+    uniform unsigned int16 * uniform specularPower; // half float
+    uniform unsigned int8 * uniform albedo_x; // unorm8
+    uniform unsigned int8 * uniform albedo_y; // unorm8
+    uniform unsigned int8 * uniform albedo_z; // unorm8
+    uniform float * uniform lightPositionView_x;
+    uniform float * uniform lightPositionView_y;
+    uniform float * uniform lightPositionView_z;
+    uniform float * uniform lightAttenuationBegin;
+    uniform float * uniform lightColor_x;
+    uniform float * uniform lightColor_y;
+    uniform float * uniform lightColor_z;
+    uniform float * uniform lightAttenuationEnd;
 };
 
 struct InputHeader
@@ -77,8 +77,7 @@ dot3(float x, float y, float z, float a, float b, float c) {
 
 
 static inline void
-normalize3(float x, float y, float z, reference float ox, 
-           reference float oy, reference float oz) {
+normalize3(float x, float y, float z, float &ox, float &oy, float &oz) {
     float n = rsqrt(x*x + y*y + z*z);
     ox = x * n;
     oy = y * n;
@@ -110,8 +109,8 @@ ComputeZBounds(
     uniform float cameraProj_33, uniform float cameraProj_43,
     uniform float cameraNear, uniform float cameraFar,
     // Output
-    reference uniform float minZ,
-    reference uniform float maxZ
+    uniform float &minZ,
+    uniform float &maxZ
     )
 {
     // Find Z bounds
@@ -156,7 +155,7 @@ IntersectLightsWithTileMinMax(
     uniform float light_positionView_z_array[],
     uniform float light_attenuationEnd_array[],
     // Output
-    reference uniform int32 tileLightIndices[]
+    uniform int32 tileLightIndices[]
     )
 {
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
@@ -268,7 +267,7 @@ IntersectLightsWithTile(
     uniform float light_positionView_z_array[],
     uniform float light_attenuationEnd_array[],
     // Output
-    reference uniform int32 tileLightIndices[]
+    uniform int32 tileLightIndices[]
     )
 {
     uniform float minZ, maxZ;
@@ -293,19 +292,19 @@ ShadeTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
     uniform int32 gBufferWidth, uniform int32 gBufferHeight,
-    reference uniform InputDataArrays inputData,
+    uniform InputDataArrays &inputData,
     // Camera data
     uniform float cameraProj_11, uniform float cameraProj_22,
     uniform float cameraProj_33, uniform float cameraProj_43,
     // Light list
-    reference uniform int32 tileLightIndices[],
+    uniform int32 tileLightIndices[],
     uniform int32 tileNumLights,
     // UI
     uniform bool visualizeLightCount,
     // Output
-    reference uniform unsigned int8 framebuffer_r[],
-    reference uniform unsigned int8 framebuffer_g[],
-    reference uniform unsigned int8 framebuffer_b[]
+    uniform unsigned int8 framebuffer_r[],
+    uniform unsigned int8 framebuffer_g[],
+    uniform unsigned int8 framebuffer_b[]
     )
 {
     if (tileNumLights == 0 || visualizeLightCount) {
@@ -478,13 +477,13 @@ ShadeTile(
 
 task void
 RenderTile(uniform int num_groups_x, uniform int num_groups_y,
-           reference uniform InputHeader inputHeader,
-           reference uniform InputDataArrays inputData,
+           uniform InputHeader &inputHeader,
+           uniform InputDataArrays &inputData,
            uniform int visualizeLightCount,
            // Output
-           reference uniform unsigned int8 framebuffer_r[],
-           reference uniform unsigned int8 framebuffer_g[],
-           reference uniform unsigned int8 framebuffer_b[]) {
+           uniform unsigned int8 framebuffer_r[],
+           uniform unsigned int8 framebuffer_g[],
+           uniform unsigned int8 framebuffer_b[]) {
     uniform int32 group_y = taskIndex / num_groups_x;
     uniform int32 group_x = taskIndex % num_groups_x;
     uniform int32 tile_start_x = group_x * MIN_TILE_WIDTH;
@@ -526,13 +525,13 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
 
 
 export void
-RenderStatic(reference uniform InputHeader inputHeader,
-             reference uniform InputDataArrays inputData,
+RenderStatic(uniform InputHeader &inputHeader,
+             uniform InputDataArrays &inputData,
              uniform int visualizeLightCount,
              // Output
-             reference uniform unsigned int8 framebuffer_r[],
-             reference uniform unsigned int8 framebuffer_g[],
-             reference uniform unsigned int8 framebuffer_b[]) {
+             uniform unsigned int8 framebuffer_r[],
+             uniform unsigned int8 framebuffer_g[],
+             uniform unsigned int8 framebuffer_b[]) {
     uniform int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
     uniform int num_groups_y = (inputHeader.framebufferHeight + 
@@ -564,8 +563,8 @@ ComputeZBoundsRow(
     uniform float cameraProj_33, uniform float cameraProj_43,
     uniform float cameraNear, uniform float cameraFar,
     // Output
-    reference uniform float minZArray[],
-    reference uniform float maxZArray[]
+    uniform float minZArray[],
+    uniform float maxZArray[]
     )
 {
     for (uniform int32 tileX = 0; tileX < numTilesX; ++tileX) {
@@ -596,7 +595,7 @@ SplitTileMinMax(
     // Camera data
     uniform float cameraProj_11, uniform float cameraProj_22,
     // Light Data
-    reference uniform int32 lightIndices[],
+    uniform int32 lightIndices[],
     uniform int32 numLights,
     uniform float light_positionView_x_array[],
     uniform float light_positionView_y_array[],
@@ -605,9 +604,9 @@ SplitTileMinMax(
     // Outputs
     // TODO: ISPC doesn't currently like multidimensionsal arrays so we'll do the
     // indexing math ourselves
-    reference uniform int32 subtileIndices[],
+    uniform int32 subtileIndices[],
     uniform int32 subtileIndicesPitch,
-    reference uniform int32 subtileNumLights[]
+    uniform int32 subtileNumLights[]
     )
 {
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;

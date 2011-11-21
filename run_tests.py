@@ -40,7 +40,8 @@ parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
 # if no specific test files are specified, run all of the tests in tests/
 # and failing_tests/
 if len(args) == 0:
-    files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc")
+    files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc") + \
+        glob.glob("tests_errors/*ispc")
 else:
     files = args
 

@@ -73,7 +73,7 @@ static inline float Dot(const float3 a, const float3 b) {
 
 static void generateRay(uniform const float raster2camera[4][4], 
                         uniform const float camera2world[4][4],
-                        float x, float y, reference Ray ray) {
+                        float x, float y, Ray &ray) {
     ray.mint = 0.f;
     ray.maxt = 1e30f;
 
@@ -105,7 +105,7 @@ static void generateRay(uniform const float raster2camera[4][4],
 
 
 static inline bool BBoxIntersect(const uniform float bounds[2][3], 
-                                 const reference Ray ray) {
+                                 const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
     uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
     float t0 = ray.mint, t1 = ray.maxt;
@@ -143,7 +143,7 @@ static inline bool BBoxIntersect(const uniform float bounds[2][3],
 
 
 
-static inline bool TriIntersect(const reference Triangle tri, reference Ray ray) {
+static inline bool TriIntersect(const Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
     uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
@@ -184,7 +184,7 @@ static inline bool TriIntersect(const reference Triangle tri, reference Ray ray)
 
 
 bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[], 
-                  reference Ray r) {
+                  Ray &r) {
     Ray ray = r;
     bool hit = false;
     // Follow ray through BVH nodes to find primitive intersections

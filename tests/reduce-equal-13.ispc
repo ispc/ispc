@@ -7,7 +7,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform bool re;
     uniform int val;
     if (programIndex & 1) {
-        re = reduce_equal(a, val);
+        re = reduce_equal(a, &val);
     }
     RET[programIndex] = ((int)re << 8) + val;
 }

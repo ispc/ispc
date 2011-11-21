@@ -171,7 +171,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     if (!error) {
         llvm::TargetMachine *targetMachine = t->GetTargetMachine();
         const llvm::TargetData *targetData = targetMachine->getTargetData();
-        t->is32bit = (targetData->getPointerSize() == 4);
+        t->is32Bit = (targetData->getPointerSize() == 4);
     }
 
     return !error;
@@ -284,8 +284,11 @@ llvm::Value *
 Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     assert(td != NULL);
-    return is32bit ? LLVMInt32(td->getTypeSizeInBits(type) / 8) :
-        LLVMInt64(td->getTypeSizeInBits(type) / 8);
+    uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
+    if (is32Bit || g->opt.force32BitAddressing)
+        return LLVMInt32(byteSize);
+    else
+        return LLVMInt64(byteSize);
 }
 
 
@@ -298,7 +301,12 @@ Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element) {
     assert(structType != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
     assert(sl != NULL);
-    return LLVMInt32(sl->getElementOffset(element));
+
+    uint64_t offset = sl->getElementOffset(element);
+    if (is32Bit || g->opt.force32BitAddressing)
+        return LLVMInt32(offset);
+    else
+        return LLVMInt64(offset);
 }
 
 
@@ -309,6 +317,7 @@ Opt::Opt() {
     level = 1;
     fastMath = false;
     fastMaskedVload = false;
+    force32BitAddressing = false;
     unrollLoops = true;
     disableAsserts = false;
     disableHandlePseudoMemoryOps = false;

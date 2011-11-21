@@ -2,24 +2,23 @@
 export uniform int width() { return programCount; }
 
 
-
-void foo(reference float a[10]) {
-    a[5] = 0;
+void foo(float &a) {
+    a += a;
 }
 
+struct Foo {
+    float a, b, c;
+};
+
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex];
-    float x[10];
-    uniform int i;
-    for (i = 0; i < 10; ++i)
-        x[i] = a*b;
-    if (a > 2)
-        foo(x);
-    RET[programIndex] = x[b] + x[9];
+    Foo f = { b, aFOO[programIndex], 1 };
+    if (programIndex < 2)
+        foo(f.b);
+    RET[programIndex] = f.b;
 }
 
 export void result(uniform float RET[]) { 
-    RET[programIndex] = 5 * (programIndex+1);
-    RET[0] = 10;
-    RET[1] = 20;
+    RET[programIndex] = 1+programIndex;
+    RET[0] = 2;
+    RET[1] = 4;
 }

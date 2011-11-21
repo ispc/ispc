@@ -41,7 +41,7 @@ struct Ray {
 static void
 generateRay(const uniform float raster2camera[4][4], 
             const uniform float camera2world[4][4],
-            float x, float y, reference Ray ray) {
+            float x, float y, Ray &ray) {
     // transform raster coordinate (x, y, 0) to camera space
     float camx = raster2camera[0][0] * x + raster2camera[0][1] * y + raster2camera[0][3];
     float camy = raster2camera[1][0] * x + raster2camera[1][1] * y + raster2camera[1][3];
@@ -70,7 +70,7 @@ Inside(float3 p, float3 pMin, float3 pMax) {
 
 
 static bool
-IntersectP(Ray ray, float3 pMin, float3 pMax, reference float hit0, reference float hit1) {
+IntersectP(Ray ray, float3 pMin, float3 pMax, float &hit0, float &hit1) {
     float t0 = -1e30, t1 = 1e30;
 
     float3 tNear = (pMin - ray.origin) / ray.dir;
@@ -141,7 +141,7 @@ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
 
 static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
                             uniform float density[], uniform int nVoxels[3],
-                            reference uniform bool checkForSameVoxel) {
+                            uniform bool &checkForSameVoxel) {
     if (!Inside(Pobj, pMin, pMax)) 
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_
@@ -155,8 +155,8 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
     // Trilinearly interpolate density values to compute local density
     float d00, d10, d01, d11;
     uniform int uvx, uvy, uvz;
-    if (checkForSameVoxel && reduce_equal(vx, uvx) && reduce_equal(vy, uvy) &&
-        reduce_equal(vz, uvz)) {
+    if (checkForSameVoxel && reduce_equal(vx, &uvx) && reduce_equal(vy, &uvy) &&
+        reduce_equal(vz, &uvz)) {
         // If all of the program instances are inside the same voxel, then
         // we'll call the 'uniform' variant of the voxel density lookup
         // function, thus doing a single load for each value rather than a

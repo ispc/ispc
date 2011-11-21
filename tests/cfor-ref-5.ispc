@@ -3,8 +3,8 @@ export uniform int width() { return programCount; }
 
 
 
-void foo(reference float a) {
-    a = 0;
+void foo(float * uniform a) {
+    *a = 0;
 }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
@@ -13,7 +13,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform int i;
     cfor (i = 0; i < 10; ++i)
         x[i] = a*b;
-    foo(x[b]);
+    foo(&x[b]);
     RET[programIndex] = x[5] + x[9];
 }
 

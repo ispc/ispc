@@ -8,7 +8,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float b = 0;
     int32 delta = 1;
     if (programIndex < 2)
-        b = atomic_add_global(s, delta);
+        b = atomic_add_global(&s, delta);
     RET[programIndex] = reduce_add(b);
 }
 

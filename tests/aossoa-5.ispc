@@ -11,7 +11,7 @@ export void f_v(uniform float RET[]) {
         a[i] = i;
 
     int x=-1, y=-1, z=-1;
-    aos_to_soa3(a, 0, x, y, z);
+    aos_to_soa3(a, 0, &x, &y, &z);
 
     int errs = 0;
     if (x != width * programIndex) ++errs;

@@ -709,6 +709,25 @@ PointerType::PointerType(const Type *t, bool iu, bool ic)
 }
 
 
+PointerType *
+PointerType::GetUniform(const Type *t) {
+    return new PointerType(t, true, false);
+}
+
+
+PointerType *
+PointerType::GetVarying(const Type *t) {
+    return new PointerType(t, false, false);
+}
+
+
+bool
+PointerType::IsVoidPointer(const Type *t) {
+    return Type::EqualIgnoringConst(t->GetAsUniformType(),
+                                    PointerType::Void);
+}
+
+
 bool
 PointerType::IsUniformType() const {
     return isUniform;
@@ -822,9 +841,11 @@ PointerType::GetCDeclaration(const std::string &name) const {
     if (baseType == NULL)
         return "";
 
-    std::string ret = baseType->GetCDeclaration(name);
+    std::string ret = baseType->GetCDeclaration("");
     ret += std::string(" *");
     if (isConst) ret += " const";
+    ret += std::string(" ");
+    ret += name;
     return ret;
 }
 
@@ -834,6 +855,9 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     if (baseType == NULL)
         return NULL;
 
+    if (isUniform == false)
+        return LLVMTypes::VoidPointerVectorType;
+
     LLVM_TYPE_CONST llvm::Type *ptype = NULL;
     const FunctionType *ftype = dynamic_cast<const FunctionType *>(baseType);
     if (ftype != NULL) 
@@ -841,15 +865,40 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         // last parameter--i.e. we don't allow taking function pointers of
         // exported functions.
         ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx, true), 0);
-    else
-        ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
+    else {
+        if (baseType == AtomicType::Void)
+            ptype = LLVMTypes::VoidPointerType;
+        else
+            ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
+    }
 
-    if (isUniform)
-        return ptype;
-    else
-        // Varying pointers are represented as arrays of pointers since
-        // LLVM doesn't allow vectors of pointers.
-        return llvm::ArrayType::get(ptype, g->target.vectorWidth);
+    return ptype;
+}
+
+
+static llvm::DIType 
+lCreateDIArray(llvm::DIType eltType, int count) {
+    int lowerBound = 0, upperBound = count-1;
+
+    if (count == 0) {
+        // unsized array -> indicate with low > high
+        lowerBound = 1;
+        upperBound = 0;
+    }
+
+    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
+    std::vector<llvm::Value *> subs;
+    subs.push_back(sub);
+#ifdef LLVM_2_9
+    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(&subs[0], subs.size());
+#else
+    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
+#endif
+
+    uint64_t size = eltType.getSizeInBits() * count;
+    uint64_t align = eltType.getAlignInBits();
+
+    return m->diBuilder->createArrayType(size, align, eltType, subArray);
 }
 
 
@@ -859,8 +908,15 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
         return llvm::DIType();
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
-    int bitsSize = g->target.is32bit ? 32 : 64;
-    return m->diBuilder->createPointerType(diTargetType, bitsSize);
+    int bitsSize = g->target.is32Bit ? 32 : 64;
+    if (isUniform)
+        return m->diBuilder->createPointerType(diTargetType, bitsSize);
+    else {
+        // emit them as an array of pointers
+        llvm::DIType eltType = m->diBuilder->createPointerType(diTargetType, 
+                                                               bitsSize);
+        return lCreateDIArray(eltType, g->target.vectorWidth);
+    }
 }
 
 
@@ -1071,28 +1127,7 @@ ArrayType::GetDIType(llvm::DIDescriptor scope) const {
         return llvm::DIType();
 
     llvm::DIType eltType = child->GetDIType(scope);
-
-    int lowerBound = 0, upperBound = numElements-1;
-    if (numElements == 0) {
-        // unsized array -> indicate with low > high
-        lowerBound = 1;
-        upperBound = 0;
-    }
-
-    llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
-    std::vector<llvm::Value *> subs;
-    subs.push_back(sub);
-#ifdef LLVM_2_9
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(&subs[0], subs.size());
-#else
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
-#endif
-
-    // it's intentional that size is zero for unsized arrays
-    uint64_t size = eltType.getSizeInBits() * numElements;
-    uint64_t align = eltType.getAlignInBits();
-
-    return m->diBuilder->createArrayType(size, align, eltType, subArray);
+    return lCreateDIArray(eltType, numElements);
 }
 
 
@@ -1112,30 +1147,49 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
     if (exprList == NULL || exprList->exprs.size() == 0)
         return type;
-    
+
+    // If the current dimension is unsized, then size it according to the
+    // length of the expression list
     if (at->GetElementCount() == 0)
         type = at->GetSizedArray(exprList->exprs.size());
 
+    // Is there another nested level of expression lists?  If not, bail out
+    // now.  Otherwise we'll use the first one to size the next dimension
+    // (after checking below that it has the same length as all of the
+    // other ones.
     ExprList *nextList = dynamic_cast<ExprList *>(exprList->exprs[0]);
     if (nextList == NULL)
         return type;
 
-    unsigned int nextSize = nextList->exprs.size();
-    for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
-        if (exprList->exprs[i] == NULL) {
-            assert(m->errorCount > 0);
-            continue;
-        }
+    const Type *nextType = at->GetElementType();
+    const ArrayType *nextArrayType = 
+        dynamic_cast<const ArrayType *>(nextType);
+    if (nextArrayType != NULL && nextArrayType->GetElementCount() == 0) {
+        // If the recursive call to SizeUnsizedArrays at the bottom of the
+        // function is going to size an unsized dimension, make sure that
+        // all of the sub-expression lists are the same length--i.e. issue
+        // an error if we have something like
+        // int x[][] = { { 1 }, { 1, 2, 3, 4 } };
+        unsigned int nextSize = nextList->exprs.size();
+        for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
+            if (exprList->exprs[i] == NULL) {
+                // We should have seen an error earlier in this case.
+                assert(m->errorCount > 0);
+                continue;
+            }
 
-        ExprList *el = dynamic_cast<ExprList *>(exprList->exprs[i]);
-        if (el == NULL || el->exprs.size() != nextSize) {
-            Error(Union(exprList->exprs[0]->pos, exprList->exprs[i]->pos), 
-                  "Inconsistent expression list lengths found in initializer "
-                  "list.");
-            return NULL;
+            ExprList *el = dynamic_cast<ExprList *>(exprList->exprs[i]);
+            if (el == NULL || el->exprs.size() != nextSize) {
+                Error(Union(exprList->exprs[0]->pos, exprList->exprs[i]->pos), 
+                      "Inconsistent initializer expression list lengths "
+                      "make it impossible to size unsized array dimensions.");
+                return NULL;
+            }
         }
     }
 
+    // Recursively call SizeUnsizedArrays() to get the child type for the
+    // array that we were able to size here.
     return new ArrayType(SizeUnsizedArrays(at->GetElementType(), nextList),
                          exprList->exprs.size());
 }
@@ -1632,6 +1686,8 @@ StructType::LLVMType(llvm::LLVMContext *ctx) const {
     std::vector<LLVM_TYPE_CONST llvm::Type *> llvmTypes;
     for (int i = 0; i < GetElementCount(); ++i) {
         const Type *type = GetElementType(i);
+        if (type == NULL)
+            return NULL;
         llvmTypes.push_back(type->LLVMType(ctx));
     }
     return llvm::StructType::get(*ctx, llvmTypes);
@@ -1732,8 +1788,8 @@ StructType::GetElementNumber(const std::string &n) const {
 ///////////////////////////////////////////////////////////////////////////
 // ReferenceType
 
-ReferenceType::ReferenceType(const Type *t, bool ic) 
-    : isConst(ic), targetType(t->GetAsNonConstType()) {
+ReferenceType::ReferenceType(const Type *t) 
+    : targetType(t) {
 }
 
 
@@ -1769,7 +1825,7 @@ ReferenceType::IsUnsignedType() const {
 
 bool
 ReferenceType::IsConstType() const {
-    return isConst; 
+    return targetType->IsConstType();
 }
 
 
@@ -1789,7 +1845,7 @@ const ReferenceType *
 ReferenceType::GetAsVaryingType() const {
     if (IsVaryingType()) 
         return this;
-    return new ReferenceType(targetType->GetAsVaryingType(), isConst);
+    return new ReferenceType(targetType->GetAsVaryingType());
 }
 
 
@@ -1797,13 +1853,13 @@ const ReferenceType *
 ReferenceType::GetAsUniformType() const {
     if (IsUniformType()) 
         return this;
-    return new ReferenceType(targetType->GetAsUniformType(), isConst);
+    return new ReferenceType(targetType->GetAsUniformType());
 }
 
 
 const Type *
 ReferenceType::GetSOAType(int width) const {
-    return new ReferenceType(targetType->GetSOAType(width), isConst);
+    return new ReferenceType(targetType->GetSOAType(width));
 }
 
 
@@ -1811,7 +1867,7 @@ const ReferenceType *
 ReferenceType::GetAsConstType() const {
     if (IsConstType())
         return this;
-    return new ReferenceType(targetType, true);
+    return new ReferenceType(targetType->GetAsConstType());
 }
 
 
@@ -1819,17 +1875,18 @@ const ReferenceType *
 ReferenceType::GetAsNonConstType() const {
     if (!IsConstType())
         return this;
-    return new ReferenceType(targetType, false);
+    return new ReferenceType(targetType->GetAsNonConstType());
 }
 
 
 std::string
 ReferenceType::GetString() const {
-    std::string ret;
-    if (isConst || targetType->IsConstType())
-        ret += "const ";
-    ret += std::string("reference<") + targetType->GetAsNonConstType()->GetString() + 
-        std::string(">");
+    if (targetType == NULL)
+        return "";
+
+    std::string ret = targetType->GetString();
+
+    ret += std::string(" &");
     return ret;
 }
 
@@ -1837,8 +1894,6 @@ ReferenceType::GetString() const {
 std::string
 ReferenceType::Mangle() const {
     std::string ret;
-    if (isConst)
-        ret += "C";
     ret += std::string("REF") + targetType->Mangle();
     return ret;
 }
@@ -1851,8 +1906,6 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
         if (at->GetElementCount() == 0) {
             // emit unsized arrays as pointers to the base type..
             std::string ret;
-            if (isConst || at->GetElementType()->IsConstType())
-                ret += "const ";
             ret += at->GetElementType()->GetAsNonConstType()->GetCDeclaration("") + 
                 std::string(" *");
             if (lShouldPrintName(name))
@@ -1866,10 +1919,7 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
     }
     else {
         std::string ret;
-        if (isConst || targetType->IsConstType())
-            ret += "const ";
-        ret += targetType->GetAsNonConstType()->GetCDeclaration("") + 
-            std::string(" *");
+        ret += targetType->GetCDeclaration("") + std::string(" *");
         if (lShouldPrintName(name))
             ret += name;
         return ret;
@@ -1901,10 +1951,9 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
 FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
                            SourcePos p)
     : isTask(false), isExported(false), isExternC(false), returnType(r), 
-      argTypes(a), argNames(std::vector<std::string>(a.size(), "")),
-      argDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
-      argPos(std::vector<SourcePos>(a.size(), p)),
-      pos(p) {
+      paramTypes(a), paramNames(std::vector<std::string>(a.size(), "")),
+      paramDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
+      paramPositions(std::vector<SourcePos>(a.size(), p)) {
     assert(returnType != NULL);
 }
 
@@ -1914,11 +1963,11 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
                            const std::vector<ConstExpr *> &ad,
                            const std::vector<SourcePos> &ap,
                            bool it, bool is, bool ec) 
-    : isTask(it), isExported(is), isExternC(ec), returnType(r), argTypes(a), 
-      argNames(an), argDefaults(ad), argPos(ap), pos(p) {
-    assert(argTypes.size() == argNames.size() && 
-           argNames.size() == argDefaults.size() &&
-           argDefaults.size() == argPos.size());
+    : isTask(it), isExported(is), isExternC(ec), returnType(r), paramTypes(a), 
+      paramNames(an), paramDefaults(ad), paramPositions(ap) {
+    assert(paramTypes.size() == paramNames.size() && 
+           paramNames.size() == paramDefaults.size() &&
+           paramDefaults.size() == paramPositions.size());
     assert(returnType != NULL);
 }
 
@@ -2007,9 +2056,9 @@ FunctionType::GetString() const {
     if (isTask) ret += "task ";
     ret += returnType->GetString();
     ret += "(";
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        ret += argTypes[i]->GetString();
-        if (i != argTypes.size() - 1)
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        ret += paramTypes[i]->GetString();
+        if (i != paramTypes.size() - 1)
             ret += ", ";
     }
     ret += ")";
@@ -2020,8 +2069,8 @@ FunctionType::GetString() const {
 std::string
 FunctionType::Mangle() const {
     std::string ret = "___";
-    for (unsigned int i = 0; i < argTypes.size(); ++i)
-        ret += argTypes[i]->Mangle();
+    for (unsigned int i = 0; i < paramTypes.size(); ++i)
+        ret += paramTypes[i]->Mangle();
     return ret;
 }
 
@@ -2033,12 +2082,23 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
     ret += " ";
     ret += fname;
     ret += "(";
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        if (argNames[i] != "")
-            ret += argTypes[i]->GetCDeclaration(argNames[i]);
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        const Type *type = paramTypes[i];
+
+        // Convert pointers to arrays to unsized arrays, which are more clear
+        // to print out for multidimensional arrays (i.e. "float foo[][4] "
+        // versus "float (foo *)[4]").
+        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        if (pt != NULL && 
+            dynamic_cast<const ArrayType *>(pt->GetBaseType()) != NULL) {
+            type = new ArrayType(pt->GetBaseType(), 0);
+        }
+
+        if (paramNames[i] != "")
+            ret += type->GetCDeclaration(paramNames[i]);
         else
-            ret += argTypes[i]->GetString();
-        if (i != argTypes.size() - 1)
+            ret += type->GetString();
+        if (i != paramTypes.size() - 1)
             ret += ", ";
     }
     ret += ")";
@@ -2063,20 +2123,17 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 
 LLVM_TYPE_CONST llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
-    if (!includeMask && isTask) {
-        Error(pos, "Function can't have both \"task\" and \"export\" qualifiers");
-        return NULL;
-    }
+    if (isTask == true) assert(includeMask == true);
 
     // Get the LLVM Type *s for the function arguments
     std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
-    for (unsigned int i = 0; i < argTypes.size(); ++i) {
-        if (!argTypes[i])
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        if (!paramTypes[i])
             return NULL;
-        assert(argTypes[i] != AtomicType::Void);
+        assert(paramTypes[i] != AtomicType::Void);
 
-        LLVM_TYPE_CONST llvm::Type *t = argTypes[i]->LLVMType(ctx);
-        if (!t)
+        LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
+        if (t == NULL)
             return NULL;
         llvmArgTypes.push_back(t);
     }
@@ -2107,10 +2164,31 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
 }
 
 
-std::string
-FunctionType::GetArgumentName(int i) const { 
-    assert(i < (int)argNames.size());
-    return argNames[i]; 
+const Type *
+FunctionType::GetParameterType(int i) const { 
+    assert(i < (int)paramTypes.size());
+    return paramTypes[i];
+}
+
+
+ConstExpr *
+FunctionType::GetParameterDefault(int i) const { 
+    assert(i < (int)paramDefaults.size());
+    return paramDefaults[i]; 
+}
+
+
+const SourcePos &
+FunctionType::GetParameterSourcePos(int i) const { 
+    assert(i < (int)paramPositions.size());
+    return paramPositions[i];
+}
+
+
+const std::string &
+FunctionType::GetParameterName(int i) const { 
+    assert(i < (int)paramNames.size());
+    return paramNames[i]; 
 }
 
 
@@ -2196,17 +2274,15 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
     // Not the same types, but only a const/non-const difference?  Return
     // the non-const type as the more general one.
-    if (Type::Equal(t0->GetAsConstType(), t1->GetAsConstType()))
+    if (Type::EqualIgnoringConst(t0, t1))
         return t0->GetAsNonConstType();
 
     const PointerType *pt0 = dynamic_cast<const PointerType *>(t0);
     const PointerType *pt1 = dynamic_cast<const PointerType *>(t1);
     if (pt0 != NULL && pt1 != NULL) {
-        if (Type::Equal(pt0->GetAsUniformType()->GetAsConstType(),
-                        PointerType::Void))
+        if (PointerType::IsVoidPointer(pt0))
             return pt1;
-        else if (Type::Equal(pt1->GetAsUniformType()->GetAsConstType(),
-                             PointerType::Void))
+        else if (PointerType::IsVoidPointer(pt1))
             return pt0;
         else {
             Error(pos, "Conversion between incompatible pointer types \"%s\" "
@@ -2318,10 +2394,17 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 }
 
 
-bool
-Type::Equal(const Type *a, const Type *b) {
+static bool
+lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     if (a == NULL || b == NULL)
         return false;
+
+    if (ignoreConst == true) {
+        if (dynamic_cast<const FunctionType *>(a) == NULL)
+            a = a->GetAsNonConstType();
+        if (dynamic_cast<const FunctionType *>(b) == NULL)
+            b = b->GetAsNonConstType();
+    }
 
     // We can compare AtomicTypes with pointer equality, since the
     // AtomicType constructor is private so that there isonly the single
@@ -2346,13 +2429,15 @@ Type::Equal(const Type *a, const Type *b) {
     const ArrayType *atb = dynamic_cast<const ArrayType *>(b);
     if (ata != NULL && atb != NULL)
         return (ata->GetElementCount() == atb->GetElementCount() && 
-                Equal(ata->GetElementType(), atb->GetElementType()));
+                lCheckTypeEquality(ata->GetElementType(), atb->GetElementType(), 
+                                   ignoreConst));
 
     const VectorType *vta = dynamic_cast<const VectorType *>(a);
     const VectorType *vtb = dynamic_cast<const VectorType *>(b);
     if (vta != NULL && vtb != NULL)
         return (vta->GetElementCount() == vtb->GetElementCount() && 
-                Equal(vta->GetElementType(), vtb->GetElementType()));
+                lCheckTypeEquality(vta->GetElementType(), vtb->GetElementType(),
+                                   ignoreConst));
 
     const StructType *sta = dynamic_cast<const StructType *>(a);
     const StructType *stb = dynamic_cast<const StructType *>(b);
@@ -2360,7 +2445,8 @@ Type::Equal(const Type *a, const Type *b) {
         if (sta->GetElementCount() != stb->GetElementCount())
             return false;
         for (int i = 0; i < sta->GetElementCount(); ++i)
-            if (!Equal(sta->GetElementType(i), stb->GetElementType(i)))
+            if (!lCheckTypeEquality(sta->GetElementType(i), stb->GetElementType(i),
+                                    ignoreConst))
                 return false;
         return true;
     }
@@ -2368,16 +2454,16 @@ Type::Equal(const Type *a, const Type *b) {
     const ReferenceType *rta = dynamic_cast<const ReferenceType *>(a);
     const ReferenceType *rtb = dynamic_cast<const ReferenceType *>(b);
     if (rta != NULL && rtb != NULL)
-        return ((rta->IsConstType() == rtb->IsConstType()) &&
-                Type::Equal(rta->GetReferenceTarget(),
-                            rtb->GetReferenceTarget()));
+        return (lCheckTypeEquality(rta->GetReferenceTarget(),
+                                   rtb->GetReferenceTarget(), ignoreConst));
 
     const FunctionType *fta = dynamic_cast<const FunctionType *>(a);
     const FunctionType *ftb = dynamic_cast<const FunctionType *>(b);
     if (fta != NULL && ftb != NULL) {
         // Both the return types and all of the argument types must match
         // for function types to match
-        if (!Equal(fta->GetReturnType(), ftb->GetReturnType()))
+        if (!lCheckTypeEquality(fta->GetReturnType(), ftb->GetReturnType(), 
+                                ignoreConst))
             return false;
 
         if (fta->isTask != ftb->isTask ||
@@ -2385,13 +2471,14 @@ Type::Equal(const Type *a, const Type *b) {
             fta->isExternC != ftb->isExternC)
             return false;
 
-        const std::vector<const Type *> &aargs = fta->GetArgumentTypes();
-        const std::vector<const Type *> &bargs = ftb->GetArgumentTypes();
-        if (aargs.size() != bargs.size())
+        if (fta->GetNumParameters() != ftb->GetNumParameters())
             return false;
-        for (unsigned int i = 0; i < aargs.size(); ++i)
-            if (!Equal(aargs[i], bargs[i]))
+
+        for (int i = 0; i < fta->GetNumParameters(); ++i)
+            if (!lCheckTypeEquality(fta->GetParameterType(i),
+                       ftb->GetParameterType(i), ignoreConst))
                 return false;
+
         return true;
     }
 
@@ -2400,7 +2487,20 @@ Type::Equal(const Type *a, const Type *b) {
     if (pta != NULL && ptb != NULL)
         return (pta->IsConstType() == ptb->IsConstType() &&
                 pta->IsUniformType() == ptb->IsUniformType() &&
-                Type::Equal(pta->GetBaseType(), ptb->GetBaseType()));
+                lCheckTypeEquality(pta->GetBaseType(), ptb->GetBaseType(), 
+                                   ignoreConst));
 
     return false;
+}
+
+
+bool
+Type::Equal(const Type *a, const Type *b) {
+    return lCheckTypeEquality(a, b, false);
+}
+
+
+bool
+Type::EqualIgnoringConst(const Type *a, const Type *b) {
+    return lCheckTypeEquality(a, b, true);
 }

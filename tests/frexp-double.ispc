@@ -7,7 +7,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     if (programIndex & 1)
         a = -a;
     int exponent;
-    RET[programIndex] = frexp(a, exponent);
+    RET[programIndex] = frexp(a, &exponent);
 }
 
 export void result(uniform float RET[]) {

@@ -40,6 +40,7 @@
 
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::VoidType = NULL;
 LLVM_TYPE_CONST llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
+LLVM_TYPE_CONST llvm::Type *LLVMTypes::PointerIntType = NULL;
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::BoolType = NULL;
 
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8Type = NULL;
@@ -74,7 +75,7 @@ LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
 
-LLVM_TYPE_CONST llvm::ArrayType *LLVMTypes::VoidPointerVectorType = NULL;
+LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
 
 llvm::Constant *LLVMTrue = NULL;
 llvm::Constant *LLVMFalse = NULL;
@@ -86,6 +87,8 @@ void
 InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
     LLVMTypes::VoidType = llvm::Type::getVoidTy(*ctx);
     LLVMTypes::VoidPointerType = llvm::PointerType::get(llvm::Type::getInt8Ty(*ctx), 0);
+    LLVMTypes::PointerIntType = target.is32Bit ? llvm::Type::getInt32Ty(*ctx) :
+        llvm::Type::getInt64Ty(*ctx);
 
     LLVMTypes::BoolType = llvm::Type::getInt1Ty(*ctx);
     LLVMTypes::Int8Type = llvm::Type::getInt8Ty(*ctx);
@@ -130,8 +133,8 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
     LLVMTypes::FloatVectorPointerType = llvm::PointerType::get(LLVMTypes::FloatVectorType, 0);
     LLVMTypes::DoubleVectorPointerType = llvm::PointerType::get(LLVMTypes::DoubleVectorType, 0);
 
-    LLVMTypes::VoidPointerVectorType = 
-        llvm::ArrayType::get(LLVMTypes::VoidPointerType, target.vectorWidth);
+    LLVMTypes::VoidPointerVectorType = g->target.is32Bit ? LLVMTypes::Int32VectorType :
+        LLVMTypes::Int64VectorType;
 
     LLVMTrue = llvm::ConstantInt::getTrue(*ctx);
     LLVMFalse = llvm::ConstantInt::getFalse(*ctx);
@@ -450,12 +453,4 @@ LLVMBoolVector(const bool *bvec) {
         vals.push_back(v);
     }
     return llvm::ConstantVector::get(vals);
-}
-
-
-LLVM_TYPE_CONST llvm::ArrayType *
-LLVMPointerVectorType(LLVM_TYPE_CONST llvm::Type *t) {
-    // NOTE: ArrayType, not VectorType
-    return llvm::ArrayType::get(llvm::PointerType::get(t, 0), 
-                                g->target.vectorWidth);
 }

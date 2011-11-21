@@ -131,7 +131,11 @@ lPossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
         // which in turn may represent an overloaded function.  So we need
         // to try to resolve the overload based on the type of the symbol
         // we're initializing here.
-        if (fse->ResolveOverloads(funcType->GetArgumentTypes()) == false)
+        std::vector<const Type *> paramTypes;
+        for (int i = 0; i < funcType->GetNumParameters(); ++i)
+            paramTypes.push_back(funcType->GetParameterType(i));
+
+        if (fse->ResolveOverloads(paramTypes) == false)
             return false;
     }
     return true;
@@ -151,14 +155,9 @@ lPossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
 static void
 lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *symType,
             Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos) {
-    if (initExpr == NULL) {
-        // Initialize things without initializers to the undefined value.
-        // To auto-initialize everything to zero, replace 'UndefValue' with
-        // 'NullValue' in the below
-        LLVM_TYPE_CONST llvm::Type *ltype = symType->LLVMType(g->ctx);
-        ctx->StoreInst(llvm::UndefValue::get(ltype), lvalue);
+    if (initExpr == NULL)
+        // leave it uninitialized
         return;
-    }
 
     // If the initializer is a straight up expression that isn't an
     // ExprList, then we'll see if we can type convert it to the type of
@@ -239,7 +238,14 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *symType,
             // Initialize each element with the corresponding value from
             // the ExprList
             for (int i = 0; i < nInits; ++i) {
-                llvm::Value *ep = ctx->GetElementPtrInst(lvalue, 0, i, "element");
+                llvm::Value *ep;
+                if (dynamic_cast<const StructType *>(symType) != NULL)
+                    ep = ctx->AddElementOffset(lvalue, i, NULL, "element");
+                else
+                    ep = ctx->GetElementPtrInst(lvalue, LLVMInt32(0), LLVMInt32(i), 
+                                                PointerType::GetUniform(collectionType->GetElementType(i)), 
+                                                "gep");
+
                 lInitSymbol(ep, symName, collectionType->GetElementType(i), 
                             exprList->exprs[i], ctx, pos);
             }
@@ -359,9 +365,11 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         else {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());
+
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
+
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
             lInitSymbol(sym->storagePtr, sym->name.c_str(), sym->type, 
@@ -693,15 +701,21 @@ lSafeToRunWithAllLanesOff(Expr *expr) {
         // If we can determine at compile time the size of the array/vector
         // and if the indices are compile-time constants, then we may be
         // able to safely run this under a predicated if statement..
-        if (ie->arrayOrVector == NULL)
+        if (ie->baseExpr == NULL)
             return false;
 
-        const Type *type = ie->arrayOrVector->GetType();
+        const Type *type = ie->baseExpr->GetType();
         ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
         if (type == NULL || ce == NULL)
             return false;
         if (dynamic_cast<const ReferenceType *>(type) != NULL)
             type = type->GetReferenceTarget();
+
+        const PointerType *pointerType = 
+            dynamic_cast<const PointerType *>(type);
+        if (pointerType != NULL)
+            // pointer[offset] -> can't be sure
+            return false;
 
         const SequentialType *seqType = 
             dynamic_cast<const SequentialType *>(type);
@@ -739,6 +753,14 @@ lSafeToRunWithAllLanesOff(Expr *expr) {
     DereferenceExpr *dre;
     if ((dre = dynamic_cast<DereferenceExpr *>(expr)) != NULL)
         return lSafeToRunWithAllLanesOff(dre->expr);
+
+    SizeOfExpr *soe;
+    if ((soe = dynamic_cast<SizeOfExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(soe->expr);
+
+    AddressOfExpr *aoe;
+    if ((aoe = dynamic_cast<AddressOfExpr *>(expr)) != NULL)
+        return lSafeToRunWithAllLanesOff(aoe->expr);
 
     if (dynamic_cast<SymbolExpr *>(expr) != NULL ||
         dynamic_cast<FunctionSymbolExpr *>(expr) != NULL ||
@@ -1822,7 +1844,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
                 if (!ptr)
                     return;
 
-                llvm::Value *arrayPtr = ctx->GetElementPtrInst(argPtrArray, 0, i);
+                llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, i, NULL);
                 ctx->StoreInst(ptr, arrayPtr);
             }
         }
@@ -1830,7 +1852,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
             llvm::Value *ptr = lProcessPrintArg(values, ctx, argTypes);
             if (!ptr)
                 return;
-            llvm::Value *arrayPtr = ctx->GetElementPtrInst(argPtrArray, 0, 0);
+            llvm::Value *arrayPtr = ctx->AddElementOffset(argPtrArray, 0, NULL);
             ctx->StoreInst(ptr, arrayPtr);
         }
     }
@@ -1846,7 +1868,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     args[2] = LLVMInt32(g->target.vectorWidth);
     args[3] = ctx->LaneMask(mask);
     std::vector<llvm::Value *> argVec(&args[0], &args[5]);
-    ctx->CallInst(printFunc, AtomicType::Void, argVec, "");
+    ctx->CallInst(printFunc, NULL, argVec, "");
 }
 
 
@@ -1926,7 +1948,7 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     args.push_back(ctx->GetStringPtr(errorString));
     args.push_back(expr->GetValue(ctx));
     args.push_back(ctx->GetFullMask());
-    ctx->CallInst(assertFunc, AtomicType::Void, args, "");
+    ctx->CallInst(assertFunc, NULL, args, "");
 
 #ifndef ISPC_IS_WINDOWS
     free(errorString);

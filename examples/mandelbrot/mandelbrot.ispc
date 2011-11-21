@@ -51,7 +51,7 @@ export void mandelbrot_ispc(uniform float x0, uniform float y0,
                             uniform float x1, uniform float y1,
                             uniform int width, uniform int height, 
                             uniform int maxIterations,
-                            reference uniform int output[])
+                            uniform int output[])
 {
     float dx = (x1 - x0) / width;
     float dy = (y1 - y0) / height;

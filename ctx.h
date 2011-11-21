@@ -311,20 +311,13 @@ public:
 
     /** Given a scalar value, return a vector of the same type (or an
         array, for pointer types). */
-    llvm::Value *SmearScalar(llvm::Value *value, const char *name = NULL);
+    llvm::Value *SmearUniform(llvm::Value *value, const char *name = NULL);
 
     llvm::Value *BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                              const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
-                              const char *name = NULL);
+    llvm::Value *PtrToIntInst(llvm::Value *value, const char *name = NULL);
     llvm::Value *IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
-    /** Given a value of some array type, return the corresponding value of
-        vector type. */
-    llvm::Value *ArrayToVectorInst(llvm::Value *value);
-    /** Given a value of some vector type, return the corresponding value of
-        array type. */
-    llvm::Value *VectorToArrayInst(llvm::Value *value);
 
     llvm::Instruction *TruncInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                                  const char *name = NULL);
@@ -337,26 +330,37 @@ public:
     llvm::Instruction *ZExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                 const char *name = NULL);
 
-    /** This GEP method is a generalization of the standard one in LLVM; it
-        supports both uniform and varying basePtr values (an array of
-        pointers) as well as uniform and varying index values (arrays of
-        indices). */
+    /** These GEP methods are generalizations of the standard ones in LLVM;
+        they support both uniform and varying basePtr values as well as
+        uniform and varying index values (arrays of indices).  Varying base
+        pointers are expected to come in as vectors of i32/i64 (depending
+        on the target), since LLVM doesn't currently support vectors of
+        pointers.  The underlying type of the base pointer must be provided
+        via the ptrType parameter */
+    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
+                                   const Type *ptrType, const char *name = NULL);
     llvm::Value *GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0,
-                                   llvm::Value *index1, const char *name = NULL);
-
-    /** This is a convenience method to generate a GEP instruction with
-        indices with values with known constant values as the ispc program
-        is being compiled. */
-    llvm::Value *GetElementPtrInst(llvm::Value *basePtr, int v0, int v1,
+                                   llvm::Value *index1, const Type *ptrType,
                                    const char *name = NULL);
+
+    /** This method returns a new pointer that represents offsetting the
+        given base pointer to point at the given element number of the
+        structure type that the base pointer points to.  (The provided
+        pointer must be a pointer to a structure type.  The ptrType gives
+        the type of the pointer, though it may be NULL if the base pointer
+        is uniform. */
+    llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum,
+                                  const Type *ptrType, const char *name = NULL);
 
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
         a gather from the multiple memory locations given by the array of
         pointer values given by the lvalue.  If the lvalue is not varying,
         then both the mask pointer and the type pointer may be NULL. */
-    llvm::Value *LoadInst(llvm::Value *lvalue, llvm::Value *mask,
-                          const Type *type, const char *name = NULL);
+    llvm::Value *LoadInst(llvm::Value *ptr, llvm::Value *mask,
+                          const Type *ptrType, const char *name = NULL);
+
+    llvm::Value *LoadInst(llvm::Value *ptr, const char *name = NULL);
 
     /** Emits an alloca instruction to allocate stack storage for the given
         type.  If a non-zero alignment is specified, the object is also
@@ -370,16 +374,14 @@ public:
 
     /** Standard store instruction; for this variant, the lvalue must be a
         single pointer, not a varying lvalue. */
-    void StoreInst(llvm::Value *rvalue, llvm::Value *lvalue, 
-                   const char *name = NULL);
+    void StoreInst(llvm::Value *value, llvm::Value *ptr);
 
     /** In this variant of StoreInst(), the lvalue may be varying.  If so,
         this corresponds to a scatter.  Whether the lvalue is uniform of
         varying, the given storeMask is used to mask the stores so that
         they only execute for the active program instances. */
-    void StoreInst(llvm::Value *rvalue, llvm::Value *lvalue,
-                   llvm::Value *storeMask, const Type *rvalueType,
-                   const char *name = NULL);
+    void StoreInst(llvm::Value *value, llvm::Value *ptr,
+                   llvm::Value *storeMask, const Type *ptrType);
 
     void BranchInst(llvm::BasicBlock *block);
     void BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock,
@@ -401,20 +403,22 @@ public:
     llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
                                   llvm::Value *val1, const char *name = NULL);
 
-    /** Emits IR to do a function call with the given arguments.  The
-        function return type must be provided in returnType. */
-    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+    /** Emits IR to do a function call with the given arguments.  If the
+        function type is a varying function pointer type, its full type
+        must be provided in funcType.  funcType can be NULL if func is a
+        uniform function pointer. */
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
                           const std::vector<llvm::Value *> &args,
                           const char *name = NULL);
 
     /** This is a convenience method that issues a call instruction to a
         function that takes just a single argument. */
-    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
                           llvm::Value *arg, const char *name = NULL);
 
     /** This is a convenience method that issues a call instruction to a
         function that takes two arguments. */
-    llvm::Value *CallInst(llvm::Value *func, const Type *returnType,
+    llvm::Value *CallInst(llvm::Value *func, const FunctionType *funcType,
                           llvm::Value *arg0, llvm::Value *arg1,
                           const char *name = NULL);
 
@@ -530,15 +534,18 @@ private:
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
+    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, 
+                                 const Type *ptrType);
+
     void restoreMaskGivenReturns(llvm::Value *oldMask);
 
-    void scatter(llvm::Value *rvalue, llvm::Value *lvalue, 
-                 llvm::Value *maskPtr, const Type *rvalueType);
-    llvm::Value *gather(llvm::Value *lvalue, llvm::Value *mask,
-                        const Type *type, const char *name);
-    void maskedStore(llvm::Value *rvalue, llvm::Value *lvalue,
-                     const Type *rvalueType, llvm::Value *maskPtr);
-    llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *value, const Type *type);
+    void scatter(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, 
+                 llvm::Value *mask);
+    void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
+                     llvm::Value *mask);
+    llvm::Value *gather(llvm::Value *ptr, const Type *ptrType, llvm::Value *mask,
+                        const char *name);
+    llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };
 
 #endif // ISPC_CTX_H
