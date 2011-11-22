@@ -1012,7 +1012,7 @@ ArrayType::GetString() const {
     // dimensions
     while (at) {
         char buf[16];
-        if (numElements > 0)
+        if (at->numElements > 0)
             sprintf(buf, "%d", at->numElements);
         else
             buf[0] = '\0';
@@ -1044,7 +1044,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     const ArrayType *at = this;
     while (at) {
         char buf[16];
-        if (numElements > 0)
+        if (at->numElements > 0)
             sprintf(buf, "%d", at->numElements);
         else
             buf[0] = '\0';
