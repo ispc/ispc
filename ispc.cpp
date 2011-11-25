@@ -75,7 +75,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
-            cpu = hostCPU.c_str();
+            cpu = strdup(hostCPU.c_str());
         else {
             fprintf(stderr, "Warning: unable to determine host CPU!\n");
             cpu = "generic";
