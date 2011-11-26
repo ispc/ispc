@@ -44,7 +44,7 @@
 #include "stmt.h"
 #include "expr.h"
 #include <stdio.h>
-#include <llvm/Module.h>
+#include <set>
 
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
     the type, returning the type that is the result. 
@@ -112,13 +112,24 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
 }
 
 
+static const char *
+lGetStorageClassName(StorageClass storageClass) {
+    switch (storageClass) {
+    case SC_NONE:     return "";
+    case SC_EXTERN:   return "extern";
+    case SC_EXTERN_C: return "extern \"C\"";
+    case SC_EXPORT:   return "export";
+    case SC_STATIC:   return "static";
+    case SC_TYPEDEF:  return "typedef";
+    default:          FATAL("Unhandled storage class in lGetStorageClassName");
+                      return "";
+    }
+}
+
+
 void
 DeclSpecs::Print() const {
-    if (storageClass == SC_EXTERN)   printf("extern ");
-    if (storageClass == SC_EXTERN_C) printf("extern \"C\" ");
-    if (storageClass == SC_EXPORT)   printf("export ");
-    if (storageClass == SC_STATIC)   printf("static ");
-    if (storageClass == SC_TYPEDEF)  printf("typedef ");
+    printf("%s ", lGetStorageClassName(storageClass));
 
     if (soaWidth > 0) printf("soa<%d> ", soaWidth);
 
@@ -310,10 +321,16 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                     // Handle more complex anonymous declarations like
                     // float (float **).
                     sprintf(buf, "__anon_parameter_%d", i);
-                    sym = new Symbol(buf, pos);
+                    sym = new Symbol(buf, d->declarators[0]->pos);
                     sym->type = d->declarators[0]->GetType(d->declSpecs);
                 }
             }
+
+            if (d->declSpecs->storageClass != SC_NONE)
+                Error(sym->pos, "Storage class \"%s\" is illegal in "
+                      "function parameter declaration for parameter \"%s\".", 
+                      lGetStorageClassName(d->declSpecs->storageClass),
+                      sym->name.c_str());
 
             const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
             if (at != NULL) {
@@ -497,6 +514,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
                              std::vector<const Type *> *elementTypes,
                              std::vector<std::string> *elementNames,
                              std::vector<SourcePos> *elementPositions) {
+    std::set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
         // FIXME: making this fake little DeclSpecs here is really
@@ -522,6 +540,12 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             }
             else
                 elementTypes->push_back(sym->type);
+
+            if (seenNames.find(sym->name) != seenNames.end())
+                Error(d->pos, "Struct member \"%s\" has same name as a "
+                      "previously-declared member.", sym->name.c_str());
+            else
+                seenNames.insert(sym->name);
 
             elementNames->push_back(sym->name);
             elementPositions->push_back(sym->pos);

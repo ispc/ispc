@@ -339,6 +339,13 @@ Function::GenerateIR() {
     llvm::Function *function = sym->function;
     assert(function != NULL);
 
+    // But if that function has a definition, we don't want to redefine it.
+    if (function->empty() == false) {
+        Error(sym->pos, "Ignoring redefinition of function \"%s\".", 
+              sym->name.c_str());
+        return;
+    }
+
     // Figure out a reasonable source file position for the start of the
     // function body.  If possible, get the position of the first actual
     // non-StmtList statment...

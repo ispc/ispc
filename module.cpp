@@ -400,10 +400,40 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
         return;
     }
 
-    if (symbolTable->LookupFunction(funSym->name.c_str(), 
-                                    functionType) != NULL)
-        // Ignore redeclaration of a function with the same name and type
-        return;
+    std::vector<Symbol *> *overloadFuncs = 
+        symbolTable->LookupFunction(funSym->name.c_str());
+    if (overloadFuncs != NULL) {
+        for (unsigned int i = 0; i < overloadFuncs->size(); ++i) {
+            Symbol *overloadFunc = (*overloadFuncs)[i];
+
+            // Check for a redeclaration of a function with the same
+            // name and type
+            if (Type::Equal(overloadFunc->type, functionType))
+                return;
+
+            // If all of the parameter types match but the return type is
+            // different, return an error--overloading by return type isn't
+            // allowed.
+            const FunctionType *ofType = 
+                dynamic_cast<const FunctionType *>(overloadFunc->type);
+            assert(ofType != NULL);
+            if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
+                int i;
+                for (i = 0; i < functionType->GetNumParameters(); ++i) {
+                    if (Type::Equal(ofType->GetParameterType(i),
+                                    functionType->GetParameterType(i)) == false)
+                        break;
+                }
+                if (i == functionType->GetNumParameters()) {
+                    Error(funSym->pos, "Illegal to overload function by return "
+                          "type only (previous declaration was at line %d of "
+                          "file %s).", overloadFunc->pos.first_line,
+                          overloadFunc->pos.name);
+                    return;
+                }
+            }
+        }
+    }
 
     if (funSym->storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
@@ -537,13 +567,6 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
         function = module->getFunction(functionName);
     }
     funSym->function = function;
-
-    // But if that function has a definition, we don't want to redefine it.
-    if (!function->empty()) {
-        Warning(funSym->pos, "Ignoring redefinition of function \"%s\".", 
-                funSym->name.c_str());
-        return;
-    }
 
     // Finally, we know all is good and we can add the function to the
     // symbol table

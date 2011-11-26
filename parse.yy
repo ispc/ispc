@@ -34,7 +34,7 @@
 %locations
 
 /* supress shift-reduces conflict message for dangling else */
-/* one for 'if', one for 'uif' */
+/* one for 'if', one for 'cif' */
 %expect 2
 
 %pure-parser
@@ -96,6 +96,8 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos);
 static std::string lGetAlternates(std::vector<std::string> &alternates);
 static const char *lGetStorageClassString(StorageClass sc);
 static bool lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage);
+static EnumType *lCreateEnumType(const char *name, std::vector<Symbol *> *enums,
+                                 SourcePos pos);
 static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
@@ -732,9 +734,18 @@ specifier_qualifier_list
                     $$ = $2;
                 }
             } 
-            else {
-                UNIMPLEMENTED;
+            else if ($1 == TYPEQUAL_INLINE) {
+                Error(@1, "\"inline\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
             }
+            else if ($1 == TYPEQUAL_TASK) {
+                Error(@1, "\"task\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
+            else
+                FATAL("Unhandled type qualifier in parser.");
         }
         else
             $$ = NULL;
@@ -773,32 +784,19 @@ enum_identifier
 enum_specifier
     : TOKEN_ENUM '{' enumerator_list '}' 
       {
-          if ($3 != NULL) {
-              EnumType *enumType = new EnumType(@1);
-
-              lFinalizeEnumeratorSymbols(*$3, enumType);
-              for (unsigned int i = 0; i < $3->size(); ++i)
-                  m->symbolTable->AddVariable((*$3)[i]);
-              enumType->SetEnumerators(*$3);
-              $$ = enumType;
-          }
-          else
-              $$ = NULL;
+          $$ = lCreateEnumType(NULL, $3, @1);
       }
     | TOKEN_ENUM enum_identifier '{' enumerator_list '}' 
       {
-          if ($4 != NULL) {
-              EnumType *enumType = new EnumType($2, $2);
-              m->symbolTable->AddType($2, enumType, @2);
-
-              lFinalizeEnumeratorSymbols(*$4, enumType);
-              for (unsigned int i = 0; i < $4->size(); ++i)
-                  m->symbolTable->AddVariable((*$4)[i]);
-              enumType->SetEnumerators(*$4);
-              $$ = enumType;
-          }
-          else
-              $$ = NULL;
+          $$ = lCreateEnumType($2, $4, @2);
+      }
+    | TOKEN_ENUM '{' enumerator_list ',' '}' 
+      {
+          $$ = lCreateEnumType(NULL, $3, @1);
+      }
+    | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}' 
+      {
+          $$ = lCreateEnumType($2, $4, @2);
       }
     | TOKEN_ENUM enum_identifier
       {
@@ -1576,6 +1574,23 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
         *value = (int)ci->getZExtValue();
         return true;
     }
+}
+
+
+static EnumType *
+lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
+    if (enums == NULL)
+        return NULL;
+
+    EnumType *enumType = name ? new EnumType(name, pos) : new EnumType(pos);
+    if (name != NULL)
+        m->symbolTable->AddType(name, enumType, pos);
+
+    lFinalizeEnumeratorSymbols(*enums, enumType);
+    for (unsigned int i = 0; i < enums->size(); ++i)
+        m->symbolTable->AddVariable((*enums)[i]);
+    enumType->SetEnumerators(*enums);
+    return enumType;
 }
 
 

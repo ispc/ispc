@@ -182,10 +182,16 @@ lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *symType,
     if (dynamic_cast<const AtomicType *>(symType) != NULL ||
         dynamic_cast<const EnumType *>(symType) != NULL ||
         dynamic_cast<const PointerType *>(symType) != NULL) {
-        if (dynamic_cast<ExprList *>(initExpr) != NULL)
-            Error(initExpr->pos, "Expression list initializers can't be used for "
-                  "variable \"%s\' with type \"%s\".", symName,
-                  symType->GetString().c_str());
+        ExprList *elist = dynamic_cast<ExprList *>(initExpr);
+        if (elist != NULL) {
+            if (elist->exprs.size() == 1)
+                lInitSymbol(lvalue, symName, symType, elist->exprs[0], ctx,
+                            pos);
+            else
+                Error(initExpr->pos, "Expression list initializers can't be used for "
+                      "variable \"%s\' with type \"%s\".", symName,
+                      symType->GetString().c_str());
+        }
         return;
     }
 

@@ -2155,7 +2155,12 @@ AssignExpr::TypeCheck() {
             return NULL;
         }
     }
-    else 
+    else if (dynamic_cast<const ArrayType *>(lhsType) != NULL) {
+        Error(pos, "Illegal to assign to array type \"%s\".",
+              lhsType->GetString().c_str());
+        return NULL;
+    }
+    else
         rvalue = TypeConvertExpr(rvalue, lhsType, lOpString(op));
 
     if (rvalue == NULL)
@@ -2755,6 +2760,12 @@ ExprList::TypeCheck() {
 
 llvm::Constant *
 ExprList::GetConstant(const Type *type) const {
+    if (exprs.size() == 1 &&
+        (dynamic_cast<const AtomicType *>(type) != NULL ||
+         dynamic_cast<const EnumType *>(type) != NULL ||
+         dynamic_cast<const PointerType *>(type) != NULL))
+        return exprs[0]->GetConstant(type);
+
     const CollectionType *collectionType = 
         dynamic_cast<const CollectionType *>(type);
     if (collectionType == NULL)
