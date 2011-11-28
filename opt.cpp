@@ -788,6 +788,35 @@ lFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
     }
 }
 
+
+/** Check to make sure that this value is actually a pointer in the end.
+    We need to make sure that given an expression like vec(offset) +
+    ptr2int(ptr), lGetBasePointer() doesn't return vec(offset) for the base
+    pointer such that we then treat ptr2int(ptr) as an offset.  This ends
+    up being important so that we don't generate LLVM GEP instructions like
+    "gep inttoptr 8, i64 %ptr", which in turn can lead to incorrect code
+    since LLVM's pointer aliasing analysis assumes that operands after the
+    first one to a GEP aren't pointers.
+ */
+static llvm::Value *
+lCheckForActualPointer(llvm::Value *v) {
+    if (v == NULL)
+        return NULL;
+    else if (llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(v->getType()))
+        return v;
+    else if (llvm::isa<llvm::PtrToIntInst>(v))
+        return v;
+    else {
+        llvm::ConstantExpr *uce = 
+            llvm::dyn_cast<llvm::ConstantExpr>(v);
+        if (uce != NULL &&
+            uce->getOpcode() == llvm::Instruction::PtrToInt)
+            return v;
+        return NULL;
+    }
+}
+
+
 /** Given a llvm::Value representing a varying pointer, this function
     checks to see if all of the elements of the vector have the same value
     (i.e. there's a common base pointer).  If so, it returns the common
@@ -813,13 +842,13 @@ lGetBasePointer(llvm::Value *v) {
             if (elements[i] != elements[i+1])
                 return NULL;
 
-        return elements[0];
+        return lCheckForActualPointer(elements[0]);
     }
 
     // This case comes up with global/static arrays
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv)
-        return cv->getSplatValue();
+    if (cv != NULL)
+        return lCheckForActualPointer(cv->getSplatValue());
 
     return NULL;
 }
@@ -1020,6 +1049,7 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         modifiedAny = true;
         goto restart;
     }
+
     return modifiedAny;
 }
 
