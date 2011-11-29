@@ -2352,7 +2352,8 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 void
 FunctionEmitContext::SyncInst() {
     llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-    llvm::Value *nullPtrValue = llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+    llvm::Value *nullPtrValue = 
+        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
     llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
                                    llvm::CmpInst::ICMP_NE,
                                    launchGroupHandle, nullPtrValue);
@@ -2365,6 +2366,11 @@ FunctionEmitContext::SyncInst() {
     if (fsync == NULL)
         FATAL("Couldn't find ISPCSync declaration?!");
     CallInst(fsync, NULL, launchGroupHandle, "");
+
+    // zero out the handle so that if ISPCLaunch is called again in this
+    // function, it knows it's starting out from scratch
+    StoreInst(nullPtrValue, launchGroupHandlePtr);
+
     BranchInst(bPostSync);
 
     SetCurrentBasicBlock(bPostSync);
