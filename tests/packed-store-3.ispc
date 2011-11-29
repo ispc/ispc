@@ -8,7 +8,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         pack[i] = 0;
     uniform int count = 0;
     if ((int)a & 1)
-        count += packed_store_active(pack, 2, a);
+        count += packed_store_active(&pack[2], a);
     RET[programIndex] = count;
 }
 

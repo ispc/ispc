@@ -2393,11 +2393,10 @@ define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
 
 define(`packed_load_and_store', `
 
-define i32 @__packed_load_active(i32 * %baseptr, i32 %start_offset, <$1 x i32> * %val_ptr,
+define i32 @__packed_load_active(i32 * %startptr, <$1 x i32> * %val_ptr,
                                  <$1 x i32> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i32 @__movmsk(<$1 x i32> %full_mask)
-  %startptr = getelementptr i32 * %baseptr, i32 %start_offset
   %mask_known = call i1 @__is_compile_time_constant_mask(<$1 x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 
@@ -2448,11 +2447,10 @@ done:
   ret i32 %nextoffset
 }
 
-define i32 @__packed_store_active(i32 * %baseptr, i32 %start_offset, <$1 x i32> %vals,
+define i32 @__packed_store_active(i32 * %startptr, <$1 x i32> %vals,
                                   <$1 x i32> %full_mask) nounwind alwaysinline {
 entry:
   %mask = call i32 @__movmsk(<$1 x i32> %full_mask)
-  %startptr = getelementptr i32 * %baseptr, i32 %start_offset
   %mask_known = call i1 @__is_compile_time_constant_mask(<$1 x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 

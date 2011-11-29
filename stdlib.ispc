@@ -385,23 +385,57 @@ static inline void prefetch_nt(const void * uniform ptr) {
      __prefetch_read_uniform_nt((uniform int8 * uniform)ptr);
 }
 
-#if 0
 static inline void prefetch_l1(const void * varying ptr) {
-    __prefetch_read_varying_1((varying int8 * varying)ptr);
+    const void * uniform ptrArray[programCount];
+    ptrArray[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        const void * uniform p = ptrArray[i];
+        prefetch_l1(p);
+    }
 }
 
 static inline void prefetch_l2(const void * varying ptr) {
-    __prefetch_read_varying_2((varying int8 * varying)ptr);
+    const void * uniform ptrArray[programCount];
+    ptrArray[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        const void * uniform p = ptrArray[i];
+        prefetch_l2(p);
+    }
 }
 
 static inline void prefetch_l3(const void * varying ptr) {
-    __prefetch_read_varying_3((varying int8 * varying)ptr);
+    const void * uniform ptrArray[programCount];
+    ptrArray[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        const void * uniform p = ptrArray[i];
+        prefetch_l3(p);
+    }
 }
 
 static inline void prefetch_nt(const void * varying ptr) {
-     __prefetch_read_varying_nt((varying int8 * varying)ptr);
+    const void * uniform ptrArray[programCount];
+    ptrArray[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        const void * uniform p = ptrArray[i];
+        prefetch_nt(p);
+    }
 }
-#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
@@ -602,27 +636,25 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 // packed load, store
 
 static inline uniform int 
-packed_load_active(uniform unsigned int a[], uniform int start,
+packed_load_active(uniform unsigned int * uniform a,
                    unsigned int * uniform vals) {
-    return __packed_load_active(&a[0], (unsigned int)start, vals,
-                                (unsigned int32)__mask);
+    return __packed_load_active(a, vals, (unsigned int32)__mask);
 }
 
 static inline uniform int
-packed_store_active(uniform unsigned int a[], uniform int start,
+packed_store_active(uniform unsigned int * uniform a,
                     unsigned int vals) {
-    return __packed_store_active(&a[0], (unsigned int)start, vals,
-                                 (unsigned int32)__mask);
+    return __packed_store_active(a, vals, (unsigned int32)__mask);
 }
 
-static inline uniform int packed_load_active(uniform int a[], uniform int start,
-                                             int * uniform vals) {
-    return __packed_load_active(&a[0], start, vals, (int32)__mask);
+static inline uniform int 
+packed_load_active(uniform int * uniform a, int * uniform vals) {
+    return __packed_load_active(a, vals, (int32)__mask);
 }
 
-static inline uniform int packed_store_active(uniform int a[], uniform int start,
-                                              int vals) {
-    return __packed_store_active(&a[0], start, vals, (int32)__mask);
+static inline uniform int 
+packed_store_active(uniform int * uniform a, int vals) {
+    return __packed_store_active(a, vals, (int32)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -649,10 +681,29 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
+                                                            (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
-}
+}                                                                       \
+static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
+    uniform TA * uniform ptrArray[programCount];                        \
+    ptrArray[programIndex] = ptr;                                       \
+    memory_barrier();                                                   \
+    TA ret;                                                             \
+    uniform int mask = lanemask();                                      \
+    for (uniform int i = 0; i < programCount; ++i) {                    \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        uniform TA * uniform p = ptrArray[i];                           \
+        uniform TA v = extract(value, i);                               \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
+                                                      (MASKTYPE)__mask); \
+        ret = insert(ret, i, r);                                        \
+    }                                                                   \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
 
 #define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB, MASKTYPE)                \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
@@ -660,7 +711,8 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval, (MASKTYPE)__mask); \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval,       \
+                                                     (MASKTYPE)__mask); \
         memory_barrier();                                               \
     }                                                                   \
     return ret;                                                         \
@@ -668,7 +720,27 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
+                                                            (MASKTYPE)__mask); \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
+static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
+                                       TA value) {                      \
+    uniform TA * uniform ptrArray[programCount];                        \
+    ptrArray[programIndex] = ptr;                                       \
+    memory_barrier();                                                   \
+    TA ret;                                                             \
+    uniform int mask = lanemask();                                      \
+    for (uniform int i = 0; i < programCount; ++i) {                    \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        uniform TA * uniform p = ptrArray[i];                           \
+        uniform TA v = extract(value, i);                               \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
+                                                      (MASKTYPE)__mask); \
+        ret = insert(ret, i, r);                                        \
+    }                                                                   \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
@@ -723,14 +795,17 @@ DEFINE_ATOMIC_OP(double,double,swap,swap,int32)
 static inline TA atomic_compare_exchange_global(                           \
          uniform TA * uniform ptr, TA oldval, TA newval) {                 \
     memory_barrier();                                                      \
-    TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval, (MASKTYPE)__mask); \
+    TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval,  \
+                                                     (MASKTYPE)__mask);    \
     memory_barrier();                                                      \
     return ret;                                                            \
 } \
 static inline uniform TA atomic_compare_exchange_global(               \
-         uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) {                 \
-    memory_barrier();                                                   \
-    uniform TA ret = __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval, (MASKTYPE)__mask); \
+         uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
+    memory_barrier();                                                      \
+    uniform TA ret =                                                    \
+        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval, \
+                                                        (MASKTYPE)__mask); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }

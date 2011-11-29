@@ -238,7 +238,7 @@ IntersectLightsWithTileMinMax(
         
         // Pack and store intersecting lights
         cif (inFrustum) {
-            tileNumLights += packed_store_active(tileLightIndices, tileNumLights, 
+            tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
                                                  lightIndex);
         }
     }
@@ -692,21 +692,21 @@ SplitTileMinMax(
         // Pack and store intersecting lights
         // TODO: Experiment with a loop here instead
         cif (inFrustum[0])
-            subtileLightOffset[0] += packed_store_active(subtileIndices, 
-                                                         subtileLightOffset[0], 
-                                                         lightIndex);
+            subtileLightOffset[0] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[0]],
+                                lightIndex);
         cif (inFrustum[1])
-            subtileLightOffset[1] += packed_store_active(subtileIndices, 
-                                                         subtileLightOffset[1], 
-                                                         lightIndex);
+            subtileLightOffset[1] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[1]],
+                                lightIndex);
         cif (inFrustum[2])
-            subtileLightOffset[2] += packed_store_active(subtileIndices, 
-                                                         subtileLightOffset[2], 
-                                                         lightIndex);
+            subtileLightOffset[2] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[2]], 
+                                lightIndex);
         cif (inFrustum[3])
-            subtileLightOffset[3] += packed_store_active(subtileIndices, 
-                                                         subtileLightOffset[3], 
-                                                         lightIndex);
+            subtileLightOffset[3] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[3]], 
+                                lightIndex);
     }
 
     subtileNumLights[0] = subtileLightOffset[0] - 0 * subtileIndicesPitch;

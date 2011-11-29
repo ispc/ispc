@@ -7,7 +7,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     for (uniform int i = 0; i < 2+programCount; ++i)
         pack[i] = 0;
     if ((int)a & 1)
-        packed_store_active(pack, 2, a);
+        packed_store_active(&pack[2], a);
     RET[programIndex] = pack[programIndex]; 
 }
 

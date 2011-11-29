@@ -8,7 +8,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     int aa = 32;
     uniform int count = 0;
     if (programIndex < 2)
-        count += packed_load_active(a, 5, &aa);
+        count += packed_load_active(&a[5], &aa);
     RET[programIndex] = aa;
 }
 
