@@ -1294,8 +1294,9 @@ BinaryExpr::GetType() const {
                 // ptr - int -> ptr
                 return type0;
         }
-        // otherwise fall through for these two...
-        assert(op == Equal || op == NotEqual);
+        // otherwise fall through for these...
+        assert(op == Lt || op == Gt || op == Le || op == Ge ||
+               op == Equal || op == NotEqual);
     }
 
     const Type *exprType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
@@ -1648,6 +1649,7 @@ BinaryExpr::TypeCheck() {
             // put in canonical order with the pointer as the first operand
             // for GetValue()
             std::swap(arg0, arg1);
+            std::swap(type0, type1);
             std::swap(pt0, pt1);
         }
 
@@ -1726,11 +1728,7 @@ BinaryExpr::TypeCheck() {
     case Sub:
     case Mul:
     case Div:
-    case Mod:
-    case Lt:
-    case Gt:
-    case Le:
-    case Ge: {
+    case Mod: {
         // Must be numeric type for these.  (And mod is special--can't be float)
         if (!type0->IsNumericType() || (op == Mod && type0->IsFloatType())) {
             Error(arg0->pos, "First operand to binary operator \"%s\" is of "
@@ -1756,6 +1754,10 @@ BinaryExpr::TypeCheck() {
             return NULL;
         return this;
     }
+    case Lt:
+    case Gt:
+    case Le:
+    case Ge:
     case Equal:
     case NotEqual: {
         const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
@@ -1763,14 +1765,14 @@ BinaryExpr::TypeCheck() {
         if (pt0 == NULL && pt1 == NULL) {
             if (!type0->IsBoolType() && !type0->IsNumericType()) {
                 Error(arg0->pos,
-                      "First operand to equality operator \"%s\" is of "
+                      "First operand to operator \"%s\" is of "
                       "non-comparable type \"%s\".", lOpString(op), 
                       type0->GetString().c_str());
                 return NULL;
             }
             if (!type1->IsBoolType() && !type1->IsNumericType()) {
                 Error(arg1->pos,
-                      "Second operand to equality operator \"%s\" is of "
+                      "Second operand to operator \"%s\" is of "
                       "non-comparable type \"%s\".", lOpString(op), 
                       type1->GetString().c_str());
                 return NULL;
@@ -5132,30 +5134,46 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             }
         }
         else {
-            // convert pointer to bool
-            assert(dynamic_cast<const AtomicType *>(toType) &&
-                   toType->IsBoolType());
-            LLVM_TYPE_CONST llvm::Type *lfu = 
-                fromType->GetAsUniformType()->LLVMType(g->ctx);
-            LLVM_TYPE_CONST llvm::PointerType *llvmFromUnifType = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(lfu);
+            assert(dynamic_cast<const AtomicType *>(toType) != NULL);
+            if (toType->IsBoolType()) {
+                // convert pointer to bool
+                LLVM_TYPE_CONST llvm::Type *lfu = 
+                    fromType->GetAsUniformType()->LLVMType(g->ctx);
+                LLVM_TYPE_CONST llvm::PointerType *llvmFromUnifType = 
+                    llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(lfu);
 
-            llvm::Value *nullPtrValue = llvm::ConstantPointerNull::get(llvmFromUnifType);
-            if (fromType->IsVaryingType())
-                nullPtrValue = ctx->SmearUniform(nullPtrValue);
+                llvm::Value *nullPtrValue = 
+                    llvm::ConstantPointerNull::get(llvmFromUnifType);
+                if (fromType->IsVaryingType())
+                    nullPtrValue = ctx->SmearUniform(nullPtrValue);
 
-            llvm::Value *exprVal = expr->GetValue(ctx);
-            llvm::Value *cmp = ctx->CmpInst(llvm::Instruction::ICmp, 
-                                            llvm::CmpInst::ICMP_NE,
-                                            exprVal, nullPtrValue, "ptr_ne_NULL");
+                llvm::Value *exprVal = expr->GetValue(ctx);
+                llvm::Value *cmp = 
+                    ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
+                                 exprVal, nullPtrValue, "ptr_ne_NULL");
 
-            if (toType->IsVaryingType()) {
-                if (fromType->IsUniformType())
-                    cmp = ctx->SmearUniform(cmp);
-                cmp = ctx->I1VecToBoolVec(cmp);
+                if (toType->IsVaryingType()) {
+                    if (fromType->IsUniformType())
+                        cmp = ctx->SmearUniform(cmp);
+                    cmp = ctx->I1VecToBoolVec(cmp);
+                }
+
+                return cmp;
             }
+            else {
+                // ptr -> int
+                llvm::Value *value = expr->GetValue(ctx);
+                if (value == NULL)
+                    return NULL;
 
-            return cmp;
+                if (toType->IsVaryingType() && fromType->IsUniformType())
+                    value = ctx->SmearUniform(value);
+
+                LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+                if (llvmToType == NULL)
+                    return NULL;
+                return ctx->PtrToIntInst(value, llvmToType, "ptr_typecast");
+            }
         }
     }
 
@@ -5304,6 +5322,17 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             cast = ctx->InsertInst(cast, conv, i);
         return cast;
     }
+    else if (toPointerType != NULL) {
+        // int -> ptr
+        if (toType->IsVaryingType() && fromType->IsUniformType())
+            exprVal = ctx->SmearUniform(exprVal);
+
+        LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+        if (llvmToType == NULL)
+            return NULL;
+
+        return ctx->IntToPtrInst(exprVal, llvmToType, "int_to_ptr");
+    }
     else {
         const AtomicType *toAtomic = dynamic_cast<const AtomicType *>(toType);
         // typechecking should ensure this is the case
@@ -5352,10 +5381,17 @@ TypeCastExpr::TypeCheck() {
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
 
+    if (fromType->IsVaryingType() && toType->IsUniformType()) {
+        Error(pos, "Can't type cast from varying type \"%s\" to uniform "
+              "type \"%s\"", fromType->GetString().c_str(),
+              toType->GetString().c_str());
+        return NULL;
+    }
+
     // First some special cases that we allow only with an explicit type cast
-    const PointerType *ptFrom = dynamic_cast<const PointerType *>(fromType);
-    const PointerType *ptTo = dynamic_cast<const PointerType *>(toType);
-    if (ptFrom != NULL && ptTo != NULL)
+    const PointerType *fromPtr = dynamic_cast<const PointerType *>(fromType);
+    const PointerType *toPtr = dynamic_cast<const PointerType *>(toType);
+    if (fromPtr != NULL && toPtr != NULL)
         // allow explicit typecasts between any two different pointer types
         return this;
 
@@ -5365,6 +5401,25 @@ TypeCastExpr::TypeCheck() {
     const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
     if ((fromAtomic || fromEnum) && (toAtomic || toEnum))
         // Allow explicit casts between all of these
+        return this;
+
+    // ptr -> int type casts
+    if (fromPtr != NULL && toAtomic != NULL && toAtomic->IsIntType()) {
+        bool safeCast = (toAtomic->basicType == AtomicType::TYPE_INT64 ||
+                         toAtomic->basicType == AtomicType::TYPE_UINT64);
+        if (g->target.is32Bit)
+            safeCast |= (toAtomic->basicType == AtomicType::TYPE_INT32 ||
+                         toAtomic->basicType == AtomicType::TYPE_UINT32);
+        if (safeCast == false)
+            Warning(pos, "Pointer type cast of type \"%s\" to integer type "
+                    "\"%s\" may lose information.", 
+                    fromType->GetString().c_str(), 
+                    toType->GetString().c_str());
+        return this;
+    }
+
+    // int -> ptr
+    if (fromAtomic != NULL && fromAtomic->IsIntType() && toPtr != NULL)
         return this;
 
     // And otherwise see if it's one of the conversions allowed to happen
@@ -5480,6 +5535,12 @@ TypeCastExpr::Print() const {
     expr->Print();
     printf(")");
     pos.Print();
+}
+
+
+Symbol *
+TypeCastExpr::GetBaseSymbol() const {
+    return expr ? expr->GetBaseSymbol() : NULL;
 }
 
 

@@ -1156,19 +1156,62 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
 
 
 llvm::Value *
-FunctionEmitContext::IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+FunctionEmitContext::PtrToIntInst(llvm::Value *value, 
+                                  LLVM_TYPE_CONST llvm::Type *toType,
                                   const char *name) {
     if (value == NULL) {
         assert(m->errorCount > 0);
         return NULL;
     }
 
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(value->getType()))
-        // no-op for varying pointers; they're already vectors of ints
-        return value;
+    LLVM_TYPE_CONST llvm::Type *fromType = value->getType();
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(fromType)) {
+        // varying pointer
+        if (fromType == toType)
+            // already the right type--done
+            return value;
+        else if (fromType->getScalarSizeInBits() > toType->getScalarSizeInBits())
+            return TruncInst(value, toType, "ptr_to_int");
+        else {
+            assert(fromType->getScalarSizeInBits() <
+                   toType->getScalarSizeInBits());
+            return ZExtInst(value, toType, "ptr_to_int");
+        }
+    }
 
     llvm::Instruction *inst = 
-        new llvm::IntToPtrInst(value, type, name ? name : "int2ptr", bblock);
+        new llvm::PtrToIntInst(value, toType, name ? name : "ptr2int", bblock);
+    AddDebugPos(inst);
+    return inst;
+}
+
+
+llvm::Value *
+FunctionEmitContext::IntToPtrInst(llvm::Value *value, 
+                                  LLVM_TYPE_CONST llvm::Type *toType,
+                                  const char *name) {
+    if (value == NULL) {
+        assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    LLVM_TYPE_CONST llvm::Type *fromType = value->getType();
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(fromType)) {
+        // varying pointer
+        if (fromType == toType)
+            // done
+            return value;
+        else if (fromType->getScalarSizeInBits() > toType->getScalarSizeInBits())
+            return TruncInst(value, toType, "int_to_ptr");
+        else {
+            assert(fromType->getScalarSizeInBits() <
+                   toType->getScalarSizeInBits());
+            return ZExtInst(value, toType, "int_to_ptr");
+        }
+    }
+
+    llvm::Instruction *inst = 
+        new llvm::IntToPtrInst(value, toType, name ? name : "int2ptr", bblock);
     AddDebugPos(inst);
     return inst;
 }

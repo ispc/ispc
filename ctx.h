@@ -41,9 +41,7 @@
 #include "ispc.h"
 #include <llvm/InstrTypes.h>
 #include <llvm/Instructions.h>
-#ifndef LLVM_2_8
 #include <llvm/Analysis/DIBuilder.h>
-#endif
 #include <llvm/Analysis/DebugInfo.h>
 
 struct CFInfo;
@@ -316,6 +314,8 @@ public:
     llvm::Value *BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                              const char *name = NULL);
     llvm::Value *PtrToIntInst(llvm::Value *value, const char *name = NULL);
+    llvm::Value *PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+                              const char *name = NULL);
     llvm::Value *IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
                               const char *name = NULL);
 

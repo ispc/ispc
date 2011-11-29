@@ -63,7 +63,7 @@
     #include <llvm/Support/StandardPasses.h>
 #else
     #include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#endif // LLVM_2_8
+#endif // LLVM_2_9
 #include <llvm/ADT/Triple.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
