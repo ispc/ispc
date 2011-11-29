@@ -832,7 +832,8 @@ PointerType::Mangle() const {
     if (baseType == NULL)
         return "";
 
-    return std::string("ptr<") + baseType->Mangle() + std::string(">");
+    return (isUniform ? std::string("uptr<") : std::string("vptr<")) + 
+        baseType->Mangle() + std::string(">");
 }
 
 
