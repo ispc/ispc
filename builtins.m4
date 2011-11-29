@@ -676,7 +676,7 @@ forloop(i, 1, eval($1-1), `
 define(`global_atomic_associative', `
 
 define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                                 <$1 x i32> %m) nounwind alwaysinline {
+                                        <$1 x i32> %m) nounwind alwaysinline {
   ; first, for any lanes where the mask is off, compute a vector where those lanes
   ; hold the identity value..
 
@@ -715,7 +715,9 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
   %eltvec`'i = insertelement <$1 x $3> %eltvec`'eval(i-1), $3 %red`'eval(i-1), i32 i')
 
   ; make the atomic call, passing it the final reduced value
-  %final0 = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %red`'eval($1-1))
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
+  %final0 = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %red`'eval($1-1))', `
+  %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst')
 
   ; now go back and compute the values to be returned for each program 
   ; instance--this just involves smearing the old value returned from the
@@ -745,6 +747,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
 
 define(`global_atomic_uniform', `
 
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
 declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
 define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
@@ -752,6 +755,14 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
   %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
   ret $3 %r
 }
+', `
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
+  %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
+  ret $3 %r
+}
+')
+
 ')
 
 ;; Macro to declare the function that implements the swap atomic.  
@@ -760,8 +771,9 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
 declare i32 @llvm.atomic.swap.i32.p0i32(i32 * %ptr, i32 %val)
-declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)
+declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)')
 
 define(`global_swap', `
 
@@ -772,7 +784,9 @@ define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
 
   per_lane($1, <$1 x i32> %mask, `
    %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-   %r_LANE_ID = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val_LANE_ID)
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
+   %r_LANE_ID = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val_LANE_ID)', `
+   %r_LANE_ID = atomicrmw xchg $2 * %ptr, $2 %val_LANE_ID seq_cst')
    %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
    store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
 
@@ -782,7 +796,9 @@ define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
 
 define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
                                                     <$1 x i32> %mask) nounwind alwaysinline {
- %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
+ %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)', `
+ %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst')
  ret $2 %r
 }
 ')
@@ -796,7 +812,8 @@ define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
 
 define(`global_atomic_exchange', `
 
-declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
+declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)')
 
 define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
                                <$1 x $2> %val, <$1 x i32> %mask) nounwind alwaysinline {
@@ -806,8 +823,10 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
   per_lane($1, <$1 x i32> %mask, `
    %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
    %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
    %r_LANE_ID = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp_LANE_ID,
-                                                         $2 %val_LANE_ID)
+                                                         $2 %val_LANE_ID)', `
+   %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst')
    %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
    store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
 
@@ -817,7 +836,9 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
                                $2 %val, <$1 x i32> %mask) nounwind alwaysinline {
-  %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)
+ifelse(`LLVM_VERSION', `LLVM_2_9',`
+  %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)', `
+  %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst')
   ret $2 %r
 }
 ')
@@ -1755,12 +1776,8 @@ define void
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetching
 
-; prefetch has a new parameter in LLVM3.0, to distinguish between instruction
-; and data caches--the declaration is now:
-; declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
-;                             i32 %cachetype)  (cachetype 1 == data cache)
-; however, the version below seems to still work...
-
+ifelse(`LLVM_VERSION', `LLVM_2_9',
+`
 declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
 
 define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
@@ -1782,7 +1799,30 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
   call void @llvm.prefetch(i8 * %0, i32 0, i32 0)
   ret void
 }
+', `
+declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
+                            i32 %cachetype) ; cachetype == 1 is dcache
 
+define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 3, i32 1)
+  ret void
+}
+
+define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 2, i32 1)
+  ret void
+}
+
+define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 1, i32 1)
+  ret void
+}
+
+define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
+  call void @llvm.prefetch(i8 * %0, i32 0, i32 0, i32 1)
+  ret void
+}
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
