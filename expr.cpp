@@ -135,6 +135,21 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 
 ///////////////////////////////////////////////////////////////////////////
 
+static Expr *
+lArrayToPointer(Expr *expr) {
+    assert(expr && dynamic_cast<const ArrayType *>(expr->GetType()));
+
+    Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
+    Expr *index = new IndexExpr(expr, zero, expr->pos);
+    Expr *addr = new AddressOfExpr(index, expr->pos);
+    addr = addr->TypeCheck();
+    assert(addr != NULL);
+    addr = addr->Optimize();
+    assert(addr != NULL);
+    return addr;
+}
+
+
 static bool
 lIsAllIntZeros(Expr *expr) {
     const Type *type = expr->GetType();
@@ -1650,6 +1665,16 @@ BinaryExpr::TypeCheck() {
         arg1 = new DereferenceExpr(arg1, arg1->pos);
         type1 = arg1->GetType();
         assert(type1 != NULL);
+    }
+
+    // Convert arrays to pointers to their first elements
+    if (dynamic_cast<const ArrayType *>(type0) != NULL) {
+        arg0 = lArrayToPointer(arg0);
+        type0 = arg0->GetType();
+    }
+    if (dynamic_cast<const ArrayType *>(type1) != NULL) {
+        arg1 = lArrayToPointer(arg1);
+        type1 = arg1->GetType();
     }
 
     const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
@@ -5241,24 +5266,18 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
     if (fromArrayType != NULL && toPointerType != NULL) {
         // implicit array to pointer to first element
-        Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, pos);
-        Expr *index = new IndexExpr(expr, zero, pos);
-        Expr *addr = new AddressOfExpr(index, pos);
-        addr = addr->TypeCheck();
-        assert(addr != NULL);
-        addr = addr->Optimize();
-        assert(addr != NULL);
-        if (Type::EqualIgnoringConst(addr->GetType(), toPointerType) == false) {
-            assert(Type::EqualIgnoringConst(addr->GetType()->GetAsVaryingType(),
+        Expr *arrayAsPtr = lArrayToPointer(expr);
+        if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
+            assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
-            addr = new TypeCastExpr(toPointerType, addr, false, pos);
-            addr = addr->TypeCheck();
-            assert(addr != NULL);
-            addr = addr->Optimize();
-            assert(addr != NULL);
+            arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, false, pos);
+            arrayAsPtr = arrayAsPtr->TypeCheck();
+            assert(arrayAsPtr != NULL);
+            arrayAsPtr = arrayAsPtr->Optimize();
+            assert(arrayAsPtr != NULL);
         }
-        assert(Type::EqualIgnoringConst(addr->GetType(), toPointerType));
-        return addr->GetValue(ctx);
+        assert(Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType));
+        return arrayAsPtr->GetValue(ctx);
     }
 
     // This also should be caught during typechecking
@@ -5738,8 +5757,8 @@ DereferenceExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
 
     Symbol *baseSym = expr->GetBaseSymbol();
-    assert(baseSym != NULL);
-    llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
+    llvm::Value *mask = baseSym ? lMaskForSymbol(baseSym, ctx) : 
+        ctx->GetFullMask();
 
     ctx->SetDebugPos(pos);
     return ctx->LoadInst(ptr, mask, type, "deref_load");
