@@ -244,34 +244,15 @@ static void raytrace_tile(uniform int x0, uniform int x1,
     uniform float widthScale = (float)(baseWidth) / (float)(width);
     uniform float heightScale = (float)(baseHeight) / (float)(height);
 
-    static const uniform float udx[16] = { 0, 1, 0, 1, 2, 3, 2, 3, 
-                                           0, 1, 0, 1, 2, 3, 2, 3 };
-    static const uniform float udy[16] = { 0, 0, 1, 1, 0, 0, 1, 1, 
-                                           2, 2, 3, 3, 2, 2, 3, 3 };
+    foreach_tiled (y = y0 ... y1, x = x0 ... x1) {
+        Ray ray;
+        generateRay(raster2camera, camera2world, x*widthScale,
+                    y*heightScale, ray);
+        BVHIntersect(nodes, triangles, ray);
 
-    // The outer loops are always over blocks of 4x4 pixels
-    for (uniform int y = y0; y < y1; y += 4) {
-        for (uniform int x = x0; x < x1; x += 4) {
-            // Now we have a block of 4x4=16 pixels to process; it will
-            // take 16/programCount iterations of this loop to process
-            // them.
-            for (uniform int o = 0; o < 16 / programCount; ++o) {
-                // Map program instances to samples in the udx/udy arrays
-                // to figure out which pixel each program instance is
-                // responsible for
-                const float dx = udx[o * programCount + programIndex];
-                const float dy = udy[o * programCount + programIndex];
-
-                Ray ray;
-                generateRay(raster2camera, camera2world, (x+dx)*widthScale,
-                            (y+dy)*heightScale, ray);
-                BVHIntersect(nodes, triangles, ray);
-
-                int offset = (y + (int)dy) * width + (x + (int)dx);
-                image[offset] = ray.maxt;
-                id[offset] = ray.hitId;
-            }
-        }
+        int offset = y * width + x;
+        image[offset] = ray.maxt;
+        id[offset] = ray.hitId;
     }
 }
 

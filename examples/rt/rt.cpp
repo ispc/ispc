@@ -199,10 +199,8 @@ int main(int argc, char *argv[]) {
     }
     fclose(f);
 
-    // round image resolution up to multiple of 16 to make things easy for
-    // the code that assigns pixels to ispc program instances
-    int height = (int(baseHeight * scale) + 0xf) & ~0xf;
-    int width = (int(baseWidth * scale) + 0xf) & ~0xf;
+    int height = int(baseHeight * scale);
+    int width = int(baseWidth * scale);
 
     // allocate images; one to hold hit object ids, one to hold depth to
     // the first interseciton

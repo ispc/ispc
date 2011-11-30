@@ -241,6 +241,31 @@ private:
 };
 
 
+/** @brief Statement implementation for parallel 'foreach' loops.
+ */
+class ForeachStmt : public Stmt {
+public:
+    ForeachStmt(const std::vector<Symbol *> &loopVars, 
+                const std::vector<Expr *> &startExprs, 
+                const std::vector<Expr *> &endExprs, 
+                Stmt *bodyStatements, bool tiled, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    std::vector<Symbol *> dimVariables;
+    std::vector<Expr *> startExprs;
+    std::vector<Expr *> endExprs;
+    bool isTiled;
+    Stmt *stmts;
+};
+
+
+
 /** @brief Statement implementation for a 'return' or 'coherent' return
     statement in the program. */
 class ReturnStmt : public Stmt {

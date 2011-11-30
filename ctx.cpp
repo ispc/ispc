@@ -68,12 +68,19 @@ struct CFInfo {
                            llvm::Value *savedContinueLanesPtr,
                            llvm::Value *savedMask, llvm::Value *savedLoopMask);
 
+    static CFInfo *GetForeach(llvm::BasicBlock *breakTarget,
+                              llvm::BasicBlock *continueTarget, 
+                              llvm::Value *savedBreakLanesPtr,
+                              llvm::Value *savedContinueLanesPtr,
+                              llvm::Value *savedMask, llvm::Value *savedLoopMask);
+
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
+    bool IsForeach() { return type == Foreach; }
     bool IsVaryingType() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop };
+    enum CFType { If, Loop, Foreach };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
@@ -102,6 +109,19 @@ private:
         savedMask = sm;
         savedLoopMask = lm;
     }
+    CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
+           llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
+           llvm::Value *lm) {
+        assert(t == Foreach);
+        type = t;
+        isUniform = false;
+        savedBreakTarget = bt;
+        savedContinueTarget = ct;
+        savedBreakLanesPtr = sb;
+        savedContinueLanesPtr = sc;
+        savedMask = sm;
+        savedLoopMask = lm;
+    }
 };
 
 
@@ -120,6 +140,18 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
     return new CFInfo(Loop, isUniform, breakTarget, continueTarget,
                       savedBreakLanesPtr, savedContinueLanesPtr,
                       savedMask, savedLoopMask);
+}
+
+
+CFInfo *
+CFInfo::GetForeach(llvm::BasicBlock *breakTarget,
+                   llvm::BasicBlock *continueTarget, 
+                   llvm::Value *savedBreakLanesPtr,
+                   llvm::Value *savedContinueLanesPtr,
+                   llvm::Value *savedMask, llvm::Value *savedForeachMask) {
+    return new CFInfo(Foreach, breakTarget, continueTarget,
+                      savedBreakLanesPtr, savedContinueLanesPtr,
+                      savedMask, savedForeachMask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -422,7 +454,7 @@ FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
 
 void
 FunctionEmitContext::EndLoop() {
-    assert(controlFlowInfo.size() && !controlFlowInfo.back()->IsIf());
+    assert(controlFlowInfo.size() && controlFlowInfo.back()->IsLoop());
     CFInfo *ci = controlFlowInfo.back();
     controlFlowInfo.pop_back();
 
@@ -441,6 +473,36 @@ FunctionEmitContext::EndLoop() {
         // into the loop, but still leaving off any lanes that executed a
         // 'return' statement.
         restoreMaskGivenReturns(ci->savedMask);
+}
+
+
+void
+FunctionEmitContext::StartForeach() {
+    // Store the current values of various loop-related state so that we
+    // can restore it when we exit this loop.
+    llvm::Value *oldMask = GetInternalMask();
+    controlFlowInfo.push_back(CFInfo::GetForeach(breakTarget, continueTarget, breakLanesPtr,
+                                                 continueLanesPtr, oldMask, loopMask));
+    continueLanesPtr = breakLanesPtr = NULL;
+    breakTarget = NULL;
+    continueTarget = NULL;
+    loopMask = NULL;
+}
+
+
+void
+FunctionEmitContext::EndForeach() {
+    assert(controlFlowInfo.size() && controlFlowInfo.back()->IsForeach());
+    CFInfo *ci = controlFlowInfo.back();
+    controlFlowInfo.pop_back();
+
+    // Restore the break/continue state information to what it was before
+    // we went into this loop.
+    breakTarget = ci->savedBreakTarget;
+    continueTarget = ci->savedContinueTarget;
+    breakLanesPtr = ci->savedBreakLanesPtr;
+    continueLanesPtr = ci->savedContinueLanesPtr;
+    loopMask = ci->savedLoopMask;
 }
 
 
@@ -635,6 +697,15 @@ FunctionEmitContext::VaryingCFDepth() const {
         if (controlFlowInfo[i]->IsVaryingType())
             ++sum;
     return sum;
+}
+
+
+bool
+FunctionEmitContext::InForeachLoop() const {
+    for (unsigned int i = 0; i < controlFlowInfo.size(); ++i)
+        if (controlFlowInfo[i]->IsForeach())
+            return true;
+    return false;
 }
 
 

@@ -101,6 +101,8 @@ extern { return TOKEN_EXTERN; }
 false { return TOKEN_FALSE; }
 float { return TOKEN_FLOAT; }
 for { return TOKEN_FOR; }
+foreach { return TOKEN_FOREACH; }
+foreach_tiled { return TOKEN_FOREACH_TILED; }
 goto { return TOKEN_GOTO; }
 if { return TOKEN_IF; }
 inline { return TOKEN_INLINE; }
@@ -132,6 +134,7 @@ varying { return TOKEN_VARYING; }
 void { return TOKEN_VOID; }
 while { return TOKEN_WHILE; }
 \"C\" { return TOKEN_STRING_C_LITERAL; }
+\.\.\. { return TOKEN_DOTDOTDOT; }
 
 L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL; }
 

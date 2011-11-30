@@ -310,11 +310,7 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
     // by 4.
     for (uniform int y = y0; y < y1; y += 4) {
         for (uniform int x = x0; x < x1; x += 4) {
-            // For each such tile, process programCount pixels at a time,
-            // until we've done all 16 of them.  Thus, we're also assuming
-            // that programCount <= 16 and that 16 is evenly dividible by
-            // programCount.
-            for (uniform int o = 0; o < 16; o += programCount) {
+            foreach (o = 0 ... 16) {
                 // These two arrays encode the mapping from [0,15] to
                 // offsets within the 4x4 pixel block so that we render
                 // each pixel inside the block
@@ -324,8 +320,7 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
                                                    2, 2, 3, 3, 2, 2, 3, 3 };
 
                 // Figure out the pixel to render for this program instance
-                int xo = x + xoffsets[o + programIndex];
-                int yo = y + yoffsets[o + programIndex];
+                int xo = x + xoffsets[o], yo = y + yoffsets[o];
 
                 // Use viewing parameters to compute the corresponding ray
                 // for the pixel

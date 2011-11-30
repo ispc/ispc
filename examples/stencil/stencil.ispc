@@ -43,9 +43,8 @@ stencil_step(uniform int x0, uniform int x1,
 
     for (uniform int z = z0; z < z1; ++z) {
         for (uniform int y = y0; y < y1; ++y) {
-            // Assumes that (x1-x0) % programCount == 0
-            for (uniform int x = x0; x < x1; x += programCount) {
-                int index = (z * Nxy) + (y * Nx) + x + programIndex;
+            foreach (x = x0 ... x1) {
+                int index = (z * Nxy) + (y * Nx) + x;
 #define A_cur(x, y, z) Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)]
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
                 float div = coef[0] * A_cur(0, 0, 0) +

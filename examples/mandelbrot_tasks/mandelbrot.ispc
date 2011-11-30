@@ -61,14 +61,12 @@ mandelbrot_scanlines(uniform int ybase, uniform int span,
     uniform int ystart = ybase + taskIndex * span;
     uniform int yend = ystart + span;
 
-    for (uniform int j = ystart; j < yend; ++j) {
-        for (uniform int i = 0; i < width; i += programCount) {
-            float x = x0 + (programIndex + i) * dx;
-            float y = y0 + j * dy;
+    foreach (yi = ystart ... yend, xi = 0 ... width) {
+        float x = x0 + xi * dx;
+        float y = y0 + yi * dy;
 
-            int index = j * width + i + programIndex;
-            output[index] = mandel(x, y, maxIterations);
-        }
+        int index = yi * width + xi;
+        output[index] = mandel(x, y, maxIterations);
     }
 }
                                

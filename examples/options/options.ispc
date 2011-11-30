@@ -59,15 +59,13 @@ export void
 black_scholes_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
                    uniform float ra[], uniform float va[], 
                    uniform float result[], uniform int count) {
-    for (uniform int i = 0; i < count; i += programCount) {
-        float S = Sa[i + programIndex], X = Xa[i + programIndex];
-        float T = Ta[i + programIndex], r = ra[i + programIndex];
-        float v = va[i + programIndex];
+    foreach (i = 0 ... count) {
+        float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
 
         float d1 = (log(S/X) + (r + v * v * .5f) * T) / (v * sqrt(T));
         float d2 = d1 - v * sqrt(T);
 
-        result[i + programIndex] = S * CND(d1) - X * exp(-r * T) * CND(d2);
+        result[i] = S * CND(d1) - X * exp(-r * T) * CND(d2);
     }
 }
 
@@ -78,10 +76,8 @@ binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
                   uniform float result[], uniform int count) {
     float V[BINOMIAL_NUM];
 
-    for (uniform int i = 0; i < count; i += programCount) {
-        float S = Sa[i + programIndex], X = Xa[i + programIndex];
-        float T = Ta[i + programIndex], r = ra[i + programIndex];
-        float v = va[i + programIndex];
+    foreach (i = 0 ... count) {
+        float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
 
         float dt = T / BINOMIAL_NUM;
         float u = exp(v * sqrt(dt));
@@ -98,6 +94,6 @@ binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
             for (uniform int k = 0; k < j; ++k)
                 V[k] = ((1 - Pu) * V[k] + Pu * V[k + 1]) / disc;
 
-        result[i + programIndex] = V[0];
+        result[i] = V[0];
     }
 }

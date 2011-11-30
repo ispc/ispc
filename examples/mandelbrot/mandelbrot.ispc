@@ -60,16 +60,16 @@ export void mandelbrot_ispc(uniform float x0, uniform float y0,
         // Note that we'll be doing programCount computations in parallel,
         // so increment i by that much.  This assumes that width evenly
         // divides programCount.
-        for (uniform int i = 0; i < width; i += programCount) {
+        foreach (i = 0 ... width) {
             // Figure out the position on the complex plane to compute the
             // number of iterations at.  Note that the x values are
             // different across different program instances, since its
             // initializer incorporates the value of the programIndex
             // variable.
-            float x = x0 + (programIndex + i) * dx;
+            float x = x0 + i * dx;
             float y = y0 + j * dy;
 
-            int index = j * width + i + programIndex;
+            int index = j * width + i;
             output[index] = mandel(x, y, maxIterations);
         }
     }

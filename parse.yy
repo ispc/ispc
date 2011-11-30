@@ -62,7 +62,11 @@
           (Current).name = NULL;                        /* new */ \
         }                                                              \
     while (0)
+
+struct ForeachDimension;
+
 }
+
 
 %{
 
@@ -102,11 +106,11 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
-    "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor",
+    "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor",
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
-    "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
-    "inline", "int", "int8", "int16", "int32", "int64", "launch", "NULL",
-    "print", "return", "signed", "sizeof",
+    "else", "enum", "export", "extern", "false", "float", "for", "foreach",
+    "foreach_tiled", "goto", "if", "inline", "int", "int8", "int16",
+    "int32", "int64", "launch", "NULL", "print", "return", "signed", "sizeof",
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
@@ -116,10 +120,26 @@ static const char *lParamListTokens[] = {
     "int8", "int16", "int32", "int64", "signed", "struct", "true",
     "uniform", "unsigned", "varying", "void", NULL 
 };
-    
+
+struct ForeachDimension {
+    ForeachDimension(Symbol *s = NULL, Expr *b = NULL, Expr *e = NULL) {
+        sym = s;
+        beginExpr = b;
+        endExpr = e;
+    }
+    Symbol *sym;
+    Expr *beginExpr, *endExpr;
+};
+
 %}
 
 %union {
+    int32_t int32Val;
+    double floatVal;
+    int64_t int64Val;
+    std::string *stringVal;
+    const char *constCharPtr;
+
     Expr *expr;
     ExprList *exprList;
     const Type *type;
@@ -136,13 +156,10 @@ static const char *lParamListTokens[] = {
     StructDeclaration *structDeclaration;
     std::vector<StructDeclaration *> *structDeclarationList;
     const EnumType *enumType;
-    Symbol *enumerator;
-    std::vector<Symbol *> *enumeratorList;
-    int32_t int32Val;
-    double floatVal;
-    int64_t int64Val;
-    std::string *stringVal;
-    const char *constCharPtr;
+    Symbol *symbol;
+    std::vector<Symbol *> *symbolList;
+    ForeachDimension *foreachDimension;
+    std::vector<ForeachDimension *> *foreachDimensionList;
 }
 
 
@@ -163,7 +180,7 @@ static const char *lParamListTokens[] = {
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
-%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH
+%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
@@ -194,8 +211,8 @@ static const char *lParamListTokens[] = {
 %type <structDeclaration> struct_declaration
 %type <structDeclarationList> struct_declaration_list
 
-%type <enumeratorList> enumerator_list
-%type <enumerator> enumerator
+%type <symbolList> enumerator_list
+%type <symbol> enumerator foreach_identifier
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -210,6 +227,9 @@ static const char *lParamListTokens[] = {
 %type <stringVal> string_constant
 %type <constCharPtr> struct_or_union_name enum_identifier
 %type <int32Val> int_constant soa_width_specifier
+
+%type <foreachDimension> foreach_dimension_specifier
+%type <foreachDimensionList> foreach_dimension_list
 
 %start translation_unit
 %%
@@ -1295,6 +1315,40 @@ cfor_scope
     : TOKEN_CFOR { m->symbolTable->PushScope(); }
     ;
 
+foreach_scope
+    : TOKEN_FOREACH { m->symbolTable->PushScope(); }
+    ;
+
+foreach_tiled_scope
+    : TOKEN_FOREACH_TILED { m->symbolTable->PushScope(); }
+    ;
+
+foreach_identifier
+    : TOKEN_IDENTIFIER
+    {
+        $$ = new Symbol(yytext, @1, AtomicType::VaryingConstInt32);
+    }
+    ;
+
+foreach_dimension_specifier
+    : foreach_identifier '=' assignment_expression TOKEN_DOTDOTDOT assignment_expression
+    {
+        $$ = new ForeachDimension($1, $3, $5);
+    }
+    ;
+
+foreach_dimension_list
+    : foreach_dimension_specifier
+    {
+        $$ = new std::vector<ForeachDimension *>;
+        $$->push_back($1);
+    }
+    | foreach_dimension_list ',' foreach_dimension_specifier
+    {
+        $$->push_back($3);
+    }
+    ;
+
 iteration_statement
     : TOKEN_WHILE '(' expression ')' statement
       { $$ = new ForStmt(NULL, $3, NULL, $5, false, @1); }
@@ -1320,6 +1374,44 @@ iteration_statement
       { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, true, @1);
         m->symbolTable->PopScope();
       }
+    | foreach_scope '(' foreach_dimension_list ')'
+     {
+         std::vector<ForeachDimension *> &dims = *$3;
+         for (unsigned int i = 0; i < dims.size(); ++i)
+             m->symbolTable->AddVariable(dims[i]->sym);
+     }
+     statement
+     {
+         std::vector<ForeachDimension *> &dims = *$3;
+         std::vector<Symbol *> syms;
+         std::vector<Expr *> begins, ends;
+         for (unsigned int i = 0; i < dims.size(); ++i) {
+             syms.push_back(dims[i]->sym);
+             begins.push_back(dims[i]->beginExpr);
+             ends.push_back(dims[i]->endExpr);
+         }
+         $$ = new ForeachStmt(syms, begins, ends, $6, false, @1);
+         m->symbolTable->PopScope();
+     }
+    | foreach_tiled_scope '(' foreach_dimension_list ')'
+     {
+         std::vector<ForeachDimension *> &dims = *$3;
+         for (unsigned int i = 0; i < dims.size(); ++i)
+             m->symbolTable->AddVariable(dims[i]->sym);
+     }
+     statement
+     {
+         std::vector<ForeachDimension *> &dims = *$3;
+         std::vector<Symbol *> syms;
+         std::vector<Expr *> begins, ends;
+         for (unsigned int i = 0; i < dims.size(); ++i) {
+             syms.push_back(dims[i]->sym);
+             begins.push_back(dims[i]->beginExpr);
+             ends.push_back(dims[i]->endExpr);
+         }
+         $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
+         m->symbolTable->PopScope();
+     }
     ;
 
 jump_statement

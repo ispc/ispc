@@ -159,6 +159,10 @@ public:
         finished. */
     void EndLoop();
 
+    /** */
+    void StartForeach();
+    void EndForeach();
+
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck
         is true, then if we're in a 'varying' loop, code will be emitted to
         see if all of the lanes want to break, in which case a jump to the
@@ -182,6 +186,8 @@ public:
     /** Returns the current number of nested levels of 'varying' control
         flow */
     int VaryingCFDepth() const;
+
+    bool InForeachLoop() const;
 
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
