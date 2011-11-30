@@ -106,14 +106,14 @@ static const char *lBuiltinTokens[] = {
     "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
     "else", "enum", "export", "extern", "false", "float", "for", "goto", "if",
     "inline", "int", "int8", "int16", "int32", "int64", "launch", "NULL",
-    "print", "return", "sizeof",
+    "print", "return", "signed", "sizeof",
     "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
     "unsigned", "varying", "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
     "bool", "const", "double", "enum", "false", "float", "int",
-    "int8", "int16", "int32", "int64", "struct", "true",
+    "int8", "int16", "int32", "int64", "signed", "struct", "true",
     "uniform", "unsigned", "varying", "void", NULL 
 };
     
@@ -158,7 +158,7 @@ static const char *lParamListTokens[] = {
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK 
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
-%token TOKEN_CHAR TOKEN_INT TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
+%token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
@@ -724,6 +724,13 @@ specifier_qualifier_list
                 $$ = $2->GetAsVaryingType();
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
+            else if ($1 == TYPEQUAL_SIGNED) {
+                if ($2->IsIntType() == false) {
+                    Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
+                          $2->GetString().c_str());
+                    $$ = $2;
+                }
+            }
             else if ($1 == TYPEQUAL_UNSIGNED) {
                 const Type *t = $2->GetAsUnsignedType();
                 if (t)
@@ -865,6 +872,7 @@ type_qualifier
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
+    | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
     ;
 

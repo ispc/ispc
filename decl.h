@@ -79,8 +79,9 @@ enum StorageClass {
 #define TYPEQUAL_UNIFORM    (1<<1)
 #define TYPEQUAL_VARYING    (1<<2)
 #define TYPEQUAL_TASK       (1<<3)
-#define TYPEQUAL_UNSIGNED   (1<<4)
-#define TYPEQUAL_INLINE     (1<<5)
+#define TYPEQUAL_SIGNED     (1<<4)
+#define TYPEQUAL_UNSIGNED   (1<<5)
+#define TYPEQUAL_INLINE     (1<<6)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 

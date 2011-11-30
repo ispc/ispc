@@ -55,13 +55,22 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         return NULL;
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
+        if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)
+            Error(pos, "Illegal to apply both \"signed\" and \"unsigned\" "
+                  "qualifiers.");
+
         const Type *unsignedType = type->GetAsUnsignedType();
         if (unsignedType != NULL)
             type = unsignedType;
         else
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
               type->GetString().c_str());
+
     }
+
+    if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false)
+        Error(pos, "\"signed\" qualifier is illegal with non-integer type "
+              "\"%s\".", type->GetString().c_str());
 
     if ((typeQualifiers & TYPEQUAL_CONST) != 0)
         type = type->GetAsConstType();
@@ -138,6 +147,7 @@ DeclSpecs::Print() const {
     if (typeQualifiers & TYPEQUAL_UNIFORM)   printf("uniform ");
     if (typeQualifiers & TYPEQUAL_VARYING)   printf("varying ");
     if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
+    if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
 
     printf("%s", baseType->GetString().c_str());
