@@ -1171,6 +1171,9 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         FATAL("Unhandled target ISA in preprocessor symbol definition");
     }
 
+    opts.addMacroDef("ISPC_MAJOR_VERSION=1");
+    opts.addMacroDef("ISPC_MINOR_VERSION=1");
+
     if (g->includeStdlib) {
         if (g->opt.disableAsserts) 
             opts.addMacroDef("assert(x)=");
