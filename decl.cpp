@@ -527,6 +527,9 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
     std::set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;
+        if (type == NULL)
+            continue;
+
         // FIXME: making this fake little DeclSpecs here is really
         // disgusting
         DeclSpecs ds(type);
