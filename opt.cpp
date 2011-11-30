@@ -854,6 +854,27 @@ lGetBasePointer(llvm::Value *v) {
 }
 
 
+/** Given the two operands to a constant add expression, see if we have the
+    form "base pointer + offset", whee op0 is the base pointer and op1 is
+    the offset; if so return the base and the offset. */
+static llvm::Constant *
+lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1, 
+                              llvm::Constant **delta) {
+    llvm::ConstantExpr *op = llvm::dyn_cast<llvm::ConstantExpr>(op0);
+    if (op == NULL || op->getOpcode() != llvm::Instruction::PtrToInt)
+        // the first operand isn't a pointer
+        return NULL;
+
+    llvm::ConstantInt *opDelta = llvm::dyn_cast<llvm::ConstantInt>(op1);
+    if (opDelta == NULL)
+        // the second operand isn't an integer operand
+        return NULL;
+
+    *delta = opDelta;
+    return op0;
+}
+
+
 /** Given a varying pointer in ptrs, this function checks to see if it can
     be determined to be indexing from a common uniform base pointer.  If
     so, the function returns the base pointer llvm::Value and initializes
@@ -885,7 +906,67 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
             return base;
         }
     }
-        
+
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(ptrs);
+    if (cv != NULL) {
+        // Indexing into global arrays can lead to this form, with
+        // ConstantVectors..
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        cv->getVectorElements(elements);
+
+        llvm::Constant *delta[ISPC_MAX_NVEC];
+        for (unsigned int i = 0; i < elements.size(); ++i) {
+            // For each element, try to decompose it into either a straight
+            // up base pointer, or a base pointer plus an integer value.
+            llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(elements[i]);
+            if (ce == NULL)
+                return NULL;
+
+            delta[i] = NULL;
+            llvm::Value *elementBase = NULL; // base pointer for this element
+            if (ce->getOpcode() == llvm::Instruction::PtrToInt) {
+                // If the element is just a ptr to int instruction, treat
+                // it as having an offset of zero
+                elementBase = ce;
+                delta[i] = g->target.is32Bit ? LLVMInt32(0) : LLVMInt64(0);
+            }
+            else if (ce->getOpcode() == llvm::Instruction::Add) {
+                // Try both orderings of the operands to see if we can get
+                // a pointer+offset out of them.
+                elementBase =
+                    lGetConstantAddExprBaseOffset(ce->getOperand(0), 
+                                                  ce->getOperand(1),
+                                                  &delta[i]);
+                if (elementBase == NULL)
+                    elementBase = 
+                        lGetConstantAddExprBaseOffset(ce->getOperand(1), 
+                                                      ce->getOperand(0),
+                                                      &delta[i]);
+            }
+
+            // We weren't able to find a base pointer in the above.  (We
+            // don't expect this to happen; if it does, it may be necessary
+            // to handle more cases in the decomposition above.)
+            if (elementBase == NULL)
+                return NULL;
+
+            assert(delta[i] != NULL);
+            if (base == NULL)
+                // The first time we've found a base pointer
+                base = elementBase;
+            else if (base != elementBase)
+                // Different program instances have different base
+                // pointers, so no luck.
+                return NULL;
+        }
+
+        assert(base != NULL);
+        llvm::ArrayRef<llvm::Constant *> deltas(&delta[0], 
+                                                &delta[elements.size()]);
+        *offsets = llvm::ConstantVector::get(deltas);
+        return base;
+    }
+
     return NULL;
 }
 
