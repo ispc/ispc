@@ -2158,13 +2158,14 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // Figure out the first lane that still needs its function
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtr);
-            llvm::Function *cttz = m->module->getFunction("__count_trailing_zeros");
+            llvm::Function *cttz = 
+                m->module->getFunction("__count_trailing_zeros_i32");
             assert(cttz != NULL);
             llvm::Value *firstLane = CallInst(cttz, NULL, LaneMask(currentMask),
                                               "first_lane");
 
-            // Get the pointer to the function we're going to call this time through:
-            // ftpr = func[firstLane]
+            // Get the pointer to the function we're going to call this
+            // time through: ftpr = func[firstLane]
             llvm::Value *fptr = 
                 llvm::ExtractElementInst::Create(func, firstLane, 
                                                  "extract_fptr", bblock);

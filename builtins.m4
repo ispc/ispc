@@ -1094,9 +1094,24 @@ define <$1 x i32> @__sext_varying_bool(<$1 x i32>) nounwind readnone alwaysinlin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; count trailing zeros
 
-define i32 @__count_trailing_zeros(i32) nounwind readnone alwaysinline {
+define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.cttz.i32(i32 %0)
   ret i32 %c
+}
+
+define i64 @__count_trailing_zeros_i64(i64) nounwind readnone alwaysinline {
+  %c = call i64 @llvm.cttz.i64(i64 %0)
+  ret i64 %c
+}
+
+define i32 @__count_leading_zeros_i32(i32) nounwind readnone alwaysinline {
+  %c = call i32 @llvm.ctlz.i32(i32 %0)
+  ret i32 %c
+}
+
+define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
+  %c = call i64 @llvm.ctlz.i64(i64 %0)
+  ret i64 %c
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2500,8 +2515,11 @@ done:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
-; count trailing zeros
+; count leading/trailing zeros
+declare i32 @llvm.ctlz.i32(i32)
+declare i64 @llvm.ctlz.i64(i64)
 declare i32 @llvm.cttz.i32(i32)
+declare i64 @llvm.cttz.i64(i64)
 
 define(`reduce_equal_aux', `
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
