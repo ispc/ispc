@@ -348,6 +348,9 @@ struct Globals {
     /** Indicates whether all warning messages should be surpressed. */
     bool disableWarnings;
 
+    /** Indicates whether warnings should be issued as errors. */
+    bool warningsAsErrors;
+
     /** Indicates whether line wrapping of error messages to the terminal
         width should be disabled. */
     bool disableLineWrap;

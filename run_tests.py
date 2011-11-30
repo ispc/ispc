@@ -107,8 +107,8 @@ def run_tasks_from_queue(queue):
         # is this a test to make sure an error is issued?
         want_error = (filename.find("tests_errors") != -1)
         if want_error == True:
-            ispc_cmd = "ispc --nowrap %s --arch=%s --target=%s" % \
-                ( filename, options.arch, options.target)
+            ispc_cmd = "ispc --werror --nowrap %s --arch=%s --target=%s" % \
+                (filename, options.arch, options.target)
             sp = subprocess.Popen(shlex.split(ispc_cmd), stdin=None, stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE)
             output = sp.communicate()[1]

@@ -104,6 +104,7 @@ static void usage(int ret) {
 #endif // !ISPC_IS_WINDOWS
     printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
+    printf("    [--werror]\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
     printf("    [--wno-perf]\t\t\tDon't issue warnings related to performance-related issues\n");
     printf("    <file to compile or \"-\" for stdin>\n");
@@ -283,6 +284,8 @@ int main(int Argc, char *Argv[]) {
             g->disableWarnings = true;
             g->emitPerfWarnings = false;
         }
+        else if (!strcmp(argv[i], "--werror"))
+            g->warningsAsErrors = true;
         else if (!strcmp(argv[i], "--nowrap"))
             g->disableLineWrap = true;
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))

@@ -291,7 +291,9 @@ Warning(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint("Warning", p, fmt, args);
+    lPrint(g->warningsAsErrors ? "Error" : "Warning", p, fmt, args);
+    if (g->warningsAsErrors)
+        ++m->errorCount;
     va_end(args);
 }
 
