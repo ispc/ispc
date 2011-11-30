@@ -625,12 +625,23 @@ public:
     int EstimateCost() const;
     llvm::Constant *GetConstant(const Type *type) const;
 
-    bool ResolveOverloads(const std::vector<const Type *> &argTypes);
+    /** Given the types of the function arguments, in the presence of
+        function overloading, this method resolves which actual function
+        the arguments match best.  If the argCouldBeNULL parameter is
+        non-NULL, each element indicates whether the corresponding argument
+        is the number zero, indicating that it could be a NULL pointer.
+        This parameter may be NULL (for cases where overload resolution is
+        being done just given type information without the parameter
+        argument expressions being available.  It returns true on success.
+     */
+    bool ResolveOverloads(const std::vector<const Type *> &argTypes,
+                          const std::vector<bool> *argCouldBeNULL = NULL);
     Symbol *GetMatchingFunction();
 
 private:
     bool tryResolve(int (*matchFunc)(const Type *, const Type *),
-                    const std::vector<const Type *> &argTypes);
+                    const std::vector<const Type *> &argTypes,
+                    const std::vector<bool> *argCouldBeNULL);
 
     /** Name of the function that is being called. */
     std::string name;

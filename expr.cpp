@@ -136,6 +136,29 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 ///////////////////////////////////////////////////////////////////////////
 
 static bool
+lIsAllIntZeros(Expr *expr) {
+    const Type *type = expr->GetType();
+    if (type == NULL || type->IsIntType() == false)
+        return false;
+
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    if (ce == NULL)
+        return false;
+
+    uint64_t vals[ISPC_MAX_NVEC];
+    int count = ce->AsUInt64(vals);
+    if (count == 1) 
+        return (vals[0] == 0);
+    else {
+        for (int i = 0; i < count; ++i)
+            if (vals[i] != 0)
+                return false;
+    }
+    return true;
+}
+
+
+static bool
 lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             bool failureOk, const char *errorMsgBase, SourcePos pos) {
     /* This function is way too long and complex.  Is type conversion stuff
@@ -255,6 +278,21 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         return true;
     }
 
+    if (toPointerType != NULL && fromAtomicType != NULL && 
+        fromAtomicType->IsIntType() && expr != NULL &&
+        lIsAllIntZeros(*expr)) {
+        // We have a zero-valued integer expression, which can also be
+        // treated as a NULL pointer that can be converted to any other
+        // pointer type.
+        Expr *npe = new NullPointerExpr(pos);
+        if (lDoTypeConv(PointerType::Void, toType, &npe,
+                        failureOk, errorMsgBase, pos)) {
+            *expr = npe;
+            return true;
+        }
+        return false;
+    }
+        
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
     if (Type::Equal(toType, fromType->GetAsConstType()))
@@ -1294,6 +1332,7 @@ BinaryExpr::GetType() const {
                 // ptr - int -> ptr
                 return type0;
         }
+
         // otherwise fall through for these...
         assert(op == Lt || op == Gt || op == Le || op == Ge ||
                op == Equal || op == NotEqual);
@@ -1762,6 +1801,20 @@ BinaryExpr::TypeCheck() {
     case NotEqual: {
         const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
         const PointerType *pt1 = dynamic_cast<const PointerType *>(type1);
+
+        // Convert '0' in expressions where the other expression is a
+        // pointer type to a NULL pointer.
+        if (pt0 != NULL && lIsAllIntZeros(arg1)) {
+            arg1 = new NullPointerExpr(pos);
+            type1 = arg1->GetType();
+            pt1 = dynamic_cast<const PointerType *>(type1);
+        }
+        else if (pt1 != NULL && lIsAllIntZeros(arg0)) {
+            arg0 = new NullPointerExpr(pos);
+            type0 = arg1->GetType();
+            pt0 = dynamic_cast<const PointerType *>(type0);
+        }
+
         if (pt0 == NULL && pt1 == NULL) {
             if (!type0->IsBoolType() && !type0->IsNumericType()) {
                 Error(arg0->pos,
@@ -2613,6 +2666,7 @@ FunctionCallExpr::TypeCheck() {
         FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
         if (fse != NULL) {
             std::vector<const Type *> argTypes;
+            std::vector<bool> argCouldBeNULL;
             for (unsigned int i = 0; i < args->exprs.size(); ++i) {
                 if (args->exprs[i] == NULL)
                     return NULL;
@@ -2620,40 +2674,43 @@ FunctionCallExpr::TypeCheck() {
                 if (t == NULL)
                     return NULL;
                 argTypes.push_back(t);
+                argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
             }
 
-            if (fse->ResolveOverloads(argTypes) == true) {
-                func = fse->TypeCheck();
+            if (fse->ResolveOverloads(argTypes, &argCouldBeNULL) == false)
+                return NULL;
 
-                if (func != NULL) {
-                    const PointerType *pt = 
-                        dynamic_cast<const PointerType *>(func->GetType());
-                    const FunctionType *ft = (pt == NULL) ? NULL : 
-                        dynamic_cast<const FunctionType *>(pt->GetBaseType());
-                    if (ft != NULL) {
-                        if (ft->isTask) {
-                            if (!isLaunch)
-                                Error(pos, "\"launch\" expression needed to call function "
-                                      "with \"task\" qualifier.");
-                            if (!launchCountExpr)
-                                return NULL;
+            func = fse->TypeCheck();
+            if (func == NULL)
+                return NULL;
 
-                            launchCountExpr = 
-                                TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
-                                                "task launch count");
-                            if (launchCountExpr == NULL)
-                                return NULL;
-                        }
-                        else {
-                            if (isLaunch)
-                                Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                                      "qualified function.");
-                            assert(launchCountExpr == NULL);
-                        }
-                    }
-                    else
-                        Error(pos, "Valid function name must be used for function call.");
-                }
+            const PointerType *pt = 
+                dynamic_cast<const PointerType *>(func->GetType());
+            const FunctionType *ft = (pt == NULL) ? NULL : 
+                dynamic_cast<const FunctionType *>(pt->GetBaseType());
+            if (ft == NULL) {
+                Error(pos, "Valid function name must be used for function call.");
+                return NULL;
+            }
+
+            if (ft->isTask) {
+                if (!isLaunch)
+                    Error(pos, "\"launch\" expression needed to call function "
+                          "with \"task\" qualifier.");
+                if (!launchCountExpr)
+                    return NULL;
+
+                launchCountExpr = 
+                    TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
+                                    "task launch count");
+                if (launchCountExpr == NULL)
+                    return NULL;
+            }
+            else {
+                if (isLaunch)
+                    Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                          "qualified function.");
+                assert(launchCountExpr == NULL);
             }
         }
         else {
@@ -6368,7 +6425,8 @@ lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
  */
 bool
 FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
-                               const std::vector<const Type *> &callTypes) {
+                               const std::vector<const Type *> &callTypes,
+                               const std::vector<bool> *argCouldBeNULL) {
     const char *funName = candidateFunctions->front()->name.c_str();
 
     std::vector<std::pair<int, Symbol *> > matches;
@@ -6402,7 +6460,17 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
                 dynamic_cast<const FunctionType *>(callTypes[i]) != NULL)
                 return false;
             
-            int argCost = matchFunc(callTypes[i], paramType);
+            int argCost;
+            if (argCost == -1 && argCouldBeNULL != NULL && 
+                (*argCouldBeNULL)[i] == true &&
+                dynamic_cast<const PointerType *>(paramType) != NULL)
+                // If the passed argument value is zero and this is a
+                // pointer type, then it can convert to a NULL value of
+                // that pointer type.
+                argCost = 0;
+            else
+                argCost= matchFunc(callTypes[i], paramType);
+
             if (argCost == -1)
                 // If the predicate function returns -1, we have failed no
                 // matter what else happens, so we stop trying
@@ -6447,7 +6515,8 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
 
 
 bool
-FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes) {
+FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes,
+                                     const std::vector<bool> *argCouldBeNULL) {
     triedToResolve = true;
 
     // Functions with names that start with "__" should only be various
@@ -6460,32 +6529,32 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes) 
 
     // Is there an exact match that doesn't require any argument type
     // conversion (other than converting type -> reference type)?
-    if (tryResolve(lExactMatch, argTypes))
+    if (tryResolve(lExactMatch, argTypes, argCouldBeNULL))
         return true;
 
     if (exactMatchOnly == false) {
         // Try to find a single match ignoring references
-        if (tryResolve(lMatchIgnoringReferences, argTypes))
+        if (tryResolve(lMatchIgnoringReferences, argTypes, argCouldBeNULL))
             return true;
 
         // Try to find an exact match via type widening--i.e. int8 ->
         // int16, etc.--things that don't lose data.
-        if (tryResolve(lMatchWithTypeWidening, argTypes))
+        if (tryResolve(lMatchWithTypeWidening, argTypes, argCouldBeNULL))
             return true;
 
         // Next try to see if there's a match via just uniform -> varying
         // promotions.
-        if (tryResolve(lMatchIgnoringUniform, argTypes))
+        if (tryResolve(lMatchIgnoringUniform, argTypes, argCouldBeNULL))
             return true;
 
         // Try to find a match via type conversion, but don't change
         // unif->varying
-        if (tryResolve(lMatchWithTypeConvSameVariability,
-                       argTypes))
+        if (tryResolve(lMatchWithTypeConvSameVariability, argTypes,
+                       argCouldBeNULL))
             return true;
     
         // Last chance: try to find a match via arbitrary type conversion.
-        if (tryResolve(lMatchWithTypeConv, argTypes))
+        if (tryResolve(lMatchWithTypeConv, argTypes, argCouldBeNULL))
             return true;
     }
 
