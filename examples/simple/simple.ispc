@@ -34,9 +34,7 @@
 
 export void simple(uniform float vin[], uniform float vout[], 
                    uniform int count) {
-    // Compute the result for 'programCount' values in parallel
-    for (uniform int i = 0; i < count; i += programCount) {
-        int index = i + programIndex;
+    foreach (index = 0 ... count) {
         // Load the appropriate input value for this program instance.
         float v = vin[index];
 
