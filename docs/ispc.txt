@@ -58,6 +58,7 @@ Contents:
   + `Basic Command-line Options`_
   + `Selecting The Compilation Target`_
   + `The Preprocessor`_
+  + `Debugging`_
 
 * `The ISPC Language`_
 
@@ -106,26 +107,8 @@ Contents:
   + `Interoperability Overview`_
   + `Data Layout`_
   + `Data Alignment and Aliasing`_
-
-* `Using ISPC Effectively`_
-
   + `Restructuring Existing Programs to Use ISPC`_
   + `Understanding How to Interoperate With the Application's Data`_
-  + `Communicating Between SPMD Program Instances`_
-  + `Gather and Scatter`_
-  + `8 and 16-bit Integer Types`_
-  + `Low-level Vector Tricks`_
-  + `Debugging`_
-  + `The "Fast math" Option`_
-  + `"Inline" Aggressively`_
-  + `Small Performance Tricks`_
-  + `Instrumenting Your ISPC Programs`_
-  + `Using Scan Operations For Variable Output`_
-  + `Application-Supplied Execution Masks`_
-  + `Explicit Vector Programming With Uniform Short Vector Types`_
-  + `Choosing A Target Vector Width`_
-  + `Compiling With Support For Multiple Instruction Sets`_
-  + `Implementing Reductions Efficiently`_
 
 * `Disclaimer and Legal Information`_
 
@@ -396,6 +379,23 @@ indicating the target instruction set is defined.  With an SSE2 target,
 ``ISPC_TARGET_SSE2`` is defined; ``ISPC_TARGET_SSE4`` is defined for SSE4,
 and ``ISPC_TARGET_AVX`` for AVX.  Finally, ``PI`` is defined for
 convenience, having the value 3.1415926535.
+
+ISPC_MAJOR_VERSION, ISPC_MINOR_VERSION
+
+Debugging
+---------
+
+Support for debugging in ``ispc`` is in progress.  On Linux\* and Mac
+OS\*, the ``-g`` command-line flag can be supplied to the compiler,
+which causes it to generate debugging symbols.  Running ``ispc`` programs
+in the debugger, setting breakpoints, printing out variables and the like
+all generally works, though there is occasional unexpected behavior.
+
+Another option for debugging (the only current option on Windows\*) is to
+use the ``print`` statement for ``printf()`` style debugging.  (See `Output
+Functions`_ for more information.)  You can also use the ability to call
+back to application code at particular points in the program, passing a set
+of variable values to be logged or otherwise analyzed from there.
 
 
 The ISPC Language
@@ -2762,9 +2762,6 @@ to the compiler's requirement of no aliasing.
 (In the future, ``ispc`` will have a mechanism to indicate that pointers
 may alias.)
 
-Using ISPC Effectively
-======================
-
 Restructuring Existing Programs to Use ISPC
 -------------------------------------------
 
@@ -2786,12 +2783,14 @@ style is often effective.
 
 Carefully choose how to do the exact mapping of computation to SPMD program
 instances.  This choice can impact the mix of gather/scatter memory access
-versus coherent memory access, for example.  (See more on this in the
-section `Gather and Scatter`_ below.)  This decision can also impact the
+versus coherent memory access, for example.  (See more on this topic in the
+`ispc Performance Tuning Guide`_.)  This decision can also impact the
 coherence of control flow across the running SPMD program instances, which
 can also have a significant effect on performance; in general, creating
 groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
+
+.. _ispc Performance Tuning Guide: http://ispc.github.com/perf.html
 
 Understanding How to Interoperate With the Application's Data
 -------------------------------------------------------------
@@ -2951,497 +2950,6 @@ elements to work with and then proceeds with the computation.
           len[4*i + programIndex] = l;
       }
   }
-
-
-Communicating Between SPMD Program Instances
---------------------------------------------
-
-The ``broadcast()``, ``rotate()``, and ``shuffle()`` standard library
-routines provide a variety of mechanisms for the running program instances
-to communicate values to each other during execution.  See the section
-`Cross-Program Instance Operations`_ for more information about their
-operation.
-
-
-Gather and Scatter
-------------------
-
-The CPU is a poor fit for SPMD execution in some ways, the worst of which
-is handling of general memory reads and writes from SPMD program instances.
-For example, in a "simple" array index:
-
-::
-
-    int i = ....;
-    uniform float x[10] = { ... };
-    float f = x[i];
-
-Since the index ``i`` is a varying value, the various SPMD program
-instances will in general be reading different locations in the array
-``x``.  Because the CPU doesn't have a gather instruction, the ``ispc``
-compiler has to serialize these memory reads, performing a separate memory
-load for each running program instance, packing the result into ``f``.
-(And the analogous case would happen for a write into ``x[i]``.)
-
-In many cases, gathers like these are unavoidable; the running program
-instances just need to access incoherent memory locations.  However, if the
-array index ``i`` could actually be declared and used as a ``uniform``
-variable, the resulting array index is substantially more
-efficient.  This is another case where using ``uniform`` whenever applicable
-is of benefit.
-
-In some cases, the ``ispc`` compiler is able to deduce that the memory
-locations accessed are either all the same or are uniform.  For example,
-given:
-
-::
-
-  uniform int x = ...;
-  int y = x;
-  return array[y];
-
-The compiler is able to determine that all of the program instances are
-loading from the same location, even though ``y`` is not a ``uniform``
-variable.  In this case, the compiler will transform this load to a regular vector
-load, rather than a general gather.
-
-Sometimes the running program instances will access a
-linear sequence of memory locations; this happens most frequently when
-array indexing is done based on the built-in ``programIndex`` variable.  In
-many of these cases, the compiler is also able to detect this case and then
-do a vector load.  For example, given:
-
-::
-
-    uniform int x = ...;
-    return array[2*x + programIndex];
-
-A regular vector load is done from array, starting at offset ``2*x``.
-
-
-8 and 16-bit Integer Types
---------------------------
-
-The code generated for 8 and 16-bit integer types is generally not as
-efficient as the code generated for 32-bit integer types.  It is generally
-worthwhile to use 32-bit integer types for intermediate computations, even
-if the final result will be stored in a smaller integer type.
-
-Low-level Vector Tricks
------------------------
-
-Many low-level Intel® SSE coding constructs can be implemented in ``ispc``
-code.  For example, the following code efficiently reverses the sign of the
-given values.
-
-::
-
-  float flipsign(float a) {
-      unsigned int i = intbits(a);
-      i ^= 0x80000000;
-      return floatbits(i);
-  }
-
-This code compiles down to a single XOR instruction.
-
-Debugging
----------
-
-Support for debugging in ``ispc`` is in progress.  On Linux\* and Mac
-OS\*, the ``-g`` command-line flag can be supplied to the compiler,
-which causes it to generate debugging symbols.  Running ``ispc`` programs
-in the debugger, setting breakpoints, printing out variables and the like
-all generally works, though there is occasional unexpected behavior.
-
-Another option for debugging (the only current option on Windows\*) is
-to use the ``print`` statement for ``printf()``
-style debugging.  You can also use the ability to call back to
-application code at particular points in the program, passing a set of
-variable values to be logged or otherwise analyzed from there.
-
-The "Fast math" Option
-----------------------
-
-``ispc`` has a ``--fast-math`` command-line flag that enables a number of
-optimizations that may be undesirable in code where numerical preceision is
-critically important.  For many graphics applications, the
-approximations may be acceptable.  The following two optimizations are
-performed when ``--fast-math`` is used.  By default, the ``--fast-math``
-flag is off.
-
-* Expressions like ``x / y``, where ``y`` is a compile-time constant, are
-  transformed to ``x * (1./y)``, where the inverse value of ``y`` is
-  precomputed at compile time.
-
-* Expressions like ``x / y``, where ``y`` is not a compile-time constant,
-  are transformed to ``x * rcp(y)``, where ``rcp()`` maps to the
-  approximate reciprocal instruction from the standard library.
-
-
-"Inline" Aggressively
----------------------
-
-Inlining functions aggressively is generally beneficial for performance
-with ``ispc``.  Definitely use the ``inline`` qualifier for any short
-functions (a few lines long), and experiment with it for longer functions.
-
-Small Performance Tricks
-------------------------
-
-Performance is slightly improved by declaring variables at the same block
-scope where they are first used.  For example, in code like the
-following, if the lifetime of ``foo`` is only within the scope of the
-``if`` clause, write the code like this:  
-
-::
-
-    float func() {
-        ....
-        if (x < y) {
-            float foo;
-            ... use foo ...
-        }
-    }
-
-Try not to write code as:
-
-::
-
-    float func() {
-        float foo;
-        ....
-        if (x < y) {
-            ... use foo ...
-        }
-    }
-
-Doing so can reduce the amount of masked store instructions that the
-compiler needs to generate.
-
-Instrumenting Your ISPC Programs
---------------------------------
-
-``ispc`` has an optional instrumentation feature that can help you
-understand performance issues.  If a program is compiled using the
-``--instrument`` flag, the compiler emits calls to a function with the
-following signature at various points in the program (for
-example, at interesting points in the control flow, when scatters or
-gathers happen.)
-
-::
-
-    extern "C" {
-        void ISPCInstrument(const char *fn, const char *note, 
-                            int line, int mask);
-    }
-
-This function is passed the file name of the ``ispc`` file running, a short
-note indicating what is happening, the line number in the source file, and
-the current mask of active SPMD program lanes.  You must provide an
-implementation of this function and link it in with your application.
-
-For example, when the ``ispc`` program runs, this function might be called
-as follows:
-
-::
-
-   ISPCInstrument("foo.ispc", "function entry", 55, 0xf);
-
-This call indicates that at the currently executing program has just
-entered the function defined at line 55 of the file ``foo.ispc``, with a
-mask of all lanes currently executing (assuming a four-wide Intel® SSE
-target machine).
-
-For a fuller example of the utility of this functionality, see
-``examples/aobench_instrumented`` in the ``ispc`` distribution.  Ths
-example includes an implementation of the ``ISPCInstrument`` function that
-collects aggregate data about the program's execution behavior.
-
-When running this example, you will want to direct to the ``ao`` executable
-to generate a low resolution image, because the instrumentation adds
-substantial execution overhead.  For example:
-
-::
-
-    % ./ao 1 32 32
-
-After the ``ao`` program exits, a summary report along the following lines
-will be printed.  In the first few lines, you can see how many times a few
-functions were called, and the average percentage of SIMD lanes that were
-active upon function entry.
-
-:: 
-
-    ao.ispc(0067) - function entry: 342424 calls (0 / 0.00% all off!), 95.86% active lanes
-    ao.ispc(0067) - return: uniform control flow: 342424 calls (0 / 0.00% all off!), 95.86% active lanes
-    ao.ispc(0071) - function entry: 1122 calls (0 / 0.00% all off!), 97.33% active lanes
-    ao.ispc(0075) - return: uniform control flow: 1122 calls (0 / 0.00% all off!), 97.33% active lanes
-    ao.ispc(0079) - function entry: 10072 calls (0 / 0.00% all off!), 45.09% active lanes
-    ao.ispc(0088) - function entry: 36928 calls (0 / 0.00% all off!), 97.40% active lanes
-    ...
-
-
-Using Scan Operations For Variable Output
------------------------------------------
-
-One important application of the ``exclusive_scan_add()`` function in the
-standard library is when program instances want to generate a variable amount
-of output and when one would like that output to be densely packed in a
-single array.  For example, consider the code fragment below:
-
-::
-
-    uniform int func(uniform float outArray[], ...) {
-       int numOut = ...;  // figure out how many to be output
-       float outLocal[MAX_OUT]; // staging area
-       // put results in outLocal[0], ..., outLocal[numOut-1]
-       int startOffset = exclusive_scan_add(numOut);
-       for (int i = 0; i < numOut; ++i)
-           outArray[startOffset + i] = outLocal[i];
-       return reduce_add(numOut);
-    }
-
-Here, each program instance has computed a number, ``numOut``, of values to
-output, and has stored them in the ``outLocal`` array.  Assume that four
-program instances are running and that the first one wants to output one
-value, the second two values, and the third and fourth three values each.
-In this case, ``exclusive_scan_add()`` will return the values (0, 1, 3, 6)
-to the four program instances, respectively.  The first program instance
-will write its one result to ``outArray[0]``, the second will write its two
-values to ``outArray[1]`` and ``outArray[2]``, and so forth.  The
-``reduce_add`` call at the end returns the total number of values that the
-program instances have written to the array.
-
-Application-Supplied Execution Masks
-------------------------------------
-
-Recall that when execution transitions from the application code to an
-``ispc`` function, all of the program instances are initially executing.
-In some cases, it may desired that only some of them are running, based on
-a data-dependent condition computed in the application program.  This
-situation can easily be handled via an additional parameter from the
-application.
-
-As a simple example, consider a case where the application code has an
-array of ``float`` values and we'd like the ``ispc`` code to update
-just specific values in that array, where which of those values to be
-updated has been determined by the application.  In C++ code, we might
-have:
-
-::
-
-    int count = ...;
-    float *array = new float[count];
-    bool *shouldUpdate = new bool[count];
-    // initialize array and shouldUpdate
-    ispc_func(array, shouldUpdate, count);
-
-Then, the ``ispc`` code could process this update as:
-
-::
-
-    export void ispc_func(uniform float array[], uniform bool update[],
-                          uniform int count) {
-        for (uniform int i = 0; i < count; i += programCount) {
-            cif (update[i+programIndex] == true)
-                // update array[i+programIndex]...
-        }
-    }
-
-(In this case a "coherent" if statement is likely to be worthwhile if the
-``update`` array will tend to have sections that are either all-true or
-all-false.)
-
-Explicit Vector Programming With Uniform Short Vector Types
------------------------------------------------------------
-
-The typical model for programming in ``ispc`` is an *implicit* parallel
-model, where one writes a program that is apparently doing scalar
-computation on values and the program is then vectorized to run in parallel
-across the SIMD lanes of a processor.  However, ``ispc`` also has some
-support for explicit vector unit programming, where the vectorization is
-explicit.  Some computations may be more effectively described in the
-explicit model rather than the implicit model.
-
-This support is provided via ``uniform`` instances of short vectors 
-(as were introduced in the `Short Vector Types`_ section).  Specifically, 
-if this short program
-
-::
-
-    export uniform float<8> madd(uniform float<8> a, 
-                                 uniform float<8> b, uniform float<8> c) {
-        return a + b * c;
-    }
-
-is compiled with the AVX target, ``ispc`` generates the following assembly:
-
-::
-    _madd:
-	vmulps	%ymm2, %ymm1, %ymm1
-	vaddps	%ymm0, %ymm1, %ymm0
-	ret
-
-(And similarly, if compiled with a 4-wide SSE target, two ``mulps`` and two
-``addps`` instructions are generated, and so forth.)
-
-Note that ``ispc`` doesn't currently support control-flow based on
-``uniform`` short vector types; it is thus not possible to write code like:
-
-::
-
-    export uniform int<8> count(uniform float<8> a, uniform float<8> b) {
-        uniform int<8> sum = 0;
-        while (a++ < b)
-            ++sum;
-    }
-
-
-Choosing A Target Vector Width
-------------------------------
-
-By default, ``ispc`` compiles to the natural vector width of the target
-instruction set.  For example, for SSE2 and SSE4, it compiles four-wide,
-and for AVX, it complies 8-wide.  For some programs, higher performance may
-be seen if the program is compiled to a doubled vector width--8-wide for
-SSE and 16-wide for AVX.  
-
-For workloads that don't require many of registers, this method can lead to
-significantly more efficient execution thanks to greater instruction level
-parallelism and amortization of various overhead over more program
-instances.  For other workloads, it may lead to a slowdown due to higher
-register pressure; trying both approaches for key kernels may be
-worthwhile.
-
-This option is only available for each of the SSE2, SSE4 and AVX targets.
-It is selected with the ``--target=sse2-x2``, ``--target=sse4-x2`` and
-``--target=avx-x2`` options, respectively.
-
-
-Compiling With Support For Multiple Instruction Sets
-----------------------------------------------------
-
-``ispc`` can also generate output that supports multiple target instruction
-sets, choosing the most appropriate one at runtime.  For example, if you
-run the command:
-
-::
-
-   ispc foo.ispc -o foo.o --target=sse2,sse4-x2,avx-x2
-
-Then four object files will be generated: ``foo_sse2.o``, ``foo_sse4.o``,
-``foo_avx.o``, and ``foo.o``.[#]_  Link all of these into your executable, and
-when you call a function in ``foo.ispc`` from your application code,
-``ispc`` will determine which instruction sets are supported by the CPU the
-code is running on and will call the most appropraite version of the
-function available.  
-
-.. [#] Similarly, if you choose to generate assembly langauage output or
-   LLVM bitcode output, multiple versions of those files will be created.
-
-In general, the version of the function that runs will be the one in the
-most general instruction set that is supported by the system.  If you only
-compile SSE2 and SSE4 variants and run on a system that supports AVX, for
-example, then the SSE4 variant will be executed.  If the system doesn't
-is not able to run any of the available variants of the function (for
-example, trying to run a function that only has SSE4 and AVX variants on a
-system that only supports SSE2), then the standard library ``abort()``
-function will be called.
-
-One subtlety is that all non-static global variables (if any) must have the
-same size and layout with all of the targets used.  For example, if you
-have the global variables:
-
-::
-
-   uniform int foo[2*programCount];
-   int bar;
-
-and compile to both SSE2 and AVX targets, both of these variables will have
-different sizes (the first due to program count having the value 4 for SSE2
-and 8 for AVX, and the second due to ``varying`` types having different
-numbers of elements with the two targets--essentially the same issue as the
-first.)
-
-
-Implementing Reductions Efficiently
------------------------------------
-
-It's often necessary to compute a "reduction" over a data set--for example,
-one might want to add all of the values in an array, compute their minimum,
-etc.  ``ispc`` provides a few capabilities that make it easy to efficiently
-compute reductions like these.  However, it's important to use these
-capabilities appropriately for best results.
-
-As an example, consider the task of computing the sum of all of the values
-in an array.  In C code, we might have:
-
-::
-
-    /* C implementation of a sum reduction */
-    float sum(const float array[], int count) {
-        float sum = 0;
-        for (int i = 0; i < count; ++i)
-            sum += array[i];
-        return sum;
-    } 
-
-Of course, exactly this computation could also be expressed in ``ispc``,
-though without any benefit from vectorization:
-
-::
-
-    /* inefficient ispc implementation of a sum reduction */
-    uniform float sum(const uniform float array[], uniform int count) {
-        uniform float sum = 0;
-        for (uniform int i = 0; i < count; ++i)
-            sum += array[i];
-        return sum;
-    } 
-
-As a first try, one might try using the ``reduce_add()`` function from the
-``ispc`` standard library; it takes a ``varying`` value and returns the sum
-of that value across all of the active program instances (see
-`Cross-Program Instance Operations`_ for more details).
-
-::
-
-    /* inefficient ispc implementation of a sum reduction */
-    uniform float sum(const uniform float array[], uniform int count) {
-        uniform float sum = 0;
-        // Assumes programCount evenly divides count
-        for (uniform int i = 0; i < count; i += programCount)
-            sum += reduce_add(array[i+programIndex]);
-        return sum;
-    } 
-
-This implementation loads a set of ``programCount`` values from the array,
-one for each of the program instances, and then uses ``reduce_add`` to
-reduce across the program instances and then update the sum.  Unfortunately
-this approach loses most benefit from vectorization, as it does more work
-on the cross-program instance ``reduce_add()`` call than it saves from the
-vector load of values.
-
-The most efficient approach is to do the reduction in two phases: rather
-than using a ``uniform`` variable to store the sum, we maintain a varying
-value, such that each program instance is effectively computing a local
-partial sum on the subset of array values that it has loaded from the
-array.  When the loop over array elements concludes, a single call to
-``reduce_add()`` computes the final reduction across each of the program
-instances' elements of ``sum``.  This approach effectively compiles to a
-single vector load and a single vector add for each ``programCount`` worth
-of values--very efficient code in the end.
-
-::
-
-    /* good ispc implementation of a sum reduction */
-    uniform float sum(const uniform float array[], uniform int count) {
-        float sum = 0;
-        // Assumes programCount evenly divides count
-        for (uniform int i = 0; i < count; i += programCount)
-            sum += array[i+programIndex];
-        return reduce_add(sum);
-    } 
 
 
 Disclaimer and Legal Information
