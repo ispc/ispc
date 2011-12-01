@@ -48,6 +48,8 @@ Contents:
 
 * `Recent Changes to ISPC`_
 
+  + `Updating ISPC Programs For Changes In ISPC 1.1`_
+
 * `Getting Started with ISPC`_
 
   + `Installing ISPC`_
@@ -62,18 +64,27 @@ Contents:
 
 * `The ISPC Language`_
 
+  + `Relationship To The C Programming Language`_
   + `Lexical Structure`_
-  + `Basic Types and Type Qualifiers`_
-  + `Function Pointer Types`_
-  + `Enumeration Types`_
-  + `Short Vector Types`_
-  + `Struct and Array Types`_
+  + `Types`_
+
+    * `Basic Types and Type Qualifiers`_
+    * `Function Pointer Types`_
+    * `Enumeration Types`_
+    * `Short Vector Types`_
+    * `Struct and Array Types`_
+
   + `Declarations and Initializers`_
-  + `Function Declarations`_
   + `Expressions`_
   + `Control Flow`_
-  + `Functions`_
-  + `C Constructs not in ISPC`_
+
+    * `Conditional Statements: "if"`_
+    * `Basic Iteration Statements: "for", "while", and "do"`_
+    * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
+    * `Functions and Function Calls`_
+
+      + `Function Declarations`_
+      + `Function Overloading`_
 
 * `Parallel Execution Model in ISPC`_
 
@@ -110,6 +121,8 @@ Contents:
   + `Restructuring Existing Programs to Use ISPC`_
   + `Understanding How to Interoperate With the Application's Data`_
 
+* `Related Languages`_
+
 * `Disclaimer and Legal Information`_
 
 * `Optimization Notice`_
@@ -119,6 +132,9 @@ Recent Changes to ISPC
 
 See the file ``ReleaseNotes.txt`` in the ``ispc`` distribution for a list
 of recent changes to the compiler.
+
+Updating ISPC Programs For Changes In ISPC 1.1
+----------------------------------------------
 
 Getting Started with ISPC
 =========================
@@ -407,6 +423,9 @@ parallel execution model (versus C's serial model), C code is not directly
 portable to ``ispc``, although starting with working C code and porting it
 to ``ispc`` can be an efficient way to write ``ispc`` programs. 
 
+Relationship To The C Programming Language
+------------------------------------------
+
 Lexical Structure
 -----------------
 
@@ -540,6 +559,9 @@ A number of tokens are used for grouping in ``ispc``:
   * - ``{``, ``}``
     - Compound statements  
 
+
+Types
+-----
 
 Basic Types and Type Qualifiers
 -------------------------------
@@ -906,31 +928,6 @@ Structures can also be initialized only with element values in braces:
     Color d = { 0.5, .75, 1.0 }; // r = 0.5, ...
 
 
-Function Declarations
----------------------
-
-Functions can be declared with a number of qualifiers that affect their
-visibility and capabilities.  As in C/C++, functions have global visibility
-by default.  If a function is declared with a ``static`` qualifier, then it
-is only visible in the file in which it was declared.
-
-Any function that can be launched with the ``launch`` construct in ``ispc``
-must have a ``task`` qualifier; see `Task Parallelism: Language Syntax`_
-for more discussion of launching tasks in ``ispc``.
-
-Functions that are intended to be called from C/C++ application code must
-have the ``export`` qualifier.  This causes them to have regular C linkage
-and to have their declarations included in header files, if the ``ispc``
-compiler is directed to generated a C/C++ header file for the file it
-compiled.
-
-Finally, any function defined with an ``inline`` qualifier will always be
-inlined by ``ispc``; ``inline`` is not a hint, but forces inlining.  The
-compiler will opportunistically inline short functions depending on their
-complexity, but any function that should always be inlined should have the
-``inline`` qualifier.
-
-
 Expressions
 -----------
 
@@ -958,6 +955,46 @@ Structure member access and array indexing also work as in C.
 
 Control Flow
 ------------
+
+Conditional Statements: "if"
+----------------------------
+
+Basic Iteration Statements: "for", "while", and "do"
+----------------------------------------------------
+
+Parallel Iteration Statements: "foreach" and "foreach_tiled"
+------------------------------------------------------------
+
+Functions and Function Calls
+----------------------------
+
+Function Declarations
+---------------------
+
+Functions can be declared with a number of qualifiers that affect their
+visibility and capabilities.  As in C/C++, functions have global visibility
+by default.  If a function is declared with a ``static`` qualifier, then it
+is only visible in the file in which it was declared.
+
+Any function that can be launched with the ``launch`` construct in ``ispc``
+must have a ``task`` qualifier; see `Task Parallelism: Language Syntax`_
+for more discussion of launching tasks in ``ispc``.
+
+Functions that are intended to be called from C/C++ application code must
+have the ``export`` qualifier.  This causes them to have regular C linkage
+and to have their declarations included in header files, if the ``ispc``
+compiler is directed to generated a C/C++ header file for the file it
+compiled.
+
+Finally, any function defined with an ``inline`` qualifier will always be
+inlined by ``ispc``; ``inline`` is not a hint, but forces inlining.  The
+compiler will opportunistically inline short functions depending on their
+complexity, but any function that should always be inlined should have the
+``inline`` qualifier.
+
+
+Function Overloading
+--------------------
 
 ``ispc`` supports most of C's control flow constructs, including ``if``,
 ``for``, ``while``, ``do``.  You can use ``break`` and ``continue``
@@ -1335,13 +1372,8 @@ at run-time, in which case it can jump to a simpler code path or otherwise
 save work.
 
 The first of these statements is ``cif``, indicating an ``if`` statement
-that is expected to be coherent.  Recall from the `The
-SPMD-on-SIMD Execution Model`_ section that ``if`` statements with a
-``uniform`` test compile to more efficient code than ``if`` tests with
-varying tests.  ``cif`` can provide many benefits of ``if`` with a
-uniform test in the case where the test is actually varying.
-
-The usage of ``cif`` in code is just the same as ``if``:
+that is expected to be coherent.  The usage of ``cif`` in code is just the
+same as ``if``:
 
 ::
 
@@ -1353,47 +1385,7 @@ The usage of ``cif`` in code is just the same as ``if``:
 
 ``cif`` provides a hint to the compiler that you expect that most of the
 executing SPMD programs will all have the same result for the ``if``
-condition.  In this case, the code the compiler generates for the ``if``
-test is along the lines of the following pseudo-code:
-
-::
-
-   bool expr = /* evaluate cif condition */
-   if (all(expr)) {
-       // run "true" case of if test only
-   } else if (!any(expr)) {
-       // run "false" case of if test only
-   } else {
-       // run both true and false cases, updating mask appropriately
-   }
-
-(For comparison, see the discussion of how regular ``if`` statements are
-executed from the `The SPMD-on-SIMD Execution Model`_
-section.)
-
-For ``if`` statements where the different running SPMD program instances
-don't have coherent values for the boolean ``if`` test, using ``cif``
-introduces some additional overhead from the ``all`` and ``any`` tests as
-well as the corresponding branches.  For cases where the program
-instances often do compute the same boolean value, this overhead is
-worthwhile.  If the control flow is in fact usually incoherent, this
-overhead only costs performance.
-
-In a similar fashion, ``ispc`` provides ``cfor``, ``cwhile``, ``cdo``,
-``cbreak``, ``ccontinue``, and ``creturn`` statements.  These statements
-are semantically the same as the corresponding non-"c"-prefixed functions.
-
-For example, when ``ispc`` encounters a regular ``continue`` statement in
-the middle of loop, it disables the mask bits for the program instances
-that executed the ``continue`` and then executes the remainder of the loop
-body, under the expectation that other executing program instances will
-still need to run those instructions.  If you expect that all running
-program instances will often execute ``continue`` together, then
-``ccontinue`` provides the compiler a hint to do extra work to check if
-every running program instance continued, in which case it can jump to the
-end of the loop, saving the work of executing the otherwise meaningless
-instructions.
-
+condition.
 
 Program Instance Convergence
 ----------------------------
@@ -2951,6 +2943,9 @@ elements to work with and then proceeds with the computation.
       }
   }
 
+
+Related Languages
+=================
 
 Disclaimer and Legal Information
 ================================
