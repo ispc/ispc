@@ -60,6 +60,9 @@ static void usage(int ret) {
     printf("This is the Intel(r) SPMD Program Compiler (ispc), build %s (%s)\n\n", 
            BUILD_DATE, BUILD_VERSION);
     printf("usage: ispc\n");
+    printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
+    printf("                          \t\taddressing calculations are done by default, even\n");
+    printf("                          \t\ton 64-bit target architectures.)\n");
     printf("    [--arch={%s}]\t\tSelect target architecture\n", 
            Target::SupportedTargetArchs());
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
@@ -83,7 +86,6 @@ static void usage(int ret) {
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
     printf("    [-O0/-O1]\t\t\t\tSet optimization level (-O1 is default)\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
-    printf("        32-bit-addressing\t\tUse 32-bit math for addressing calculations even on 64-bit targets.\n");
     printf("        disable-assertions\t\tRemove assertion statements from final code.\n");
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
@@ -197,6 +199,17 @@ int main(int Argc, char *Argv[]) {
             usage(0);
         else if (!strncmp(argv[i], "-D", 2))
             g->cppArgs.push_back(argv[i]);
+        else if (!strncmp(argv[i], "--addressing=", 13)) {
+            if (atoi(argv[i] + 13) == 64)
+                g->opt.force32BitAddressing = false;
+            else if (atoi(argv[i] + 13) == 32)
+                g->opt.force32BitAddressing = 32;
+            else {
+                fprintf(stderr, "Addressing width \"%s\" invalid--only 32 and "
+                        "64 are allowed.\n", argv[i]+13);
+                usage(1);
+            }
+        }
         else if (!strncmp(argv[i], "--arch=", 7))
             arch = argv[i] + 7;
         else if (!strncmp(argv[i], "--cpu=", 6))
@@ -250,8 +263,6 @@ int main(int Argc, char *Argv[]) {
                 g->opt.fastMath = true;
             else if (!strcmp(opt, "fast-masked-vload"))
                 g->opt.fastMaskedVload = true;
-            else if (!strcmp(opt, "32-bit-addressing"))
-                g->opt.force32BitAddressing = true;
             else if (!strcmp(opt, "disable-assertions"))
                 g->opt.disableAsserts = true;
             else if (!strcmp(opt, "disable-loop-unroll"))

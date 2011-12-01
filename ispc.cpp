@@ -317,7 +317,7 @@ Opt::Opt() {
     level = 1;
     fastMath = false;
     fastMaskedVload = false;
-    force32BitAddressing = false;
+    force32BitAddressing = true;
     unrollLoops = true;
     disableAsserts = false;
     disableHandlePseudoMemoryOps = false;
