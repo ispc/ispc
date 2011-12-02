@@ -97,7 +97,6 @@ Float32ToUnorm8(float f) {
 }
 
 
-// tile width must be a multiple of programCount (SIMD size)
 static void
 ComputeZBounds(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -117,9 +116,9 @@ ComputeZBounds(
     float laneMinZ = cameraFar;
     float laneMaxZ = cameraNear;
     for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-        for (uniform int32 x = tileStartX; x < tileEndX; x += programCount) {
+        foreach (x = tileStartX ... tileEndX) {
             // Unproject depth buffer Z value into view space
-            float z = zBuffer[(y * gBufferWidth + x) + programIndex];
+            float z = zBuffer[y * gBufferWidth + x];
             float viewSpaceZ = cameraProj_43 / (z - cameraProj_33);
 
             // Work out Z bounds for our samples
@@ -135,8 +134,6 @@ ComputeZBounds(
 }
 
 
-// tile width must be a multiple of programCount (SIMD size)
-// numLights must currently be a multiple of programCount (SIMD size)
 export uniform int32
 IntersectLightsWithTileMinMax(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -197,9 +194,7 @@ IntersectLightsWithTileMinMax(
 
     uniform int32 tileNumLights = 0;
 
-    for (uniform int32 baseLightIndex = 0; baseLightIndex < numLights; 
-         baseLightIndex += programCount) {
-        int32 lightIndex = baseLightIndex + programIndex;
+    foreach (lightIndex = 0 ... numLights) {
         float light_positionView_z = light_positionView_z_array[lightIndex];
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
@@ -214,32 +209,31 @@ IntersectLightsWithTileMinMax(
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
-        if (!any(inFrustum)) 
-            continue;
+        if (any(inFrustum)) {
+            float light_positionView_x = light_positionView_x_array[lightIndex];
+            float light_positionView_y = light_positionView_y_array[lightIndex];
 
-        float light_positionView_x = light_positionView_x_array[lightIndex];
-        float light_positionView_y = light_positionView_y_array[lightIndex];
+            d = light_positionView_z * frustumPlanes_z[0] + 
+                light_positionView_x * frustumPlanes_xy[0];
+            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[0] + 
-            light_positionView_x * frustumPlanes_xy[0];
-        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+            d = light_positionView_z * frustumPlanes_z[1] + 
+                light_positionView_x * frustumPlanes_xy[1];
+            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[1] + 
-            light_positionView_x * frustumPlanes_xy[1];
-        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+            d = light_positionView_z * frustumPlanes_z[2] + 
+                light_positionView_y * frustumPlanes_xy[2];
+            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-        d = light_positionView_z * frustumPlanes_z[2] + 
-            light_positionView_y * frustumPlanes_xy[2];
-        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-
-        d = light_positionView_z * frustumPlanes_z[3] + 
-            light_positionView_y * frustumPlanes_xy[3];
-        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+            d = light_positionView_z * frustumPlanes_z[3] + 
+                light_positionView_y * frustumPlanes_xy[3];
+            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
         
-        // Pack and store intersecting lights
-        cif (inFrustum) {
-            tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
-                                                 lightIndex);
+            // Pack and store intersecting lights
+            cif (inFrustum) {
+                tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
+                                                     lightIndex);
+            }
         }
     }
 
@@ -247,8 +241,6 @@ IntersectLightsWithTileMinMax(
 }
 
 
-// tile width must be a multiple of programCount (SIMD size)
-// numLights must currently be a multiple of programCount (SIMD size)
 static uniform int32
 IntersectLightsWithTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -286,7 +278,6 @@ IntersectLightsWithTile(
 }
 
 
-// tile width must be a multiple of programCount (SIMD size)
 export void
 ShadeTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -310,8 +301,8 @@ ShadeTile(
     if (tileNumLights == 0 || visualizeLightCount) {
         uniform unsigned int8 c = (unsigned int8)(min(tileNumLights << 2, 255));
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-            for (uniform int32 x = tileStartX; x < tileEndX; x += programCount) {
-                int32 framebufferIndex = (y * gBufferWidth + x) + programIndex;
+            foreach (x = tileStartX ... tileEndX) {
+                int32 framebufferIndex = (y * gBufferWidth + x);
                 framebuffer_r[framebufferIndex] = c;
                 framebuffer_g[framebufferIndex] = c;
                 framebuffer_b[framebufferIndex] = c;
@@ -324,9 +315,8 @@ ShadeTile(
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
             uniform float positionScreen_y = -(((0.5f + y) * twoOverGBufferHeight) - 1.f);
 
-            for (uniform int32 x = tileStartX; x < tileEndX; x += programCount) {
-                uniform int32 gBufferOffsetBase = y * gBufferWidth + x;
-                int32 gBufferOffset = gBufferOffsetBase + programIndex;
+            foreach (x = tileStartX ... tileEndX) {
+                int32 gBufferOffset = y * gBufferWidth + x;
                 
                 // Reconstruct position and (negative) view vector from G-buffer
                 float surface_positionView_x, surface_positionView_y, surface_positionView_z;
@@ -336,7 +326,7 @@ ShadeTile(
 
                 // Compute screen/clip-space position
                 // NOTE: Mind DX11 viewport transform and pixel center!
-                float positionScreen_x = (0.5f + (float)(x + programIndex)) * 
+                float positionScreen_x = (0.5f + (float)(x)) * 
                     twoOverGBufferWidth - 1.0f;
 
                 // Unproject depth buffer Z value into view space
@@ -550,7 +540,6 @@ RenderStatic(uniform InputHeader &inputHeader,
 // Routines for dynamic decomposition path
 
 // This computes the z min/max range for a whole row worth of tiles.
-// The tile width must be a multiple of programCount (SIMD size)
 export void
 ComputeZBoundsRow(
     uniform int32 tileY,
@@ -644,12 +633,7 @@ SplitTileMinMax(
     subtileLightOffset[2] = 2 * subtileIndicesPitch;
     subtileLightOffset[3] = 3 * subtileIndicesPitch;
 
-    for (int32 i = programIndex; i < numLights; i += programCount) {
-        // TODO: ISPC says gather required here when it actually
-        // isn't... this could be fixed this by nesting an if() within a
-        // uniform loop, but I'm not totally sure if that's a win
-        // overall. For now we'll just eat the perf cost for cleanliness
-        // since the below are real gathers anyways.
+    foreach (i = 0 ... numLights) {
         int32 lightIndex = lightIndices[i];
 
         float light_positionView_x = light_positionView_x_array[lightIndex];
