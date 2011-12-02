@@ -77,8 +77,9 @@ Contents:
     * `Basic Types and Type Qualifiers`_
     * `"uniform" and "varying" Qualifiers`_
     * `Defining New Names For Types`_
-    * `Pointer and Reference Types`_
+    * `Pointer Types`_
     * `Function Pointer Types`_
+    * `Reference Types`_
     * `Enumeration Types`_
     * `Short Vector Types`_
     * `Struct and Array Types`_
@@ -89,13 +90,12 @@ Contents:
 
     * `Conditional Statements: "if"`_
     * `Basic Iteration Statements: "for", "while", and "do"`_
-    * `"Coherent" Control Flow Statements: "cif", "cfor", and Friends`_
+    * `"Coherent" Control Flow Statements: "cif" and Friends`_
     * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
     * `Parallel Iteration with "programIndex" and "programCount"`_
     * `Functions and Function Calls`_
 
       + `Function Overloading`_
-      + `Varying Function Pointers`_
 
     * `Task Parallel Execution`_
 
@@ -105,16 +105,29 @@ Contents:
 * `The ISPC Standard Library`_
 
   + `Math Functions`_
+
+    * `Basic Math Functions`_
+    * `Bit-Level Operations`_
+    * `Transcendental Functions`_
+    * `Pseudo-Random Numbers`_
+
   + `Output Functions`_
   + `Assertions`_
   + `Cross-Program Instance Operations`_
-  + `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
-  + `Packed Load and Store Operations`_
-  + `Conversions To and From Half-Precision Floats`_
-  + `Atomic Operations and Memory Fences`_
-  + `Prefetches`_
-  + `System Information`_
-  + `Low-Level Bits`_
+
+    * `Reductions`_
+
+  + `Data Conversions And Storage`_
+
+    * `Packed Load and Store Operations`_
+    * `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
+    * `Conversions To and From Half-Precision Floats`_
+
+  + `Systems Programming Support`_
+
+    * `Atomic Operations and Memory Fences`_
+    * `Prefetches`_
+    * `System Information`_
 
 * `Interoperability with the Application`_
 
@@ -474,6 +487,12 @@ of variable values to be logged or otherwise analyzed from there.
 Parallel Execution Model in ISPC
 ================================
 
+invariant: will never execute with mask "all off" (at least not observably)
+
+make the notion of a uniform pc + a mask a clear component
+
+define what we mean by control flow coherence here
+
 handwave to point forward to the language reference in the following
 section
 
@@ -613,9 +632,29 @@ There is thus no need for a ``syncthreads``--type construct to synchronize
 the executing program instances in cases where program instances would like
 to share data or commicate with each other.
 
+If a function pointer is ``varying``, then it has a possibly-different
+value for all running program instances.  Given a call to a varying
+function pointer, ``ispc`` maintains as much execution convergence as
+possible; the code executed finds the set of unique function pointers over
+the currently running program instances and calls each one just once, such
+that the executing program instances when it is called are the set of
+active program instances that had that function pointer value.  The order
+in which the various function pointers are called in this case is
+indefined.
+
 
 Data Races Within a Gang
 ------------------------
+
+sequence points, this works since writes from first statement will be seen
+as having gone to memory by the second
+
+::
+
+    int value = ...;
+    uniform int v[programCount];
+    v[programIndex] = value; 
+    value = v[(programIndex+1)%programCount];
 
 Although the SPMD model assumes that program instances are independent, you
 can write code that has data races across the program instances.  For
@@ -732,8 +771,8 @@ can be an efficient way to quickly write ``ispc`` programs.
 
 This section describes the syntax and semantics of the ``ispc`` language.
 To understand how to use ``ispc``, you need to understand both the language
-syntax and ``ispc``'s parallel execution model, which is described in the
-following section, `Parallel Execution Model in ISPC`_.
+syntax and ``ispc``'s parallel execution model, which was described in the
+previous section, `Parallel Execution Model in ISPC`_.
 
 Relationship To The C Programming Language
 ------------------------------------------
@@ -769,22 +808,23 @@ which will be highlighted in the below.)
   values
 * Reference types (e.g. ``const float &foo``)
 * Comments delimited by ``//``
+* Variables can be declared anywhere in blocks, not just at their start.
 * Iteration variables for ``for`` loops can be declared in the ``for``
   statement itself (e.g. ``for (int i = 0; ...``) 
 * The ``inline`` qualifier to hint that a function should be inlined 
 * Function overloading by parameter type
 * Hexidecimal floating-point constants
 
-``ispc`` also adds a number of substantial new features that aren't in any
-of C89, C99, or C++:
+``ispc`` also adds a number of new features that aren't in any of C89, C99,
+or C++:
 
 * "Coherent" control flow statements that indicate that control flow is
   expected to be coherent across the running program instances (see
-  `"Coherent" Control Flow Statements: "cif", "cfor", and Friends`_)
+  `"Coherent" Control Flow Statements: "cif" and Friends`_)
 * Short vector types (see `Short Vector Types`_)
 * Parallel ``foreach`` and ``foreach_tiled`` iteration constructs (see
   `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_)
-* Native support for task parallelism (see `Task Parallel Execution`_)
+* Language support for task parallelism (see `Task Parallel Execution`_)
 * A rich standard library, though one that is different than C's (see `The
   ISPC Standard Library`_.)
 
@@ -794,9 +834,10 @@ but are likely to be supported in future releases:
 * Short circuiting of logical operations
 * There are no types named ``char``, ``short``, or ``long``.  However,
   there are built-in ``int8``, ``int16``, and ``int64`` types
+* Character constants
 * String constants and arrays of characters as strings
 * ``switch`` and ``goto`` statements
-* ``union`` s
+* ``union`` types
 * Bitfield members of ``struct`` types
 * Variable numbers of arguments to functions
 * Literal floating-point constants (even without a ``f`` suffix) are
@@ -820,11 +861,10 @@ The following reserved words from C89 are also reserved in ``ispc``:
 
 ``ispc`` additionally reserves the following words:
 
-``bool``, ``export``, ``cbreak``, ``ccontinue``, ``cdo``, ``cfor``,
-``cif``, ``creturn``, ``cwhile``, ``false``, ``foreach``,
-``foreach_tiled``, ``inline``, ``int8``, ``int16``, ``int32``, ``int64``,
-``launch``, ``print``, ``reference``, ``soa``, ``sync``, ``task``,
-``true``, ``uniform``, and ``varying``.
+``bool``, ``export``, ``cdo``, ``cfor``, ``cif``, ``cwhile``, ``false``,
+``foreach``, ``foreach_tiled``, ``inline``, ``int8``, ``int16``, ``int32``,
+``int64``, ``launch``, ``print``, ``reference``, ``soa``, ``sync``,
+``task``, ``true``, ``uniform``, and ``varying``.
 
 
 Lexical Structure
@@ -839,7 +879,8 @@ comments can't be nested.
 
 Identifiers in ``ispc`` are sequences of characters that start with an
 underscore or an upper-case or lower-case letter, and then followed by
-zero or more letters, numbers, or underscores.
+zero or more letters, numbers, or underscores.  Identifiers that start with
+two underscores are reserved for use by the compiler.
 
 Integer numeric constants can be specified in base 10 or in hexidecimal.
 Base 10 constants are given by a sequence of one or more digits from 0 to
@@ -911,15 +952,14 @@ as the first argument to the ``print()`` statement, however.  ``ispc`` also
 doesn't support character constants.
 
 The following identifiers are reserved as language keywords: ``bool``,
-``break``, ``case``, ``cbreak``, ``ccontinue``, ``cdo``, ``cfor``,
-``char``, ``cif``, ``cwhile``, ``const``, ``continue``, ``creturn``,
-``default``, ``do``, ``double``, ``else``, ``enum``, ``export``,
-``extern``, ``false``, ``float``, ``for``, ``goto``, ``if``, ``inline``, ``int``,
-``int8``, ``int16``, ``int32``, ``int64``, ``launch``, ``print``,
-``reference``, ``return``,
-``signed``, ``sizeof``, ``soa``, ``static``, ``struct``, ``switch``,
-``sync``, ``task``, ``true``, ``typedef``, ``uniform``, ``union``,
-``unsigned``, ``varying``, ``void``, ``volatile``, ``while``.
+``break``, ``case``, ``cdo``, ``cfor``, ``char``, ``cif``, ``cwhile``,
+``const``, ``continue``, ``default``, ``do``, ``double``, ``else``,
+``enum``, ``export``, ``extern``, ``false``, ``float``, ``for``,
+``foreach``, ``foreach_tiled``, ``goto``, ``if``, ``inline``, ``int``,
+``int8``, ``int16``, ``int32``, ``int64``, ``launch``, ``NULL``, ``print``,
+``return``, ``signed``, ``sizeof``, ``soa``, ``static``, ``struct``,
+``switch``, ``sync``, ``task``, ``true``, ``typedef``, ``uniform``,
+``union``, ``unsigned``, ``varying``, ``void``, ``volatile``, ``while``.
 
 ``ispc`` defines the following operators and punctuation:
 
@@ -1027,34 +1067,27 @@ functions are preserved across function calls.
 "uniform" and "varying" Qualifiers
 ----------------------------------
 
-To write high-performance code, you need to understand the distinction
-between ``uniform`` and ``varying`` data types.
-
 If a variable has a ``uniform`` qualifier, then there is only a single
-instance of that variable for all of the currently-executing program
-instances.  (As such, it necessarily has the same value across all of the
-program instances.)  ``uniform`` variables can be modified as the program
-executes, but only in ways that preserve the property that they have the
-same value across all of the program instances.  Assigning a
-non-``uniform`` (i.e., ``varying``) value to a ``uniform`` variable causes
-a compile-time error.
+instance of that variable shared by all program instances in a gang.  (In
+other words, it necessarily has the same value across all of the program
+instances.)  In addition to requiring less storage, ``uniform`` variables
+lead to a number of performance advantages when they are applicable (see 
+`Uniform Variables and Varying Control Flow`_, for example.)
 
-``uniform`` variables will implicitly type-convert to varying types as
-required:
+``uniform`` variables can be modified as the program executes, but only in
+ways that preserve the property that they have a single value for the
+entire gang.  Thus, it's legal to add two uniform variables together and
+assign the result to a uniform variable, but assigning a non-``uniform``
+(i.e., ``varying``) value to a ``uniform`` variable is a compile-time
+error.
+
+``uniform`` variables implicitly type-convert to varying types as required:
 
 ::
 
    uniform int x = ...;
    int y = ...;
    int z = x * y;
-
-Conversely, it is a compile-time error to assign a varying value to a
-``uniform`` type:
-
-::
-
-    float f = ....;
-    uniform float uf = f;  // ERROR
 
 Arrays themselves aren't uniform or varying, but the elements that they
 store are:
@@ -1064,9 +1097,9 @@ store are:
     float foo[10];
     uniform float bar[10];
 
-Continuing the connection to data types in memory, the first declaration
-corresponds to 10 four-wide float values (on Intel® SSE), and the second to
-10 single float values.
+The first declaration corresponds to 10 n-wide ``float`` values, where "n"
+is the gang size, while the second declaration corresonds to 10 ``float``
+values.
 
 
 Defining New Names For Types
@@ -1084,25 +1117,88 @@ value with ``float[3]`` type to a function that has been declared to take a
 ``Float3`` parameter.
 
 
-Pointer and Reference Types
----------------------------
+Pointer Types
+-------------
 
-``ispc`` provides a ``reference`` qualifier that can be used for passing
-values to functions by reference so that functions can return multiple
-results or modify existing variables.
+It is possible to have pointers to data in memory; pointer arithmetic,
+changing values in memory with pointers, and so forth is supported as in C.
 
 ::
 
-    void increment(reference float f) {
-        ++f;
-    }
+    float a = 0;
+    float *pa = &a;
+    *pa = 1;  // now a == 1
+
+Also as in C, arrays are silently converted into pointers:
+
+::
+
+    float a[10] = { ... };
+    float *pa = a;     // pointer to first element of a
+    float *pb = a + 5; // pointer to 5th element of a
+
+As with other basic types, pointers can be both ``uniform`` and
+``varying``.  By default, they are varying.  The placement of the
+``uniform`` qualifier to declare a ``uniform`` pointer may be initially
+surprising, but it matches the form of how for example a pointer that is
+itself ``const`` (as opposed to pointing to a ``const`` type)is declared in
+C.
+
+::
+
+    uniform float f = 0;
+    uniform float * uniform pf = &f;
+    *pf = 1;
+
+A subtlety comes in when a uniform pointer points to a varying datatype.
+In this case, each program instance accesses a distinct location in memory
+(because the underlying varying datatype is itself laid out with a separate
+location in memory for each program instance.)
+
+::
+
+    float a;
+    float * uniform pa = &a;
+    *pa = programIndex;  // same as (a = programIndex)
+    
+
+Any pointer type can be explicitly typecast to another pointer type (of the
+same uniform/varying-ness.)
+
+::
+
+    float *pa = ...;
+    int *pb = (int *)pa;  // legal, but beware
+
+Any pointer type can be assigned to a ``void`` pointer without a type cast:
+
+::
+
+    float foo(void *);
+    int *bar = ...;
+    foo(bar);
+
+There is a special ``NULL`` value that corresponds to a NULL pointer.  As a
+special case, the integer value zero can be implicitly converted to a NULL
+pointer and pointers are implicitly converted to boolean values in
+conditional expressions.
+
+::
+
+    void foo(float *ptr) {
+        if (ptr != 0) { // or, (ptr != NULL), or just (ptr)
+           ...
+
+It is legal to explicitly type-cast a pointer type to an integer type and
+back from an integer type to a pointer type.  Note that this  conversion
+isn't performed implicitly, for example for function calls.
 
 Function Pointer Types
 ----------------------
 
-``ispc`` does allow function pointers to be taken and used as in C and
-C++.  The syntax for declaring function pointer types is the same as in
-those languages; it's generally easiest to use a ``typedef`` to help:
+Pointers to functions can also be to be taken and used as in C and C++.
+The syntax for declaring function pointer types is the same as in those
+languages; it's generally easiest to use a ``typedef`` to help:
 
 ::
 
@@ -1110,7 +1206,7 @@ those languages; it's generally easiest to use a ``typedef`` to help:
     int dec(int v) { return v-1; }
 
     typedef int (*FPType)(int);
-    FPType fptr = inc;
+    FPType fptr = inc;  // vs. int (*fptr)(int) = inc;
 
 Given a function pointer, the function it points to can be called:
 
@@ -1118,11 +1214,52 @@ Given a function pointer, the function it points to can be called:
 
     int x = fptr(1);
 
-Note that ``ispc`` doesn't currently support the "address-of" operator
-``&`` or the "derefernce" operator ``*``, so it's not necessary to take the
-address of a function to assign it to a function pointer or to dereference
-it to call the function.
+It's not necessary to take the address of a function to assign it to a
+function pointer or to dereference it to call the function.
 
+As with pointers to data in ``ispc``, function pointers can be either
+``uniform`` or ``varying``.
+
+
+Reference Types
+---------------
+
+``ispc`` also provides reference types (like C++ references) that can be
+used for passing values to functions by reference, allowing functions can
+return multiple results or modify existing variables.
+
+::
+
+    void increment(float &f) {
+        ++f;
+    }
+
+As in C++, once a reference is bound to a variable, it can't be rebound
+to a different variable:
+
+::
+
+    float a = ..., b = ...;
+    float &r = a;  // makes r refer to a
+    r = b;  // assigns b to a, doesn't make r now refer to b
+
+An important limitation with references in ``ispc`` is that references
+can't be bound to varying lvalues; doing so causes a compile-time error to
+be issued.  This situation is illustrated in the following code, where
+``ptr`` is a ``varying`` pointer type (in other words, there each program
+instance in the gang has its own unique pointer value)
+
+::
+
+    uniform float * varying ptr = ...;
+    float &r = *ptr;  // ERROR: *ptr is a varying lvalue type
+
+(The rationale for this limitation is that references must be represented
+as either a uniform pointer or a varying pointer internally.  While
+choosing a varying pointer would provide maximum flexibilty and eliminate
+this issue, it would reduce performance in the common case where a uniform
+pointer is all that's needed.  As a work-around, a varying pointer can be
+used in cases where a varying lvalue reference would be desired.)
 
 Enumeration Types
 -----------------
@@ -1307,8 +1444,7 @@ More complex data structures can be built using ``struct`` and arrays.
     };
 
 The size of arrays must be a compile-time constant, though functions can be
-declared to take "unsized arrays" as parameters so that arrays of any size
-may be passed:
+declared to take "unsized arrays" as parameters.
 
 ::
 
@@ -1332,6 +1468,7 @@ Declarations and Initializers
 -----------------------------
 
 Variables are declared and assigned just as in C:
+
 ::
 
     float foo = 0, bar[5];
@@ -1339,7 +1476,7 @@ Variables are declared and assigned just as in C:
 
 If a variable is declared without an initializer expression, then its value
 is undefined until a value is assigned to it.  Reading an undefined
-variable may lead to unexpected program behavior.
+variable is undefined behavior.
 
 Any variable that is declared at file scope (i.e. outside a function) is a
 global variable.  If a global variable is qualified with the ``static``
@@ -1347,7 +1484,7 @@ keyword, then its only visible within the compilation unit in which it was
 defined.  As in C/C++, a variable with a ``static`` qualifier inside a
 functions maintains its value across function invocations.
 
-Like C++, variables don't need to be declared at the start of a basic
+As in C++, variables don't need to be declared at the start of a basic
 block:
 
 ::
@@ -1402,38 +1539,72 @@ Structure member access and array indexing also work as in C.
    return foo.f[4] - foo.i;
     
 
+The address-of operator, pointer derefernce operator, and pointer member
+operator also work as expected.
+
+::
+
+    struct Foo { float a, b, c; };
+    Foo f;
+    Foo * uniform fp = &f;
+    (*fp).a = 0;
+    fp->b = 1;
+  
+
 Control Flow
 ------------
 
 ``ispc`` supports most of C's control flow constructs, including ``if``,
-``for``, ``while``, ``do``.  You can use ``break`` and ``continue``
-statements in ``for``, ``while``, and ``do`` loops.
+``for``, ``while``, ``do``.  It also supports variants of C's control flow
+constructs that provide hints about the expected runtime coherence of the
+control flow at that statement.  It also provides parallel looping
+constructs, ``foreach`` and ``foreach_tiled``, all of which will be
+detailed in this section.
 
-There are variants of the ``if``, ``do``, ``while``, ``for``, ``break``,
-``continue``, and ``return`` statements (``cif``, ``cdo``, ``cwhile``,
-``cfor``, ``cbreak``, ``ccontinue``, and ``creturn``, respectively) that
-provide the compiler a hint that the control flow is expected to be
-coherent at that particular point, thus allowing the compiler to do
-additional optimizations for that case.  These are described in the
-`"Coherent" Control Flow Statements: "cif", "cfor", and Friends`_ section.
-
-``ispc`` does not support ``switch`` statements or ``goto``.
+``ispc`` does not currently support ``switch`` statements or ``goto``.
 
 Conditional Statements: "if"
 ----------------------------
 
+The ``if`` statement behaves precisely as in C; the code in the "true"
+block only executes if the condition evaluates to ``true``, and if an
+optional ``else`` clause is provided, the code in the "else" block only
+executes if the condition is false. 
+
 Basic Iteration Statements: "for", "while", and "do"
 ----------------------------------------------------
 
-"Coherent" Control Flow Statements: "cif", "cfor", and Friends
---------------------------------------------------------------
+``ispc`` supports ``for``, ``while``, and ``do`` loops, with the same
+specification as in C.  Like C++, variables can be declared in the ``for``
+statment itself:
 
-``ispc`` provides a few mechanisms for you to supply a hint that control
-flow is expected to be coherent at a particular point in the program's
-execution.  These mechanisms provide the compiler a hint that it's worth
-emitting extra code to check to see if the control flow is in fact coherent
-at run-time, in which case it can jump to a simpler code path or otherwise
-save work.
+::
+
+    for (uniform int i = 0; i < 10; ++i) {
+      // loop body
+    }
+    // i is now no longer in scope
+
+You can use ``break`` and ``continue`` statements in ``for``, ``while``,
+and ``do`` loops; ``break`` breaks out of the current enclosing loop, while
+``continue`` has the effect of skipping the remainder of the loop body and
+jumping to the loop step.
+
+Note that all of these looping constructs have the effect of executing
+independently for each of the program instances in a gang; for example, if
+one of them executes a ``continue`` statement, other program instances
+executing code in the loop body that didn't execute the ``continue`` will
+be unaffected by it.
+
+"Coherent" Control Flow Statements: "cif" and Friends
+-----------------------------------------------------
+
+``ispc`` provides variants of all of the standard control flow constructs
+that allow you to supply a hint that control flow is expected to be
+coherent at a particular point in the program's execution.  These
+mechanisms provide the compiler a hint that it's worth emitting extra code
+to check to see if the control flow is in fact coherent at run-time, in
+which case it can jump to a simpler code path or otherwise save work.
 
 The first of these statements is ``cif``, indicating an ``if`` statement
 that is expected to be coherent.  The usage of ``cif`` in code is just the
@@ -1449,52 +1620,35 @@ same as ``if``:
 
 ``cif`` provides a hint to the compiler that you expect that most of the
 executing SPMD programs will all have the same result for the ``if``
-condition.
+condition.  
 
+Along similar lines, ``cfor``, ``cdo``, and ``cwhile`` check to see if all
+program instances are running at the start of each loop iteration; if so,
+they can run a specialized code path that has been optimized for the "all
+on" execution mask case.
 
 Parallel Iteration Statements: "foreach" and "foreach_tiled"
 ------------------------------------------------------------
 
+
+
+
 Parallel Iteration with "programIndex" and "programCount"
 ---------------------------------------------------------
 
-An important part of SPMD programming is how to map the set of running
-instances to the set of inputs to the program.  
+In addition to ``foreach`` and ``foreach_tiled``, ``ispc`` provides a
+lower-level mechanism for mapping SPMD program instances to data to operate
+on via the built-in ``programIndex`` and ``programCount`` variables.
 
-If the application has created an array of floating-point values on which
-the following computation needs to be completed:
+``programIndex`` gives the index of the SIMD-lane being used for running
+each program instance.  (In other words, it's a varying integer value that
+has value zero for the first program instance, and so forth.)  The
+``programCount`` builtin gives the total number of instances in the gang.
+Together, these can be used to uniquely map executing program instances to
+input data.
 
-::
-
-    // C++ code
-    int count = ...;
-    float *data = new float[count];
-    float *result = new float[count];
-    ... initialize data ...
-    ispc_func(data, count, result);
-
-And if we have a ``ispc`` function declared as follows, then, given a
-number of program instances running in parallel, how do the program
-instances determine which elements of the array to work on?
-
-::
-
-    // ispc code
-    export void ispc_func(uniform float data[],
-                          uniform int count,
-                          uniform float result[]) {
-        ...
-     
-``ispc`` provides two built-in variables to help with this data mapping
-across the set of running SPMD program instances.  The first,
-``programCount`` gives the number of program instances that are executing
-in parallel; for example, it may have the value 4 on most targets that
-support Intel® and 8 on targets that support Intel® AVX.  The second,
-``programIndex``, gives the index of the SIMD-lane being used for the
-current program instance.  (In other words, it's a varying integer value
-that has value zero for the first program instance, and so forth.)
-
-Given these, ``ispc_func`` might be implemented as:
+As a specific example, consider an ``ispc`` function that needs to perform
+some computation on an array of data.
 
 ::
 
@@ -1504,71 +1658,21 @@ Given these, ``ispc_func`` might be implemented as:
         result[i + programIndex] = r;
     }
 
-This code implicitly assumes that ``programCount`` evenly divides
-``count``.  The more general case could be:
-
-::
-
-    for (uniform int i = 0; i < count; i += programCount) {
-        if (i + programIndex < count) {
-            float d = data[i + programIndex];
-            ...
-
-Some performance improvement may come from removing the ``if`` test from
-the loop:
-
-::
-
-    uniform int fullCount = count - (count % programCount);
-    uniform int i;
-    for (i = 0; i < fullCount; i += programCount) {
-        float d = data[i + programIndex];
-         ...
-    }
-    if (i + programIndex < count) {
-        float d = data[i + programIndex];
-        ...
-    }
-
-For a more complex example, consider a ray tracer that wants to trace 4
-rays per pixel.  To write code that works on one pixel at a time on a
-machine that supports Intel® SSE, and 2 pixels at a time on a machine that
-supports Intel® AVX, see the following:
-
-::
-
-    // compute sample offsets for the pixel or pixels being processed    
-    uniform float xOffsetBase[4] = { 0, 0, 0.5, 0.5 };
-    uniform float yOffsetBase[4] = { 0, 0.5, 0, 0.5 };
-    float xOffset[programIndex % 4], yOffset[programIndex % 4];
-
-    // compute steps
-    uniform int dx, dy;
-    if (programCount == 4) { dx = dy = 1; }
-    else if (programCount == 8) { 
-        dx = 2; dy = 1; 
-        xOffset += programIndex / 4;
-    }
-    else if (programCount == 16) { 
-        xOffset += programIndex / 8;
-        yOffset += (programIndex / 4) & 0x1;
-        dx = dy = 2; 
-    }
-
-    for (uniform int y = 0; y < height; y += dy) {
-       for (uniform int x = 0; x < width; x += dx) {
-           float xSample = x + xOffset, ySample = y + yOffset;
-           // process samples in parallel ... 
-       }
-    }
-
+Here, we've written a loop that explicitly loops over the data in chunks of
+``programCount`` elements.  In each loop iteraton, the running program
+instances effectively collude amongst themselves using ``programIndex`` to
+determine which elements to work on in a way that ensures that all of the
+data elements will be processed.  In this particular case, a ``foreach``
+loop would be preferable, as ``foreach`` naturally handles the case where
+``programCount`` doesn't evenly divide the number of elements to be
+processed, while the loop above assumes that case implicitly. 
 
 Functions and Function Calls
 ----------------------------
 
-Like C, functions must be declared before they are called, though a forward
-declaration can be used before the actual function definition.  
-Also like C, arrays are passed to functions by reference.
+Like C, functions must be declared in ``ispc`` before they are called,
+though a forward declaration can be used before the actual function
+definition.  Also like C, arrays are passed to functions by reference.
 
 Functions can be declared with a number of qualifiers that affect their
 visibility and capabilities.  As in C/C++, functions have global visibility
@@ -1601,7 +1705,7 @@ If a single match of a given type is found, it is used; if multiple matches
 of a given type are found, an error is issued.
 
 * All parameter types match exactly.
-* All parameter types match exactly, where any ``reference``-qualified
+* All parameter types match exactly, where any reference-type
   parameters are considered equivalent to their underlying type.
 * Parameters match with only type conversions that don't risk losing any
   information (for example, converting an ``int16`` value to an ``int32``
@@ -1615,29 +1719,15 @@ of a given type are found, an error is issued.
   variability from ``uniform`` to ``varying`` as needed.
 
 
-Varying Function Pointers
--------------------------
-
-As with other variables, a function pointer in ``ispc`` may be of
-``uniform`` or ``varying`` type.  If a function pointer is ``uniform``, it
-has the same value for all of the executing program instances, and thus all
-active program instances will call the same function if the function
-pointer is used.
-
-If a function pointer is ``varying``, then it has a possibly-different
-value for all running program instances.  Given a call to a varying
-function pointer, ``ispc`` maintains as much execution convergence as
-possible; the code executed finds the set of unique function pointers over
-the currently running program instances and calls each one just once, such
-that the executing program instances when it is called are the set of
-active program instances that had that function pointer value.  The order
-in which the various function pointers are called in this case is
-indefined.
-
-
 Task Parallel Execution
 -----------------------
 
+In addition to the facilities for using SPMD for parallelism across the
+SIMD lanes of one processing core, ``ispc`` also provides facilities for
+parallel execution across multiple cores though an asynchronous function
+call mechanism via the ``launch`` keyword.  A function called with
+``launch`` executes as an asynchronous task, often on another core in the
+system.
 
 Task Parallelism: "launch" and "sync" Statements
 ------------------------------------------------
@@ -1651,7 +1741,7 @@ from ``ispc`` code.  The approach is similar to Intel® Cilk's task launch
 feature.  (See the ``examples/mandelbrot_tasks`` example to see it used in
 a small example.)
 
-First, any function that is launched as a task must be declared with the
+Any function that is launched as a task must be declared with the
 ``task`` qualifier:
 
 ::
@@ -1695,8 +1785,8 @@ will be enqueued to be run asynchronously.  Within each of the tasks, two
 special built-in variables are available--``taskIndex``, and ``taskCount``.
 The first, ``taskIndex``, ranges from zero to one minus the number of tasks
 provided to ``launch``, and ``taskCount`` equals the number of launched
-taks.  Thus, we might use ``taskIndex`` in the implementation of ``func2``
-to determine which array element to process.
+tasks.  Thus, in this example we might use ``taskIndex`` in the
+implementation of ``func2`` to determine which array element to process.
 
 ::
 
@@ -1705,11 +1795,11 @@ to determine which array element to process.
         a[taskIndex] = ...
     }
 
-Program execution continues asynchronously after a ``launch`` statement;
-thus, a function shouldn't access values being generated by the tasks it
-has launched within the function without synchronization.  If results are
-needed before function return, a function can use a ``sync`` statement to
-wait for all launched tasks to finish:
+Program execution continues asynchronously after a ``launch`` statement in
+a function; thus, a function shouldn't access values being generated by the
+tasks it has launched within the function without synchronization.  If
+results are needed before function return, a function can use a ``sync``
+statement to wait for all launched tasks to finish:
 
 ::
 
@@ -1860,6 +1950,9 @@ for this argument.
   active program instance.  (This is not the case for the other three
   options.)
 
+Basic Math Functions
+--------------------
+
 In addition to an absolute value call, ``abs()``, ``signbits()`` extracts
 the sign bit of the given value, returning ``0x80000000`` if the sign bit
 is on (i.e. the value is negative) and zero if it is off.
@@ -1890,19 +1983,6 @@ different on different architectures.
 
     float rcp(float v)
     uniform float rcp(uniform float v)
-
-The square root of a given value can be computed with ``sqrt()``, which
-maps to hardware square root intrinsics when available.  An approximate
-reciprocal square root, ``1/sqrt(v)`` is computed by ``rsqrt()``.  Like
-``rcp()``, the error from this call is different on different
-architectures.
-
-::
-
-    float sqrt(float v)
-    uniform float sqrt(uniform float v)
-    float rsqrt(float v)
-    uniform float rsqrt(uniform float v)
 
 A standard set of minimum and maximum functions is available.  These
 functions also map to corresponding intrinsic functions.
@@ -1935,6 +2015,93 @@ quite efficient.)
                                uniform unsigned int low,
                                uniform unsigned int high)
 
+Bit-Level Operations
+--------------------
+
+
+The various variants of ``popcnt()`` return the population count--the
+number of bits set in the given value.
+
+::
+
+    uniform int popcnt(uniform int v)
+    int popcnt(int v)
+    uniform int popcnt(bool v)
+
+
+A few functions determine how many leading bits in the given value are zero
+and how many of the trailing bits are zero; there are also ``unsigned``
+variants of these functions and variants that take ``int64`` and ``unsigned
+int64`` types.
+
+::
+
+    int32 count_leading_zeros(int32 v)
+    uniform int32 count_leading_zeros(uniform int32 v)
+    int32 count_trailing_zeros(int32 v)
+    uniform int32 count_trailing_zeros(uniform int32 v)
+
+Sometimes it's useful to convert a ``bool`` value to an integer using sign
+extension so that the integer's bits are all on if the ``bool`` has the
+value ``true`` (rather than just having the value one).  The
+``sign_extend()`` functions provide this functionality:
+
+::
+
+    int sign_extend(bool value) 
+    uniform int sign_extend(uniform bool value) 
+
+The ``intbits()`` and ``floatbits()`` functions can be used to implement
+low-level floating-point bit twiddling.  For example, ``intbits()`` returns
+an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
+value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
+something like ``*((int *)&a)`` in C.
+
+::
+
+    float floatbits(unsigned int a);
+    uniform float floatbits(uniform unsigned int a);
+    unsigned int intbits(float a);
+    uniform unsigned int intbits(uniform float a);
+
+
+The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
+they just let the compiler know how to interpret the bits of the given
+value.  They make it possible to efficiently write functions that take
+advantage of the low-level bit representation of floating-point values.
+
+For example, the ``abs()`` function in the standard library is implemented
+as follows:
+
+::
+
+    float abs(float a) {
+        unsigned int i = intbits(a);
+        i &= 0x7fffffff;
+        return floatbits(i);
+    }
+
+It, it clears the high order bit, to ensure that the given floating-point
+value is positive.  This compiles down to a single ``andps`` instruction
+when used with an Intel® SSE target, for example.
+
+
+Transcendental Functions
+------------------------
+
+The square root of a given value can be computed with ``sqrt()``, which
+maps to hardware square root intrinsics when available.  An approximate
+reciprocal square root, ``1/sqrt(v)`` is computed by ``rsqrt()``.  Like
+``rcp()``, the error from this call is different on different
+architectures.
+
+::
+
+    float sqrt(float v)
+    uniform float sqrt(uniform float v)
+    float rsqrt(float v)
+    uniform float rsqrt(uniform float v)
+
 ``ispc`` provides a standard variety of calls for trigonometric functions:
 
 ::
@@ -1961,9 +2128,9 @@ functions:
 
 ::
 
-    void sincos(float x, reference float s, reference float c)
-    void sincos(uniform float x, uniform reference float s,
-                uniform reference float c)
+    void sincos(float x, float * uniform s, float * uniform c)
+    void sincos(uniform float x, uniform float * uniform s,
+                uniform float * uniform c)
 
 
 The usual exponential and logarithmic functions are provided.
@@ -1987,10 +2154,13 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 
     float ldexp(float x, int n)
     uniform float ldexp(uniform float x, uniform int n)
-    float frexp(float x, reference int pw2)
-    niform float frexp(uniform float x,
-                       reference uniform int pw2)
+    float frexp(float x, int * uniform pw2)
+    uniform float frexp(uniform float x,
+                        uniform int * uniform pw2)
 
+
+Pseudo-Random Numbers
+---------------------
 
 A simple random number generator is provided.  State for the RNG
 is maintained in an instance of the ``RNGState`` structure, which is seeded
@@ -1999,10 +2169,9 @@ with ``seed_rng()``.
 ::
 
     struct RNGState;
-    unsigned int random(reference uniform RNGState state)
-    float frandom(reference uniform RNGState state)
-    void seed_rng(reference uniform RNGState state,
-                  uniform int seed)
+    unsigned int random(RNGState * uniform state)
+    float frandom(RNGState * uniform state)
+    void seed_rng(RNGState * uniform state, uniform int seed)
 
 Output Functions
 ----------------
@@ -2038,17 +2207,14 @@ generates the following output on a four-wide compilation target:
 ::
 
     i = 10, x = [0.000000,1.000000,2.000000,3.000000]
-    added to x = [1.000000,2.000000,_________,_________]
+    added to x = [1.000000,2.000000,((2.000000)),((3.000000)]
     last print of x = [1.000000,2.000000,2.000000,3.000000]
 
-All values of "varying" variables for each executing program instance is
-printed when a "varying" variable is printed.  The result from the second
-print statement, which was called under control flow in the function
-``foo()`` above, and given the input array (0,1,2,3), only includes the
-first two program instances entered the ``if`` block.  Therefore, the
-values for the inactive program instances aren't printed.  (In other cases,
-they may have garbage values or be otherwise undefined.)
-
+When a varying variable is printed, the values for program instances that
+aren't currently executing are printed inside double parenthesis,
+indicating inactive program instances.  The elements for inactive program
+instances may have garabge values, though in some circumstances it can be
+useful to see their values.
 
 Assertions
 ----------
@@ -2087,16 +2253,14 @@ computation on separate data elements.  There are, however, a number of
 cases where it's useful for the program instances to be able to cooperate
 in computing results.  The cross-lane operations described in this section
 provide primitives for communication between the running program instances.
- 
-A few routines that evaluate conditions across the running program
-instances.  For example, ``any()`` returns ``true`` if the given value
-``v`` is ``true`` for any of the SPMD program instances currently running,
-and ``all()`` returns ``true`` if it true for all of them.
+
+The ``lanemask()`` function returns an integer that encodes which of the
+current SPMD program instances are currently executing.  The i'th bit is
+set if the i'th SIMD lane is currently active.
 
 ::
 
-    uniform bool any(bool v)
-    uniform bool all(bool v)
+    uniform int lanemask()
 
 To broadcast a value from one program instance to all of the others, a
 ``broadcast()`` function is available.  It broadcasts the value of the
@@ -2162,27 +2326,53 @@ of ``value1``, etc.)
     float shuffle(float value0, float value1, int permutation)
     double shuffle(double value0, double value1, int permutation)
 
-The various variants of ``popcnt()`` return the population count--the
-number of bits set in the given value.
+Finally, there are primitive operations that extract and set values in the
+SIMD lanes.  You can implement all of the operations described
+above in this section from these routines, though in general, not as
+efficiently.  These routines are useful for implementing other reductions
+and cross-lane communication that isn't included in the above, though.
+Given a ``varying`` value, ``extract()`` returns the i'th element of it as
+a single ``uniform`` value.
+.
 
 ::
 
-    uniform int popcnt(uniform int v)
-    int popcnt(int v)
-    uniform int popcnt(bool v)
+    uniform int8 extract(int8 x, uniform int i)
+    uniform int16 extract(int16 x, uniform int i)
+    uniform int32 extract(int32 x, uniform int i)
+    uniform int64 extract(int64 x, uniform int i)
+    uniform float extract(float x, uniform int i)
 
-The ``lanemask()`` function returns an integer that encodes which of the
-current SPMD program instances are currently executing.  The i'th bit is
-set if the i'th SIMD lane is currently active.
+Similarly, ``insert`` returns a new value
+where the ``i`` th element of ``x`` has been replaced with the value ``v``
 
 ::
 
-    uniform int lanemask()
+    int8 insert(int8 x, uniform int i, uniform int8 v)
+    int16 insert(int16 x, uniform int i, uniform int16 v)
+    int32 insert(int32 x, uniform int i, uniform int32 v)
+    int64 insert(int64 x, uniform int i, uniform int64 v)
+    float insert(float x, uniform int i, uniform float v)
 
-You can compute reductions across the program instances.  For example, the
-values in each of the SIMD lanes ``x`` are added together by
-``reduce_add()``.  If this function is called under control flow, it only
-adds the values for the currently active program instances.
+
+
+Reductions
+----------
+
+A few routines that evaluate conditions across the running program
+instances.  For example, ``any()`` returns ``true`` if the given value
+``v`` is ``true`` for any of the SPMD program instances currently running,
+and ``all()`` returns ``true`` if it true for all of them.
+
+::
+
+    uniform bool any(bool v)
+    uniform bool all(bool v)
+
+You can also compute a variety of reductions across the program instances.
+For example, the values in each of the SIMD lanes ``x`` are added together
+by ``reduce_add()``.  If this function is called under control flow, it
+only adds the values for the currently active program instances.
 
 ::
 
@@ -2226,14 +2416,14 @@ There are also variants of these functions that return the value as a
 
 ::
 
-    uniform bool reduce_equal(int32 v, reference uniform int32 sameval)
+    uniform bool reduce_equal(int32 v, uniform int32 * uniform sameval)
     uniform bool reduce_equal(unsigned int32 v,
-                              reference uniform unsigned int32 sameval)
-    uniform bool reduce_equal(float v, reference uniform float sameval)
-    uniform bool reduce_equal(int64 v, reference uniform int64 sameval)
+                              uniform unsigned int32 * uniform sameval)
+    uniform bool reduce_equal(float v, uniform float * uniform sameval)
+    uniform bool reduce_equal(int64 v, uniform int64 * uniform sameval)
     uniform bool reduce_equal(unsigned int64 v,
-                              reference uniform unsigned int64 sameval)
-    uniform bool reduce_equal(double, reference uniform double sameval)
+                              uniform unsigned int64 * uniform sameval)
+    uniform bool reduce_equal(double, uniform double * uniform sameval)
 
 If called when none of the program instances are running,
 ``reduce_equal()`` will return ``false``.
@@ -2276,6 +2466,53 @@ bitwise-or are available:
     unsigned int64 exclusive_scan_or(unsigned int64 v) 
 
 
+Data Conversions And Storage
+----------------------------
+
+Packed Load and Store Operations
+--------------------------------
+
+The standard library also offers routines for writing out and reading in
+values from linear memory locations for the active program instances.  The
+``packed_load_active()`` functions load consecutive values starting at the
+given location, loading one consecutive value for each currently-executing
+program instance and storing it into that program instance's ``val``
+variable.  They return the total number of values loaded.  Similarly, the
+``packed_store_active()`` functions store the ``val`` values for each
+program instances that executed the ``packed_store_active()`` call, storing
+the results consecutively starting at the given location.  They return the
+total number of values stored.
+
+::
+
+    uniform int packed_load_active(uniform int * uniform base,
+                                   int * uniform val)
+    uniform int packed_load_active(uniform unsigned int * uniform base,
+                                   unsigned int * uniform val)
+    uniform int packed_store_active(uniform int * uniform base,
+                                    int val)
+    uniform int packed_store_active(uniform unsigned int * uniform base,
+                                    unsigned int val)
+
+
+As an example of how these functions can be used, the following code shows
+the use of ``packed_store_active()``.  The program instances that are
+executing each compute some value ``x``; we'd like to record the program
+index values of the program instances for which ``x`` is less than zero, if
+any.  In following the code, the ``programIndex`` value for each program
+instance is written into the ``ids`` array only if ``x < 0`` for that
+program instance.  The total number of values written into ``ids`` is
+returned from ``packed_store_active()``.
+
+::
+
+    uniform int ids[100];
+    uniform int offset = 0;
+    float x = ...;
+    if (x < 0)
+        offset += packed_store_active(&ids[offset], programIndex);
+
+
 Converting Between Array-of-Structures and Structure-of-Arrays Layout
 ---------------------------------------------------------------------
 
@@ -2315,7 +2552,7 @@ the aos_to_soa3 standard library function could be used:
     extern uniform float pos[];
     uniform int base = ...;
     float x, y, z;
-    aos_to_soa3(pos, base, x, y, z);
+    aos_to_soa3(&pos[base], x, y, z);
 
 This routine loads ``3*programCount`` values from the given array starting
 at the given offset, returning three ``varying`` results.  There are both
@@ -2323,10 +2560,10 @@ at the given offset, returning three ``varying`` results.  There are both
 
 ::
 
-    void aos_to_soa3(uniform float a[], uniform int offset, reference float v0,
-                     reference float v1, reference float v2)
-    void aos_to_soa3(uniform int32 a[], uniform int offset, reference int32 v0,
-                     reference int32 v1, reference int32 v2)
+    void aos_to_soa3(uniform float a[], float * uniform v0, 
+                     float * uniform v1, float * uniform v2)
+    void aos_to_soa3(uniform int32 a[], int32 * uniform v0,
+                     int32 * uniform v1, int32 * uniform v2)
 
 After computation is done, corresponding functions convert back from the
 SoA values in ``ispc`` ``varying`` variables and write the values back to
@@ -2337,16 +2574,14 @@ the given array, starting at the given offset.
     extern uniform float pos[];
     uniform int base = ...;
     float x, y, z;
-    aos_to_soa3(pos, base, x, y, z);
+    aos_to_soa3(&pos[base], x, y, z);
     // do computation with x, y, z
-    soa_to_aos3(x, y, z, pos, base);
+    soa_to_aos3(x, y, z, &pos[base]);
 
 ::
 
-    void soa_to_aos3(float v0, float v1, float v2, uniform float a[], 
-                     uniform int offset)
-    void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[], 
-                     uniform int offset)
+    void soa_to_aos3(float v0, float v1, float v2, uniform float a[])
+    void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[])
 
 There are also variants of these functions that convert 4-wide values
 between AoS and SoA layouts.  In other words, ``aos_to_soa4`` converts AoS
@@ -2357,90 +2592,12 @@ starting at the given offset.
 
 ::
 
-    void aos_to_soa4(uniform float a[], uniform int offset, reference float v0,
-                     reference float v1, reference float v2, reference float v3)
-    void aos_to_soa4(uniform int32 a[], uniform int offset, reference int32 v0,
-                     reference int32 v1, reference int32 v2, reference int32 v3)
-    void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[], 
-                     uniform int offset)
-    void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[], 
-                     uniform int offset)
-
-
-Packed Load and Store Operations
---------------------------------
-
-The standard library also offers routines for writing out and reading in
-values from linear memory locations for the active program instances.  The
-``packed_load_active()`` functions load consecutive values from the given
-array, starting at ``a[offset]``, loading one value for each
-currently-executing program instance and storing it into that program
-instance's ``val`` variable.  They return the total number of values
-loaded.  Similarly, the ``packed_store_active()`` functions store the
-``val`` values for each program instances that executed the
-``packed_store_active()`` call, storing the results into the given array
-starting at the given offset.  They return the total number of values
-stored.
-
-::
-
-    uniform int packed_load_active(uniform int a[],
-                                   uniform int offset,
-                                   reference int val)
-    uniform int packed_load_active(uniform unsigned int a[],
-                                   uniform int offset,
-                                   reference unsigned int val)
-    uniform int packed_store_active(uniform int a[],
-                                    uniform int offset,
-                                    int val)
-    uniform int packed_store_active(uniform unsigned int a[],
-                                    uniform int offset,
-                                    unsigned int val)
-
-
-As an example of how these functions can be used, the following code shows
-the use of ``packed_store_active()``.  The program instances that are
-executing each compute some value ``x``; we'd like to record the program
-index values of the program instances for which ``x`` is less than zero, if
-any.  In following the code, the ``programIndex`` value for each program
-instance is written into the ``ids`` array only if ``x < 0`` for that
-program instance.  The total number of values written into ``ids`` is
-returned from ``packed_store_active()``.
-
-::
-
-    uniform int ids[100];
-    uniform int offset = 0;
-    float x = ...;
-    if (x < 0)
-        offset += packed_store_active(ids, offset, programIndex);
-
-
-Finally, there are primitive operations that extract and set values in the
-SIMD lanes.  You can implement all of the operations described
-above in this section from these routines, though in general, not as
-efficiently.  These routines are useful for implementing other reductions
-and cross-lane communication that isn't included in the above, though.
-Given a ``varying`` value, ``extract()`` returns the i'th element of it as
-a single ``uniform`` value.  Similarly, ``insert`` returns a new value
-where the ``i`` th element of ``x`` has been replaced with the value ``v``
-.
-
-::
-
-    uniform int8 extract(int8 x, uniform int i)
-    uniform int16 extract(int16 x, uniform int i)
-    uniform int32 extract(int32 x, uniform int i)
-    uniform int64 extract(int64 x, uniform int i)
-    uniform float extract(float x, uniform int i)
-
-::
-
-    int8 insert(int8 x, uniform int i, uniform int8 v)
-    int16 insert(int16 x, uniform int i, uniform int16 v)
-    int32 insert(int32 x, uniform int i, uniform int32 v)
-    int64 insert(int64 x, uniform int i, uniform int64 v)
-    float insert(float x, uniform int i, uniform float v)
+    void aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1,
+                     float * uniform v2, float * uniform v3)
+    void aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1,
+                     int32 * uniform v2, int32 * uniform v3)
+    void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[])
+    void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[])
 
 
 Conversions To and From Half-Precision Floats
@@ -2477,25 +2634,31 @@ precise.
     uniform int16 float_to_half_fast(uniform float f)
 
 
+Systems Programming Support
+---------------------------
+
 Atomic Operations and Memory Fences
 -----------------------------------
 
-The usual range of atomic memory operations are provided in ``ispc``.  As an
+The usual range of atomic memory operations are provided in ``ispc``, with
+a few variants to handle both uniform and varying types.  As a first
 example, consider the 32-bit integer atomic add routine:
 
 ::
 
-  int32 atomic_add_global(reference uniform int32 val, int32 delta)
+  int32 atomic_add_global(uniform int32 * uniform ptr, int32 delta)
 
-The semantics are the expected ones for an atomic add function: the value
-"val" has the value "delta" added to it atomically, and the old value of
-"val" is returned from the function.  (Thus, if multiple processors 
+The semantics are the expected ones for an atomic add function: the pointer
+points to a single location in memory (the same one for all program
+instances), and fore each executing program instance, the "val" has that
+program instance's value "delta" added to it atomically, and the old value
+of "val" is returned from the function.  (Thus, if multiple processors
 simultaneously issue atomic adds to the same memory location, the adds will
 be serialized by the hardware so that the correct result is computed in the
 end.)
 
-One thing to note is that that the value being added to here is a
-``uniform`` integer, while the increment amount and the return value are
+One thing to note is that that the type of the value being added to here is
+a ``uniform`` integer, while the increment amount and the return value are
 ``varying``.  In other words, the semantics of this call are that each
 running program instance individually issues the atomic operation with its
 own ``delta`` value and gets the previous value of ``val`` back in return.
@@ -2510,36 +2673,55 @@ function can be used with ``float`` and ``double`` types as well.)
 
 ::
 
-  int32 atomic_add_global(reference uniform int32 val, int32 value)
-  int32 atomic_subtract_global(reference uniform int32 val, int32 value)
-  int32 atomic_min_global(reference uniform int32 val, int32 value)
-  int32 atomic_max_global(reference uniform int32 val, int32 value)
-  int32 atomic_and_global(reference uniform int32 val, int32 value)
-  int32 atomic_or_global(reference uniform int32 val, int32 value)
-  int32 atomic_xor_global(reference uniform int32 val, int32 value)
-  int32 atomic_swap_global(reference uniform int32 val, int32 newval)
+  int32 atomic_add_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_subtract_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_min_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_max_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_and_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_or_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_xor_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 value)
 
 There are also variants of these functions that take ``uniform`` values for
-the operand and return a ``uniform`` result:
+the operand and return a ``uniform`` result.  These correspond to a single
+atomic operation being performed for the entire gang of program instances,
+rather than one per program instance.
 
 ::
 
-  uniform int32 atomic_add_global(reference uniform int32 val,
+  uniform int32 atomic_add_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_subtract_global(reference uniform int32 val,
+  uniform int32 atomic_subtract_global(uniform int32 * uniform ptr,
                                        uniform int32 value)
-  uniform int32 atomic_min_global(reference uniform int32 val,
+  uniform int32 atomic_min_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_max_global(reference uniform int32 val,
+  uniform int32 atomic_max_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_and_global(reference uniform int32 val,
+  uniform int32 atomic_and_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_or_global(reference uniform int32 val,
+  uniform int32 atomic_or_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_xor_global(reference uniform int32 val,
+  uniform int32 atomic_xor_global(uniform int32 * uniform ptr,
                                   uniform int32 value)
-  uniform int32 atomic_swap_global(reference uniform int32 val,
+  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
                                    uniform int32 newval)
+
+There is a third variant of each of these atomic functions that takes a
+``varying`` pointer; this allows each program instance to issue an atomic
+operation to a possibly-different location in memory.  (Of course, the
+proper result is still returned if some or all of them happen to point to
+the same location in memory!)
+
+::
+
+  int32 atomic_add_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_subtract_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_min_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_max_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_and_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_or_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_xor_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_swap_global(uniform int32 * varying ptr, int32 value)
 
 There are also an atomic swap and "compare and exchange" functions.
 Compare and exchange atomically compares the value in "val" to
@@ -2550,12 +2732,12 @@ Furthermore, there are ``float`` and ``double`` variants as well.)
 
 ::
 
-  int32 atomic_swap_global(reference uniform int32 val, int32 new)
-  uniform int32 atomic_swap_global(reference uniform int32 val,
-                                   uniform int32 new)
-  int32 atomic_compare_exchange_global(reference uniform int32 val,
+  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 newvalue)
+  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
+                                   uniform int32 newvalue)
+  int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
                                        int32 compare, int32 newval)
-  uniform int32 atomic_compare_exchange_global(reference uniform int32 val,
+  uniform int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
                                   uniform int32 compare, uniform int32 newval)
 
 ``ispc`` also has a standard library routine that inserts a memory barrier
@@ -2589,20 +2771,20 @@ cache while iterating over the items in an array.
    uniform int32 array[...];
    for (uniform int i = 0; i < count; ++i) {
        // do computation with array[i]
-       prefetch_l1(array[i+32]);
+       prefetch_l1(&array[i+32]);
    }
 
 The standard library has routines to prefetch to the L1, L2, and L3
 caches.  It also has a variant, ``prefetch_nt()``, that indicates that the
 value being prefetched isn't expected to be used more than once (so should
-be high priority to be evicted from the cache).
+be high priority to be evicted from the cache).  Furthermore, it has
+versions of these functions that take both ``uniform`` and ``varying``
+pointer types.
 
 ::
 
-    void prefetch_{l1,l2,l3,nt}(reference TYPE)
-
-These functions are available for all of the basic types in the
-language--``int8``, ``int16``, ``int32``, ``float``, and so forth.
+    void prefetch_{l1,l2,l3,nt}(void * uniform ptr)
+    void prefetch_{l1,l2,l3,nt}(void * varying ptr)
 
 
 System Information
@@ -2618,53 +2800,6 @@ system:
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.
 
-
-Low-Level Bits
---------------
-
-Sometimes it's useful to convert a ``bool`` value to an integer using sign
-extension so that the integer's bits are all on if the ``bool`` has the
-value ``true`` (rather than just having the value one).  The
-``sign_extend()`` functions provide this functionality:
-
-::
-
-    int sign_extend(bool value) 
-    uniform int sign_extend(uniform bool value) 
-
-The ``intbits()`` and ``floatbits()`` functions can be used to implement
-low-level floating-point bit twiddling.  For example, ``intbits()`` returns
-an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
-value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
-something like ``*((int *)&a)`` in C.
-
-::
-
-    float floatbits(unsigned int a);
-    uniform float floatbits(uniform unsigned int a);
-    unsigned int intbits(float a);
-    uniform unsigned int intbits(uniform float a);
-
-
-The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
-they just let the compiler know how to interpret the bits of the given
-value.  They make it possible to efficiently write functions that take
-advantage of the low-level bit representation of floating-point values.
-
-For example, the ``abs()`` function in the standard library is implemented
-as follows:
-
-::
-
-    float abs(float a) {
-        unsigned int i = intbits(a);
-        i &= 0x7fffffff;
-        return floatbits(i);
-    }
-
-It, it clears the high order bit, to ensure that the given floating-point
-value is positive.  This compiles down to a single ``andps`` instruction
-when used with an Intel® SSE target, for example.
 
 Interoperability with the Application
 =====================================
@@ -2719,11 +2854,14 @@ And this C++ code:
 ::
 
    // C++ code
-   extern float foo;
-   float bar[10];
+   extern "C" {
+     extern float foo;
+     float bar[10];
+   }
 
 Both the ``foo`` and ``bar`` global variables can be accessed on each
-side.
+side.  Note that the ``extern "C"`` declaration is necessary from C++,
+since ``ispc`` uses C linkage for functions and globals.
 
 ``ispc`` code can also call back to C/C++.  On the ``ispc`` side, any
 application functions to be called must be declared with the ``extern "C"``
@@ -2777,8 +2915,8 @@ If the function is then called as:
 The ``activeLanes`` parameter will have the value one in the 0th bit if the
 first program instance is running at this point in the code, one in the
 first bit for the second instance, and so forth.  (The ``lanemask()``
-function is documented in `Low-Level Bits`_.)  Application code can thus be
-written as:
+function is documented in `Cross-Program Instance Operations`_.)
+Application code can thus be written as:
 
 ::
 
@@ -2793,10 +2931,10 @@ written as:
 Data Layout
 -----------
 
-In general, ``ispc`` tries to ensure that ``struct`` s and other complex
-datatypes are laid out in the same way in memory as they are in C/C++.
-Matching structure layout is important for easy interoperability between C/C++
-code and ``ispc`` code.
+In general, ``ispc`` tries to ensure that ``struct`` types and other
+complex datatypes are laid out in the same way in memory as they are in
+C/C++.  Matching structure layout is important for easy interoperability
+between C/C++ code and ``ispc`` code.
 
 The main complexity in sharing data between ``ispc`` and C/C++ often comes
 from reconciling data structures between ``ispc`` code and application
@@ -2824,8 +2962,8 @@ have a declaration like:
      float pos[3];
   };
 
-Because ``varying`` types have different sizes on different processor
-architectures, ``ispc`` prohibits any varying types from being used in
+Because ``varying`` types have size that depends on the size of the gang of
+program instances, ``ispc`` prohibits any varying types from being used in
 parameters to functions with the ``export`` qualifier.  (``ispc`` also
 prohibits passing structures that themselves have varying types as members,
 etc.)  Thus, all datatypes that is shared with the application must have
@@ -2833,23 +2971,8 @@ the ``uniform`` qualifier applied to them.  (See `Understanding How to
 Interoperate With the Application's Data`_ for more discussion of how to
 load vectors of SoA or AoSoA data from the application.)
 
-While ``ispc`` doesn't support pointers, there are two mechanisms to work
-with pointers to arrays from the application.  First, ``ispc`` passes
-arrays by reference (like C), if the application has allocated an array by:
-
-::
-
-   // C++ code
-   float *array = new float[count];
-
-It can pass ``array`` to a ``ispc`` function defined as:
-
-::
-
-   export void foo(uniform float array[], uniform int count)
-
-Similarly, ``struct`` s from the application can have embedded pointers.
-This is handled with similar ``[]`` syntax:
+Similarly, ``struct`` types shared with the application can also have
+embedded pointers.
 
 ::
 
@@ -2864,20 +2987,16 @@ On the ``ispc`` side, the corresponding ``struct`` declaration is:
 
   // ispc
   struct Foo {
-      uniform float foo[], bar[];
+      uniform float * uniform foo, * uniform bar;
   };
 
-There are two subtleties related to data layout to be aware of.  First, the
-C++ specification doesn't define the size or memory layout of ``bool`` s.
-Therefore, it's dangerous to share ``bool`` values in memory between
-``ispc`` code and C/C++ code.
-
-Second, ``ispc`` stores ``uniform`` short-vector types in memory with their
-first element at the machine's natural vector alignment (i.e. 16 bytes for
-a target that is using Intel® SSE, and so forth.)  This implies that these
-types will have different layout on different compilation targets.  As
-such, applications should in general avoid accessing ``uniform`` short
-vector types from C/C++ application code if possible.
+There is one subtlety related to data layout to be aware of: ``ispc``
+stores ``uniform`` short-vector types in memory with their first element at
+the machine's natural vector alignment (i.e. 16 bytes for a target that is
+using Intel® SSE, and so forth.)  This implies that these types will have
+different layout on different compilation targets.  As such, applications
+should in general avoid accessing ``uniform`` short vector types from C/C++
+application code if possible.
 
 Data Alignment and Aliasing
 ---------------------------
@@ -2902,7 +3021,7 @@ functions.  Given a function like:
 
 ::
 
-    void func(reference int a, reference int b) {
+    void func(int &a, int &b) {
         a = 0;
         if (b == 0) { ... }
     }
@@ -2974,8 +3093,7 @@ this:
 ::
 
   export void length(Vector vectors[1024], uniform float len[]) {
-      for (uniform int i = 0; i < 1024; i += programCount) {
-          int index = i+programIndex;
+      foreach (index = 0 ... 1024) {
           float x = vectors[index].x;
           float y = vectors[index].y;
           float z = vectors[index].z;
@@ -2983,10 +3101,6 @@ this:
           len[index] = l;
       }
   }
-
-The ``vectors`` array has been indexed using ``programIndex`` in
-order to "peel off" ``programCount`` worth of values to compute the length
-of each time through the loop.
 
 The problem with this implementation is that the indexing into the array of
 structures, ``vectors[index].x`` is relatively expensive.  On a target
@@ -3015,8 +3129,7 @@ The ``ispc`` code might be:
 
   export void length(uniform float x[1024], uniform float y[1024],
                      uniform float z[1024], uniform float len[]) {
-      for (uniform int i = 0; i < 1024; i += programCount) {
-          int index = i+programIndex;
+      foreach (index = 0 ... 1024) {
           float xx = x[index];
           float yy = y[index];
           float zz = z[index];
@@ -3026,9 +3139,9 @@ The ``ispc`` code might be:
   }
 
 In this example, the loads into ``xx``, ``yy``, and ``zz`` are single
-vector loads of ``programCount`` values into the corresponding registers.
-This processing is more efficient than the multiple scalar loads that are
-required with the AoS layout above.
+vector loads of an entire gang's worth of values into the corresponding
+registers.  This processing is more efficient than the multiple scalar
+loads that are required with the AoS layout above.
 
 A final alternative is "array of structures of arrays" (AoSoA), a hybrid
 between these two.  A structure is declared that stores a small number of
@@ -3048,29 +3161,26 @@ then an inner loop that peels off values from the element members:
 
   #define N_VEC (1024/16)
   export void length(Vector16 v[N_VEC], uniform float len[]) {
-      for (uniform int i = 0; i < N_VEC; ++i) {
-          for (uniform int j = 0; j < 16; j += programCount) {
-              int index = j + programIndex;
-              float x = v[i].x[index];
-              float y = v[i].y[index];
-              float z = v[i].z[index];
-              float l = sqrt(x*x + y*y + z*z);
-              len[index] = l;
+      foreach (i = 0 ... N_VEC, j = 0 ... 16) {
+          float x = v[i].x[j];
+          float y = v[i].y[j];
+          float z = v[i].z[j];
+          float l = sqrt(x*x + y*y + z*z);
+          len[16*i+j] = l;
           }
       }
   }
 
-(This code assumes that ``programCount`` divides 16 equally.  See below for
-discussion of the more general case.)  One advantage of the AoSoA layout is
-that the memory accesses to load values are to nearby memory locations,
-where as with SoA, each of the three loads above is to locations separated
-by a few thousand bytes.  Thus, AoSoA can be more cache friendly.  For
-structures with many members, this difference can lead to a substantial
-improvement.
+One advantage of the AoSoA layout is that the memory accesses to load
+values are to nearby memory locations, where as with SoA, each of the three
+loads above is to locations separated by a few thousand bytes.  Thus, AoSoA
+can be more cache friendly.  For structures with many members, this
+difference can lead to a substantial improvement.
 
-``ispc`` can also efficiently process data in AoSoA layout where the inner
-array length is less than the machine vector width.  For example, consider
-doing computation with this AoSoA structure definition on a machine with an
+With some additional complexity, ``ispc`` can also generate code that
+efficiently processes data in AoSoA layout where the inner array length is
+less than the machine vector width.  For example, consider doing
+computation with this AoSoA structure definition on a machine with an
 8-wide vector unit (for example, an Intel® AVX target):
 
 ::
@@ -3107,6 +3217,9 @@ elements to work with and then proceeds with the computation.
 
 Related Languages
 =================
+
+TODO: rsl, C*, IVL
+
 
 Disclaimer and Legal Information
 ================================

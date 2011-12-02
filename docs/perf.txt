@@ -207,20 +207,9 @@ instances often do compute the same boolean value, this overhead is
 worthwhile.  If the control flow is in fact usually incoherent, this
 overhead only costs performance.
 
-In a similar fashion, ``ispc`` provides ``cfor``, ``cwhile``, ``cdo``,
-``cbreak``, ``ccontinue``, and ``creturn`` statements.  These statements
-are semantically the same as the corresponding non-"c"-prefixed functions.
-
-For example, when ``ispc`` encounters a regular ``continue`` statement in
-the middle of loop, it disables the mask bits for the program instances
-that executed the ``continue`` and then executes the remainder of the loop
-body, under the expectation that other executing program instances will
-still need to run those instructions.  If you expect that all running
-program instances will often execute ``continue`` together, then
-``ccontinue`` provides the compiler a hint to do extra work to check if
-every running program instance continued, in which case it can jump to the
-end of the loop, saving the work of executing the otherwise meaningless
-instructions.
+In a similar fashion, ``ispc`` provides ``cfor``, ``cwhile``, and ``cdo``
+statements.  These statements are semantically the same as the
+corresponding non-"c"-prefixed functions.
 
 Use "uniform" Whenever Appropriate
 ----------------------------------
