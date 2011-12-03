@@ -1728,7 +1728,6 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     llvm::Value *oldMask = ctx->GetInternalMask();
 
-    ctx->StartForeach();
     ctx->SetDebugPos(pos);
     ctx->StartScope();
 
@@ -1802,6 +1801,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         extrasMaskPtrs.push_back(ctx->AllocaInst(LLVMTypes::MaskType, "extras mask"));
         ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
+
+    ctx->StartForeach(bbStep[nDims-1]);
 
     // On to the outermost loop's test
     ctx->BranchInst(bbTest[0]);
@@ -1886,6 +1887,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // just generate its value when we need it in the loop body.
     for (int i = 0; i < nDims; ++i) {
         ctx->SetCurrentBasicBlock(bbStep[i]);
+        if (i == nDims-1)
+            ctx->RestoreContinuedLanes();
         llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
         llvm::Value *newCounter =  
             ctx->BinaryOperator(llvm::Instruction::Add, counter,

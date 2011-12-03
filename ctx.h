@@ -159,8 +159,11 @@ public:
         finished. */
     void EndLoop();
 
-    /** */
-    void StartForeach();
+    /** Indicates that code generation for a 'foreach' or 'foreach_tiled'
+        loop is about to start.  The provided basic block pointer indicates
+        where control flow should go if a 'continue' statement is executed
+        in the loop. */
+    void StartForeach(llvm::BasicBlock *continueTarget);
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck

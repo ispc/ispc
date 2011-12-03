@@ -1962,6 +1962,14 @@ of iteration dimensions may be specified, with each one spanning a
 different range of values.  Within the ``foreach`` loop, the given
 identifiers are available as ``const varying int32`` variables.
 
+It is illegal to have a ``break`` statement or a ``return`` statement
+within a ``foreach`` loop; a compile-time error will be issued in this
+case.  (It is legal to have a ``break`` in a regular ``for`` loop that's
+nested inside a ``foreach`` loop.)  ``continue`` statements are legal in
+``foreach`` loops; they have the same effect as in regular ``for`` loops:
+a program instances that executes a ``continue`` statement effectively
+skips over the rest of the loop body for the current iteration.
+
 As a specific example, consdier the following ``foreach`` statement:
 
 ::

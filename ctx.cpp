@@ -401,22 +401,26 @@ FunctionEmitContext::EndIf() {
         // or continue statements (and breakLanesPtr and continueLanesPtr
         // have their initial 'all off' values), so we don't need to check
         // for that here.
-        if (breakLanesPtr != NULL) {
-            assert(continueLanesPtr != NULL);
-
+        if (continueLanesPtr != NULL) {
+            // We want to compute:
             // newMask = (oldMask & ~(breakLanes | continueLanes))
             llvm::Value *oldMask = GetInternalMask();
-            llvm::Value *breakLanes = LoadInst(breakLanesPtr, "break_lanes");
             llvm::Value *continueLanes = LoadInst(continueLanesPtr,
                                                   "continue_lanes");
-            llvm::Value *breakOrContinueLanes = 
-                BinaryOperator(llvm::Instruction::Or, breakLanes, continueLanes,
-                               "break|continue_lanes");
-            llvm::Value *notBreakOrContinue = NotOperator(breakOrContinueLanes,
-                                                          "!(break|continue)_lanes");
+            llvm::Value *bcLanes = continueLanes;
+
+            if (breakLanesPtr != NULL) {
+                // breakLanesPtr will be NULL if we're inside a 'foreach' loop
+                llvm::Value *breakLanes = LoadInst(breakLanesPtr, "break_lanes");
+                bcLanes = BinaryOperator(llvm::Instruction::Or, breakLanes, 
+                                         continueLanes, "break|continue_lanes");
+            }
+
+            llvm::Value *notBreakOrContinue = 
+                NotOperator(bcLanes, "!(break|continue)_lanes");
             llvm::Value *newMask = 
-                BinaryOperator(llvm::Instruction::And, oldMask, notBreakOrContinue, 
-                               "new_mask");
+                BinaryOperator(llvm::Instruction::And, oldMask, 
+                               notBreakOrContinue, "new_mask");
             SetInternalMask(newMask);
         }
     }
@@ -477,15 +481,20 @@ FunctionEmitContext::EndLoop() {
 
 
 void
-FunctionEmitContext::StartForeach() {
+FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetForeach(breakTarget, continueTarget, breakLanesPtr,
-                                                 continueLanesPtr, oldMask, loopMask));
-    continueLanesPtr = breakLanesPtr = NULL;
+    controlFlowInfo.push_back(CFInfo::GetForeach(breakTarget, continueTarget, 
+                                                 breakLanesPtr, continueLanesPtr,
+                                                 oldMask, loopMask));
+    breakLanesPtr = NULL;
     breakTarget = NULL;
-    continueTarget = NULL;
+
+    continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
+    StoreInst(LLVMMaskAllOff, continueLanesPtr);
+    continueTarget = ct;
+
     loopMask = NULL;
 }
 
@@ -526,7 +535,8 @@ FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
 void
 FunctionEmitContext::Break(bool doCoherenceCheck) {
     if (breakTarget == NULL) {
-        Error(currentPos, "\"break\" statement is illegal outside of for/while/do loops.");
+        Error(currentPos, "\"break\" statement is illegal outside of "
+              "for/while/do loops.");
         return;
     }
 
@@ -576,7 +586,8 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
 void
 FunctionEmitContext::Continue(bool doCoherenceCheck) {
     if (!continueTarget) {
-        Error(currentPos, "\"continue\" statement illegal outside of for/while/do loops.");
+        Error(currentPos, "\"continue\" statement illegal outside of "
+              "for/while/do/foreach loops.");
         return;
     }
 
@@ -586,8 +597,8 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         // loop or if we can tell that the mask is all on.
         AddInstrumentationPoint("continue: uniform CF, jumped");
         if (ifsInLoopAllUniform() && doCoherenceCheck)
-            Warning(currentPos, "Coherent continue statement not necessary in fully uniform "
-                    "control flow.");
+            Warning(currentPos, "Coherent continue statement not necessary in "
+                    "fully uniform control flow.");
         BranchInst(continueTarget);
         bblock = NULL;
     }
@@ -638,26 +649,40 @@ FunctionEmitContext::ifsInLoopAllUniform() const {
 
 void
 FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
-    // Check to see if (returned lanes | continued lanes | break lanes) is
-    // equal to the value of mask at the start of the loop iteration.  If
-    // so, everyone is done and we can jump to the given target
-    llvm::Value *returned = LoadInst(returnedLanesPtr,
-                                     "returned_lanes");
-    llvm::Value *continued = LoadInst(continueLanesPtr,
-                                      "continue_lanes");
-    llvm::Value *breaked = LoadInst(breakLanesPtr, "break_lanes");
-    llvm::Value *returnedOrContinued = BinaryOperator(llvm::Instruction::Or, 
-                                                      returned, continued,
-                                                      "returned|continued");
-    llvm::Value *returnedOrContinuedOrBreaked = 
-        BinaryOperator(llvm::Instruction::Or, returnedOrContinued,
-                       breaked, "returned|continued");
+    llvm::Value *allDone = NULL;
+    assert(continueLanesPtr != NULL);
+    if (breakLanesPtr == NULL) {
+        // In a foreach loop, break and return are illegal, and
+        // breakLanesPtr is NULL.  In this case, the mask is guaranteed to
+        // be all on at the start of each iteration, so we only need to
+        // check if all lanes have continued..
+        llvm::Value *continued = LoadInst(continueLanesPtr,
+                                          "continue_lanes");
+        allDone = All(continued);
+    }
+    else {
+        // Check to see if (returned lanes | continued lanes | break lanes) is
+        // equal to the value of mask at the start of the loop iteration.  If
+        // so, everyone is done and we can jump to the given target
+        llvm::Value *returned = LoadInst(returnedLanesPtr,
+                                         "returned_lanes");
+        llvm::Value *continued = LoadInst(continueLanesPtr,
+                                          "continue_lanes");
+        llvm::Value *breaked = LoadInst(breakLanesPtr, "break_lanes");
+        llvm::Value *returnedOrContinued = BinaryOperator(llvm::Instruction::Or, 
+                                                          returned, continued,
+                                                          "returned|continued");
+        llvm::Value *returnedOrContinuedOrBreaked = 
+            BinaryOperator(llvm::Instruction::Or, returnedOrContinued,
+                           breaked, "returned|continued");
 
-    // Do we match the mask at loop entry?
-    llvm::Value *allRCB = MasksAllEqual(returnedOrContinuedOrBreaked, loopMask);
+        // Do we match the mask at loop entry?
+        allDone = MasksAllEqual(returnedOrContinuedOrBreaked, loopMask);
+    }
+
     llvm::BasicBlock *bAll = CreateBasicBlock("all_continued_or_breaked");
     llvm::BasicBlock *bNotAll = CreateBasicBlock("not_all_continued_or_breaked");
-    BranchInst(bAll, bNotAll, allRCB);
+    BranchInst(bAll, bNotAll, allDone);
 
     // If so, have an extra basic block along the way to add
     // instrumentation, if the user asked for it.
