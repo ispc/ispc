@@ -495,8 +495,9 @@ declaration_statement
     {
         if ($1->declSpecs->storageClass == SC_TYPEDEF) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
-                m->AddTypeDef($1->declarators[i]->sym);
+                m->AddTypeDef($1->declarators[i]->GetSymbol());
             }
+            $$ = NULL;
         }
         else {
             std::vector<VariableDeclaration> vars = $1->GetVariableDeclarations();
