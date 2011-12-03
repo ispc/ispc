@@ -972,7 +972,13 @@ which of them will write their value of ``value`` to ``array[index]``.
     void assign(uniform int array[], int index, int value) {
         array[index] = value;
     }
-    
+
+While this rule that says that program instances can safely depend on
+side-effects from by other program instances in their gang eliminates a
+class of synchronization requirements imposed by some other SPMD languages,
+it conversely means that it is possible to write ``ispc`` programs that
+compute different results when run with different gang sizes.
+
 
 Tasking Model
 -------------
@@ -1960,7 +1966,9 @@ value less than or equal to ``end``, specifying iteration over all integer
 values from ``start`` up to and including ``end-1``.  An arbitrary number
 of iteration dimensions may be specified, with each one spanning a
 different range of values.  Within the ``foreach`` loop, the given
-identifiers are available as ``const varying int32`` variables.
+identifiers are available as ``const varying int32`` variables.  The
+execution mask starts out "all on" at the start of each ``foreach`` loop
+iteration, but may be changed by control flow constructs within the loop.
 
 It is illegal to have a ``break`` statement or a ``return`` statement
 within a ``foreach`` loop; a compile-time error will be issued in this
@@ -1994,28 +2002,41 @@ the gang size is 8:
         // perform computation on element i
     }
 
-The program counter will step through the statements of this loop just
-``16/8==2`` times; the first time through, the ``varying int32`` variable
-``i`` will have the values (0,1,2,3,4,5,6,7) over the program instances,
-and the second time through, ``i`` will have the values
-(8,9,10,11,12,13,14,15), thus mapping the available program instances to
-all of the data by the end of the loop's execution.  The execution mask
-starts out "all on" at the start of each ``foreach`` loop iteration, but
-may be changed by control flow constructs within the loop.
+One possible valid execution path of this loop would be for the program
+counter the step through the statements of this loop just ``16/8==2``
+times; the first time through, with the ``varying int32`` variable ``i``
+having the values (0,1,2,3,4,5,6,7) over the program instances, and the
+second time through, having the values (8,9,10,11,12,13,14,15), thus
+mapping the available program instances to all of the data by the end of
+the loop's execution.  
 
-The basic ``foreach`` statement subdivides the iteration domain by mapping
-a gang-size worth of values in the innermost dimension to the gang, only
-spanning a single value in each of the outer dimensions.  This
-decomposition generally leads to coherent memory reads and writes, but may
-lead to worse control flow coherence than other decompositions.
+In general, however, you shouldn't make any assumptions about the order in
+which elements of the iteration domain will be processed by a ``foreach``
+loop.  For example, the following code exhibits undefined behavior:
+
+::
+
+    uniform float a[10][100];
+    foreach (i = 0 ... 10, j = 0 ... 100) {
+        if (i == 0)
+            a[i][j] = j;
+        else
+            // Error: can't assume that a[i-1][j] has been set yet
+            a[i][j] = a[i-1][j];
+
+The ``foreach`` statement generally subdivides the iteration domain by
+selecting sets of contiguous elements in the inner-most dimension of the
+iteration domain.  This decomposition approach generally leads to coherent
+memory reads and writes, but may lead to worse control flow coherence than
+other decompositions.
 
 Therefore, ``foreach_tiled`` decomposes the iteration domain in a way that
 tries to map locations in the domain to program instances in a way that is
 compact across all of the dimensions.  For example, on a target with an
-8-wide gang size, the following ``foreach_tiled`` statement processes the
-iteration domain in chunks of 2 elements in ``j`` and 4 elements in ``i``
-each time.  (The trade-offs between these two constructs are discussed in
-more detail in the `ispc Performance Guide`_.)
+8-wide gang size, the following ``foreach_tiled`` statement might process
+the iteration domain in chunks of 2 elements in ``j`` and 4 elements in
+``i`` each time.  (The trade-offs between these two constructs are
+discussed in more detail in the `ispc Performance Guide`_.)
 
 .. _ispc Performance Guide: perf.html#improving-control-flow-coherence-with-foreach-tiled
 
