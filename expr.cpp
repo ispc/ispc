@@ -2599,6 +2599,17 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         const Type *paramType = ft->GetParameterType(i); 
 
+        const Type *argLValueType = argExpr->GetLValueType();
+        if (argLValueType != NULL &&
+            dynamic_cast<const PointerType *>(argLValueType) != NULL &&
+            argLValueType->IsVaryingType() &&
+            dynamic_cast<const ReferenceType *>(paramType) != NULL) {
+            Error(argExpr->pos, "Illegal to pass a \"varying\" lvalue to a "
+                  "reference parameter of type \"%s\".",
+                  paramType->GetString().c_str());
+            return NULL;
+        }
+
         // Do whatever type conversion is needed
         argExpr = TypeConvertExpr(argExpr, paramType,
                                   "function call argument");
