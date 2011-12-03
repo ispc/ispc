@@ -2,18 +2,19 @@
 Intel® SPMD Program Compiler User's Guide
 =========================================
 
-``ispc`` is a compiler for writing SPMD (single program multiple data)
-programs to run on the CPU.  The SPMD programming approach is widely known
-to graphics and GPGPU programmers; it is used for GPU shaders and CUDA\* and
-OpenCL\* kernels, for example.  The main idea behind SPMD is that one writes
-programs as if they were operating on a single data element (a pixel for a
-pixel shader, for example), but then the underlying hardware and runtime
-system executes multiple invocations of the program in parallel with
-different inputs (the values for different pixels, for example).
+The Intel® SPMD Program Compiler (``ispc``) is a compiler for writing SPMD
+(single program multiple data) programs to run on the CPU.  The SPMD
+programming approach is widely known to graphics and GPGPU programmers; it
+is used for GPU shaders and CUDA\* and OpenCL\* kernels, for example.  The
+main idea behind SPMD is that one writes programs as if they were operating
+on a single data element (a pixel for a pixel shader, for example), but
+then the underlying hardware and runtime system executes multiple
+invocations of the program in parallel with different inputs (the values
+for different pixels, for example).
 
 The main goals behind ``ispc`` are to:
 
-* Build a small variant of the C programming language that delivers good
+* Build a variant of the C programming language that delivers good
   performance to performance-oriented programmers who want to run SPMD
   programs on CPUs.
 * Provide a thin abstraction layer between the programmer and the
@@ -162,10 +163,11 @@ of recent changes to the compiler.
 Updating ISPC Programs For Changes In ISPC 1.1
 ----------------------------------------------
 
-The 1.1 release of ``ispc`` features first-class support for pointers in
-the language.  Adding this functionality led to a number of syntactic
-changes to the language.  These should generally require only
-straightforward modification of existing programs.
+The major changes introduced in the 1.1 release of ``ispc`` are first-class
+support for pointers in the language and new parallel loop constructs.
+Adding this functionality required a number of syntactic changes to the
+language.  These changes should generally lead to straightforward minor
+modifications of existing ``ispc`` programs.
 
 These are the relevant changes to the language:
 
@@ -179,11 +181,6 @@ These are the relevant changes to the language:
     qualifier should just have ``reference`` removed: ``void foo(reference
     float bar[])`` can just be ``void foo(float bar[])``.
 
-* It is no longer legal to pass a varying lvalue to a function that takes a
-  reference parameter; references can only be to uniform lvalue types.  In
-  this case, the function should be rewritten to take a varying pointer
-  parameter.
-
 * It is now a compile-time error to assign an entire array to another
   array.
 
@@ -195,6 +192,11 @@ These are the relevant changes to the language:
   ``packed_store_active()`` takes a pointer to a ``uniform unsigned int``
   as its first parameter rather than taking a ``uniform unsigned int[]`` as
   its first parameter and a ``uniform int`` offset as its second parameter.
+
+* It is no longer legal to pass a varying lvalue to a function that takes a
+  reference parameter; references can only be to uniform lvalue types.  In
+  this case, the function should be rewritten to take a varying pointer
+  parameter.
 
 * There are new iteration constructs for looping over computation domains,
   ``foreach`` and ``foreach_tiled``.  In addition to being syntactically
@@ -505,14 +507,14 @@ parallel computation.  Understanding the details of ``ispc``'s parallel
 execution model that are introduced in this section is critical for writing
 efficient and correct programs in ``ispc``.
 
-``ispc`` supports two types of parallelism: both task parallelism to
-parallelize across multiple processor cores and SPMD parallelism to
-parallelize across the SIMD vector lanes on a single core.  Most of this
-section focuses on SPMD parallelism, but see `Tasking Model`_ at the end of
-this section for discussion of task parallelism in ``ispc``.
+``ispc`` supports two types of parallelism: task parallelism to parallelize
+across multiple processor cores and SPMD parallelism to parallelize across
+the SIMD vector lanes on a single core.  Most of this section focuses on
+SPMD parallelism, but see `Tasking Model`_ at the end of this section for
+discussion of task parallelism in ``ispc``.
 
 This section will use some snippets of ``ispc`` code to illustrate various
-concepts.  Given ``ispc``'s relationship to C, these should generally be
+concepts.  Given ``ispc``'s relationship to C, these should be
 understandable on their own, but you may want to refer to the `The ISPC
 Language`_ section for details on language syntax.
 
@@ -523,15 +525,15 @@ Basic Concepts: Program Instances and Gangs of Program Instances
 Upon entry to a ``ispc`` function called from C/C++ code, the execution
 model switches from the application's serial model to ``ispc``'s execution
 model.  Conceptually, a number of ``ispc`` *program instances* start
-running in parallel.  The group of running program instances is a called
-*gang* (harkening to "gang scheduling", since ``ispc`` provides certain
-guarantees about the control flow coherence of program instances running
-in a gang.)  An ``ispc`` program instance is thus roughly similar to a
-CUDA* "thread" or an OpenCL* "work-item", and an ``ispc`` gang is roughly
-similar to a CUDA* "warp".
+running in concurrently.  The group of running program instances is a
+called *gang* (harkening to "gang scheduling", since ``ispc`` provides
+certain guarantees about the control flow coherence of program instances
+running in a gang, detailed in `Gang Convergence Guarantees`_.)  An
+``ispc`` program instance is thus similar to a CUDA* "thread" or an OpenCL*
+"work-item", and an ``ispc`` gang is similar to a CUDA* "warp".
 
-An ``ispc`` program, then, expresses the computation performed by a gang of
-program instances, using an "implicitly parallel" model, where the ``ispc``
+An ``ispc`` program expresses the computation performed by a gang of
+program instances, using an "implicit parallel" model, where the ``ispc``
 program generally describes the behavior of a single program instance, even
 though a gang of them is actually executing together.  This implicit model
 is the same that is used for shaders in programmable graphics pipelines,
@@ -592,7 +594,7 @@ the same results for each program instance in a gang as would have been
 computed if the equivalent code ran serially in C to compute each program
 instance's result individually.  However, here we will more precisely
 define the execution model for control flow in order to be able to
-precisely define the language's behavior.
+precisely define the language's behavior in specific situations.
 
 We will specify the notion of a *program counter* and how it is updated to
 step through the program, and an *execution mask* that indicates which
@@ -615,13 +617,14 @@ of an ``ispc`` function.
   conservative execution path through the function, wherein if *any*
   program instance wants to execute a statement, the program counter will
   pass through that statement.
+
   2. At each statement the program counter passes through, the execution
   mask will be set such that its value for a particular program instance is
-  "on" if the program instance wants to execute that statements.
+  "on" if and only if the program instance wants to execute that statement.
 
 Note that these definition provide the compiler some latitude; for example,
 the program counter is allowed pass through a series of statements with the
-execution mask "all off" as long as doing so has no observable side-effects.
+execution mask "all off" because doing so has no observable side-effects.
 
 Elsewhere, we will speak informally of the *control flow coherence* of a
 program; this notion describes the degree to which the program instances in
@@ -638,7 +641,7 @@ Control Flow Example: If Statements
 As a concrete example of the interplay between program counter and
 execution mask, one way that an ``if`` statement like the one in the
 previous section can be represented is shown by the following pseudo-code
-``ispc`` compiler output:
+compiler output:
 
 ::
 
@@ -654,7 +657,8 @@ previous section can be represented is shown by the following pseudo-code
 In other words, the program counter steps through the statements for both
 the "true" case and the "false" case, with the execution mask set so that
 no side-effects from the true statements affect the program instances that
-want to run the false statements, and vice versa.
+want to run the false statements, and vice versa.  the execution mask is
+then restored to the value it had before the ``if`` statement.
 
 However, the compiler is free to generate different code for an ``if``
 test, such as:
@@ -681,8 +685,8 @@ code for the "true" and "false" statements is undefined.
 
 In most cases, there is no programmer-visible difference between these two
 ways of compiling ``if``, though see the `Uniform Variables and Varying
-Control Flow`_ section for a case where it causes undefined behavior in a
-specific situation.
+Control Flow`_ section for a case where it causes undefined behavior in one
+particular situation.
 
 
 Control Flow Example: Loops
@@ -701,12 +705,13 @@ Therefore, if we have a loop like the following:
         ...
     }
 
-where ``limit`` has the value 1 for all of the program instances but
-one, and has value 1000 for the other one, the program counter will step
-through the loop body 1000 times.  The first time, the execution mask will be all on
-(assuming it is all on going into the ``for`` loop), and the remaining 999
-times, the mask will be off except for the program instance with 1000 in
-``limit``.  (This would be a loop with poor control flow coherence!)
+where ``limit`` has the value 1 for all of the program instances but one,
+and has value 1000 for the other one, the program counter will step through
+the loop body 1000 times.  The first time, the execution mask will be all
+on (assuming it is all on going into the ``for`` loop), and the remaining
+999 times, the mask will be off except for the program instance with a
+``limit`` value of 1000.  (This would be a loop with poor control flow
+coherence!)
 
 A ``continue`` statement in a loop may be handled either by disabling the
 execution mask for the program instances that execute the ``continue`` and
@@ -716,11 +721,6 @@ disabled after the ``continue`` has executed.  ``break`` statements are
 handled in a similar fashion.
 
 
-Control Flow Example: Function Pointers
----------------------------------------
-
- 
-
 Gang Convergence Guarantees
 ---------------------------
 
@@ -728,13 +728,16 @@ The ``ispc`` execution model provides an important guarantee about the
 behavior of the program counter and execution mask: the execution of
 program instances is *maximally converged*.  Maximal convergence means that
 if two program instances follow the same control path, they are guaranteed
-to execute each program statement concurrently. [#]_
+to execute each program statement concurrently. If two program instances
+follow diverging control paths, it is guaranteed that they will reconverge
+as soon as possible (if they do later reconverge). [#]_
 
 .. [#] This is another significant difference between the ``ispc``
-       execution model and the one implemented by OpenCL* and CUDA*.
+       execution model and the one implemented by OpenCL* and CUDA*, which
+       doesn't provide this guarantee.
 
-Furthermore, maximal convergence means that in the presence of divergent
-control flow such as the following:
+Maximal convergence means that in the presence of divergent control flow
+such as the following:
 
 ::
 
@@ -751,9 +754,9 @@ It is guaranteed that all program instances that were running before the
 for the gang of program instances, rather than the concept of a unique
 program counter for each program instance.)
 
-Thus, it is illegal to execute a function with an 8-wide gang by running it
-two times, with a 4-wide gang representing half of the original 8-wide gang
-each time.
+Another implication of this property is that it is illegal to execute a
+function with an 8-wide gang by running it two times, with a 4-wide gang
+representing half of the original 8-wide gang each time.
 
 The way that "varying" function pointers are handled in ``ispc`` is also
 affected by this guarantee: if a function pointer is ``varying``, then it
@@ -772,16 +775,16 @@ Uniform Data
 
 A variable that is declared with the ``uniform`` qualifier represents a
 single value that is shared across the entire gang.  (In contrast, the
-default qualifier for variables in ``ispc``, ``varying``, represents a
-variable that has a distinct storage location for each program instance in
-the gang.)
+default variability qualifier for variables in ``ispc``, ``varying``,
+represents a variable that has a distinct storage location for each program
+instance in the gang.)
 
 It is an error to try to assign a ``varying`` value to a ``uniform``
 variable, though ``uniform`` values can be assigned to ``uniform``
 variables.  Assignments to ``uniform`` variables are not affected by the
 execution mask (there's no unambiguous way that they could be); rather,
-they always apply if the block of code that has the the uniform assignment
-is executed.
+they always apply if the program pointer executes a statement that is a
+uniform assignment.
 
 
 Uniform Control Flow
@@ -811,14 +814,13 @@ over pixels adjacent to the given (x,y) coordiantes:
         return sum / 9.;
     }
 
-Under the ``ispc`` SPMD model, we have a gang of program instances this
-function in parallel, where in general each program instance has different
-values for ``x`` and ``y``.)  For the box filtering algorithm here, all of
+In general each program instance in the gang has different values for ``x``
+and ``y`` in this function.  For the box filtering algorithm here, all of
 the program instances will actually want to execute the same number of
 iterations of the ``for`` loops, with all of them having the same values
 for ``dx`` and ``dy`` each time through.  If these loops are instead
 implemented with ``dx`` and ``dy`` declared as ``uniform`` variables, then
-the ``ispc`` compiler can generate more efficient code for the loops. [#]_ 
+the ``ispc`` compiler can generate more efficient code for the loops. [#]_
 
 .. [#] In this case, a sufficiently smart compiler could determine that
    ``dx`` and ``dy`` have the same value for all program instances and thus
@@ -833,7 +835,7 @@ the ``ispc`` compiler can generate more efficient code for the loops. [#]_
 
 In particular, ``ispc`` can avoid the overhead of checking to see if any of
 the running program instances wants to do another loop iteration.  Instead,
-``ispc`` can generate code where all instances always do the same
+the compiler can generate code where all instances always do the same
 iterations.
 
 The analogous benefit comes when using ``if`` statements--if the test in an
@@ -854,9 +856,9 @@ instances that are supposed to be executing the corresponding clause.
 Under this model, we must define the effect of modifying ``uniform``
 variables in the context of varying control flow.  
 
-In general, modifying ``uniform`` variables under varying control flow
-leads to the ``uniform`` variable having an undefined value, except
-within a block where the ``uniform`` value had a value assigned to it.
+In most cases, modifying ``uniform`` variables under varying control flow
+leads to the ``uniform`` variable having an undefined value, except within
+a block where the ``uniform`` value had a value assigned to it.
 
 Consider the following example, which illustrates three cases.
 
@@ -1331,9 +1333,9 @@ instance of that variable shared by all program instances in a gang.  (In
 other words, it necessarily has the same value across all of the program
 instances.)  In addition to requiring less storage than varying values,
 ``uniform`` variables lead to a number of performance advantages when they
-are applicable (see `Uniform Variables and Varying Control Flow`_, for
-example.)  Varying variables may be qualified with ``varying``, though
-doing so has no effect, as ``varying`` is the default.
+are applicable (see `Uniform Control Flow`_, for example.)  Varying
+variables may be qualified with ``varying``, though doing so has no effect,
+as ``varying`` is the default.
 
 ``uniform`` variables can be modified as the program executes, but only in
 ways that preserve the property that they have a single value for the
@@ -1938,7 +1940,10 @@ more details on why regular ``if`` statements may sometimes do this.)
 Along similar lines, ``cfor``, ``cdo``, and ``cwhile`` check to see if all
 program instances are running at the start of each loop iteration; if so,
 they can run a specialized code path that has been optimized for the "all
-on" execution mask case.
+on" execution mask case.  It is already the case for the regular looping
+constructs in ``ispc`` that a loop will never be executed with an "all off"
+execution mask.
+
 
 Parallel Iteration Statements: "foreach" and "foreach_tiled"
 ------------------------------------------------------------
@@ -1966,8 +1971,8 @@ As a specific example, consdier the following ``foreach`` statement:
     }
 
 It specifies a loop over a 2D domain, where the ``j`` variable goes from 0
-to ``height`` and ``i`` goes from 0 to ``width``.  Within the loop, the
-variables ``i`` and ``j`` are available.
+to ``height-1`` and ``i`` goes from 0 to ``width-1``.  Within the loop, the
+variables ``i`` and ``j`` are available and initialized accordingly.
 
 ``foreach`` loops actually cause the given iteration domain to be
 automatically mapped to the program instances in the gang, so that all of
@@ -1981,27 +1986,28 @@ the gang size is 8:
         // perform computation on element i
     }
 
-At the CPU hardware level, the body of this loop will only execute
+The program counter will step through the statements of this loop just
 ``16/8==2`` times; the first time through, the ``varying int32`` variable
 ``i`` will have the values (0,1,2,3,4,5,6,7) over the program instances,
 and the second time through, ``i`` will have the values
 (8,9,10,11,12,13,14,15), thus mapping the available program instances to
-all of the data by the end of the loop's execution.
+all of the data by the end of the loop's execution.  The execution mask
+starts out "all on" at the start of each ``foreach`` loop iteration, but
+may be changed by control flow constructs within the loop.
 
-The ``foreach`` statement subdivides the iteration domain by mapping a
-gang-size worth of values in the innermost dimension to the gang, only
+The basic ``foreach`` statement subdivides the iteration domain by mapping
+a gang-size worth of values in the innermost dimension to the gang, only
 spanning a single value in each of the outer dimensions.  This
 decomposition generally leads to coherent memory reads and writes, but may
 lead to worse control flow coherence than other decompositions.
-``foreach_tiled`` decomposes the iteration domain in a way that tries to
-map locations in the domain to program instances in a way that is compact
-across all of the dimensions.  
 
-For example, on a target with an 8-wide gang size, the following
-``foreach_tiled`` statement processes the iteration domain in chunks of 2
-elements in ``j`` and 4 elements in ``i`` each time.  (The trade-offs
-between these two constructs are discussed in more detail in the `ispc
-Performance Guide`_.)
+Therefore, ``foreach_tiled`` decomposes the iteration domain in a way that
+tries to map locations in the domain to program instances in a way that is
+compact across all of the dimensions.  For example, on a target with an
+8-wide gang size, the following ``foreach_tiled`` statement processes the
+iteration domain in chunks of 2 elements in ``j`` and 4 elements in ``i``
+each time.  (The trade-offs between these two constructs are discussed in
+more detail in the `ispc Performance Guide`_.)
 
 .. _ispc Performance Guide: perf.html#improving-control-flow-coherence-with-foreach-tiled
 
@@ -2024,7 +2030,10 @@ each program instance.  (In other words, it's a varying integer value that
 has value zero for the first program instance, and so forth.)  The
 ``programCount`` builtin gives the total number of instances in the gang.
 Together, these can be used to uniquely map executing program instances to
-input data.
+input data. [#]_
+
+.. [#] ``programIndex`` is analogous to ``get_global_id()`` in OpenCL* and
+       ``threadIdx`` in CUDA*.
 
 As a specific example, consider an ``ispc`` function that needs to perform
 some computation on an array of data.
