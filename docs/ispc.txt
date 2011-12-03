@@ -59,14 +59,22 @@ Contents:
   + `The Preprocessor`_
   + `Debugging`_
 
-* `Parallel Execution Model in ISPC`_
+* `The ISPC Parallel Execution Model`_
 
-  + `Program Instances and Gangs of Program Instances`_
-  + `The SPMD-on-SIMD Execution Model`_
-  + `Gang Convergence`_
+  + `Basic Concepts: Program Instances and Gangs of Program Instances`_
+  + `Control Flow Within A Gang`_
+
+    * `Control Flow Example: If Statements`_
+    * `Control Flow Example: Loops`_
+    * `Gang Convergence Guarantees`_
+
+  + `Uniform Data`_
+
+    * `Uniform Control Flow`_
+    * `Uniform Variables and Varying Control Flow`_
+
   + `Data Races Within a Gang`_
-  + `Uniform Data In A Gang`_
-  + `Uniform Variables and Varying Control Flow`_
+  + `Tasking Model`_
 
 * `The ISPC Language`_
 
@@ -254,12 +262,6 @@ program can then proceed, doing computation and control flow based on the
 values loaded.  The result from the running program instances is written to
 the ``vout`` array before the next iteration of the ``foreach`` loop runs.
 
-For a simple program like this one, the performance difference versus a
-regular scalar C/C++ implementation of the same computation is not likely
-to be compelling.  For more complex programs that do more substantial
-amounts of computation, doing that computation in parallel across the
-machine's SIMD lanes can have a substantial performance benefit.
-
 On Linux\* and Mac OS\*, the makefile in that directory compiles this program.
 For Windows\*, open the ``examples/examples.sln`` file in Microsoft Visual
 C++ 2010\* to build this (and the other) examples.  In either case,
@@ -435,9 +437,9 @@ Selecting 32 or 64 Bit Addressing
 
 By default, ``ispc`` uses 32-bit arithmetic for performing addressing
 calculations, even when using a 64-bit compilation target like x86-64.
-This decision can provide substantial performance benefits by reducing the
-cost of addressing calculations.  (Note that pointers themselves are still
-maintained as 64-bit quantities for 64-bit targets.)
+This implementation approach can provide substantial performance benefits
+by reducing the cost of addressing calculations.  (Note that pointers
+themselves are still maintained as 64-bit quantities for 64-bit targets.)
 
 If you need to be able to address more than 4GB of memory from your
 ``ispc`` programs, the ``--addressing=64`` command-line argument can be
@@ -451,23 +453,33 @@ The Preprocessor
 ----------------
 
 ``ispc`` automatically runs the C preprocessor on your input program before
-compiling it.  Thus, you can use ``#ifdef``, ``#define``', and so forth in
+compiling it.  Thus, you can use ``#ifdef``, ``#define``, and so forth in
 your ispc programs.  (This functionality can be disabled with the ``--nocpp``
 command-line argument.)
 
-Three preprocessor symbols are automatically defined before the
-preprocessor runs.  First, ``ISPC`` is defined, so that it can be detected
-that the ``ispc`` compiler is running over the program.  Next, a symbol
-indicating the target instruction set is defined.  With an SSE2 target,
-``ISPC_TARGET_SSE2`` is defined; ``ISPC_TARGET_SSE4`` is defined for SSE4,
-and ``ISPC_TARGET_AVX`` for AVX.  
+A number of preprocessor symbols are automatically defined before the
+preprocessor runs:
 
-To detect which version of the compiler is being used, the
-``ISPC_MAJOR_VERSION`` and ``ISPC_MINOR_VERSION`` symbols are available.
-For the 1.0 releases of ``ispc`` these symbols were not defined; starting
-with ``ispc`` 1.1, they are defined, both having value 1.
+.. list-table:: Predefined Preprocessor symbols and their values
 
-For convenience, ``PI`` is defined, having the value 3.1415926535.
+  * - Symbol name
+    - Value
+    - Use
+  * - ISPC
+    - 1
+    - Detecting that the ``ispc`` compiler is processing the file
+  * - ISPC_TARGET_{SSE2,SSE4,AVX}
+    - 1
+    - One of these will be set, depending on the compilation target.
+  * - ISPC_MAJOR_VERSION
+    - 1
+    - Major version of the ``ispc`` compiler/language
+  * - ISPC_MINOR_VERSION
+    - 1
+    - Minor version of the ``ispc`` compiler/language
+  * - PI
+    - 3.1415926535
+    - Mathematics
 
 Debugging
 ---------
@@ -484,138 +496,245 @@ Functions`_ for more information.)  You can also use the ability to call
 back to application code at particular points in the program, passing a set
 of variable values to be logged or otherwise analyzed from there.
 
-Parallel Execution Model in ISPC
-================================
 
-invariant: will never execute with mask "all off" (at least not observably)
+The ISPC Parallel Execution Model
+=================================
 
-make the notion of a uniform pc + a mask a clear component
-
-define what we mean by control flow coherence here
-
-handwave to point forward to the language reference in the following
-section
-
-mention task parallelism here, basically that there are no guarantees about
-ordering between tasks, no way to synchronize among them, but remidn that
-we sync before returning from functions
-
-Though ``ispc`` has C-based syntax, it is inherently a language for
+Though ``ispc`` is a C-based language, it is inherently a language for
 parallel computation.  Understanding the details of ``ispc``'s parallel
-execution model is critical for writing efficient and correct programs in
-``ispc``.
+execution model that are introduced in this section is critical for writing
+efficient and correct programs in ``ispc``.
 
-``ispc`` supports both task parallelism to parallelize across multiple
-cores and SPMD parallelism to parallelize across the SIMD vector lanes on a
-single core.  This section focuses on SPMD parallelism.  See the sections
-`Task Parallelism: "launch" and "sync" Statements`_ and `Task Parallelism:
-Runtime Requirements`_ for discussion of task parallelism in ``ispc``.
+``ispc`` supports two types of parallelism: both task parallelism to
+parallelize across multiple processor cores and SPMD parallelism to
+parallelize across the SIMD vector lanes on a single core.  Most of this
+section focuses on SPMD parallelism, but see `Tasking Model`_ at the end of
+this section for discussion of task parallelism in ``ispc``.
 
-Program Instances and Gangs of Program Instances
-------------------------------------------------
+This section will use some snippets of ``ispc`` code to illustrate various
+concepts.  Given ``ispc``'s relationship to C, these should generally be
+understandable on their own, but you may want to refer to the `The ISPC
+Language`_ section for details on language syntax.
 
-The SPMD-on-SIMD Execution Model
---------------------------------
 
-In the SPMD model as implemented in ``ispc``, you programs that compute a
-set of outputs based on a set of inputs.  You must write these
-programs so that it is safe to run multiple instances of them in
-parallel--i.e. given a program an a set of inputs, the programs shouldn't
-have any assumptions about the order in which they will be run over the
-inputs, whether one program instances will have completed before another
-runs. [#]_
+Basic Concepts: Program Instances and Gangs of Program Instances
+----------------------------------------------------------------
 
-.. [#] This is essentially the same requirement that languages like CUDA\*
-   and OpenCL\* place on the programmer.
+Upon entry to a ``ispc`` function called from C/C++ code, the execution
+model switches from the application's serial model to ``ispc``'s execution
+model.  Conceptually, a number of ``ispc`` *program instances* start
+running in parallel.  The group of running program instances is a called
+*gang* (harkening to "gang scheduling", since ``ispc`` provides certain
+guarantees about the control flow coherence of program instances running
+in a gang.)  An ``ispc`` program instance is thus roughly similar to a
+CUDA* "thread" or an OpenCL* "work-item", and an ``ispc`` gang is roughly
+similar to a CUDA* "warp".
 
-Given this guarantee, the ``ispc`` compiler can safely execute multiple
-program instances in parallel, across the SIMD lanes of a single CPU.  In
-many cases, this execution approach can achieve higher overall performance
-than if the program instances had been run serially.
-
-Upon entry to a ``ispc`` function, the execution model switches from
-the application's serial model to SPMD.  Conceptually, a number of
-``ispc`` program instances will start running in parallel.  This
-parallelism doesn't involve launching hardware threads.  Rather, one
-program instance is mapped to each of the SIMD lanes of the CPU's vector
-unit (Intel® SSE or Intel® AVX).
-
-If a ``ispc`` program is written to do a the following computation:
+An ``ispc`` program, then, expresses the computation performed by a gang of
+program instances, using an "implicitly parallel" model, where the ``ispc``
+program generally describes the behavior of a single program instance, even
+though a gang of them is actually executing together.  This implicit model
+is the same that is used for shaders in programmable graphics pipelines,
+OpenCL* kernels, and CUDA*.  For example, consider the following ``ispc``
+function:
 
 ::
 
-    float x = ..., y = ...;
-    return x+y;
+    float func(float a, float b) {
+         return a + b / 2.;
+    }
 
-and if the ``ispc`` program is running four-wide on a CPU that supports the
-Intel® SSE instructions, then four program instances are running in
-parallel, each adding a pair of scalar values.  However, these four program
-instances store their individual scalar values for ``x`` and ``y`` in the
-lanes of an Intel® SSE vector register, so the addition operation for all
-four program instances can be done in parallel with a single ``addps``
-instruction.
+In C, this function describes a simple computation on two individual
+floating-point values.  In ``ispc``, this function describes the
+computation to be performed by each program instance in a gang.  Each
+program instance has distinct values for the variables ``a`` and ``b``, and
+thus each program instance generally computes a different result when
+executing this function.
 
-Program execution is more complicated in the presence of control flow.  The
-details are handled by the ``ispc`` compiler, but you may find it helpful
-to understand what is going on in order to be a more effective ``ispc``
-programmer.  In particular, the mapping of SPMD to SIMD lanes can lead to
-reductions in this SIMD efficiency as different program instances want to
-perform different computations.  For example, consider a simple ``if``
-statement:
+The gang of program instances starts executing in the same hardware thread
+and context as the application code that called the ``ispc`` function; no
+thread creation or context switching is done under the covers by ``ispc``.
+Rather, the set of program instances is mapped to the SIMD lanes of the
+current processor, leading to excellent utilization of hardware SIMD units
+and high performance.
+
+The number of program instances in a gang is relatively small; in practice,
+it's no more than twice the native SIMD width of the hardware it is
+executing on.  (Thus, four or eight program instances in a gang on a CPU
+using the the 4-wide SSE instruction set, and eight or sixteen on a CPU
+using 8-wide AVX.)
+
+Control Flow Within A Gang
+--------------------------
+
+Almost all the standard control-flow constructs are supported by ``ispc``;
+program instances are free to follow different program execution paths than
+other ones in their gang.  For example, consider a simple ``if`` statement
+in ``ispc`` code:
 
 ::
 
    float x = ..., y = ...;
    if (x < y) {
-      ... 
-   } else {
-      ...
+      // true statements
+   }
+   else {
+      // false statements
    }
 
-In general, the test ``x<y`` has a different result for different running
-SPMD program instances.  Some of the currently running program instances
-want to execute the statements for the "true" case and some want to execute
-the statements for the "false" case.  ``ispc`` processes this case by
-generating code that executes for both cases and masking the results, such
-that the "true" code doesn't have any side effects for the program
-instances that want to run the "false" code, and vice versa.  Thus, the
-correct reusult is computed for all of the program instances in the end,
-though with some overhead relative to a scalar implementation where code
-for only one of the two cases needs to run.
+In general, the test ``x < y`` may have different result for different
+program instances in the gang: some of the currently running program
+instances want to execute the statements for the "true" case and some want
+to execute the statements for the "false" case.  
 
-``for``, ``while``, and ``do`` statements are similar.  Their loops must
-run until all of the running SPMD program instances are ready to exit the
-loop.  Thus in an extreme case of a loop like:
+Complex control flow in ``ispc`` programs generally "just works", computing
+the same results for each program instance in a gang as would have been
+computed if the equivalent code ran serially in C to compute each program
+instance's result individually.  However, here we will more precisely
+define the execution model for control flow in order to be able to
+precisely define the language's behavior.
+
+We will specify the notion of a *program counter* and how it is updated to
+step through the program, and an *execution mask* that indicates which
+program instances want to execute the instruction at the current program
+counter.  The program counter a single program counter shared by all of the
+program instances in the gang; it points to a single instruction to be
+executed next.  The execution mask is a per-program instance boolean value
+that indicates whether or not side effects from the current instruction
+should effect each program instance.  Thus, for example, if a statement
+were to be executed with an "all off" mask, there should be no observable
+side-effects.
+
+Upon entry to an ``ispc`` function called by the application, the execution
+mask is "all on" and the program counter points at the first statement in
+the function.  The following two statments describe the required behavior
+of the program counter and the execution mask over the course of execution
+of an ``ispc`` function.
+
+  1. The program counter will have a sequence of values corresponding to a
+  conservative execution path through the function, wherein if *any*
+  program instance wants to execute a statement, the program counter will
+  pass through that statement.
+  2. At each statement the program counter passes through, the execution
+  mask will be set such that its value for a particular program instance is
+  "on" if the program instance wants to execute that statements.
+
+Note that these definition provide the compiler some latitude; for example,
+the program counter is allowed pass through a series of statements with the
+execution mask "all off" as long as doing so has no observable side-effects.
+
+Elsewhere, we will speak informally of the *control flow coherence* of a
+program; this notion describes the degree to which the program instances in
+the gang want to follow the same control flow path through a function (or,
+conversely, whether most statements are executed with a "mostly on"
+execution mask or a "mostly off" execution mask.)  In general, control flow
+divergence leads to reductions in SIMD efficiency (and thus performance) as
+different program instances want to perform different computations.
+
+
+Control Flow Example: If Statements
+-----------------------------------
+
+As a concrete example of the interplay between program counter and
+execution mask, one way that an ``if`` statement like the one in the
+previous section can be represented is shown by the following pseudo-code
+``ispc`` compiler output:
 
 ::
 
-    // assume limit has the values (1,1,1,1000) for the
-    // current running program instances
+   float x = ..., y = ...;
+   bool test = (x < y);
+   mask originalMask = get_current_mask();
+   set_mask(originalMask & test);
+   // true statements
+   set_mask(originalMask & ~test);
+   // false statements
+   set_mask(originalMask);
+
+In other words, the program counter steps through the statements for both
+the "true" case and the "false" case, with the execution mask set so that
+no side-effects from the true statements affect the program instances that
+want to run the false statements, and vice versa.
+
+However, the compiler is free to generate different code for an ``if``
+test, such as:
+ 
+::
+
+       float x = ..., y = ...;
+       bool test = (x < y);
+       mask originalMask = get_current_mask();
+       if (all_off(originalMask & test))
+           goto else_stmts;
+       set_mask(originalMask & test);
+       // true statements
+    else_stmts:
+       if (all_off(originalMask & ~test))
+           goto done;
+       set_mask(originalMask & ~test);
+       // false statements
+    done:
+       set_mask(originalMask);
+
+Furthermore, the order in which the program counter steps through the
+code for the "true" and "false" statements is undefined.
+
+In most cases, there is no programmer-visible difference between these two
+ways of compiling ``if``, though see the `Uniform Variables and Varying
+Control Flow`_ section for a case where it causes undefined behavior in a
+specific situation.
+
+
+Control Flow Example: Loops
+---------------------------
+
+``for``, ``while``, and ``do`` statements are handled in an analogous
+fashion.  The program counter continues to run additional iterations of the
+loop until all of the program instances are ready to exit the loop.  
+
+Therefore, if we have a loop like the following:
+
+::
+
     int limit = ...;  
     for (int i = 0; i < limit; ++i) {
         ...
     }
 
-The loop body needs to execute 1000 times, since one of the SPMD
-program instances has a value of 1000 for ``limit``.  For the other three
-running program instances, the right result will still be computed, as the
-code run the additional 999 times won't have any side effects for them.  However,
-the result will have poor SIMD utilization as the majority of the loop
-iterations don't benefit three out of the four currently running program
-instances.  Thus, finding ways to structure the computation
-so that the currently running program instances have similar desired
-control flow paths leads to better overall efficiency.
+where ``limit`` has the value 1 for all of the program instances but
+one, and has value 1000 for the other one, the program counter will step
+through the loop body 1000 times.  The first time, the execution mask will be all on
+(assuming it is all on going into the ``for`` loop), and the remaining 999
+times, the mask will be off except for the program instance with 1000 in
+``limit``.  (This would be a loop with poor control flow coherence!)
+
+A ``continue`` statement in a loop may be handled either by disabling the
+execution mask for the program instances that execute the ``continue`` and
+then continuing to step the program counter through the rest of the loop,
+or by jumping to the loop step statement, if all program instances are
+disabled after the ``continue`` has executed.  ``break`` statements are
+handled in a similar fashion.
 
 
-Gang Convergence
-----------------
+Control Flow Example: Function Pointers
+---------------------------------------
 
-notion of a single shared PC, ...
+ 
 
-Unlike languages such as OpenCL\* and CUDA\*, these executing program
-instances are guaranteed to be maximally converged--if two program
-instances follow the same control path, they are guaranteed to execute each
-operation at the same time.  In the presence of divergent control flow:
+Gang Convergence Guarantees
+---------------------------
+
+The ``ispc`` execution model provides an important guarantee about the
+behavior of the program counter and execution mask: the execution of
+program instances is *maximally converged*.  Maximal convergence means that
+if two program instances follow the same control path, they are guaranteed
+to execute each program statement concurrently. [#]_
+
+.. [#] This is another significant difference between the ``ispc``
+       execution model and the one implemented by OpenCL* and CUDA*.
+
+Furthermore, maximal convergence means that in the presence of divergent
+control flow such as the following:
 
 ::
 
@@ -628,54 +747,59 @@ operation at the same time.  In the presence of divergent control flow:
 
 It is guaranteed that all program instances that were running before the
 ``if`` test will also be running after the end of the ``else`` block.
-There is thus no need for a ``syncthreads``--type construct to synchronize
-the executing program instances in cases where program instances would like
-to share data or commicate with each other.
+(This guarantee stems from the notion of having a single program counter
+for the gang of program instances, rather than the concept of a unique
+program counter for each program instance.)
 
-If a function pointer is ``varying``, then it has a possibly-different
-value for all running program instances.  Given a call to a varying
-function pointer, ``ispc`` maintains as much execution convergence as
-possible; the code executed finds the set of unique function pointers over
-the currently running program instances and calls each one just once, such
-that the executing program instances when it is called are the set of
-active program instances that had that function pointer value.  The order
-in which the various function pointers are called in this case is
-indefined.
+Thus, it is illegal to execute a function with an 8-wide gang by running it
+two times, with a 4-wide gang representing half of the original 8-wide gang
+each time.
 
-
-Data Races Within a Gang
-------------------------
-
-sequence points, this works since writes from first statement will be seen
-as having gone to memory by the second
-
-::
-
-    int value = ...;
-    uniform int v[programCount];
-    v[programIndex] = value; 
-    value = v[(programIndex+1)%programCount];
-
-Although the SPMD model assumes that program instances are independent, you
-can write code that has data races across the program instances.  For
-example, the following code causes all program instances to try to write
-different values to the same location:
-
-::
-
-    uniform int array[32] = 0;
-    int index = 0;
-    array[index] = programIndex;
-    
-In this case, the behavior of the program is undefined.
+The way that "varying" function pointers are handled in ``ispc`` is also
+affected by this guarantee: if a function pointer is ``varying``, then it
+has a possibly-different value for all running program instances.  Given a
+call to a varying function pointer, ``ispc`` must maintains as much
+execution convergence as possible; the assembly code generated finds the
+set of unique function pointers over the currently running program
+instances and calls each one just once, such that the executing program
+instances when it is called are the set of active program instances that
+had that function pointer value.  The order in which the various function
+pointers are called in this case is undefined.
 
 
-Uniform Data In A Gang
-----------------------
+Uniform Data
+------------
 
-When appropriate, declaring variables as ``uniform`` types can allow the
-compiler to produce substantially better code.  Consider for example an
-image filtering operation where the program loops over adjacent pixels:
+A variable that is declared with the ``uniform`` qualifier represents a
+single value that is shared across the entire gang.  (In contrast, the
+default qualifier for variables in ``ispc``, ``varying``, represents a
+variable that has a distinct storage location for each program instance in
+the gang.)
+
+It is an error to try to assign a ``varying`` value to a ``uniform``
+variable, though ``uniform`` values can be assigned to ``uniform``
+variables.  Assignments to ``uniform`` variables are not affected by the
+execution mask (there's no unambiguous way that they could be); rather,
+they always apply if the block of code that has the the uniform assignment
+is executed.
+
+
+Uniform Control Flow
+--------------------
+
+One advantage of declaring variables that are shared across the gang as
+``uniform``, when appropriate, is the reduction in storage space required.
+A more important benefit is that it can enable the compiler to generate
+substantially better code for control flow; when a test condition for a
+control flow decision is based on a ``uniform`` quantity, the compiler can
+be immediately aware that all of the running program instances will follow
+the same path at that point, saving the overhead of needing to deal with
+control flow divergence and mask management.  (To distinguish the two forms
+of control flow, will say that control flow based on ``varying``
+expressions is "varying" control flow.)
+
+Consider for example an image filtering operation where the program loops
+over pixels adjacent to the given (x,y) coordiantes:
 
 ::
 
@@ -687,25 +811,19 @@ image filtering operation where the program loops over adjacent pixels:
         return sum / 9.;
     }
 
-Under the SPMD execution model, a number of program instances are running
-this function in parallel (and in general, we will assume that this
-function will end up being called with different values for ``x`` and ``y``
-for the running program instances.)  However, all of the program instances
-will want to execute the same number of iterations of the ``for`` loops,
-with all of them having the same values for ``dx`` and ``dy`` each time
-through. [#]_
+Under the ``ispc`` SPMD model, we have a gang of program instances this
+function in parallel, where in general each program instance has different
+values for ``x`` and ``y``.)  For the box filtering algorithm here, all of
+the program instances will actually want to execute the same number of
+iterations of the ``for`` loops, with all of them having the same values
+for ``dx`` and ``dy`` each time through.  If these loops are instead
+implemented with ``dx`` and ``dy`` declared as ``uniform`` variables, then
+the ``ispc`` compiler can generate more efficient code for the loops. [#]_ 
 
 .. [#] In this case, a sufficiently smart compiler could determine that
    ``dx`` and ``dy`` have the same value for all program instances and thus
-   generate more optimized code from the start, though ``ispc`` isn't yet
-   this clever.  Put another way, the ``ispc`` approach is generally that
-   the programmer shouldn't have to wonder if the compiler was smart or not
-   in a particular case, thus avoiding performance surprises.
-
-If these are instead implemented with ``dx`` and ``dy`` declared as
-``uniform`` variables, then the ``ispc`` compiler can generate more
-efficient code for the loops, taking advantage of the fact that these
-values are the same for all program instances.
+   generate more optimized code from the start, though this optimization
+   isn't yet implemented in ``ispc``.
 
 ::
 
@@ -718,44 +836,171 @@ the running program instances wants to do another loop iteration.  Instead,
 ``ispc`` can generate code where all instances always do the same
 iterations.
 
-A related benefit comes in ``if`` statements--if the test in an ``if``
-statement is purely based on ``uniform`` quantities, then the result will
-by definition be the same for all of the running program instances. Thus,
-the code for only one of the two cases needs to execute.  ``ispc`` can
-generate code that jumps to one of the two, avoiding the overhead of
-needing to run the code for both cases.
+The analogous benefit comes when using ``if`` statements--if the test in an
+``if`` statement is based on a ``uniform`` test, then the result will by
+definition be the same for all of the running program instances.  Thus, the
+code for only one of the two cases needs to execute.  ``ispc`` can generate
+code that jumps to one of the two, avoiding the overhead of needing to run
+the code for both cases.
 
 
 Uniform Variables and Varying Control Flow
 ------------------------------------------
 
-Operations may be executed even if none of the program instances needs to
-run them based on their control flow.  Consider an ``if``/``else`` test;
-the statements in the ``else`` block may be executed even if the test
-evaluates to ``true`` for all of the running program instances.  In
-general, the executed statements are masked, such that they have no side
-effects for the program instances that don't want to be running them, so
-there is no visible side-effect of executing the ``else`` statements.
-There is, however, one case where this part of the execution model can
-become apparent.
+Recall that in the presence of varying control flow, both the "true" and
+"false" clauses of an ``if`` statement may be executed, with the side
+effects of the instructions masked so that they only apply to the program
+instances that are supposed to be executing the corresponding clause.
+Under this model, we must define the effect of modifying ``uniform``
+variables in the context of varying control flow.  
 
-Consider the cast of modifying the value of a ``uniform`` variable under
-varying control flow:
+In general, modifying ``uniform`` variables under varying control flow
+leads to the ``uniform`` variable having an undefined value, except
+within a block where the ``uniform`` value had a value assigned to it.
+
+Consider the following example, which illustrates three cases.
 
 ::
 
-   extern void foo();
-   uniform int a;
+    float a = ...;
+    uniform int b = 0;
+    if (a == 0) {
+        ++b;
+        // use b: undefined! May be 1 or 11.
+    }
+    else {
+        b = 10;
+        // can use b, has value 10
+    }
+    // b is undefined: may be 10 or 11
 
-   if (test) { // varying test
-       ++a;    // modifying uniform under varying control flow
-       foo();
-   }
 
-When possible, ``ispc`` detects that the control flow is varying and issues
-an warning if a uniform variable is modified in this case.  Here, ``a`` may
-be modified in the above code even if *none* of the program instances
-evaluated a true value for the test, given the ``ispc`` execution model.
+There are three principles of ``ispc``'s execution model that have been
+previously introduced that together explain the results above.  They are:
+
+  1. Modifications to ``uniform`` variables aren't affected by the
+     execution mask.
+  2. The "true" and "false" clauses of a varying ``if`` statement may be
+     executed in either order.
+  3. Varying ``if`` statements may in some cases execute the instructions
+     for one of their clauses with the execution mask "all off".
+
+Thus, within the "true" clause, the value of ``b`` is undefined since the
+"else" clause may or may not have executed before the clause for the true
+case.
+ 
+Within the "else" clause, the assignment ``b = 10`` applies, giving ``b`` a
+well-defined value within the "else" clause and ``b`` can validly be used
+in the remainder of the code in that block.  
+
+Finally, ``b`` is undefined after the end of the "else" clause, since it is
+possible (but not necessarily the case) that one the clauses may have
+executed with an "all off" mask.  Thus, even if ``a`` had a non-zero value
+for all program instances in the gang, it's possible that the "true" clause
+executed with an "all off" mask and ``b`` was modified there.
+
+If it is important that code never be executed with an "all off" execution
+mask, then the ``cif`` statment (documented in the `"Coherent" Control Flow
+Statements: "cif" and Friends`_ section) can be used in place of a regular
+``if``, as it guarantees this property. 
+
+
+Data Races Within a Gang
+------------------------
+
+In order to be able to write well-formed programs where program instances
+depend on values that are written to memory by other program instances
+within their gang, it's necessary to have a clear definition of when
+side-effects from one program instance become visible to other program
+instances running in the same gang.
+
+In the model implemented by ``ispc``, any side effect from one program
+instance is visible to other program instances in the gang after the next
+sequence point in the program. [#]_ 
+
+.. [#] This is a significant difference between ``ispc`` and SPMD languages
+   like OpenCL* and CUDA*, which require barrier synchronization among the
+   running program instances with functions like ``barrier()`` or
+   ``__syncthreads()``, respectively, to ensure this condition.
+
+Generally, sequence points include the end of a full expression, before a
+function is entered in a function call, at function return, and at the end
+of initializer expressions.  The fact that there is no sequence point
+between the increment of ``i`` and the assignment to ``i`` in ``i=i++`` is
+why the effect that expression is undefined in C, for example.  See, for
+example, the `Wikipedia page on sequence points`_ for more information
+about sequence points in C and C++.
+
+.. _Wikipedia page on sequence points: http://en.wikipedia.org/wiki/Sequence_point
+
+In the following example, we have declared an array of values ``v``, with
+one value for each running program instance.  In the below, assume that
+``programCount`` gives the gang size, and the ``varying`` integer value
+``programIndex`` indexes into the running program instances starting from
+zero.  (Thus, if 8 program instances are running, the first one of them
+will have a value 0, the next one a value of 1, and so forth up to 7.) 
+
+::
+
+    int x = ...;
+    uniform int tmp[programCount];
+    tmp[programIndex] = x; 
+    int neighbor = tmp[(programIndex+1)%programCount];
+
+In this code, the running program instances have written their values of
+``x`` into the ``tmp`` array such that the ith element of ``tmp`` is equal
+to the value of ``x`` for the ith program instance.  Then, the program
+instances load the value of ``neighbor`` from ``tmp``, accessing the value
+written by their neighboring program instance (wrapping around to the first
+one at the end.)  This code is well-defined and without data races, since
+the writes to and reads from ``tmp`` are separated by a sequence point.
+
+(For this particular application of communicating values from one program
+instance to another, there are more efficient built-in functions in the
+``ispc`` standard library; see `Cross-Program Instance Operations`_ for
+more information.)
+
+It is possible to write code that has data races across the gang of program
+instances.  For example, if the following function is called with multiple
+program instances having the same value of ``index``, then it is undefined
+which of them will write their value of ``value`` to ``array[index]``.
+
+::
+
+    void assign(uniform int array[], int index, int value) {
+        array[index] = value;
+    }
+    
+
+Tasking Model
+-------------
+
+``ispc`` provides an asynchronous function call (i.e. tasking) mechanism
+through the ``launch`` keyword.  (The syntax is documented in the `Task
+Parallelism: "launch" and "sync" Statements`_ section.)  A function called
+with ``launch`` executes asynchronously from the function that called it;
+it may run immediately or it may run concurrently on another processor in
+the system, for example.  (This model is closely modeled on the model
+introduced by Intel® Cilk(tm).)  
+
+If a function launches multiple tasks, there are no guarantees about the
+order in which the tasks will execute.  Furthermore, multiple launched
+tasks from a single function may execute concurrently.
+
+A function that has launched tasks may use the ``sync`` keyword to force
+synchronization with the launched functions; ``sync`` causes a function to
+wait for all of the tasks it has launched to finish before execution
+continues after the ``sync``.  (Note that ``sync`` only waits for the tasks
+launched by the current function, not tasks launched by other functions).
+
+Alternatively, when a function that has launched tasks returns, an implicit
+``sync`` waits for all launched tasks to finish before allowing the
+function to return to its calling function.  This feature is important
+since it enables parallel composition: a function can call second function
+without needing to be concerned if the second function has launched
+asynchronous tasks or not--in either case, when the second function
+returns, the first function can trust that all of its computation has
+completed.
 
 
 The ISPC Language
@@ -765,14 +1010,15 @@ The ISPC Language
 number of new features that make it easy to write high-performance SPMD
 programs for the CPU.  Note that between not only the few small syntactic
 differences between ``ispc`` and C code but more importantly ``ispc``'s
-fundamentally parallel execution model, C code is not directly portable to
-``ispc``.  However, starting with working C code and porting it to ``ispc``
-can be an efficient way to quickly write ``ispc`` programs.
+fundamentally parallel execution model, C code can't just be recompiled to
+correctly run in parallel with ``ispc``.  However, starting with working C
+code and porting it to ``ispc`` can be an efficient way to quickly write
+``ispc`` programs.
 
 This section describes the syntax and semantics of the ``ispc`` language.
 To understand how to use ``ispc``, you need to understand both the language
 syntax and ``ispc``'s parallel execution model, which was described in the
-previous section, `Parallel Execution Model in ISPC`_.
+previous section, `The ISPC Parallel Execution Model`_.
 
 Relationship To The C Programming Language
 ------------------------------------------
@@ -790,16 +1036,17 @@ Specifically, C89 is used as the baseline for comparison in this subsection
 and Ritchie's book).  (``ispc`` adopts some features from C99 and from C++,
 which will be highlighted in the below.)
 
-``ispc`` has the same syntax for the following key features as C:
+``ispc`` has the same syntax and features for the following as is present
+in C:
 
 * Expression syntax and basic types
 * Syntax for variable declarations
-* Control flow structures: if, for, while, do.
+* Control flow structures: if, for, while, do
 * Pointers, including function pointers, ``void *``, and C's array/pointer
   duality (arrays are converted to pointers when passed to functions, etc.)
 * Structs and arrays
-* Recursion
-* Separate compilation
+* Support for recursive function calls
+* Support for separate compilation of source files
 * The preprocessor
 
 ``ispc`` adds a number of features from C++ and C99 to this base:
@@ -811,29 +1058,31 @@ which will be highlighted in the below.)
 * Variables can be declared anywhere in blocks, not just at their start.
 * Iteration variables for ``for`` loops can be declared in the ``for``
   statement itself (e.g. ``for (int i = 0; ...``) 
-* The ``inline`` qualifier to hint that a function should be inlined 
+* The ``inline`` qualifier to indicate that a function should be inlined 
 * Function overloading by parameter type
 * Hexidecimal floating-point constants
 
-``ispc`` also adds a number of new features that aren't in any of C89, C99,
-or C++:
+``ispc`` also adds a number of new features that aren't in C89, C99, or
+C++:
 
-* "Coherent" control flow statements that indicate that control flow is
-  expected to be coherent across the running program instances (see
-  `"Coherent" Control Flow Statements: "cif" and Friends`_)
-* Short vector types (see `Short Vector Types`_)
 * Parallel ``foreach`` and ``foreach_tiled`` iteration constructs (see
   `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_)
 * Language support for task parallelism (see `Task Parallel Execution`_)
+* "Coherent" control flow statements that indicate that control flow is
+  expected to be coherent across the running program instances (see
+  `"Coherent" Control Flow Statements: "cif" and Friends`_)
 * A rich standard library, though one that is different than C's (see `The
   ISPC Standard Library`_.)
+* Short vector types (see `Short Vector Types`_)
+* Syntax to specify integer constants as bit vectors (e.g. ``0b1100`` is 12)
 
 There are a number of features of C89 that are not supported in ``ispc``
 but are likely to be supported in future releases:
 
 * Short circuiting of logical operations
-* There are no types named ``char``, ``short``, or ``long``.  However,
-  there are built-in ``int8``, ``int16``, and ``int64`` types
+* There are no types named ``char``, ``short``, or ``long`` (or ``long
+  double``).  However, there are built-in ``int8``, ``int16``, and
+  ``int64`` types
 * Character constants
 * String constants and arrays of characters as strings
 * ``switch`` and ``goto`` statements
@@ -843,14 +1092,14 @@ but are likely to be supported in future releases:
 * Literal floating-point constants (even without a ``f`` suffix) are
   currently treated as being ``float`` type, not ``double``
 * The ``volatile`` qualifier
+* The ``register`` storage class for variables.  (Will be ignored).
 
 The following C89 features are not expected to be supported in any future
 ``ispc`` release:
 
-* The ``long double`` type
 * "K&R" style function declarations
 * The C standard library
-* The ``register`` storage class for variables
+* Octal integer constants
 
 The following reserved words from C89 are also reserved in ``ispc``:
 
@@ -874,7 +1123,7 @@ Tokens in ``ispc`` are delimted by white-space and comments.  The
 white-space characters are the usual set of spaces, tabs, and carriage
 returns/line feeds.  Comments can be delinated with ``//``, which starts a
 comment that continues to the end of the line, or the start of a comment
-can be delinated with ``/*`` and the end with ``*/``.  Like in C/C++,
+can be delinated with ``/*`` and the end with ``*/``.  Like C/C++,
 comments can't be nested.
 
 Identifiers in ``ispc`` are sequences of characters that start with an
@@ -882,10 +1131,20 @@ underscore or an upper-case or lower-case letter, and then followed by
 zero or more letters, numbers, or underscores.  Identifiers that start with
 two underscores are reserved for use by the compiler.
 
-Integer numeric constants can be specified in base 10 or in hexidecimal.
-Base 10 constants are given by a sequence of one or more digits from 0 to
-9.  Hexidecimal constants are denoted by a leading ``0x`` and then one or
-more digits from 0-9, a-f, or A-F.
+Integer numeric constants can be specified in base 10, hexidecimal, or
+binary.  (Octal integer constants aren't supported).  Base 10 constants are
+given by a sequence of one or more digits from 0 to 9.  Hexidecimal
+constants are denoted by a leading ``0x`` and then one or more digits from
+0-9, a-f, or A-F.  Finally, binary constants are denoted by a leading
+``0b`` and then a sequence of 1s and 0s.
+
+Here are three ways of specifying the integer value "15":
+
+::
+
+   int fifteen_decimal = 15;
+   int fifteen_hex     = 0xf;
+   int fifteen_binary  = 0b1111;
 
 Floating-point constants can be specified in one of three ways.  First,
 they may be a sequence of zero or more digits from 0 to 9, followed by a
@@ -1070,9 +1329,11 @@ functions are preserved across function calls.
 If a variable has a ``uniform`` qualifier, then there is only a single
 instance of that variable shared by all program instances in a gang.  (In
 other words, it necessarily has the same value across all of the program
-instances.)  In addition to requiring less storage, ``uniform`` variables
-lead to a number of performance advantages when they are applicable (see 
-`Uniform Variables and Varying Control Flow`_, for example.)
+instances.)  In addition to requiring less storage than varying values,
+``uniform`` variables lead to a number of performance advantages when they
+are applicable (see `Uniform Variables and Varying Control Flow`_, for
+example.)  Varying variables may be qualified with ``varying``, though
+doing so has no effect, as ``varying`` is the default.
 
 ``uniform`` variables can be modified as the program executes, but only in
 ways that preserve the property that they have a single value for the
@@ -1087,7 +1348,7 @@ error.
 
    uniform int x = ...;
    int y = ...;
-   int z = x * y;
+   int z = x * y;  // x is converted to varying for the multiply
 
 Arrays themselves aren't uniform or varying, but the elements that they
 store are:
@@ -1097,9 +1358,8 @@ store are:
     float foo[10];
     uniform float bar[10];
 
-The first declaration corresponds to 10 n-wide ``float`` values, where "n"
-is the gang size, while the second declaration corresonds to 10 ``float``
-values.
+The first declaration corresponds to 10 gang-wide ``float`` values in
+memory, while the second declaration corresonds to 10 ``float`` values.
 
 
 Defining New Names For Types
@@ -1141,8 +1401,8 @@ As with other basic types, pointers can be both ``uniform`` and
 ``varying``.  By default, they are varying.  The placement of the
 ``uniform`` qualifier to declare a ``uniform`` pointer may be initially
 surprising, but it matches the form of how for example a pointer that is
-itself ``const`` (as opposed to pointing to a ``const`` type)is declared in
-C.
+itself ``const`` (as opposed to pointing to a ``const`` type) is declared
+in C.
 
 ::
 
@@ -1162,8 +1422,10 @@ location in memory for each program instance.)
     *pa = programIndex;  // same as (a = programIndex)
     
 
-Any pointer type can be explicitly typecast to another pointer type (of the
-same uniform/varying-ness.)
+Any pointer type can be explicitly typecast to another pointer type, as
+long as the source type isn't a ``varying`` pointer when the destination
+type is a ``uniform`` pointer.  Like other types, ``uniform`` pointers can
+be typecast to be ``varying`` pointers, however.
 
 ::
 
@@ -1218,7 +1480,10 @@ It's not necessary to take the address of a function to assign it to a
 function pointer or to dereference it to call the function.
 
 As with pointers to data in ``ispc``, function pointers can be either
-``uniform`` or ``varying``.
+``uniform`` or ``varying``.  A call through a ``uniform`` causes all of the
+running program instances in the gang to call into the target function; the
+implications of a call through a ``varying`` function pointer are discussed
+in the section `Gang Convergence Guarantees`_.
 
 
 Reference Types
@@ -1241,25 +1506,27 @@ to a different variable:
 
     float a = ..., b = ...;
     float &r = a;  // makes r refer to a
-    r = b;  // assigns b to a, doesn't make r now refer to b
+    r = b;  // assigns b to a, doesn't make r refer to b
 
 An important limitation with references in ``ispc`` is that references
 can't be bound to varying lvalues; doing so causes a compile-time error to
 be issued.  This situation is illustrated in the following code, where
-``ptr`` is a ``varying`` pointer type (in other words, there each program
+``vptr`` is a ``varying`` pointer type (in other words, there each program
 instance in the gang has its own unique pointer value)
 
 ::
 
-    uniform float * varying ptr = ...;
-    float &r = *ptr;  // ERROR: *ptr is a varying lvalue type
+    uniform float * uniform uptr = ...;
+    float &ra = *uptr;  // ok
+    uniform float * varying vptr = ...;
+    float &rb = *vptr;  // ERROR: *ptr is a varying lvalue type
 
 (The rationale for this limitation is that references must be represented
 as either a uniform pointer or a varying pointer internally.  While
 choosing a varying pointer would provide maximum flexibilty and eliminate
-this issue, it would reduce performance in the common case where a uniform
-pointer is all that's needed.  As a work-around, a varying pointer can be
-used in cases where a varying lvalue reference would be desired.)
+this restriction, it would reduce performance in the common case where a
+uniform pointer is all that's needed.  As a work-around, a varying pointer
+can be used in cases where a varying lvalue reference would be desired.)
 
 Enumeration Types
 -----------------
@@ -1443,8 +1710,17 @@ More complex data structures can be built using ``struct`` and arrays.
         int flags[10];
     };
 
-The size of arrays must be a compile-time constant, though functions can be
-declared to take "unsized arrays" as parameters.
+Like in C, multidimensional arrays can be specified; the following declares
+an array of 5 arrays of 15 floats.
+
+::
+
+    float a[5][15];
+
+The size of arrays must be a compile-time constant, though array size can
+be determined from array initializer lists; see the following section,
+`Declarations and Initializers`_, for details.  One exception to this is
+that functions can be declared to take "unsized arrays" as parameters:
 
 ::
 
@@ -1473,6 +1749,15 @@ Variables are declared and assigned just as in C:
 
     float foo = 0, bar[5];
     float bat = func(foo);
+
+More complex declarations are also possible:
+
+::
+
+    void (*fptr_array[16])(int, int);
+
+Here, ``fptr_array`` is an array of 16 pointers to functions that have
+``void`` return type and take two ``int`` parameters.
 
 If a variable is declared without an initializer expression, then its value
 is undefined until a value is assigned to it.  Reading an undefined
@@ -1505,7 +1790,16 @@ Arrays can be initialized with individual element values in braces:
 
     int bar[2][4] = { { 1, 2, 3, 4 }, { 5, 6, 7, 8 } };
 
-Structures can also be initialized only with element values in braces:
+An array with an initializer expression can be declared with some or all of
+its dimensions unspecified.  In this case, the "shape" of the initializer
+expression is used to determine the array dimensions:
+
+::
+
+    // This corresponds to bar[2][4], due to the initializer expression
+    int bar[][] = { { 1, 2, 3, 4 }, { 5, 6, 7, 8 } };
+
+Structures can also be initialized by providing element values in braces:
 
 ::
 
@@ -1513,6 +1807,14 @@ Structures can also be initialized only with element values in braces:
     ....
     Color d = { 0.5, .75, 1.0 }; // r = 0.5, ...
 
+Arrays of structures and arrays inside structures can be initialzed with
+the expected syntax:
+
+::
+
+    struct Foo { int x; float bar[3]; };
+    Foo fa[2] = { { 1, { 2, 3, 4 } }, { 10, { 20, 30, 40 } } };
+    // now, fa[1].bar[2] == 30, and so forth
 
 Expressions
 -----------
@@ -1571,6 +1873,14 @@ block only executes if the condition evaluates to ``true``, and if an
 optional ``else`` clause is provided, the code in the "else" block only
 executes if the condition is false. 
 
+::
+
+    float x = ..., y = ...;
+    if (x < 0.)
+        y = -y;
+    else
+        x *= 2.;
+
 Basic Iteration Statements: "for", "while", and "do"
 ----------------------------------------------------
 
@@ -1604,7 +1914,7 @@ that allow you to supply a hint that control flow is expected to be
 coherent at a particular point in the program's execution.  These
 mechanisms provide the compiler a hint that it's worth emitting extra code
 to check to see if the control flow is in fact coherent at run-time, in
-which case it can jump to a simpler code path or otherwise save work.
+which case a simpler code path can often be executed.
 
 The first of these statements is ``cif``, indicating an ``if`` statement
 that is expected to be coherent.  The usage of ``cif`` in code is just the
@@ -1620,7 +1930,10 @@ same as ``if``:
 
 ``cif`` provides a hint to the compiler that you expect that most of the
 executing SPMD programs will all have the same result for the ``if``
-condition.  
+condition.  Furthermore, it guarantees that the code in the "true" and
+"false" clauses of the ``if`` statement will never be executed with an "all
+off" execution mask.  (See the `Control Flow Within A Gang`_ section for
+more details on why regular ``if`` statements may sometimes do this.)
 
 Along similar lines, ``cfor``, ``cdo``, and ``cwhile`` check to see if all
 program instances are running at the start of each loop iteration; if so,
@@ -1630,7 +1943,73 @@ on" execution mask case.
 Parallel Iteration Statements: "foreach" and "foreach_tiled"
 ------------------------------------------------------------
 
+The ``foreach`` and ``foreach_tiled`` constructs specify loops over a
+possibly multi-dimensional domain of integer ranges.  Their role goes
+beyond "syntactic sugar"; they provides one of the two key ways of
+expressing parallel computation in ``ispc``.
 
+In general, a ``foreach`` or ``foreach_tiled`` statement takes one or more
+dimension specifiers separated by commas, where each dimension is specified
+by ``identifier = start ... end``, where ``start`` is a signed integer
+value less than or equal to ``end``, specifying iteration over all integer
+values from ``start`` up to and including ``end-1``.  An arbitrary number
+of iteration dimensions may be specified, with each one spanning a
+different range of values.  Within the ``foreach`` loop, the given
+identifiers are available as ``const varying int32`` variables.
+
+As a specific example, consdier the following ``foreach`` statement:
+
+::
+
+    foreach (j = 0 ... height, i = 0 ... width) {
+        // loop body--process data element (i,j)
+    }
+
+It specifies a loop over a 2D domain, where the ``j`` variable goes from 0
+to ``height`` and ``i`` goes from 0 to ``width``.  Within the loop, the
+variables ``i`` and ``j`` are available.
+
+``foreach`` loops actually cause the given iteration domain to be
+automatically mapped to the program instances in the gang, so that all of
+the data can be processed, in gang-sized chunks.  As a specific example,
+consider a simple ``foreach`` loop like the following, on a target where
+the gang size is 8:
+
+::
+
+    foreach (i = 0 ... 16) {
+        // perform computation on element i
+    }
+
+At the CPU hardware level, the body of this loop will only execute
+``16/8==2`` times; the first time through, the ``varying int32`` variable
+``i`` will have the values (0,1,2,3,4,5,6,7) over the program instances,
+and the second time through, ``i`` will have the values
+(8,9,10,11,12,13,14,15), thus mapping the available program instances to
+all of the data by the end of the loop's execution.
+
+The ``foreach`` statement subdivides the iteration domain by mapping a
+gang-size worth of values in the innermost dimension to the gang, only
+spanning a single value in each of the outer dimensions.  This
+decomposition generally leads to coherent memory reads and writes, but may
+lead to worse control flow coherence than other decompositions.
+``foreach_tiled`` decomposes the iteration domain in a way that tries to
+map locations in the domain to program instances in a way that is compact
+across all of the dimensions.  
+
+For example, on a target with an 8-wide gang size, the following
+``foreach_tiled`` statement processes the iteration domain in chunks of 2
+elements in ``j`` and 4 elements in ``i`` each time.  (The trade-offs
+between these two constructs are discussed in more detail in the `ispc
+Performance Guide`_.)
+
+.. _ispc Performance Guide: perf.html#improving-control-flow-coherence-with-foreach-tiled
+
+::
+
+    foreach_tiled (j = 0 ... height, i = 0 ... width) {
+        // loop body--process data element (i,j)
+    }
 
 
 Parallel Iteration with "programIndex" and "programCount"
@@ -1673,11 +2052,27 @@ Functions and Function Calls
 Like C, functions must be declared in ``ispc`` before they are called,
 though a forward declaration can be used before the actual function
 definition.  Also like C, arrays are passed to functions by reference.
+Recursive function calls are legal:
+
+::
+
+    int gcd(int a, int b) {
+        if (a == 0)
+            return b;
+        else
+            return gcd(b%a, a);
+    }
 
 Functions can be declared with a number of qualifiers that affect their
 visibility and capabilities.  As in C/C++, functions have global visibility
 by default.  If a function is declared with a ``static`` qualifier, then it
 is only visible in the file in which it was declared.
+
+::
+
+    static void lerp(float t, float a, float b) {
+        return (1.-t)*a + t*b;
+    }
 
 Any function that can be launched with the ``launch`` construct in ``ispc``
 must have a ``task`` qualifier; see `Task Parallelism: "launch" and "sync"
@@ -1689,6 +2084,12 @@ and to have their declarations included in header files, if the ``ispc``
 compiler is directed to generated a C/C++ header file for the file it
 compiled.
 
+::
+
+    export uniform float inc(uniform float v) {
+        return v+1;
+    }
+ 
 Finally, any function defined with an ``inline`` qualifier will always be
 inlined by ``ispc``; ``inline`` is not a hint, but forces inlining.  The
 compiler will opportunistically inline short functions depending on their
@@ -2081,9 +2482,9 @@ as follows:
         return floatbits(i);
     }
 
-It, it clears the high order bit, to ensure that the given floating-point
-value is positive.  This compiles down to a single ``andps`` instruction
-when used with an Intel® SSE target, for example.
+This code directly clears the high order bit to ensure that the given
+floating-point value is positive.  This compiles down to a single ``andps``
+instruction when used with an Intel® SSE target, for example.
 
 
 Transcendental Functions
@@ -2144,7 +2545,7 @@ The usual exponential and logarithmic functions are provided.
     float pow(float a, float b)
     uniform float pow(uniform float a, uniform float b)
 
-Some functions that end up doing low-level manipulation of the
+A few functions that end up doing low-level manipulation of the
 floating-point representation in memory are available.  As in the standard
 math library, ``ldexp()`` multiplies the value ``x`` by 2^n, and
 ``frexp()`` directly returns the normalized mantissa and returns the
@@ -2162,16 +2563,23 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 Pseudo-Random Numbers
 ---------------------
 
-A simple random number generator is provided.  State for the RNG
-is maintained in an instance of the ``RNGState`` structure, which is seeded
-with ``seed_rng()``.
+A simple random number generator is provided by the ``ispc`` standard
+library.  State for the RNG is maintained in an instance of the
+``RNGState`` structure, which is seeded with ``seed_rng()``.
 
 ::
 
     struct RNGState;
-    unsigned int random(RNGState * uniform state)
-    float frandom(RNGState * uniform state)
     void seed_rng(RNGState * uniform state, uniform int seed)
+
+After the RNG is seeded, the ``random()`` function can be used to get a
+pseudo-random ``unsigned int32`` value and the ``frandom()`` function can
+be used to get a pseudo-random ``float`` value.
+
+::
+
+    unsigned int32 random(RNGState * uniform state)
+    float frandom(RNGState * uniform state)
 
 Output Functions
 ----------------
@@ -2248,15 +2656,16 @@ command-line argument.
 Cross-Program Instance Operations
 ---------------------------------
 
-Usually, ``ispc`` code expresses independent programs performing
-computation on separate data elements.  There are, however, a number of
-cases where it's useful for the program instances to be able to cooperate
-in computing results.  The cross-lane operations described in this section
-provide primitives for communication between the running program instances.
+``ispc`` programs are often used to expresses independently-executing
+programs performing computation on separate data elements.  (i.e. pure
+data-parallelism).  However, it's often the case where it's useful for the
+program instances to be able to cooperate in computing results.  The
+cross-lane operations described in this section provide primitives for
+communication between the running program instances in the gang.
 
 The ``lanemask()`` function returns an integer that encodes which of the
 current SPMD program instances are currently executing.  The i'th bit is
-set if the i'th SIMD lane is currently active.
+set if the i'th program instance lane is currently active.
 
 ::
 
@@ -2279,11 +2688,11 @@ the running program instances.
 The ``rotate()`` function allows each program instance to find the value of
 the given value that their neighbor ``offset`` steps away has.  For
 example, on an 8-wide target, if ``offset`` has the value (1, 2, 3, 4, 5,
-6, 7, 8) in each of the running program instances, then ``rotate(value,
+6, 7, 8) across the gang of running program instances, then ``rotate(value,
 -1)`` causes the first program instance to get the value 8, the second
 program instance to get the value 1, the third 2, and so forth.  The
 provided offset value can be positive or negative, and may be greater than
-``programCount`` (it is masked to ensure valid offsets).
+the size of the gang (it is masked to ensure valid offsets).
 
 ::
 
@@ -2299,7 +2708,7 @@ Finally, the ``shuffle()`` functions allow two variants of fully general
 shuffling of values among the program instances.  For the first version,
 each program instance's value of permutation gives the program instance
 from which to get the value of ``value``.  The provided values for
-``permutation`` must all be between 0 and ``programCount-1``.
+``permutation`` must all be between 0 and the gang size.
 
 ::
 
@@ -2314,8 +2723,8 @@ from which to get the value of ``value``.  The provided values for
 The second variant of ``shuffle()`` permutes over the extended vector that
 is the concatenation of the two provided values.  In other words, a value
 of 0 in an element of ``permutation`` corresponds to the first element of
-``value0``, the value ``2*programCount-1`` corresponds to the last element
-of ``value1``, etc.)
+``value0``, the value of two times the gang size, minus one corresponds to
+the last element of ``value1``, etc.)
 
 ::
 
@@ -2327,13 +2736,12 @@ of ``value1``, etc.)
     double shuffle(double value0, double value1, int permutation)
 
 Finally, there are primitive operations that extract and set values in the
-SIMD lanes.  You can implement all of the operations described
-above in this section from these routines, though in general, not as
-efficiently.  These routines are useful for implementing other reductions
-and cross-lane communication that isn't included in the above, though.
-Given a ``varying`` value, ``extract()`` returns the i'th element of it as
-a single ``uniform`` value.
-.
+SIMD lanes.  You can implement all of the broadcast, rotate, and shuffle
+operations described above in this section from these routines, though in
+general, not as efficiently.  These routines are useful for implementing
+other reductions and cross-lane communication that isn't included in the
+above, though.  Given a ``varying`` value, ``extract()`` returns the i'th
+element of it as a single ``uniform`` value.  .
 
 ::
 
@@ -2355,14 +2763,13 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
     float insert(float x, uniform int i, uniform float v)
 
 
-
 Reductions
 ----------
 
-A few routines that evaluate conditions across the running program
-instances.  For example, ``any()`` returns ``true`` if the given value
-``v`` is ``true`` for any of the SPMD program instances currently running,
-and ``all()`` returns ``true`` if it true for all of them.
+A number routines are available to evaluate conditions across the running
+program instances.  For example, ``any()`` returns ``true`` if the given
+value ``v`` is ``true`` for any of the SPMD program instances currently
+running, and ``all()`` returns ``true`` if it true for all of them.
 
 ::
 
@@ -2370,9 +2777,8 @@ and ``all()`` returns ``true`` if it true for all of them.
     uniform bool all(bool v)
 
 You can also compute a variety of reductions across the program instances.
-For example, the values in each of the SIMD lanes ``x`` are added together
-by ``reduce_add()``.  If this function is called under control flow, it
-only adds the values for the currently active program instances.
+For example, the values of the given value in each of the active program
+instances are added together by the ``reduce_add()`` function.
 
 ::
 
@@ -2381,7 +2787,7 @@ only adds the values for the currently active program instances.
     uniform unsigned int reduce_add(unsigned int x)
 
 You can also use functions to compute the minimum and maximum value of the
-given value across all of the currently-executing vector lanes.
+given value across all of the currently-executing program instances.
 
 ::
 
@@ -2412,7 +2818,11 @@ all of the currently-running program instances:
     uniform bool reduce_equal(double)
 
 There are also variants of these functions that return the value as a
-``uniform`` in the case where the values are all the same.
+``uniform`` in the case where the values are all the same.  (There is 
+discussion of an application of this variant to improve memory access
+performance in the `Performance Guide`_.
+
+.. _Performance Guide: perf.html#understanding-gather-and-scatter
 
 ::
 
@@ -2465,6 +2875,11 @@ bitwise-or are available:
     int64 exclusive_scan_or(int64 v) 
     unsigned int64 exclusive_scan_or(unsigned int64 v) 
 
+The use of exclusive scan to generate variable amounts of output from
+program instances into a compact output buffer is `discussed in the FAQ`_.
+
+.. _discussed in the FAQ: faq.html#how-can-a-gang-of-program-instances-generate-variable-amounts-of-output-efficiently
+
 
 Data Conversions And Storage
 ----------------------------
@@ -2477,11 +2892,7 @@ values from linear memory locations for the active program instances.  The
 ``packed_load_active()`` functions load consecutive values starting at the
 given location, loading one consecutive value for each currently-executing
 program instance and storing it into that program instance's ``val``
-variable.  They return the total number of values loaded.  Similarly, the
-``packed_store_active()`` functions store the ``val`` values for each
-program instances that executed the ``packed_store_active()`` call, storing
-the results consecutively starting at the given location.  They return the
-total number of values stored.
+variable.  They return the total number of values loaded.  
 
 ::
 
@@ -2489,6 +2900,14 @@ total number of values stored.
                                    int * uniform val)
     uniform int packed_load_active(uniform unsigned int * uniform base,
                                    unsigned int * uniform val)
+
+Similarly, the ``packed_store_active()`` functions store the ``val`` values
+for each program instances that executed the ``packed_store_active()``
+call, storing the results consecutively starting at the given location.
+They return the total number of values stored.
+
+::
+
     uniform int packed_store_active(uniform int * uniform base,
                                     int val)
     uniform int packed_store_active(uniform unsigned int * uniform base,
@@ -2496,21 +2915,30 @@ total number of values stored.
 
 
 As an example of how these functions can be used, the following code shows
-the use of ``packed_store_active()``.  The program instances that are
-executing each compute some value ``x``; we'd like to record the program
-index values of the program instances for which ``x`` is less than zero, if
-any.  In following the code, the ``programIndex`` value for each program
-instance is written into the ``ids`` array only if ``x < 0`` for that
-program instance.  The total number of values written into ``ids`` is
-returned from ``packed_store_active()``.
+the use of ``packed_store_active()``.
 
 ::
 
-    uniform int ids[100];
-    uniform int offset = 0;
-    float x = ...;
-    if (x < 0)
-        offset += packed_store_active(&ids[offset], programIndex);
+    uniform int negative_indices(uniform float a[], uniform int length,
+                                 uniform int indices[]) {
+        uniform int numNeg = 0;
+        foreach (i = 0 ... length) {
+            if (a[i] < 0.)
+                numNeg += packed_store_active(&indices[numNeg], i);
+        }
+        return numNeg;
+    }
+
+The function takes an array of floating point values ``a``, with length
+given by the ``length`` parameter.  This function also takes an output
+array, ``indices``, which is assumed to be at least as long as ``length``.
+It then loops over all of the elements of ``a`` and, for each element that
+is less than zero, stores that element's offset into the ``indices`` array.
+It returns the total number of negative values.  For example, given an
+input array ``a[8] = { 10, -20, 30, -40, -50, -60, 70, 80 }``, it returns a count
+of four negative values, and initializes the first four elements of
+``indices[]`` to the values ``{ 1, 3, 4, 5 }`` corresponding to the array
+indices where ``a[i]`` was less than zero.
 
 
 Converting Between Array-of-Structures and Structure-of-Arrays Layout
@@ -2545,7 +2973,7 @@ do a computation based on them.  The natural expression of this:
     float z = pos[base + 2 + 3 * programIndex]; // z = { z0 z1 z2 ... }
 
 leads to irregular memory accesses and reduced performance.  Alternatively,
-the aos_to_soa3 standard library function could be used:
+the ``aos_to_soa3()`` standard library function could be used:
 
 ::
 
@@ -2554,9 +2982,9 @@ the aos_to_soa3 standard library function could be used:
     float x, y, z;
     aos_to_soa3(&pos[base], x, y, z);
 
-This routine loads ``3*programCount`` values from the given array starting
-at the given offset, returning three ``varying`` results.  There are both
-``int32`` and ``float`` variants of this function:
+This routine loads three times the gang size values from the given array
+starting at the given offset, returning three ``varying`` results.  There
+are both ``int32`` and ``float`` variants of this function:
 
 ::
 
@@ -2584,11 +3012,11 @@ the given array, starting at the given offset.
     void soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[])
 
 There are also variants of these functions that convert 4-wide values
-between AoS and SoA layouts.  In other words, ``aos_to_soa4`` converts AoS
-data in memory laid out like ``r0 g0 b0 a0 r1 g1 b1 a1 ...`` to four ``varying``
-variables with values ``r0 r1...``, ``g0 g1...``, ``b0 b1...``, and ``a0
-a1...`, reading a total of ``4*programCount`` values from the given array,
-starting at the given offset.
+between AoS and SoA layouts.  In other words, ``aos_to_soa4()`` converts
+AoS data in memory laid out like ``r0 g0 b0 a0 r1 g1 b1 a1 ...`` to four
+``varying`` variables with values ``r0 r1...``, ``g0 g1...``, ``b0 b1...``,
+and ``a0 a1...``, reading a total of four times the gang size values from
+the given array, starting at the given offset.
 
 ::
 
@@ -2640,9 +3068,9 @@ Systems Programming Support
 Atomic Operations and Memory Fences
 -----------------------------------
 
-The usual range of atomic memory operations are provided in ``ispc``, with
-a few variants to handle both uniform and varying types.  As a first
-example, consider the 32-bit integer atomic add routine:
+The usual range of atomic memory operations are provided in ``ispc``,
+including variants to handle both uniform and varying types.  As a first
+example, consider on variant of the 32-bit integer atomic add routine:
 
 ::
 
@@ -2650,21 +3078,23 @@ example, consider the 32-bit integer atomic add routine:
 
 The semantics are the expected ones for an atomic add function: the pointer
 points to a single location in memory (the same one for all program
-instances), and fore each executing program instance, the "val" has that
-program instance's value "delta" added to it atomically, and the old value
-of "val" is returned from the function.  (Thus, if multiple processors
-simultaneously issue atomic adds to the same memory location, the adds will
-be serialized by the hardware so that the correct result is computed in the
-end.)
+instances), and for each executing program instance, the value stored in
+the location that ``ptr`` points to has that program instance's value
+"delta" added to it atomically, and the old value at that location is
+returned from the function.  (Thus, if multiple processors simultaneously
+issue atomic adds to the same memory location, the adds will be serialized
+by the hardware so that the correct result is computed in the end.
+Furthermore, the atomic adds are serialized across the running program
+instances.)
 
-One thing to note is that that the type of the value being added to here is
-a ``uniform`` integer, while the increment amount and the return value are
+One thing to note is that that the type of the value being added to a
+``uniform`` integer, while the increment amount and the return value are
 ``varying``.  In other words, the semantics of this call are that each
 running program instance individually issues the atomic operation with its
-own ``delta`` value and gets the previous value of ``val`` back in return.
-The atomics for the running program instances may be issued in arbitrary
-order; it's not guaranteed that they will be issued in ``programIndex``
-order, for example.
+own ``delta`` value and gets the previous value of back in return.  The
+atomics for the running program instances may be issued in arbitrary order;
+it's not guaranteed that they will be issued in ``programIndex`` order, for
+example.
 
 Here are the declarations of the ``int32`` variants of these functions.
 There are also ``int64`` equivalents as well as variants that take
@@ -2706,6 +3136,31 @@ rather than one per program instance.
   uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
                                    uniform int32 newval)
 
+Be careful that you use the atomic function that you mean to; consider the
+folloiwng code:
+
+::
+
+    extern uniform int32 counter;
+    int32 myCounter = atomic_add_global(&counter, 1);
+
+One might write code like this with the intent that each running program
+instance increments the counter by one and gets the old value of the
+counter (for example, to store results into unique locations in an array).
+However, the above code calls the second variant of
+``atomic_add_global()``, which takes a ``uniform int`` value to add to the
+counter and only performs one atomic operation.  The counter will be
+increased by just one, and all program instances will receive the same
+value back (thanks to the ``uniform int32`` return value being silently
+converted to a ``varying int32``.)  Writing the code this way, for example,
+will cause the desired atomic add function to be called.
+
+::
+
+    extern uniform int32 counter;
+    int32 one = 1;
+    int32 myCounter = atomic_add_global(&counter, one);
+
 There is a third variant of each of these atomic functions that takes a
 ``varying`` pointer; this allows each program instance to issue an atomic
 operation to a possibly-different location in memory.  (Of course, the
@@ -2723,7 +3178,7 @@ the same location in memory!)
   int32 atomic_xor_global(uniform int32 * varying ptr, int32 value)
   int32 atomic_swap_global(uniform int32 * varying ptr, int32 value)
 
-There are also an atomic swap and "compare and exchange" functions.
+There are also atomic swap and "compare and exchange" functions.
 Compare and exchange atomically compares the value in "val" to
 "compare"--if they match, it assigns "newval" to "val".  In either case,
 the old value of "val" is returned.  (As with the other atomic operations,
