@@ -13,7 +13,7 @@ export void f_v(uniform float RET[]) {
     int z = 2 + width * programIndex;
     int w = 3 + width * programIndex;
 
-    soa_to_aos4(x, y, z, w, a, 0);
+    soa_to_aos4(x, y, z, w, a);
     uniform int errs = 0;
     for (uniform int i = 0; i < width * programCount; ++i)
         if (a[i] != i) ++errs;

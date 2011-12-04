@@ -1660,11 +1660,10 @@ define void
 ;; versions to be called from stdlib
 
 define void
-@__aos_to_soa4_float(float * noalias %pf, i32 %offset,
+@__aos_to_soa4_float(float * noalias %p,
         <$1 x float> * noalias %out0, <$1 x float> * noalias %out1,
         <$1 x float> * noalias %out2, <$1 x float> * noalias %out3)
         nounwind alwaysinline { 
-  %p = getelementptr float * %pf, i32 %offset
   %p0 = bitcast float * %p to <$1 x float> *
   %v0 = load <$1 x float> * %p0, align 4
   %p1 = getelementptr <$1 x float> * %p0, i32 1
@@ -1681,16 +1680,16 @@ define void
 
 
 define void
-@__aos_to_soa4_int32(i32 * noalias %base, i32 %offset,
+@__aos_to_soa4_int32(i32 * noalias %ptr,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2, <$1 x i32> * noalias %out3)
         nounwind alwaysinline { 
-  %fbase = bitcast i32 * %base to float *
+  %fptr = bitcast i32 * %ptr to float *
   %fout0 = bitcast <$1 x i32> * %out0 to <$1 x float> *
   %fout1 = bitcast <$1 x i32> * %out1 to <$1 x float> *
   %fout2 = bitcast <$1 x i32> * %out2 to <$1 x float> *
   %fout3 = bitcast <$1 x i32> * %out3 to <$1 x float> *
-  call void @__aos_to_soa4_float(float * %fbase, i32 %offset,
+  call void @__aos_to_soa4_float(float * %fptr, 
       <$1 x float> * %fout0, <$1 x float> * %fout1, <$1 x float> * %fout2, 
       <$1 x float> * %fout3)
   ret void
@@ -1699,9 +1698,7 @@ define void
 
 define void
 @__soa_to_aos4_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
-             <$1 x float> %v3, float * noalias %pf,
-             i32 %offset) nounwind alwaysinline { 
-  %p = getelementptr float * %pf, i32 %offset
+             <$1 x float> %v3, float * noalias %p) nounwind alwaysinline { 
   %out0 = bitcast float * %p to <$1 x float> *
   %out1 = getelementptr <$1 x float> * %out0, i32 1
   %out2 = getelementptr <$1 x float> * %out0, i32 2
@@ -1715,25 +1712,22 @@ define void
 
 define void
 @__soa_to_aos4_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
-             <$1 x i32> %v3, i32 * noalias %base,
-             i32 %offset) nounwind alwaysinline { 
+             <$1 x i32> %v3, i32 * noalias %base) nounwind alwaysinline { 
   %fv0 = bitcast <$1 x i32> %v0 to <$1 x float>
   %fv1 = bitcast <$1 x i32> %v1 to <$1 x float>
   %fv2 = bitcast <$1 x i32> %v2 to <$1 x float>
   %fv3 = bitcast <$1 x i32> %v3 to <$1 x float>
   %fbase = bitcast i32 * %base to float *
   call void @__soa_to_aos4_float(<$1 x float> %fv0, <$1 x float> %fv1, 
-      <$1 x float> %fv2, <$1 x float> %fv3, float * %fbase,
-      i32 %offset)
+      <$1 x float> %fv2, <$1 x float> %fv3, float * %fbase)
   ret void
 }
 
 
 define void
-@__aos_to_soa3_float(float * noalias %pf, i32 %offset,
+@__aos_to_soa3_float(float * noalias %p,
         <$1 x float> * %out0, <$1 x float> * %out1,
         <$1 x float> * %out2) nounwind alwaysinline { 
-  %p = getelementptr float * %pf, i32 %offset
   %p0 = bitcast float * %p to <$1 x float> *
   %v0 = load <$1 x float> * %p0, align 4
   %p1 = getelementptr <$1 x float> * %p0, i32 1
@@ -1748,14 +1742,14 @@ define void
 
 
 define void
-@__aos_to_soa3_int32(i32 * noalias %base, i32 %offset,
+@__aos_to_soa3_int32(i32 * noalias %base,
         <$1 x i32> * noalias %out0, <$1 x i32> * noalias %out1,
         <$1 x i32> * noalias %out2) nounwind alwaysinline { 
   %fbase = bitcast i32 * %base to float *
   %fout0 = bitcast <$1 x i32> * %out0 to <$1 x float> *
   %fout1 = bitcast <$1 x i32> * %out1 to <$1 x float> *
   %fout2 = bitcast <$1 x i32> * %out2 to <$1 x float> *
-  call void @__aos_to_soa3_float(float * %fbase, i32 %offset,
+  call void @__aos_to_soa3_float(float * %fbase,
       <$1 x float> * %fout0, <$1 x float> * %fout1, <$1 x float> * %fout2)
   ret void
 }
@@ -1763,8 +1757,7 @@ define void
 
 define void
 @__soa_to_aos3_float(<$1 x float> %v0, <$1 x float> %v1, <$1 x float> %v2,
-                     float * noalias %pf, i32 %offset) nounwind alwaysinline { 
-  %p = getelementptr float * %pf, i32 %offset
+                     float * noalias %p) nounwind alwaysinline { 
   %out0 = bitcast float * %p to <$1 x float> *
   %out1 = getelementptr <$1 x float> * %out0, i32 1
   %out2 = getelementptr <$1 x float> * %out0, i32 2
@@ -1777,13 +1770,13 @@ define void
 
 define void
 @__soa_to_aos3_int32(<$1 x i32> %v0, <$1 x i32> %v1, <$1 x i32> %v2,
-                     i32 * noalias %base, i32 %offset) nounwind alwaysinline { 
+                     i32 * noalias %base) nounwind alwaysinline { 
   %fv0 = bitcast <$1 x i32> %v0 to <$1 x float>
   %fv1 = bitcast <$1 x i32> %v1 to <$1 x float>
   %fv2 = bitcast <$1 x i32> %v2 to <$1 x float>
   %fbase = bitcast i32 * %base to float *
   call void @__soa_to_aos3_float(<$1 x float> %fv0, <$1 x float> %fv1, 
-      <$1 x float> %fv2, float * %fbase, i32 %offset)
+      <$1 x float> %fv2, float * %fbase)
   ret void
 }
 

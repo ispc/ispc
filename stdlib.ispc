@@ -426,51 +426,47 @@ count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void
-aos_to_soa3(uniform float a[], uniform int offset, float * uniform v0,
-            float * uniform v1, float * uniform v2) {
-    __aos_to_soa3_float(&a[0], offset, v0, v1, v2);
+aos_to_soa3(uniform float a[], float * uniform v0, float * uniform v1, 
+            float * uniform v2) {
+    __aos_to_soa3_float(a, v0, v1, v2);
 }
 
 static inline void
-soa_to_aos3(float v0, float v1, float v2, uniform float a[], 
-            uniform int offset) {
-    __soa_to_aos3_float(v0, v1, v2, &a[0], offset);
+soa_to_aos3(float v0, float v1, float v2, uniform float a[]) {
+    __soa_to_aos3_float(v0, v1, v2, a);
 }
 
 static inline void
-aos_to_soa4(uniform float a[], uniform int offset, float * uniform v0,
-            float * uniform v1, float * uniform v2, float * uniform v3) {
-    __aos_to_soa4_float(&a[0], offset, v0, v1, v2, v3);
+aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1, 
+            float * uniform v2, float * uniform v3) {
+    __aos_to_soa4_float(a, v0, v1, v2, v3);
 }
 
 static inline void
-soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[], 
-            uniform int offset) {
-    __soa_to_aos4_float(v0, v1, v2, v3, &a[0], offset);
+soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
+    __soa_to_aos4_float(v0, v1, v2, v3, a);
 }
 
 static inline void
-aos_to_soa3(uniform int32 a[], uniform int offset, int32 * uniform v0,
-            int32 * uniform v1, int32 * uniform v2) {
-    __aos_to_soa3_int32(&a[0], offset, v0, v1, v2);
+aos_to_soa3(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
+            int32 * uniform v2) {
+    __aos_to_soa3_int32(a, v0, v1, v2);
 }
 
 static inline void
-soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[], 
-            uniform int offset) {
-    __soa_to_aos3_int32(v0, v1, v2, &a[0], offset);
+soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[]) {
+    __soa_to_aos3_int32(v0, v1, v2, a);
 }
 
 static inline void
-aos_to_soa4(uniform int32 a[], uniform int offset, int32 * uniform v0,
-            int32 * uniform v1, int32 * uniform v2, int32 * uniform v3) {
-    __aos_to_soa4_int32(&a[0], offset, v0, v1, v2, v3);
+aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
+            int32 * uniform v2, int32 * uniform v3) {
+    __aos_to_soa4_int32(a, v0, v1, v2, v3);
 }
 
 static inline void
-soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[], 
-            uniform int offset) {
-    __soa_to_aos4_int32(v0, v1, v2, v3, &a[0], offset);
+soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[]) {
+    __soa_to_aos4_int32(v0, v1, v2, v3, a);
 }
 
 ///////////////////////////////////////////////////////////////////////////
