@@ -55,6 +55,32 @@ CND(float X) {
     return w;
 }
 
+task void
+bs_task(uniform float Sa[], uniform float Xa[], uniform float Ta[],
+        uniform float ra[], uniform float va[], 
+        uniform float result[], uniform int count) {
+    uniform int first = taskIndex * (count/taskCount);
+    uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
+
+    foreach (i = first ... last) {
+        float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
+
+        float d1 = (log(S/X) + (r + v * v * .5f) * T) / (v * sqrt(T));
+        float d2 = d1 - v * sqrt(T);
+
+        result[i] = S * CND(d1) - X * exp(-r * T) * CND(d2);
+    }
+}
+
+export void
+black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float Ta[],
+                         uniform float ra[], uniform float va[], 
+                         uniform float result[], uniform int count) {
+    uniform int nTasks = max((int)1, (int)count/1024);
+    launch[nTasks] < bs_task(Sa, Xa, Ta, ra, va, result, count) >;
+}
+
+
 export void
 black_scholes_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
                    uniform float ra[], uniform float va[], 
@@ -70,30 +96,59 @@ black_scholes_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[],
 }
 
 
+static inline float
+binomial_put(float S, float X, float T, float r, float v) {
+    float V[BINOMIAL_NUM];
+
+    float dt = T / BINOMIAL_NUM;
+    float u = exp(v * sqrt(dt));
+    float d = 1. / u;
+    float disc = exp(r * dt);
+    float Pu = (disc - d) / (u - d);
+
+    for (uniform int j = 0; j < BINOMIAL_NUM; ++j) {
+        float upow = pow(u, (float)(2*j-BINOMIAL_NUM));
+        V[j] = max(0., X - S * upow);
+    }
+
+    for (uniform int j = BINOMIAL_NUM-1; j >= 0; --j)
+        for (uniform int k = 0; k < j; ++k)
+            V[k] = ((1 - Pu) * V[k] + Pu * V[k + 1]) / disc;
+    return V[0];
+}
+
+
 export void
 binomial_put_ispc(uniform float Sa[], uniform float Xa[], uniform float Ta[], 
                   uniform float ra[], uniform float va[], 
                   uniform float result[], uniform int count) {
-    float V[BINOMIAL_NUM];
-
     foreach (i = 0 ... count) {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
-
-        float dt = T / BINOMIAL_NUM;
-        float u = exp(v * sqrt(dt));
-        float d = 1. / u;
-        float disc = exp(r * dt);
-        float Pu = (disc - d) / (u - d);
-
-        for (uniform int j = 0; j < BINOMIAL_NUM; ++j) {
-            float upow = pow(u, (float)(2*j-BINOMIAL_NUM));
-            V[j] = max(0., X - S * upow);
-        }
-
-        for (uniform int j = BINOMIAL_NUM-1; j >= 0; --j)
-            for (uniform int k = 0; k < j; ++k)
-                V[k] = ((1 - Pu) * V[k] + Pu * V[k + 1]) / disc;
-
-        result[i] = V[0];
+        result[i] = binomial_put(S, X, T, r, v);
     }
+}
+
+
+task void
+binomial_task(uniform float Sa[], uniform float Xa[], 
+              uniform float Ta[], uniform float ra[], 
+              uniform float va[], uniform float result[], 
+              uniform int count) {
+    uniform int first = taskIndex * (count/taskCount);
+    uniform int last = min(count, (int)((taskIndex+1) * (count/taskCount)));
+
+    foreach (i = first ... last) {
+        float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
+        result[i] = binomial_put(S, X, T, r, v);
+    }
+}
+
+
+export void
+binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[], 
+                        uniform float Ta[], uniform float ra[], 
+                        uniform float va[], uniform float result[], 
+                        uniform int count) {
+    uniform int nTasks = max((int)1, (int)count/1024);
+    launch[nTasks] < binomial_task(Sa, Xa, Ta, ra, va, result, count) >;
 }

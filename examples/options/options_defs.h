@@ -35,8 +35,6 @@
 #define OPTIONS_DEFS_H 1
 
 #define BINOMIAL_NUM 64
-#define N_OPTIONS 65536
-#define N_BLACK_SCHOLES_ROUNDS 20
 
 
 #endif // OPTIONS_DEFS_H

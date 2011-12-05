@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClCompile Include="options.cpp" />
     <ClCompile Include="options_serial.cpp" />
+    <ClCompile Include="../tasksys.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="options.ispc">
