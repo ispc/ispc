@@ -25,7 +25,7 @@ distribution.
   + `What primitives are there for communicating between SPMD program instances?`_
   + `How can a gang of program instances generate variable amounts of output efficiently?`_
   + `Is it possible to use ispc for explicit vector programming?`_
-
+  + `How can I debug my ispc programs using Valgrind?`_
 
 Understanding ispc's Output
 ===========================
@@ -445,4 +445,38 @@ Note that ``ispc`` doesn't currently support control-flow based on
             ++sum;
     }
 
+
+How can I debug my ispc programs using Valgrind?
+------------------------------------------------
+
+The `valgrind`_ memory checker is an extremely useful memory checker for
+Linux and OSX; it detects a range of memory errors, including accessing
+memory after it has been freed, accessing memory beyond the end of an
+array, accessing uninitialized stack variables, and so forth.
+In general, applications that use ``ispc`` code run with ``valgrind``
+without modification and ``valgrind`` will detect the same range of memory
+errors in ``ispc`` code that it does in C/C++ code.  
+
+.. _valgrind: http://valgrind.org
+
+One issue to be aware of is that until recently, ``valgrind`` only
+supported the SSE2 vector instructions; if you are using a version of
+``valgrind`` older than the 3.7.0 release (5 November 2011), you should
+compile your ``ispc`` programs with ``--target=sse2`` before running them
+through ``valgrind``.  (Note that if no target is specified, then ``ispc``
+chooses a target based on the capabilities of the system you're running
+``ispc`` on.)  If you run an ``ispc`` program that uses instructions that
+``valgrind`` doesn't support, you'll see an error message like:
+
+::
+
+    vex amd64->IR: unhandled instruction bytes: 0xC5 0xFA 0x10 0x0 0xC5 0xFA 0x11 0x84
+    ==46059== valgrind: Unrecognised instruction at address 0x100002707.
+
+The just-released valgrind 3.7.0 adds support for the SSE4.2 instruction
+set; if you're using that version (and your system supports SSE4.2), then
+you can use ``--target=sse4`` when compiling to run with ``valgrind``.
+
+Note that ``valgrind`` does not yet support programs that use the AVX
+instruction set.
 
