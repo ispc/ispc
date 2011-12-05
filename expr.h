@@ -613,7 +613,7 @@ private:
  */    
 class FunctionSymbolExpr : public Expr {
 public:
-    FunctionSymbolExpr(const char *name, std::vector<Symbol *> *candidateFunctions,
+    FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs,
                        SourcePos pos);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
@@ -649,7 +649,7 @@ private:
     /** All of the functions with the name given in the function call;
         there may be more then one, in which case we need to resolve which
         overload is the best match. */
-    std::vector<Symbol *> *candidateFunctions;
+    std::vector<Symbol *> candidateFunctions;
 
     /** The actual matching function found after overload resolution. */
     Symbol *matchingFunc;

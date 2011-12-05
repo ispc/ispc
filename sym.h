@@ -169,11 +169,11 @@ public:
     /** Looks for the function or functions with the given name in the
         symbol name.  If a function has been overloaded and multiple
         definitions are present for a given function name, all of them will
-        be returned and it's up the the caller to resolve which one (if
-        any) to use.
-
-        @return vector of Symbol pointers to functions with the given name. */
-    std::vector<Symbol *> *LookupFunction(const char *name);
+        be returned in the provided vector and it's up the the caller to
+        resolve which one (if any) to use.  Returns true if any matches
+        were found. */
+    bool LookupFunction(const char *name, 
+                        std::vector<Symbol *> *matches = NULL);
 
     /** Looks for a function with the given name and type
         in the symbol table.
@@ -248,24 +248,27 @@ private:
     std::vector<std::string> closestTypeMatch(const char *str, 
                                               bool structsVsEnums) const;
 
-    /** This member variable holds one \c vector of Symbol pointers for
-        each of the current active scopes as the program is being parsed.
-        New vectors of symbols are added and removed from the end of the
-        main vector, so searches for symbols start looking at the end of \c
-        variables and work backwards.
+    /** This member variable holds one SymbolMap for each of the current
+        active scopes as the program is being parsed.  New maps are added
+        and removed from the end of the main vector, so searches for
+        symbols start looking at the end of \c variables and work
+        backwards.
      */
-    std::vector<std::vector<Symbol *> *> variables;
-    /** Because there is no scoping for function symbols, functions are
-        represented with a single STL \c map from names to symbols.  A STL
-        \c vector is used to store the function symbols for a given name
-        since, due to function overloading, a name can have multiple
-        function symbols associated with it. */
-    std::map<std::string, std::vector<Symbol *> > functions;
-    typedef std::map<std::string, const Type *> TypeMapType;
-    /** Like variables, type definitions can be scoped.  A new \c TypeMapType
+    typedef std::map<std::string, Symbol *> SymbolMapType;
+    std::vector<SymbolMapType *> variables;
+
+    /** Function declarations are also scoped., A STL \c vector is used to
+        store the function symbols for a given name since, due to function
+        overloading, a name can have multiple function symbols associated
+        with it. */
+    typedef std::map<std::string, std::vector<Symbol *> > FunctionMapType;
+    std::vector<FunctionMapType *> functions;
+
+    /** Type definitions can also be scoped.  A new \c TypeMapType
         is added to the back of the \c types \c vector each time a new scope
         is entered.  (And it's removed when the scope exits).
      */
+    typedef std::map<std::string, const Type *> TypeMapType;
     std::vector<TypeMapType *> types;
 };
 
@@ -275,12 +278,15 @@ SymbolTable::GetMatchingFunctions(Predicate pred,
                                   std::vector<Symbol *> *matches) const {
     // Iterate through all function symbols and apply the given predicate.
     // If it returns true, add the Symbol * to the provided vector.
-    std::map<std::string, std::vector<Symbol *> >::const_iterator iter;
-    for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        const std::vector<Symbol *> &syms = iter->second;
-        for (unsigned int i = 0; i < syms.size(); ++i) {
-            if (pred(syms[i]))
-                matches->push_back(syms[i]);
+    for (unsigned int i = 0; i < functions.size(); ++i) {
+        FunctionMapType &fm = *(functions[i]);
+        FunctionMapType::const_iterator iter;
+        for (iter = fm.begin(); iter != fm.end(); ++iter) {
+            const std::vector<Symbol *> &syms = iter->second;
+            for (unsigned int j = 0; j < syms.size(); ++j) {
+                if (pred(syms[j]))
+                    matches->push_back(syms[j]);
+            }
         }
     }
 }
@@ -289,10 +295,14 @@ SymbolTable::GetMatchingFunctions(Predicate pred,
 template <typename Predicate> void
 SymbolTable::GetMatchingVariables(Predicate pred, 
                                   std::vector<Symbol *> *matches) const {
-    for (unsigned int i = 0; i < variables.size(); ++i)
-        for (unsigned int j = 0; j < variables[i]->size(); ++j)
-            if (pred((*variables[i])[j]))
-                matches->push_back((*variables[i])[j]);
+    for (unsigned int i = 0; i < variables.size(); ++i) {
+        SymbolMapType &sm = *(variables[i]);
+        SymbolMapType::const_iterator iter;
+        for (iter = sm.begin(); iter != sm.end(); ++iter) {
+            if (pred(iter->second))
+                matches->push_back(iter->second);
+        }
+    }
 }
 
 #endif // ISPC_SYM_H

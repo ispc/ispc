@@ -1537,10 +1537,10 @@ BinaryExpr::Optimize() {
                 Type::Equal(type1, AtomicType::UniformConstFloat) ||
                 Type::Equal(type1, AtomicType::VaryingConstFloat)) {
                 // Get the symbol for the appropriate builtin
-                std::vector<Symbol *> *rcpFuns = 
-                    m->symbolTable->LookupFunction("rcp");
-                if (rcpFuns != NULL) {
-                    assert(rcpFuns->size() == 2);
+                std::vector<Symbol *> rcpFuns;
+                m->symbolTable->LookupFunction("rcp", &rcpFuns);
+                if (rcpFuns.size() > 0) {
+                    assert(rcpFuns.size() == 2);
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
@@ -6100,13 +6100,12 @@ SymbolExpr::Print() const {
 // FunctionSymbolExpr
 
 FunctionSymbolExpr::FunctionSymbolExpr(const char *n,
-                                       std::vector<Symbol *> *candidates,
+                                       const std::vector<Symbol *> &candidates,
                                        SourcePos p) 
   : Expr(p) {
     name = n;
     candidateFunctions = candidates;
-    matchingFunc = (candidates && candidates->size() == 1) ? 
-        (*candidates)[0] : NULL;
+    matchingFunc = (candidates.size() == 1) ? candidates[0] : NULL;
     triedToResolve = false;
 }
 
@@ -6457,12 +6456,12 @@ bool
 FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
                                const std::vector<const Type *> &callTypes,
                                const std::vector<bool> *argCouldBeNULL) {
-    const char *funName = candidateFunctions->front()->name.c_str();
+    const char *funName = candidateFunctions.front()->name.c_str();
 
     std::vector<std::pair<int, Symbol *> > matches;
     std::vector<Symbol *>::iterator iter;
-    for (iter = candidateFunctions->begin(); 
-         iter != candidateFunctions->end(); ++iter) {
+    for (iter = candidateFunctions.begin(); 
+         iter != candidateFunctions.end(); ++iter) {
         // Loop over the set of candidate functions and try each one
         Symbol *candidateFunction = *iter;
         const FunctionType *ft = 
@@ -6588,10 +6587,10 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes,
     }
 
     // failure :-(
-    const char *funName = candidateFunctions->front()->name.c_str();
+    const char *funName = candidateFunctions.front()->name.c_str();
     Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
           funName, exactMatchOnly ? " only considering exact matches" : "");
-    lPrintFunctionOverloads(funName, *candidateFunctions);
+    lPrintFunctionOverloads(funName, candidateFunctions);
     lPrintPassedTypes(funName, argTypes);
     return false;
 }

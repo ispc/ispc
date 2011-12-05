@@ -72,23 +72,30 @@ SymbolTable::SymbolTable() {
 
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
-    assert(variables.size() == 1 && types.size() == 1);
+    assert(variables.size() == 1 && functions.size() == 1 &&
+           types.size() == 1);
     PopScope();
 }
 
+
 void
 SymbolTable::PushScope() { 
-    variables.push_back(new std::vector<Symbol *>); 
+    variables.push_back(new SymbolMapType);
+    functions.push_back(new FunctionMapType);
     types.push_back(new TypeMapType);
 }
 
 
 void
 SymbolTable::PopScope() { 
-    // FIXME: delete Symbols in variables vector<>...
     assert(variables.size() > 1);
     delete variables.back();
     variables.pop_back();
+
+    assert(functions.size() > 1);
+    delete functions.back();
+    functions.pop_back();
+
     assert(types.size() > 1);
     delete types.back();
     types.pop_back();
@@ -101,48 +108,44 @@ SymbolTable::AddVariable(Symbol *symbol) {
 
     // Check to see if a symbol of the same name has already been declared.
     for (int i = (int)variables.size() - 1; i >= 0; --i) {
-        std::vector<Symbol *> &sv = *(variables[i]);
-        for (int j = (int)sv.size() - 1; j >= 0; --j) {
-            if (sv[j]->name == symbol->name) {
-                if (i == (int)variables.size()-1) {
-                    // If a symbol of the same name was declared in the
-                    // same scope, it's an error.
-                    Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".", 
-                          symbol->name.c_str());
-                    return false;
-                }
-                else {
-                    // Otherwise it's just shadowing something else, which
-                    // is legal but dangerous..
-                    Warning(symbol->pos, 
-                            "Symbol \"%s\" shadows symbol declared in outer scope.",
-                            symbol->name.c_str());
-                    variables.back()->push_back(symbol);
-                    return true;
-                }
+        SymbolMapType &sm = *(variables[i]);
+        if (sm.find(symbol->name) != sm.end()) {
+            if (i == (int)variables.size()-1) {
+                // If a symbol of the same name was declared in the
+                // same scope, it's an error.
+                Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".", 
+                      symbol->name.c_str());
+                return false;
+            }
+            else {
+                // Otherwise it's just shadowing something else, which
+                // is legal but dangerous..
+                Warning(symbol->pos, 
+                        "Symbol \"%s\" shadows symbol declared in outer scope.",
+                        symbol->name.c_str());
+                (*variables.back())[symbol->name] = symbol;
+                return true;
             }
         }
     }
 
     // No matches, so go ahead and add it...
-    variables.back()->push_back(symbol);
+    (*variables.back())[symbol->name] = symbol;
     return true;
 }
 
 
 Symbol *
 SymbolTable::LookupVariable(const char *name) {
-    // Note that we iterate through the variables vectors backwards, sinec
+    // Note that we iterate through the variables vectors backwards, since
     // we want to search from the innermost scope to the outermost, so that
     // we get the right symbol if we have multiple variables in different
     // scopes that shadow each other.
-    std::vector<std::vector<Symbol *> *>::reverse_iterator liter = variables.rbegin();
-    while (liter != variables.rend()) {
-        std::vector<Symbol *> &sv = *(*liter);
-        for (int i = (int)sv.size() - 1; i >= 0; --i)
-            if (sv[i]->name == name) 
-                return sv[i];
-        ++liter;
+    for (int i = (int)variables.size() - 1; i >= 0; --i) {
+        SymbolMapType &sm = *(variables[i]);
+        SymbolMapType::iterator iter = sm.find(name);
+        if (iter != sm.end())
+            return iter->second;
     }
     return NULL;
 }
@@ -157,28 +160,44 @@ SymbolTable::AddFunction(Symbol *symbol) {
         // the symbol table
         return false;
 
-    functions[symbol->name].push_back(symbol);
+    std::vector<Symbol *> &funOverloads = (*functions.back())[symbol->name];
+    funOverloads.push_back(symbol);
     return true;
 }
 
 
-std::vector<Symbol *> *
-SymbolTable::LookupFunction(const char *name) {
-    if (functions.find(name) != functions.end())
-        return &functions[name];
-    return NULL;
+bool
+SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
+    for (int i = (int)functions.size() - 1; i >= 0; --i) {
+        FunctionMapType &fm = *(functions[i]);
+        FunctionMapType::iterator iter = fm.find(name);
+        if (iter != fm.end()) {
+            if (matches == NULL)
+                return true;
+            else {
+                const std::vector<Symbol *> &funcs = iter->second;
+                for (int j = 0; j < (int)funcs.size(); ++j)
+                    matches->push_back(funcs[j]);
+            }
+        }
+    }
+    return matches ? (matches->size() > 0) : false;
 }
 
 
 Symbol *
 SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
-    if (functions.find(name) == functions.end())
-        return NULL;
-
-    std::vector<Symbol *> &funcs = functions[name];
-    for (unsigned int i = 0; i < funcs.size(); ++i)
-        if (Type::Equal(funcs[i]->type, type))
-            return funcs[i];
+    for (int i = (int)functions.size() - 1; i >= 0; --i) {
+        FunctionMapType &fm = *(functions[i]);
+        FunctionMapType::iterator iter = fm.find(name);
+        if (iter != fm.end()) {
+            std::vector<Symbol *> funcs = iter->second;
+            for (int j = 0; j < (int)funcs.size(); ++j) {
+                if (Type::Equal(funcs[j]->type, type))
+                    return funcs[j];
+            }
+        }
+    }
     return NULL;
 }
 
@@ -232,19 +251,24 @@ SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
     std::vector<std::string> matches[maxDelta+1];
 
     for (int i = 0; i < (int)variables.size(); ++i) {
-        std::vector<Symbol *> &sv = *(variables[i]);
-        for (int j = 0; j < (int)sv.size(); ++j) {
-            int dist = StringEditDistance(str, sv[j]->name, maxDelta+1);
+        const SymbolMapType &sv = *(variables[i]);
+        SymbolMapType::const_iterator iter;
+        for (iter = sv.begin(); iter != sv.end(); ++iter) {
+            const Symbol *sym = iter->second;
+            int dist = StringEditDistance(str, sym->name, maxDelta+1);
             if (dist <= maxDelta)
-                matches[dist].push_back(sv[j]->name);
+                matches[dist].push_back(sym->name);
         }
     }
 
-    std::map<std::string, std::vector<Symbol *> >::const_iterator iter;
-    for (iter = functions.begin(); iter != functions.end(); ++iter) {
-        int dist = StringEditDistance(str, iter->first, maxDelta+1);
+    for (int i = 0; i < (int)functions.size(); ++i) {
+        const FunctionMapType &fm = *(functions[i]);
+        FunctionMapType::const_iterator iter;
+        for (iter = fm.begin(); iter != fm.end(); ++iter) {
+            int dist = StringEditDistance(str, iter->first, maxDelta+1);
             if (dist <= maxDelta)
                 matches[dist].push_back(iter->first);
+        }
     }
 
     // Now, return the first entry of matches[] that is non-empty, if any.
@@ -308,29 +332,29 @@ void
 SymbolTable::Print() {
     int depth = 0;
     fprintf(stderr, "Variables:\n----------------\n");
-    std::vector<std::vector<Symbol *> *>::iterator liter = variables.begin();
-    while (liter != variables.end()) {
-        fprintf(stderr, "%*c", depth, ' ');
-        std::vector<Symbol *>::iterator siter = (*liter)->begin();
-        while (siter != (*liter)->end()) {
-            fprintf(stderr, "%s [%s]", (*siter)->name.c_str(), 
-                    (*siter)->type->GetString().c_str());
-            ++siter;
+    for (int i = 0; i < (int)variables.size(); ++i) {
+        SymbolMapType &sm = *(variables[i]);
+        SymbolMapType::iterator iter;
+        for (iter = sm.begin(); iter != sm.end(); ++iter) {
+            fprintf(stderr, "%*c", depth, ' ');
+            Symbol *sym = iter->second;
+            fprintf(stderr, "%s [%s]", sym->name.c_str(), 
+                    sym->type->GetString().c_str());
         }
-        ++liter;
         fprintf(stderr, "\n");
         depth += 4;
     }
 
     fprintf(stderr, "Functions:\n----------------\n");
-    std::map<std::string, std::vector<Symbol *> >::iterator fiter;
-    fiter = functions.begin();
-    while (fiter != functions.end()) {
-        fprintf(stderr, "%s\n", fiter->first.c_str());
-        std::vector<Symbol *> &syms = fiter->second;
-        for (unsigned int i = 0; i < syms.size(); ++i)
-            fprintf(stderr, "    %s\n", syms[i]->type->GetString().c_str());
-        ++fiter;
+    for (int i = 0; i < (int)functions.size(); ++i) {
+        FunctionMapType::iterator fiter = functions[i]->begin();
+        while (fiter != functions[i]->end()) {
+            fprintf(stderr, "%s\n", fiter->first.c_str());
+            std::vector<Symbol *> &syms = fiter->second;
+            for (unsigned int j = 0; j < syms.size(); ++j)
+                fprintf(stderr, "    %s\n", syms[j]->type->GetString().c_str());
+            ++fiter;
+        }
     }
 
     depth = 0;

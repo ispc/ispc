@@ -246,8 +246,9 @@ primary_expression
         if (s)
             $$ = new SymbolExpr(s, @1);       
         else {
-            std::vector<Symbol *> *funs = m->symbolTable->LookupFunction(name);
-            if (funs)
+            std::vector<Symbol *> funs;
+            m->symbolTable->LookupFunction(name, &funs);
+            if (funs.size() > 0)
                 $$ = new FunctionSymbolExpr(name, funs, @1);
         }
         if ($$ == NULL) {

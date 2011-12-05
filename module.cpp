@@ -226,7 +226,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
         return;
     }
 
-    if (symbolTable->LookupFunction(sym->name.c_str()) != NULL) {
+    if (symbolTable->LookupFunction(sym->name.c_str())) {
         Error(sym->pos, "Global variable \"%s\" shadows previously-declared function.",
               sym->name.c_str());
         return;
@@ -400,11 +400,11 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
         return;
     }
 
-    std::vector<Symbol *> *overloadFuncs = 
-        symbolTable->LookupFunction(funSym->name.c_str());
-    if (overloadFuncs != NULL) {
-        for (unsigned int i = 0; i < overloadFuncs->size(); ++i) {
-            Symbol *overloadFunc = (*overloadFuncs)[i];
+    std::vector<Symbol *> overloadFuncs;
+    symbolTable->LookupFunction(funSym->name.c_str(), &overloadFuncs);
+    if (overloadFuncs.size() > 0) {
+        for (unsigned int i = 0; i < overloadFuncs.size(); ++i) {
+            Symbol *overloadFunc = overloadFuncs[i];
 
             // Check for a redeclaration of a function with the same
             // name and type
@@ -444,21 +444,21 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
             return;
         }
 
-        std::vector<Symbol *> *funcs =
-            symbolTable->LookupFunction(funSym->name.c_str());
-        if (funcs != NULL) {
-            if (funcs->size() > 1) {
+        std::vector<Symbol *> funcs;
+        symbolTable->LookupFunction(funSym->name.c_str(), &funcs);
+        if (funcs.size() > 0) {
+            if (funcs.size() > 1) {
                 // Multiple functions with this name have already been declared; 
                 // can't overload here
                 Error(funSym->pos, "Can't overload extern \"C\" function \"%s\"; "
                       "%d functions with the same name have already been declared.",
-                      funSym->name.c_str(), (int)funcs->size());
+                      funSym->name.c_str(), (int)funcs.size());
                 return;
             }
 
             // One function with the same name has been declared; see if it
             // has the same type as this one, in which case it's ok.
-            if (Type::Equal((*funcs)[0]->type, funSym->type))
+            if (Type::Equal(funcs[0]->type, funSym->type))
                 return;
             else {
                 Error(funSym->pos, "Can't overload extern \"C\" function \"%s\".",
@@ -543,7 +543,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
 #endif
         }
 
-        if (symbolTable->LookupFunction(argName.c_str()) != NULL)
+        if (symbolTable->LookupFunction(argName.c_str()))
             Warning(argPos, "Function parameter \"%s\" shadows a function "
                     "declared in global scope.", argName.c_str());
         
