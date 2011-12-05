@@ -50,7 +50,7 @@
 #include <algorithm>
 #include <sys/types.h>
 
-#include "ao_ispc.h"
+#include "ao_instrumented_ispc.h"
 using namespace ispc;
 
 #include "instrument.h"
