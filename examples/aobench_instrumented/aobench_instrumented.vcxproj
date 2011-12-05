@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClCompile Include="ao.cpp" />
     <ClCompile Include="instrument.cpp" />
+    <ClCompile Include="../tasksys.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="ao.ispc">
