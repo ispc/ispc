@@ -1,3 +1,42 @@
+=== v1.1.0 === (5 December 2011)
+
+This is a major new release of the compiler, with significant additions to
+language functionality and capabilities.  It includes a number of small
+language syntax changes that will require modification of existing
+programs.  These changes should generally be straightforward and all are
+steps toward eliminating parts of ispc syntax that are incompatible with
+C/C++.  See
+http://ispc.github.com/ispc.html#updating-ispc-programs-for-changes-in-ispc-1-1
+for more information about these changes.
+
+ispc now fully supports pointers, including pointer arithmetic, implicit
+conversions of arrays to pointers, and all of the other capabilities of
+pointers in C.  See http://ispc.github.com/ispc.html#pointer-types for more
+information about pointers in ispc and
+http://ispc.github.com/ispc.html#function-pointer-types for information
+about function pointers in ispc.
+
+Reference types are now declared with C++ syntax (e.g. "const float &foo").
+
+ispc now supports 64-bit addressing.  For performance reasons, this
+capability is disabled by default (even on 64-bit targets), but can be
+enabled with a command-line flag:
+http://ispc.github.com/ispc.html#selecting-32-or-64-bit-addressing.
+
+This release features new parallel "foreach" statements, which make it
+easier in many instances to map program instances to data for data-parallel
+computation than the programIndex/programCount mechanism:
+http://ispc.github.com/ispc.html#parallel-iteration-statements-foreach-and-foreach-tiled.
+
+Finally, all of the system's documentation has been significantly revised.
+The documentation of ispc's parallel execution model has been rewritten:
+http://ispc.github.com/ispc.html#the-ispc-parallel-execution-model, and
+there is now a more specific discussion of similarities and differences
+between ispc and C/C++:
+http://ispc.github.com/ispc.html#relationship-to-the-c-programming-language.
+There is now a separate FAQ (http://ispc.github.com/faq.html), and a
+Performance Guide (http://ispc.github.com/perfguide.html).
+ 
 === v1.0.12 === (20 October 2011)
 
 This release includes a new "double-pumped" 8-wide target for SSE2,
