@@ -2684,6 +2684,9 @@ FunctionCallExpr::Optimize() {
         func = func->Optimize();
     if (args) 
         args = args->Optimize();
+    if (launchCountExpr != NULL)
+        launchCountExpr = launchCountExpr->Optimize();
+
     if (!func || !args)
         return NULL;
         
@@ -2697,6 +2700,8 @@ FunctionCallExpr::TypeCheck() {
         func = func->TypeCheck();
     if (args != NULL) 
         args = args->TypeCheck();
+    if (launchCountExpr != NULL)
+        launchCountExpr = launchCountExpr->TypeCheck();
 
     if (args != NULL && func != NULL) {
         FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
@@ -2782,8 +2787,11 @@ FunctionCallExpr::TypeCheck() {
 int
 FunctionCallExpr::EstimateCost() const {
     int callCost = 0;
-    if (isLaunch) 
+    if (isLaunch) {
         callCost = COST_TASK_LAUNCH;
+        if (launchCountExpr != NULL)
+            callCost += launchCountExpr->EstimateCost();
+    }
     else if (dynamic_cast<FunctionSymbolExpr *>(func) == NULL) {
         // it's going through a function pointer
         const Type *fpType = func->GetType();
