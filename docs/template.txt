@@ -25,10 +25,11 @@
     <div id="nav">
       <div id="nbar">
         <ul>
-          <li id="selected"><a href="index.html">Home</a></li>
+          <li><a href="index.html">Overview</a></li>
+          <li><a href="features.html">Features</a></li>
           <li><a href="downloads.html">Downloads</a></li>
-          <li><a href="example.html">Example</a></li>
-          <li><a href="ispc.html">User's Guide</a></li>
+          <li id="selected"><a href="documentation.html">Documentation</a></li>
+          <li><a href="perf.html">Performance</a></li>
         </ul>
       </div>
     </div>
