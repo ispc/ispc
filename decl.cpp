@@ -492,15 +492,19 @@ Declaration::GetVariableDeclarations() const {
         if (declarators[i] == NULL)
             continue;
         Declarator *decl = declarators[i];
-        if (decl == NULL || decl->kind == DK_FUNCTION) 
-            // Ignore earlier errors or external function declarations
-            // inside other functions.
+        if (decl == NULL)
+            // Ignore earlier errors
             continue;
 
         Symbol *sym = decl->GetSymbol();
-        m->symbolTable->AddVariable(sym);
-
-        vars.push_back(VariableDeclaration(sym, decl->initExpr));
+        if (dynamic_cast<const FunctionType *>(sym->type) != NULL) {
+            // function declaration
+            m->symbolTable->AddFunction(sym);
+        }
+        else {
+            m->symbolTable->AddVariable(sym);
+            vars.push_back(VariableDeclaration(sym, decl->initExpr));
+        }
     }
     return vars;
 }
