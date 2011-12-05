@@ -25,7 +25,8 @@ BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
 
 CXX=g++
 CPP=cpp
-CXXFLAGS=-g3 $(LLVM_CXXFLAGS) -I. -Iobjs/ -Wall $(LLVM_VERSION_DEF) \
+OPT=-g3
+CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -Wall $(LLVM_VERSION_DEF) \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
 
 LDFLAGS=

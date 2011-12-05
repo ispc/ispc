@@ -353,7 +353,8 @@ Globals::Globals() {
 #ifdef ISPC_IS_WINDOWS
     _getcwd(currentDirectory, sizeof(currentDirectory));
 #else
-    getcwd(currentDirectory, sizeof(currentDirectory));
+    if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
+        FATAL("Current directory path too long!");
 #endif
 }
 
