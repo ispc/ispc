@@ -6486,25 +6486,24 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
             // potential match versus detecting this earlier in the
             // matching process and just giving up.
             const Type *paramType = ft->GetParameterType(i);
+
             if (callTypes[i] == NULL || paramType == NULL ||
                 dynamic_cast<const FunctionType *>(callTypes[i]) != NULL)
                 return false;
-            
-            int argCost;
-            if (argCost == -1 && argCouldBeNULL != NULL && 
-                (*argCouldBeNULL)[i] == true &&
-                dynamic_cast<const PointerType *>(paramType) != NULL)
-                // If the passed argument value is zero and this is a
-                // pointer type, then it can convert to a NULL value of
-                // that pointer type.
-                argCost = 0;
-            else
-                argCost= matchFunc(callTypes[i], paramType);
 
-            if (argCost == -1)
-                // If the predicate function returns -1, we have failed no
-                // matter what else happens, so we stop trying
-                break;
+            int argCost = matchFunc(callTypes[i], paramType);
+            if (argCost == -1) {
+                if (argCouldBeNULL != NULL && (*argCouldBeNULL)[i] == true &&
+                    dynamic_cast<const PointerType *>(paramType) != NULL)
+                    // If the passed argument value is zero and this is a
+                    // pointer type, then it can convert to a NULL value of
+                    // that pointer type.
+                    argCost = 0;
+                else
+                    // If the predicate function returns -1, we have failed no
+                    // matter what else happens, so we stop trying
+                    break;
+            }
             cost += argCost;
         }
         if (i == (int)callTypes.size()) {
