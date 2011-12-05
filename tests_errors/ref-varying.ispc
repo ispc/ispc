@@ -1,4 +1,4 @@
-// fff
+// Illegal to pass a "varying" lvalue
 
 void foo(float &x) {
     ++x;
