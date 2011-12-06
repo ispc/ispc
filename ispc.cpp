@@ -389,7 +389,13 @@ Globals::Globals() {
 // SourcePos
 
 SourcePos::SourcePos(const char *n, int fl, int fc, int ll, int lc) {
-    name = n ? n : m->module->getModuleIdentifier().c_str();
+    name = n;
+    if (name == NULL) {
+        if (m != NULL)
+            name = m->module->getModuleIdentifier().c_str();
+        else
+            name = "(unknown)";
+    }
     first_line = fl;
     first_column = fc;
     last_line = ll != 0 ? ll : fl;

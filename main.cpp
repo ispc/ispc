@@ -37,6 +37,7 @@
 
 #include "ispc.h"
 #include "module.h"
+#include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -353,6 +354,11 @@ int main(int Argc, char *Argv[]) {
     // optimization).
     if (debugSet && !optSet)
         g->opt.level = 0;
+
+    if (outFileName == NULL && headerFileName == NULL)
+        Warning(SourcePos(), "Warning: no output file or header file name "
+                "specified.  Program will be compiled and warnings/errors will "
+                "be issued, but no output will be generated.");
 
     return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
                                     ot, outFileName, headerFileName);

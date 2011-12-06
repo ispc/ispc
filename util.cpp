@@ -267,7 +267,7 @@ Error(SourcePos p, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     lPrint("Error", p, fmt, args);
-    ++m->errorCount;
+    if (m != NULL) ++m->errorCount;
     va_end(args);
 }
 
@@ -292,7 +292,7 @@ Warning(SourcePos p, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     lPrint(g->warningsAsErrors ? "Error" : "Warning", p, fmt, args);
-    if (g->warningsAsErrors)
+    if (g->warningsAsErrors && m != NULL)
         ++m->errorCount;
     va_end(args);
 }
