@@ -1169,6 +1169,9 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     case Target::AVX:
         opts.addMacroDef("ISPC_TARGET_AVX");
         break;
+    case Target::AVX2:
+        opts.addMacroDef("ISPC_TARGET_AVX2");
+        break;
     default:
         FATAL("Unhandled target ISA in preprocessor symbol definition");
     }

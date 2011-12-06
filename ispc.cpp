@@ -161,7 +161,21 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 16;
         t->attributes = "+avx,+popcnt,+cmov";
     }
-#endif // LLVM 3.0
+#endif // LLVM 3.0+
+#if defined(LLVM_3_1svn)
+    else if (!strcasecmp(isa, "avx2")) {
+        t->isa = Target::AVX2;
+        t->nativeVectorWidth = 8;
+        t->vectorWidth = 8;
+        t->attributes = "+avx2,+popcnt,+cmov";
+    }
+    else if (!strcasecmp(isa, "avx2-x2")) {
+        t->isa = Target::AVX2;
+        t->nativeVectorWidth = 16;
+        t->vectorWidth = 16;
+        t->attributes = "+avx2,+popcnt,+cmov";
+    }
+#endif // LLVM 3.1
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n", 
                 isa, SupportedTargetISAs());
@@ -201,9 +215,12 @@ Target::SupportedTargetArchs() {
 const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2"
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+#ifndef LLVM_2.9
         ", avx, avx-x2"
-#endif
+#endif !LLVM_2_9
+#ifdef LLVM_3_1svn
+        ", avx2, avx2-x2"
+#endif // LLVM_3_1svn
         ;
 }
 
@@ -281,7 +298,8 @@ Target::GetISAString() const {
         return "sse4";
     case Target::AVX:
         return "avx";
-        break;
+    case Target::AVX2:
+        return "avx2";
     default:
         FATAL("Unhandled target in GetISAString()");
     }

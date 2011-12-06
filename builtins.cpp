@@ -718,6 +718,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX:
+    case Target::AVX2:
         switch (g->target.vectorWidth) {
         case 8:
             extern unsigned char builtins_bitcode_avx[];

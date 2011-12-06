@@ -182,7 +182,7 @@ struct Target {
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { SSE2, SSE4, AVX, NUM_ISAS };
+    enum ISA { SSE2, SSE4, AVX, AVX2, NUM_ISAS };
 
     /** Instruction set being compiled to. */
     ISA isa;
