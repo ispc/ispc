@@ -356,7 +356,7 @@ int main(int Argc, char *Argv[]) {
         g->opt.level = 0;
 
     if (outFileName == NULL && headerFileName == NULL)
-        Warning(SourcePos(), "Nutput file or header file name specified. "
+        Warning(SourcePos(), "No output file or header file name specified. "
                 "Program will be compiled and warnings/errors will "
                 "be issued, but no output will be generated.");
 
