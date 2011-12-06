@@ -150,8 +150,10 @@ extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
+#ifndef LLVM_3_1svn
     if (g->opt.fastMath == true)
         llvm::UnsafeFPMath = true;
+#endif // !LLVM_3_1svn
 
     // FIXME: it'd be nice to do this in the Module constructor, but this
     // function ends up calling into routines that expect the global

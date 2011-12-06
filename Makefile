@@ -5,20 +5,34 @@
 ARCH_OS = $(shell uname)
 ARCH_TYPE = $(shell arch)
 
+ifeq ($(shell llvm-config --version), 3.1svn)
+  LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
+	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
+	-lLLVMBitWriter -lLLVMTableGen -lLLVMCBackendInfo			\
+	-lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMSelectionDAG		\
+	-lLLVMAsmPrinter -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info		\
+	-lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCDisassembler	-lLLVMMCParser	\
+	-lLLVMCodeGen -lLLVMScalarOpts	-lLLVMInstCombine -lLLVMTransformUtils	\
+	-lLLVMipa -lLLVMAnalysis -lLLVMMCJIT -lLLVMRuntimeDyld			\
+	-lLLVMExecutionEngine -lLLVMTarget -lLLVMMC -lLLVMObject -lLLVMCore 	\
+	-lLLVMSupport
+else
+  LLVM_LIBS=$(shell llvm-config --libs)
+endif
+
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
-ISPC_LIBS=$(CLANG_LIBS) \
-	$(shell llvm-config --ldflags --libs) \
+ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread -ldl
-ISPC_TEST_LIBS=$(shell llvm-config --ldflags --libs) \
+ISPC_TEST_LIBS=$(shell llvm-config --ldflags) $(LLVM_LIBS) \
 	-lpthread -ldl
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
-LLVM_VERSION=$(shell llvm-config --version | sed s/\\./_/)
-LLVM_VERSION_DEF=-DLLVM_$(LLVM_VERSION)
+LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
+LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 BUILD_DATE=$(shell date +%Y%m%d)
 BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)

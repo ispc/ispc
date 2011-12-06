@@ -241,11 +241,19 @@ Target::GetTargetMachine() const {
 
     llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
                                                   llvm::Reloc::Default;
-#if defined(LLVM_3_0svn) || defined(LLVM_3_1svn) || defined(LLVM_3_0)
+#if defined(LLVM_3_1svn)
+    std::string featuresString = attributes;
+    llvm::TargetOptions options;
+    if (g->opt.fastMath == true)
+        options.UnsafeFPMath = 1;
+    llvm::TargetMachine *targetMachine = 
+        target->createTargetMachine(triple, cpu, featuresString, options,
+                                    relocModel);
+#elif defined(LLVM_3_0)
     std::string featuresString = attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, relocModel);
-#else
+#else // LLVM 2.9
 #ifdef ISPC_IS_APPLE
     relocModel = llvm::Reloc::PIC_;
 #endif // ISPC_IS_APPLE
@@ -255,7 +263,8 @@ Target::GetTargetMachine() const {
 #ifndef ISPC_IS_WINDOWS
     targetMachine->setRelocationModel(relocModel);
 #endif // !ISPC_IS_WINDOWS
-#endif
+#endif // LLVM_2_9
+
     assert(targetMachine != NULL);
 
     targetMachine->setAsmVerbosityDefault(true);

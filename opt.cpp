@@ -961,9 +961,13 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
         }
 
         assert(base != NULL);
+#ifdef LLVM_2_9
+        *offsets = llvm::ConstantVector::get(delta);
+#else
         llvm::ArrayRef<llvm::Constant *> deltas(&delta[0], 
                                                 &delta[elements.size()]);
         *offsets = llvm::ConstantVector::get(deltas);
+#endif
         return base;
     }
 
