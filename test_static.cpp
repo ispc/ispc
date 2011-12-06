@@ -39,6 +39,10 @@
 #define ISPC_IS_APPLE
 #endif
 
+#ifdef ISPC_IS_WINDOWS
+#include <windows.h>
+#endif // ISPC_IS_WINDOWS
+
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>

@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ispc", "ispc.vcxproj", "{9861F490-F516-480C-B63C-D62A77AFA9D5}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ispc_test", "ispc_test.vcxproj", "{92547BA8-BE86-4E78-8799-1D72A70E5831}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -15,9 +13,6 @@ Global
 		{9861F490-F516-480C-B63C-D62A77AFA9D5}.Debug|Win32.Build.0 = Debug|Win32
 		{9861F490-F516-480C-B63C-D62A77AFA9D5}.Release|Win32.ActiveCfg = Release|Win32
 		{9861F490-F516-480C-B63C-D62A77AFA9D5}.Release|Win32.Build.0 = Release|Win32
-		{92547BA8-BE86-4E78-8799-1D72A70E5831}.Debug|Win32.ActiveCfg = Debug|Win32
-		{92547BA8-BE86-4E78-8799-1D72A70E5831}.Debug|Win32.Build.0 = Debug|Win32
-		{92547BA8-BE86-4E78-8799-1D72A70E5831}.Release|Win32.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

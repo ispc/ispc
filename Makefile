@@ -27,8 +27,6 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
 
 ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread -ldl
-ISPC_TEST_LIBS=$(shell llvm-config --ldflags) $(LLVM_LIBS) \
-	-lpthread -ldl
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
@@ -73,7 +71,7 @@ OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_SRC:.ll=.o) \
 	builtins-c-32.o builtins-c-64.o stdlib_ispc.o $(BISON_SRC:.yy=.o) \
 	$(FLEX_SRC:.ll=.o))
 
-default: ispc ispc_test
+default: ispc
 
 .PHONY: dirs clean depend doxygen print_llvm_src
 .PRECIOUS: objs/builtins-%.cpp
@@ -92,7 +90,7 @@ print_llvm_src:
 	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
 
 clean:
-	/bin/rm -rf objs ispc ispc_test
+	/bin/rm -rf objs ispc
 
 doxygen:
 	/bin/rm -rf docs/doxygen
@@ -101,10 +99,6 @@ doxygen:
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
-
-ispc_test: dirs ispc_test.cpp
-	@echo Creating ispc_test executable
-	@$(CXX) $(LDFLAGS) $(CXXFLAGS) -o $@ ispc_test.cpp $(ISPC_TEST_LIBS)
 
 objs/%.o: %.cpp
 	@echo Compiling $<
