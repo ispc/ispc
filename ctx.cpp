@@ -1691,7 +1691,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
     else {
         // Otherwise we should have a varying ptr and it's time for a
         // gather.
-        return gather(ptr, ptrType, mask, name);
+        return gather(ptr, ptrType, GetFullMask(), name);
     }
 }
 
@@ -2055,7 +2055,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
         assert(ptrType->IsVaryingType());
         // We have a varying ptr (an array of pointers), so it's time to
         // scatter
-        scatter(value, ptr, ptrType, mask);
+        scatter(value, ptr, ptrType, GetFullMask());
     }
 }
 
