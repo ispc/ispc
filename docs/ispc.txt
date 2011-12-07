@@ -146,8 +146,6 @@ Contents:
   + `Restructuring Existing Programs to Use ISPC`_
   + `Understanding How to Interoperate With the Application's Data`_
 
-* `Related Languages`_
-
 * `Disclaimer and Legal Information`_
 
 * `Optimization Notice`_
@@ -402,7 +400,7 @@ which sets the target architecture, ``--cpu``, which sets the target CPU,
 and ``--target``, which sets the target instruction set.
 
 By default, the ``ispc`` compiler generates code for the 64-bit x86-64
-architecture (i.e. ``--arch=x86-64`.)  To compile to a 32-bit x86 target,
+architecture (i.e. ``--arch=x86-64``.)  To compile to a 32-bit x86 target,
 supply ``--arch=x86`` on the command line:
 
 ::
@@ -3706,12 +3704,6 @@ elements to work with and then proceeds with the computation.
           len[4*i + programIndex] = l;
       }
   }
-
-
-Related Languages
-=================
-
-TODO: rsl, C*, IVL
 
 
 Disclaimer and Legal Information
