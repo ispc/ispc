@@ -144,7 +144,7 @@ define <4 x double> @__ceil_varying_double(<4 x double>) nounwind readonly alway
 ; from %1, and otherwise return the value from %0.
 
 define <4 x i32> @__vselect_i32(<4 x i32>, <4 x i32> ,
-                                         <4 x i32> %mask) nounwind readnone alwaysinline {
+                                <4 x i32> %mask) nounwind readnone alwaysinline {
   %notmask = xor <4 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1>
   %cleared_old = and <4 x i32> %0, %notmask
   %masked_new = and <4 x i32> %1, %mask
@@ -153,7 +153,7 @@ define <4 x i32> @__vselect_i32(<4 x i32>, <4 x i32> ,
 }
 
 define <4 x float> @__vselect_float(<4 x float>, <4 x float>,
-                                             <4 x i32> %mask) nounwind readnone alwaysinline {
+                                    <4 x i32> %mask) nounwind readnone alwaysinline {
   %v0 = bitcast <4 x float> %0 to <4 x i32>
   %v1 = bitcast <4 x float> %1 to <4 x i32>
   %r = call <4 x i32> @__vselect_i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %mask)

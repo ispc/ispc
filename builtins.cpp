@@ -311,8 +311,12 @@ lCheckModuleIntrinsics(llvm::Module *module) {
 static void
 lSetInternalFunctions(llvm::Module *module) {
     const char *names[] = {
+        "__add_float",
+        "__add_int32",
+        "__add_uniform_double",
         "__add_uniform_int32",
         "__add_uniform_int64",
+        "__add_varying_double",
         "__add_varying_int32",
         "__add_varying_int64",
         "__aos_to_soa3_float",
@@ -543,6 +547,10 @@ lSetInternalFunctions(llvm::Module *module) {
         "__svml_pow",
         "__undef_uniform",
         "__undef_varying",
+        "__vec4_add_float",
+        "__vec4_add_int32",
+        "__vselect_float",
+        "__vselect_i32",
     };
 
     int count = sizeof(names) / sizeof(names[0]);

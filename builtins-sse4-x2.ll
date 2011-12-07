@@ -252,7 +252,7 @@ define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
 
 ; helper function for reduce_add_int32
 define <4 x i32> @__vec4_add_int32(<4 x i32> %v0,
-                                            <4 x i32> %v1) nounwind readnone alwaysinline {
+                                   <4 x i32> %v1) nounwind readnone alwaysinline {
   %v = add <4 x i32> %v0, %v1
   ret <4 x i32> %v
 }

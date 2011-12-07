@@ -3157,7 +3157,7 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
             for (int i = 0; i < count; ++i) {
                 if (indices[i] < 0 || indices[i] >= nElements)
                     Warning(index->pos, "Array index \"%d\" may be out of bounds for "
-                            "\"%d\" element array.", indices[i], nElements);
+                            "%d element array.", indices[i], nElements);
             }
         }
     }
