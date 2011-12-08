@@ -8,7 +8,7 @@ TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
 CXX=g++
 CXXFLAGS=-Iobjs/ -O3 -Wall -m64
 ISPC=ispc
-ISPCFLAGS=-O2 --target=sse2,sse4-x2,avx --arch=x86-64
+ISPCFLAGS=-O2 --target=sse2,sse4-x2,avx-x2 --arch=x86-64
 
 OBJS=objs/stencil.o objs/stencil_serial.o $(TASK_OBJ) objs/stencil_ispc.o \
 	objs/stencil_ispc_sse2.o objs/stencil_ispc_sse4.o \
