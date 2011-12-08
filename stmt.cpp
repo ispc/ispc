@@ -491,7 +491,6 @@ IfStmt::IfStmt(Expr *t, Stmt *ts, Stmt *fs, bool checkCoherence, SourcePos p)
     : Stmt(p), test(t), trueStmts(ts), falseStmts(fs), 
       doAllCheck(checkCoherence &&
                  !g->opt.disableCoherentControlFlow) {
-    // have to wait until after type checking to initialize doAnyCheck.
 }
 
 
@@ -869,7 +868,7 @@ lSafeToRunWithAllLanesOff(Stmt *stmt) {
 void
 IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetInternalMask();
-    if (ctx->GetFullMask() == LLVMMaskAllOn) {
+    if (ctx->GetFullMask() == LLVMMaskAllOn && !g->opt.disableCoherentControlFlow) {
         // We can tell that the mask is on statically at compile time; just
         // emit code for the 'if test with the mask all on' path
         llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
@@ -921,11 +920,12 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         //
         // where our use of blend for conditional assignments doesn't check
         // for the 'all lanes' off case.
+        bool costIsAcceptable = ((trueStmts ? trueStmts->EstimateCost() : 0) + 
+                                 (falseStmts ? falseStmts->EstimateCost() : 0)) < 
+            PREDICATE_SAFE_IF_STATEMENT_COST;
         if (lSafeToRunWithAllLanesOff(trueStmts) &&
             lSafeToRunWithAllLanesOff(falseStmts) &&
-            (((trueStmts ? trueStmts->EstimateCost() : 0) + 
-              (falseStmts ? falseStmts->EstimateCost() : 0)) < 
-             PREDICATE_SAFE_IF_STATEMENT_COST)) {
+            (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
             emitMaskedTrueAndFalse(ctx, oldMask, ltest);
             assert(ctx->GetCurrentBasicBlock());
@@ -951,6 +951,7 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     // compiler see what's going on so that subsequent optimizations for
     // code emitted here can operate with the knowledge that the mask is
     // definitely all on (until it modifies the mask itself).
+    assert(!g->opt.disableCoherentControlFlow);
     ctx->SetInternalMask(LLVMMaskAllOn);
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
     ctx->SetFunctionMask(LLVMMaskAllOn);

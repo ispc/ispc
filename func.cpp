@@ -287,7 +287,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // is all on and thence having a specialized code path for that
         // case.  If this is a simple function, then this isn't worth the
         // code bloat / overhead.
-        if (checkMask) {
+        if (checkMask && (g->opt.disableCoherentControlFlow == false)) {
             bool allTrue[ISPC_MAX_NVEC];
             for (int i = 0; i < g->target.vectorWidth; ++i)
                 allTrue[i] = true;
