@@ -22,8 +22,8 @@ also included in the ``examples/`` directory.)
     - ``ispc``, 1 core
     - ``ispc``, 4 cores
   * - `AOBench`_ (512 x 512 resolution)
-    - 3.99x
-    - 19.32x
+    - 6.19x
+    - 28.06x
   * - `Binomial Options`_ (128k options)
     - 7.94x
     - 33.43x
@@ -31,20 +31,20 @@ also included in the ``examples/`` directory.)
     - 8.45x
     - 32.48x
   * - `Deferred Shading`_ (1280p)
-    - n/a
+    - 5.02x
     - 23.06x
   * - `Mandelbrot Set`_
     - 6.21x
-    - 19.90x
+    - 20.28x
   * - `Perlin Noise Function`_
     - 5.37x
     - n/a
   * - `Ray Tracer`_ (Sponza dataset)
-    - 3.99x
-    - 19.32x
+    - 4.31x
+    - 20.29x
   * - `3D Stencil`_
-    - 3.76x
-    - 13.79x
+    - 4.05x
+    - 15.53x
   * - `Volume Rendering`_
     - 3.11x
     - 15.80x
