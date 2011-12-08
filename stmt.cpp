@@ -1945,12 +1945,12 @@ ForeachStmt::Optimize() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
         if (startExprs[i] != NULL)
-            startExprs[i]->Optimize();
+            startExprs[i] = startExprs[i]->Optimize();
         anyErrors |= (startExprs[i] == NULL);
     }
     for (unsigned int i = 0; i < endExprs.size(); ++i) {
         if (endExprs[i] != NULL)
-            endExprs[i]->Optimize();
+            endExprs[i] = endExprs[i]->Optimize();
         anyErrors |= (endExprs[i] == NULL);
     }
 
@@ -1966,20 +1966,21 @@ Stmt *
 ForeachStmt::TypeCheck() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
+        // Typecheck first, to resolve function overloads
+        if (startExprs[i] != NULL)
+            startExprs[i] = startExprs[i]->TypeCheck();
         if (startExprs[i] != NULL)
             startExprs[i] = TypeConvertExpr(startExprs[i], 
                                             AtomicType::UniformInt32, 
                                             "foreach starting value");
-        if (startExprs[i] != NULL)
-            startExprs[i]->TypeCheck();
         anyErrors |= (startExprs[i] == NULL);
     }
     for (unsigned int i = 0; i < endExprs.size(); ++i) {
         if (endExprs[i] != NULL)
+            endExprs[i] = endExprs[i]->TypeCheck();
+        if (endExprs[i] != NULL)
             endExprs[i] = TypeConvertExpr(endExprs[i], AtomicType::UniformInt32,
                                           "foreach ending value");
-        if (endExprs[i] != NULL)
-            endExprs[i]->TypeCheck();
         anyErrors |= (endExprs[i] == NULL);
     }
 
