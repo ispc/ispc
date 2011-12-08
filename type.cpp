@@ -353,7 +353,10 @@ AtomicType::Mangle() const {
 std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
-    assert(isUniform);
+    if (isUniform == false) {
+        assert(m->errorCount > 0);
+        return ret;
+    }
     if (isConst) ret += "const ";
 
     switch (basicType) {

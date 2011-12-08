@@ -3050,7 +3050,10 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
         const SequentialType *st = 
             dynamic_cast<const SequentialType *>(baseExprType);
-        assert(st != NULL);
+        if (st == NULL) {
+            assert(m->errorCount > 0);
+            return NULL;
+        }
         lvalueType = PointerType::GetUniform(st->GetElementType());
 
         lvalue = lAddVaryingOffsetsIfNeeded(ctx, lvalue, lvalueType);
