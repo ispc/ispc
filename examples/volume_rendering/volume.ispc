@@ -124,24 +124,13 @@ static inline float D(int x, int y, int z, uniform int nVoxels[3],
 }
 
 
-static inline float Du(uniform int x, uniform int y, uniform int z, 
-                       uniform int nVoxels[3], uniform float density[]) {
-    x = clamp(x, 0, nVoxels[0]-1);
-    y = clamp(y, 0, nVoxels[1]-1);
-    z = clamp(z, 0, nVoxels[2]-1);
-
-    return density[z*nVoxels[0]*nVoxels[1] + y*nVoxels[0] + x];
-}
-
-
 static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
     return (p - pMin) / (pMax - pMin);
 }
 
 
 static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
-                            uniform float density[], uniform int nVoxels[3],
-                            uniform bool &checkForSameVoxel) {
+                            uniform float density[], uniform int nVoxels[3]) {
     if (!Inside(Pobj, pMin, pMax)) 
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_
@@ -153,39 +142,14 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
     float dx = vox.x - vx, dy = vox.y - vy, dz = vox.z - vz;
 
     // Trilinearly interpolate density values to compute local density
-    float d00, d10, d01, d11;
-    uniform int uvx, uvy, uvz;
-    if (checkForSameVoxel && reduce_equal(vx, &uvx) && reduce_equal(vy, &uvy) &&
-        reduce_equal(vz, &uvz)) {
-        // If all of the program instances are inside the same voxel, then
-        // we'll call the 'uniform' variant of the voxel density lookup
-        // function, thus doing a single load for each value rather than a
-        // gather.
-        d00 = Lerp(dx, Du(uvx, uvy, uvz, nVoxels, density),     
-                       Du(uvx+1, uvy, uvz, nVoxels, density));
-        d10 = Lerp(dx, Du(uvx, uvy+1, uvz, nVoxels, density),   
-                       Du(uvx+1, uvy+1, uvz, nVoxels, density));
-        d01 = Lerp(dx, Du(uvx, uvy, uvz+1, nVoxels, density),   
-                       Du(uvx+1, uvy, uvz+1, nVoxels, density));
-        d11 = Lerp(dx, Du(uvx, uvy+1, uvz+1, nVoxels, density), 
-                       Du(uvx+1, uvy+1, uvz+1, nVoxels, density));
-    }
-    else {
-        // Otherwise, we have to do an actual gather in the more general
-        // D() function.  Once the reduce_equal tests above fail, we stop
-        // checking in subsequent steps, since it's unlikely that this will
-        // be true in the future once they've diverged into different
-        // voxels.
-        checkForSameVoxel = false;
-        d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),     
-                       D(vx+1, vy, vz, nVoxels, density));
-        d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),   
-                       D(vx+1, vy+1, vz, nVoxels, density));
-        d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),   
-                       D(vx+1, vy, vz+1, nVoxels, density));
-        d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density), 
-                       D(vx+1, vy+1, vz+1, nVoxels, density));
-    }
+    float d00 = Lerp(dx, D(vx, vy, vz, nVoxels, density),     
+                     D(vx+1, vy, vz, nVoxels, density));
+    float d10 = Lerp(dx, D(vx, vy+1, vz, nVoxels, density),   
+                     D(vx+1, vy+1, vz, nVoxels, density));
+    float d01 = Lerp(dx, D(vx, vy, vz+1, nVoxels, density),   
+                     D(vx+1, vy, vz+1, nVoxels, density));
+    float d11 = Lerp(dx, D(vx, vy+1, vz+1, nVoxels, density), 
+                     D(vx+1, vy+1, vz+1, nVoxels, density));
     float d0 = Lerp(dy, d00, d10);
     float d1 = Lerp(dy, d01, d11);
     return Lerp(dz, d0, d1);
@@ -221,10 +185,8 @@ transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
     float t = rayT0;
     float3 pos = ray.origin + ray.dir * rayT0;
     float3 dirStep = ray.dir * stepT;
-    uniform bool checkForSameVoxel = true;
     while (t < rayT1) {
-        tau += stepDist * sigma_t * Density(pos, pMin, pMax, density, nVoxels,
-                                            checkForSameVoxel);
+        tau += stepDist * sigma_t * Density(pos, pMin, pMax, density, nVoxels);
         pos = pos + dirStep;
         t += stepT;
     }
@@ -268,9 +230,8 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float t = rayT0;
     float3 pos = ray.origin + ray.dir * rayT0;
     float3 dirStep = ray.dir * stepT;
-    uniform bool checkForSameVoxel = true;
     cwhile (t < rayT1) {
-        float d = Density(pos, pMin, pMax, density, nVoxels, checkForSameVoxel);
+        float d = Density(pos, pMin, pMax, density, nVoxels);
 
         // terminate once attenuation is high
         float atten = exp(-tau);

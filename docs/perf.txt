@@ -46,8 +46,8 @@ also included in the ``examples/`` directory.)
     - 4.05x
     - 15.53x
   * - `Volume Rendering`_
-    - 3.11x
-    - 15.80x
+    - 3.60x
+    - 17.53x
 
 
 .. _AOBench: https://github.com/ispc/ispc/tree/master/examples/aobench
