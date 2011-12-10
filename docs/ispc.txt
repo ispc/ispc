@@ -523,8 +523,8 @@ Basic Concepts: Program Instances and Gangs of Program Instances
 Upon entry to a ``ispc`` function called from C/C++ code, the execution
 model switches from the application's serial model to ``ispc``'s execution
 model.  Conceptually, a number of ``ispc`` *program instances* start
-running in concurrently.  The group of running program instances is a
-called *gang* (harkening to "gang scheduling", since ``ispc`` provides
+running concurrently.  The group of running program instances is a
+called a *gang* (harkening to "gang scheduling", since ``ispc`` provides
 certain guarantees about the control flow coherence of program instances
 running in a gang, detailed in `Gang Convergence Guarantees`_.)  An
 ``ispc`` program instance is thus similar to a CUDA* "thread" or an OpenCL*
