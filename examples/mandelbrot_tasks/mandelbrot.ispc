@@ -49,19 +49,18 @@ mandel(float c_re, float c_im, int count) {
 }
 
 
-/* Task to compute the Mandelbrot iterations for a span of scanlines from
-   [ystart,yend).
+/* Task to compute the Mandelbrot iterations for a single scanline.
  */
 task void
-mandelbrot_scanlines(uniform int ybase, uniform int span,
-                     uniform float x0, uniform float dx, 
-                     uniform float y0, uniform float dy,
-                     uniform int width, uniform int maxIterations,
-                     uniform int output[]) {
-    uniform int ystart = ybase + taskIndex * span;
-    uniform int yend = ystart + span;
+mandelbrot_scanline(uniform float x0, uniform float dx, 
+                    uniform float y0, uniform float dy,
+                    uniform int width, uniform int height, 
+                    uniform int span,
+                    uniform int maxIterations, uniform int output[]) {
+    uniform int y0 = taskIndex * span;
+    uniform int y1 = min((taskIndex+1) * span, height);
 
-    foreach (yi = ystart ... yend, xi = 0 ... width) {
+    foreach (yi = y0 ... y1, xi = 0 ... width) {
         float x = x0 + xi * dx;
         float y = y0 + yi * dy;
 
@@ -71,20 +70,6 @@ mandelbrot_scanlines(uniform int ybase, uniform int span,
 }
                                
 
-task void
-mandelbrot_chunk(uniform float x0, uniform float dx,
-                 uniform float y0, uniform float dy,
-                 uniform int width, uniform int height,
-                 uniform int maxIterations, uniform int output[]) {
-    uniform int ystart = taskIndex * (height/taskCount);
-    uniform int yend = (taskIndex+1) * (height/taskCount);
-    uniform int span = 1;
-
-    launch[(yend-ystart)/span] < mandelbrot_scanlines(ystart, span, x0, dx, y0, dy,
-                                                      width, maxIterations, output) >;
-}
-
-
 export void
 mandelbrot_ispc(uniform float x0, uniform float y0, 
                 uniform float x1, uniform float y1,
@@ -92,7 +77,8 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
                 uniform int maxIterations, uniform int output[]) {
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
+    uniform int span = 4;
 
-    launch[32] < mandelbrot_chunk(x0, dx, y0, dy, width, height,
-                                  maxIterations, output) >;
+    launch[height/span] < mandelbrot_scanline(x0, dx, y0, dy, width, height, span,
+                                              maxIterations, output) >;
 }
