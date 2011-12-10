@@ -98,9 +98,9 @@ public:
         the function entry mask and the internal mask. */ 
     llvm::Value *GetFullMask();
 
-    /** Provides the alloca'd pointer to memory to store the full function
-        mask.  This is only used to wire up the __mask builtin variable. */
-    void SetMaskPointer(llvm::Value *p);
+    /** Returns a pointer to storage in memory that stores the current full
+        mask. */
+    llvm::Value *GetFullMaskPointer();
 
     /** Provides the value of the mask at function entry */
     void SetFunctionMask(llvm::Value *val);

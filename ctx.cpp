@@ -171,8 +171,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
     internalMaskPointer = AllocaInst(LLVMTypes::MaskType, "internal_mask_memory");
     StoreInst(LLVMMaskAllOn, internalMaskPointer);
+
     functionMaskValue = LLVMMaskAllOn;
-    fullMaskPointer = NULL;
+
+    fullMaskPointer = AllocaInst(LLVMTypes::MaskType, "full_mask_memory");
+    StoreInst(LLVMMaskAllOn, fullMaskPointer);
 
     loopMask = NULL;
     breakLanesPtr = continueLanesPtr = NULL;
@@ -286,9 +289,9 @@ FunctionEmitContext::GetFullMask() {
 }
 
 
-void
-FunctionEmitContext::SetMaskPointer(llvm::Value *p) {
-    fullMaskPointer = p;
+llvm::Value *
+FunctionEmitContext::GetFullMaskPointer() {
+    return fullMaskPointer;
 }
 
 

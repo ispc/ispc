@@ -189,10 +189,9 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
 void 
 Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, 
                    SourcePos firstStmtPos) {
-    llvm::Value *maskPtr = ctx->AllocaInst(LLVMTypes::MaskType, "mask_memory");
-    ctx->StoreInst(LLVMMaskAllOn, maskPtr);
-    maskSymbol->storagePtr = maskPtr;
-    ctx->SetMaskPointer(maskPtr);
+    // Connect the __mask builtin to the location in memory that stores its
+    // value
+    maskSymbol->storagePtr = ctx->GetFullMaskPointer();
 
     // add debugging info for __mask, programIndex, ...
     maskSymbol->pos = firstStmtPos;
