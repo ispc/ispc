@@ -1176,6 +1176,11 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         FATAL("Unhandled target ISA in preprocessor symbol definition");
     }
 
+    if (g->target.is32Bit)
+        opts.addMacroDef("ISPC_POINTER_SIZE=32");
+    else
+        opts.addMacroDef("ISPC_POINTER_SIZE=64");
+
     opts.addMacroDef("ISPC_MAJOR_VERSION=1");
     opts.addMacroDef("ISPC_MINOR_VERSION=1");
 

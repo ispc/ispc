@@ -471,6 +471,9 @@ preprocessor runs:
   * - ISPC_TARGET_{SSE2,SSE4,AVX}
     - 1
     - One of these will be set, depending on the compilation target.
+  * - ISPC_POINTER_SIZE
+    - 32 or 64
+    - Number of bits used to represent a pointer for the target architecture.
   * - ISPC_MAJOR_VERSION
     - 1
     - Major version of the ``ispc`` compiler/language
