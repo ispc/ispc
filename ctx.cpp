@@ -1850,6 +1850,11 @@ llvm::Value *
 FunctionEmitContext::AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, 
                                 const char *name, int align, 
                                 bool atEntryBlock) {
+    if (llvmType == NULL) {
+        assert(m->errorCount > 0);
+        return NULL;
+    }
+
     llvm::AllocaInst *inst = NULL;
     if (atEntryBlock) {
         // We usually insert it right before the jump instruction at the

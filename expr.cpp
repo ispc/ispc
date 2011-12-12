@@ -3350,11 +3350,13 @@ StructMemberExpr::GetType() const {
         return NULL;
 
     const Type *elementType = structType->GetElementType(identifier);
-    if (elementType == NULL)
+    if (elementType == NULL) {
         Error(identifierPos,
               "Element name \"%s\" not present in struct type \"%s\".%s",
               identifier.c_str(), structType->GetString().c_str(),
               getCandidateNearMatches().c_str());
+        return NULL;
+    }
 
     const PointerType *pt = dynamic_cast<const PointerType *>(expr->GetType());
     if (structType->IsVaryingType() ||
