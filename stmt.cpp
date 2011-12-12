@@ -868,7 +868,9 @@ lSafeToRunWithAllLanesOff(Stmt *stmt) {
 void
 IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetInternalMask();
-    if (ctx->GetFullMask() == LLVMMaskAllOn && !g->opt.disableCoherentControlFlow) {
+    if (ctx->GetFullMask() == LLVMMaskAllOn && 
+        !g->opt.disableCoherentControlFlow &&
+        !g->opt.disableMaskAllOnOptimizations) {
         // We can tell that the mask is on statically at compile time; just
         // emit code for the 'if test with the mask all on' path
         llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
@@ -952,9 +954,11 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     // code emitted here can operate with the knowledge that the mask is
     // definitely all on (until it modifies the mask itself).
     assert(!g->opt.disableCoherentControlFlow);
-    ctx->SetInternalMask(LLVMMaskAllOn);
+    if (!g->opt.disableMaskAllOnOptimizations)
+        ctx->SetInternalMask(LLVMMaskAllOn);
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
-    ctx->SetFunctionMask(LLVMMaskAllOn);
+    if (!g->opt.disableMaskAllOnOptimizations)
+        ctx->SetFunctionMask(LLVMMaskAllOn);
 
     // First, check the value of the test.  If it's all on, then we jump to
     // a basic block that will only have code for the true case.
@@ -1156,9 +1160,11 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         // IfStmt::emitCoherentTests()), and then emit the code for the
         // loop body.
         ctx->SetCurrentBasicBlock(bAllOn);
-        ctx->SetInternalMask(LLVMMaskAllOn);
+        if (!g->opt.disableMaskAllOnOptimizations)
+            ctx->SetInternalMask(LLVMMaskAllOn);
         llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
-        ctx->SetFunctionMask(LLVMMaskAllOn);
+        if (!g->opt.disableMaskAllOnOptimizations)
+            ctx->SetFunctionMask(LLVMMaskAllOn);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
         assert(ctx->GetCurrentBasicBlock());
@@ -1379,9 +1385,11 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         // the runtime test has passed, make this fact clear for code
         // generation at compile time here.)
         ctx->SetCurrentBasicBlock(bAllOn);
-        ctx->SetInternalMask(LLVMMaskAllOn);
+        if (!g->opt.disableMaskAllOnOptimizations)
+            ctx->SetInternalMask(LLVMMaskAllOn);
         llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
-        ctx->SetFunctionMask(LLVMMaskAllOn);
+        if (!g->opt.disableMaskAllOnOptimizations)
+            ctx->SetFunctionMask(LLVMMaskAllOn);
         if (stmts)
             stmts->EmitCode(ctx);
         assert(ctx->GetCurrentBasicBlock());

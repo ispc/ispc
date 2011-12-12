@@ -250,7 +250,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createConstantPropagationPass());
 
-        if (!g->opt.disableMaskedStoreOptimizations) {
+        if (!g->opt.disableMaskAllOnOptimizations) {
             optPM.add(CreateIntrinsicsOptPass());
             optPM.add(CreateMaskedStoreOptPass());
         }
@@ -287,7 +287,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createTailCallEliminationPass());
 
-        if (!g->opt.disableMaskedStoreOptimizations) {
+        if (!g->opt.disableMaskAllOnOptimizations) {
             optPM.add(CreateIntrinsicsOptPass());
             optPM.add(CreateMaskedStoreOptPass());
         }
@@ -334,12 +334,16 @@ Optimize(llvm::Module *module, int optLevel) {
             builder.DisableUnrollLoops = true;
         builder.populateFunctionPassManager(funcPM);
         builder.populateModulePassManager(optPM);
-        optPM.add(CreateIsCompileTimeConstantPass(true));
+
+        optPM.add(CreateIsCompileTimeConstantPass(false));
         optPM.add(CreateIntrinsicsOptPass());
+
         builder.populateLTOPassManager(optPM, true /* internalize */,
                                        true /* inline once again */);
+
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
+
         builder.populateModulePassManager(optPM);
 #endif
         optPM.add(CreateMakeInternalFuncsStaticPass());
@@ -2221,9 +2225,11 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             // not a __is_compile_time_constant_* function
             continue;
 
-        // This optimization pass can be disabled with the (poorly named)
-        // disableGatherScatterFlattening option.
-        if (g->opt.disableGatherScatterFlattening) {
+        // This optimization pass can be disabled with both the (poorly
+        // named) disableGatherScatterFlattening option and
+        // disableMaskAllOnOptimizations.
+        if (g->opt.disableGatherScatterFlattening ||
+            g->opt.disableMaskAllOnOptimizations) {
             llvm::ReplaceInstWithValue(i->getParent()->getInstList(), i, LLVMFalse);
             modifiedAny = true;
             goto restart;

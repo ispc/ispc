@@ -347,6 +347,7 @@ Opt::Opt() {
     force32BitAddressing = true;
     unrollLoops = true;
     disableAsserts = false;
+    disableMaskAllOnOptimizations = false;
     disableHandlePseudoMemoryOps = false;
     disableBlendedMaskedStores = false;
     disableCoherentControlFlow = false;
@@ -355,7 +356,6 @@ Opt::Opt() {
     disableMaskedStoreToStore = false;
     disableGatherScatterFlattening = false;
     disableUniformMemoryOptimizations = false;
-    disableMaskedStoreOptimizations = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////

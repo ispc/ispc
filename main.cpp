@@ -92,15 +92,15 @@ static void usage(int ret) {
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
 #if 0
-    printf("        disable-handle-pseudo-memory-ops\n");
+    printf("        disable-all-on-optimizations\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
-    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
-    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
-    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
     printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
+    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
     printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
+    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
+    printf("        disable-handle-pseudo-memory-ops\n");
+    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
-    printf("        disable-masked-store-optimizations\tDisable lowering to regular stores when possible\n");
 #endif
 #ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
@@ -271,6 +271,8 @@ int main(int Argc, char *Argv[]) {
 
             // These are only used for performance tests of specific
             // optimizations
+            else if (!strcmp(opt, "disable-all-on-optimizations"))
+                g->opt.disableMaskAllOnOptimizations = true;
             else if (!strcmp(opt, "disable-handle-pseudo-memory-ops"))
                 g->opt.disableHandlePseudoMemoryOps = true;
             else if (!strcmp(opt, "disable-blended-masked-stores"))
@@ -287,8 +289,6 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableGatherScatterFlattening = true;
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
-            else if (!strcmp(opt, "disable-masked-store-optimizations"))
-                g->opt.disableMaskedStoreOptimizations = true;
             else 
                 usage(1);
         }

@@ -197,6 +197,47 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         returnValuePtr = AllocaInst(ftype, "return_value_memory");
     }
 
+    if (g->opt.disableMaskAllOnOptimizations) {
+        // This is really disgusting.  We want to be able to fool the
+        // compiler to not be able to reason that the mask is all on, but
+        // we don't want to pay too much of a price at the start of each
+        // function to do so.
+        //
+        // Therefore: first, we declare a module-static __all_on_mask
+        // variable that will hold an "all on" mask value.  At the start of
+        // each function, we'll load its value and call SetInternalMaskAnd
+        // with the result to set the current internal execution mask.
+        // (This is a no-op at runtime.)
+        //
+        // Then, to fool the optimizer that maybe the value of
+        // __all_on_mask can't be guaranteed to be "all on", we emit a
+        // dummy function that sets __all_on_mask be "all off".  (That
+        // function is never actually called.)
+        llvm::Value *globalAllOnMaskPtr = 
+            m->module->getNamedGlobal("__all_on_mask");
+        if (globalAllOnMaskPtr == NULL) {
+            globalAllOnMaskPtr = 
+                new llvm::GlobalVariable(*m->module, LLVMTypes::MaskType, false,
+                                         llvm::GlobalValue::InternalLinkage,
+                                         LLVMMaskAllOn, "__all_on_mask");
+
+            char buf[256];
+            sprintf(buf, "__off_all_on_mask_%s", g->target.GetISAString());
+            llvm::Constant *offFunc = 
+                m->module->getOrInsertFunction(buf, LLVMTypes::VoidType,
+                                               NULL);
+            assert(llvm::isa<llvm::Function>(offFunc));
+            llvm::BasicBlock *offBB = 
+                   llvm::BasicBlock::Create(*g->ctx, "entry", 
+                                            (llvm::Function *)offFunc, 0);
+            new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
+            llvm::ReturnInst::Create(*g->ctx, offBB);
+        }
+
+        llvm::Value *allOnMask = LoadInst(globalAllOnMaskPtr, "all_on_mask");
+        SetInternalMaskAnd(LLVMMaskAllOn, allOnMask);
+    }
+
     if (m->diBuilder) {
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
@@ -271,7 +312,8 @@ FunctionEmitContext::GetFunctionMask() {
 
 llvm::Value *
 FunctionEmitContext::GetInternalMask() {
-    if (VaryingCFDepth() == 0)
+    if (VaryingCFDepth() == 0 && 
+        !g->opt.disableMaskAllOnOptimizations)
         return LLVMMaskAllOn;
     else
         return LoadInst(internalMaskPointer, "load_mask");
@@ -281,7 +323,8 @@ FunctionEmitContext::GetInternalMask() {
 llvm::Value *
 FunctionEmitContext::GetFullMask() {
     llvm::Value *internalMask = GetInternalMask();
-    if (internalMask == LLVMMaskAllOn && functionMaskValue == LLVMMaskAllOn)
+    if (internalMask == LLVMMaskAllOn && functionMaskValue == LLVMMaskAllOn &&
+        !g->opt.disableMaskAllOnOptimizations)
         return LLVMMaskAllOn;
     else
         return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
@@ -2047,7 +2090,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
         if (ptrType->GetBaseType()->IsUniformType())
             // the easy case
             StoreInst(value, ptr);
-        else if (mask == LLVMMaskAllOn)
+        else if (mask == LLVMMaskAllOn && !g->opt.disableMaskAllOnOptimizations)
             // Otherwise it is a masked store unless we can determine that the
             // mask is all on...  (Unclear if this check is actually useful.)
             StoreInst(value, ptr);

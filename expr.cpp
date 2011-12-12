@@ -659,6 +659,7 @@ lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
     assert(baseSym != NULL &&
            baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore &&
+        !g->opt.disableMaskAllOnOptimizations &&
         baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
         baseSym->storageClass != SC_STATIC &&
         dynamic_cast<const ReferenceType *>(baseSym->type) == NULL &&

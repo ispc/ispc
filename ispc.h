@@ -250,7 +250,12 @@ struct Opt {
     /** Indicates whether assert() statements should be ignored (for
         performance in the generated code). */
     bool disableAsserts;
-    
+
+    /** If enabled, disables the various optimizations that kick in when
+        the execution mask can be determined to be "all on" at compile
+        time. */
+    bool disableMaskAllOnOptimizations;
+
     /** If enabled, the various __pseudo* memory ops (gather/scatter,
         masked load/store) are left in their __pseudo* form, for better
         understanding of the structure of generated code when reading
@@ -302,14 +307,6 @@ struct Opt {
         than gathers/scatters.  This is likely only useful for measuring
         the impact of this optimization. */
     bool disableUniformMemoryOptimizations;
-
-    /** Disables optimizations for masked stores: masked stores with the
-        mask all on are transformed to regular stores, and masked stores
-        with the mask are all off are removed (which in turn can allow
-        eliminating additional dead code related to computing the value
-        stored).  This is likely only useful for measuring the impact of
-        this optimization. */
-    bool disableMaskedStoreOptimizations;
 };
 
 /** @brief This structure collects together a number of global variables. 
