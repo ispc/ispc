@@ -75,11 +75,14 @@ fnull = open(os.devnull, 'w')
 
 # run the commands in cmd_list
 def run_cmds(cmd_list, filename, expect_failure):
+    output = ""
     for cmd in cmd_list:
         sp = subprocess.Popen(shlex.split(cmd), stdin=None,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
-        output = sp.communicate()[0]
+        out = sp.communicate()
+        output += out[0]
+        output += out[1]
         failed = (sp.returncode != 0)
         if failed:
             break
@@ -87,9 +90,11 @@ def run_cmds(cmd_list, filename, expect_failure):
     surprise = ((expect_failure and not failed) or
                 (not expect_failure and failed))
     if surprise == True:
-        print "Test %s %s                 " % \
-            (filename, "unexpectedly passed" if expect_failure else "failed")
-        print "Output %s" % output
+        print "Test %s %s (return code %d)            " % \
+            (filename, "unexpectedly passed" if expect_failure else "failed",
+             sp.returncode)
+    if output != "":
+        print "%s" % output
     return surprise
 
 
