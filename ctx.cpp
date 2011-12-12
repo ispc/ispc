@@ -1644,14 +1644,14 @@ FunctionEmitContext::AddElementOffset(llvm::Value *basePtr, int elementNum,
         // us the offset in bytes to the given element of the structure
         offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum);
     else {
-        // Otherwise we should have a vector here and the offset is given
-        // by the element number times the size of the element type of the
-        // vector.
-        const VectorType *vt = 
-            dynamic_cast<const VectorType *>(ptrType->GetBaseType());
-        assert(vt != NULL);
+        // Otherwise we should have a vector or array here and the offset
+        // is given by the element number times the size of the element
+        // type of the vector.
+        const SequentialType *st = 
+            dynamic_cast<const SequentialType *>(ptrType->GetBaseType());
+        assert(st != NULL);
         llvm::Value *size = 
-            g->target.SizeOf(vt->GetElementType()->LLVMType(g->ctx));
+            g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx));
         llvm::Value *scale = (g->target.is32Bit || g->opt.force32BitAddressing) ?
             LLVMInt32(elementNum) : LLVMInt64(elementNum);
         offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
@@ -2542,9 +2542,10 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     assert(pt && pt->IsVaryingType());
 
     const Type *baseType = ptrType->GetBaseType();
-    assert(dynamic_cast<const AtomicType *>(baseType) != NULL ||
-           dynamic_cast<const EnumType *>(baseType) != NULL ||
-           dynamic_cast<const PointerType *>(baseType));
+    if (dynamic_cast<const AtomicType *>(baseType) == NULL &&
+        dynamic_cast<const EnumType *>(baseType) == NULL &&
+        dynamic_cast<const PointerType *>(baseType) == NULL)
+        return ptr;
     if (baseType->IsUniformType())
         return ptr;
     
