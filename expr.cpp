@@ -2705,19 +2705,21 @@ FunctionCallExpr::TypeCheck() {
         launchCountExpr = launchCountExpr->TypeCheck();
 
     if (args != NULL && func != NULL) {
+        std::vector<const Type *> argTypes;
+        std::vector<bool> argCouldBeNULL;
+        for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+            if (args->exprs[i] == NULL)
+                return NULL;
+            const Type *t = args->exprs[i]->GetType();
+            if (t == NULL)
+                return NULL;
+            argTypes.push_back(t);
+            argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
+        }
+
         FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
         if (fse != NULL) {
-            std::vector<const Type *> argTypes;
-            std::vector<bool> argCouldBeNULL;
-            for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-                if (args->exprs[i] == NULL)
-                    return NULL;
-                const Type *t = args->exprs[i]->GetType();
-                if (t == NULL)
-                    return NULL;
-                argTypes.push_back(t);
-                argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
-            }
+            // Regular function call
 
             if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
                 return NULL;
@@ -2756,25 +2758,66 @@ FunctionCallExpr::TypeCheck() {
             }
         }
         else {
-            const Type *funcType = func->GetType();
-            if (funcType == NULL)
+            // Call through a function pointer
+            const Type *fptrType = func->GetType();
+            if (fptrType == NULL)
                 return NULL;
-
-            if (dynamic_cast<const PointerType *>(funcType) == NULL ||
-                dynamic_cast<const FunctionType *>(funcType->GetBaseType()) == NULL) {
+           
+            assert(dynamic_cast<const PointerType *>(fptrType) != NULL);
+            const FunctionType *funcType = 
+                dynamic_cast<const FunctionType *>(fptrType->GetBaseType());
+            if (funcType == NULL) {
                 Error(pos, "Must provide function name or function pointer for "
                       "function call expression.");
                 return NULL;
             }
+            
+            // Make sure we don't have too many arguments for the function
+            if ((int)argTypes.size() > funcType->GetNumParameters()) {
+                Error(args->pos, "Too many parameter values provided in "
+                      "function call (%d provided, %d expected).",
+                      (int)argTypes.size(), funcType->GetNumParameters());
+                return NULL;
+            }
+            // It's ok to have too few arguments, as long as the function's
+            // default parameter values have started by the time we run out
+            // of arguments
+            if ((int)argTypes.size() < funcType->GetNumParameters() &&
+                funcType->GetParameterDefault(argTypes.size()) == NULL) {
+                Error(args->pos, "Too few parameter values provided in "
+                      "function call (%d provided, %d expected).",
+                      (int)argTypes.size(), funcType->GetNumParameters());
+                return NULL;
+            }
 
-            if (funcType->IsVaryingType()) {
-                const FunctionType *ft =  
-                    dynamic_cast<const FunctionType *>(funcType->GetBaseType());
-                if (ft->GetReturnType()->IsUniformType()) {
-                    Error(pos, "Illegal to call a varying function pointer that "
-                          "points to a function with a uniform return type.");
-                    return NULL;
+            // Now make sure they can all type convert to the corresponding
+            // parameter types..
+            for (int i = 0; i < (int)argTypes.size(); ++i) {
+                if (i < funcType->GetNumParameters()) {
+                    // make sure it can type convert
+                    const Type *paramType = funcType->GetParameterType(i);
+                    if (CanConvertTypes(argTypes[i], paramType) == false &&
+                        !(argCouldBeNULL[i] == true &&
+                          dynamic_cast<const PointerType *>(paramType) != NULL)) {
+                        Error(args->exprs[i]->pos, "Can't convert argument of "
+                              "type \"%s\" to type \"%s\" for funcion call "
+                              "argument.", argTypes[i]->GetString().c_str(),
+                              paramType->GetString().c_str());
+                        return NULL;
+                    }
                 }
+                else
+                    // Otherwise the parameter default saves us.  It should
+                    // be there for sure, given the check right above the
+                    // for loop.
+                    assert(funcType->GetParameterDefault(i) != NULL);
+            }
+
+            if (fptrType->IsVaryingType() && 
+                funcType->GetReturnType()->IsUniformType()) {
+                Error(pos, "Illegal to call a varying function pointer that "
+                      "points to a function with a uniform return type.");
+                return NULL;
             }
         }
     }
