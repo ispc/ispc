@@ -312,11 +312,7 @@ FunctionEmitContext::GetFunctionMask() {
 
 llvm::Value *
 FunctionEmitContext::GetInternalMask() {
-    if (VaryingCFDepth() == 0 && 
-        !g->opt.disableMaskAllOnOptimizations)
-        return LLVMMaskAllOn;
-    else
-        return LoadInst(internalMaskPointer, "load_mask");
+    return LoadInst(internalMaskPointer, "load_mask");
 }
 
 
@@ -798,13 +794,19 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
         expr = TypeConvertExpr(expr, returnType, "return statement");
         if (expr != NULL) {
             llvm::Value *retVal = expr->GetValue(this);
-            if (retVal != NULL)
-                // Use a masked store to store the value of the expression
-                // in the return value memory; this preserves the return
-                // values from other lanes that may have executed return
-                // statements previously.
-                StoreInst(retVal, returnValuePtr, GetInternalMask(), 
-                          PointerType::GetUniform(returnType));
+            if (retVal != NULL) {
+                if (returnType->IsUniformType() ||
+                    dynamic_cast<const ReferenceType *>(returnType) != NULL)
+                    StoreInst(retVal, returnValuePtr);
+                else {
+                    // Use a masked store to store the value of the expression
+                    // in the return value memory; this preserves the return
+                    // values from other lanes that may have executed return
+                    // statements previously.
+                    StoreInst(retVal, returnValuePtr, GetInternalMask(), 
+                              PointerType::GetUniform(returnType));
+                }
+            }
         }
     }
 
