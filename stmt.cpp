@@ -135,7 +135,7 @@ lPossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
         for (int i = 0; i < funcType->GetNumParameters(); ++i)
             paramTypes.push_back(funcType->GetParameterType(i));
 
-        if (fse->ResolveOverloads(paramTypes) == false)
+        if (fse->ResolveOverloads(expr->pos, paramTypes) == false)
             return false;
     }
     return true;

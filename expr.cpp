@@ -2206,7 +2206,7 @@ AssignExpr::TypeCheck() {
         for (int i = 0; i < ftype->GetNumParameters(); ++i)
             paramTypes.push_back(ftype->GetParameterType(i));
 
-        if (!fse->ResolveOverloads(paramTypes)) {
+        if (!fse->ResolveOverloads(rvalue->pos, paramTypes)) {
             Error(pos, "Unable to find overloaded function for function "
                   "pointer assignment.");
             return NULL;
@@ -2719,7 +2719,7 @@ FunctionCallExpr::TypeCheck() {
                 argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
             }
 
-            if (fse->ResolveOverloads(argTypes, &argCouldBeNULL) == false)
+            if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
                 return NULL;
 
             func = fse->TypeCheck();
@@ -6189,110 +6189,22 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
 }
 
 
-static std::string
-lGetFunctionDeclaration(const std::string &name, const FunctionType *type) {
-    std::string ret;
-    ret += type->GetReturnType()->GetString();
-    ret += " ";
-    ret += name;
-    ret += "(";
-
-    for (int i = 0; i < type->GetNumParameters(); ++i) {
-        const Type *paramType = type->GetParameterType(i);
-        ConstExpr *paramDefault = type->GetParameterDefault(i);
-
-        ret += paramType->GetString();
-        ret += " ";
-        ret += type->GetParameterName(i);
-
-        // Print the default value if present
-        if (paramDefault != NULL) {
-            char buf[32];
-            if (paramType->IsFloatType()) {
-                double val;
-                int count = paramDefault->AsDouble(&val);
-                assert(count == 1);
-                sprintf(buf, " = %g", val);
-            }
-            else if (paramType->IsBoolType()) {
-                bool val;
-                int count = paramDefault->AsBool(&val);
-                assert(count == 1);
-                sprintf(buf, " = %s", val ? "true" : "false");
-            }
-            else if (paramType->IsUnsignedType()) {
-                uint64_t val;
-                int count = paramDefault->AsUInt64(&val);
-                assert(count == 1);
-#ifdef ISPC_IS_LINUX
-                sprintf(buf, " = %lu", val);
-#else
-                sprintf(buf, " = %llu", val);
-#endif
-            }
-            else { 
-                int64_t val;
-                int count = paramDefault->AsInt64(&val);
-                assert(count == 1);
-#ifdef ISPC_IS_LINUX
-                sprintf(buf, " = %ld", val);
-#else
-                sprintf(buf, " = %lld", val);
-#endif
-            }
-            ret += buf;
-        }
-        if (i != type->GetNumParameters() - 1)
-            ret += ", ";
-    }
-    ret += ")";
-    return ret;
-}
-
-
 static void
-lPrintFunctionOverloads(const std::string &name,
-                        const std::vector<std::pair<int, Symbol *> > &matches) {
-    fprintf(stderr, "Matching functions:\n");
-    int minCost = matches[0].first;
-    for (unsigned int i = 1; i < matches.size(); ++i)
-        minCost = std::min(minCost, matches[i].first);
+lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
+                         const std::vector<const Type *> &argTypes, 
+                         const std::vector<bool> *argCouldBeNULL) {
+    for (unsigned int i = 0; i < funcs.size(); ++i)
+        Error(funcs[i]->pos, "Candidate function:");
 
-    for (unsigned int i = 0; i < matches.size(); ++i) {
-        const FunctionType *t = 
-            dynamic_cast<const FunctionType *>(matches[i].second->type);
-        assert(t != NULL);
-        if (matches[i].first == minCost)
-            fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
-    }
-}
-
-
-static void
-lPrintFunctionOverloads(const std::string &name,
-                        const std::vector<Symbol *> &funcs) {
-    fprintf(stderr, "Candidate functions:\n");
-    for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *t = 
-            dynamic_cast<const FunctionType *>(funcs[i]->type);
-        assert(t != NULL);
-        fprintf(stderr, "\t%s\n", lGetFunctionDeclaration(name, t).c_str());
-    }
-}
-
-
-static void
-lPrintPassedTypes(const char *funName, 
-                  const std::vector<const Type *> &argTypes) {
-    fprintf(stderr, "Passed types: %*c(", (int)strlen(funName), ' ');
+    std::string passedTypes = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
         if (argTypes[i] != NULL)
-            fprintf(stderr, "%s%s", argTypes[i]->GetString().c_str(),
-                    (i < argTypes.size()-1) ? ", " : ")\n\n");
+            passedTypes += argTypes[i]->GetString();
         else
-            fprintf(stderr, "(unknown type)%s", 
-                    (i < argTypes.size()-1) ? ", " : ")\n\n");
+            passedTypes += "(unknown type)";
+        passedTypes += (i < argTypes.size()-1) ? ", " : ")\n\n";
     }
+    Error(pos, "%s", passedTypes.c_str());
 }
 
              
@@ -6468,6 +6380,7 @@ lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
  */
 bool
 FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
+                               SourcePos argPos,
                                const std::vector<const Type *> &callTypes,
                                const std::vector<bool> *argCouldBeNULL) {
     const char *funName = candidateFunctions.front()->name.c_str();
@@ -6547,8 +6460,19 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
     else {
         Error(pos, "Multiple overloaded instances of function \"%s\" matched.",
               funName);
-        lPrintFunctionOverloads(funName, matches);
-        lPrintPassedTypes(funName, callTypes);
+
+        // select the matches that have the lowest cost
+        std::vector<Symbol *> bestMatches;
+        int minCost = matches[0].first;
+        for (unsigned int i = 1; i < matches.size(); ++i)
+            minCost = std::min(minCost, matches[i].first);
+        for (unsigned int i = 0; i < matches.size(); ++i)
+            if (matches[i].first == minCost)
+                bestMatches.push_back(matches[i].second);
+
+        // And print a useful error message
+        lPrintOverloadCandidates(argPos, bestMatches, callTypes, argCouldBeNULL);
+
         // Stop trying to find more matches after an ambigious set of
         // matches.
         return true;
@@ -6557,7 +6481,8 @@ FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
 
 
 bool
-FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes,
+FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
+                                     const std::vector<const Type *> &argTypes,
                                      const std::vector<bool> *argCouldBeNULL) {
     triedToResolve = true;
 
@@ -6571,32 +6496,33 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes,
 
     // Is there an exact match that doesn't require any argument type
     // conversion (other than converting type -> reference type)?
-    if (tryResolve(lExactMatch, argTypes, argCouldBeNULL))
+    if (tryResolve(lExactMatch, argPos, argTypes, argCouldBeNULL))
         return true;
 
     if (exactMatchOnly == false) {
         // Try to find a single match ignoring references
-        if (tryResolve(lMatchIgnoringReferences, argTypes, argCouldBeNULL))
+        if (tryResolve(lMatchIgnoringReferences, argPos, argTypes, 
+                       argCouldBeNULL))
             return true;
 
         // Try to find an exact match via type widening--i.e. int8 ->
         // int16, etc.--things that don't lose data.
-        if (tryResolve(lMatchWithTypeWidening, argTypes, argCouldBeNULL))
+        if (tryResolve(lMatchWithTypeWidening, argPos, argTypes, argCouldBeNULL))
             return true;
 
         // Next try to see if there's a match via just uniform -> varying
         // promotions.
-        if (tryResolve(lMatchIgnoringUniform, argTypes, argCouldBeNULL))
+        if (tryResolve(lMatchIgnoringUniform, argPos, argTypes, argCouldBeNULL))
             return true;
 
         // Try to find a match via type conversion, but don't change
         // unif->varying
-        if (tryResolve(lMatchWithTypeConvSameVariability, argTypes,
+        if (tryResolve(lMatchWithTypeConvSameVariability, argPos, argTypes,
                        argCouldBeNULL))
             return true;
     
         // Last chance: try to find a match via arbitrary type conversion.
-        if (tryResolve(lMatchWithTypeConv, argTypes, argCouldBeNULL))
+        if (tryResolve(lMatchWithTypeConv, argPos, argTypes, argCouldBeNULL))
             return true;
     }
 
@@ -6604,8 +6530,8 @@ FunctionSymbolExpr::ResolveOverloads(const std::vector<const Type *> &argTypes,
     const char *funName = candidateFunctions.front()->name.c_str();
     Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
           funName, exactMatchOnly ? " only considering exact matches" : "");
-    lPrintFunctionOverloads(funName, candidateFunctions);
-    lPrintPassedTypes(funName, argTypes);
+    lPrintOverloadCandidates(argPos, candidateFunctions, argTypes, 
+                             argCouldBeNULL);
     return false;
 }
 

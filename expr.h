@@ -634,13 +634,14 @@ public:
         being done just given type information without the parameter
         argument expressions being available.  It returns true on success.
      */
-    bool ResolveOverloads(const std::vector<const Type *> &argTypes,
+    bool ResolveOverloads(SourcePos argPos,
+                          const std::vector<const Type *> &argTypes,
                           const std::vector<bool> *argCouldBeNULL = NULL);
     Symbol *GetMatchingFunction();
 
 private:
     bool tryResolve(int (*matchFunc)(const Type *, const Type *),
-                    const std::vector<const Type *> &argTypes,
+                    SourcePos argPos, const std::vector<const Type *> &argTypes,
                     const std::vector<bool> *argCouldBeNULL);
 
     /** Name of the function that is being called. */
