@@ -26,9 +26,9 @@ The main goals behind ``ispc`` are to:
   units without the extremely low-programmer-productivity activity of directly
   writing intrinsics.
 * Explore opportunities from close-coupling between C/C++ application code
-  and SPMD ``ispc`` code running on the same processor--lightweight funcion
-  calls betwen the two languages, sharing data directly via pointers without
-  copying or reformating, etc.
+  and SPMD ``ispc`` code running on the same processor--lightweight function
+  calls between the two languages, sharing data directly via pointers without
+  copying or reformatting, etc.
 
 **We are very interested in your feedback and comments about ispc and
 in hearing your experiences using the system.  We are especially interested
@@ -249,7 +249,7 @@ of the value.
 The first thing to notice in this program is the presence of the ``export``
 keyword in the function definition; this indicates that the function should
 be made available to be called from application code.  The ``uniform``
-qualifiers on the parameters to ``simple`` indicate that the correpsonding
+qualifiers on the parameters to ``simple`` indicate that the corresponding
 variables are non-vector quantities--this concept is discussed in detail in the
 `"uniform" and "varying" Qualifiers`_ section.
 
@@ -321,7 +321,7 @@ When the executable ``simple`` runs, it generates the expected output:
     ...
 
 For a slightly more complex example of using ``ispc``, see the `Mandelbrot
-set example`_ page on the ``ispc`` website for a walkthrough of an ``ispc``
+set example`_ page on the ``ispc`` website for a walk-through of an ``ispc``
 implementation of that algorithm.  After reading through that example, you
 may want to examine the source code of the various examples in the
 ``examples/`` directory of the ``ispc`` distribution.
@@ -372,7 +372,7 @@ Optimizations are on by default; they can be turned off with ``-O0``:
 On Mac\* and Linux\*, there is basic support for generating debugging
 symbols; this is enabled with the ``-g`` command-line flag.  Using ``-g``
 causes optimizations to be disabled; to compile with debugging symbols and
-optimizaion, ``-O1`` should be provided as well as the ``-g`` flag.
+optimization, ``-O1`` should be provided as well as the ``-g`` flag.
 
 The ``-h`` flag can also be used to direct ``ispc`` to generate a C/C++
 header file that includes C/C++ declarations of the C-callable ``ispc``
@@ -610,7 +610,7 @@ side-effects.
 
 Upon entry to an ``ispc`` function called by the application, the execution
 mask is "all on" and the program counter points at the first statement in
-the function.  The following two statments describe the required behavior
+the function.  The following two statements describe the required behavior
 of the program counter and the execution mask over the course of execution
 of an ``ispc`` function.
 
@@ -731,7 +731,7 @@ program instances is *maximally converged*.  Maximal convergence means that
 if two program instances follow the same control path, they are guaranteed
 to execute each program statement concurrently. If two program instances
 follow diverging control paths, it is guaranteed that they will reconverge
-as soon as possible (if they do later reconverge). [#]_
+as soon as possible in the function (if they do later reconverge). [#]_
 
 .. [#] This is another significant difference between the ``ispc``
        execution model and the one implemented by OpenCL* and CUDA*, which
@@ -819,7 +819,7 @@ of control flow, will say that control flow based on ``varying``
 expressions is "varying" control flow.)
 
 Consider for example an image filtering operation where the program loops
-over pixels adjacent to the given (x,y) coordiantes:
+over pixels adjacent to the given (x,y) coordinates:
 
 ::
 
@@ -919,7 +919,7 @@ for all program instances in the gang, it's possible that the "true" clause
 executed with an "all off" mask and ``b`` was modified there.
 
 If it is important that code never be executed with an "all off" execution
-mask, then the ``cif`` statment (documented in the `"Coherent" Control Flow
+mask, then the ``cif`` statement (documented in the `"Coherent" Control Flow
 Statements: "cif" and Friends`_ section) can be used in place of a regular
 ``if``, as it guarantees this property. 
 
@@ -1045,7 +1045,7 @@ completed.
 The ISPC Language
 =================
 
-``ispc`` is an extended verion of the C programming language, providing a
+``ispc`` is an extended version of the C programming language, providing a
 number of new features that make it easy to write high-performance SPMD
 programs for the CPU.  Note that between not only the few small syntactic
 differences between ``ispc`` and C code but more importantly ``ispc``'s
@@ -1066,12 +1066,12 @@ This subsection summarizes the differences between ``ispc`` and C; if you
 are already familiar with C, you may find it most effective to focus on
 this subsection and just focus on the topics in the remainder of section
 that introduce new language features.  You may also find it helpful to
-comapre the ``ispc`` and C++ implementations of various algorithms in the
+compare the ``ispc`` and C++ implementations of various algorithms in the
 ``ispc`` ``examples/`` directory to get a sense of the close relationship
 between ``ispc`` and C.
 
 Specifically, C89 is used as the baseline for comparison in this subsection
-(this is also the verion of C described in the Second Edition of Kernighan
+(this is also the version of C described in the Second Edition of Kernighan
 and Ritchie's book).  (``ispc`` adopts some features from C99 and from C++,
 which will be highlighted in the below.)
 
@@ -1099,7 +1099,7 @@ in C:
   statement itself (e.g. ``for (int i = 0; ...``) 
 * The ``inline`` qualifier to indicate that a function should be inlined 
 * Function overloading by parameter type
-* Hexidecimal floating-point constants
+* Hexadecimal floating-point constants
 
 ``ispc`` also adds a number of new features that aren't in C89, C99, or
 C++:
@@ -1158,11 +1158,11 @@ The following reserved words from C89 are also reserved in ``ispc``:
 Lexical Structure
 -----------------
 
-Tokens in ``ispc`` are delimted by white-space and comments.  The
+Tokens in ``ispc`` are delimited by white-space and comments.  The
 white-space characters are the usual set of spaces, tabs, and carriage
-returns/line feeds.  Comments can be delinated with ``//``, which starts a
+returns/line feeds.  Comments can be delineated with ``//``, which starts a
 comment that continues to the end of the line, or the start of a comment
-can be delinated with ``/*`` and the end with ``*/``.  Like C/C++,
+can be delineated with ``/*`` and the end with ``*/``.  Like C/C++,
 comments can't be nested.
 
 Identifiers in ``ispc`` are sequences of characters that start with an
@@ -1170,9 +1170,9 @@ underscore or an upper-case or lower-case letter, and then followed by
 zero or more letters, numbers, or underscores.  Identifiers that start with
 two underscores are reserved for use by the compiler.
 
-Integer numeric constants can be specified in base 10, hexidecimal, or
+Integer numeric constants can be specified in base 10, hexadecimal, or
 binary.  (Octal integer constants aren't supported).  Base 10 constants are
-given by a sequence of one or more digits from 0 to 9.  Hexidecimal
+given by a sequence of one or more digits from 0 to 9.  Hexadecimal
 constants are denoted by a leading ``0x`` and then one or more digits from
 0-9, a-f, or A-F.  Finally, binary constants are denoted by a leading
 ``0b`` and then a sequence of 1s and 0s.
@@ -1194,11 +1194,11 @@ The second option is scientific notation, where a base value is specified
 as the first form of a floating-point constant but is then followed by an
 "e" or "E", then a plus sign or a minus sign, and then an exponent.
 
-Finally, floating-point constants may be specified as hexidecimal
+Finally, floating-point constants may be specified as hexadecimal
 constants; this form can ensure a perfectly bit-accurate representation of
 a particular floating-point number.  These are specified with an "0x"
 prefix, followed by a zero or a one, a period, and then the remainder of
-the mantissa in hexidecimal form, with digits from 0-9, a-f, or A-F.  The
+the mantissa in hexadecimal form, with digits from 0-9, a-f, or A-F.  The
 start of the exponent is denoted by a "p", which is then followed by an
 optional plus or minus sign and then digits from 0 to 9.  For example:
 
@@ -1235,7 +1235,7 @@ to specify special characters.  These sequences all start with an initial
   * - ``\n``
     - newline
   * - ``\r``
-    - carriabe return
+    - carriage return
   * - ``\t``
     - horizontal tab
   * - ``\v``
@@ -1243,7 +1243,7 @@ to specify special characters.  These sequences all start with an initial
   * - ``\`` followed by one or more digits from 0-8
     - ASCII character in octal notation
   * - ``\x``, followed by one or more digits from 0-9, a-f, A-F 
-    - ASCII character in hexidecimal notation
+    - ASCII character in hexadecimal notation
 
 ``ispc`` doesn't support a string data type; string constants can be passed
 as the first argument to the ``print()`` statement, however.  ``ispc`` also
@@ -1398,7 +1398,7 @@ store are:
     uniform float bar[10];
 
 The first declaration corresponds to 10 gang-wide ``float`` values in
-memory, while the second declaration corresonds to 10 ``float`` values.
+memory, while the second declaration corresponds to 10 ``float`` values.
 
 
 Defining New Names For Types
@@ -1562,7 +1562,7 @@ instance in the gang has its own unique pointer value)
 
 (The rationale for this limitation is that references must be represented
 as either a uniform pointer or a varying pointer internally.  While
-choosing a varying pointer would provide maximum flexibilty and eliminate
+choosing a varying pointer would provide maximum flexibility and eliminate
 this restriction, it would reduce performance in the common case where a
 uniform pointer is all that's needed.  As a work-around, a varying pointer
 can be used in cases where a varying lvalue reference would be desired.)
@@ -1585,7 +1585,7 @@ and then a brace-delimited list of enumerators with optional values:
 
 Each ``enum`` declaration defines a new type; an attempt to implicitly
 convert between enumerations of different types gives a compile-time error,
-but enuemrations of different types can be explicitly cast to one other.
+but enumerations of different types can be explicitly cast to one other.
 
 ::
 
@@ -1595,7 +1595,7 @@ Enumerators are implicitly converted to integer types, however, so they can
 be directly passed to routines that take integer parameters and can be used
 in expressions including integers, for example.  However, the integer
 result of such an expression must be explicitly cast back to the enumerant
-type if it to be assigned to a variable with the enuemrant type.
+type if it to be assigned to a variable with the enumerant type.
 
 ::
 
@@ -1846,7 +1846,7 @@ Structures can also be initialized by providing element values in braces:
     ....
     Color d = { 0.5, .75, 1.0 }; // r = 0.5, ...
 
-Arrays of structures and arrays inside structures can be initialzed with
+Arrays of structures and arrays inside structures can be initialized with
 the expected syntax:
 
 ::
@@ -1880,7 +1880,7 @@ Structure member access and array indexing also work as in C.
    return foo.f[4] - foo.i;
     
 
-The address-of operator, pointer derefernce operator, and pointer member
+The address-of operator, pointer dereference operator, and pointer member
 operator also work as expected.
 
 ::
@@ -1925,7 +1925,7 @@ Basic Iteration Statements: "for", "while", and "do"
 
 ``ispc`` supports ``for``, ``while``, and ``do`` loops, with the same
 specification as in C.  Like C++, variables can be declared in the ``for``
-statment itself:
+statement itself:
 
 ::
 
@@ -2009,7 +2009,7 @@ nested inside a ``foreach`` loop.)  ``continue`` statements are legal in
 a program instances that executes a ``continue`` statement effectively
 skips over the rest of the loop body for the current iteration.
 
-As a specific example, consdier the following ``foreach`` statement:
+As a specific example, consider the following ``foreach`` statement:
 
 ::
 
@@ -2107,7 +2107,7 @@ some computation on an array of data.
     }
 
 Here, we've written a loop that explicitly loops over the data in chunks of
-``programCount`` elements.  In each loop iteraton, the running program
+``programCount`` elements.  In each loop iteration, the running program
 instances effectively collude amongst themselves using ``programIndex`` to
 determine which elements to work on in a way that ensures that all of the
 data elements will be processed.  In this particular case, a ``foreach``
@@ -2313,7 +2313,7 @@ distributions.
 If you are implementing your own task system, the remainder of this section
 discusses the requirements for these calls.  You will also likely want to
 review the example task systems in ``examples/tasksys.cpp`` for reference.
-If you are not implmenting your own task system, you can skip reading the
+If you are not implementing your own task system, you can skip reading the
 remainder of this section.
 
 Here are the declarations of the three functions that must be provided to
@@ -2333,7 +2333,7 @@ implementation can efficiently wait for completion on just the tasks
 launched from a single function.
 
 The first time one of ``ISPCLaunch()`` or ``ISPCAlloc()`` is called in an
-``ispc`` functon, the ``void *`` pointed to by the ``handlePtr`` parameter
+``ispc`` function, the ``void *`` pointed to by the ``handlePtr`` parameter
 will be ``NULL``.  The implementations of these function should then
 initialize ``*handlePtr`` to a unique handle value of some sort.  (For
 example, it might allocate a small structure to record which tasks were
@@ -2349,14 +2349,14 @@ than a pointer to it, as in the other functions.
 
 The ``ISPCAlloc()`` function is used to allocate small blocks of memory to
 store parameters passed to tasks.  It should return a pointer to memory
-with the given aize and alignment.  Note that there is no explicit
+with the given size and alignment.  Note that there is no explicit
 ``ISPCFree()`` call; instead, all memory allocated within an ``ispc``
 function should be freed when ``ISPCSync()`` is called.
 
 ``ISPCLaunch()`` is called to launch to launch one or more asynchronous
 tasks.  Each ``launch`` statement in ``ispc`` code causes a call to
 ``ISPCLaunch()`` to be emitted in the generated code.  The three parameters
-after the handle pointer to thie function are relatively straightforward;
+after the handle pointer to the function are relatively straightforward;
 the ``void *f`` parameter holds a pointer to a function to call to run the
 work for this task, ``data`` holds a pointer to data to pass to this
 function, and ``count`` is the number of instances of this function to
@@ -2371,7 +2371,7 @@ The signature of the provided function pointer ``f`` is
                         int taskIndex, int taskCount)
 
 When this function pointer is called by one of the hardware threads managed
-bythe task system, the ``data`` pointer passed to ``ISPCLaunch()`` should
+by the task system, the ``data`` pointer passed to ``ISPCLaunch()`` should
 be passed to it for its first parameter; ``threadCount`` gives the total
 number of hardware threads that have been spawned to run tasks and
 ``threadIndex`` should be an integer index between zero and ``threadCount``
@@ -2690,7 +2690,7 @@ generates the following output on a four-wide compilation target:
 When a varying variable is printed, the values for program instances that
 aren't currently executing are printed inside double parenthesis,
 indicating inactive program instances.  The elements for inactive program
-instances may have garabge values, though in some circumstances it can be
+instances may have garbage values, though in some circumstances it can be
 useful to see their values.
 
 Assertions
@@ -2910,7 +2910,7 @@ If called when none of the program instances are running,
 There are also a number of functions to compute "scan"s of values across
 the program instances.  For example, the ``exclusive_scan_and()`` function
 computes, for each program instance, the sum of the given value over all of
-the preceeding program instances.  (The scans currently available in
+the preceding program instances.  (The scans currently available in
 ``ispc`` are all so-called "exclusive" scans, meaning that the value
 computed for a given element does not include the value provided for that
 element.)  In C code, an exclusive add scan over an array might be
@@ -3206,7 +3206,7 @@ rather than one per program instance.
                                    uniform int32 newval)
 
 Be careful that you use the atomic function that you mean to; consider the
-folloiwng code:
+following code:
 
 ::
 
@@ -3563,7 +3563,7 @@ Restructuring Existing Programs to Use ISPC
 
 ``ispc`` is designed to enable you to incorporate
 SPMD parallelism into existing code with minimal modification; features
-like the ability to share memory and data structures betwen C/C++ and
+like the ability to share memory and data structures between C/C++ and
 ``ispc`` code and the ability to directly call back and forth between
 ``ispc`` and C/C++ are motivated by this.  These features also make it
 easy to incrementally transform a program to use ``ispc``; the most

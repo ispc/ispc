@@ -64,7 +64,7 @@ on each one:
 Depending on the specifics of the computation being performed, the code
 generated for this function could likely be improved by modifying the code 
 so that the loop only goes as far through the data as is possible to pack
-an entire gang of program instances with computation each time thorugh the
+an entire gang of program instances with computation each time through the
 loop.  Doing so enables the ``ispc`` compiler to generate more efficient
 code for cases where it knows that the execution mask is "all on".  Then,
 an ``if`` statement at the end handles processing the ragged extra bits of
@@ -153,7 +153,7 @@ processed, and so forth.
 
 Performance benefit can come from using ``foreach_tiled`` in that it
 essentially optimizes for the benefit of iterating over *compact* regions
-of the domian (while ``foreach`` iterates over the domain in a way that
+of the domain (while ``foreach`` iterates over the domain in a way that
 generally allows linear memory access.)  There are two benefits from
 processing compact regions of the domain.  
 
@@ -215,7 +215,7 @@ Use "uniform" Whenever Appropriate
 ----------------------------------
 
 For any variable that will always have the same value across all of the
-program instances in a gang, declare the variable with the  ``unfiorm``
+program instances in a gang, declare the variable with the  ``uniform``
 qualifier.  Doing so enables the ``ispc`` compiler to emit better code in
 many different ways.
 
@@ -229,7 +229,7 @@ number of iterations:
 
 If this is written with ``i`` as a ``varying`` variable, as above, there's
 additional overhead in the code generated for the loop as the compiler
-emits instructions to handle the possibilty of not all program instances
+emits instructions to handle the possibility of not all program instances
 following the same control flow path (as might be the case if the loop
 limit, 10, was itself a ``varying`` value.)
 
@@ -568,7 +568,7 @@ mask of all lanes currently executing (assuming a four-wide gang size
 target machine).
 
 For a fuller example of the utility of this functionality, see
-``examples/aobench_instrumented`` in the ``ispc`` distribution.  Ths
+``examples/aobench_instrumented`` in the ``ispc`` distribution.  This
 example includes an implementation of the ``ISPCInstrument()`` function
 that collects aggregate data about the program's execution behavior.
 

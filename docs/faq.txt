@@ -273,10 +273,10 @@ Then four object files will be generated: ``foo_sse2.o``, ``foo_sse4.o``,
 ``foo_avx.o``, and ``foo.o``.[#]_  Link all of these into your executable, and
 when you call a function in ``foo.ispc`` from your application code,
 ``ispc`` will determine which instruction sets are supported by the CPU the
-code is running on and will call the most appropraite version of the
+code is running on and will call the most appropriate version of the
 function available.  
 
-.. [#] Similarly, if you choose to generate assembly langauage output or
+.. [#] Similarly, if you choose to generate assembly language output or
    LLVM bitcode output, multiple versions of those files will be created.
 
 In general, the version of the function that runs will be the one in the
