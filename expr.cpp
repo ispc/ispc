@@ -741,15 +741,6 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
                                         dval, "val_inc_or_dec");
     }
 
-#if 0
-    if (type->IsUniformType()) {
-        if (ctx->VaryingCFDepth() > 0)
-            Warning(expr->pos, 
-                    "Modifying \"uniform\" value under \"varying\" control "
-                    "flow.");
-    }
-#endif
-
     // And store the result out to the lvalue
     Symbol *baseSym = expr->GetBaseSymbol();
     lStoreAssignResult(binop, lvalue, lvalueType, ctx, baseSym);
@@ -2045,11 +2036,6 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
 
-#if 0
-    if (ctx->VaryingCFDepth() > 0 && type->IsUniformType())
-        Warning(pos, "Modifying \"uniform\" value under \"varying\" control flow.");
-#endif
-
     Symbol *baseSym = lvalue->GetBaseSymbol();
     if (!baseSym) {
         // FIXME: I think that this check also is unnecessary and that this
@@ -2078,27 +2064,6 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         ctx->SetDebugPos(pos);
-
-        // Warn if we're assigning a large array
-        const ArrayType *at = dynamic_cast<const ArrayType *>(type);
-        if (at && at->TotalElementCount() > 4)
-            PerformanceWarning(pos, "Copying %d element array in assignment expression.",
-                               at->TotalElementCount());
-
-#if 0
-        const StructType *st = dynamic_cast<const StructType *>(type);
-        if (st != NULL) {
-            bool anyUniform = false;
-            for (int i = 0; i < st->NumElements(); ++i) {
-                if (st->GetElementType(i)->IsUniformType())
-                    anyUniform = true;
-            }
-
-            if (anyUniform && ctx->VaryingCFDepth() > 0)
-                Warning(pos, "Modifying \"uniform\" value under \"varying\" "
-                        "control flow.  Beware.");
-        }
-#endif
 
         lStoreAssignResult(rv, lv, lvalueType, ctx, baseSym);
 
