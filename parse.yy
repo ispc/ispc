@@ -1566,7 +1566,9 @@ lAddFunctionParams(Declarator *decl) {
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
         Declaration *pdecl = decl->functionParams[i];
-        if (pdecl == NULL)
+        if (pdecl == NULL || pdecl->declarators.size() == 0)
+            // zero size declarators array corresponds to an anonymous 
+            // parameter
             continue;
         assert(pdecl->declarators.size() == 1);
         Symbol *sym = pdecl->declarators[0]->GetSymbol();
