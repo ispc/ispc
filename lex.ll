@@ -148,57 +148,40 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         return TOKEN_IDENTIFIER; 
 }
 
-{INT_NUMBER} { 
-    char *endPtr = NULL;
-    int64_t val;
+{INT_NUMBER}+(u|U|l|L)*? { 
+    int ls = 0, us = 0;
 
     if (yytext[0] == '0' && yytext[1] == 'b')
-        val = lParseBinary(yytext+2, *yylloc);
+        yylval->intVal = lParseBinary(yytext+2, *yylloc);
     else {
+        char *endPtr = NULL;
+
 #ifdef ISPC_IS_WINDOWS
-        val = _strtoi64(yytext, &endPtr, 0);
+        yylval->intVal = _strtoi64(yytext, &endPtr, 0);
 #else
         // FIXME: should use strtouq and then issue an error if we can't
         // fit into 64 bits...
-        val = strtoull(yytext, &endPtr, 0);
+        yylval->intVal = strtoull(yytext, &endPtr, 0);
 #endif
+        for (; *endPtr; endPtr++) {
+           if (*endPtr == 'l' || *endPtr == 'L')
+                ls++;
+           else if (*endPtr == 'u' || *endPtr == 'U')
+                us++;
+        }
+        if (ls >= 2)
+            return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+        else if (ls == 1)
+           return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
     }
 
     // See if we can fit this into a 32-bit integer...
-    if ((val & 0xffffffff) == val) {
-        yylval->int32Val = (int32_t)val;
-        return TOKEN_INT32_CONSTANT; 
-    }
-    else {
-        yylval->int64Val = val;
-        return TOKEN_INT64_CONSTANT; 
-    }
+    if ((yylval->intVal & 0xffffffff) == yylval->intVal)
+        return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
+    else
+        return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
 }
 
-{INT_NUMBER}[uU] {
-    char *endPtr = NULL;
-    uint64_t val;
-
-    if (yytext[0] == '0' && yytext[1] == 'b')
-        val = lParseBinary(yytext+2, *yylloc);
-    else {
-#ifdef ISPC_IS_WINDOWS
-        val = _strtoui64(yytext, &endPtr, 0);
-#else
-        val = strtoull(yytext, &endPtr, 0);
-#endif
-    }
-
-    if ((val & 0xffffffff) == val) {
-        // we can represent it in a 32-bit value
-        yylval->int32Val = (int32_t)val;
-        return TOKEN_UINT32_CONSTANT; 
-    }
-    else {
-        yylval->int64Val = val;
-        return TOKEN_UINT64_CONSTANT; 
-    }
-}
 
 {FLOAT_NUMBER} { 
     yylval->floatVal = atof(yytext); 

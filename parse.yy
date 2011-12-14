@@ -134,9 +134,8 @@ struct ForeachDimension {
 %}
 
 %union {
-    int32_t int32Val;
-    double floatVal;
-    int64_t int64Val;
+    int64_t intVal;
+    float floatVal;
     std::string *stringVal;
     const char *constCharPtr;
 
@@ -226,7 +225,7 @@ struct ForeachDimension {
 
 %type <stringVal> string_constant
 %type <constCharPtr> struct_or_union_name enum_identifier
-%type <int32Val> int_constant soa_width_specifier
+%type <intVal> int_constant soa_width_specifier
 
 %type <foreachDimension> foreach_dimension_specifier
 %type <foreachDimensionList> foreach_dimension_list
@@ -259,16 +258,16 @@ primary_expression
         }
     }
     | TOKEN_INT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt32, yylval.int32Val, @1); 
+        $$ = new ConstExpr(AtomicType::UniformConstInt32, (int32_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt32, (uint32_t)yylval.int32Val, @1); 
+        $$ = new ConstExpr(AtomicType::UniformConstUInt32, (uint32_t)yylval.intVal, @1); 
     }
     | TOKEN_INT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt64, yylval.int64Val, @1); 
+        $$ = new ConstExpr(AtomicType::UniformConstInt64, (int64_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt64, (uint64_t)yylval.int64Val, @1); 
+        $$ = new ConstExpr(AtomicType::UniformConstUInt64, (uint64_t)yylval.intVal, @1); 
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformConstFloat, (float)yylval.floatVal, @1); 
@@ -930,7 +929,7 @@ declarator
     ;
 
 int_constant
-    : TOKEN_INT32_CONSTANT { $$ = yylval.int32Val; }
+    : TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
     ;
 
 direct_declarator
