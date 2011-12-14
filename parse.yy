@@ -947,10 +947,16 @@ direct_declarator
     {
         int size;
         if ($1 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
-            Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
-            d->arraySize = size;
-            d->child = $1;
-            $$ = d;
+            if (size < 0) {
+                Error(@3, "Array dimension must be non-negative.");
+                $$ = NULL;
+            }
+            else {
+                Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+                d->arraySize = size;
+                d->child = $1;
+                $$ = d;
+            }
         }
         else
             $$ = NULL;
@@ -1141,10 +1147,16 @@ direct_abstract_declarator
     | '[' constant_expression ']'
       {
         int size;
-        if (lGetConstantInt($2, &size, @2, "Array dimension")) {
-            Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
-            d->arraySize = size;
-            $$ = d;
+        if ($2 != NULL && lGetConstantInt($2, &size, @2, "Array dimension")) {
+            if (size < 0) {
+                Error(@2, "Array dimension must be non-negative.");
+                $$ = NULL;
+            }
+            else {
+                Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+                d->arraySize = size;
+                $$ = d;
+            }
         }
         else
             $$ = NULL;
@@ -1159,11 +1171,17 @@ direct_abstract_declarator
     | direct_abstract_declarator '[' constant_expression ']'
       {
           int size;
-          if (lGetConstantInt($3, &size, @3, "Array dimension")) {
-              Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
-              d->arraySize = size;
-              d->child = $1;
-              $$ = d;
+          if ($3 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
+              if (size < 0) {
+                  Error(@3, "Array dimension must be non-negative.");
+                  $$ = NULL;
+              }
+              else {
+                  Declarator *d = new Declarator(DK_ARRAY, Union(@1, @4));
+                  d->arraySize = size;
+                  d->child = $1;
+                  $$ = d;
+              }
           }
           else
               $$ = NULL;
@@ -1672,6 +1690,10 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(cval);
         if (ci == NULL) {
             Error(pos, "%s must be a compile-time integer constant.", usage);
+            return false;
+        }
+        if ((int64_t)((int32_t)ci->getSExtValue()) != ci->getSExtValue()) {
+            Error(pos, "%s must be representable with a 32-bit integer.", usage);
             return false;
         }
         *value = (int)ci->getZExtValue();
