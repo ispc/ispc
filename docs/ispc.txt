@@ -755,9 +755,25 @@ It is guaranteed that all program instances that were running before the
 for the gang of program instances, rather than the concept of a unique
 program counter for each program instance.)
 
-Another implication of this property is that it is illegal to execute a
-function with an 8-wide gang by running it two times, with a 4-wide gang
-representing half of the original 8-wide gang each time.
+Another implication of this property is that it would be illegal for the
+``ispc`` implementation to execute a function with an 8-wide gang by
+running it two times, with a 4-wide gang representing half of the original
+8-wide gang each time.
+
+It also follows that given the following program:
+
+::
+
+    if (programIndex == 0) {
+        while (true)  // infinite loop
+            ;
+    }
+    print("hello, world\n");
+
+the program will loop infinitely and the ``print`` statement will never be
+executed.  (A different execution model that allowed gang divergence might
+execute the ``print`` statement since not all program instances were caught
+in the infinite loop in the example above.)
 
 The way that "varying" function pointers are handled in ``ispc`` is also
 affected by this guarantee: if a function pointer is ``varying``, then it
@@ -973,6 +989,20 @@ which of them will write their value of ``value`` to ``array[index]``.
     void assign(uniform int array[], int index, int value) {
         array[index] = value;
     }
+
+As another example, if the values of the array indices ``i`` and ``j`` have
+the same values for some of the program instances, and an assignment like
+the following is performed:
+
+::
+
+    int i = ..., j = ...;
+    uniform int array[...] = { ... };
+    array[i] = array[j];
+
+
+then the program's behavior is undefined, since there is no sequence point
+between the reads and writes to the same location. 
 
 While this rule that says that program instances can safely depend on
 side-effects from by other program instances in their gang eliminates a
