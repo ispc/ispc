@@ -217,7 +217,7 @@ Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2"
 #ifndef LLVM_2_9
         ", avx, avx-x2"
-#endif !LLVM_2_9
+#endif // !LLVM_2_9
 #ifdef LLVM_3_1svn
         ", avx2, avx2-x2"
 #endif // LLVM_3_1svn
