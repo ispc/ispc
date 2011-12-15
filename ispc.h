@@ -50,10 +50,20 @@
 #define ISPC_IS_APPLE
 #endif
 
-#include <assert.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <string>
+
+#define Assert(expr)                                            \
+    ((void)((expr) ? 0 : __Assert (#expr, __FILE__, __LINE__)))
+#define __Assert(expr, file, line)                                      \
+    ((void)fprintf(stderr, "%s:%u: Assertion failed: \"%s\"\n"          \
+                   "***\n*** Please file a bug report at "              \
+                   "https://github.com/ispc/ispc/issues\n*** (Including as much " \
+                   "information as you can about how to reproduce this error).\n" \
+                   "*** You have apparently encountered a bug in the compiler that " \
+                   "we'd like to fix!\n***\n", file, line, expr), abort(), 0)
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
@@ -247,7 +257,7 @@ struct Opt {
      */ 
     bool force32BitAddressing;
 
-    /** Indicates whether assert() statements should be ignored (for
+    /** Indicates whether Assert() statements should be ignored (for
         performance in the generated code). */
     bool disableAsserts;
 

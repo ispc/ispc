@@ -72,7 +72,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
     code = c;
 
     maskSymbol = m->symbolTable->LookupVariable("__mask");
-    assert(maskSymbol != NULL);
+    Assert(maskSymbol != NULL);
 
     if (code != NULL) {
         if (g->debugPrint) {
@@ -109,7 +109,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
     }
 
     const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
-    assert(type != NULL);
+    Assert(type != NULL);
 
     for (unsigned int i = 0; i < args.size(); ++i)
         if (dynamic_cast<const ReferenceType *>(args[i]->type) == NULL)
@@ -117,13 +117,13 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
 
     if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
-        assert(threadIndexSym);
+        Assert(threadIndexSym);
         threadCountSym = m->symbolTable->LookupVariable("threadCount");
-        assert(threadCountSym);
+        Assert(threadCountSym);
         taskIndexSym = m->symbolTable->LookupVariable("taskIndex");
-        assert(taskIndexSym);
+        Assert(taskIndexSym);
         taskCountSym = m->symbolTable->LookupVariable("taskCount");
-        assert(taskCountSym);
+        Assert(taskCountSym);
     }
     else
         threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
@@ -133,7 +133,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
 const Type *
 Function::GetReturnType() const {
     const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
-    assert(type != NULL);
+    Assert(type != NULL);
     return type->GetReturnType();
 }
 
@@ -141,7 +141,7 @@ Function::GetReturnType() const {
 const FunctionType *
 Function::GetType() const {
     const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
-    assert(type != NULL);
+    Assert(type != NULL);
     return type;
 }
 
@@ -157,9 +157,9 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
     const llvm::Type *structArgType = structArgPtr->getType();
-    assert(llvm::isa<llvm::PointerType>(structArgType));
+    Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
-    assert(llvm::isa<llvm::StructType>(pt->getElementType()));
+    Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
     const llvm::StructType *argStructType = 
         llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
@@ -201,7 +201,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif
     const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
-    assert(type != NULL);
+    Assert(type != NULL);
     if (type->isTask == true) {
         // For tasks, we there should always be three parmeters: the
         // pointer to the structure that holds all of the arguments, the
@@ -266,9 +266,9 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         else {
             // Otherwise use the mask to set the entry mask value
             argIter->setName("__mask");
-            assert(argIter->getType() == LLVMTypes::MaskType);
+            Assert(argIter->getType() == LLVMTypes::MaskType);
             ctx->SetFunctionMask(argIter);
-            assert(++argIter == function->arg_end());
+            Assert(++argIter == function->arg_end());
         }
     }
 
@@ -372,7 +372,7 @@ Function::GenerateIR() {
         return;
 
     llvm::Function *function = sym->function;
-    assert(function != NULL);
+    Assert(function != NULL);
 
     // But if that function has a definition, we don't want to redefine it.
     if (function->empty() == false) {
@@ -411,7 +411,7 @@ Function::GenerateIR() {
         // it without a mask parameter and without name mangling so that
         // the application can call it
         const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
-        assert(type != NULL);
+        Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {
                 LLVM_TYPE_CONST llvm::FunctionType *ftype = 

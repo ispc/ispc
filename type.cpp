@@ -293,7 +293,7 @@ AtomicType::GetAsUniformType() const {
 
 const Type *
 AtomicType::GetSOAType(int width) const {
-    assert(width > 0);
+    Assert(width > 0);
     return new ArrayType(this, width);
 }
 
@@ -354,7 +354,7 @@ std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
     if (isUniform == false) {
-        assert(m->errorCount > 0);
+        Assert(m->errorCount > 0);
         return ret;
     }
     if (isConst) ret += "const ";
@@ -570,7 +570,7 @@ EnumType::GetAsUniformType() const {
 
 const Type *
 EnumType::GetSOAType(int width) const {
-    assert(width > 0);
+    Assert(width > 0);
     return new ArrayType(this, width);
 }
 
@@ -644,9 +644,9 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     std::vector<llvm::Value *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
-        assert(enumerators[i]->constValue != NULL);
+        Assert(enumerators[i]->constValue != NULL);
         int count = enumerators[i]->constValue->AsUInt32(&enumeratorValue);
-        assert(count == 1);
+        Assert(count == 1);
 
         llvm::Value *descriptor = 
             m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
@@ -938,7 +938,7 @@ const Type *SequentialType::GetElementType(int index) const {
 ArrayType::ArrayType(const Type *c, int a) 
     : child(c), numElements(a) {
     // 0 -> unsized array.
-    assert(numElements >= 0);
+    Assert(numElements >= 0);
 }
 
 
@@ -1137,7 +1137,7 @@ ArrayType::GetDIType(llvm::DIDescriptor scope) const {
 
 ArrayType *
 ArrayType::GetSizedArray(int sz) const {
-    assert(numElements == 0);
+    Assert(numElements == 0);
     return new ArrayType(child, sz);
 }
 
@@ -1178,7 +1178,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
         for (unsigned int i = 1; i < exprList->exprs.size(); ++i) {
             if (exprList->exprs[i] == NULL) {
                 // We should have seen an error earlier in this case.
-                assert(m->errorCount > 0);
+                Assert(m->errorCount > 0);
                 continue;
             }
 
@@ -1204,9 +1204,9 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
 
 SOAArrayType::SOAArrayType(const StructType *eltType, int nElem, int sw) 
     : ArrayType(eltType, nElem), soaWidth(sw) {
-    assert(soaWidth > 0);
+    Assert(soaWidth > 0);
     if (numElements > 0)
-        assert((numElements % soaWidth) == 0);
+        Assert((numElements % soaWidth) == 0);
 }
 
 
@@ -1337,8 +1337,8 @@ SOAArrayType::soaType() const {
 
 VectorType::VectorType(const AtomicType *b, int a) 
     : base(b), numElements(a) {
-    assert(numElements > 0);
-    assert(base != NULL);
+    Assert(numElements > 0);
+    Assert(base != NULL);
 }
 
 
@@ -1719,7 +1719,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
         // element starts at an offset that's the correct alignment.
         if (currentSize > 0 && (currentSize % eltAlign))
             currentSize += eltAlign - (currentSize % eltAlign);
-        assert((currentSize == 0) || (currentSize % eltAlign) == 0);
+        Assert((currentSize == 0) || (currentSize % eltAlign) == 0);
 
         llvm::DIFile diFile = elementPositions[i].GetDIFile();
         int line = elementPositions[i].first_line;
@@ -1758,7 +1758,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
 const Type *
 StructType::GetElementType(int i) const {
-    assert(i < (int)elementTypes.size());
+    Assert(i < (int)elementTypes.size());
     // If the struct is uniform qualified, then each member comes out with
     // the same type as in the original source file.  If it's varying, then
     // all members are promoted to varying.
@@ -1958,7 +1958,7 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
       paramTypes(a), paramNames(std::vector<std::string>(a.size(), "")),
       paramDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
       paramPositions(std::vector<SourcePos>(a.size(), p)) {
-    assert(returnType != NULL);
+    Assert(returnType != NULL);
 }
 
 
@@ -1969,10 +1969,10 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
                            bool it, bool is, bool ec) 
     : isTask(it), isExported(is), isExternC(ec), returnType(r), paramTypes(a), 
       paramNames(an), paramDefaults(ad), paramPositions(ap) {
-    assert(paramTypes.size() == paramNames.size() && 
+    Assert(paramTypes.size() == paramNames.size() && 
            paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
-    assert(returnType != NULL);
+    Assert(returnType != NULL);
 }
 
 
@@ -2127,14 +2127,14 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 
 LLVM_TYPE_CONST llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
-    if (isTask == true) assert(includeMask == true);
+    if (isTask == true) Assert(includeMask == true);
 
     // Get the LLVM Type *s for the function arguments
     std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (!paramTypes[i])
             return NULL;
-        assert(paramTypes[i] != AtomicType::Void);
+        Assert(paramTypes[i] != AtomicType::Void);
 
         LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL)
@@ -2170,28 +2170,28 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
 
 const Type *
 FunctionType::GetParameterType(int i) const { 
-    assert(i < (int)paramTypes.size());
+    Assert(i < (int)paramTypes.size());
     return paramTypes[i];
 }
 
 
 ConstExpr *
 FunctionType::GetParameterDefault(int i) const { 
-    assert(i < (int)paramDefaults.size());
+    Assert(i < (int)paramDefaults.size());
     return paramDefaults[i]; 
 }
 
 
 const SourcePos &
 FunctionType::GetParameterSourcePos(int i) const { 
-    assert(i < (int)paramPositions.size());
+    Assert(i < (int)paramPositions.size());
     return paramPositions[i];
 }
 
 
 const std::string &
 FunctionType::GetParameterName(int i) const { 
-    assert(i < (int)paramNames.size());
+    Assert(i < (int)paramNames.size());
     return paramNames[i]; 
 }
 
@@ -2244,7 +2244,7 @@ lVectorConvert(const Type *type, SourcePos pos, const char *reason, int vecSize)
 const Type *
 Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char *reason, 
                       bool forceVarying, int vecSize) {
-    assert(reason != NULL);
+    Assert(reason != NULL);
 
     // First, if we need to go varying, promote both of the types to be
     // varying.
@@ -2315,7 +2315,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
         // The 'more general' version of the two vector element types must
         // be an AtomicType (that's all that vectors can hold...)
         const AtomicType *at = dynamic_cast<const AtomicType *>(t);
-        assert(at != NULL);
+        Assert(at != NULL);
 
         return new VectorType(at, vt0->GetElementCount());
     }
@@ -2330,7 +2330,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
             return NULL;
 
         const AtomicType *at = dynamic_cast<const AtomicType *>(t);
-        assert(at != NULL);
+        Assert(at != NULL);
         return new VectorType(at, vt0->GetElementCount());
     }
     else if (vt1) {
@@ -2342,7 +2342,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
             return NULL;
 
         const AtomicType *at = dynamic_cast<const AtomicType *>(t);
-        assert(at != NULL);
+        Assert(at != NULL);
         return new VectorType(at, vt1->GetElementCount());
     }
 
@@ -2355,7 +2355,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
     const EnumType *et1 = dynamic_cast<const EnumType *>(t1->GetReferenceTarget());
     if (et0 != NULL && et1 != NULL) {
         // Two different enum types -> make them uint32s...
-        assert(et0->IsVaryingType() == et1->IsVaryingType());
+        Assert(et0->IsVaryingType() == et1->IsVaryingType());
         return et0->IsVaryingType() ? AtomicType::VaryingUInt32 :
                 AtomicType::UniformUInt32;
     }
@@ -2386,7 +2386,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
     // Now all we can do is promote atomic types...
     if (at0 == NULL || at1 == NULL) {
-        assert(reason != NULL);
+        Assert(reason != NULL);
         Error(pos, "Implicit conversion from type \"%s\" to \"%s\" for %s not possible.",
               t0->GetString().c_str(), t1->GetString().c_str(), reason);
         return NULL;

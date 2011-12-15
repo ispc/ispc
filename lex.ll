@@ -274,7 +274,7 @@ lParseBinary(const char *ptr, SourcePos pos) {
 
     while (*ptr != '\0') {
         /* if this hits, the regexp for 0b... constants is broken */
-        assert(*ptr == '0' || *ptr == '1');
+        Assert(*ptr == '0' || *ptr == '1');
 
         if ((val & (((int64_t)1)<<63)) && warned == false) {
             // We're about to shift out a set bit
@@ -329,7 +329,7 @@ static void lHandleCppHash(SourcePos *pos) {
     char *ptr, *src;
 
     // Advance past the opening stuff on the line.
-    assert(yytext[0] == '#');
+    Assert(yytext[0] == '#');
     if (yytext[1] == ' ')
         // On Linux/OSX, the preprocessor gives us lines like
         // # 1234 "foo.c"
@@ -337,7 +337,7 @@ static void lHandleCppHash(SourcePos *pos) {
     else {
         // On windows, cl.exe's preprocessor gives us lines of the form:
         // #line 1234 "foo.c"
-        assert(!strncmp(yytext+1, "line ", 5));
+        Assert(!strncmp(yytext+1, "line ", 5));
         ptr = yytext + 6;
     }
 
@@ -347,13 +347,13 @@ static void lHandleCppHash(SourcePos *pos) {
     pos->last_column = 1;
     // Make sure that the character after the integer is a space and that
     // then we have open quotes
-    assert(src != ptr && src[0] == ' ' && src[1] == '"');
+    Assert(src != ptr && src[0] == ' ' && src[1] == '"');
     src += 2;
 
     // And the filename is everything up until the closing quotes
     std::string filename;
     while (*src != '"') {
-        assert(*src && *src != '\n');
+        Assert(*src && *src != '\n');
         filename.push_back(*src);
         ++src;
     }
@@ -454,13 +454,13 @@ ipow2(int exponent) {
 */
 static double
 lParseHexFloat(const char *ptr) {
-    assert(ptr != NULL);
+    Assert(ptr != NULL);
 
-    assert(ptr[0] == '0' && ptr[1] == 'x');
+    Assert(ptr[0] == '0' && ptr[1] == 'x');
     ptr += 2;
 
     // Start initializing the mantissa
-    assert(*ptr == '0' || *ptr == '1');
+    Assert(*ptr == '0' || *ptr == '1');
     double mantissa = (*ptr == '1') ? 1. : 0.;
     ++ptr;
 
@@ -480,7 +480,7 @@ lParseHexFloat(const char *ptr) {
             else if (*ptr >= 'a' && *ptr <= 'f')
                 digit = 10 + *ptr - 'a';
             else {
-                assert(*ptr >= 'A' && *ptr <= 'F');
+                Assert(*ptr >= 'A' && *ptr <= 'F');
                 digit = 10 + *ptr - 'A';
             }
 
@@ -493,7 +493,7 @@ lParseHexFloat(const char *ptr) {
     else
         // If there's not a '.', then we better be going straight to the
         // exponent
-        assert(*ptr == 'p');
+        Assert(*ptr == 'p');
 
     ++ptr; // skip the 'p'
 

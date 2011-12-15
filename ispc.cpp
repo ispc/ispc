@@ -282,7 +282,7 @@ Target::GetTargetMachine() const {
 #endif // !ISPC_IS_WINDOWS
 #endif // LLVM_2_9
 
-    assert(targetMachine != NULL);
+    Assert(targetMachine != NULL);
 
     targetMachine->setAsmVerbosityDefault(true);
     return targetMachine;
@@ -310,7 +310,7 @@ Target::GetISAString() const {
 llvm::Value *
 Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
-    assert(td != NULL);
+    Assert(td != NULL);
     uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
     if (is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32(byteSize);
@@ -322,12 +322,12 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
 llvm::Value *
 Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element) {
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
-    assert(td != NULL);
+    Assert(td != NULL);
     LLVM_TYPE_CONST llvm::StructType *structType = 
         llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
-    assert(structType != NULL);
+    Assert(structType != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
-    assert(sl != NULL);
+    Assert(sl != NULL);
 
     uint64_t offset = sl->getElementOffset(element);
     if (is32Bit || g->opt.force32BitAddressing)

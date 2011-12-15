@@ -216,7 +216,7 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
         return NULL;
 
     Symbol *declSym = GetSymbol();
-    assert(declSym != NULL);
+    Assert(declSym != NULL);
 
     // Get the symbol for the function from the symbol table.  (It should
     // already have been added to the symbol table by AddGlobal() by the
@@ -232,11 +232,11 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
     Declarator *d = this;
     while (d != NULL && d->kind != DK_FUNCTION)
         d = d->child;
-    assert(d != NULL);
+    Assert(d != NULL);
 
     for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
         Declaration *pdecl = d->functionParams[i];
-        assert(pdecl->declarators.size() == 1);
+        Assert(pdecl->declarators.size() == 1);
         funArgs->push_back(pdecl->declarators[0]->GetSymbol());
     }
 
@@ -263,8 +263,8 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     case DK_BASE:
         // All of the type qualifiers should be in the DeclSpecs for the
         // base declarator
-        assert(typeQualifiers == 0);
-        assert(child == NULL);
+        Assert(typeQualifiers == 0);
+        Assert(child == NULL);
         return type;
 
     case DK_POINTER:
@@ -376,7 +376,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                 // it lives down to the base declarator.
                 Declarator *decl = d->declarators[0];
                 while (decl->child != NULL) {
-                    assert(decl->initExpr == NULL);
+                    Assert(decl->initExpr == NULL);
                     decl = decl->child;
                 }
 
@@ -485,7 +485,7 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
 
 std::vector<VariableDeclaration>
 Declaration::GetVariableDeclarations() const {
-    assert(declSpecs->storageClass != SC_TYPEDEF);
+    Assert(declSpecs->storageClass != SC_TYPEDEF);
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {

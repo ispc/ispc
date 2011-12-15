@@ -49,7 +49,6 @@
 #include "llvmutil.h"
 
 #include <stdio.h>
-#include <assert.h>
 #include <stdarg.h>
 #include <ctype.h>
 #include <sys/types.h>
@@ -224,7 +223,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
     if (sym == NULL || sym->type == NULL) {
         // But if these are NULL and there haven't been any previous
         // errors, something surprising is going on
-        assert(errorCount > 0);
+        Assert(errorCount > 0);
         return;
     }
 
@@ -391,7 +390,7 @@ void
 Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     const FunctionType *functionType = 
         dynamic_cast<const FunctionType *>(funSym->type);
-    assert(functionType != NULL);
+    Assert(functionType != NULL);
 
     // If a global variable with the same name has already been declared
     // issue an error.
@@ -418,7 +417,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
             // allowed.
             const FunctionType *ofType = 
                 dynamic_cast<const FunctionType *>(overloadFunc->type);
-            assert(ofType != NULL);
+            Assert(ofType != NULL);
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
                 int i;
                 for (i = 0; i < functionType->GetNumParameters(); ++i) {
@@ -573,7 +572,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     // Finally, we know all is good and we can add the function to the
     // symbol table
     bool ok = symbolTable->AddFunction(funSym);
-    assert(ok);
+    Assert(ok);
 }
 
 
@@ -731,7 +730,7 @@ static void
 lVisitNode(const StructType *structType, 
            std::map<const StructType *, StructDAGNode *> &structToNode,
            std::vector<const StructType *> &sortedTypes) {
-    assert(structToNode.find(structType) != structToNode.end());
+    Assert(structToNode.find(structType) != structToNode.end());
     // Get the node that encodes the structs that this one is immediately
     // dependent on.
     StructDAGNode *node = structToNode[structType];
@@ -795,7 +794,7 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
         if (hasIncomingEdges.find(structType) == hasIncomingEdges.end())
             lVisitNode(structType, structToNode, sortedTypes);
     }
-    assert(sortedTypes.size() == structTypes.size());
+    Assert(sortedTypes.size() == structTypes.size());
 
     // And finally we can emit the struct declarations by going through the
     // sorted ones in order.
@@ -830,10 +829,10 @@ lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
         // Print the individual enumerators 
         for (int j = 0; j < enumTypes[i]->GetEnumeratorCount(); ++j) {
             const Symbol *e = enumTypes[i]->GetEnumerator(j);
-            assert(e->constValue != NULL);
+            Assert(e->constValue != NULL);
             unsigned int enumValue;
             int count = e->constValue->AsUInt32(&enumValue);
-            assert(count == 1);
+            Assert(count == 1);
 
             // Always print an initializer to set the value.  We could be
             // 'clever' here and detect whether the implicit value given by
@@ -899,7 +898,7 @@ lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
             return;
 
     const T *castType = dynamic_cast<const T *>(type);
-    assert(castType != NULL);
+    Assert(castType != NULL);
     exportedTypes->push_back(castType);
 }
 
@@ -936,7 +935,7 @@ lGetExportedTypes(const Type *type,
     else if (dynamic_cast<const VectorType *>(type) != NULL)
         lAddTypeIfNew(type, exportedVectorTypes);
     else
-        assert(dynamic_cast<const AtomicType *>(type) != NULL);
+        Assert(dynamic_cast<const AtomicType *>(type) != NULL);
 }
 
 
@@ -967,7 +966,7 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
     fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
-        assert(ftype);
+        Assert(ftype);
         std::string decl = ftype->GetCDeclaration(funcs[i]->name);
         fprintf(file, "    extern %s;\n", decl.c_str());
     }
@@ -992,7 +991,7 @@ lPrintExternGlobals(FILE *file, const std::vector<Symbol *> &externGlobals) {
 static bool
 lIsExported(const Symbol *sym) {
     const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
-    assert(ft);
+    Assert(ft);
     return ft->isExported;
 }
 
@@ -1000,7 +999,7 @@ lIsExported(const Symbol *sym) {
 static bool
 lIsExternC(const Symbol *sym) {
     const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
-    assert(ft);
+    Assert(ft);
     return ft->isExternC;
 }
 
@@ -1186,9 +1185,9 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts) 
-            opts.addMacroDef("assert(x)=");
+            opts.addMacroDef("Assert(x)=");
         else
-            opts.addMacroDef("assert(x)=__assert(#x, x)");
+            opts.addMacroDef("Assert(x)=__Assert(#x, x)");
     }
 
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
@@ -1327,7 +1326,7 @@ lExtractAndRewriteGlobals(llvm::Module *module,
 
             Symbol *sym = 
                 m->symbolTable->LookupVariable(gv->getName().str().c_str());
-            assert(sym != NULL);
+            Assert(sym != NULL);
             globals->push_back(RewriteGlobalInfo(gv, init, sym->pos));
         }
     }
@@ -1376,9 +1375,9 @@ lAddExtractedGlobals(llvm::Module *module,
             if (globals[j].size() > 0) {
                 // There should be the same number of globals in the other
                 // vectors, in the same order.
-                assert(globals[firstActive].size() == globals[j].size());
+                Assert(globals[firstActive].size() == globals[j].size());
                 llvm::GlobalVariable *gv2 = globals[j][i].gv;
-                assert(gv2->getName() == gv->getName());
+                Assert(gv2->getName() == gv->getName());
 
                 // It is possible that the types may not match, though--for
                 // example, this happens with varying globals if we compile
@@ -1432,7 +1431,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
 
         // Grab the type of the function as well.
         if (ftype != NULL)
-            assert(ftype == funcs.func[i]->getFunctionType());
+            Assert(ftype == funcs.func[i]->getFunctionType());
         else
             ftype = funcs.func[i]->getFunctionType();
 
@@ -1520,7 +1519,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     // or some such, but we don't want to start imposing too much of a
     // runtime library requirement either...
     llvm::Function *abortFunc = module->getFunction("abort");
-    assert(abortFunc);
+    Assert(abortFunc);
     llvm::CallInst::Create(abortFunc, "", bblock);
 
     // Return an undef value from the function here; we won't get to this
@@ -1552,10 +1551,10 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
 
     // Get pointers to things we need below
     llvm::Function *setFunc = module->getFunction("__set_system_isa");
-    assert(setFunc != NULL);
+    Assert(setFunc != NULL);
     llvm::Value *systemBestISAPtr = 
         module->getGlobalVariable("__system_best_isa", true);
-    assert(systemBestISAPtr != NULL);
+    Assert(systemBestISAPtr != NULL);
 
     // For each exported function, create the dispatch function
     std::map<std::string, FunctionTargetVariants>::iterator iter;
@@ -1601,7 +1600,7 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
     else {
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
-        assert(targets.size() > 1);
+        Assert(targets.size() > 1);
 
         if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
             Error(SourcePos(), "Multi-target compilation can't generate output "
@@ -1678,7 +1677,7 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
         int i = 1;
         while (i < Target::NUM_ISAS && firstTargetMachine == NULL)
             firstTargetMachine = targetMachines[i++];
-        assert(firstTargetMachine != NULL);
+        Assert(firstTargetMachine != NULL);
 
         if (outFileName != NULL) {
             if (outputType == Bitcode)

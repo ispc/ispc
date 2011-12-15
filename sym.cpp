@@ -72,7 +72,7 @@ SymbolTable::SymbolTable() {
 
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
-    assert(variables.size() == 1 && functions.size() == 1 &&
+    Assert(variables.size() == 1 && functions.size() == 1 &&
            types.size() == 1);
     PopScope();
 }
@@ -88,15 +88,15 @@ SymbolTable::PushScope() {
 
 void
 SymbolTable::PopScope() { 
-    assert(variables.size() > 1);
+    Assert(variables.size() > 1);
     delete variables.back();
     variables.pop_back();
 
-    assert(functions.size() > 1);
+    Assert(functions.size() > 1);
     delete functions.back();
     functions.pop_back();
 
-    assert(types.size() > 1);
+    Assert(types.size() > 1);
     delete types.back();
     types.pop_back();
 }
@@ -104,7 +104,7 @@ SymbolTable::PopScope() {
 
 bool
 SymbolTable::AddVariable(Symbol *symbol) {
-    assert(symbol != NULL);
+    Assert(symbol != NULL);
 
     // Check to see if a symbol of the same name has already been declared.
     for (int i = (int)variables.size() - 1; i >= 0; --i) {
@@ -154,7 +154,7 @@ SymbolTable::LookupVariable(const char *name) {
 bool
 SymbolTable::AddFunction(Symbol *symbol) {
     const FunctionType *ft = dynamic_cast<const FunctionType *>(symbol->type);
-    assert(ft != NULL);
+    Assert(ft != NULL);
     if (LookupFunction(symbol->name.c_str(), ft) != NULL)
         // A function of the same name and type has already been added to
         // the symbol table

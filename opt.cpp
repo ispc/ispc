@@ -152,19 +152,19 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     // All of these asserts are things that FunctionEmitContext::addGSMetadata() is
     // expected to have done in its operation
     llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
-    assert(str);
+    Assert(str);
     llvm::ConstantInt *first_lnum = 
         llvm::dyn_cast<llvm::ConstantInt>(first_line->getOperand(0));
-    assert(first_lnum);
+    Assert(first_lnum);
     llvm::ConstantInt *first_colnum = 
         llvm::dyn_cast<llvm::ConstantInt>(first_column->getOperand(0));
-    assert(first_column);
+    Assert(first_column);
     llvm::ConstantInt *last_lnum = 
         llvm::dyn_cast<llvm::ConstantInt>(last_line->getOperand(0));
-    assert(last_lnum);
+    Assert(last_lnum);
     llvm::ConstantInt *last_colnum = 
         llvm::dyn_cast<llvm::ConstantInt>(last_column->getOperand(0));
-    assert(last_column);
+    Assert(last_column);
 
     *pos = SourcePos(str->getString().data(), (int)first_lnum->getZExtValue(),
                      (int)first_colnum->getZExtValue(), (int)last_lnum->getZExtValue(),
@@ -440,7 +440,7 @@ IntrinsicsOpt::IntrinsicsOpt()
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Function *avxMovmsk = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
-    assert(avxMovmsk != NULL);
+    Assert(avxMovmsk != NULL);
     maskInstructions.push_back(avxMovmsk);
 #endif
 
@@ -486,7 +486,7 @@ lGetMask(llvm::Value *factor) {
             else {
                 // Otherwise get it as an int
                 llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-                assert(ci != NULL);  // vs return -1 if NULL?
+                Assert(ci != NULL);  // vs return -1 if NULL?
                 intMaskValue = ci->getValue();
             }
             // Is the high-bit set?  If so, OR in the appropriate bit in
@@ -509,7 +509,7 @@ lGetMask(llvm::Value *factor) {
             factor = c;
         }
         // else we should be able to handle it above...
-        assert(!llvm::isa<llvm::Constant>(factor));
+        Assert(!llvm::isa<llvm::Constant>(factor));
 #endif
         return -1;
     }
@@ -549,8 +549,8 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_ps_256);
     llvm::Function *avxMaskedStore64 = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_pd_256);
-    assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
-    assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
+    Assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
+    Assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
 #endif
 
     bool modifiedAny = false;
@@ -631,7 +631,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (mask == 0) {
                 // nothing being loaded, replace with undef value
                 llvm::Type *returnType = callInst->getType();
-                assert(llvm::isa<llvm::VectorType>(returnType));
+                Assert(llvm::isa<llvm::VectorType>(returnType));
                 llvm::Value *undefValue = llvm::UndefValue::get(returnType);
                 llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, undefValue);
@@ -641,7 +641,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             else if (mask == 0xff) {
                 // all lanes active; replace with a regular load
                 llvm::Type *returnType = callInst->getType();
-                assert(llvm::isa<llvm::VectorType>(returnType));
+                Assert(llvm::isa<llvm::VectorType>(returnType));
                 // cast the i8 * to the appropriate type
                 llvm::Value *castPtr = 
                     new llvm::BitCastInst(callInst->getArgOperand(0),
@@ -755,7 +755,7 @@ llvm::RegisterPass<GatherScatterFlattenOpt> gsf("gs-flatten", "Gather/Scatter Fl
 static int64_t
 lGetIntValue(llvm::Value *offset) {
     llvm::ConstantInt *intOffset = llvm::dyn_cast<llvm::ConstantInt>(offset);
-    assert(intOffset && (intOffset->getBitWidth() == 32 ||
+    Assert(intOffset && (intOffset->getBitWidth() == 32 ||
                          intOffset->getBitWidth() == 64));
     return intOffset->getSExtValue();
 }
@@ -780,15 +780,15 @@ lFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 
     while (ie != NULL) {
         int64_t iOffset = lGetIntValue(ie->getOperand(2));
-        assert(iOffset >= 0 && iOffset < vectorWidth);
-        assert(elements[iOffset] == NULL);
+        Assert(iOffset >= 0 && iOffset < vectorWidth);
+        Assert(elements[iOffset] == NULL);
 
         elements[iOffset] = ie->getOperand(1);
 
         llvm::Value *insertBase = ie->getOperand(0);
         ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
         if (ie == NULL)
-            assert(llvm::isa<llvm::UndefValue>(insertBase));
+            Assert(llvm::isa<llvm::UndefValue>(insertBase));
     }
 }
 
@@ -954,7 +954,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
             if (elementBase == NULL)
                 return NULL;
 
-            assert(delta[i] != NULL);
+            Assert(delta[i] != NULL);
             if (base == NULL)
                 // The first time we've found a base pointer
                 base = elementBase;
@@ -964,7 +964,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
                 return NULL;
         }
 
-        assert(base != NULL);
+        Assert(base != NULL);
 #ifdef LLVM_2_9
         *offsets = llvm::ConstantVector::get(delta);
 #else
@@ -1031,7 +1031,7 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     };
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
     for (int i = 0; i < numGSFuncs; ++i)
-        assert(gsFuncs[i].func != NULL && gsFuncs[i].baseOffsetsFunc != NULL &&
+        Assert(gsFuncs[i].func != NULL && gsFuncs[i].baseOffsetsFunc != NULL &&
                gsFuncs[i].baseOffsets32Func != NULL);
 
     bool modifiedAny = false;
@@ -1177,7 +1177,7 @@ struct MSInfo {
     MSInfo(const char *name, const int a) 
         : align(a) {
         func = m->module->getFunction(name);
-        assert(func != NULL);
+        Assert(func != NULL);
     }
     llvm::Function *func;
     const int align;
@@ -1321,7 +1321,7 @@ struct LMSInfo {
         pseudoFunc = m->module->getFunction(pname);
         blendFunc = m->module->getFunction(bname);
         maskedStoreFunc = m->module->getFunction(msname);
-        assert(pseudoFunc != NULL && blendFunc != NULL && 
+        Assert(pseudoFunc != NULL && blendFunc != NULL && 
                maskedStoreFunc != NULL);
     }
     llvm::Function *pseudoFunc;
@@ -1455,7 +1455,7 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
     if (v0 == v1)
         return true;
 
-    assert(seenPhi0.size() == seenPhi1.size());
+    Assert(seenPhi0.size() == seenPhi1.size());
     for (unsigned int i = 0; i < seenPhi0.size(); ++i)
         if (v0 == seenPhi0[i] && v1 == seenPhi1[i])
             return true;
@@ -1485,7 +1485,7 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
         // then we're good.
         bool anyFailure = false;
         for (unsigned int i = 0; i < numIncoming; ++i) {
-            assert(phi0->getIncomingBlock(i) == phi1->getIncomingBlock(i));
+            Assert(phi0->getIncomingBlock(i) == phi1->getIncomingBlock(i));
             if (!lValuesAreEqual(phi0->getIncomingValue(i), 
                                  phi1->getIncomingValue(i), seenPhi0, seenPhi1)) {
                 anyFailure = true;
@@ -1539,7 +1539,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
             // probably to just ignore undef elements and return true if
             // all of the other ones are equal, but it'd be nice to have
             // some test cases to verify this.
-            assert(elements[i] != NULL && elements[i+1] != NULL);
+            Assert(elements[i] != NULL && elements[i+1] != NULL);
 
             std::vector<llvm::PHINode *> seenPhi0;
             std::vector<llvm::PHINode *> seenPhi1;
@@ -1573,7 +1573,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
         return true;
     }
 
-    assert(!llvm::isa<llvm::Constant>(v));
+    Assert(!llvm::isa<llvm::Constant>(v));
 
     if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v) ||
         !llvm::isa<llvm::Instruction>(v))
@@ -1618,7 +1618,7 @@ lVectorIsLinearConstantInts(llvm::ConstantVector *cv, int vectorLength,
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
     cv->getVectorElements(elements);
-    assert((int)elements.size() == vectorLength);
+    Assert((int)elements.size() == vectorLength);
 
     llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[0]);
     if (ci == NULL)
@@ -1792,7 +1792,7 @@ struct GatherImpInfo {
         loadBroadcastFunc = m->module->getFunction(lbName);
         loadMaskedFunc = m->module->getFunction(lmName);
 
-        assert(pseudoFunc != NULL && loadBroadcastFunc != NULL &&
+        Assert(pseudoFunc != NULL && loadBroadcastFunc != NULL &&
                loadMaskedFunc != NULL);
     }
     llvm::Function *pseudoFunc;
@@ -1809,7 +1809,7 @@ struct ScatterImpInfo {
         pseudoFunc = m->module->getFunction(pName);
         maskedStoreFunc = m->module->getFunction(msName);
         vecPtrType = vpt;
-        assert(pseudoFunc != NULL && maskedStoreFunc != NULL);
+        Assert(pseudoFunc != NULL && maskedStoreFunc != NULL);
     }
     llvm::Function *pseudoFunc;
     llvm::Function *maskedStoreFunc;
@@ -1888,7 +1888,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         SourcePos pos;
         bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        assert(ok);     
+        Assert(ok);     
 
         llvm::Value *base = callInst->getArgOperand(0);
         llvm::Value *offsets = callInst->getArgOperand(1);
@@ -2066,7 +2066,7 @@ struct LowerGSInfo {
         : isGather(ig) {
         pseudoFunc = m->module->getFunction(pName);
         actualFunc = m->module->getFunction(aName);
-        assert(pseudoFunc != NULL && actualFunc != NULL);
+        Assert(pseudoFunc != NULL && actualFunc != NULL);
     }
     llvm::Function *pseudoFunc;
     llvm::Function *actualFunc;
@@ -2143,7 +2143,7 @@ LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // instruction so that we can issue PerformanceWarning()s below.
         SourcePos pos;
         bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        assert(ok);     
+        Assert(ok);     
 
         callInst->setCalledFunction(info->actualFunc);
         if (info->isGather)

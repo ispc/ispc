@@ -287,7 +287,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     for (unsigned int i = 0; i < vars.size(); ++i) {
         Symbol *sym = vars[i].sym;
-        assert(sym != NULL);
+        Assert(sym != NULL);
         if (sym->type == NULL)
             continue;
         Expr *initExpr = vars[i].init;
@@ -324,7 +324,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            assert(m->errorCount > 0);
+            Assert(m->errorCount > 0);
             return;
         }
 
@@ -645,12 +645,12 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
         // under varying control flow,, returns can't stop instruction
         // emission, so this better be non-NULL...
-        assert(ctx->GetCurrentBasicBlock()); 
+        Assert(ctx->GetCurrentBasicBlock()); 
     }
     if (falseStmts) {
         ctx->SetInternalMaskAndNot(oldMask, test);
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
-        assert(ctx->GetCurrentBasicBlock());
+        Assert(ctx->GetCurrentBasicBlock());
     }
 }
 
@@ -724,7 +724,7 @@ lSafeToRunWithAllLanesOff(Expr *expr) {
 
         const SequentialType *seqType = 
             dynamic_cast<const SequentialType *>(type);
-        assert(seqType != NULL);
+        Assert(seqType != NULL);
         int nElements = seqType->GetElementCount();
         if (nElements == 0)
             // Unsized array, so we can't be sure
@@ -930,7 +930,7 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
             (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
             emitMaskedTrueAndFalse(ctx, oldMask, ltest);
-            assert(ctx->GetCurrentBasicBlock());
+            Assert(ctx->GetCurrentBasicBlock());
             ctx->EndIf();
         }
         else {
@@ -953,7 +953,7 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     // compiler see what's going on so that subsequent optimizations for
     // code emitted here can operate with the knowledge that the mask is
     // definitely all on (until it modifies the mask itself).
-    assert(!g->opt.disableCoherentControlFlow);
+    Assert(!g->opt.disableCoherentControlFlow);
     if (!g->opt.disableMaskAllOnOptimizations)
         ctx->SetInternalMask(LLVMMaskAllOn);
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
@@ -1003,7 +1003,7 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     emitMaskedTrueAndFalse(ctx, LLVMMaskAllOn, ltest);
     // In this case, return/break/continue isn't allowed to jump and end
     // emission.
-    assert(ctx->GetCurrentBasicBlock());
+    Assert(ctx->GetCurrentBasicBlock());
     ctx->EndIf();
     ctx->BranchInst(bDone);
 
@@ -1032,7 +1032,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
         // Emit statements for true
         ctx->SetCurrentBasicBlock(bRunTrue);
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
-        assert(ctx->GetCurrentBasicBlock()); 
+        Assert(ctx->GetCurrentBasicBlock()); 
         ctx->BranchInst(bNext);
         ctx->SetCurrentBasicBlock(bNext);
     }
@@ -1049,7 +1049,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
         // Emit code for false
         ctx->SetCurrentBasicBlock(bRunFalse);
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
-        assert(ctx->GetCurrentBasicBlock());
+        Assert(ctx->GetCurrentBasicBlock());
         ctx->BranchInst(bNext);
         ctx->SetCurrentBasicBlock(bNext);
     }
@@ -1167,7 +1167,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetFunctionMask(LLVMMaskAllOn);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
-        assert(ctx->GetCurrentBasicBlock());
+        Assert(ctx->GetCurrentBasicBlock());
         ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(btest);
 
@@ -1175,7 +1175,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bMixed);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
-        assert(ctx->GetCurrentBasicBlock());
+        Assert(ctx->GetCurrentBasicBlock());
         ctx->BranchInst(btest);
     }
     else {
@@ -1328,7 +1328,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // it and then jump into the loop test code.  (Also start a new scope
     // since the initiailizer may be a declaration statement).
     if (init) {
-        assert(dynamic_cast<StmtList *>(init) == NULL);
+        Assert(dynamic_cast<StmtList *>(init) == NULL);
         ctx->StartScope();
         init->EmitCode(ctx);
     }
@@ -1356,7 +1356,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (uniformTest) {
         if (doCoherentCheck)
             Warning(pos, "Uniform condition supplied to cfor/cwhile statement.");
-        assert(ltest->getType() == LLVMTypes::BoolType);
+        Assert(ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     }
     else {
@@ -1392,7 +1392,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetFunctionMask(LLVMMaskAllOn);
         if (stmts)
             stmts->EmitCode(ctx);
-        assert(ctx->GetCurrentBasicBlock());
+        Assert(ctx->GetCurrentBasicBlock());
         ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(bstep);
 
@@ -1741,7 +1741,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->StartScope();
 
     // This should be caught during typechecking
-    assert(startExprs.size() == dimVariables.size() && 
+    Assert(startExprs.size() == dimVariables.size() && 
            endExprs.size() == dimVariables.size());
     int nDims = (int)dimVariables.size();
 
@@ -1923,7 +1923,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetInternalMask(LLVMMaskAllOn);
     ctx->AddInstrumentationPoint("foreach loop body");
     stmts->EmitCode(ctx);
-    assert(ctx->GetCurrentBasicBlock() != NULL);
+    Assert(ctx->GetCurrentBasicBlock() != NULL);
     ctx->BranchInst(bbStep[nDims-1]);
 
     ///////////////////////////////////////////////////////////////////////////
@@ -2351,7 +2351,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // Now we can emit code to call __do_print()
     llvm::Function *printFunc = m->module->getFunction("__do_print");
-    assert(printFunc);
+    Assert(printFunc);
 
     llvm::Value *mask = ctx->GetFullMask();
     // Set up the rest of the parameters to it
@@ -2414,7 +2414,7 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Function *assertFunc = 
         isUniform ? m->module->getFunction("__do_assert_uniform") :
                     m->module->getFunction("__do_assert_varying");
-    assert(assertFunc != NULL);
+    Assert(assertFunc != NULL);
 
 #ifdef ISPC_IS_WINDOWS
     char errorString[2048];

@@ -424,7 +424,7 @@ LLVMBoolVector(bool b) {
         v = llvm::ConstantInt::get(LLVMTypes::Int32Type, b ? 0xffffffff : 0, 
                                    false /*unsigned*/);
     else {
-        assert(LLVMTypes::BoolVectorType->getElementType() == 
+        Assert(LLVMTypes::BoolVectorType->getElementType() == 
                llvm::Type::getInt1Ty(*g->ctx));
         v = b ? LLVMTrue : LLVMFalse;
     }
@@ -445,7 +445,7 @@ LLVMBoolVector(const bool *bvec) {
             v = llvm::ConstantInt::get(LLVMTypes::Int32Type, bvec[i] ? 0xffffffff : 0, 
                                        false /*unsigned*/);
         else {
-            assert(LLVMTypes::BoolVectorType->getElementType() == 
+            Assert(LLVMTypes::BoolVectorType->getElementType() == 
                    llvm::Type::getInt1Ty(*g->ctx));
             v = bvec[i] ? LLVMTrue : LLVMFalse;
         }

@@ -257,7 +257,7 @@ static void
 lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 #if 0
     // FIXME: handle globals?
-    assert(module->global_empty());
+    Assert(module->global_empty());
 #endif
 
     llvm::Module::iterator iter;
@@ -287,11 +287,11 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         // check the llvm.x86.* intrinsics for now...
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
-            assert(id != 0);
+            Assert(id != 0);
             LLVM_TYPE_CONST llvm::Type *intrinsicType = 
                 llvm::Intrinsic::getType(*g->ctx, id);
             intrinsicType = llvm::PointerType::get(intrinsicType, 0);
-            assert(func->getType() == intrinsicType);
+            Assert(func->getType() == intrinsicType);
         }
     }
 }
@@ -591,9 +591,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // linking together modules with incompatible target triples..
         llvm::Triple mTriple(m->module->getTargetTriple());
         llvm::Triple bcTriple(bcModule->getTargetTriple());
-        assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
+        Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
                mTriple.getArch() == bcTriple.getArch());
-        assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
+        Assert(bcTriple.getVendor() == llvm::Triple::UnknownVendor ||
                mTriple.getVendor() == bcTriple.getVendor());
         bcModule->setTargetTriple(mTriple.str());
 
@@ -639,7 +639,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
     Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
 
     llvm::Function *func = module->getFunction(name);
-    assert(func != NULL); // it should be declared already...
+    Assert(func != NULL); // it should be declared already...
     func->addFnAttr(llvm::Attribute::AlwaysInline);
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
     llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);

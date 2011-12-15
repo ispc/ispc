@@ -327,7 +327,7 @@ argument_expression_list
     | argument_expression_list ',' assignment_expression
       {
           ExprList *argList = dynamic_cast<ExprList *>($1);
-          assert(argList != NULL);
+          Assert(argList != NULL);
           argList->exprs.push_back($3);
           argList->pos = Union(argList->pos, @3);
           $$ = argList;
@@ -629,7 +629,7 @@ type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
       { const Type *t = m->symbolTable->LookupType(yytext); 
-        assert(t != NULL);
+        Assert(t != NULL);
         $$ = t;
       }
     | struct_or_union_specifier { $$ = $1; }
@@ -1223,7 +1223,7 @@ initializer_list
               $$ = NULL;
           else {
               ExprList *exprList = dynamic_cast<ExprList *>($1);
-              assert(exprList);
+              Assert(exprList);
               exprList->exprs.push_back($3);
               exprList->pos = Union(exprList->pos, @3);
               $$ = exprList;
@@ -1554,7 +1554,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
         if (ft != NULL) {
             Symbol *funSym = decl->GetSymbol();
-            assert(funSym != NULL);
+            Assert(funSym != NULL);
             funSym->type = ft;
             funSym->storageClass = ds->storageClass;
 
@@ -1578,7 +1578,7 @@ lAddFunctionParams(Declarator *decl) {
     // walk down to the declarator for the function itself 
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
-    assert(decl->kind == DK_FUNCTION);
+    Assert(decl->kind == DK_FUNCTION);
 
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
@@ -1587,12 +1587,12 @@ lAddFunctionParams(Declarator *decl) {
             // zero size declarators array corresponds to an anonymous 
             // parameter
             continue;
-        assert(pdecl->declarators.size() == 1);
+        Assert(pdecl->declarators.size() == 1);
         Symbol *sym = pdecl->declarators[0]->GetSymbol();
 #ifndef NDEBUG
         bool ok = m->symbolTable->AddVariable(sym);
         if (ok == false)
-            assert(m->errorCount > 0);
+            Assert(m->errorCount > 0);
 #else
         m->symbolTable->AddVariable(sym);
 #endif
@@ -1659,7 +1659,7 @@ lGetStorageClassString(StorageClass sc) {
     case SC_EXTERN_C:
         return "extern \"C\"";
     default:
-        assert(!"logic error in lGetStorageClassString()");
+        Assert(!"logic error in lGetStorageClassString()");
         return "";
     }
 }
@@ -1743,7 +1743,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
         if (enums[i]->constValue != NULL) {
             /* Already has a value, so first update nextVal with it. */
             int count = enums[i]->constValue->AsUInt32(&nextVal);
-            assert(count == 1);
+            Assert(count == 1);
             ++nextVal;
 
             /* When the source file as being parsed, the ConstExpr for any
@@ -1756,7 +1756,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                               false, enums[i]->pos);
             castExpr = castExpr->Optimize();
             enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
-            assert(enums[i]->constValue != NULL);
+            Assert(enums[i]->constValue != NULL);
         }
         else {
             enums[i]->constValue = new ConstExpr(enumType, nextVal++, 

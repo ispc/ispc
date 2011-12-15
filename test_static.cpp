@@ -102,7 +102,7 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 
 int main(int argc, char *argv[]) {
     int w = width();
-    assert(w <= 16);
+    Assert(w <= 16);
 
     float returned_result[16];
     for (int i = 0; i < 16; ++i)

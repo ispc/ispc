@@ -45,7 +45,6 @@
 #include <stdio.h>
 
 #include <stdio.h>
-#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -147,7 +146,7 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
     fputs(buf, out);
 #else
     int column = 0;
-    assert(strchr(buf, ':') != NULL);
+    Assert(strchr(buf, ':') != NULL);
     int indent = strchr(buf, ':') - buf + 2;
     int width = std::max(40, columnWidth - 2);
 
@@ -313,6 +312,12 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
 void
 FatalError(const char *file, int line, const char *message) {
     fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
+    fprintf(stderr, "***\n"
+            "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
+            "*** (Including as much information as you can about how to "
+            "reproduce this error).\n"
+            "*** You have apparently encountered a bug in the compiler that we'd "
+            "like to fix!\n***\n");
     abort();
 }
 
@@ -392,7 +397,7 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     char path[MAX_PATH];
     const char *combPath = PathCombine(path, currentDirectory.c_str(),
                                        relativeName.c_str());
-    assert(combPath != NULL);
+    Assert(combPath != NULL);
     const char *filenamePtr = PathFindFileName(combPath);
     *filename = filenamePtr;
     *directory = std::string(combPath, filenamePtr - combPath);
@@ -414,9 +419,9 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     // now, we need to separate it into the base name and the directory
     const char *fp = fullPath.c_str();
     const char *basenameStart = strrchr(fp, '/');
-    assert(basenameStart != NULL);
+    Assert(basenameStart != NULL);
     ++basenameStart;
-    assert(basenameStart != '\0');
+    Assert(basenameStart != '\0');
     *filename = basenameStart;
     *directory = std::string(fp, basenameStart - fp);
 #endif // ISPC_IS_WINDOWS

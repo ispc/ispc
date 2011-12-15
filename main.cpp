@@ -167,10 +167,12 @@ int main(int Argc, char *Argv[]) {
     char *argv[128];
     lGetAllArgs(Argc, Argv, argc, argv);
 
+#if 0
     // Use LLVM's little utility function to print out nice stack traces if
     // we crash
     llvm::sys::PrintStackTraceOnErrorSignal();
     llvm::PrettyStackTraceProgram X(argc, argv);
+#endif
 
     // initialize available LLVM targets
     LLVMInitializeX86TargetInfo();
