@@ -1,3 +1,33 @@
+=== v1.1.1 === (15 December 2011)
+
+This release doesn't include any significant new functionality, but does
+include a small improvements in generated code and a number of bug fixes.
+
+The one user-visible language change is that integer constants may be
+specified with 'u' and 'l' suffixes, like in C.  For example, "1024llu"
+defines the constant with unsigned 64-bit type.
+
+More informative and useful error messages are printed when function
+overload resolution fails.
+
+Masking is avoided in additional cases when the mask can be
+statically-determined to be all on. 
+
+A number of small bugs have been fixed:
+- Under some circumstances, incorrect masks were used when assigning a
+  value to a reference and when doing gathers/scatters.
+- Incorrect code could be generated in some cases when some instances
+  returned part way through a function but others contineud executing.
+- Type checking wasn't being performed for calls through function pointers;
+  now an error is issued if the arguments don't match up, etc.
+- Incorrect code was being generated for gather/scatter to structs that had
+  elements with varying short-vector types.
+- Typechecking wasn't being performed for "foreach" statements; this led to
+  problems like function overload resolution not being performed if an
+  overloaded function call was used to determine the iteration range..
+- A number of symbols would be multiply-defined when compiling to multiple
+  targets and using the sse2-x2 target as one of them (issue #131).
+
 === v1.1.0 === (5 December 2011)
 
 This is a major new release of the compiler, with significant additions to
