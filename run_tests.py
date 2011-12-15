@@ -108,7 +108,10 @@ def run_test(filename):
         sp = subprocess.Popen(shlex.split(ispc_cmd), stdin=None,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
-        output = sp.communicate()[1]
+        out = sp.communicate()
+        output = ""
+        output += out[0]
+        output += out[1]
         got_error = (sp.returncode != 0)
 
         # figure out the error message we're expecting
@@ -120,8 +123,8 @@ def run_test(filename):
         file.close()
 
         if (output.find(firstline) == -1):
-            print "Didn't see expected error message \"%s\" from " + \
-                  "test %s.\nActual outout: %s" % \
+            print "OUT %s" % filename
+            print "Didnt see expected error message %s from test %s.\nActual output:\n%s" % \
                 (firstline, filename, output)
             error_count += 1
         elif got_error == False:

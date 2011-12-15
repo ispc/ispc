@@ -1,4 +1,4 @@
-// Can't assign to type "const uniform int32" on left-hand side
+// Left hand side of assignment statement can't be assigned to
 
 int bar(){ 
     4 = 0;
