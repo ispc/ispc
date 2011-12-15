@@ -638,10 +638,12 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 
 static llvm::Value *
 lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
-    if (dynamic_cast<const PointerType *>(baseSym->type) != NULL)
-        // FIXME: we really only want to do this for dereferencing the
-        // pointer, not for things like pointer arithmetic, when we may be
-        // able to use the internal mask, depending on context...
+    if (dynamic_cast<const PointerType *>(baseSym->type) != NULL ||
+        dynamic_cast<const ReferenceType *>(baseSym->type) != NULL)
+        // FIXME: for pointers, we really only want to do this for
+        // dereferencing the pointer, not for things like pointer
+        // arithmetic, when we may be able to use the internal mask,
+        // depending on context...
         return ctx->GetFullMask();
 
     llvm::Value *mask = (baseSym->parentFunction == ctx->GetFunction() && 
