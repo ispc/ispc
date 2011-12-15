@@ -2037,12 +2037,8 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     Symbol *baseSym = lvalue->GetBaseSymbol();
-    if (!baseSym) {
-        // FIXME: I think that this check also is unnecessary and that this
-        // case should be covered during type checking.
-        Error(pos, "Left hand side of assignment statement can't be assigned to.");
-        return NULL;
-    }
+    // Should be caught during type-checking...
+    assert(baseSym != NULL);
 
     switch (op) {
     case Assign: {
@@ -2178,6 +2174,12 @@ AssignExpr::TypeCheck() {
                   "pointer assignment.");
             return NULL;
         }
+    }
+
+    if (lvalue->GetBaseSymbol() == NULL) {
+        Error(lvalue->pos, "Left hand side of assignment statement can't be "
+              "assigned to.");
+        return NULL;
     }
 
     const Type *lhsType = lvalue->GetType();
