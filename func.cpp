@@ -274,30 +274,66 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 
     // Finally, we can generate code for the function
     if (code != NULL) {
+        ctx->SetDebugPos(code->pos);
+        ctx->AddInstrumentationPoint("function entry");
+
         int costEstimate = code->EstimateCost();
+        Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
+              sym->name.c_str(), costEstimate);
+
+        // If the body of the function is non-trivial, then we wrap the
+        // entire thing inside code that tests to see if the mask is all
+        // on, all off, or mixed.  If this is a simple function, then this
+        // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) || 
             ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
-        Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
-              sym->name.c_str(), costEstimate);
-        // If the body of the function is non-trivial, then we wrap the
-        // entire thing around a varying "cif (true)" test in order to reap
-        // the side-effect benefit of checking to see if the execution mask
-        // is all on and thence having a specialized code path for that
-        // case.  If this is a simple function, then this isn't worth the
-        // code bloat / overhead.
-        if (checkMask && (g->opt.disableCoherentControlFlow == false)) {
-            bool allTrue[ISPC_MAX_NVEC];
-            for (int i = 0; i < g->target.vectorWidth; ++i)
-                allTrue[i] = true;
-            Expr *trueExpr = new ConstExpr(AtomicType::VaryingBool, allTrue, 
-                                           code->pos);
-            code = new IfStmt(trueExpr, code, NULL, true, code->pos);
-        }
+        if (checkMask && g->opt.disableCoherentControlFlow == false) {
+            llvm::Value *mask = ctx->GetFunctionMask();
+            llvm::Value *allOn = ctx->All(mask);
+            llvm::BasicBlock *bbAllOn = ctx->CreateBasicBlock("all_on");
+            llvm::BasicBlock *bbNotAll = ctx->CreateBasicBlock("not_all_on");
 
-        ctx->SetDebugPos(code->pos);
-        ctx->AddInstrumentationPoint("function entry");
-        code->EmitCode(ctx);
+            ctx->BranchInst(bbAllOn, bbNotAll, allOn);
+
+            // all on: we've determined dynamically that the mask is all
+            // on.  Set the current mask to "all on" explicitly so that
+            // codegen for this path can be improved with this knowledge in
+            // hand...
+            ctx->SetCurrentBasicBlock(bbAllOn);
+            if (!g->opt.disableMaskAllOnOptimizations)
+                ctx->SetFunctionMask(LLVMMaskAllOn);
+            code->EmitCode(ctx);
+            if (ctx->GetCurrentBasicBlock())
+                ctx->ReturnInst();
+
+            // not all on: figure out if no instances are running, or if
+            // some of them are
+            ctx->SetCurrentBasicBlock(bbNotAll);
+            ctx->SetFunctionMask(mask);
+            llvm::BasicBlock *bbNoneOn = ctx->CreateBasicBlock("none_on");
+            llvm::BasicBlock *bbSomeOn = ctx->CreateBasicBlock("some_on");
+            llvm::Value *anyOn = ctx->Any(mask);
+            ctx->BranchInst(bbSomeOn, bbNoneOn, anyOn);
+            
+            // Everyone is off; get out of here.
+            ctx->SetCurrentBasicBlock(bbNoneOn);
+            ctx->ReturnInst();
+
+            // some on: reset the mask to the value it had at function
+            // entry and emit the code.  Resetting the mask here is
+            // important, due to the "all on" setting of it for the path
+            // above
+            ctx->SetCurrentBasicBlock(bbSomeOn);
+            ctx->SetFunctionMask(mask);
+            code->EmitCode(ctx);
+            if (ctx->GetCurrentBasicBlock())
+                ctx->ReturnInst();
+
+        }
+        else
+            // No check, just emit the code
+            code->EmitCode(ctx);
     }
 
     if (ctx->GetCurrentBasicBlock()) {

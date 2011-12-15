@@ -337,7 +337,8 @@ FunctionEmitContext::GetFullMaskPointer() {
 void
 FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
     functionMaskValue = value;
-    StoreInst(GetFullMask(), fullMaskPointer);
+    if (bblock != NULL)
+        StoreInst(GetFullMask(), fullMaskPointer);
 }
 
 
