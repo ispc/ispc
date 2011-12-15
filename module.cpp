@@ -1185,9 +1185,9 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts) 
-            opts.addMacroDef("Assert(x)=");
+            opts.addMacroDef("assert(x)=");
         else
-            opts.addMacroDef("Assert(x)=__Assert(#x, x)");
+            opts.addMacroDef("assert(x)=__assert(#x, x)");
     }
 
     for (unsigned int i = 0; i < g->cppArgs.size(); ++i) {
