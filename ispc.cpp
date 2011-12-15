@@ -215,7 +215,7 @@ Target::SupportedTargetArchs() {
 const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2"
-#ifndef LLVM_2.9
+#ifndef LLVM_2_9
         ", avx, avx-x2"
 #endif !LLVM_2_9
 #ifdef LLVM_3_1svn
@@ -313,7 +313,7 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
     Assert(td != NULL);
     uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
     if (is32Bit || g->opt.force32BitAddressing)
-        return LLVMInt32(byteSize);
+        return LLVMInt32((int32_t)byteSize);
     else
         return LLVMInt64(byteSize);
 }
@@ -331,7 +331,7 @@ Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element) {
 
     uint64_t offset = sl->getElementOffset(element);
     if (is32Bit || g->opt.force32BitAddressing)
-        return LLVMInt32(offset);
+        return LLVMInt32((int32_t)offset);
     else
         return LLVMInt64(offset);
 }

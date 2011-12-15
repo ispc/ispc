@@ -544,7 +544,7 @@ declaration_specifiers
     | soa_width_specifier
       {
           DeclSpecs *ds = new DeclSpecs;
-          ds->soaWidth = $1;
+          ds->soaWidth = (int32_t)$1;
           $$ = ds;
       }
     | soa_width_specifier declaration_specifiers
@@ -554,7 +554,7 @@ declaration_specifiers
               if (ds->soaWidth != 0)
                   Error(@1, "soa<> qualifier supplied multiple times in declaration.");
               else
-                  ds->soaWidth = $1;
+                  ds->soaWidth = (int32_t)$1;
           }
           $$ = ds;
       }
@@ -565,7 +565,7 @@ declaration_specifiers
     | type_specifier '<' int_constant '>'
     {
           DeclSpecs *ds = new DeclSpecs($1);
-          ds->vectorSize = $3;
+          ds->vectorSize = (int32_t)$3;
           $$ = ds;
     }
     | type_specifier declaration_specifiers
@@ -651,7 +651,7 @@ short_vec_specifier
     : atomic_var_type_specifier '<' int_constant '>'
       {
         Type* vt = 
-          new VectorType($1, $3);
+          new VectorType($1, (int32_t)$3);
         $$ = vt;
       }
     ;

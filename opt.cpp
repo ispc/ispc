@@ -1673,7 +1673,8 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
 
     // Check to see if the other operand is a linear vector with stride
     // given by stride/splatVal.
-    return lVectorIsLinear(op1, vectorLength, stride / splatVal, seenPhis);
+    return lVectorIsLinear(op1, vectorLength, (int)(stride / splatVal), 
+                           seenPhis);
 }
 
 

@@ -184,12 +184,12 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 
 
 {FLOAT_NUMBER} { 
-    yylval->floatVal = atof(yytext); 
+    yylval->floatVal = (float)atof(yytext); 
     return TOKEN_FLOAT_CONSTANT; 
 }
 
 {HEX_FLOAT_NUMBER} {
-    yylval->floatVal = lParseHexFloat(yytext); 
+    yylval->floatVal = (float)lParseHexFloat(yytext); 
     return TOKEN_FLOAT_CONSTANT; 
 }
 

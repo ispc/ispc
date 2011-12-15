@@ -206,7 +206,7 @@ int main(int Argc, char *Argv[]) {
             if (atoi(argv[i] + 13) == 64)
                 g->opt.force32BitAddressing = false;
             else if (atoi(argv[i] + 13) == 32)
-                g->opt.force32BitAddressing = 32;
+                g->opt.force32BitAddressing = true;
             else {
                 fprintf(stderr, "Addressing width \"%s\" invalid--only 32 and "
                         "64 are allowed.\n", argv[i]+13);
