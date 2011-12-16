@@ -113,8 +113,28 @@ typedef ASTNode * (* ASTPostCallBackFunc)(ASTNode *node, void *data);
 extern ASTNode *WalkAST(ASTNode *root, ASTPreCallBackFunc preFunc,
                         ASTPostCallBackFunc postFunc, void *data);
 
-extern Expr *Optimize(Expr *);
-extern Stmt *Optimize(Stmt *);
+/** Perform simple optimizations on the AST or portion thereof passed to
+    this function, returning the resulting AST. */
 extern ASTNode *Optimize(ASTNode *root);
+
+/** Convenience version of Optimize() for Expr *s that returns an Expr *
+    (rather than an ASTNode *, which would require the caller to cast back
+    to an Expr *). */ 
+extern Expr *Optimize(Expr *);
+
+/** Convenience version of Optimize() for Expr *s that returns an Stmt *
+    (rather than an ASTNode *, which would require the caller to cast back
+    to a Stmt *). */ 
+extern Stmt *Optimize(Stmt *);
+
+/* Perform type-checking on the given AST (or portion of one), returning a
+   pointer to the root of the resulting AST. */
+extern ASTNode *TypeCheck(ASTNode *root);
+
+/* Convenience version of TypeCheck() for Expr *s that returns an Expr *. */
+extern Expr *TypeCheck(Expr *);
+
+/* Convenience version of TypeCheck() for Stmt *s that returns an Stmt *. */
+extern Stmt *TypeCheck(Stmt *);
 
 #endif // ISPC_AST_H

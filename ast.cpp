@@ -249,3 +249,27 @@ Stmt *
 Optimize(Stmt *stmt) {
     return (Stmt *)Optimize((ASTNode *)stmt);
 }
+
+
+static ASTNode *
+lTypeCheckNode(ASTNode *node, void *) {
+    return node->TypeCheck();
+}
+
+
+ASTNode *
+TypeCheck(ASTNode *root) {
+    return WalkAST(root, NULL, lTypeCheckNode, NULL);
+}
+
+
+Expr *
+TypeCheck(Expr *expr) {
+    return (Expr *)TypeCheck((ASTNode *)expr);
+}
+
+
+Stmt *
+TypeCheck(Stmt *stmt) {
+    return (Stmt *)TypeCheck((ASTNode *)stmt);
+}

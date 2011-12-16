@@ -1674,7 +1674,7 @@ static bool
 lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
     if (expr == NULL)
         return false;
-    expr = expr->TypeCheck();
+    expr = TypeCheck(expr);
     if (expr == NULL)
         return false;
     expr = Optimize(expr);

@@ -381,7 +381,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                 }
 
                 if (decl->initExpr != NULL &&
-                    (decl->initExpr = decl->initExpr->TypeCheck()) != NULL &&
+                    (decl->initExpr = TypeCheck(decl->initExpr)) != NULL &&
                     (decl->initExpr = Optimize(decl->initExpr)) != NULL &&
                     (init = dynamic_cast<ConstExpr *>(decl->initExpr)) == NULL) {
                     Error(decl->initExpr->pos, "Default value for parameter "

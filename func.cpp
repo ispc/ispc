@@ -82,7 +82,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
             fprintf(stderr, "---------------------\n");
         }
 
-        code = code->TypeCheck();
+        code = TypeCheck(code);
 
         if (code != NULL && g->debugPrint) {
             fprintf(stderr, "After typechecking function \"%s\":\n", 

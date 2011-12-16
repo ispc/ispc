@@ -142,7 +142,7 @@ lArrayToPointer(Expr *expr) {
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
     Expr *addr = new AddressOfExpr(index, expr->pos);
-    addr = addr->TypeCheck();
+    addr = TypeCheck(addr);
     Assert(addr != NULL);
     addr = Optimize(addr);
     Assert(addr != NULL);
@@ -927,14 +927,9 @@ UnaryExpr::Optimize() {
 
 Expr *
 UnaryExpr::TypeCheck() {
-    if (expr != NULL) 
-        expr = expr->TypeCheck();
-    if (expr == NULL)
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL)
         // something went wrong in type checking...
-        return NULL;
-
-    const Type *type = expr->GetType();
-    if (type == NULL)
         return NULL;
 
     if (op == PreInc || op == PreDec || op == PostInc || op == PostDec) {
@@ -1506,7 +1501,7 @@ BinaryExpr::Optimize() {
                     inv[i] = 1.f / inv[i];
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
                 Expr *e = new BinaryExpr(Mul, arg0, einv, pos);
-                e = e->TypeCheck();
+                e = ::TypeCheck(e);
                 if (e == NULL)
                     return NULL;
                 return ::Optimize(e);
@@ -1529,7 +1524,7 @@ BinaryExpr::Optimize() {
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
                                                          arg1->pos);
-                    rcpCall = rcpCall->TypeCheck();
+                    rcpCall = ::TypeCheck(rcpCall);
                     if (rcpCall == NULL)
                         return NULL;
                     rcpCall = ::Optimize(rcpCall);
@@ -1537,7 +1532,7 @@ BinaryExpr::Optimize() {
                         return NULL;
 
                     Expr *ret = new BinaryExpr(Mul, arg0, rcpCall, pos);
-                    ret = ret->TypeCheck();
+                    ret = ::TypeCheck(ret);
                     if (ret == NULL)
                         return NULL;
                     return ::Optimize(ret);
@@ -1628,11 +1623,6 @@ BinaryExpr::Optimize() {
 
 Expr *
 BinaryExpr::TypeCheck() {
-    if (arg0 != NULL) 
-        arg0 = arg0->TypeCheck();
-    if (arg1 != NULL) 
-        arg1 = arg1->TypeCheck();
-
     if (arg0 == NULL || arg1 == NULL)
         return NULL;
 
@@ -2124,10 +2114,6 @@ lCheckForConstStructMember(SourcePos pos, const StructType *structType,
 
 Expr *
 AssignExpr::TypeCheck() {
-    if (lvalue != NULL) 
-        lvalue = lvalue->TypeCheck();
-    if (rvalue != NULL) 
-        rvalue = rvalue->TypeCheck();
     if (lvalue == NULL || rvalue == NULL) 
         return NULL;
 
@@ -2405,13 +2391,6 @@ SelectExpr::Optimize() {
 
 Expr *
 SelectExpr::TypeCheck() {
-    if (test) 
-        test = test->TypeCheck();
-    if (expr1) 
-        expr1 = expr1->TypeCheck();
-    if (expr2) 
-        expr2 = expr2->TypeCheck();
-
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
 
@@ -2636,128 +2615,122 @@ FunctionCallExpr::Optimize() {
 
 Expr *
 FunctionCallExpr::TypeCheck() {
-    if (func != NULL)
-        func = func->TypeCheck();
-    if (args != NULL) 
-        args = args->TypeCheck();
-    if (launchCountExpr != NULL)
-        launchCountExpr = launchCountExpr->TypeCheck();
+    if (func == NULL || args == NULL)
+        return NULL;
 
-    if (args != NULL && func != NULL) {
-        std::vector<const Type *> argTypes;
-        std::vector<bool> argCouldBeNULL;
-        for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-            if (args->exprs[i] == NULL)
-                return NULL;
-            const Type *t = args->exprs[i]->GetType();
-            if (t == NULL)
-                return NULL;
-            argTypes.push_back(t);
-            argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
+    std::vector<const Type *> argTypes;
+    std::vector<bool> argCouldBeNULL;
+    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+        if (args->exprs[i] == NULL)
+            return NULL;
+        const Type *t = args->exprs[i]->GetType();
+        if (t == NULL)
+            return NULL;
+        argTypes.push_back(t);
+        argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
+    }
+
+    FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+    if (fse != NULL) {
+        // Regular function call
+
+        if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
+            return NULL;
+
+        func = fse->TypeCheck();
+        if (func == NULL)
+            return NULL;
+
+        const PointerType *pt = 
+            dynamic_cast<const PointerType *>(func->GetType());
+        const FunctionType *ft = (pt == NULL) ? NULL : 
+            dynamic_cast<const FunctionType *>(pt->GetBaseType());
+        if (ft == NULL) {
+            Error(pos, "Valid function name must be used for function call.");
+            return NULL;
         }
 
-        FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
-        if (fse != NULL) {
-            // Regular function call
-
-            if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
+        if (ft->isTask) {
+            if (!isLaunch)
+                Error(pos, "\"launch\" expression needed to call function "
+                      "with \"task\" qualifier.");
+            if (!launchCountExpr)
                 return NULL;
 
-            func = fse->TypeCheck();
-            if (func == NULL)
+            launchCountExpr = 
+                TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
+                                "task launch count");
+            if (launchCountExpr == NULL)
                 return NULL;
-
-            const PointerType *pt = 
-                dynamic_cast<const PointerType *>(func->GetType());
-            const FunctionType *ft = (pt == NULL) ? NULL : 
-                dynamic_cast<const FunctionType *>(pt->GetBaseType());
-            if (ft == NULL) {
-                Error(pos, "Valid function name must be used for function call.");
-                return NULL;
-            }
-
-            if (ft->isTask) {
-                if (!isLaunch)
-                    Error(pos, "\"launch\" expression needed to call function "
-                          "with \"task\" qualifier.");
-                if (!launchCountExpr)
-                    return NULL;
-
-                launchCountExpr = 
-                    TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
-                                    "task launch count");
-                if (launchCountExpr == NULL)
-                    return NULL;
-            }
-            else {
-                if (isLaunch)
-                    Error(pos, "\"launch\" expression illegal with non-\"task\"-"
-                          "qualified function.");
-                Assert(launchCountExpr == NULL);
-            }
         }
         else {
-            // Call through a function pointer
-            const Type *fptrType = func->GetType();
-            if (fptrType == NULL)
-                return NULL;
+            if (isLaunch)
+                Error(pos, "\"launch\" expression illegal with non-\"task\"-"
+                      "qualified function.");
+            Assert(launchCountExpr == NULL);
+        }
+    }
+    else {
+        // Call through a function pointer
+        const Type *fptrType = func->GetType();
+        if (fptrType == NULL)
+            return NULL;
            
-            Assert(dynamic_cast<const PointerType *>(fptrType) != NULL);
-            const FunctionType *funcType = 
-                dynamic_cast<const FunctionType *>(fptrType->GetBaseType());
-            if (funcType == NULL) {
-                Error(pos, "Must provide function name or function pointer for "
-                      "function call expression.");
-                return NULL;
-            }
+        Assert(dynamic_cast<const PointerType *>(fptrType) != NULL);
+        const FunctionType *funcType = 
+            dynamic_cast<const FunctionType *>(fptrType->GetBaseType());
+        if (funcType == NULL) {
+            Error(pos, "Must provide function name or function pointer for "
+                  "function call expression.");
+            return NULL;
+        }
             
-            // Make sure we don't have too many arguments for the function
-            if ((int)argTypes.size() > funcType->GetNumParameters()) {
-                Error(args->pos, "Too many parameter values provided in "
-                      "function call (%d provided, %d expected).",
-                      (int)argTypes.size(), funcType->GetNumParameters());
-                return NULL;
-            }
-            // It's ok to have too few arguments, as long as the function's
-            // default parameter values have started by the time we run out
-            // of arguments
-            if ((int)argTypes.size() < funcType->GetNumParameters() &&
-                funcType->GetParameterDefault(argTypes.size()) == NULL) {
-                Error(args->pos, "Too few parameter values provided in "
-                      "function call (%d provided, %d expected).",
-                      (int)argTypes.size(), funcType->GetNumParameters());
-                return NULL;
-            }
+        // Make sure we don't have too many arguments for the function
+        if ((int)argTypes.size() > funcType->GetNumParameters()) {
+            Error(args->pos, "Too many parameter values provided in "
+                  "function call (%d provided, %d expected).",
+                  (int)argTypes.size(), funcType->GetNumParameters());
+            return NULL;
+        }
+        // It's ok to have too few arguments, as long as the function's
+        // default parameter values have started by the time we run out
+        // of arguments
+        if ((int)argTypes.size() < funcType->GetNumParameters() &&
+            funcType->GetParameterDefault(argTypes.size()) == NULL) {
+            Error(args->pos, "Too few parameter values provided in "
+                  "function call (%d provided, %d expected).",
+                  (int)argTypes.size(), funcType->GetNumParameters());
+            return NULL;
+        }
 
-            // Now make sure they can all type convert to the corresponding
-            // parameter types..
-            for (int i = 0; i < (int)argTypes.size(); ++i) {
-                if (i < funcType->GetNumParameters()) {
-                    // make sure it can type convert
-                    const Type *paramType = funcType->GetParameterType(i);
-                    if (CanConvertTypes(argTypes[i], paramType) == false &&
-                        !(argCouldBeNULL[i] == true &&
-                          dynamic_cast<const PointerType *>(paramType) != NULL)) {
-                        Error(args->exprs[i]->pos, "Can't convert argument of "
-                              "type \"%s\" to type \"%s\" for funcion call "
-                              "argument.", argTypes[i]->GetString().c_str(),
-                              paramType->GetString().c_str());
-                        return NULL;
-                    }
+        // Now make sure they can all type convert to the corresponding
+        // parameter types..
+        for (int i = 0; i < (int)argTypes.size(); ++i) {
+            if (i < funcType->GetNumParameters()) {
+                // make sure it can type convert
+                const Type *paramType = funcType->GetParameterType(i);
+                if (CanConvertTypes(argTypes[i], paramType) == false &&
+                    !(argCouldBeNULL[i] == true &&
+                      dynamic_cast<const PointerType *>(paramType) != NULL)) {
+                    Error(args->exprs[i]->pos, "Can't convert argument of "
+                          "type \"%s\" to type \"%s\" for funcion call "
+                          "argument.", argTypes[i]->GetString().c_str(),
+                          paramType->GetString().c_str());
+                    return NULL;
                 }
-                else
-                    // Otherwise the parameter default saves us.  It should
-                    // be there for sure, given the check right above the
-                    // for loop.
-                    Assert(funcType->GetParameterDefault(i) != NULL);
             }
+            else
+                // Otherwise the parameter default saves us.  It should
+                // be there for sure, given the check right above the
+                // for loop.
+                Assert(funcType->GetParameterDefault(i) != NULL);
+        }
 
-            if (fptrType->IsVaryingType() && 
-                funcType->GetReturnType()->IsUniformType()) {
-                Error(pos, "Illegal to call a varying function pointer that "
-                      "points to a function with a uniform return type.");
-                return NULL;
-            }
+        if (fptrType->IsVaryingType() && 
+            funcType->GetReturnType()->IsUniformType()) {
+            Error(pos, "Illegal to call a varying function pointer that "
+                  "points to a function with a uniform return type.");
+            return NULL;
         }
     }
 
@@ -2834,9 +2807,6 @@ ExprList::Optimize() {
 
 ExprList *
 ExprList::TypeCheck() {
-    for (unsigned int i = 0; i < exprs.size(); ++i)
-        if (exprs[i])
-            exprs[i] = exprs[i]->TypeCheck();
     return this;
 }
 
@@ -3199,16 +3169,11 @@ IndexExpr::Optimize() {
 
 Expr *
 IndexExpr::TypeCheck() {
-    if (baseExpr) 
-        baseExpr = baseExpr->TypeCheck();
-    if (index) 
-        index = index->TypeCheck();
-    
-    if (!baseExpr || !index || !index->GetType())
+    if (baseExpr == NULL || index == NULL || index->GetType() == NULL)
         return NULL;
 
     const Type *baseExprType = baseExpr->GetType();
-    if (!baseExprType)
+    if (baseExprType == NULL)
         return NULL;
 
     if (!dynamic_cast<const SequentialType *>(baseExprType->GetReferenceTarget()) &&
@@ -3741,8 +3706,6 @@ MemberExpr::GetLValueType() const {
 
 Expr *
 MemberExpr::TypeCheck() {
-    if (expr) 
-        expr = expr->TypeCheck();
     return expr ? this : NULL;
 }
 
@@ -5268,7 +5231,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, false, pos);
-            arrayAsPtr = arrayAsPtr->TypeCheck();
+            arrayAsPtr = ::TypeCheck(arrayAsPtr);
             Assert(arrayAsPtr != NULL);
             arrayAsPtr = ::Optimize(arrayAsPtr);
             Assert(arrayAsPtr != NULL);
@@ -5435,8 +5398,6 @@ lDeconstifyType(const Type *t) {
 
 Expr *
 TypeCastExpr::TypeCheck() {
-    if (expr != NULL) 
-        expr = expr->TypeCheck();
     if (expr == NULL)
         return NULL;
 
@@ -5448,7 +5409,7 @@ TypeCastExpr::TypeCheck() {
         toType->IsVaryingType()) {
         TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(),
                                              expr, false, pos);
-        return tce->TypeCheck();
+        return ::TypeCheck(tce);
     }
 
     fromType = lDeconstifyType(fromType);
@@ -5699,8 +5660,6 @@ ReferenceExpr::Optimize() {
 
 Expr *
 ReferenceExpr::TypeCheck() {
-    if (expr != NULL) 
-        expr = expr->TypeCheck();
     if (expr == NULL)
         return NULL;
     return this;
@@ -5797,8 +5756,6 @@ DereferenceExpr::GetType() const {
 
 Expr *
 DereferenceExpr::TypeCheck() {
-    if (expr != NULL)
-        expr = expr->TypeCheck();
     if (expr == NULL)
         return NULL;
     return this;
@@ -5896,8 +5853,6 @@ AddressOfExpr::Print() const {
 
 Expr *
 AddressOfExpr::TypeCheck() {
-    if (expr != NULL)
-        expr = expr->TypeCheck();
     return this;
 }
 
@@ -5964,8 +5919,6 @@ SizeOfExpr::Print() const {
 
 Expr *
 SizeOfExpr::TypeCheck() {
-    if (expr != NULL)
-        expr = expr->TypeCheck();
     return this;
 }
 

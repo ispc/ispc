@@ -88,8 +88,6 @@ ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 ExprStmt::TypeCheck() {
-    if (expr) 
-        expr = expr->TypeCheck();
     return this;
 }
 
@@ -420,18 +418,13 @@ Stmt *
 DeclStmt::TypeCheck() {
     bool encounteredError = false;
     for (unsigned int i = 0; i < vars.size(); ++i) {
-        if (!vars[i].sym) {
+        if (vars[i].sym == NULL) {
             encounteredError = true;
             continue;
         }
 
         if (vars[i].init == NULL)
             continue;
-        vars[i].init = vars[i].init->TypeCheck();
-        if (vars[i].init == NULL) {
-            encounteredError = true;
-            continue;
-        }
 
         // get the right type for stuff like const float foo = 2; so that
         // the int->float type conversion is in there and we don't return
@@ -566,24 +559,17 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *
 IfStmt::TypeCheck() {
     if (test != NULL) {
-        test = test->TypeCheck();
-        if (test != NULL) {
-            const Type *testType = test->GetType();
-            if (testType != NULL) {
-                bool isUniform = (testType->IsUniformType() && 
-                                  !g->opt.disableUniformControlFlow);
-                test = TypeConvertExpr(test, isUniform ? AtomicType::UniformBool : 
-                                                         AtomicType::VaryingBool, 
-                                       "\"if\" statement test");
-                if (test == NULL)
-                    return NULL;
-            }
+        const Type *testType = test->GetType();
+        if (testType != NULL) {
+            bool isUniform = (testType->IsUniformType() && 
+                              !g->opt.disableUniformControlFlow);
+            test = TypeConvertExpr(test, isUniform ? AtomicType::UniformBool : 
+                                                     AtomicType::VaryingBool, 
+                                   "\"if\" statement test");
+            if (test == NULL)
+                return NULL;
         }
     }
-    if (trueStmts != NULL)
-        trueStmts = trueStmts->TypeCheck();
-    if (falseStmts != NULL) 
-        falseStmts = falseStmts->TypeCheck();
 
     return this;
 }
@@ -1122,43 +1108,38 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 DoStmt::TypeCheck() {
-    if (testExpr) {
-        testExpr = testExpr->TypeCheck();
-        if (testExpr) {
-            const Type *testType = testExpr->GetType();
-            if (testType) {
-                if (!testType->IsNumericType() && !testType->IsBoolType()) {
-                    Error(testExpr->pos, "Type \"%s\" can't be converted to boolean for \"while\" "
-                          "test in \"do\" loop.", testExpr->GetType()->GetString().c_str());
-                    return NULL;
-                }
-
-                // Should the test condition for the loop be uniform or
-                // varying?  It can be uniform only if three conditions are
-                // met.  First and foremost, the type of the test condition
-                // must be uniform.  Second, the user must not have set the
-                // dis-optimization option that disables uniform flow
-                // control.
-                //
-                // Thirdly, and most subtlely, there must not be any break
-                // or continue statements inside the loop that are within
-                // the scope of a 'varying' if statement.  If there are,
-                // then we type cast the test to be 'varying', so that the
-                // code generated for the loop includes masking stuff, so
-                // that we can track which lanes actually want to be
-                // running, accounting for breaks/continues.
-                bool uniformTest = (testType->IsUniformType() &&
-                                    !g->opt.disableUniformControlFlow &&
-                                    !lHasVaryingBreakOrContinue(bodyStmts));
-                testExpr = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
-                                                          AtomicType::VaryingBool,
-                                            testExpr, false, testExpr->pos);
-            }
+    const Type *testType;
+    if (testExpr != NULL && (testType = testExpr->GetType()) != NULL) {
+        if (!testType->IsNumericType() && !testType->IsBoolType()) {
+            Error(testExpr->pos, "Type \"%s\" can't be converted to boolean for \"while\" "
+                  "test in \"do\" loop.", testExpr->GetType()->GetString().c_str());
+            return NULL;
         }
+
+        // Should the test condition for the loop be uniform or varying?
+        // It can be uniform only if three conditions are met:
+        //
+        // - First and foremost, the type of the test condition must be
+        //   uniform.
+        //
+        // - Second, the user must not have set the dis-optimization option
+        //   that disables uniform flow control.
+        //
+        // - Thirdly, and most subtlely, there must not be any break or
+        //   continue statements inside the loop that are within the scope
+        //   of a 'varying' if statement.  If there are, then we type cast
+        //   the test to be 'varying', so that the code generated for the
+        //   loop includes masking stuff, so that we can track which lanes
+        //   actually want to be running, accounting for breaks/continues.
+        //
+        bool uniformTest = (testType->IsUniformType() &&
+                            !g->opt.disableUniformControlFlow &&
+                            !lHasVaryingBreakOrContinue(bodyStmts));
+        testExpr = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
+                                                  AtomicType::VaryingBool,
+                                    testExpr, false, testExpr->pos);
     }
 
-    if (bodyStmts) 
-        bodyStmts = bodyStmts->TypeCheck();
     return this;
 }
 
@@ -1324,35 +1305,27 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 ForStmt::TypeCheck() {
-    if (test) {
-        test = test->TypeCheck();
-        if (test) {
-            const Type *testType = test->GetType();
-            if (testType) {
-                if (!testType->IsNumericType() && !testType->IsBoolType()) {
-                    Error(test->pos, "Type \"%s\" can't be converted to boolean for for loop test.",
-                          test->GetType()->GetString().c_str());
-                    return NULL;
-                }
-
-                // See comments in DoStmt::TypeCheck() regarding
-                // 'uniformTest' and the type cast here.
-                bool uniformTest = (testType->IsUniformType() &&
-                                    !g->opt.disableUniformControlFlow &&
-                                    !lHasVaryingBreakOrContinue(stmts));
-                test = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
-                                                      AtomicType::VaryingBool,
-                                        test, false, test->pos);
-            }
+    const Type *testType;
+    if (test && (testType = test->GetType()) != NULL) {
+        if (!testType->IsNumericType() && !testType->IsBoolType()) {
+            Error(test->pos, "Type \"%s\" can't be converted to boolean for \"for\" "
+                  "loop test.", test->GetType()->GetString().c_str());
+            return NULL;
         }
+
+        // See comments in DoStmt::TypeCheck() regarding
+        // 'uniformTest' and the type cast here.
+        bool uniformTest = (testType->IsUniformType() &&
+                            !g->opt.disableUniformControlFlow &&
+                            !lHasVaryingBreakOrContinue(stmts));
+        test = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
+                                AtomicType::VaryingBool,
+                                test, false, test->pos);
+        test = ::TypeCheck(test);
+        if (test == NULL)
+            return NULL;
     }
 
-    if (init) 
-        init = init->TypeCheck();
-    if (step) 
-        step = step->TypeCheck();
-    if (stmts) 
-        stmts = stmts->TypeCheck();
     return this;
 }
 
@@ -1813,9 +1786,6 @@ Stmt *
 ForeachStmt::TypeCheck() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
-        // Typecheck first, to resolve function overloads
-        if (startExprs[i] != NULL)
-            startExprs[i] = startExprs[i]->TypeCheck();
         if (startExprs[i] != NULL)
             startExprs[i] = TypeConvertExpr(startExprs[i], 
                                             AtomicType::UniformInt32, 
@@ -1824,16 +1794,10 @@ ForeachStmt::TypeCheck() {
     }
     for (unsigned int i = 0; i < endExprs.size(); ++i) {
         if (endExprs[i] != NULL)
-            endExprs[i] = endExprs[i]->TypeCheck();
-        if (endExprs[i] != NULL)
             endExprs[i] = TypeConvertExpr(endExprs[i], AtomicType::UniformInt32,
                                           "foreach ending value");
         anyErrors |= (endExprs[i] == NULL);
     }
-
-    if (stmts != NULL) 
-        stmts = stmts->TypeCheck();
-    anyErrors |= (stmts == NULL);
 
     if (startExprs.size() < dimVariables.size()) {
         Error(pos, "Not enough initial values provided for \"foreach\" loop; "
@@ -1938,11 +1902,6 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 ReturnStmt::TypeCheck() {
-    // FIXME: We don't have ctx->functionType available here; should we?
-    // We ned up needing to type conversion stuff in EmitCode() method via
-    // FunctionEmitContext::SetReturnValue as a result, which is kind of ugly...
-    if (val)
-        val = val->TypeCheck();
     return this;
 }
 
@@ -1982,9 +1941,6 @@ StmtList::EmitCode(FunctionEmitContext *ctx) const {
 
 Stmt *
 StmtList::TypeCheck() {
-    for (unsigned int i = 0; i < stmts.size(); ++i)
-        if (stmts[i])
-            stmts[i] = stmts[i]->TypeCheck();
     return this;
 }
 
@@ -2194,8 +2150,6 @@ PrintStmt::Print(int indent) const {
 
 Stmt *
 PrintStmt::TypeCheck() {
-    if (values) 
-        values = values->TypeCheck();
     return this;
 }
 
@@ -2270,21 +2224,18 @@ AssertStmt::Print(int indent) const {
 
 Stmt *
 AssertStmt::TypeCheck() {
-    if (expr)
-        expr = expr->TypeCheck();
-    if (expr) {
-        const Type *type = expr->GetType();
-        if (type) {
-            bool isUniform = type->IsUniformType();
-            if (!type->IsNumericType() && !type->IsBoolType()) {
-                Error(expr->pos, "Type \"%s\" can't be converted to boolean for \"assert\".",
-                      type->GetString().c_str());
-                return NULL;
-            }
-            expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
-                                                AtomicType::VaryingBool, 
-                                    expr, false, expr->pos);
+    const Type *type;
+    if (expr && (type = expr->GetType()) != NULL) {
+        bool isUniform = type->IsUniformType();
+        if (!type->IsNumericType() && !type->IsBoolType()) {
+            Error(expr->pos, "Type \"%s\" can't be converted to boolean for \"assert\".",
+                  type->GetString().c_str());
+            return NULL;
         }
+        expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
+                                            AtomicType::VaryingBool, 
+                                expr, false, expr->pos);
+        expr = ::TypeCheck(expr);
     }
     return this;
 }

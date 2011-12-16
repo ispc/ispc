@@ -263,7 +263,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
                   "global variable \"%s\".", sym->name.c_str());
     }
     else if (initExpr != NULL) {
-        initExpr = initExpr->TypeCheck();
+        initExpr = TypeCheck(initExpr);
         if (initExpr != NULL) {
             // We need to make sure the initializer expression is
             // the same type as the global.  (But not if it's an
