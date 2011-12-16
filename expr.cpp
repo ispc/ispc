@@ -144,7 +144,7 @@ lArrayToPointer(Expr *expr) {
     Expr *addr = new AddressOfExpr(index, expr->pos);
     addr = addr->TypeCheck();
     Assert(addr != NULL);
-    addr = addr->Optimize();
+    addr = Optimize(addr);
     Assert(addr != NULL);
     return addr;
 }
@@ -843,11 +843,6 @@ UnaryExpr::GetType() const {
 
 Expr *
 UnaryExpr::Optimize() {
-    if (!expr)
-        return NULL;
-
-    expr = expr->Optimize();
-
     ConstExpr *constExpr = dynamic_cast<ConstExpr *>(expr);
     // If the operand isn't a constant, then we can't do any optimization
     // here...
@@ -1489,12 +1484,7 @@ lConstFoldBoolBinOp(BinaryExpr::Op op, const bool *v0, const bool *v1,
 
 Expr *
 BinaryExpr::Optimize() {
-    if (arg0 != NULL) 
-        arg0 = arg0->Optimize();
-    if (arg1 != NULL) 
-        arg1 = arg1->Optimize();
-
-    if (!arg0 || !arg1)
+    if (arg0 == NULL || arg1 == NULL)
         return NULL;
 
     ConstExpr *constArg0 = dynamic_cast<ConstExpr *>(arg0);
@@ -1519,7 +1509,7 @@ BinaryExpr::Optimize() {
                 e = e->TypeCheck();
                 if (e == NULL)
                     return NULL;
-                return e->Optimize();
+                return ::Optimize(e);
             }
         }
 
@@ -1542,7 +1532,7 @@ BinaryExpr::Optimize() {
                     rcpCall = rcpCall->TypeCheck();
                     if (rcpCall == NULL)
                         return NULL;
-                    rcpCall = rcpCall->Optimize();
+                    rcpCall = ::Optimize(rcpCall);
                     if (rcpCall == NULL)
                         return NULL;
 
@@ -1550,7 +1540,7 @@ BinaryExpr::Optimize() {
                     ret = ret->TypeCheck();
                     if (ret == NULL)
                         return NULL;
-                    return ret->Optimize();
+                    return ::Optimize(ret);
                 }
                 else
                     Warning(pos, "rcp() not found from stdlib.  Can't apply "
@@ -2089,13 +2079,8 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
 
 Expr *
 AssignExpr::Optimize() {
-    if (lvalue) 
-        lvalue = lvalue->Optimize();
-    if (rvalue) 
-        rvalue = rvalue->Optimize();
     if (lvalue == NULL || rvalue == NULL)
         return NULL;
-
     return this;
 }
 
@@ -2412,15 +2397,8 @@ SelectExpr::GetType() const {
 
 Expr *
 SelectExpr::Optimize() {
-    if (test) 
-        test = test->Optimize();
-    if (expr1) 
-        expr1 = expr1->Optimize();
-    if (expr2) 
-        expr2 = expr2->Optimize();
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
-
     return this;
 }
 
@@ -2650,16 +2628,8 @@ FunctionCallExpr::GetType() const {
 
 Expr *
 FunctionCallExpr::Optimize() {
-    if (func) 
-        func = func->Optimize();
-    if (args) 
-        args = args->Optimize();
-    if (launchCountExpr != NULL)
-        launchCountExpr = launchCountExpr->Optimize();
-
-    if (!func || !args)
+    if (func == NULL || args == NULL)
         return NULL;
-        
     return this;
 }
 
@@ -2858,9 +2828,6 @@ ExprList::GetType() const {
 
 ExprList *
 ExprList::Optimize() {
-    for (unsigned int i = 0; i < exprs.size(); ++i)
-        if (exprs[i])
-            exprs[i] = exprs[i]->Optimize();
     return this;
 }
 
@@ -3224,13 +3191,8 @@ IndexExpr::GetLValueType() const {
 
 Expr *
 IndexExpr::Optimize() {
-    if (baseExpr) 
-        baseExpr = baseExpr->Optimize();
-    if (index) 
-        index = index->Optimize();
     if (baseExpr == NULL || index == NULL)
         return NULL;
-
     return this;
 }
 
@@ -3787,8 +3749,6 @@ MemberExpr::TypeCheck() {
 
 Expr *
 MemberExpr::Optimize() {
-    if (expr) 
-        expr = expr->Optimize();
     return expr ? this : NULL;
 }
 
@@ -5310,7 +5270,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, false, pos);
             arrayAsPtr = arrayAsPtr->TypeCheck();
             Assert(arrayAsPtr != NULL);
-            arrayAsPtr = arrayAsPtr->Optimize();
+            arrayAsPtr = ::Optimize(arrayAsPtr);
             Assert(arrayAsPtr != NULL);
         }
         Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType));
@@ -5546,13 +5506,8 @@ TypeCastExpr::TypeCheck() {
 
 Expr *
 TypeCastExpr::Optimize() {
-    if (expr != NULL) 
-        expr = expr->Optimize();
-    if (expr == NULL)
-        return NULL;
-
     ConstExpr *constExpr = dynamic_cast<ConstExpr *>(expr);
-    if (!constExpr)
+    if (constExpr == NULL)
         // We can't do anything if this isn't a const expr
         return this;
 
@@ -5736,11 +5691,8 @@ ReferenceExpr::GetLValueType() const {
 
 Expr *
 ReferenceExpr::Optimize() {
-    if (expr) 
-        expr = expr->Optimize();
     if (expr == NULL)
         return NULL;
-
     return this;
 }
 
@@ -5855,8 +5807,6 @@ DereferenceExpr::TypeCheck() {
 
 Expr *
 DereferenceExpr::Optimize() {
-    if (expr != NULL) 
-        expr = expr->Optimize();
     if (expr == NULL)
         return NULL;
     return this;
@@ -5954,8 +5904,6 @@ AddressOfExpr::TypeCheck() {
 
 Expr *
 AddressOfExpr::Optimize() {
-    if (expr != NULL)
-        expr = expr->Optimize();
     return this;
 }
 
@@ -6024,8 +5972,6 @@ SizeOfExpr::TypeCheck() {
 
 Expr *
 SizeOfExpr::Optimize() {
-    if (expr != NULL)
-        expr = expr->Optimize();
     return this;
 }
 

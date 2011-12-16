@@ -225,3 +225,27 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
     else
         return node;
 }
+
+
+static ASTNode *
+lOptimizeNode(ASTNode *node, void *) {
+    return node->Optimize();
+}
+
+
+ASTNode *
+Optimize(ASTNode *root) {
+    return WalkAST(root, NULL, lOptimizeNode, NULL);
+}
+
+
+Expr *
+Optimize(Expr *expr) {
+    return (Expr *)Optimize((ASTNode *)expr);
+}
+
+
+Stmt *
+Optimize(Stmt *stmt) {
+    return (Stmt *)Optimize((ASTNode *)stmt);
+}

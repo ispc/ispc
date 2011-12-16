@@ -92,7 +92,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
         }
 
         if (code != NULL) {
-            code = code->Optimize();
+            code = Optimize(code);
             if (g->debugPrint) {
                 fprintf(stderr, "After optimizing function \"%s\":\n", 
                         sym->name.c_str());

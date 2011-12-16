@@ -59,6 +59,15 @@
 #include <llvm/Support/raw_ostream.h>
 
 ///////////////////////////////////////////////////////////////////////////
+// Stmt
+
+Stmt *
+Stmt::Optimize() {
+    return this;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // ExprStmt
 
 ExprStmt::ExprStmt(Expr *e, SourcePos p) 
@@ -74,14 +83,6 @@ ExprStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     if (expr) 
         expr->GetValue(ctx);
-}
-
-
-Stmt *
-ExprStmt::Optimize() {
-    if (expr) 
-        expr = expr->Optimize();
-    return this;
 }
 
 
@@ -345,7 +346,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     // FIXME: and this is only needed to re-establish
                     // constant-ness so that GetConstant below works for
                     // constant artithmetic expressions...
-                    initExpr = initExpr->Optimize();
+                    initExpr = ::Optimize(initExpr);
                 }
 
                 cinit = initExpr->GetConstant(sym->type);
@@ -388,10 +389,8 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 Stmt *
 DeclStmt::Optimize() {
     for (unsigned int i = 0; i < vars.size(); ++i) {
-        if (vars[i].init != NULL) {
-            vars[i].init = vars[i].init->Optimize();
-            Expr *init = vars[i].init;
-
+        Expr *init = vars[i].init;
+        if (init != NULL && dynamic_cast<ExprList *>(init) == NULL) {
             // If the variable is const-qualified, after we've optimized
             // the initializer expression, see if we have a ConstExpr.  If
             // so, save it in Symbol::constValue where it can be used in
@@ -408,8 +407,7 @@ DeclStmt::Optimize() {
             // computing array sizes from non-trivial expressions is
             // consequently limited.
             Symbol *sym = vars[i].sym;
-            if (sym->type && sym->type->IsConstType() && init != NULL && 
-                dynamic_cast<ExprList *>(init) == NULL &&
+            if (sym->type && sym->type->IsConstType() && 
                 Type::Equal(init->GetType(), sym->type))
                 sym->constValue = dynamic_cast<ConstExpr *>(init);
         }
@@ -566,18 +564,7 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-IfStmt::Optimize() {
-    if (test != NULL) 
-        test = test->Optimize();
-    if (trueStmts != NULL) 
-        trueStmts = trueStmts->Optimize();
-    if (falseStmts != NULL) 
-        falseStmts = falseStmts->Optimize();
-    return this;
-}
-
-
-Stmt *IfStmt::TypeCheck() {
+IfStmt::TypeCheck() {
     if (test != NULL) {
         test = test->TypeCheck();
         if (test != NULL) {
@@ -1134,16 +1121,6 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-DoStmt::Optimize() {
-    if (testExpr) 
-        testExpr = testExpr->Optimize();
-    if (bodyStmts) 
-        bodyStmts = bodyStmts->Optimize();
-    return this;
-}
-
-
-Stmt *
 DoStmt::TypeCheck() {
     if (testExpr) {
         testExpr = testExpr->TypeCheck();
@@ -1346,20 +1323,6 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-ForStmt::Optimize() {
-    if (test) 
-        test = test->Optimize();
-    if (init) 
-        init = init->Optimize();
-    if (step) 
-        step = step->Optimize();
-    if (stmts) 
-        stmts = stmts->Optimize();
-    return this;
-}
-
-
-Stmt *
 ForStmt::TypeCheck() {
     if (test) {
         test = test->TypeCheck();
@@ -1451,12 +1414,6 @@ BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-BreakStmt::Optimize() {
-    return this;
-}
-
-
-Stmt *
 BreakStmt::TypeCheck() {
     return this;
 }
@@ -1492,12 +1449,6 @@ ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     ctx->Continue(doCoherenceCheck);
-}
-
-
-Stmt *
-ContinueStmt::Optimize() {
-    return this;
 }
 
 
@@ -1859,28 +1810,6 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-ForeachStmt::Optimize() {
-    bool anyErrors = false;
-    for (unsigned int i = 0; i < startExprs.size(); ++i) {
-        if (startExprs[i] != NULL)
-            startExprs[i] = startExprs[i]->Optimize();
-        anyErrors |= (startExprs[i] == NULL);
-    }
-    for (unsigned int i = 0; i < endExprs.size(); ++i) {
-        if (endExprs[i] != NULL)
-            endExprs[i] = endExprs[i]->Optimize();
-        anyErrors |= (endExprs[i] == NULL);
-    }
-
-    if (stmts != NULL) 
-        stmts = stmts->TypeCheck();
-    anyErrors |= (stmts == NULL);
-
-    return anyErrors ? NULL : this;
-}
-
-
-Stmt *
 ForeachStmt::TypeCheck() {
     bool anyErrors = false;
     for (unsigned int i = 0; i < startExprs.size(); ++i) {
@@ -2008,14 +1937,6 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
 
 
 Stmt *
-ReturnStmt::Optimize() {
-    if (val) 
-        val = val->Optimize();
-    return this;
-}
-
-
-Stmt *
 ReturnStmt::TypeCheck() {
     // FIXME: We don't have ctx->functionType available here; should we?
     // We ned up needing to type conversion stuff in EmitCode() method via
@@ -2056,15 +1977,6 @@ StmtList::EmitCode(FunctionEmitContext *ctx) const {
         if (stmts[i])
             stmts[i]->EmitCode(ctx);
     ctx->EndScope();
-}
-
-
-Stmt *
-StmtList::Optimize() {
-    for (unsigned int i = 0; i < stmts.size(); ++i)
-        if (stmts[i])
-            stmts[i] = stmts[i]->Optimize();
-    return this;
 }
 
 
@@ -2281,14 +2193,6 @@ PrintStmt::Print(int indent) const {
 
 
 Stmt *
-PrintStmt::Optimize() {
-    if (values) 
-        values = values->Optimize();
-    return this;
-}
-
-
-Stmt *
 PrintStmt::TypeCheck() {
     if (values) 
         values = values->TypeCheck();
@@ -2361,14 +2265,6 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
 void
 AssertStmt::Print(int indent) const {
     printf("%*cAssert Stmt (%s)", indent, ' ', message.c_str());
-}
-
-
-Stmt *
-AssertStmt::Optimize() {
-    if (expr)
-        expr = expr->Optimize();
-    return this;
 }
 
 

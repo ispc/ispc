@@ -273,7 +273,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
                 initExpr = TypeConvertExpr(initExpr, sym->type, "initializer");
             
             if (initExpr != NULL) {
-                initExpr = initExpr->Optimize();
+                initExpr = Optimize(initExpr);
                 // Fingers crossed, now let's see if we've got a
                 // constant value..
                 llvmInitializer = initExpr->GetConstant(sym->type);

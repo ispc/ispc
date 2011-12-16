@@ -60,8 +60,10 @@ public:
     virtual void Print(int indent) const = 0;
 
     // Redeclare these methods with Stmt * return values, rather than
-    // ASTNode *s, as in the original ASTNode declarations of them.
-    virtual Stmt *Optimize() = 0;
+    // ASTNode *s, as in the original ASTNode declarations of them.  We'll
+    // also provide a default implementation of Optimize(), since most
+    // Stmts don't have anything to do here.
+    virtual Stmt *Optimize();
     virtual Stmt *TypeCheck() = 0;
 };
 
@@ -74,7 +76,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -117,7 +118,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -158,7 +158,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -179,7 +178,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -206,7 +204,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -228,7 +225,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -253,7 +249,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -275,7 +270,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -297,7 +291,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -323,7 +316,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 
@@ -350,7 +342,6 @@ public:
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
-    Stmt *Optimize();
     Stmt *TypeCheck();
     int EstimateCost() const;
 

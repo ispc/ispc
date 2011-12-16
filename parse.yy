@@ -1677,7 +1677,7 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
     expr = expr->TypeCheck();
     if (expr == NULL)
         return false;
-    expr = expr->Optimize();
+    expr = Optimize(expr);
     if (expr == NULL)
         return false;
 
@@ -1754,7 +1754,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                us end up with a ConstExpr with the desired EnumType... */
             Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
                                               false, enums[i]->pos);
-            castExpr = castExpr->Optimize();
+            castExpr = Optimize(castExpr);
             enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
             Assert(enums[i]->constValue != NULL);
         }

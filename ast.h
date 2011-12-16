@@ -53,10 +53,11 @@ public:
     virtual ~ASTNode();
 
     /** The Optimize() method should perform any appropriate early-stage
-        optimizations on the node (e.g. constant folding).  The caller
-        should use the returned ASTNode * in place of the original node.
-        This method may return NULL if an error is encountered during
-        optimization. */
+        optimizations on the node (e.g. constant folding).  This method
+        will be called after the node's children have already been
+        optimized, and the caller will store the returned ASTNode * in
+        place of the original node.  This method should return NULL if an
+        error is encountered during optimization. */
     virtual ASTNode *Optimize() = 0;
 
     /** Type checking should be performed by the node when this method is
@@ -111,5 +112,9 @@ typedef ASTNode * (* ASTPostCallBackFunc)(ASTNode *node, void *data);
     postFunc call is ignored. */
 extern ASTNode *WalkAST(ASTNode *root, ASTPreCallBackFunc preFunc,
                         ASTPostCallBackFunc postFunc, void *data);
+
+extern Expr *Optimize(Expr *);
+extern Stmt *Optimize(Stmt *);
+extern ASTNode *Optimize(ASTNode *root);
 
 #endif // ISPC_AST_H
