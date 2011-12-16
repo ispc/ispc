@@ -937,54 +937,6 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 ///////////////////////////////////////////////////////////////////////////
 // DoStmt
 
-/** Given a statment, walk through it to see if there is a 'break' or
-    'continue' statement inside if its children, under varying control
-    flow.  We need to detect this case for loops since what might otherwise
-    look like a 'uniform' loop needs to have code emitted to do all of the
-    lane management stuff if this is the case.
- */ 
-static bool
-lHasVaryingBreakOrContinue(Stmt *stmt, bool inVaryingCF = false) {
-    StmtList *sl;
-    IfStmt *is;
-
-    if ((sl = dynamic_cast<StmtList *>(stmt)) != NULL) {
-        // Recurse through the children statements 
-        const std::vector<Stmt *> &stmts = sl->GetStatements();
-        for (unsigned int i = 0; i < stmts.size(); ++i)
-            if (lHasVaryingBreakOrContinue(stmts[i], inVaryingCF))
-                return true;
-    }
-    else if ((is = dynamic_cast<IfStmt *>(stmt)) != NULL) {
-        // We've come to an 'if'.  Is the test type varying?  If so, then
-        // we're under 'varying' control flow when we recurse through the
-        // true and false statements.
-        if (is->test != NULL) {
-            const Type *type = is->test->GetType();
-            if (type)
-                inVaryingCF |= type->IsVaryingType();
-        }
-
-        if (lHasVaryingBreakOrContinue(is->trueStmts, inVaryingCF) ||
-            lHasVaryingBreakOrContinue(is->falseStmts, inVaryingCF))
-            return true;
-    }
-    else if (dynamic_cast<BreakStmt *>(stmt) != NULL) {
-        if (inVaryingCF)
-            return true;
-    }
-    else if (dynamic_cast<ContinueStmt *>(stmt) != NULL) {
-        if (inVaryingCF)
-            return true;
-    }
-    // Important: note that we don't recurse into do/for loops here but
-    // just return false.  For the question of whether a given loop needs
-    // to do mask management stuff, breaks/continues inside nested loops
-    // inside of them don't matter.
-    return false;
-}
-
-
 struct VaryingBCCheckInfo {
     VaryingBCCheckInfo() {
         varyingControlFlowDepth = 0;
@@ -1054,8 +1006,14 @@ lVaryingBCPostFunc(ASTNode *node, void *d) {
 }
 
 
+/** Given a statment, walk through it to see if there is a 'break' or
+    'continue' statement inside if its children, under varying control
+    flow.  We need to detect this case for loops since what might otherwise
+    look like a 'uniform' loop needs to have code emitted to do all of the
+    lane management stuff if this is the case.
+ */ 
 static bool
-lHasVaryingBreakOrContinue2(Stmt *stmt) {
+lHasVaryingBreakOrContinue(Stmt *stmt) {
     VaryingBCCheckInfo info;
     WalkAST(stmt, lVaryingBCPreFunc, lVaryingBCPostFunc, &info);
     return info.foundVaryingBreakOrContinue;
@@ -1212,9 +1170,6 @@ DoStmt::TypeCheck() {
                 // code generated for the loop includes masking stuff, so
                 // that we can track which lanes actually want to be
                 // running, accounting for breaks/continues.
-                assert(lHasVaryingBreakOrContinue(bodyStmts) ==
-                       lHasVaryingBreakOrContinue2(bodyStmts));
-                       
                 bool uniformTest = (testType->IsUniformType() &&
                                     !g->opt.disableUniformControlFlow &&
                                     !lHasVaryingBreakOrContinue(bodyStmts));
@@ -1275,9 +1230,6 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool uniformTest = test ? test->GetType()->IsUniformType() :
         (!g->opt.disableUniformControlFlow &&
          !lHasVaryingBreakOrContinue(stmts));
-
-    assert(lHasVaryingBreakOrContinue(stmts) ==
-           lHasVaryingBreakOrContinue2(stmts));
 
     ctx->StartLoop(bexit, bstep, uniformTest);
     ctx->SetDebugPos(pos);
@@ -1422,8 +1374,6 @@ ForStmt::TypeCheck() {
 
                 // See comments in DoStmt::TypeCheck() regarding
                 // 'uniformTest' and the type cast here.
-                assert(lHasVaryingBreakOrContinue(stmts) ==
-                       lHasVaryingBreakOrContinue2(stmts));
                 bool uniformTest = (testType->IsUniformType() &&
                                     !g->opt.disableUniformControlFlow &&
                                     !lHasVaryingBreakOrContinue(stmts));
@@ -1449,8 +1399,6 @@ ForStmt::EstimateCost() const {
     bool uniformTest = test ? test->GetType()->IsUniformType() :
         (!g->opt.disableUniformControlFlow &&
          !lHasVaryingBreakOrContinue(stmts));
-    assert(lHasVaryingBreakOrContinue(stmts) ==
-           lHasVaryingBreakOrContinue2(stmts));
 
     return ((init ? init->EstimateCost() : 0) +
             (test ? test->EstimateCost() : 0) +
