@@ -655,6 +655,72 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 }
 
 
+
+static void
+lCheckAllOffSafety(ASTNode *node, void *data) {
+    bool *okPtr = (bool *)data;
+
+    if (dynamic_cast<FunctionCallExpr *>(node) != NULL)
+        // FIXME: If we could somehow determine that the function being
+        // called was safe (and all of the args Exprs were safe, then it'd
+        // be nice to be able to return true here.  (Consider a call to
+        // e.g. floatbits() in the stdlib.)  Unfortunately for now we just
+        // have to be conservative.
+        *okPtr = false;
+
+    if (dynamic_cast<AssertStmt *>(node) != NULL)
+        // While this is fine for varying tests, it's not going to be
+        // desirable to check an assert on a uniform variable if all of the
+        // lanes are off.
+        *okPtr = false;
+
+    IndexExpr *ie;
+    if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {
+        const Type *type = ie->baseExpr->GetType();
+        if (type == NULL)
+            return;
+        if (dynamic_cast<const ReferenceType *>(type) != NULL)
+            type = type->GetReferenceTarget();
+
+        ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
+        if (ce == NULL) {
+            // indexing with a variable...
+            *okPtr = false;
+            return;
+        }
+
+        const PointerType *pointerType = 
+            dynamic_cast<const PointerType *>(type);
+        if (pointerType != NULL) {
+            // pointer[index] -> can't be sure
+            *okPtr = false;
+            return;
+        }
+
+        const SequentialType *seqType = 
+            dynamic_cast<const SequentialType *>(type);
+        Assert(seqType != NULL);
+        int nElements = seqType->GetElementCount();
+        if (nElements == 0) {
+            // Unsized array, so we can't be sure
+            *okPtr = false;
+            return;
+        }
+
+        int32_t indices[ISPC_MAX_NVEC];
+        int count = ce->AsInt32(indices);
+        for (int i = 0; i < count; ++i) {
+            if (indices[i] < 0 || indices[i] >= nElements) {
+                *okPtr = false;
+                return;
+            }
+        }
+
+        // All indices are in-bounds
+    }
+}
+
+
 /** Similar to the Stmt variant of this function, this conservatively
     checks to see if it's safe to run the code for the given Expr even if
     the mask is 'all off'.
@@ -662,7 +728,7 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 static bool
 lSafeToRunWithAllLanesOff(Expr *expr) {
     if (expr == NULL)
-        return false;
+        return true;
 
     UnaryExpr *ue;
     if ((ue = dynamic_cast<UnaryExpr *>(expr)) != NULL)
@@ -925,8 +991,14 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         bool costIsAcceptable = ((trueStmts ? trueStmts->EstimateCost() : 0) + 
                                  (falseStmts ? falseStmts->EstimateCost() : 0)) < 
             PREDICATE_SAFE_IF_STATEMENT_COST;
-        if (lSafeToRunWithAllLanesOff(trueStmts) &&
-            lSafeToRunWithAllLanesOff(falseStmts) &&
+
+        bool safeToRunWithAllLanesOff = true;
+        WalkAST(trueStmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
+        WalkAST(falseStmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
+        assert(safe == (lSafeToRunWithAllLanesOff(trueStmts) &
+                        lSafeToRunWithAllLanesOff(falseStmts)));
+
+        if (safeToRunWithAllLanesOff &&
             (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
             emitMaskedTrueAndFalse(ctx, oldMask, ltest);

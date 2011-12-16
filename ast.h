@@ -91,4 +91,15 @@ private:
     std::vector<Function *> functions;
 };
 
+
+typedef void (* ASTCallBackFunc)(ASTNode *node, void *data);
+
+/** Walk (some portion of) an AST, starting from the given root node.  At
+    each node, if preFunc is non-NULL, call it preFunc, passing the given
+    void *data pointer.  Makes recursive calls to WalkAST() to process the
+    node's children; after doing so, postFunc, if non-NULL is called at the
+    node. */
+extern void WalkAST(ASTNode *root, ASTCallBackFunc preFunc,
+                    ASTCallBackFunc postFunc, void *data);
+
 #endif // ISPC_AST_H
