@@ -302,9 +302,7 @@ public:
     int EstimateCost() const;
 
     void Add(Stmt *s) { if (s) stmts.push_back(s); }
-    const std::vector<Stmt *> &GetStatements() { return stmts; }
 
-private:
     std::vector<Stmt *> stmts;
 };
 

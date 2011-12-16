@@ -997,12 +997,12 @@ lVaryingBCPreFunc(ASTNode *node, void *d) {
 /** Postorder callback function for checking for varying breaks or
     continues; decrement the varying control flow depth after the node's
     children have been processed, if this is a varying if statement. */
-static bool
+static ASTNode *
 lVaryingBCPostFunc(ASTNode *node, void *d) {
     VaryingBCCheckInfo *info = (VaryingBCCheckInfo *)d;
     if (lIsVaryingFor(node))
         --info->varyingControlFlowDepth;
-    return true;
+    return node;
 }
 
 

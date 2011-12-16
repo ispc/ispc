@@ -387,9 +387,8 @@ Function::GenerateIR() {
     SourcePos firstStmtPos = sym->pos;
     if (code) {
         StmtList *sl = dynamic_cast<StmtList *>(code);
-        if (sl && sl->GetStatements().size() > 0 && 
-            sl->GetStatements()[0] != NULL)
-            firstStmtPos = sl->GetStatements()[0]->pos;
+        if (sl && sl->stmts.size() > 0 && sl->stmts[0] != NULL)
+            firstStmtPos = sl->stmts[0]->pos;
         else
             firstStmtPos = code->pos;
     }
