@@ -92,13 +92,17 @@ private:
 };
 
 
-typedef void (* ASTCallBackFunc)(ASTNode *node, void *data);
+/** Callback function type for the AST walk.
+ */
+typedef bool (* ASTCallBackFunc)(ASTNode *node, void *data);
 
 /** Walk (some portion of) an AST, starting from the given root node.  At
-    each node, if preFunc is non-NULL, call it preFunc, passing the given
-    void *data pointer.  Makes recursive calls to WalkAST() to process the
-    node's children; after doing so, postFunc, if non-NULL is called at the
-    node. */
+    each node, if preFunc is non-NULL, call it, passing the given void
+    *data pointer; if the call to preFunc function returns false, then the
+    children of the node aren't visited.  This then makes recursive calls
+    to WalkAST() to process the node's children; after doing so, calls
+    postFunc, at the node.  The return value from the postFunc call is
+    ignored. */
 extern void WalkAST(ASTNode *root, ASTCallBackFunc preFunc,
                     ASTCallBackFunc postFunc, void *data);
 

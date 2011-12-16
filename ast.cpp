@@ -75,8 +75,11 @@ WalkAST(ASTNode *node, ASTCallBackFunc preFunc, ASTCallBackFunc postFunc,
         return;
 
     // Call the callback function
-    if (preFunc != NULL)
-        preFunc(node, data);
+    if (preFunc != NULL) {
+        if (preFunc(node, data) == false)
+            // The function asked us to not continue recursively, so stop.
+            return;
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // Handle Statements
