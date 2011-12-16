@@ -273,3 +273,19 @@ Stmt *
 TypeCheck(Stmt *stmt) {
     return (Stmt *)TypeCheck((ASTNode *)stmt);
 }
+
+
+static bool
+lCostCallback(ASTNode *node, void *c) {
+    int *cost = (int *)c;
+    *cost += node->EstimateCost();
+    return true;
+}
+
+
+int
+EstimateCost(ASTNode *root) {
+    int cost = 0;
+    WalkAST(root, lCostCallback, NULL, &cost);
+    return cost;
+}

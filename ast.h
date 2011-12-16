@@ -66,6 +66,9 @@ public:
         pointer in place of the original ASTNode *. */
     virtual ASTNode *TypeCheck() = 0;
 
+    /** Estimate the execution cost of the node (not including the cost of
+        the children.  The value returned should be based on the COST_*
+        enumerant values defined in ispc.h. */
     virtual int EstimateCost() const = 0;
 
     /** All AST nodes must track the file position where they are
@@ -127,14 +130,18 @@ extern Expr *Optimize(Expr *);
     to a Stmt *). */ 
 extern Stmt *Optimize(Stmt *);
 
-/* Perform type-checking on the given AST (or portion of one), returning a
-   pointer to the root of the resulting AST. */
+/** Perform type-checking on the given AST (or portion of one), returning a
+    pointer to the root of the resulting AST. */
 extern ASTNode *TypeCheck(ASTNode *root);
 
-/* Convenience version of TypeCheck() for Expr *s that returns an Expr *. */
+/** Convenience version of TypeCheck() for Expr *s that returns an Expr *. */
 extern Expr *TypeCheck(Expr *);
 
-/* Convenience version of TypeCheck() for Stmt *s that returns an Stmt *. */
+/** Convenience version of TypeCheck() for Stmt *s that returns an Stmt *. */
 extern Stmt *TypeCheck(Stmt *);
+
+/** Returns an estimate of the execution cost of the tree starting at
+    the given root. */
+extern int EstimateCost(ASTNode *root);
 
 #endif // ISPC_AST_H

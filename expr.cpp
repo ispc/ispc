@@ -989,7 +989,7 @@ UnaryExpr::TypeCheck() {
 
 int
 UnaryExpr::EstimateCost() const {
-    return (expr ? expr->EstimateCost() : 0) + COST_SIMPLE_ARITH_LOGIC_OP;
+    return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
 
@@ -1885,10 +1885,8 @@ BinaryExpr::TypeCheck() {
 
 int
 BinaryExpr::EstimateCost() const {
-    return ((arg0 ? arg0->EstimateCost() : 0) +
-            (arg1 ? arg1->EstimateCost() : 0) +
-            ((op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
-                                        COST_SIMPLE_ARITH_LOGIC_OP));
+    return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
+                                      COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
 
@@ -2204,15 +2202,12 @@ AssignExpr::TypeCheck() {
 
 int
 AssignExpr::EstimateCost() const {
-    int cost = ((lvalue ? lvalue->EstimateCost() : 0) +
-                (rvalue ? rvalue->EstimateCost() : 0));
-    cost += COST_ASSIGN;
     if (op == Assign)
-        return cost;
+        return COST_ASSIGN;
     if (op == DivAssign || op == ModAssign)
-        return cost + COST_COMPLEX_ARITH_OP;
+        return COST_ASSIGN + COST_COMPLEX_ARITH_OP;
     else
-        return cost + COST_SIMPLE_ARITH_LOGIC_OP;
+        return COST_ASSIGN + COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
 
@@ -2637,7 +2632,7 @@ FunctionCallExpr::TypeCheck() {
         if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
             return NULL;
 
-        func = fse->TypeCheck();
+        func = ::TypeCheck(fse);
         if (func == NULL)
             return NULL;
 
@@ -2742,28 +2737,20 @@ FunctionCallExpr::TypeCheck() {
 
 int
 FunctionCallExpr::EstimateCost() const {
-    int callCost = 0;
-    if (isLaunch) {
-        callCost = COST_TASK_LAUNCH;
-        if (launchCountExpr != NULL)
-            callCost += launchCountExpr->EstimateCost();
-    }
+    if (isLaunch)
+        return COST_TASK_LAUNCH;
     else if (dynamic_cast<FunctionSymbolExpr *>(func) == NULL) {
         // it's going through a function pointer
         const Type *fpType = func->GetType();
         if (fpType != NULL) {
             Assert(dynamic_cast<const PointerType *>(fpType) != NULL);
             if (fpType->IsUniformType())
-                callCost = COST_FUNPTR_UNIFORM;
+                return COST_FUNPTR_UNIFORM;
             else 
-                callCost = COST_FUNPTR_VARYING;
+                return COST_FUNPTR_VARYING;
         }
     }
-    else
-        // regular function call
-        callCost = COST_FUNCALL;
-
-    return (args ? args->EstimateCost() : 0) + callCost;
+    return COST_FUNCALL;
 }
 
 
@@ -2880,12 +2867,7 @@ ExprList::GetConstant(const Type *type) const {
 
 int
 ExprList::EstimateCost() const {
-    int cost = 0;
-    for (unsigned int i = 0; i < exprs.size(); ++i) {
-        if (exprs[i] != NULL)
-            cost += exprs[i]->EstimateCost();
-    }
-    return cost;
+    return 0;
 }
 
 

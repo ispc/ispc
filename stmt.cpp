@@ -107,7 +107,7 @@ ExprStmt::Print(int indent) const {
 
 int
 ExprStmt::EstimateCost() const {
-    return expr ? expr->EstimateCost() : 0;
+    return 0;
 }
 
 
@@ -467,11 +467,7 @@ DeclStmt::Print(int indent) const {
 
 int
 DeclStmt::EstimateCost() const {
-    int cost = 0;
-    for (unsigned int i = 0; i < vars.size(); ++i)
-        if (vars[i].init != NULL)
-            cost += vars[i].init->EstimateCost();
-    return cost;
+    return 0;
 }
 
 
@@ -577,15 +573,11 @@ IfStmt::TypeCheck() {
 
 int
 IfStmt::EstimateCost() const {
-    int ifcost = 0;
     const Type *type;
-    if (test && (type = test->GetType()) != NULL)
-        ifcost = type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
+    if (test == NULL || (type = test->GetType()) != NULL)
+        return 0;
 
-    return ifcost +
-        ((test ? test->EstimateCost() : 0) +
-         (trueStmts ? trueStmts->EstimateCost() : 0) +
-         (falseStmts ? falseStmts->EstimateCost() : 0));
+    return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
 }
 
 
@@ -766,9 +758,10 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         //
         // where our use of blend for conditional assignments doesn't check
         // for the 'all lanes' off case.
-        bool costIsAcceptable = ((trueStmts ? trueStmts->EstimateCost() : 0) + 
-                                 (falseStmts ? falseStmts->EstimateCost() : 0)) < 
-            PREDICATE_SAFE_IF_STATEMENT_COST;
+        int trueFalseCost = (::EstimateCost(trueStmts) + 
+                             ::EstimateCost(falseStmts));
+        bool costIsAcceptable = (trueFalseCost <
+                                 PREDICATE_SAFE_IF_STATEMENT_COST);
 
         bool safeToRunWithAllLanesOff = true;
         WalkAST(trueStmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
@@ -1146,8 +1139,11 @@ DoStmt::TypeCheck() {
 
 int
 DoStmt::EstimateCost() const {
-    return ((testExpr ? testExpr->EstimateCost() : 0) +
-            (bodyStmts ? bodyStmts->EstimateCost() : 0));
+    bool uniformTest = testExpr ? testExpr->GetType()->IsUniformType() :
+        (!g->opt.disableUniformControlFlow &&
+         !lHasVaryingBreakOrContinue(bodyStmts));
+
+    return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
 
@@ -1336,11 +1332,7 @@ ForStmt::EstimateCost() const {
         (!g->opt.disableUniformControlFlow &&
          !lHasVaryingBreakOrContinue(stmts));
 
-    return ((init ? init->EstimateCost() : 0) +
-            (test ? test->EstimateCost() : 0) +
-            (step ? step->EstimateCost() : 0) +
-            (stmts ? stmts->EstimateCost() : 0) +
-            (uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP));
+    return uniformTest ? COST_UNIFORM_LOOP : COST_VARYING_LOOP;
 }
 
 
@@ -1827,8 +1819,7 @@ ForeachStmt::TypeCheck() {
 
 int
 ForeachStmt::EstimateCost() const {
-    return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP) +
-        (stmts ? stmts->EstimateCost() : 0);
+    return dimVariables.size() * (COST_UNIFORM_LOOP + COST_SIMPLE_ARITH_LOGIC_OP);
 }
 
 
@@ -1908,7 +1899,7 @@ ReturnStmt::TypeCheck() {
 
 int
 ReturnStmt::EstimateCost() const {
-    return COST_RETURN + (val ? val->EstimateCost() : 0);
+    return COST_RETURN;
 }
 
 
@@ -1947,11 +1938,7 @@ StmtList::TypeCheck() {
 
 int
 StmtList::EstimateCost() const {
-    int cost = 0;
-    for (unsigned int i = 0; i < stmts.size(); ++i)
-        if (stmts[i])
-            cost += stmts[i]->EstimateCost();
-    return cost;
+    return 0;
 }
 
 
@@ -2156,7 +2143,7 @@ PrintStmt::TypeCheck() {
 
 int
 PrintStmt::EstimateCost() const {
-    return COST_FUNCALL + (values ? values->EstimateCost() : 0);
+    return COST_FUNCALL;
 }
 
 
@@ -2243,6 +2230,6 @@ AssertStmt::TypeCheck() {
 
 int
 AssertStmt::EstimateCost() const {
-    return (expr ? expr->EstimateCost() : 0) + COST_ASSERT;
+    return COST_ASSERT;
 }
 

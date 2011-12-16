@@ -277,7 +277,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         ctx->SetDebugPos(code->pos);
         ctx->AddInstrumentationPoint("function entry");
 
-        int costEstimate = code->EstimateCost();
+        int costEstimate = EstimateCost(code);
         Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
               sym->name.c_str(), costEstimate);
 
