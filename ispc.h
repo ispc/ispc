@@ -193,7 +193,7 @@ struct Target {
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { SSE2, SSE4, AVX, AVX2, NUM_ISAS };
+    enum ISA { SSE2, SSE4, AVX, AVX2, GENERIC, NUM_ISAS };
 
     /** Instruction set being compiled to. */
     ISA isa;
@@ -222,6 +222,23 @@ struct Target {
 
     /** Indicates whether position independent code should be generated. */
     bool generatePIC;
+
+    /** Is there overhead associated with masking on the target
+        architecture; e.g. there is on SSE, due to extra blends and the
+        like, but there isn't with an ISA that supports masking
+        natively. */
+    bool maskingIsFree;
+
+    /** Is it safe to run code with the mask all if: e.g. on SSE, the fast
+        gather trick assumes that at least one program instance is running
+        (so that it can safely assume that the array base pointer is
+        valid). */
+    bool allOffMaskIsSafe;
+
+    /** How many bits are used to store each element of the mask: e.g. this
+        is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
+        the generic target. */
+    int maskBitCount;
 };
 
 

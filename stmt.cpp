@@ -622,9 +622,6 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 
 /** Given an AST node, check to see if it's safe if we happen to run the
     code for that node with the execution mask all off.
-
-    FIXME: this is actually a target-specific thing; for non SSE/AVX
-    targets with more complete masking support, some of this won't apply...
  */
 static bool
 lCheckAllOffSafety(ASTNode *node, void *data) {
@@ -647,6 +644,11 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         *okPtr = false;
         return false;
     }
+
+    if (g->target.allOffMaskIsSafe == true)
+        // Don't worry about memory accesses if we have a target that can
+        // safely run them with the mask all off
+        return true;
 
     IndexExpr *ie;
     if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {

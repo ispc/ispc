@@ -1158,22 +1158,14 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     opts.addMacroDef("PI=3.1415926535");
 
     // Add #define for current compilation target
-    switch (g->target.isa) {
-    case Target::SSE2:
-        opts.addMacroDef("ISPC_TARGET_SSE2");
-        break;
-    case Target::SSE4:
-        opts.addMacroDef("ISPC_TARGET_SSE4");
-        break;
-    case Target::AVX:
-        opts.addMacroDef("ISPC_TARGET_AVX");
-        break;
-    case Target::AVX2:
-        opts.addMacroDef("ISPC_TARGET_AVX2");
-        break;
-    default:
-        FATAL("Unhandled target ISA in preprocessor symbol definition");
+    char targetMacro[128];
+    sprintf(targetMacro, "ISPC_TARGET_%s", g->target.GetISAString());
+    char *p = targetMacro;
+    while (*p) {
+        *p = toupper(*p);
+        ++p;
     }
+    opts.addMacroDef(targetMacro);
 
     if (g->target.is32Bit)
         opts.addMacroDef("ISPC_POINTER_SIZE=32");

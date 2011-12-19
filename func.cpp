@@ -288,7 +288,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         bool checkMask = (type->isTask == true) || 
             ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
-        if (checkMask && g->opt.disableCoherentControlFlow == false) {
+        checkMask &= (g->target.maskingIsFree == false);
+        checkMask &= (g->opt.disableCoherentControlFlow == false);
+
+        if (checkMask) {
             llvm::Value *mask = ctx->GetFunctionMask();
             llvm::Value *allOn = ctx->All(mask);
             llvm::BasicBlock *bbAllOn = ctx->CreateBasicBlock("all_on");

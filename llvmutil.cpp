@@ -105,11 +105,14 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
     LLVMTypes::FloatPointerType = llvm::PointerType::get(LLVMTypes::FloatType, 0);
     LLVMTypes::DoublePointerType = llvm::PointerType::get(LLVMTypes::DoubleType, 0);
 
-    // Note that both the mask and bool vectors are vector of int32s
-    // (not i1s).  LLVM ends up generating much better SSE code with
-    // this representation.
-    LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
-        llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.vectorWidth);
+    if (target.maskBitCount == 1)
+        LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
+            llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.vectorWidth);
+    else {
+        assert(target.maskBitCount == 32);
+        LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
+            llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.vectorWidth);
+    }
 
     LLVMTypes::Int1VectorType = 
         llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.vectorWidth);
@@ -141,7 +144,11 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
 
     std::vector<llvm::Constant *> maskOnes;
     llvm::Constant *onMask = NULL;
-    onMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), -1,
+    if (target.maskBitCount == 1)
+        onMask = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*ctx), 1,
+                                        false /*unsigned*/); // 0x1
+    else
+        onMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), -1,
                                     true /*signed*/); // 0xffffffff
 
     for (int i = 0; i < target.vectorWidth; ++i)
@@ -150,8 +157,12 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
 
     std::vector<llvm::Constant *> maskZeros;
     llvm::Constant *offMask = NULL;
-    offMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), 0,
-                                     true /*signed*/);
+    if (target.maskBitCount == 1)
+        offMask = llvm::ConstantInt::get(llvm::Type::getInt1Ty(*ctx), 0,
+                                         true /*signed*/);
+    else
+        offMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), 0,
+                                         true /*signed*/);
 
     for (int i = 0; i < target.vectorWidth; ++i)
         maskZeros.push_back(offMask);

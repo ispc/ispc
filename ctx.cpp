@@ -875,8 +875,11 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
     // into an i32 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__movmsk", &mm);
-    // There should be one with signed int signature, one unsigned int.
-    Assert(mm.size() == 2); 
+    if (g->target.maskBitCount == 1)
+        Assert(mm.size() == 1);
+    else
+        // There should be one with signed int signature, one unsigned int.
+        Assert(mm.size() == 2); 
     // We can actually call either one, since both are i32s as far as
     // LLVM's type system is concerned...
     llvm::Function *fmm = mm[0]->function;
@@ -928,6 +931,9 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
         Assert(m->errorCount > 0);
         return NULL;
     }
+
+    if (g->target.maskBitCount == 1)
+        return b;
 
     LLVM_TYPE_CONST llvm::ArrayType *at = 
         llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(b->getType());

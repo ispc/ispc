@@ -29,82 +29,8 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding floats
-
-declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32) nounwind readnone
-
-define float @__round_uniform_float(float) nounwind readonly alwaysinline {
-  ; roundss, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  ; the roundss intrinsic is a total mess--docs say:
-  ;
-  ;  __m128 _mm_round_ss (__m128 a, __m128 b, const int c)
-  ;       
-  ;  b is a 128-bit parameter. The lowest 32 bits are the result of the rounding function
-  ;  on b0. The higher order 96 bits are copied directly from input parameter a. The
-  ;  return value is described by the following equations:
-  ;
-  ;  r0 = RND(b0)
-  ;  r1 = a1
-  ;  r2 = a2
-  ;  r3 = a3
-  ;
-  ;  It doesn't matter what we pass as a, since we only need the r0 value
-  ;  here.  So we pass the same register for both.  Further, only the 0th
-  ;  element of the b parameter matters
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1010 = 9
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 9)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <4 x float> undef, float %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 10)
-  %rs = extractelement <4 x float> %xr, i32 0
-  ret float %rs
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rounding doubles
-
-declare <2 x double> @llvm.x86.sse41.round.sd(<2 x double>, <2 x double>, i32) nounwind readnone
-
-define double @__round_uniform_double(double) nounwind readonly alwaysinline {
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 8)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
-
-define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
-  ; see above for round_ss instrinsic discussion...
-  %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
-  %rs = extractelement <2 x double> %xr, i32 0
-  ret double %rs
-}
+ctlztz()
+define_prefetches()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -152,6 +78,7 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
 
 declare <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float>) nounwind readnone
 
+
 define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
   sse_unary_scalar(ret, 4, float, @llvm.x86.sse.sqrt.ss, %0)
   ret float %ret
@@ -187,6 +114,7 @@ define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
   ret float %ret
 }
 
+
 define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
   ret float %ret
@@ -214,58 +142,128 @@ define double @__min_uniform_double(double, double) nounwind readnone {
   ret double %ret
 }
 
-
 define double @__max_uniform_double(double, double) nounwind readnone {
   sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
   ret double %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int32 min/max
+;; rounding
+;;
+;; There are not any rounding instructions in SSE2, so we have to emulate
+;; the functionality with multiple instructions...
 
-declare <4 x i32> @llvm.x86.sse41.pminsd(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.x86.sse41.pmaxsd(<4 x i32>, <4 x i32>) nounwind readnone
+; The code for __round_* is the result of compiling the following source
+; code.
+;
+; export float Round(float x) {
+;    unsigned int sign = signbits(x);
+;    unsigned int ix = intbits(x);
+;    ix ^= sign;
+;    x = floatbits(ix);
+;    x += 0x1.0p23f;
+;    x -= 0x1.0p23f;
+;    ix = intbits(x);
+;    ix ^= sign;
+;    x = floatbits(ix);
+;    return x;
+;}
 
-define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminsd, %0, %1)
-  ret i32 %ret
+define float @__round_uniform_float(float) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast float %0 to i32
+  %bitop.i.i = and i32 %float_to_int_bitcast.i.i.i.i, -2147483648
+  %bitop.i = xor i32 %bitop.i.i, %float_to_int_bitcast.i.i.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast i32 %bitop.i to float
+  %binop.i = fadd float %int_to_float_bitcast.i.i40.i, 8.388608e+06
+  %binop21.i = fadd float %binop.i, -8.388608e+06
+  %float_to_int_bitcast.i.i.i = bitcast float %binop21.i to i32
+  %bitop31.i = xor i32 %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop31.i to float
+  ret float %int_to_float_bitcast.i.i.i
 }
 
-define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
-  ret i32 %ret
+;; Similarly, for implementations of the __floor* functions below, we have the
+;; bitcode from compiling the following source code...
+
+;export float Floor(float x) {
+;    float y = Round(x);
+;    unsigned int cmp = y > x ? 0xffffffff : 0;
+;    float delta = -1.f;
+;    unsigned int idelta = intbits(delta);
+;    idelta &= cmp;
+;    delta = floatbits(idelta);
+;    return y + delta;
+;}
+
+define float @__floor_uniform_float(float) nounwind readonly alwaysinline {
+  %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
+  %bincmp.i = fcmp ogt float %calltmp.i, %0
+  %selectexpr.i = sext i1 %bincmp.i to i32
+  %bitop.i = and i32 %selectexpr.i, -1082130432
+  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop.i to float
+  %binop.i = fadd float %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret float %binop.i
 }
+
+;; And here is the code we compiled to get the __ceil* functions below
+;
+;export uniform float Ceil(uniform float x) {
+;    uniform float y = Round(x);
+;    uniform int yltx = y < x ? 0xffffffff : 0;
+;    uniform float delta = 1.f;
+;    uniform int idelta = intbits(delta);
+;    idelta &= yltx;
+;    delta = floatbits(idelta);
+;    return y + delta;
+;}
+
+define float @__ceil_uniform_float(float) nounwind readonly alwaysinline {
+  %calltmp.i = tail call float @__round_uniform_float(float %0) nounwind
+  %bincmp.i = fcmp olt float %calltmp.i, %0
+  %selectexpr.i = sext i1 %bincmp.i to i32
+  %bitop.i = and i32 %selectexpr.i, 1065353216
+  %int_to_float_bitcast.i.i.i = bitcast i32 %bitop.i to float
+  %binop.i = fadd float %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret float %binop.i
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; unsigned int min/max
+;; rounding doubles
 
-declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
-declare <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32>, <4 x i32>) nounwind readnone
+declare double @round(double)
+declare double @floor(double)
+declare double @ceil(double)
 
-define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pminud, %0, %1)
-  ret i32 %ret
+define double @__round_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @round(double %0)
+  ret double %r
 }
 
-define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
-  sse_binary_scalar(ret, 4, i32, @llvm.x86.sse41.pmaxud, %0, %1)
-  ret i32 %ret
+define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @floor(double %0)
+  ret double %r
 }
 
+define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
+  %r = call double @ceil(double %0)
+  ret double %r
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
 
-declare i32 @llvm.ctpop.i32(i32) nounwind readnone
+declare i32 @llvm.ctpop.i32(i32)
+declare i64 @llvm.ctpop.i64(i64)
 
 define i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-  %call = call i32 @llvm.ctpop.i32(i32 %0)
-  ret i32 %call
+  %val = call i32 @llvm.ctpop.i32(i32 %0)
+  ret i32 %val
 }
 
-declare i64 @llvm.ctpop.i64(i64) nounwind readnone
-
-define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
-  %call = call i64 @llvm.ctpop.i64(i64 %0)
-  ret i64 %call
+define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
+  %val = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %val
 }
+
+

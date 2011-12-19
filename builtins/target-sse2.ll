@@ -33,12 +33,16 @@
 ;; Define the standard library builtins for the SSE2 target
 
 ; Define some basics for a 4-wide target
-stdlib_core(4)
-packed_load_and_store(4)
-scans(4)
-int64minmax(4)
+define(`WIDTH',`4')
+define(`MASK',`i32')
+include(`util.m4')
 
-include(`builtins-sse2-common.ll')
+stdlib_core()
+packed_load_and_store()
+scans()
+int64minmax()
+
+include(`target-sse2-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding

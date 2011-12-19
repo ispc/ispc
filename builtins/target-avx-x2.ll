@@ -32,12 +32,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Basic 16-wide definitions
 
-stdlib_core(16)
-packed_load_and_store(16)
-scans(16)
-int64minmax(16)
+define(`WIDTH',`16')
+define(`MASK',`i32')
+include(`util.m4')
 
-include(`builtins-avx-common.ll')
+stdlib_core()
+packed_load_and_store()
+scans()
+int64minmax()
+
+include(`target-avx-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

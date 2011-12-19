@@ -2444,7 +2444,7 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = m->module->getFunction(names[i]);
-        if (f != NULL) {
+        if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
             modifiedAny = true;
         }

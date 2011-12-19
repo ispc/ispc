@@ -99,6 +99,9 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
 
     // varying
+    if (LLVMTypes::MaskType != LLVMTypes::Int32VectorType &&
+        t == LLVMTypes::MaskType)
+        return AtomicType::VaryingBool;
     else if (t == LLVMTypes::Int8VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8;
     else if (t == LLVMTypes::Int16VectorType)
@@ -194,7 +197,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     // symbol creation code below assumes that any LLVM vector of i32s is a
     // varying int32.  Here, we need that to be interpreted as a varying
     // bool, so just have a one-off override for that one...
-    if (name == "__sext_varying_bool") {
+    if (g->target.maskBitCount != 1 && name == "__sext_varying_bool") {
         const Type *returnType = AtomicType::VaryingInt32;
         std::vector<const Type *> argTypes;
         argTypes.push_back(AtomicType::VaryingBool);
@@ -556,7 +559,7 @@ lSetInternalFunctions(llvm::Module *module) {
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = module->getFunction(names[i]);
-        if (f != NULL)
+        if (f != NULL && f->empty() == false)
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
     }
 }
@@ -744,6 +747,33 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             FATAL("logic error in DefineStdlib");
         }
         break;
+    case Target::GENERIC:
+        switch (g->target.vectorWidth) {
+        case 4:
+            extern unsigned char builtins_bitcode_generic_4[];
+            extern int builtins_bitcode_generic_4_length;
+            AddBitcodeToModule(builtins_bitcode_generic_4, 
+                               builtins_bitcode_generic_4_length, 
+                               module, symbolTable);
+            break;
+        case 8:
+            extern unsigned char builtins_bitcode_generic_8[];
+            extern int builtins_bitcode_generic_8_length;
+            AddBitcodeToModule(builtins_bitcode_generic_8, 
+                               builtins_bitcode_generic_8_length, 
+                               module, symbolTable);
+            break;
+        case 16:
+            extern unsigned char builtins_bitcode_generic_16[];
+            extern int builtins_bitcode_generic_16_length;
+            AddBitcodeToModule(builtins_bitcode_generic_16, 
+                               builtins_bitcode_generic_16_length, 
+                               module, symbolTable);
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
+        break;
     default:
         FATAL("logic error");
     }
@@ -771,11 +801,16 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
-        // definitions added.  Disable emission of performance warnings for
-        // now, since the user doesn't care about any of that in the stdlib
-        // implementation...
-        extern char stdlib_code[];
-        yy_scan_string(stdlib_code);
-        yyparse();
+        // definitions added.
+        if (g->target.isa == Target::GENERIC) {
+            extern char stdlib_generic_code[];
+            yy_scan_string(stdlib_generic_code);
+            yyparse();
+        }
+        else {
+            extern char stdlib_x86_code[];
+            yy_scan_string(stdlib_x86_code);
+            yyparse();
+        }
     }
 }

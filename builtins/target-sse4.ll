@@ -33,12 +33,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; Define common 4-wide stuff
-stdlib_core(4)
-packed_load_and_store(4)
-scans(4)
-int64minmax(4)
+define(`WIDTH',`4')
+define(`MASK',`i32')
+include(`util.m4')
 
-include(`builtins-sse4-common.ll')
+stdlib_core()
+packed_load_and_store()
+scans()
+int64minmax()
+
+include(`target-sse4-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

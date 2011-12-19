@@ -11,7 +11,8 @@ length=0
 
 src=str(sys.argv[1])
 
-target = re.sub(".*builtins-", "", src)
+target = re.sub("builtins/target-", "", src)
+target = re.sub("builtins/", "", target)
 target = re.sub("\.ll$", "", target)
 target = re.sub("\.c$", "", target)
 target = re.sub("-", "_", target)

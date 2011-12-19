@@ -1605,7 +1605,8 @@ lAddFunctionParams(Declarator *decl) {
 
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
-    const Type *t = AtomicType::VaryingConstUInt32;
+    const Type *t = g->target.isa == Target::GENERIC ?
+        AtomicType::VaryingConstBool : AtomicType::VaryingConstUInt32;
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
     m->symbolTable->AddVariable(maskSymbol);
 }

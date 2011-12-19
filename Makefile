@@ -62,14 +62,17 @@ CXX_SRC=ast.cpp builtins.cpp ctx.cpp decl.cpp expr.cpp func.cpp ispc.cpp \
 	util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-BUILTINS_SRC=builtins-avx.ll builtins-avx-x2.ll builtins-sse2.ll builtins-sse2-x2.ll \
-	builtins-sse4.ll builtins-sse4-x2.ll builtins-dispatch.ll
+TARGETS=avx avx-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 generic-16
+BUILTINS_SRC=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS))) \
+	builtins/dispatch.ll
+BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC:.ll=.o))) \
+	builtins-c-32.cpp builtins-c-64.cpp 
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
-OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_SRC:.ll=.o) \
-	builtins-c-32.o builtins-c-64.o stdlib_ispc.o $(BISON_SRC:.yy=.o) \
-	$(FLEX_SRC:.ll=.o))
+OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
+	stdlib_generic_ispc.o stdlib_x86_ispc.o \
+	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
 default: ispc
 
@@ -104,6 +107,10 @@ objs/%.o: %.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
+objs/%.o: objs/%.cpp
+	@echo Compiling $<
+	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+
 objs/parse.cc: parse.yy
 	@echo Running bison on $<
 	@$(YACC) -o $@ $<
@@ -120,41 +127,24 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-%.cpp: builtins-%.ll
-	@echo Creating C++ source from builtin definitions file $<
-	@m4 -DLLVM_VERSION=$(LLVM_VERSION) builtins.m4 $< | ./bitcode2cpp.py $< > $@
-
-objs/builtins-%.o: objs/builtins-%.cpp
-	@echo Compiling $<
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
-
-objs/builtins-c-32.cpp: builtins-c.c
+objs/builtins-%.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py builtins-c-32.c > $@
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | ./bitcode2cpp.py $< > $@
 
-objs/builtins-c-32.o: objs/builtins-c-32.cpp
-	@echo Compiling $<
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
-
-objs/builtins-c-64.cpp: builtins-c.c
+objs/builtins-c-32.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py builtins-c-64.c > $@
+	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-32 > $@
 
-objs/builtins-c-64.o: objs/builtins-c-64.cpp
-	@echo Compiling $<
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+objs/builtins-c-64.cpp: builtins/builtins.c
+	@echo Creating C++ source from builtins definition file $<
+	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-64 > $@
 
-objs/stdlib_ispc.cpp: stdlib.ispc
-	@echo Creating C++ source from $<
-	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | ./stdlib2cpp.py > $@
+objs/stdlib_generic_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for generic
+	@$(CLANG) -E -x c -DISPC_TARGET_GENERIC=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		./stdlib2cpp.py generic > $@
 
-objs/stdlib_ispc.o: objs/stdlib_ispc.cpp
-	@echo Compiling $<
-	@$(CXX) $(CXXFLAGS) -o $@ -c $<
-
-objs/builtins-sse2.cpp: builtins.m4 builtins-sse2-common.ll builtins-sse2.ll
-objs/builtins-sse2-x2.cpp: builtins.m4 builtins-sse2-common.ll builtins-sse2-x2.ll
-objs/builtins-sse4.cpp: builtins.m4 builtins-sse4-common.ll builtins-sse4.ll
-objs/builtins-sse4-x2.cpp: builtins.m4 builtins-sse4-common.ll builtins-sse4-x2.ll
-objs/builtins-avx.cpp: builtins.m4 builtins-avx-common.ll builtins-avx.ll
-objs/builtins-avx-x2.cpp: builtins.m4 builtins-avx-common.ll builtins-avx-x2.ll
+objs/stdlib_x86_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for x86
+	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		./stdlib2cpp.py x86 > $@

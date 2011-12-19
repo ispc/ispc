@@ -30,18 +30,22 @@
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
 
-;; This file defines the target for "double-pumped" SSE4, i.e. running
+;; This file defines the target for "double-pumped" SSE2, i.e. running
 ;; with 8-wide vectors
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; standard 8-wide definitions from m4 macros
 
-stdlib_core(8)
-packed_load_and_store(8)
-scans(8)
-int64minmax(8)
+define(`WIDTH',`8')
+define(`MASK',`i32')
+include(`util.m4')
 
-include(`builtins-sse4-common.ll')
+stdlib_core()
+packed_load_and_store()
+scans()
+int64minmax()
+
+include(`target-sse2-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -193,31 +197,89 @@ define <8 x float> @__min_varying_float(<8 x float>, <8 x float>) nounwind reado
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int32 min/max
+;; min/max
+
+; There is no blend instruction with SSE2, so we simulate it with bit
+; operations on i32s.  For these two vselect functions, for each
+; vector element, if the mask is on, we return the corresponding value
+; from %1, and otherwise return the value from %0.
+
+define <8 x i32> @__vselect_i32(<8 x i32>, <8 x i32> ,
+                                         <8 x i32> %mask) nounwind readnone alwaysinline {
+  %notmask = xor <8 x i32> %mask, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  %cleared_old = and <8 x i32> %0, %notmask
+  %masked_new = and <8 x i32> %1, %mask
+  %new = or <8 x i32> %cleared_old, %masked_new
+  ret <8 x i32> %new
+}
+
+define <8 x float> @__vselect_float(<8 x float>, <8 x float>,
+                                             <8 x i32> %mask) nounwind readnone alwaysinline {
+  %v0 = bitcast <8 x float> %0 to <8 x i32>
+  %v1 = bitcast <8 x float> %1 to <8 x i32>
+  %r = call <8 x i32> @__vselect_i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %mask)
+  %rf = bitcast <8 x i32> %r to <8 x float>
+  ret <8 x float> %rf
+}
+
+
+; To do vector integer min and max, we do the vector compare and then sign
+; extend the i1 vector result to an i32 mask.  The __vselect does the
+; rest...
 
 define <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(call, i32, @llvm.x86.sse41.pminsd, %0, %1)
-  ret <8 x i32> %call
+  %c = icmp slt <8 x i32> %0, %1
+  %mask = sext <8 x i1> %c to <8 x i32>
+  %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
+  ret <8 x i32> %v
+}
+
+define i32 @__min_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+  %c = icmp slt i32 %0, %1
+  %r = select i1 %c, i32 %0, i32 %1
+  ret i32 %r
 }
 
 define <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(call, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
-  ret <8 x i32> %call
+  %c = icmp sgt <8 x i32> %0, %1
+  %mask = sext <8 x i1> %c to <8 x i32>
+  %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
+  ret <8 x i32> %v
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; unsigned int min/max
-
-define <8 x i32> @__min_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(call, i32, @llvm.x86.sse41.pminud, %0, %1)
-  ret <8 x i32> %call
+define i32 @__max_uniform_int32(i32, i32) nounwind readonly alwaysinline {
+  %c = icmp sgt i32 %0, %1
+  %r = select i1 %c, i32 %0, i32 %1
+  ret i32 %r
 }
 
-define <8 x i32> @__max_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(call, i32, @llvm.x86.sse41.pmaxud, %0, %1)
-  ret <8 x i32> %call
+; The functions for unsigned ints are similar, just with unsigned
+; comparison functions...
+
+define <8 x i32> @__min_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+  %c = icmp ult <8 x i32> %0, %1
+  %mask = sext <8 x i1> %c to <8 x i32>
+  %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
+  ret <8 x i32> %v
+}
+
+define i32 @__min_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+  %c = icmp ult i32 %0, %1
+  %r = select i1 %c, i32 %0, i32 %1
+  ret i32 %r
+}
+
+define <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
+  %c = icmp ugt <8 x i32> %0, %1
+  %mask = sext <8 x i1> %c to <8 x i32>
+  %v = call <8 x i32> @__vselect_i32(<8 x i32> %1, <8 x i32> %0, <8 x i32> %mask)
+  ret <8 x i32> %v
+}
+
+define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
+  %c = icmp ugt i32 %0, %1
+  %r = select i1 %c, i32 %0, i32 %1
+  ret i32 %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -242,12 +304,27 @@ define i32 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ret i32 %v
 }
 
+define <4 x float> @__vec4_add_float(<4 x float> %v0,
+                                     <4 x float> %v1) nounwind readnone alwaysinline {
+  %v = fadd <4 x float> %v0, %v1
+  ret <4 x float> %v
+}
+
+define float @__add_float(float, float) nounwind readnone alwaysinline {
+  %v = fadd float %0, %1
+  ret float %v
+}
+
+define float @__reduce_add_float(<8 x float>) nounwind readnone alwaysinline {
+  reduce8by4(float, @__vec4_add_float, @__add_float)
+}
+
 define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
-  reduce8by4(float, @llvm.x86.sse.min.ps, @__min_uniform_float)
+  reduce8(float, @__min_varying_float, @__min_uniform_float)
 }
 
 define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
-  reduce8by4(float, @llvm.x86.sse.max.ps, @__max_uniform_float)
+  reduce8(float, @__max_varying_float, @__max_uniform_float)
 }
 
 ; helper function for reduce_add_int32
@@ -268,11 +345,11 @@ define i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
-  reduce8by4(i32, @llvm.x86.sse41.pminsd, @__min_uniform_int32)
+  reduce8(i32, @__min_varying_int32, @__min_uniform_int32)
 }
 
 define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
-  reduce8by4(i32, @llvm.x86.sse41.pmaxsd, @__max_uniform_int32)
+  reduce8(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
 define i32 @__reduce_add_uint32(<8 x i32> %v) nounwind readnone alwaysinline {
@@ -281,11 +358,11 @@ define i32 @__reduce_add_uint32(<8 x i32> %v) nounwind readnone alwaysinline {
 }
 
 define i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
-  reduce8by4(i32, @llvm.x86.sse41.pminud, @__min_uniform_uint32)
+  reduce8(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
 define i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
-  reduce8by4(i32, @llvm.x86.sse41.pmaxud, @__max_uniform_uint32)
+  reduce8(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
 
 define <4 x double> @__add_varying_double(<4 x double>,
@@ -373,60 +450,101 @@ gen_scatter(8, i64)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float rounding
 
-declare <4 x float> @llvm.x86.sse41.round.ps(<4 x float>, i32) nounwind readnone
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rounding
+;;
+;; There are not any rounding instructions in SSE2, so we have to emulate
+;; the functionality with multiple instructions...
+
+; The code for __round_* is the result of compiling the following source
+; code.
+;
+; export float Round(float x) {
+;    unsigned int sign = signbits(x);
+;    unsigned int ix = intbits(x);
+;    ix ^= sign;
+;    x = floatbits(ix);
+;    x += 0x1.0p23f;
+;    x -= 0x1.0p23f;
+;    ix = intbits(x);
+;    ix ^= sign;
+;    x = floatbits(ix);
+;    return x;
+;}
 
 define <8 x float> @__round_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  ; roundps, round mode nearest 0b00 | don't signal precision exceptions 0b1000 = 8
-  round4to8(%0, 8)
+  %float_to_int_bitcast.i.i.i.i = bitcast <8 x float> %0 to <8 x i32>
+  %bitop.i.i = and <8 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %bitop.i = xor <8 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <8 x i32> %bitop.i to <8 x float>
+  %binop.i = fadd <8 x float> %int_to_float_bitcast.i.i40.i, <float 8.388608e+06, float 8.388608e+06, float 8.388608e+06, float 8.388608e+06, float 8.388608e+06, float 8.388608e+06, float 8.388608e+06, float 8.388608e+06>
+  %binop21.i = fadd <8 x float> %binop.i, <float -8.388608e+06, float -8.388608e+06, float -8.388608e+06, float -8.388608e+06, float -8.388608e+06, float -8.388608e+06, float -8.388608e+06, float -8.388608e+06>
+  %float_to_int_bitcast.i.i.i = bitcast <8 x float> %binop21.i to <8 x i32>
+  %bitop31.i = xor <8 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <8 x i32> %bitop31.i to <8 x float>
+  ret <8 x float> %int_to_float_bitcast.i.i.i
 }
+
+;; Similarly, for implementations of the __floor* functions below, we have the
+;; bitcode from compiling the following source code...
+
+;export float Floor(float x) {
+;    float y = Round(x);
+;    unsigned int cmp = y > x ? 0xffffffff : 0;
+;    float delta = -1.f;
+;    unsigned int idelta = intbits(delta);
+;    idelta &= cmp;
+;    delta = floatbits(idelta);
+;    return y + delta;
+;}
 
 define <8 x float> @__floor_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  ; roundps, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  round4to8(%0, 9)
+  %calltmp.i = tail call <8 x float> @__round_varying_float(<8 x float> %0) nounwind
+  %bincmp.i = fcmp ogt <8 x float> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <8 x i1> %bincmp.i to <8 x i32>
+  %bitop.i = and <8 x i32> %val_to_boolvec32.i, <i32 -1082130432, i32 -1082130432, i32 -1082130432, i32 -1082130432, i32 -1082130432, i32 -1082130432, i32 -1082130432, i32 -1082130432>
+  %int_to_float_bitcast.i.i.i = bitcast <8 x i32> %bitop.i to <8 x float>
+  %binop.i = fadd <8 x float> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <8 x float> %binop.i
 }
 
+;; And here is the code we compiled to get the __ceil* functions below
+;
+;export uniform float Ceil(uniform float x) {
+;    uniform float y = Round(x);
+;    uniform int yltx = y < x ? 0xffffffff : 0;
+;    uniform float delta = 1.f;
+;    uniform int idelta = intbits(delta);
+;    idelta &= yltx;
+;    delta = floatbits(idelta);
+;    return y + delta;
+;}
+
 define <8 x float> @__ceil_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  ; roundps, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  round4to8(%0, 10)
+  %calltmp.i = tail call <8 x float> @__round_varying_float(<8 x float> %0) nounwind
+  %bincmp.i = fcmp olt <8 x float> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <8 x i1> %bincmp.i to <8 x i32>
+  %bitop.i = and <8 x i32> %val_to_boolvec32.i, <i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216, i32 1065353216>
+  %int_to_float_bitcast.i.i.i = bitcast <8 x i32> %bitop.i to <8 x float>
+  %binop.i = fadd <8 x float> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <8 x float> %binop.i
 }
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding doubles
 
-declare <2 x double> @llvm.x86.sse41.round.pd(<2 x double>, i32) nounwind readnone
-
 define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  round2to8double(%0, 8)
+  unary1to8(double, @round)
 }
 
 define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
-  round2to8double(%0, 9)
+  unary1to8(double, @floor)
 }
 
 define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
-  round2to8double(%0, 10)
+  unary1to8(double, @ceil)
 }
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; horizontal ops / reductions
-
-declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone
-
-define float @__reduce_add_float(<8 x float>) nounwind readonly alwaysinline {
-  %a = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %b = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %ab = fadd <4 x float> %a, %b
-  %hab = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %ab, <4 x float> %ab)
-  %a_scalar = extractelement <4 x float> %hab, i32 0
-  %b_scalar = extractelement <4 x float> %hab, i32 1
-  %sum = fadd float %a_scalar, %b_scalar
-  ret float %sum
-}
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
@@ -438,106 +556,57 @@ gen_masked_store(8, i64, 64)
 
 masked_store_blend_8_16_by_8()
 
-declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
-                                             <4 x float>) nounwind readnone
-
 define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>, 
                                      <8 x i32> %mask) nounwind alwaysinline {
-  ; do two 4-wide blends with blendvps
-  %mask_as_float = bitcast <8 x i32> %mask to <8 x float>
-  %mask_a = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %mask_b = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %oldValue = load <8 x i32>* %0, align 4
-  %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
-  %newAsFloat = bitcast <8 x i32> %1 to <8 x float>
-  %old_a = shufflevector <8 x float> %oldAsFloat, <8 x float> undef,
-                <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %old_b = shufflevector <8 x float> %oldAsFloat, <8 x float> undef,
-                <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %new_a = shufflevector <8 x float> %newAsFloat, <8 x float> undef,
-                <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %new_b = shufflevector <8 x float> %newAsFloat, <8 x float> undef,
-                <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %blend_a = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old_a, <4 x float> %new_a,
-                                                       <4 x float> %mask_a)
-  %blend_b = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old_b, <4 x float> %new_b,
-                                                       <4 x float> %mask_b)
-  %blend = shufflevector <4 x float> %blend_a, <4 x float> %blend_b,
-               <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-  %blendAsInt = bitcast <8 x float> %blend to <8 x i32>
-  store <8 x i32> %blendAsInt, <8 x i32>* %0, align 4
+  %val = load <8 x i32> * %0, align 4
+  %newval = call <8 x i32> @__vselect_i32(<8 x i32> %val, <8 x i32> %1, <8 x i32> %mask) 
+  store <8 x i32> %newval, <8 x i32> * %0, align 4
   ret void
 }
 
 define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
                                      <8 x i32> %mask) nounwind alwaysinline {
-  ; implement this as 4 blends of <4 x i32>s, which are actually bitcast
-  ; <2 x i64>s...
+  %oldValue = load <8 x i64>* %ptr, align 8
 
-  %mask_as_float = bitcast <8 x i32> %mask to <8 x float>
-
-  %old = load <8 x i64>* %ptr, align 8
-
+  ; Do 8x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values
+  ; are actually bitcast <2 x i64> values
+  ;
   ; set up the first two 64-bit values
-  %old01 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
-  %old01f = bitcast <2 x i64> %old01 to <4 x float>
-  %new01  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
-  %new01f = bitcast <2 x i64> %new01 to <4 x float>
-  ; compute mask--note that the values mask0 and mask1 are doubled-up
-  %mask01 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                          <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-  ; and blend the two of them values
-  %result01f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old01f,
-                                                         <4 x float> %new01f,
-                                                         <4 x float> %mask01)
-  %result01 = bitcast <4 x float> %result01f to <2 x i64>
+  %old0123  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+                            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %old0123f = bitcast <4 x i64> %old0123 to <8 x float>
+  %new0123  = shufflevector <8 x i64> %new, <8 x i64> undef,
+                            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %new0123f = bitcast <4 x i64> %new0123 to <8 x float>
+  ; compute mask--note that the indices are doubled-up
+  %mask0123 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+              <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+  ; and blend the first 4 values
+  %result0123f = call <8 x float> @__vselect_float(<8 x float> %old0123f, <8 x float> %new0123f,
+                                                   <8 x i32> %mask0123)
+  %result0123 = bitcast <8 x float> %result0123f to <4 x i64>
 
   ; and again
-  %old23 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 2, i32 3>
-  %old23f = bitcast <2 x i64> %old23 to <4 x float>
-  %new23  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 2, i32 3>
-  %new23f = bitcast <2 x i64> %new23 to <4 x float>
-  %mask23 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                          <4 x i32> <i32 2, i32 2, i32 3, i32 3>
-  %result23f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old23f,
-                                                         <4 x float> %new23f,
-                                                         <4 x float> %mask23)
-  %result23 = bitcast <4 x float> %result23f to <2 x i64>
+  %old4567  = shufflevector <8 x i64> %oldValue, <8 x i64> undef,
+                            <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %old4567f = bitcast <4 x i64> %old4567 to <8 x float>
+  %new4567  = shufflevector <8 x i64> %new, <8 x i64> undef,
+                            <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %new4567f = bitcast <4 x i64> %new4567 to <8 x float>
+  ; compute mask--note that the values are doubled-up
+  %mask4567 = shufflevector <8 x i32> %mask, <8 x i32> undef,
+              <8 x i32> <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+  ; and blend the two of the values
+  %result4567f = call <8 x float> @__vselect_float(<8 x float> %old4567f, <8 x float> %new4567f,
+                                                   <8 x i32> %mask4567)
+  %result4567 = bitcast <8 x float> %result4567f to <4 x i64>
 
-  %old45 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 4, i32 5>
-  %old45f = bitcast <2 x i64> %old45 to <4 x float>
-  %new45  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 4, i32 5>
-  %new45f = bitcast <2 x i64> %new45 to <4 x float>
-  %mask45 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                          <4 x i32> <i32 4, i32 4, i32 5, i32 5>
-  %result45f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old45f,
-                                                         <4 x float> %new45f,
-                                                         <4 x float> %mask45)
-  %result45 = bitcast <4 x float> %result45f to <2 x i64>
-
-  %old67 = shufflevector <8 x i64> %old, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
-  %old67f = bitcast <2 x i64> %old67 to <4 x float>
-  %new67  = shufflevector <8 x i64> %new, <8 x i64> undef, <2 x i32> <i32 6, i32 7>
-  %new67f = bitcast <2 x i64> %new67 to <4 x float>
-  %mask67 = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
-                          <4 x i32> <i32 6, i32 6, i32 7, i32 7>
-  %result67f = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %old67f,
-                                                         <4 x float> %new67f,
-                                                         <4 x float> %mask67)
-  %result67 = bitcast <4 x float> %result67f to <2 x i64>
-
-  %final0123 = shufflevector <2 x i64> %result01, <2 x i64> %result23,
-       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %final4567 = shufflevector <2 x i64> %result45, <2 x i64> %result67,
-       <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %final = shufflevector <4 x i64> %final0123, <4 x i64> %final4567,
-       <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ; reconstruct the final <8 x i64> vector
+  %final = shufflevector <4 x i64> %result0123, <4 x i64> %result4567,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   store <8 x i64> %final, <8 x i64> * %ptr, align 8
   ret void
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
