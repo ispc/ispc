@@ -66,11 +66,15 @@ static void usage(int ret) {
     printf("                          \t\ton 64-bit target architectures.)\n");
     printf("    [--arch={%s}]\t\tSelect target architecture\n", 
            Target::SupportedTargetArchs());
+    printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
+#ifndef LLVM_2_9
+    printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
+#endif // !LLVM_2_9
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
@@ -187,6 +191,7 @@ int main(int Argc, char *Argv[]) {
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;
+    const char *includeFileName = NULL;
 
     // Initiailize globals early so that we can set various option values
     // as we're parsing below
@@ -236,13 +241,20 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
+#ifndef LLVM_2_9
+        else if (!strcmp(argv[i], "--emit-c++"))
+            ot = Module::CXX;
+#endif // !LLVM_2_9
         else if (!strcmp(argv[i], "--emit-llvm"))
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
         else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
-            if (++i == argc) usage(1);
+            if (++i == argc) {
+                fprintf(stderr, "No target specified after --target option.\n");
+                usage(1);
+            }
             target = argv[i];
         }
         else if (!strncmp(argv[i], "--target=", 9))
@@ -257,8 +269,10 @@ int main(int Argc, char *Argv[]) {
                 g->mathLib = Globals::Math_SVML;
             else if (!strcmp(lib, "system"))
                 g->mathLib = Globals::Math_System;
-            else
+            else {
+                fprintf(stderr, "Unknown --math-lib= option \"%s\".\n", lib);
                 usage(1);
+            }
         }
         else if (!strncmp(argv[i], "--opt=", 6)) {
             const char *opt = argv[i] + 6;
@@ -291,8 +305,10 @@ int main(int Argc, char *Argv[]) {
                 g->opt.disableGatherScatterFlattening = true;
             else if (!strcmp(opt, "disable-uniform-memory-optimizations"))
                 g->opt.disableUniformMemoryOptimizations = true;
-            else 
+            else {
+                fprintf(stderr, "Unknown --opt= option \"%s\".\n", opt);
                 usage(1);
+            }
         }
         else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;
@@ -305,17 +321,26 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--wno-perf") || !strcmp(argv[i], "-wno-perf"))
             g->emitPerfWarnings = false;
         else if (!strcmp(argv[i], "-o")) {
-            if (++i == argc) usage(1);
+            if (++i == argc) {
+                fprintf(stderr, "No output file specified after -o option.\n");
+                usage(1);
+            }
             outFileName = argv[i];
         }
         else if (!strcmp(argv[i], "--outfile="))
             outFileName = argv[i] + strlen("--outfile=");
         else if (!strcmp(argv[i], "-h")) {
-            if (++i == argc) usage(1);
+            if (++i == argc) {
+                fprintf(stderr, "No header file name specified after -h option.\n");
+                usage(1);
+            }
             headerFileName = argv[i];
         }
-        else if (!strcmp(argv[i], "--header-outfile=")) {
+        else if (!strncmp(argv[i], "--header-outfile=", 17)) {
             headerFileName = argv[i] + strlen("--header-outfile=");
+        }
+        else if (!strncmp(argv[i], "--c++-include-file=", 19)) {
+            includeFileName = argv[i] + strlen("--c++-include-file=");
         }
         else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
@@ -341,11 +366,16 @@ int main(int Argc, char *Argv[]) {
                    BUILD_DATE, BUILD_VERSION);
             return 0;
         }
-        else if (argv[i][0] == '-')
+        else if (argv[i][0] == '-') {
+            fprintf(stderr, "Unknown option \"%s\".\n", argv[i]);
             usage(1);
+        }
         else {
-            if (file != NULL)
+            if (file != NULL) {
+                fprintf(stderr, "Multiple input files specified on command "
+                        "line: \"%s\" and \"%s\".\n", file, argv[i]);
                 usage(1);
+            }
             else
                 file = argv[i];
         }
@@ -363,5 +393,6 @@ int main(int Argc, char *Argv[]) {
                 "be issued, but no output will be generated.");
 
     return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
-                                    ot, outFileName, headerFileName);
+                                    ot, outFileName, headerFileName, 
+                                    includeFileName);
 }

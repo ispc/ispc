@@ -80,6 +80,9 @@ public:
     enum OutputType { Asm,      /** Generate text assembly language output */
                       Bitcode,  /** Generate LLVM IR bitcode output */
                       Object,   /** Generate a native object file */
+#ifndef LLVM_2_9
+                      CXX,      /** Generate a C++ file */
+#endif // !LLVM_2_9
                       Header    /** Generate a C/C++ header file with 
                                     declarations of 'export'ed functions, global
                                     variables, and the types used by them. */
@@ -108,6 +111,10 @@ public:
                               inclusion from C/C++ code with declarations of
                               types and functions exported from the given ispc
                               source file.
+        @param includeFileName If non-NULL, gives the filename for the C++ 
+                               backend to emit in an #include statement to
+                               get definitions of the builtins for the generic
+                               target.
         @return             Number of errors encountered when compiling
                             srcFile.
      */
@@ -115,7 +122,8 @@ public:
                                 const char *cpu, const char *targets, 
                                 bool generatePIC, OutputType outputType, 
                                 const char *outFileName, 
-                                const char *headerFileName);
+                                const char *headerFileName, 
+                                const char *includeFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -138,7 +146,8 @@ private:
         true on success, false if there has been an error.  The given
         filename may be NULL, indicating that output should go to standard
         output. */
-    bool writeOutput(OutputType ot, const char *filename);
+    bool writeOutput(OutputType ot, const char *filename,
+                     const char *includeFileName = NULL);
     bool writeHeader(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,

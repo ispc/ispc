@@ -57,9 +57,9 @@ YACC=bison -d -v -t
 
 ###########################################################################
 
-CXX_SRC=ast.cpp builtins.cpp ctx.cpp decl.cpp expr.cpp func.cpp ispc.cpp \
-	llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp type.cpp \
-	util.cpp
+CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
+	ispc.cpp llvmutil.cpp main.cpp module.cpp opt.cpp stmt.cpp sym.cpp \
+	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx avx-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 generic-16
@@ -106,6 +106,10 @@ ispc: print_llvm_src dirs $(OBJS)
 objs/%.o: %.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
+
+objs/cbackend.o: cbackend.cpp
+	@echo Compiling $<
+	@$(CXX) -fno-rtti -fno-exceptions $(CXXFLAGS) -o $@ -c $<
 
 objs/%.o: objs/%.cpp
 	@echo Compiling $<

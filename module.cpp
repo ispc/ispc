@@ -76,7 +76,6 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -584,7 +583,8 @@ Module::AddFunctionDefinition(Symbol *sym, const std::vector<Symbol *> &args,
 
 
 bool
-Module::writeOutput(OutputType outputType, const char *outFileName) {
+Module::writeOutput(OutputType outputType, const char *outFileName,
+                    const char *includeFileName) {
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     if (diBuilder != NULL && outputType != Header)
         diBuilder->finalize();
@@ -610,6 +610,14 @@ Module::writeOutput(OutputType outputType, const char *outFileName) {
             if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                 fileType = "object";
             break;
+#ifndef LLVM_2_9
+        case CXX:
+            if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+                strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+                strcasecmp(suffix, "cpp"))
+                fileType = "c++";
+            break;
+#endif // !LLVM_2_9
         case Header:
             if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") &&
                 strcasecmp(suffix, "hpp"))
@@ -623,12 +631,18 @@ Module::writeOutput(OutputType outputType, const char *outFileName) {
 
     if (outputType == Header)
         return writeHeader(outFileName);
-    else {
-        if (outputType == Bitcode)
-            return writeBitcode(module, outFileName);
-        else
-            return writeObjectFileOrAssembly(outputType, outFileName);
+    else if (outputType == Bitcode)
+        return writeBitcode(module, outFileName);
+#ifndef LLVM_2_9
+    else if (outputType == CXX) {
+        extern bool WriteCXXFile(llvm::Module *module, const char *fn, 
+                                 int vectorWidth, const char *includeName);
+        return WriteCXXFile(module, outFileName, g->target.vectorWidth,
+                            includeFileName);
     }
+#endif // !LLVM_2_9
+    else
+        return writeObjectFileOrAssembly(outputType, outFileName);
 }
 
 
@@ -1568,7 +1582,8 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
 int
 Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu, 
                          const char *target, bool generatePIC, OutputType outputType, 
-                         const char *outFileName, const char *headerFileName) {
+                         const char *outFileName, const char *headerFileName,
+                         const char *includeFileName) {
     if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
@@ -1577,7 +1592,7 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
             if (outFileName != NULL)
-                if (!m->writeOutput(outputType, outFileName))
+                if (!m->writeOutput(outputType, outFileName, includeFileName))
                     return 1;
             if (headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, headerFileName))
@@ -1590,6 +1605,14 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
         return errorCount > 0;
     }
     else {
+#ifndef LLVM_2_9
+        if (outputType == CXX) {
+            Error(SourcePos(), "Illegal to specify more then one target when "
+                  "compiling C++ output.");
+            return 1;
+        }
+#endif // !LLVM_2_9
+
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
         Assert(targets.size() > 1);

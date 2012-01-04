@@ -184,10 +184,12 @@ Optimize(llvm::Module *module, int optLevel) {
     llvm::PassManager optPM;
     llvm::FunctionPassManager funcPM(module);
 
-    llvm::TargetLibraryInfo *targetLibraryInfo =
-        new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
-    optPM.add(targetLibraryInfo);
-    optPM.add(new llvm::TargetData(module));
+    if (g->target.isa != Target::GENERIC) {
+        llvm::TargetLibraryInfo *targetLibraryInfo =
+            new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
+        optPM.add(targetLibraryInfo);
+        optPM.add(new llvm::TargetData(module));
+    }
 
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     optPM.add(llvm::createIndVarSimplifyPass());

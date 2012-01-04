@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="ast.cpp" />
     <ClCompile Include="builtins.cpp" />
+    <ClCompile Include="cbackend.cpp" />
     <ClCompile Include="ctx.cpp" />
     <ClCompile Include="decl.cpp" />
     <ClCompile Include="expr.cpp" />
