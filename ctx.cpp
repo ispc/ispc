@@ -1945,6 +1945,20 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         else
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
     }
+    else if (valueType == AtomicType::VaryingBool &&
+             g->target.maskBitCount == 1) {
+        llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask,
+                                              LLVMMaskAllOn, "~mask");
+        llvm::Value *old = LoadInst(ptr);
+        llvm::Value *maskedOld = BinaryOperator(llvm::Instruction::And, old,
+                                                notMask, "old&~mask");
+        llvm::Value *maskedNew = BinaryOperator(llvm::Instruction::And, value,
+                                                mask, "new&mask");
+        llvm::Value *final = BinaryOperator(llvm::Instruction::Or, maskedOld,
+                                            maskedNew, "old_new_result");
+        StoreInst(final, ptr);
+        return;
+    }
     else if (valueType == AtomicType::VaryingDouble || 
              valueType == AtomicType::VaryingInt64 ||
              valueType == AtomicType::VaryingUInt64) {

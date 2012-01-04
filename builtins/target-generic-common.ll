@@ -33,7 +33,6 @@ define(`MASK',`i1')
 include(`util.m4')
 
 stdlib_core()
-
 scans()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -96,7 +95,7 @@ declare float @__rsqrt_uniform_float(float) nounwind readnone
 declare float @__rcp_uniform_float(float) nounwind readnone 
 declare float @__sqrt_uniform_float(float) nounwind readnone 
 declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %v) nounwind readnone 
+declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
 declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
 
 declare double @__sqrt_uniform_double(double) nounwind readnone
@@ -142,7 +141,7 @@ declare i32 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone
 declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone 
 
-declare i32 @__reduce_add_uint32(<WIDTH x i32> %v) nounwind readnone 
+declare i32 @__reduce_add_uint32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone 
 
@@ -154,7 +153,7 @@ declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone
 declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone 
 
-declare i64 @__reduce_add_uint64(<WIDTH x i64> %v) nounwind readnone 
+declare i64 @__reduce_add_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
 
@@ -189,7 +188,6 @@ declare void @__masked_store_32(<WIDTH x i32>* nocapture, <WIDTH x i32>,
 declare void @__masked_store_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
                                 <WIDTH x i1> %mask) nounwind 
 
-ifelse(LLVM_VERSION,LLVM_3_1svn,`
 define void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind {
   %v = load <WIDTH x i8> * %0
@@ -221,39 +219,28 @@ define void @__masked_store_blend_64(<WIDTH x i64>* nocapture,
   store <WIDTH x i64> %v1, <WIDTH x i64> * %0
   ret void
 }
-',`
-declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                     <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                     <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                      <WIDTH x i1>) nounwind
-declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture %ptr,
-                                      <WIDTH x i64> %new, 
-                                      <WIDTH x i1> %mask) nounwind
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
 define(`gather_scatter', `
-declare <WIDTH x $1> @__gather_base_offsets32_$1(i8 * nocapture %ptr, <WIDTH x i32> %offsets,
-                        i32 %offset_scale, <WIDTH x i1> %vecmask) nounwind readonly 
-declare <WIDTH x $1> @__gather_base_offsets64_$1(i8 * nocapture %ptr, <WIDTH x i64> %offsets,
-                        i32 %offset_scale, <WIDTH x i1> %vecmask) nounwind readonly 
-declare <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs, 
-                                    <WIDTH x i1> %vecmask) nounwind readonly 
-declare <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs, 
-                                    <WIDTH x i1> %vecmask) nounwind readonly 
+declare <WIDTH x $1> @__gather_base_offsets32_$1(i8 * nocapture, <WIDTH x i32>,
+                        i32, <WIDTH x i1>) nounwind readonly 
+declare <WIDTH x $1> @__gather_base_offsets64_$1(i8 * nocapture, <WIDTH x i64>,
+                        i32, <WIDTH x i1>) nounwind readonly 
+declare <WIDTH x $1> @__gather32_$1(<WIDTH x i32>, 
+                                    <WIDTH x i1>) nounwind readonly 
+declare <WIDTH x $1> @__gather64_$1(<WIDTH x i64>, 
+                                    <WIDTH x i1>) nounwind readonly 
 
-declare void @__scatter_base_offsets32_$1(i8* nocapture %base, <WIDTH x i32> %offsets,
-                  i32 %offset_scale, <WIDTH x $1> %values, <WIDTH x i1> %mask) nounwind 
-declare void @__scatter_base_offsets64_$1(i8* nocapture %base, <WIDTH x i64> %offsets,
-                  i32 %offset_scale, <WIDTH x $1> %values, <WIDTH x i1> %mask) nounwind 
-declare void @__scatter32_$1(<WIDTH x i32> %ptrs, <WIDTH x $1> %values,
-                             <WIDTH x i1> %mask) nounwind 
-declare void @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
-                              <WIDTH x i1> %mask) nounwind 
+declare void @__scatter_base_offsets32_$1(i8* nocapture, <WIDTH x i32>,
+                  i32, <WIDTH x $1>, <WIDTH x i1>) nounwind 
+declare void @__scatter_base_offsets64_$1(i8* nocapture, <WIDTH x i64>,
+                  i32, <WIDTH x $1>, <WIDTH x i1>) nounwind 
+declare void @__scatter32_$1(<WIDTH x i32>, <WIDTH x $1>,
+                             <WIDTH x i1>) nounwind 
+declare void @__scatter64_$1(<WIDTH x i64>, <WIDTH x $1>,
+                              <WIDTH x i1>) nounwind 
 ')
 
 gather_scatter(i8)
@@ -261,17 +248,17 @@ gather_scatter(i16)
 gather_scatter(i32)
 gather_scatter(i64)
 
-declare i32 @__packed_load_active(i32 * nocapture %startptr, <WIDTH x i32> * nocapture %val_ptr,
-                                  <WIDTH x i1> %full_mask) nounwind
-declare i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
-                                   <WIDTH x i1> %full_mask) nounwind
+declare i32 @__packed_load_active(i32 * nocapture, <WIDTH x i32> * nocapture,
+                                  <WIDTH x i1>) nounwind
+declare i32 @__packed_store_active(i32 * nocapture, <WIDTH x i32> %vals,
+                                   <WIDTH x i1>) nounwind
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetch
 
-declare void @__prefetch_read_uniform_1(i8 *) nounwind readnone
-declare void @__prefetch_read_uniform_2(i8 *) nounwind readnone
-declare void @__prefetch_read_uniform_3(i8 *) nounwind readnone
-declare void @__prefetch_read_uniform_nt(i8 *) nounwind readnone
+declare void @__prefetch_read_uniform_1(i8 * nocapture) nounwind 
+declare void @__prefetch_read_uniform_2(i8 * nocapture) nounwind 
+declare void @__prefetch_read_uniform_3(i8 * nocapture) nounwind 
+declare void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind 
 

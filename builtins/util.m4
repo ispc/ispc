@@ -2192,9 +2192,8 @@ i64minmax(WIDTH,max,uint64,ugt)
 ;; $2: element type for which to emit the function (i32, i64, ...)
 ;; $3: suffix for function name (32, 64, ...)
 
-
 define(`load_and_broadcast', `
-define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x MASK> %mask) nounwind alwaysinline {
   %ptr = bitcast i8 * %0 to $2 *
   %val = load $2 * %ptr
 
@@ -2536,9 +2535,9 @@ declare i64 @llvm.cttz.i64(i64)
 
 define(`reduce_equal_aux', `
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
-                                      <$1 x i32> %mask) nounwind alwaysinline {
+                             <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
-   %mm = call i32 @__movmsk(<$1 x i32> %mask)
+   %mm = call i32 @__movmsk(<$1 x MASK> %mask)
    %allon = icmp eq i32 %mm, eval((1<<$1)-1)
    br i1 %allon, label %check_neighbors, label %domixed
 
@@ -2560,7 +2559,7 @@ domixed:
   store <$1 x $2> %basesmear, <$1 x $2> * %ptr
   %castptr = bitcast <$1 x $2> * %ptr to <$1 x $4> *
   %castv = bitcast <$1 x $2> %v to <$1 x $4>
-  call void @__masked_store_blend_$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x i32> %mask)
+  call void @__masked_store_blend_$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x MASK> %mask)
   %blendvec = load <$1 x $2> * %ptr
   br label %check_neighbors
 
@@ -2574,8 +2573,10 @@ check_neighbors:
   %castvr = call <$1 x $4> @__rotate_int$6(<$1 x $4> %castvec, i32 1)
   %vr = bitcast <$1 x $4> %castvr to <$1 x $2>
   %eq = $5 eq <$1 x $2> %vec, %vr
-  %eq32 = sext <$1 x i1> %eq to <$1 x i32>
-  %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)
+  ifelse(MASK,i32, `
+    %eq32 = sext <$1 x i1> %eq to <$1 x i32>
+    %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)', `
+    %eqmm = call i32 @__movmsk(<$1 x MASK> %eq)')
   %alleq = icmp eq i32 %eqmm, eval((1<<$1)-1)
   br i1 %alleq, label %all_equal, label %not_all_equal
   ', `

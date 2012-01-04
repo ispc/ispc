@@ -312,14 +312,14 @@ static inline int popcnt(int v) {
     int r;
     for (uniform int i = 0; i < programCount; ++i)
         r = insert(r, i, popcnt(extract(v, i)));
-    return (r & __mask);
+    return __mask ? r : 0;
 }
 
 static inline int popcnt(int64 v) {
     int r;
     for (uniform int i = 0; i < programCount; ++i)
         r = insert(r, i, popcnt(extract(v, i)));
-    return (r & __mask);
+    return __mask ? r : 0;
 }
 
 static inline uniform int popcnt(bool v) {
@@ -589,7 +589,7 @@ static inline uniform float reduce_max(float v) {
 
 static inline uniform int reduce_add(int x) {
     // Zero out the values for lanes that aren't running
-    return __reduce_add_int32(x & __mask);
+    return __reduce_add_int32(__mask ? x : 0);
 }
 
 static inline uniform int reduce_min(int v) {
@@ -609,7 +609,7 @@ static inline uniform int reduce_max(int v) {
 static inline uniform unsigned int reduce_add(unsigned int x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
-    return __reduce_add_uint32(x & __mask);
+    return __reduce_add_uint32(__mask ? x : 0);
 }
 
 static inline uniform unsigned int reduce_min(unsigned int v) {
@@ -647,7 +647,7 @@ static inline uniform double reduce_max(double v) {
 
 static inline uniform int64 reduce_add(int64 x) {
     // Zero out the values for lanes that aren't running
-    return __reduce_add_int64(x & (int64)(__mask));
+    return __reduce_add_int64(__mask ? x : 0);
 }
 
 static inline uniform int64 reduce_min(int64 v) {
@@ -667,7 +667,7 @@ static inline uniform int64 reduce_max(int64 v) {
 static inline uniform unsigned int64 reduce_add(unsigned int64 x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
-    return __reduce_add_int64(x & (int64)(__mask));
+    return __reduce_add_int64(__mask ? x : 0);
 }
 
 static inline uniform unsigned int64 reduce_min(unsigned int64 v) {
