@@ -75,13 +75,6 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
     Assert(maskSymbol != NULL);
 
     if (code != NULL) {
-        if (g->debugPrint) {
-            fprintf(stderr, "Creating function \"%s\".  Initial code:\n", 
-                    sym->name.c_str());
-            code->Print(0);
-            fprintf(stderr, "---------------------\n");
-        }
-
         code = TypeCheck(code);
 
         if (code != NULL && g->debugPrint) {
