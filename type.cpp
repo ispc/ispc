@@ -2448,6 +2448,8 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     if (sta != NULL && stb != NULL) {
         if (sta->GetElementCount() != stb->GetElementCount())
             return false;
+        if (sta->GetStructName() != stb->GetStructName())
+            return false;
         for (int i = 0; i < sta->GetElementCount(); ++i)
             if (!lCheckTypeEquality(sta->GetElementType(i), stb->GetElementType(i),
                                     ignoreConst))
