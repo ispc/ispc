@@ -2229,7 +2229,11 @@ define void @__masked_store_$3(<$1 x $2>* nocapture, <$1 x $2>, <$1 x i32>) noun
 define(`masked_store_blend_8_16_by_4', `
 define void @__masked_store_blend_8(<4 x i8>* nocapture, <4 x i8>,
                                     <4 x i32>) nounwind alwaysinline {
-  %old = load <4 x i8> * %0
+  %old = load <4 x i8> * %0, align 1
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <4 x i32> %2 to <4 x i1>
+    %resultvec = select <4 x i1> %m, <4 x i8> %1, <4 x i8> %old
+  ',`
   %old32 = bitcast <4 x i8> %old to i32
   %new32 = bitcast <4 x i8> %1 to i32
 
@@ -2242,13 +2246,18 @@ define void @__masked_store_blend_8(<4 x i8>* nocapture, <4 x i8>,
   %result = or i32 %newmasked, %oldmasked
 
   %resultvec = bitcast i32 %result to <4 x i8>
-  store <4 x i8> %resultvec, <4 x i8> * %0
+  ')
+  store <4 x i8> %resultvec, <4 x i8> * %0, align 1
   ret void
 }
 
 define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
                                      <4 x i32>) nounwind alwaysinline {
-  %old = load <4 x i16> * %0
+  %old = load <4 x i16> * %0, align 2
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <4 x i32> %2 to <4 x i1>
+    %resultvec = select <4 x i1> %m, <4 x i16> %1, <4 x i16> %old
+  ',`
   %old64 = bitcast <4 x i16> %old to i64
   %new64 = bitcast <4 x i16> %1 to i64
 
@@ -2261,7 +2270,8 @@ define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
   %result = or i64 %newmasked, %oldmasked
 
   %resultvec = bitcast i64 %result to <4 x i16>
-  store <4 x i16> %resultvec, <4 x i16> * %0
+  ')
+  store <4 x i16> %resultvec, <4 x i16> * %0, align 2
   ret void
 }
 ')
@@ -2269,7 +2279,11 @@ define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
 define(`masked_store_blend_8_16_by_8', `
 define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>,
                                     <8 x i32>) nounwind alwaysinline {
-  %old = load <8 x i8> * %0
+  %old = load <8 x i8> * %0, align 1
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <8 x i32> %2 to <8 x i1>
+    %resultvec = select <8 x i1> %m, <8 x i8> %1, <8 x i8> %old
+  ',`
   %old64 = bitcast <8 x i8> %old to i64
   %new64 = bitcast <8 x i8> %1 to i64
 
@@ -2282,13 +2296,18 @@ define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>,
   %result = or i64 %newmasked, %oldmasked
 
   %resultvec = bitcast i64 %result to <8 x i8>
-  store <8 x i8> %resultvec, <8 x i8> * %0
+  ')
+  store <8 x i8> %resultvec, <8 x i8> * %0, align 1
   ret void
 }
 
 define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
                                      <8 x i32>) nounwind alwaysinline {
-  %old = load <8 x i16> * %0
+  %old = load <8 x i16> * %0, align 2
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <8 x i32> %2 to <8 x i1>
+    %resultvec = select <8 x i1> %m, <8 x i16> %1, <8 x i16> %old
+  ',`
   %old128 = bitcast <8 x i16> %old to i128
   %new128 = bitcast <8 x i16> %1 to i128
 
@@ -2301,7 +2320,8 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
   %result = or i128 %newmasked, %oldmasked
 
   %resultvec = bitcast i128 %result to <8 x i16>
-  store <8 x i16> %resultvec, <8 x i16> * %0
+  ')
+  store <8 x i16> %resultvec, <8 x i16> * %0, align 2
   ret void
 }
 ')
@@ -2310,7 +2330,11 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
 define(`masked_store_blend_8_16_by_16', `
 define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
                                     <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i8> * %0
+  %old = load <16 x i8> * %0, align 1
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <16 x i32> %2 to <16 x i1>
+    %resultvec = select <16 x i1> %m, <16 x i8> %1, <16 x i8> %old
+  ',`
   %old128 = bitcast <16 x i8> %old to i128
   %new128 = bitcast <16 x i8> %1 to i128
 
@@ -2323,13 +2347,18 @@ define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
   %result = or i128 %newmasked, %oldmasked
 
   %resultvec = bitcast i128 %result to <16 x i8>
-  store <16 x i8> %resultvec, <16 x i8> * %0
+  ')
+  store <16 x i8> %resultvec, <16 x i8> * %0, align 1
   ret void
 }
 
 define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
                                      <16 x i32>) nounwind alwaysinline {
-  %old = load <16 x i16> * %0
+  %old = load <16 x i16> * %0, align 2
+  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+    %m = trunc <16 x i32> %2 to <16 x i1>
+    %resultvec = select <16 x i1> %m, <16 x i16> %1, <16 x i16> %old
+  ',`
   %old256 = bitcast <16 x i16> %old to i256
   %new256 = bitcast <16 x i16> %1 to i256
 
@@ -2342,7 +2371,8 @@ define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
   %result = or i256 %newmasked, %oldmasked
 
   %resultvec = bitcast i256 %result to <16 x i16>
-  store <16 x i16> %resultvec, <16 x i16> * %0
+  ')
+  store <16 x i16> %resultvec, <16 x i16> * %0, align 2
   ret void
 }
 ')
