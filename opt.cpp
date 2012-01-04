@@ -84,6 +84,7 @@
 #endif // ISPC_IS_WINDOWS
 
 static llvm::Pass *CreateIntrinsicsOptPass();
+static llvm::Pass *CreateVSelMovmskOptPass();
 static llvm::Pass *CreateGatherScatterFlattenPass();
 static llvm::Pass *CreateGatherScatterImprovementsPass();
 static llvm::Pass *CreateLowerGatherScatterPass();
@@ -291,6 +292,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (!g->opt.disableMaskAllOnOptimizations) {
             optPM.add(CreateIntrinsicsOptPass());
+            optPM.add(CreateVSelMovmskOptPass());
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
@@ -307,6 +309,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
+        optPM.add(CreateVSelMovmskOptPass());
 
 #if defined(LLVM_2_9)
         llvm::createStandardModulePasses(&optPM, 3, 
@@ -323,6 +326,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
+        optPM.add(CreateVSelMovmskOptPass());
 
         llvm::createStandardModulePasses(&optPM, 3, 
                                          false /* opt size */,
@@ -343,6 +347,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(CreateIsCompileTimeConstantPass(false));
         optPM.add(CreateIntrinsicsOptPass());
+        optPM.add(CreateVSelMovmskOptPass());
 
         builder.populateLTOPassManager(optPM, true /* internalize */,
                                        true /* inline once again */);
@@ -726,6 +731,92 @@ IntrinsicsOpt::matchingBlendInstruction(llvm::Function *function) {
 static llvm::Pass *
 CreateIntrinsicsOptPass() {
     return new IntrinsicsOpt;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+
+/** This simple optimization pass looks for a vector select instruction
+    with an all-on or all-off constant mask, simplifying it to the
+    appropriate operand if so.
+
+    @todo The better thing to do would be to submit a patch to LLVM to get
+    these; they're presumably pretty simple patterns to match.  
+*/
+class VSelMovmskOpt : public llvm::BasicBlockPass {
+public:
+    VSelMovmskOpt()
+        : BasicBlockPass(ID) { }
+
+    const char *getPassName() const { return "Vector Select Optimization"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    static char ID;
+};
+
+char VSelMovmskOpt::ID = 0;
+llvm::RegisterPass<VSelMovmskOpt> vsel("vector-select", "Vector Select Pass");
+
+
+bool
+VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+ restart:
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+    // vector select wasn't available before 3.1...
+#if defined(LLVM_3_1svn)
+        llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
+        if (selectInst != NULL && selectInst->getType()->isVectorTy()) {
+            llvm::Value *factor = selectInst->getOperand(0);
+            int mask = lGetMask(factor);
+            int allOnMask = (1 << g->target.vectorWidth) - 1;
+            llvm::Value *value = NULL;
+            if (mask == allOnMask)
+                // Mask all on -> replace with the first select value
+                value = selectInst->getOperand(1);
+            else if (mask == 0)
+                // Mask all off -> replace with the second select blend value
+                value = selectInst->getOperand(1);
+
+            if (value != NULL) {
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                                           iter, value);
+                modifiedAny = true;
+                goto restart;
+            }
+        }
+#endif // LLVM_3_1svn
+
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+        if (callInst == NULL)
+            continue;
+
+        llvm::Function *calledFunc = callInst->getCalledFunction();
+        if (calledFunc != m->module->getFunction("__movmsk"))
+            continue;
+
+        int mask = lGetMask(callInst->getArgOperand(0));
+        if (mask != -1) {
+#if 0
+            fprintf(stderr, "mask %d\n", mask);
+            callInst->getArgOperand(0)->dump();
+            fprintf(stderr, "-----------\n");
+#endif
+            llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                                       iter, LLVMInt32(mask));
+            modifiedAny = true;
+            goto restart;
+        }
+    }
+
+    return modifiedAny;
+}
+
+
+static llvm::Pass *
+CreateVSelMovmskOptPass() {
+    return new VSelMovmskOpt;
 }
 
 
