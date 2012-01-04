@@ -31,6 +31,8 @@
 
 ctlztz()
 define_prefetches()
+define_shuffles()
+aossoa()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

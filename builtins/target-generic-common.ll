@@ -34,6 +34,69 @@ include(`util.m4')
 
 stdlib_core()
 scans()
+reduce_equal(WIDTH)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; broadcast/rotate/shuffle
+
+declare <WIDTH x float> @__smear_float(float) nounwind readnone
+declare <WIDTH x double> @__smear_double(double) nounwind readnone
+declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
+declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
+declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
+declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
+
+declare <WIDTH x float> @__broadcast_float(<WIDTH x float>, i32) nounwind readnone
+declare <WIDTH x double> @__broadcast_double(<WIDTH x double>, i32) nounwind readnone
+declare <WIDTH x i8> @__broadcast_i8(<WIDTH x i8>, i32) nounwind readnone
+declare <WIDTH x i16> @__broadcast_i16(<WIDTH x i16>, i32) nounwind readnone
+declare <WIDTH x i32> @__broadcast_i32(<WIDTH x i32>, i32) nounwind readnone
+declare <WIDTH x i64> @__broadcast_i64(<WIDTH x i64>, i32) nounwind readnone
+
+declare <WIDTH x i8> @__rotate_i8(<WIDTH x i8>, i32) nounwind readnone
+declare <WIDTH x i16> @__rotate_i16(<WIDTH x i16>, i32) nounwind readnone
+declare <WIDTH x float> @__rotate_float(<WIDTH x float>, i32) nounwind readnone
+declare <WIDTH x i32> @__rotate_i32(<WIDTH x i32>, i32) nounwind readnone
+declare <WIDTH x double> @__rotate_double(<WIDTH x double>, i32) nounwind readnone
+declare <WIDTH x i64> @__rotate_i64(<WIDTH x i64>, i32) nounwind readnone
+
+declare <WIDTH x i8> @__shuffle_i8(<WIDTH x i8>, <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i8> @__shuffle2_i8(<WIDTH x i8>, <WIDTH x i8>,
+                                    <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>,
+                                      <WIDTH x i32>) nounwind readnone
+declare <WIDTH x float> @__shuffle_float(<WIDTH x float>,
+                                         <WIDTH x i32>) nounwind readnone
+declare <WIDTH x float> @__shuffle2_float(<WIDTH x float>, <WIDTH x float>,
+                                          <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>,
+                                     <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i32> @__shuffle2_i32(<WIDTH x i32>, <WIDTH x i32>,
+                                      <WIDTH x i32>) nounwind readnone
+declare <WIDTH x double> @__shuffle_double(<WIDTH x double>,
+                                           <WIDTH x i32>) nounwind readnone
+declare <WIDTH x double> @__shuffle2_double(<WIDTH x double>,
+                                            <WIDTH x double>, <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i64> @__shuffle_i64(<WIDTH x i64>,
+                                     <WIDTH x i32>) nounwind readnone
+declare <WIDTH x i64> @__shuffle2_i64(<WIDTH x i64>, <WIDTH x i64>,
+                                      <WIDTH x i32>) nounwind readnone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; aos/soa
+
+declare void @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
+                                  <WIDTH x float> %v2, float * noalias %p) nounwind
+declare void @__aos_to_soa3_float(float * noalias %p, <WIDTH x float> * %out0,
+                                  <WIDTH x float> * %out1, <WIDTH x float> * %out2) nounwind
+declare void @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
+                                  <WIDTH x float> %v2, <WIDTH x float> %v3,
+                                  float * noalias %p) nounwind
+declare void @__aos_to_soa4_float(float * noalias %p, <WIDTH x float> * noalias %out0,
+                                  <WIDTH x float> * noalias %out1,
+                                  <WIDTH x float> * noalias %out2,
+                                  <WIDTH x float> * noalias %out3) nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; math
@@ -128,7 +191,6 @@ declare <WIDTH x float> @__svml_log(<WIDTH x float>)
 declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ;; reductions
 
 declare i32 @__movmsk(<WIDTH x i1>) nounwind readnone 
@@ -156,15 +218,6 @@ declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone
 declare i64 @__reduce_add_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
-
-declare i1 @__reduce_equal_int32(<WIDTH x i32> %v, i32 * nocapture %samevalue,
-                                 <WIDTH x i1> %mask) nounwind 
-declare i1 @__reduce_equal_float(<WIDTH x float> %v, float * nocapture %samevalue,
-                                 <WIDTH x i1> %mask) nounwind 
-declare i1 @__reduce_equal_int64(<WIDTH x i64> %v, i64 * nocapture %samevalue,
-                                 <WIDTH x i1> %mask) nounwind 
-declare i1 @__reduce_equal_double(<WIDTH x double> %v, double * nocapture %samevalue,
-                                  <WIDTH x i1> %mask) nounwind 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts

@@ -94,15 +94,15 @@ static inline float broadcast(float v, uniform int i) {
 }
 
 static inline int8 broadcast(int8 v, uniform int i) {
-    return __broadcast_int8(v, i);
+    return __broadcast_i8(v, i);
 }
 
 static inline int16 broadcast(int16 v, uniform int i) {
-    return __broadcast_int16(v, i);
+    return __broadcast_i16(v, i);
 }
 
 static inline int32 broadcast(int32 v, uniform int i) {
-    return __broadcast_int32(v, i);
+    return __broadcast_i32(v, i);
 }
 
 static inline double broadcast(double v, uniform int i) {
@@ -110,7 +110,7 @@ static inline double broadcast(double v, uniform int i) {
 }
 
 static inline int64 broadcast(int64 v, uniform int i) {
-    return __broadcast_int64(v, i);
+    return __broadcast_i64(v, i);
 }
 
 static inline float rotate(float v, uniform int i) {
@@ -118,15 +118,15 @@ static inline float rotate(float v, uniform int i) {
 }
 
 static inline int8 rotate(int8 v, uniform int i) {
-    return __rotate_int8(v, i);
+    return __rotate_i8(v, i);
 }
 
 static inline int16 rotate(int16 v, uniform int i) {
-    return __rotate_int16(v, i);
+    return __rotate_i16(v, i);
 }
 
 static inline int32 rotate(int32 v, uniform int i) {
-    return __rotate_int32(v, i);
+    return __rotate_i32(v, i);
 }
 
 static inline double rotate(double v, uniform int i) {
@@ -134,7 +134,7 @@ static inline double rotate(double v, uniform int i) {
 }
 
 static inline int64 rotate(int64 v, uniform int i) {
-    return __rotate_int64(v, i);
+    return __rotate_i64(v, i);
 }
 
 static inline float shuffle(float v, int i) {
@@ -142,15 +142,15 @@ static inline float shuffle(float v, int i) {
 }
 
 static inline int8 shuffle(int8 v, int i) {
-    return __shuffle_int8(v, i);
+    return __shuffle_i8(v, i);
 }
 
 static inline int16 shuffle(int16 v, int i) {
-    return __shuffle_int16(v, i);
+    return __shuffle_i16(v, i);
 }
 
 static inline int32 shuffle(int32 v, int i) {
-    return __shuffle_int32(v, i);
+    return __shuffle_i32(v, i);
 }
 
 static inline double shuffle(double v, int i) {
@@ -158,7 +158,7 @@ static inline double shuffle(double v, int i) {
 }
 
 static inline int64 shuffle(int64 v, int i) {
-    return __shuffle_int64(v, i);
+    return __shuffle_i64(v, i);
 }
 
 static inline float shuffle(float v0, float v1, int i) {
@@ -166,15 +166,15 @@ static inline float shuffle(float v0, float v1, int i) {
 }
 
 static inline int8 shuffle(int8 v0, int8 v1, int i) {
-    return __shuffle2_int8(v0, v1, i);
+    return __shuffle2_i8(v0, v1, i);
 }
 
 static inline int16 shuffle(int16 v0, int16 v1, int i) {
-    return __shuffle2_int16(v0, v1, i);
+    return __shuffle2_i16(v0, v1, i);
 }
 
 static inline int32 shuffle(int32 v0, int32 v1, int i) {
-    return __shuffle2_int32(v0, v1, i);
+    return __shuffle2_i32(v0, v1, i);
 }
 
 static inline double shuffle(double v0, double v1, int i) {
@@ -182,7 +182,7 @@ static inline double shuffle(double v0, double v1, int i) {
 }
 
 static inline int64 shuffle(int64 v0, int64 v1, int i) {
-    return __shuffle2_int64(v0, v1, i);
+    return __shuffle2_i64(v0, v1, i);
 }
 
 // x[i]
@@ -470,23 +470,27 @@ soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
 static inline void
 aos_to_soa3(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
             int32 * uniform v2) {
-    __aos_to_soa3_int32(a, v0, v1, v2);
+    aos_to_soa3((uniform float * uniform)a, (float * uniform)v0, 
+                (float * uniform)v1, (float * uniform)v2);
 }
 
 static inline void
 soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[]) {
-    __soa_to_aos3_int32(v0, v1, v2, a);
+    soa_to_aos3(floatbits(v0), floatbits(v1), floatbits(v2),
+                (uniform float * uniform)a);
 }
 
 static inline void
 aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
             int32 * uniform v2, int32 * uniform v3) {
-    __aos_to_soa4_int32(a, v0, v1, v2, v3);
+    aos_to_soa4((uniform float * uniform)a, (float * uniform )v0, 
+                (float * uniform)v1, (float * uniform)v2, (float * uniform)v3);
 }
 
 static inline void
 soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[]) {
-    __soa_to_aos4_int32(v0, v1, v2, v3, a);
+    soa_to_aos4(floatbits(v0), floatbits(v1), floatbits(v2), floatbits(v3), 
+                (uniform float * uniform)a);
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -555,7 +555,7 @@ divert`'dnl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`shuffles', `
-define <WIDTH x $1> @__broadcast_$2(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
+define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %v = extractelement <WIDTH x $1> %0, i32 %1
   %r_0 = insertelement <WIDTH x $1> undef, $1 %v, i32 0
 forloop(i, 1, eval(WIDTH-1), `  %r_`'i = insertelement <WIDTH x $1> %r_`'eval(i-1), $1 %v, i32 i
@@ -563,7 +563,7 @@ forloop(i, 1, eval(WIDTH-1), `  %r_`'i = insertelement <WIDTH x $1> %r_`'eval(i-
   ret <WIDTH x $1> %r_`'eval(WIDTH-1)
 }
 
-define <WIDTH x $1> @__rotate_$2(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
+define <WIDTH x $1> @__rotate_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
   %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
   br i1 %isc, label %is_const, label %not_const
 
@@ -592,11 +592,11 @@ not_const:
   %ptr_as_elt_array = bitcast <WIDTH x $1> * %ptr to [eval(2*WIDTH) x $1] *
   %load_ptr = getelementptr [eval(2*WIDTH) x $1] * %ptr_as_elt_array, i32 0, i32 %offset
   %load_ptr_vec = bitcast $1 * %load_ptr to <WIDTH x $1> *
-  %result = load <WIDTH x $1> * %load_ptr_vec, align $3
+  %result = load <WIDTH x $1> * %load_ptr_vec, align $2
   ret <WIDTH x $1> %result
 }
 
-define <WIDTH x $1> @__shuffle_$2(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
 forloop(i, 0, eval(WIDTH-1), `  
   %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
 forloop(i, 0, eval(WIDTH-1), `  
@@ -608,7 +608,7 @@ forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eva
   ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
 }
 
-define <WIDTH x $1> @__shuffle2_$2(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
+define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
   %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
       forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
   >
@@ -650,6 +650,14 @@ forloop(i, 1, eval(WIDTH-1), `
 }
 ')
 
+define(`define_shuffles',`
+shuffles(i8, 1)
+shuffles(i16, 2)
+shuffles(float, 4)
+shuffles(i32, 4)
+shuffles(double, 8)
+shuffles(i64, 8)
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_associative
@@ -924,274 +932,12 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-define(`stdlib_core', `
-
-declare i32 @__fast_masked_vload()
-
-declare i8* @ISPCAlloc(i8**, i64, i32) nounwind
-declare void @ISPCLaunch(i8**, i8*, i8*, i32) nounwind
-declare void @ISPCSync(i8*) nounwind
-declare void @ISPCInstrument(i8*, i8*, i32, i32) nounwind
-
-declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
-declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
-
-; This function declares placeholder masked store functions for the
-;  front-end to use.
-;
-;  void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
-;  void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
-;  void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
-;  void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
-;
-;  These in turn are converted to native masked stores or to regular
-;  stores (if the mask is all on) by the MaskedStoreOptPass optimization
-;  pass.
-
-declare void @__pseudo_masked_store_8(<WIDTH x i8> * nocapture, <WIDTH x i8>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_16(<WIDTH x i16> * nocapture, <WIDTH x i16>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_32(<WIDTH x i32> * nocapture, <WIDTH x i32>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_64(<WIDTH x i64> * nocapture, <WIDTH x i64>, <WIDTH x MASK>)
-
-; Declare the pseudo-gather functions.  When the ispc front-end needs
-; to perform a gather, it generates a call to one of these functions,
-; which have signatures:
-;    
-; varying int8  __pseudo_gather(varying int8 *, mask)
-; varying int16 __pseudo_gather(varying int16 *, mask)
-; varying int32 __pseudo_gather(varying int32 *, mask)
-; varying int64 __pseudo_gather(varying int64 *, mask)
-;
-; The GatherScatterFlattenOpt optimization pass finds these calls and then 
-; converts them to make calls to the following functions (when appropriate); 
-; these represent gathers from a common base pointer with offsets.  The
-; offset_scale factor scales the offsets before they are added to the base
-; pointer--it should have the value 1, 2, 4, or 8.  (It can always just be 1.)
-; The 2, 4, 8 cases are used to match LLVM patterns that use the free 2/4/8 scaling
-; available in x86 addressing calculations... 
-;
-; varying int8  __pseudo_gather_base_offsets{32,64}_8(uniform int8 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int16 __pseudo_gather_base_offsets{32,64}_16(uniform int16 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int32 __pseudo_gather_base_offsets{32,64}_32(uniform int32 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int64 __pseudo_gather_base_offsets{32,64}_64(uniform int64 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-;
-; Then, the GSImprovementsPass optimizations finds these and either
-; converts them to native gather functions or converts them to vector
-; loads, if equivalent.
-
-declare <WIDTH x i8>  @__pseudo_gather32_8(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather32_16(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather32_32(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather32_64(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
-
-declare <WIDTH x i8>  @__pseudo_gather64_8(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather64_16(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather64_32(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather64_64(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
-
-declare <WIDTH x i8>  @__pseudo_gather_base_offsets32_8(i8 *, <WIDTH x i32>, i32,
-                                                     <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather_base_offsets32_16(i8 *, <WIDTH x i32>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather_base_offsets32_32(i8 *, <WIDTH x i32>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather_base_offsets32_64(i8 *, <WIDTH x i32>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-
-declare <WIDTH x i8>  @__pseudo_gather_base_offsets64_8(i8 *, <WIDTH x i64>, i32,
-                                                     <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather_base_offsets64_16(i8 *, <WIDTH x i64>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather_base_offsets64_32(i8 *, <WIDTH x i64>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather_base_offsets64_64(i8 *, <WIDTH x i64>, i32,
-                                                      <WIDTH x MASK>) nounwind readonly
-
-; Similarly to the pseudo-gathers defined above, we also declare undefined
-; pseudo-scatter instructions with signatures:
-;
-; void __pseudo_scatter_8 (varying int8 *, varying int8 values, mask)
-; void __pseudo_scatter_16(varying int16 *, varying int16 values, mask)
-; void __pseudo_scatter_32(varying int32 *, varying int32 values, mask)
-; void __pseudo_scatter_64(varying int64 *, varying int64 values, mask)
-;
-; The GatherScatterFlattenOpt optimization pass also finds these and
-; transforms them to scatters like:
-;
-; void __pseudo_scatter_base_offsets{32,64}_8(uniform int8 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int8 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_16(uniform int16 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int16 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_32(uniform int32 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int32 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_64(uniform int64 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int64 values, mask)
-;
-; And the GSImprovementsPass in turn converts these to actual native
-; scatters or masked stores.  
-
-declare void @__pseudo_scatter32_8(<WIDTH x i32>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter32_16(<WIDTH x i32>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter32_32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter32_64(<WIDTH x i32>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
-
-declare void @__pseudo_scatter64_8(<WIDTH x i64>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter64_16(<WIDTH x i64>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter64_32(<WIDTH x i64>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter64_64(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
-
-declare void @__pseudo_scatter_base_offsets32_8(i8 * nocapture, <WIDTH x i32>, i32,
-                                                <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_16(i8 * nocapture, <WIDTH x i32>, i32,
-                                                 <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_32(i8 * nocapture, <WIDTH x i32>, i32,
-                                                 <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_64(i8 * nocapture, <WIDTH x i32>, i32,
-                                                 <WIDTH x i64>, <WIDTH x MASK>) nounwind
-
-declare void @__pseudo_scatter_base_offsets64_8(i8 * nocapture, <WIDTH x i64>, i32,
-                                                <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_16(i8 * nocapture, <WIDTH x i64>, i32,
-                                                 <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, i32,
-                                                 <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32,
-                                                 <WIDTH x i64>, <WIDTH x MASK>) nounwind
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; vector ops
-
-define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i8> %0, i32 %1
-  ret i8 %extract
-}
-
-define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
-                                           i8) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
-  ret <WIDTH x i8> %insert
-}
-
-define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i16> %0, i32 %1
-  ret i16 %extract
-}
-
-define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
-                                           i16) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
-  ret <WIDTH x i16> %insert
-}
-
-define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i32> %0, i32 %1
-  ret i32 %extract
-}
-
-define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
-                                           i32) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
-  ret <WIDTH x i32> %insert
-}
-
-define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i64> %0, i32 %1
-  ret i64 %extract
-}
-
-define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
-                                           i64) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
-  ret <WIDTH x i64> %insert
-}
-
-shuffles(i8, int8, 1)
-shuffles(i16, int16, 2)
-shuffles(float, float, 4)
-shuffles(i32, int32, 4)
-shuffles(double, double, 8)
-shuffles(i64, int64, 8)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; various bitcasts from one type to another
-
-define <WIDTH x i32> @__intbits_varying_float(<WIDTH x float>) nounwind readnone alwaysinline {
-  %float_to_int_bitcast = bitcast <WIDTH x float> %0 to <WIDTH x i32>
-  ret <WIDTH x i32> %float_to_int_bitcast
-}
-
-define i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
-  %float_to_int_bitcast = bitcast float %0 to i32
-  ret i32 %float_to_int_bitcast
-}
-
-define <WIDTH x i64> @__intbits_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
-  %double_to_int_bitcast = bitcast <WIDTH x double> %0 to <WIDTH x i64>
-  ret <WIDTH x i64> %double_to_int_bitcast
-}
-
-define i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
-  %double_to_int_bitcast = bitcast double %0 to i64
-  ret i64 %double_to_int_bitcast
-}
-
-define <WIDTH x float> @__floatbits_varying_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
-  %int_to_float_bitcast = bitcast <WIDTH x i32> %0 to <WIDTH x float>
-  ret <WIDTH x float> %int_to_float_bitcast
-}
-
-define float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
-  %int_to_float_bitcast = bitcast i32 %0 to float
-  ret float %int_to_float_bitcast
-}
-
-define <WIDTH x double> @__doublebits_varying_int64(<WIDTH x i64>) nounwind readnone alwaysinline {
-  %int_to_double_bitcast = bitcast <WIDTH x i64> %0 to <WIDTH x double>
-  ret <WIDTH x double> %int_to_double_bitcast
-}
-
-define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
-  %int_to_double_bitcast = bitcast i64 %0 to double
-  ret double %int_to_double_bitcast
-}
-
-define <WIDTH x float> @__undef_varying() nounwind readnone alwaysinline {
-  ret <WIDTH x float> undef
-}
-
-define float @__undef_uniform() nounwind readnone alwaysinline {
-  ret float undef
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; sign extension
-
-define i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
-  %r = sext i1 %0 to i32
-  ret i32 %r
-}
-
-define <WIDTH x i32> @__sext_varying_bool(<WIDTH x MASK>) nounwind readnone alwaysinline {
-  ifelse(MASK,i1, `
-  %se = sext <WIDTH x i1> %0 to <WIDTH x i32>
-  ret <WIDTH x i32> %se
-  ', `
-  ret <WIDTH x i32> %0')
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AOS/SOA conversion primitives
 
 ;; take 4 4-wide vectors laid out like <r0 g0 b0 a0> <r1 g1 b1 a1> ...
 ;; and reorder them to <r0 r1 r2 r3> <g0 g1 g2 g3> ...
 
-define void
+define(`aossoa', `define void
 @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0, 
         <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
@@ -1751,23 +1497,6 @@ define void
 
 
 define void
-@__aos_to_soa4_int32(i32 * noalias %ptr,
-        <WIDTH x i32> * noalias %out0, <WIDTH x i32> * noalias %out1,
-        <WIDTH x i32> * noalias %out2, <WIDTH x i32> * noalias %out3)
-        nounwind alwaysinline { 
-  %fptr = bitcast i32 * %ptr to float *
-  %fout0 = bitcast <WIDTH x i32> * %out0 to <WIDTH x float> *
-  %fout1 = bitcast <WIDTH x i32> * %out1 to <WIDTH x float> *
-  %fout2 = bitcast <WIDTH x i32> * %out2 to <WIDTH x float> *
-  %fout3 = bitcast <WIDTH x i32> * %out3 to <WIDTH x float> *
-  call void @__aos_to_soa4_float(float * %fptr, 
-      <WIDTH x float> * %fout0, <WIDTH x float> * %fout1, <WIDTH x float> * %fout2, 
-      <WIDTH x float> * %fout3)
-  ret void
-}
-
-
-define void
 @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
              <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline { 
   %out0 = bitcast float * %p to <WIDTH x float> *
@@ -1777,20 +1506,6 @@ define void
   call void @__soa_to_aos4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1, 
          <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0, 
          <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
-  ret void
-}
-
-
-define void
-@__soa_to_aos4_int32(<WIDTH x i32> %v0, <WIDTH x i32> %v1, <WIDTH x i32> %v2,
-             <WIDTH x i32> %v3, i32 * noalias %base) nounwind alwaysinline { 
-  %fv0 = bitcast <WIDTH x i32> %v0 to <WIDTH x float>
-  %fv1 = bitcast <WIDTH x i32> %v1 to <WIDTH x float>
-  %fv2 = bitcast <WIDTH x i32> %v2 to <WIDTH x float>
-  %fv3 = bitcast <WIDTH x i32> %v3 to <WIDTH x float>
-  %fbase = bitcast i32 * %base to float *
-  call void @__soa_to_aos4_float(<WIDTH x float> %fv0, <WIDTH x float> %fv1, 
-      <WIDTH x float> %fv2, <WIDTH x float> %fv3, float * %fbase)
   ret void
 }
 
@@ -1813,20 +1528,6 @@ define void
 
 
 define void
-@__aos_to_soa3_int32(i32 * noalias %base,
-        <WIDTH x i32> * noalias %out0, <WIDTH x i32> * noalias %out1,
-        <WIDTH x i32> * noalias %out2) nounwind alwaysinline { 
-  %fbase = bitcast i32 * %base to float *
-  %fout0 = bitcast <WIDTH x i32> * %out0 to <WIDTH x float> *
-  %fout1 = bitcast <WIDTH x i32> * %out1 to <WIDTH x float> *
-  %fout2 = bitcast <WIDTH x i32> * %out2 to <WIDTH x float> *
-  call void @__aos_to_soa3_float(float * %fbase,
-      <WIDTH x float> * %fout0, <WIDTH x float> * %fout1, <WIDTH x float> * %fout2)
-  ret void
-}
-
-
-define void
 @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
                      float * noalias %p) nounwind alwaysinline { 
   %out0 = bitcast float * %p to <WIDTH x float> *
@@ -1837,20 +1538,262 @@ define void
          <WIDTH x float> * %out2)
   ret void
 }
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-define void
-@__soa_to_aos3_int32(<WIDTH x i32> %v0, <WIDTH x i32> %v1, <WIDTH x i32> %v2,
-                     i32 * noalias %base) nounwind alwaysinline { 
-  %fv0 = bitcast <WIDTH x i32> %v0 to <WIDTH x float>
-  %fv1 = bitcast <WIDTH x i32> %v1 to <WIDTH x float>
-  %fv2 = bitcast <WIDTH x i32> %v2 to <WIDTH x float>
-  %fbase = bitcast i32 * %base to float *
-  call void @__soa_to_aos3_float(<WIDTH x float> %fv0, <WIDTH x float> %fv1, 
-      <WIDTH x float> %fv2, float * %fbase)
-  ret void
+define(`stdlib_core', `
+
+declare i32 @__fast_masked_vload()
+
+declare i8* @ISPCAlloc(i8**, i64, i32) nounwind
+declare void @ISPCLaunch(i8**, i8*, i8*, i32) nounwind
+declare void @ISPCSync(i8*) nounwind
+declare void @ISPCInstrument(i8*, i8*, i32, i32) nounwind
+
+declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
+declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
+
+; This function declares placeholder masked store functions for the
+;  front-end to use.
+;
+;  void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
+;  void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
+;  void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
+;  void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
+;
+;  These in turn are converted to native masked stores or to regular
+;  stores (if the mask is all on) by the MaskedStoreOptPass optimization
+;  pass.
+
+declare void @__pseudo_masked_store_8(<WIDTH x i8> * nocapture, <WIDTH x i8>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_16(<WIDTH x i16> * nocapture, <WIDTH x i16>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_32(<WIDTH x i32> * nocapture, <WIDTH x i32>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_64(<WIDTH x i64> * nocapture, <WIDTH x i64>, <WIDTH x MASK>)
+
+; Declare the pseudo-gather functions.  When the ispc front-end needs
+; to perform a gather, it generates a call to one of these functions,
+; which have signatures:
+;    
+; varying int8  __pseudo_gather(varying int8 *, mask)
+; varying int16 __pseudo_gather(varying int16 *, mask)
+; varying int32 __pseudo_gather(varying int32 *, mask)
+; varying int64 __pseudo_gather(varying int64 *, mask)
+;
+; The GatherScatterFlattenOpt optimization pass finds these calls and then 
+; converts them to make calls to the following functions (when appropriate); 
+; these represent gathers from a common base pointer with offsets.  The
+; offset_scale factor scales the offsets before they are added to the base
+; pointer--it should have the value 1, 2, 4, or 8.  (It can always just be 1.)
+; The 2, 4, 8 cases are used to match LLVM patterns that use the free 2/4/8 scaling
+; available in x86 addressing calculations... 
+;
+; varying int8  __pseudo_gather_base_offsets{32,64}_8(uniform int8 *base, 
+;                                    int{32,64} offsets, int32 offset_scale, mask)
+; varying int16 __pseudo_gather_base_offsets{32,64}_16(uniform int16 *base, 
+;                                    int{32,64} offsets, int32 offset_scale, mask)
+; varying int32 __pseudo_gather_base_offsets{32,64}_32(uniform int32 *base, 
+;                                    int{32,64} offsets, int32 offset_scale, mask)
+; varying int64 __pseudo_gather_base_offsets{32,64}_64(uniform int64 *base, 
+;                                    int{32,64} offsets, int32 offset_scale, mask)
+;
+; Then, the GSImprovementsPass optimizations finds these and either
+; converts them to native gather functions or converts them to vector
+; loads, if equivalent.
+
+declare <WIDTH x i8>  @__pseudo_gather32_8(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i16> @__pseudo_gather32_16(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i32> @__pseudo_gather32_32(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i64> @__pseudo_gather32_64(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+
+declare <WIDTH x i8>  @__pseudo_gather64_8(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i16> @__pseudo_gather64_16(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i32> @__pseudo_gather64_32(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i64> @__pseudo_gather64_64(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+
+declare <WIDTH x i8>  @__pseudo_gather_base_offsets32_8(i8 *, <WIDTH x i32>, i32,
+                                                     <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i16> @__pseudo_gather_base_offsets32_16(i8 *, <WIDTH x i32>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i32> @__pseudo_gather_base_offsets32_32(i8 *, <WIDTH x i32>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i64> @__pseudo_gather_base_offsets32_64(i8 *, <WIDTH x i32>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+
+declare <WIDTH x i8>  @__pseudo_gather_base_offsets64_8(i8 *, <WIDTH x i64>, i32,
+                                                     <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i16> @__pseudo_gather_base_offsets64_16(i8 *, <WIDTH x i64>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i32> @__pseudo_gather_base_offsets64_32(i8 *, <WIDTH x i64>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i64> @__pseudo_gather_base_offsets64_64(i8 *, <WIDTH x i64>, i32,
+                                                      <WIDTH x MASK>) nounwind readonly
+
+; Similarly to the pseudo-gathers defined above, we also declare undefined
+; pseudo-scatter instructions with signatures:
+;
+; void __pseudo_scatter_8 (varying int8 *, varying int8 values, mask)
+; void __pseudo_scatter_16(varying int16 *, varying int16 values, mask)
+; void __pseudo_scatter_32(varying int32 *, varying int32 values, mask)
+; void __pseudo_scatter_64(varying int64 *, varying int64 values, mask)
+;
+; The GatherScatterFlattenOpt optimization pass also finds these and
+; transforms them to scatters like:
+;
+; void __pseudo_scatter_base_offsets{32,64}_8(uniform int8 *base, 
+;             varying int32 offsets, int32 offset_scale, varying int8 values, mask)
+; void __pseudo_scatter_base_offsets{32,64}_16(uniform int16 *base, 
+;             varying int32 offsets, int32 offset_scale, varying int16 values, mask)
+; void __pseudo_scatter_base_offsets{32,64}_32(uniform int32 *base, 
+;             varying int32 offsets, int32 offset_scale, varying int32 values, mask)
+; void __pseudo_scatter_base_offsets{32,64}_64(uniform int64 *base, 
+;             varying int32 offsets, int32 offset_scale, varying int64 values, mask)
+;
+; And the GSImprovementsPass in turn converts these to actual native
+; scatters or masked stores.  
+
+declare void @__pseudo_scatter32_8(<WIDTH x i32>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter32_16(<WIDTH x i32>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter32_32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter32_64(<WIDTH x i32>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_scatter64_8(<WIDTH x i64>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter64_16(<WIDTH x i64>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter64_32(<WIDTH x i64>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter64_64(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_scatter_base_offsets32_8(i8 * nocapture, <WIDTH x i32>, i32,
+                                                <WIDTH x i8>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets32_16(i8 * nocapture, <WIDTH x i32>, i32,
+                                                 <WIDTH x i16>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets32_32(i8 * nocapture, <WIDTH x i32>, i32,
+                                                 <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets32_64(i8 * nocapture, <WIDTH x i32>, i32,
+                                                 <WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare void @__pseudo_scatter_base_offsets64_8(i8 * nocapture, <WIDTH x i64>, i32,
+                                                <WIDTH x i8>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets64_16(i8 * nocapture, <WIDTH x i64>, i32,
+                                                 <WIDTH x i16>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, i32,
+                                                 <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32,
+                                                 <WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; vector ops
+
+define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <WIDTH x i8> %0, i32 %1
+  ret i8 %extract
 }
 
+define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
+                                           i8) nounwind readnone alwaysinline {
+  %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
+  ret <WIDTH x i8> %insert
+}
+
+define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <WIDTH x i16> %0, i32 %1
+  ret i16 %extract
+}
+
+define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
+                                           i16) nounwind readnone alwaysinline {
+  %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
+  ret <WIDTH x i16> %insert
+}
+
+define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <WIDTH x i32> %0, i32 %1
+  ret i32 %extract
+}
+
+define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
+                                           i32) nounwind readnone alwaysinline {
+  %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
+  ret <WIDTH x i32> %insert
+}
+
+define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
+  %extract = extractelement <WIDTH x i64> %0, i32 %1
+  ret i64 %extract
+}
+
+define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
+                                           i64) nounwind readnone alwaysinline {
+  %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
+  ret <WIDTH x i64> %insert
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; various bitcasts from one type to another
+
+define <WIDTH x i32> @__intbits_varying_float(<WIDTH x float>) nounwind readnone alwaysinline {
+  %float_to_int_bitcast = bitcast <WIDTH x float> %0 to <WIDTH x i32>
+  ret <WIDTH x i32> %float_to_int_bitcast
+}
+
+define i32 @__intbits_uniform_float(float) nounwind readnone alwaysinline {
+  %float_to_int_bitcast = bitcast float %0 to i32
+  ret i32 %float_to_int_bitcast
+}
+
+define <WIDTH x i64> @__intbits_varying_double(<WIDTH x double>) nounwind readnone alwaysinline {
+  %double_to_int_bitcast = bitcast <WIDTH x double> %0 to <WIDTH x i64>
+  ret <WIDTH x i64> %double_to_int_bitcast
+}
+
+define i64 @__intbits_uniform_double(double) nounwind readnone alwaysinline {
+  %double_to_int_bitcast = bitcast double %0 to i64
+  ret i64 %double_to_int_bitcast
+}
+
+define <WIDTH x float> @__floatbits_varying_int32(<WIDTH x i32>) nounwind readnone alwaysinline {
+  %int_to_float_bitcast = bitcast <WIDTH x i32> %0 to <WIDTH x float>
+  ret <WIDTH x float> %int_to_float_bitcast
+}
+
+define float @__floatbits_uniform_int32(i32) nounwind readnone alwaysinline {
+  %int_to_float_bitcast = bitcast i32 %0 to float
+  ret float %int_to_float_bitcast
+}
+
+define <WIDTH x double> @__doublebits_varying_int64(<WIDTH x i64>) nounwind readnone alwaysinline {
+  %int_to_double_bitcast = bitcast <WIDTH x i64> %0 to <WIDTH x double>
+  ret <WIDTH x double> %int_to_double_bitcast
+}
+
+define double @__doublebits_uniform_int64(i64) nounwind readnone alwaysinline {
+  %int_to_double_bitcast = bitcast i64 %0 to double
+  ret double %int_to_double_bitcast
+}
+
+define <WIDTH x float> @__undef_varying() nounwind readnone alwaysinline {
+  ret <WIDTH x float> undef
+}
+
+define float @__undef_uniform() nounwind readnone alwaysinline {
+  ret float undef
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; sign extension
+
+define i32 @__sext_uniform_bool(i1) nounwind readnone alwaysinline {
+  %r = sext i1 %0 to i32
+  ret i32 %r
+}
+
+define <WIDTH x i32> @__sext_varying_bool(<WIDTH x MASK>) nounwind readnone alwaysinline {
+  ifelse(MASK,i1, `
+  %se = sext <WIDTH x i1> %0 to <WIDTH x i32>
+  ret <WIDTH x i32> %se
+  ', `
+  ret <WIDTH x i32> %0')
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
@@ -2570,7 +2513,7 @@ check_neighbors:
   ; up comparing each element to its neighbor on the right.  Then see if
   ; all of those values are true; if so, then all of the elements are equal..
   %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
-  %castvr = call <$1 x $4> @__rotate_int$6(<$1 x $4> %castvec, i32 1)
+  %castvr = call <$1 x $4> @__rotate_i$6(<$1 x $4> %castvec, i32 1)
   %vr = bitcast <$1 x $4> %castvr to <$1 x $2>
   %eq = $5 eq <$1 x $2> %vec, %vr
   ifelse(MASK,i32, `
