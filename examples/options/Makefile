@@ -5,7 +5,7 @@ TASK_OBJ=$(addprefix objs/, $(subst ../,, $(TASK_CXX:.cpp=.o)))
 
 
 CXX=g++ -m64
-CXXFLAGS=-Iobjs/ -g -Wall
+CXXFLAGS=-Iobjs/ -O3 -Wall
 ISPC=ispc
 ISPCFLAGS=-O2 --target=sse2,sse4-x2,avx-x2 --arch=x86-64
 
