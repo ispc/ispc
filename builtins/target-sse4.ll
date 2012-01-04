@@ -455,10 +455,10 @@ load_and_broadcast(4, i16, 16)
 load_and_broadcast(4, i32, 32)
 load_and_broadcast(4, i64, 64)
 
-load_masked(4, i8,  8,  1)
-load_masked(4, i16, 16, 2)
-load_masked(4, i32, 32, 4)
-load_masked(4, i64, 64, 8)
+masked_load(4, i8,  8,  1)
+masked_load(4, i16, 16, 2)
+masked_load(4, i32, 32, 4)
+masked_load(4, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

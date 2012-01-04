@@ -2213,8 +2213,8 @@ define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x i32> %mask) nounwind alway
 ;; $3: suffix for function name (32, 64, ...)
 ;; $4: alignment for elements of type $2 (4, 8, ...)
 
-define(`load_masked', `
-define <$1 x $2> @__load_masked_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+define(`masked_load', `
+define <$1 x $2> @__masked_load_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
 entry:
   %mm = call i32 @__movmsk(<$1 x i32> %mask)
   

@@ -385,13 +385,13 @@ load_and_broadcast(16, i32, 32)
 load_and_broadcast(16, i64, 64)
 
 ; no masked load instruction for i8 and i16 types??
-load_masked(16, i8,  8,  1)
-load_masked(16, i16, 16, 2)
+masked_load(16, i8,  8,  1)
+masked_load(16, i16, 16, 2)
 
 declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8 *, <8 x float> %mask)
 declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x double> %mask)
  
-define <16 x i32> @__load_masked_32(i8 *, <16 x i32> %mask) nounwind alwaysinline {
+define <16 x i32> @__masked_load_32(i8 *, <16 x i32> %mask) nounwind alwaysinline {
   %floatmask = bitcast <16 x i32> %mask to <16 x float>
   %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
      <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -409,7 +409,7 @@ define <16 x i32> @__load_masked_32(i8 *, <16 x i32> %mask) nounwind alwaysinlin
 }
 
 
-define <16 x i64> @__load_masked_64(i8 *, <16 x i32> %mask) nounwind alwaysinline {
+define <16 x i64> @__masked_load_64(i8 *, <16 x i32> %mask) nounwind alwaysinline {
   ; double up masks, bitcast to doubles
   %mask0 = shufflevector <16 x i32> %mask, <16 x i32> undef,
      <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>

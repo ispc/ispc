@@ -356,10 +356,10 @@ load_and_broadcast(8, i16, 16)
 load_and_broadcast(8, i32, 32)
 load_and_broadcast(8, i64, 64)
 
-load_masked(8, i8,  8,  1)
-load_masked(8, i16, 16, 2)
-load_masked(8, i32, 32, 4)
-load_masked(8, i64, 64, 8)
+masked_load(8, i8,  8,  1)
+masked_load(8, i16, 16, 2)
+masked_load(8, i32, 32, 4)
+masked_load(8, i64, 64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

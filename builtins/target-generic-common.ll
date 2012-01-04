@@ -175,10 +175,10 @@ load_and_broadcast(WIDTH, i16, 16)
 load_and_broadcast(WIDTH, i32, 32)
 load_and_broadcast(WIDTH, i64, 64)
 
-declare <WIDTH x i8> @__load_masked_8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i16> @__load_masked_16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i32> @__load_masked_32(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i64> @__load_masked_64(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i8> @__masked_load_8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i16> @__masked_load_16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i32> @__masked_load_32(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i64> @__masked_load_64(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 
 declare void @__masked_store_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                 <WIDTH x i1>) nounwind 
