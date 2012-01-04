@@ -1106,7 +1106,8 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
                 // points to in order to return the difference in elements.
                 LLVM_TYPE_CONST llvm::Type *llvmElementType = 
                     ptrType->GetBaseType()->LLVMType(g->ctx);
-                llvm::Value *size = g->target.SizeOf(llvmElementType);
+                llvm::Value *size = g->target.SizeOf(llvmElementType, 
+                                                     ctx->GetCurrentBasicBlock());
                 if (ptrType->IsVaryingType())
                     size = ctx->SmearUniform(size);
 
@@ -5875,7 +5876,7 @@ SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     if (llvmType == NULL)
         return NULL;
 
-    return g->target.SizeOf(llvmType);
+    return g->target.SizeOf(llvmType, ctx->GetCurrentBasicBlock());
 }
 
 

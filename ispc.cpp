@@ -50,6 +50,7 @@
 #include <llvm/Analysis/DIBuilder.h>
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
+#include <llvm/Instructions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
@@ -358,7 +359,30 @@ Target::GetISAString() const {
 
 
 llvm::Value *
-Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
+Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type, 
+               llvm::BasicBlock *insertAtEnd) {
+    if (isa == Target::GENERIC && type->isPrimitiveType() == false) {
+        llvm::Value *index[1] = { LLVMInt32(1) };
+        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+        llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+        llvm::Instruction *gep = 
+            llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
+                                            insertAtEnd);
+#else
+        llvm::Instruction *gep =
+            llvm::GetElementPtrInst::Create(voidPtr, &index[0], &index[1],
+                                            "sizeof_gep", insertAtEnd);
+#endif
+        if (is32Bit || g->opt.force32BitAddressing)
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
+                                          "sizeof_int", insertAtEnd);
+        else
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, 
+                                          "sizeof_int", insertAtEnd);
+    }
+
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
     uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
@@ -370,7 +394,30 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type) {
 
 
 llvm::Value *
-Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element) {
+Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
+                     llvm::BasicBlock *insertAtEnd) {
+    if (isa == Target::GENERIC && type->isPrimitiveType() == false) {
+        llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
+        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+        llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
+        llvm::Instruction *gep = 
+            llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
+                                            insertAtEnd);
+#else
+        llvm::Instruction *gep =
+            llvm::GetElementPtrInst::Create(voidPtr, &indices[0], &indices[2],
+                                            "offset_gep", insertAtEnd);
+#endif
+        if (is32Bit || g->opt.force32BitAddressing)
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
+                                          "offset_int", insertAtEnd);
+        else
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, 
+                                          "offset_int", insertAtEnd);
+    }
+
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
     LLVM_TYPE_CONST llvm::StructType *structType = 

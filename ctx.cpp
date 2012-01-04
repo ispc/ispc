@@ -1468,7 +1468,7 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
     // Find the scale factor for the index (i.e. the size of the object
     // that the pointer(s) point(s) to.
     const Type *scaleType = ptrType->GetBaseType();
-    llvm::Value *scale = g->target.SizeOf(scaleType->LLVMType(g->ctx));
+    llvm::Value *scale = g->target.SizeOf(scaleType->LLVMType(g->ctx), bblock);
 
     bool indexIsVarying = 
         llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index->getType());
@@ -1651,7 +1651,8 @@ FunctionEmitContext::AddElementOffset(llvm::Value *basePtr, int elementNum,
     if (st != NULL)
         // If the pointer is to a structure, Target::StructOffset() gives
         // us the offset in bytes to the given element of the structure
-        offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum);
+        offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum,
+                                        bblock);
     else {
         // Otherwise we should have a vector or array here and the offset
         // is given by the element number times the size of the element
@@ -1660,7 +1661,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *basePtr, int elementNum,
             dynamic_cast<const SequentialType *>(ptrType->GetBaseType());
         Assert(st != NULL);
         llvm::Value *size = 
-            g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx));
+            g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
         llvm::Value *scale = (g->target.is32Bit || g->opt.force32BitAddressing) ?
             LLVMInt32(elementNum) : LLVMInt64(elementNum);
         offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
@@ -2479,7 +2480,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     Assert(falloc != NULL);
-    llvm::Value *structSize = g->target.SizeOf(argStructType);
+    llvm::Value *structSize = g->target.SizeOf(argStructType, bblock);
     if (structSize->getType() != LLVMTypes::Int64Type)
         // ISPCAlloc expects the size as an uint64_t, but on 32-bit
         // targets, SizeOf returns a 32-bit value
@@ -2575,7 +2576,7 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     // Find the size of a uniform element of the varying type
     LLVM_TYPE_CONST llvm::Type *llvmBaseUniformType = 
         baseType->GetAsUniformType()->LLVMType(g->ctx);
-    llvm::Value *unifSize = g->target.SizeOf(llvmBaseUniformType);
+    llvm::Value *unifSize = g->target.SizeOf(llvmBaseUniformType, bblock);
     unifSize = SmearUniform(unifSize);
 
     // Compute offset = <0, 1, .. > * unifSize
