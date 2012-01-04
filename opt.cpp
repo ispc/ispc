@@ -1156,8 +1156,12 @@ lIs248Splat(llvm::Value *v, int *splat) {
     if (cvec == NULL)
         return false;
 
+    llvm::Constant *splatConst = cvec->getSplatValue();
+    if (splatConst == NULL)
+        return false;
+
     llvm::ConstantInt *ci = 
-        llvm::dyn_cast<llvm::ConstantInt>(cvec->getSplatValue());
+        llvm::dyn_cast<llvm::ConstantInt>(splatConst);
     if (ci == NULL)
         return false;
 
