@@ -98,6 +98,8 @@ namespace llvm {
 #endif
 
 class ArrayType;
+class AST;
+class ASTNode;
 class AtomicType;
 class FunctionEmitContext;
 class Expr;
@@ -421,6 +423,7 @@ enum {
     COST_FUNPTR_UNIFORM = 12,
     COST_FUNPTR_VARYING = 24,
     COST_GATHER = 8,
+    COST_GOTO = 4,
     COST_LOAD = 2,
     COST_REGULAR_BREAK_CONTINUE = 2,
     COST_RETURN = 4,

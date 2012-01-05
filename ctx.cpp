@@ -77,7 +77,7 @@ struct CFInfo {
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
     bool IsForeach() { return type == Foreach; }
-    bool IsVaryingType() { return !isUniform; }
+    bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
     enum CFType { If, Loop, Foreach };
@@ -157,9 +157,10 @@ CFInfo::GetForeach(llvm::BasicBlock *breakTarget,
 ///////////////////////////////////////////////////////////////////////////
 
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
-                                         llvm::Function *llvmFunction,
+                                         llvm::Function *lf,
                                          SourcePos firstStmtPos) {
     function = func;
+    llvmFunction = lf;
 
     /* Create a new basic block to store all of the allocas */
     allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
@@ -762,7 +763,7 @@ int
 FunctionEmitContext::VaryingCFDepth() const { 
     int sum = 0;
     for (unsigned int i = 0; i < controlFlowInfo.size(); ++i)
-        if (controlFlowInfo[i]->IsVaryingType())
+        if (controlFlowInfo[i]->IsVarying())
             ++sum;
     return sum;
 }
@@ -774,6 +775,41 @@ FunctionEmitContext::InForeachLoop() const {
         if (controlFlowInfo[i]->IsForeach())
             return true;
     return false;
+}
+
+
+bool
+FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
+    LabeledStmt *ls = dynamic_cast<LabeledStmt *>(node);
+    if (ls == NULL)
+        return true;
+
+    FunctionEmitContext *ctx = (FunctionEmitContext *)data;
+
+    if (ctx->labelMap.find(ls->name) != ctx->labelMap.end())
+        Error(ls->pos, "Multiple labels named \"%s\" in function.",
+              ls->name.c_str());
+    else {
+        llvm::BasicBlock *bb = ctx->CreateBasicBlock(ls->name.c_str());
+        ctx->labelMap[ls->name] = bb;
+    }
+    return true;
+}
+
+
+void
+FunctionEmitContext::InitializeLabelMap(Stmt *code) {
+    labelMap.erase(labelMap.begin(), labelMap.end());
+    WalkAST(code, initLabelBBlocks, NULL, this);
+}
+
+
+llvm::BasicBlock *
+FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
+    if (labelMap.find(label) != labelMap.end())
+        return labelMap[label];
+    else
+        return NULL;
 }
 
 
@@ -920,8 +956,7 @@ FunctionEmitContext::GetStringPtr(const std::string &str) {
 
 llvm::BasicBlock *
 FunctionEmitContext::CreateBasicBlock(const char *name) {
-    llvm::Function *function = bblock->getParent();
-    return llvm::BasicBlock::Create(*g->ctx, name, function);
+    return llvm::BasicBlock::Create(*g->ctx, name, llvmFunction);
 }
 
 

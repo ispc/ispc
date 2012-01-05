@@ -224,7 +224,7 @@ struct ForeachDimension {
 %type <declSpecs> declaration_specifiers 
 
 %type <stringVal> string_constant
-%type <constCharPtr> struct_or_union_name enum_identifier
+%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
 %type <intVal> int_constant soa_width_specifier
 
 %type <foreachDimension> foreach_dimension_specifier
@@ -1262,7 +1262,11 @@ statement
     ;
 
 labeled_statement
-    : TOKEN_CASE constant_expression ':' statement
+    : goto_identifier ':' statement
+    {
+        $$ = new LabeledStmt($1, $3, @1);
+    }
+    | TOKEN_CASE constant_expression ':' statement
       { UNIMPLEMENTED; }
     | TOKEN_DEFAULT ':' statement
       { UNIMPLEMENTED; }
@@ -1433,9 +1437,13 @@ iteration_statement
      }
     ;
 
+goto_identifier
+    : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
+    ;
+
 jump_statement
-    : TOKEN_GOTO TOKEN_IDENTIFIER ';'
-      { UNIMPLEMENTED; }
+    : TOKEN_GOTO goto_identifier ';'
+      { $$ = new GotoStmt($2, @1, @2); }
     | TOKEN_CONTINUE ';'
       { $$ = new ContinueStmt(false, @1); }
     | TOKEN_BREAK ';'

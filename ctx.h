@@ -39,6 +39,7 @@
 #define ISPC_CTX_H 1
 
 #include "ispc.h"
+#include <map>
 #include <llvm/InstrTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/Analysis/DIBuilder.h>
@@ -191,6 +192,15 @@ public:
     int VaryingCFDepth() const;
 
     bool InForeachLoop() const;
+
+    /** Step through the code and find label statements; create a basic
+        block for each one, so that subsequent calls to
+        GetLabeledBasicBlock() return the corresponding basic block. */
+    void InitializeLabelMap(Stmt *code);
+
+    /** If there is a label in the function with the given name, return the
+        new basic block that it starts. */
+    llvm::BasicBlock *GetLabeledBasicBlock(const std::string &label);
 
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
@@ -446,6 +456,9 @@ private:
     /** Pointer to the Function for which we're currently generating code. */
     Function *function;
 
+    /** LLVM function representation for the current function. */
+    llvm::Function *llvmFunction;
+
     /** The basic block into which we add any alloca instructions that need
         to go at the very start of the function. */
     llvm::BasicBlock *allocaBlock;
@@ -536,6 +549,10 @@ private:
         ISPCAlloc(), and ISPCSync() routines as a handle to the group ot
         tasks launched from the current function. */
     llvm::Value *launchGroupHandlePtr;
+
+    std::map<std::string, llvm::BasicBlock *> labelMap;
+
+    static bool initLabelBBlocks(ASTNode *node, void *data);
 
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);

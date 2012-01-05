@@ -91,6 +91,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         ForStmt *fs;
         ForeachStmt *fes;
         ReturnStmt *rs;
+        LabeledStmt *ls;
         StmtList *sl;
         PrintStmt *ps;
         AssertStmt *as;
@@ -131,9 +132,12 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
         }
         else if (dynamic_cast<BreakStmt *>(node) != NULL ||
-                 dynamic_cast<ContinueStmt *>(node) != NULL) {
-            // nothing 
+                 dynamic_cast<ContinueStmt *>(node) != NULL ||
+                 dynamic_cast<GotoStmt *>(node) != NULL) {
+            // nothing
         }
+        else if ((ls = dynamic_cast<LabeledStmt *>(node)) != NULL)
+            ls->stmt = (Stmt *)WalkAST(ls->stmt, preFunc, postFunc, data);
         else if ((rs = dynamic_cast<ReturnStmt *>(node)) != NULL)
             rs->val = (Expr *)WalkAST(rs->val, preFunc, postFunc, data);
         else if ((sl = dynamic_cast<StmtList *>(node)) != NULL) {
@@ -289,3 +293,4 @@ EstimateCost(ASTNode *root) {
     WalkAST(root, lCostCallback, NULL, &cost);
     return cost;
 }
+

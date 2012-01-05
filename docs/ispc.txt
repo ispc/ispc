@@ -100,6 +100,7 @@ Contents:
 
     * `Conditional Statements: "if"`_
     * `Basic Iteration Statements: "for", "while", and "do"`_
+    * `Unstructured Control Flow: "goto"`_
     * `"Coherent" Control Flow Statements: "cif" and Friends`_
     * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
     * `Parallel Iteration with "programIndex" and "programCount"`_
@@ -1184,7 +1185,8 @@ but are likely to be supported in future releases:
   ``int64`` types
 * Character constants
 * String constants and arrays of characters as strings
-* ``switch`` and ``goto`` statements
+* ``switch`` statements
+* ``goto`` statements are partially supported (see `Unstructured Control Flow: "goto"`_)
 * ``union`` types
 * Bitfield members of ``struct`` types
 * Variable numbers of arguments to functions
@@ -2004,6 +2006,37 @@ independently for each of the program instances in a gang; for example, if
 one of them executes a ``continue`` statement, other program instances
 executing code in the loop body that didn't execute the ``continue`` will
 be unaffected by it.
+
+Unstructured Control Flow: "goto"
+---------------------------------
+
+``goto`` statements are allowed in ``ispc`` programs under limited
+circumstances; specifically, only when the compiler can determine that if
+any program instance executes a ``goto`` statement, then all of the program
+instances will be running at that statement, such that all will follow the
+``goto``.
+
+Put another way: it's illegal for there to be "varying" control flow
+statements in scopes that enclose a ``goto`` statement.  An error is issued
+if a ``goto`` is used in this situation.
+
+The syntax for adding labels to ``ispc`` programs and jumping to them with
+``goto`` is the same as in C.  The following code shows a ``goto`` based
+equivalent of a ``for`` loop where the induction variable ``i`` goes from
+zero to ten.
+
+::
+
+      uniform int i = 0;
+    check:
+      if (i > 10)
+          goto done;
+      // loop body
+      ++i;
+      goto check;
+    done:
+      // ...
+
 
 "Coherent" Control Flow Statements: "cif" and Friends
 -----------------------------------------------------

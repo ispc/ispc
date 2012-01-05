@@ -494,6 +494,7 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
         ctx->EndScope();
 }
 
+
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     // First check all of the things that might happen due to errors
@@ -1912,6 +1913,132 @@ ReturnStmt::Print(int indent) const {
     if (val) val->Print();
     else printf("(void)");
     printf("\n");
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// GotoStmt
+
+GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip) 
+    : Stmt(gotoPos) {
+    label = l;
+    identifierPos = ip;
+}
+
+
+void
+GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (ctx->VaryingCFDepth() > 0) {
+        Error(pos, "\"goto\" statements are only legal under \"uniform\" "
+              "control flow.");
+        return;
+    }
+    if (ctx->InForeachLoop()) {
+        Error(pos, "\"goto\" statements are currently illegal inside "
+              "\"foreach\" loops.");
+        return;
+    }
+
+    llvm::BasicBlock *bb = ctx->GetLabeledBasicBlock(label);
+    if (bb == NULL) {
+        // TODO: use the string distance stuff to suggest alternatives if
+        // there are some with names close to the label name we have here..
+        Error(identifierPos, "No label named \"%s\" found in current function.",
+              label.c_str());
+        return;
+    }
+
+    ctx->BranchInst(bb);
+    ctx->SetCurrentBasicBlock(NULL);
+}
+
+
+void
+GotoStmt::Print(int indent) const {
+    printf("%*cGoto label \"%s\"\n", indent, ' ', label.c_str());
+}
+
+
+Stmt *
+GotoStmt::Optimize() {
+    return this;
+}
+
+
+Stmt *
+GotoStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+GotoStmt::EstimateCost() const {
+    return COST_GOTO;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// LabeledStmt
+
+LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p) 
+    : Stmt(p) {
+    name = n;
+    stmt = s;
+}
+
+
+void
+LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
+    llvm::BasicBlock *bblock = ctx->GetLabeledBasicBlock(name);
+    assert(bblock != NULL);
+
+    // End the current basic block with a jump to our basic block and then
+    // set things up for emission to continue there.  Note that the current
+    // basic block may validly be NULL going into this statement due to an
+    // earlier goto that NULLed it out; that doesn't stop us from
+    // re-establishing a current basic block starting at the label..
+    if (ctx->GetCurrentBasicBlock() != NULL)
+        ctx->BranchInst(bblock);
+    ctx->SetCurrentBasicBlock(bblock);
+
+    if (stmt != NULL)
+        stmt->EmitCode(ctx);
+}
+
+
+void
+LabeledStmt::Print(int indent) const {
+    printf("%*cLabel \"%s\"\n", indent, ' ', name.c_str());
+    if (stmt != NULL)
+        stmt->Print(indent);
+}
+
+
+Stmt *
+LabeledStmt::Optimize() {
+    return this;
+}
+
+
+Stmt *
+LabeledStmt::TypeCheck() {
+    if (!isalpha(name[0]) || name[0] == '_') {
+        Error(pos, "Label must start with either alphabetic character or '_'.");
+        return NULL;
+    }
+    for (unsigned int i = 1; i < name.size(); ++i) {
+        if (!isalnum(name[i]) && name[i] != '_') {
+            Error(pos, "Character \"%c\" is illegal in labels.", name[i]);
+            return NULL;
+        }
+    }
+    return this;
+}
+
+
+int
+LabeledStmt::EstimateCost() const {
+    return 0;
 }
 
 

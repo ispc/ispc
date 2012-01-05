@@ -290,8 +290,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             llvm::BasicBlock *bbAllOn = ctx->CreateBasicBlock("all_on");
             llvm::BasicBlock *bbNotAll = ctx->CreateBasicBlock("not_all_on");
 
-            ctx->BranchInst(bbAllOn, bbNotAll, allOn);
+            // Set up basic blocks for goto targets
+            ctx->InitializeLabelMap(code);
 
+            ctx->BranchInst(bbAllOn, bbNotAll, allOn);
             // all on: we've determined dynamically that the mask is all
             // on.  Set the current mask to "all on" explicitly so that
             // codegen for this path can be improved with this knowledge in
@@ -322,12 +324,19 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             // above
             ctx->SetCurrentBasicBlock(bbSomeOn);
             ctx->SetFunctionMask(mask);
+
+            // Set up basic blocks for goto targets again; we want to have
+            // one set of them for gotos in the 'all on' case, and a
+            // distinct set for the 'mixed mask' case.
+            ctx->InitializeLabelMap(code);
+
             code->EmitCode(ctx);
             if (ctx->GetCurrentBasicBlock())
                 ctx->ReturnInst();
-
         }
         else
+            // Set up basic blocks for goto targets
+            ctx->InitializeLabelMap(code);
             // No check, just emit the code
             code->EmitCode(ctx);
     }

@@ -307,6 +307,12 @@ static FORCEINLINE uint32_t __movmsk(__vec16_i1 mask) {
     return mask.v;
 }
 
+static FORCEINLINE __vec16_i1 __equal(__vec16_i1 a, __vec16_i1 b) {
+    __vec16_i1 r;
+    r.v = (a.v & b.v) | (~a.v & ~b.v);
+    return r;
+}
+
 static FORCEINLINE __vec16_i1 __and(__vec16_i1 a, __vec16_i1 b) {
     __vec16_i1 r;
     r.v = a.v & b.v;

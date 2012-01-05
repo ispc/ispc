@@ -376,7 +376,7 @@ namespace {
       if (I.getType() == Type::getVoidTy(I.getContext()) || !I.hasOneUse() ||
           isa<TerminatorInst>(I) || isa<CallInst>(I) || isa<PHINode>(I) ||
           isa<LoadInst>(I) || isa<VAArgInst>(I) || isa<InsertElementInst>(I) ||
-          isa<InsertValueInst>(I) || isa<ExtractValueInst>(I))
+          isa<InsertValueInst>(I) || isa<ExtractValueInst>(I) || isa<SelectInst>(I))
         // Don't inline a load across a store or other bad things!
         return false;
 

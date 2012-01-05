@@ -282,6 +282,38 @@ public:
 };
 
 
+class GotoStmt : public Stmt {
+public:
+    GotoStmt(const char *label, SourcePos gotoPos, SourcePos idPos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    std::string label;
+    SourcePos identifierPos;
+};
+
+
+class LabeledStmt : public Stmt {
+public:
+    LabeledStmt(const char *label, Stmt *stmt, SourcePos p);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    std::string name;
+    Stmt *stmt;
+};
+
+
 /** @brief Representation of a list of statements in the program.
  */
 class StmtList : public Stmt {

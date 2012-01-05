@@ -228,6 +228,10 @@ static FORCEINLINE uint32_t __movmsk(__vec4_i1 mask) {
     return _mm_movemask_ps(mask.v);
 }
 
+static FORCEINLINE __vec4_i1 __equal(__vec4_i1 a, __vec4_i1 b) {
+    return _mm_cmpeq_epi32(_mm_castps_si128(a.v), _mm_castps_si128(b.v));
+}
+
 static FORCEINLINE __vec4_i1 __and(__vec4_i1 a, __vec4_i1 b) {
     return _mm_and_ps(a.v, b.v);
 }
