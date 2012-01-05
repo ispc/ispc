@@ -221,7 +221,7 @@ def run_test(filename):
                     gcc_arch = '-m32'
                 else:
                     gcc_arch = '-m64'
-                cc_cmd = "%s -msse4.2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                cc_cmd = "%s -O2 -msse4.2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, match, obj_name, exe_name)
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
