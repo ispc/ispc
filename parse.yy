@@ -1112,8 +1112,7 @@ type_name
 abstract_declarator
     : pointer
       {
-          Declarator *d = new Declarator(DK_POINTER, @1);
-          $$ = d;
+          $$ = $1;
       }
     | direct_abstract_declarator
     | pointer direct_abstract_declarator
