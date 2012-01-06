@@ -72,8 +72,7 @@ SymbolTable::SymbolTable() {
 
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
-    Assert(variables.size() == 1 && functions.size() == 1 &&
-           types.size() == 1);
+    Assert(variables.size() == 1 && types.size() == 1);
     PopScope();
 }
 
@@ -81,7 +80,6 @@ SymbolTable::~SymbolTable() {
 void
 SymbolTable::PushScope() { 
     variables.push_back(new SymbolMapType);
-    functions.push_back(new FunctionMapType);
     types.push_back(new TypeMapType);
 }
 
@@ -91,10 +89,6 @@ SymbolTable::PopScope() {
     Assert(variables.size() > 1);
     delete variables.back();
     variables.pop_back();
-
-    Assert(functions.size() > 1);
-    delete functions.back();
-    functions.pop_back();
 
     Assert(types.size() > 1);
     delete types.back();
@@ -160,7 +154,7 @@ SymbolTable::AddFunction(Symbol *symbol) {
         // the symbol table
         return false;
 
-    std::vector<Symbol *> &funOverloads = (*functions.back())[symbol->name];
+    std::vector<Symbol *> &funOverloads = functions[symbol->name];
     funOverloads.push_back(symbol);
     return true;
 }
@@ -168,17 +162,14 @@ SymbolTable::AddFunction(Symbol *symbol) {
 
 bool
 SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
-    for (int i = (int)functions.size() - 1; i >= 0; --i) {
-        FunctionMapType &fm = *(functions[i]);
-        FunctionMapType::iterator iter = fm.find(name);
-        if (iter != fm.end()) {
-            if (matches == NULL)
-                return true;
-            else {
-                const std::vector<Symbol *> &funcs = iter->second;
-                for (int j = 0; j < (int)funcs.size(); ++j)
-                    matches->push_back(funcs[j]);
-            }
+    FunctionMapType::iterator iter = functions.find(name);
+    if (iter != functions.end()) {
+        if (matches == NULL)
+            return true;
+        else {
+            const std::vector<Symbol *> &funcs = iter->second;
+            for (int j = 0; j < (int)funcs.size(); ++j)
+                matches->push_back(funcs[j]);
         }
     }
     return matches ? (matches->size() > 0) : false;
@@ -187,15 +178,12 @@ SymbolTable::LookupFunction(const char *name, std::vector<Symbol *> *matches) {
 
 Symbol *
 SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
-    for (int i = (int)functions.size() - 1; i >= 0; --i) {
-        FunctionMapType &fm = *(functions[i]);
-        FunctionMapType::iterator iter = fm.find(name);
-        if (iter != fm.end()) {
-            std::vector<Symbol *> funcs = iter->second;
-            for (int j = 0; j < (int)funcs.size(); ++j) {
-                if (Type::Equal(funcs[j]->type, type))
-                    return funcs[j];
-            }
+    FunctionMapType::iterator iter = functions.find(name);
+    if (iter != functions.end()) {
+        std::vector<Symbol *> funcs = iter->second;
+        for (int j = 0; j < (int)funcs.size(); ++j) {
+            if (Type::Equal(funcs[j]->type, type))
+                return funcs[j];
         }
     }
     return NULL;
@@ -261,14 +249,11 @@ SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {
         }
     }
 
-    for (int i = 0; i < (int)functions.size(); ++i) {
-        const FunctionMapType &fm = *(functions[i]);
-        FunctionMapType::const_iterator iter;
-        for (iter = fm.begin(); iter != fm.end(); ++iter) {
-            int dist = StringEditDistance(str, iter->first, maxDelta+1);
-            if (dist <= maxDelta)
-                matches[dist].push_back(iter->first);
-        }
+    FunctionMapType::const_iterator iter;
+    for (iter = functions.begin(); iter != functions.end(); ++iter) {
+        int dist = StringEditDistance(str, iter->first, maxDelta+1);
+        if (dist <= maxDelta)
+            matches[dist].push_back(iter->first);
     }
 
     // Now, return the first entry of matches[] that is non-empty, if any.
@@ -346,15 +331,13 @@ SymbolTable::Print() {
     }
 
     fprintf(stderr, "Functions:\n----------------\n");
-    for (int i = 0; i < (int)functions.size(); ++i) {
-        FunctionMapType::iterator fiter = functions[i]->begin();
-        while (fiter != functions[i]->end()) {
-            fprintf(stderr, "%s\n", fiter->first.c_str());
-            std::vector<Symbol *> &syms = fiter->second;
-            for (unsigned int j = 0; j < syms.size(); ++j)
-                fprintf(stderr, "    %s\n", syms[j]->type->GetString().c_str());
-            ++fiter;
-        }
+    FunctionMapType::iterator fiter = functions.begin();
+    while (fiter != functions.end()) {
+        fprintf(stderr, "%s\n", fiter->first.c_str());
+        std::vector<Symbol *> &syms = fiter->second;
+        for (unsigned int j = 0; j < syms.size(); ++j)
+            fprintf(stderr, "    %s\n", syms[j]->type->GetString().c_str());
+        ++fiter;
     }
 
     depth = 0;

@@ -494,6 +494,7 @@ declaration_statement
             $$ = NULL;
         }
         else {
+            $1->DeclareFunctions();
             std::vector<VariableDeclaration> vars = $1->GetVariableDeclarations();
             $$ = new DeclStmt(vars, @1);
         }

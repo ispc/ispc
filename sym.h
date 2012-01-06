@@ -257,12 +257,13 @@ private:
     typedef std::map<std::string, Symbol *> SymbolMapType;
     std::vector<SymbolMapType *> variables;
 
-    /** Function declarations are also scoped., A STL \c vector is used to
-        store the function symbols for a given name since, due to function
-        overloading, a name can have multiple function symbols associated
-        with it. */
+    /** Function declarations are *not* scoped.  (C99, for example, allows
+        an implementation to maintain function declarations in a single
+        namespace.)  A STL \c vector is used to store the function symbols
+        for a given name since, due to function overloading, a name can
+        have multiple function symbols associated with it. */
     typedef std::map<std::string, std::vector<Symbol *> > FunctionMapType;
-    std::vector<FunctionMapType *> functions;
+    FunctionMapType functions;
 
     /** Type definitions can also be scoped.  A new \c TypeMapType
         is added to the back of the \c types \c vector each time a new scope
@@ -278,15 +279,12 @@ SymbolTable::GetMatchingFunctions(Predicate pred,
                                   std::vector<Symbol *> *matches) const {
     // Iterate through all function symbols and apply the given predicate.
     // If it returns true, add the Symbol * to the provided vector.
-    for (unsigned int i = 0; i < functions.size(); ++i) {
-        FunctionMapType &fm = *(functions[i]);
-        FunctionMapType::const_iterator iter;
-        for (iter = fm.begin(); iter != fm.end(); ++iter) {
-            const std::vector<Symbol *> &syms = iter->second;
-            for (unsigned int j = 0; j < syms.size(); ++j) {
-                if (pred(syms[j]))
-                    matches->push_back(syms[j]);
-            }
+    FunctionMapType::const_iterator iter;
+    for (iter = functions.begin(); iter != functions.end(); ++iter) {
+        const std::vector<Symbol *> &syms = iter->second;
+        for (unsigned int j = 0; j < syms.size(); ++j) {
+            if (pred(syms[j]))
+                matches->push_back(syms[j]);
         }
     }
 }

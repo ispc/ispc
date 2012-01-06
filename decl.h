@@ -210,6 +210,10 @@ public:
         Declarator representation.) */
     std::vector<VariableDeclaration> GetVariableDeclarations() const;
 
+    /** For any function declarations in the Declaration, add the
+        declaration to the module. */
+    void DeclareFunctions();
+
     DeclSpecs *declSpecs;
     std::vector<Declarator *> declarators;
 };

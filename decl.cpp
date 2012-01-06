@@ -535,8 +535,6 @@ Declaration::GetVariableDeclarations() const {
     std::vector<VariableDeclaration> vars;
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
-        if (declarators[i] == NULL)
-            continue;
         Declarator *decl = declarators[i];
         if (decl == NULL)
             // Ignore earlier errors
@@ -545,16 +543,34 @@ Declaration::GetVariableDeclarations() const {
         Symbol *sym = decl->GetSymbol();
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 
-        if (dynamic_cast<const FunctionType *>(sym->type) != NULL) {
-            // function declaration
-            m->symbolTable->AddFunction(sym);
-        }
-        else {
+        if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         }
     }
     return vars;
+}
+
+
+void
+Declaration::DeclareFunctions() {
+    Assert(declSpecs->storageClass != SC_TYPEDEF);
+
+    for (unsigned int i = 0; i < declarators.size(); ++i) {
+        Declarator *decl = declarators[i];
+        if (decl == NULL)
+            // Ignore earlier errors
+            continue;
+
+        Symbol *sym = decl->GetSymbol();
+        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+
+        if (dynamic_cast<const FunctionType *>(sym->type) == NULL)
+            continue;
+
+        bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
+        m->AddFunctionDeclaration(sym, isInline);
+    }
 }
 
 
