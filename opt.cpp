@@ -957,8 +957,16 @@ lFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 
         llvm::Value *insertBase = ie->getOperand(0);
         ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
-        if (ie == NULL)
-            Assert(llvm::isa<llvm::UndefValue>(insertBase));
+        if (ie == NULL) {
+            if (llvm::isa<llvm::UndefValue>(insertBase))
+                return;
+
+            llvm::ConstantVector *cv = 
+                llvm::dyn_cast<llvm::ConstantVector>(insertBase);
+            Assert(cv != NULL);
+            Assert(iOffset < (int)cv->getNumOperands());
+            elements[iOffset] = cv->getOperand(iOffset);
+        }
     }
 }
 
@@ -1884,19 +1892,27 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
         llvm::Value *elements[ISPC_MAX_NVEC];
         lFlattenInsertChain(ie, vectorLength, elements);
 
-        for (int i = 0; i < vectorLength-1; ++i) {
-            // TODO: It's not clear what to do in this case (which
-            // corresponds to elements of the vector being undef).  It is
-            // probably to just ignore undef elements and return true if
-            // all of the other ones are equal, but it'd be nice to have
-            // some test cases to verify this.
-            Assert(elements[i] != NULL && elements[i+1] != NULL);
+        // We will ignore any values of elements[] that are NULL; as they
+        // correspond to undefined values--we just want to see if all of
+        // the defined values have the same value.
+        int lastNonNull = 0;
+        while (lastNonNull < vectorLength && elements[lastNonNull] == NULL)
+            ++lastNonNull;
+
+        if (lastNonNull == vectorLength)
+            // all of them are undef!
+            return true;
+
+        for (int i = lastNonNull; i < vectorLength; ++i) {
+            if (elements[i] == NULL)
+                continue;
 
             std::vector<llvm::PHINode *> seenPhi0;
             std::vector<llvm::PHINode *> seenPhi1;
-            if (lValuesAreEqual(elements[i], elements[i+1], seenPhi0, 
+            if (lValuesAreEqual(elements[lastNonNull], elements[i], seenPhi0, 
                                 seenPhi1) == false)
                 return false;
+            lastNonNull = i;
         }
         return true;
     }
