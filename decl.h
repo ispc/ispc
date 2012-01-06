@@ -153,6 +153,8 @@ public:
         declarator and symbols for its arguments in *args. */
     Symbol *GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *args);
 
+    Symbol *GetSymbolForFunctionParameter(int paramNum) const;
+
     /** Returns the symbol associated with the declarator. */
     Symbol *GetSymbol() const;
 

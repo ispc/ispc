@@ -261,10 +261,7 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
     Assert(d != NULL);
 
     for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
-        Declaration *pdecl = d->functionParams[i];
-        Assert(pdecl->declarators.size() == 1);
-
-        Symbol *sym = pdecl->declarators[0]->GetSymbol();
+        Symbol *sym = d->GetSymbolForFunctionParameter(i);
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
         funArgs->push_back(sym);
     }
@@ -353,25 +350,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
             Declaration *d = functionParams[i];
 
-            char buf[32];
-            Symbol *sym;
-            if (d->declarators.size() == 0) {
-                // function declaration like foo(float), w/o a name for
-                // the parameter
-                sprintf(buf, "__anon_parameter_%d", i);
-                sym = new Symbol(buf, pos);
-                sym->type = d->declSpecs->GetBaseType(pos);
-            }
-            else {
-                sym = d->declarators[0]->GetSymbol();
-                if (sym == NULL) {
-                    // Handle more complex anonymous declarations like
-                    // float (float **).
-                    sprintf(buf, "__anon_parameter_%d", i);
-                    sym = new Symbol(buf, d->declarators[0]->pos);
-                    sym->type = d->declarators[0]->GetType(d->declSpecs);
-                }
-            }
+            Symbol *sym = GetSymbolForFunctionParameter(i);
 
             if (d->declSpecs->storageClass != SC_NONE)
                 Error(sym->pos, "Storage class \"%s\" is illegal in "
@@ -496,6 +475,35 @@ Declarator::GetType(DeclSpecs *ds) const {
     const Type *baseType = ds->GetBaseType(pos);
     const Type *type = GetType(baseType, ds);
     return type;
+}
+
+
+Symbol *
+Declarator::GetSymbolForFunctionParameter(int paramNum) const {
+    Assert(paramNum < (int)functionParams.size());
+    Declaration *d = functionParams[paramNum];
+
+    char buf[32];
+    Symbol *sym;
+    if (d->declarators.size() == 0) {
+        // function declaration like foo(float), w/o a name for
+        // the parameter
+        sprintf(buf, "__anon_parameter_%d", paramNum);
+        sym = new Symbol(buf, pos);
+        sym->type = d->declSpecs->GetBaseType(pos);
+    }
+    else {
+        Assert(d->declarators.size() == 1);
+        sym = d->declarators[0]->GetSymbol();
+        if (sym == NULL) {
+            // Handle more complex anonymous declarations like
+            // float (float **).
+            sprintf(buf, "__anon_parameter_%d", paramNum);
+            sym = new Symbol(buf, d->declarators[0]->pos);
+            sym->type = d->declarators[0]->GetType(d->declSpecs);
+        }
+    }
+    return sym;
 }
 
 
