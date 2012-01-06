@@ -1247,6 +1247,18 @@ Here are three ways of specifying the integer value "15":
    int fifteen_hex     = 0xf;
    int fifteen_binary  = 0b1111;
 
+A number of suffixes can be provided with integer numeric constants.
+First, "u" denotes that the constant is unsigned, and "ll" denotes a 64-bit
+integer constant (while "l" denotes a 32-bit integer constant).  It is also
+possible to denote units of 1024, 1024*1024, or 1024*1024*1024 with the
+SI-inspired suffixes "k", "M", and "G" respectively:
+
+::
+
+   int two_kb = 2k;   // 2048
+   int two_megs = 2M; // 2 * 1024 * 1024
+   int one_gig = 1G;  // 1024 * 1024 * 1024
+
 Floating-point constants can be specified in one of three ways.  First,
 they may be a sequence of zero or more digits from 0 to 9, followed by a
 period, followed by zero or more digits from 0 to 9. (There must be at

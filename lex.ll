@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-static uint64_t lParseBinary(const char *ptr, SourcePos pos);
+static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lHandleCppHash(SourcePos *);
@@ -67,7 +67,7 @@ inline int isatty(int) { return 0; }
 %option nounistd
 
 WHITESPACE [ \t\r]+
-INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))
+INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[kMG]?
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 
@@ -151,11 +151,10 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 {INT_NUMBER}+(u|U|l|L)*? { 
     int ls = 0, us = 0;
 
+    char *endPtr = NULL;
     if (yytext[0] == '0' && yytext[1] == 'b')
-        yylval->intVal = lParseBinary(yytext+2, *yylloc);
+        yylval->intVal = lParseBinary(yytext+2, *yylloc, &endPtr);
     else {
-        char *endPtr = NULL;
-
 #ifdef ISPC_IS_WINDOWS
         yylval->intVal = _strtoi64(yytext, &endPtr, 0);
 #else
@@ -163,17 +162,32 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         // fit into 64 bits...
         yylval->intVal = strtoull(yytext, &endPtr, 0);
 #endif
-        for (; *endPtr; endPtr++) {
-           if (*endPtr == 'l' || *endPtr == 'L')
-                ls++;
-           else if (*endPtr == 'u' || *endPtr == 'U')
-                us++;
-        }
-        if (ls >= 2)
-            return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
-        else if (ls == 1)
-           return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
     }
+
+    bool kilo = false, mega = false, giga = false;
+    for (; *endPtr; endPtr++) {
+        if (*endPtr == 'k')
+            kilo = true;
+        else if (*endPtr == 'M')
+            mega = true;
+        else if (*endPtr == 'G')
+            giga = true;        
+        else if (*endPtr == 'l' || *endPtr == 'L')
+            ls++;
+        else if (*endPtr == 'u' || *endPtr == 'U')
+            us++;
+    }
+    if (kilo)
+        yylval->intVal *= 1024;
+    if (mega)
+        yylval->intVal *= 1024*1024;
+    if (giga)
+        yylval->intVal *= 1024*1024*1024;
+
+    if (ls >= 2)
+        return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+    else if (ls == 1)
+        return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
 
     // See if we can fit this into a 32-bit integer...
     if ((yylval->intVal & 0xffffffff) == yylval->intVal)
@@ -268,14 +282,11 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 /** Return the integer version of a binary constant from a string.
  */
 static uint64_t
-lParseBinary(const char *ptr, SourcePos pos) {
+lParseBinary(const char *ptr, SourcePos pos, char **endPtr) {
     uint64_t val = 0;
     bool warned = false;
 
-    while (*ptr != '\0') {
-        /* if this hits, the regexp for 0b... constants is broken */
-        Assert(*ptr == '0' || *ptr == '1');
-
+    while (*ptr == '0' || *ptr == '1') {
         if ((val & (((int64_t)1)<<63)) && warned == false) {
             // We're about to shift out a set bit
             Warning(pos, "Can't represent binary constant with a 64-bit integer type");
@@ -285,6 +296,7 @@ lParseBinary(const char *ptr, SourcePos pos) {
         val = (val << 1) | (*ptr == '0' ? 0 : 1);
         ++ptr;
     }
+    *endPtr = (char *)ptr;
     return val;
 }
 
