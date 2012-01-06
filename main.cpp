@@ -38,6 +38,7 @@
 #include "ispc.h"
 #include "module.h"
 #include "util.h"
+#include "type.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <llvm/Support/PrettyStackTrace.h>
@@ -187,6 +188,8 @@ int main(int Argc, char *Argv[]) {
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     LLVMInitializeX86TargetMC();
 #endif
+
+    AtomicType::Init();
 
     char *file = NULL;
     const char *headerFileName = NULL;

@@ -78,19 +78,43 @@ public:
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
+    /** Types may have uniform, varying, or not-yet-determined variability;
+        this enumerant is used by Type implementations to record their
+        variability. */
+    enum Variability {
+        Uniform,
+        Varying,
+        Unbound
+    };
+
+    /** Returns the variability of the type. */
+    virtual Variability GetVariability() const = 0;
+
     /** Returns true if the underlying type is uniform */
-    virtual bool IsUniformType() const = 0;
+    bool IsUniformType() const { return GetVariability() == Uniform; }
 
     /** Returns true if the underlying type is varying */
-    bool IsVaryingType() const { return !IsUniformType(); }
+    bool IsVaryingType() const { return GetVariability() == Varying; }
+
+    /** Returns true if the underlying type's uniform/varying-ness is
+        unbound. */
+    bool HasUnboundVariability() const { return GetVariability() == Unbound; }
+
+    /* Returns a type wherein any elements of the original type and
+       contained types that have unbound variability have their variability
+       set to the given variability. */
+    virtual const Type *ResolveUnboundVariability(Variability v) const = 0;
 
     /** Return a "uniform" instance of this type.  If the type is already
         uniform, its "this" pointer will be returned. */
     virtual const Type *GetAsUniformType() const = 0;
 
     /** Return a "varying" instance of this type.  If the type is already
-        uniform, its "this" pointer will be returned. */
+        varying, its "this" pointer will be returned. */
     virtual const Type *GetAsVaryingType() const = 0;
+
+    /** Get an instance of the type with unbound variability. */
+    virtual const Type *GetAsUnboundVariabilityType() const = 0;
 
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
@@ -185,7 +209,8 @@ public:
  */
 class AtomicType : public Type {
 public:
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -195,8 +220,10 @@ public:
     /** For AtomicTypes, the base type is just the same as the AtomicType
         itself. */
     const AtomicType *GetBaseType() const;
-    const AtomicType *GetAsVaryingType() const;
     const AtomicType *GetAsUniformType() const;
+    const AtomicType *GetAsVaryingType() const;
+    const AtomicType *GetAsUnboundVariabilityType() const;
+    const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
     const Type *GetSOAType(int width) const;
     const AtomicType *GetAsConstType() const;
@@ -224,38 +251,45 @@ public:
         TYPE_INT64,
         TYPE_UINT64,
         TYPE_DOUBLE,
+        NUM_BASIC_TYPES
     };
 
     const BasicType basicType;
 
-    static const AtomicType *UniformBool, *VaryingBool;
-    static const AtomicType *UniformInt8, *VaryingInt8;
-    static const AtomicType *UniformInt16, *VaryingInt16;
-    static const AtomicType *UniformInt32, *VaryingInt32;
-    static const AtomicType *UniformUInt8, *VaryingUInt8;
-    static const AtomicType *UniformUInt16, *VaryingUInt16;
-    static const AtomicType *UniformUInt32, *VaryingUInt32;
-    static const AtomicType *UniformFloat, *VaryingFloat;
-    static const AtomicType *UniformInt64, *VaryingInt64;
-    static const AtomicType *UniformUInt64, *VaryingUInt64;
-    static const AtomicType *UniformDouble, *VaryingDouble;
-    static const AtomicType *UniformConstBool, *VaryingConstBool;
-    static const AtomicType *UniformConstInt8, *VaryingConstInt8;
-    static const AtomicType *UniformConstInt16, *VaryingConstInt16;
-    static const AtomicType *UniformConstInt32, *VaryingConstInt32;
-    static const AtomicType *UniformConstUInt8, *VaryingConstUInt8;
-    static const AtomicType *UniformConstUInt16, *VaryingConstUInt16;
-    static const AtomicType *UniformConstUInt32, *VaryingConstUInt32;
-    static const AtomicType *UniformConstFloat, *VaryingConstFloat;
-    static const AtomicType *UniformConstInt64, *VaryingConstInt64;
-    static const AtomicType *UniformConstUInt64, *VaryingConstUInt64;
-    static const AtomicType *UniformConstDouble, *VaryingConstDouble;
+    static const AtomicType *UniformBool, *VaryingBool, *UnboundBool;
+    static const AtomicType *UniformInt8, *VaryingInt8, *UnboundInt8;
+    static const AtomicType *UniformInt16, *VaryingInt16, *UnboundInt16;
+    static const AtomicType *UniformInt32, *VaryingInt32, *UnboundInt32;
+    static const AtomicType *UniformUInt8, *VaryingUInt8, *UnboundUInt8;
+    static const AtomicType *UniformUInt16, *VaryingUInt16, *UnboundUInt16;
+    static const AtomicType *UniformUInt32, *VaryingUInt32, *UnboundUInt32;
+    static const AtomicType *UniformFloat, *VaryingFloat, *UnboundFloat;
+    static const AtomicType *UniformInt64, *VaryingInt64, *UnboundInt64;
+    static const AtomicType *UniformUInt64, *VaryingUInt64, *UnboundUInt64;
+    static const AtomicType *UniformDouble, *VaryingDouble, *UnboundDouble;
+    static const AtomicType *UniformConstBool, *VaryingConstBool, *UnboundConstBool;
+    static const AtomicType *UniformConstInt8, *VaryingConstInt8, *UnboundConstInt8;
+    static const AtomicType *UniformConstInt16, *VaryingConstInt16, *UnboundConstInt16;
+    static const AtomicType *UniformConstInt32, *VaryingConstInt32, *UnboundConstInt32;
+    static const AtomicType *UniformConstUInt8, *VaryingConstUInt8, *UnboundConstUInt8;
+    static const AtomicType *UniformConstUInt16, *VaryingConstUInt16, *UnboundConstUInt16;
+    static const AtomicType *UniformConstUInt32, *VaryingConstUInt32, *UnboundConstUInt32;
+    static const AtomicType *UniformConstFloat, *VaryingConstFloat, *UnboundConstFloat;
+    static const AtomicType *UniformConstInt64, *VaryingConstInt64, *UnboundConstInt64;
+    static const AtomicType *UniformConstUInt64, *VaryingConstUInt64, *UnboundConstUInt64;
+    static const AtomicType *UniformConstDouble, *VaryingConstDouble, *UnboundConstDouble;
     static const AtomicType *Void;
 
+    /** This function must be called before any of the above static const
+        AtomicType values is used; in practice, we do it early in
+        main(). */
+    static void Init();
+
 private:
-    const bool isUniform;
+    static const AtomicType *typeTable[NUM_BASIC_TYPES][3][2];
+    const Variability variability;
     const bool isConst;
-    AtomicType(BasicType basicType, bool isUniform, bool isConst);
+    AtomicType(BasicType basicType, Variability v, bool isConst);
 };
 
 
@@ -268,7 +302,8 @@ public:
     /** Constructor for named enumerated types */
     EnumType(const char *name, SourcePos pos);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -278,6 +313,8 @@ public:
     const EnumType *GetBaseType() const;
     const EnumType *GetAsVaryingType() const;
     const EnumType *GetAsUniformType() const;
+    const EnumType *GetAsUnboundVariabilityType() const;
+    const EnumType *ResolveUnboundVariability(Variability v) const;
     const Type *GetSOAType(int width) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
@@ -300,15 +337,17 @@ public:
 
 private:
     const std::string name;
-    bool isUniform, isConst;
+    Variability variability;
+    bool isConst;
     std::vector<Symbol *> enumerators;
 };
+
 
 /** @brief Type implementation for pointers to other types
  */
 class PointerType : public Type {
 public:
-    PointerType(const Type *t, bool isUniform, bool isConst);
+    PointerType(const Type *t, Variability v, bool isConst);
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t);
@@ -318,7 +357,8 @@ public:
     /** Returns true if the given type is a void * type. */
     static bool IsVoidPointer(const Type *t);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -328,6 +368,8 @@ public:
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
     const PointerType *GetAsUniformType() const;
+    const PointerType *GetAsUnboundVariabilityType() const;
+    const PointerType *ResolveUnboundVariability(Variability v) const;
     const Type *GetSOAType(int width) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
@@ -342,7 +384,8 @@ public:
     static PointerType *Void;
 
 private:
-    const bool isUniform, isConst;
+    const Variability variability;
+    const bool isConst;
     const Type *baseType;
 };
 
@@ -408,7 +451,8 @@ public:
      */
     ArrayType(const Type *elementType, int numElements);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -418,6 +462,9 @@ public:
     const Type *GetBaseType() const;
     const ArrayType *GetAsVaryingType() const;
     const ArrayType *GetAsUniformType() const;
+    const ArrayType *GetAsUnboundVariabilityType() const;
+    const ArrayType *ResolveUnboundVariability(Variability v) const;
+
     const ArrayType *GetAsUnsignedType() const;
     const Type *GetSOAType(int width) const;
     const ArrayType *GetAsConstType() const;
@@ -495,6 +542,9 @@ public:
 
     const SOAArrayType *GetAsVaryingType() const;
     const SOAArrayType *GetAsUniformType() const;
+    const SOAArrayType *GetAsUnboundVariabilityType() const;
+    const SOAArrayType *ResolveUnboundVariability(Variability v) const;
+
     const Type *GetSOAType(int width) const;
     const SOAArrayType *GetAsConstType() const;
     const SOAArrayType *GetAsNonConstType() const;
@@ -536,7 +586,8 @@ class VectorType : public SequentialType {
 public:
     VectorType(const AtomicType *base, int size);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -546,6 +597,9 @@ public:
     const Type *GetBaseType() const;
     const VectorType *GetAsVaryingType() const;
     const VectorType *GetAsUniformType() const;
+    const VectorType *GetAsUnboundVariabilityType() const;
+    const VectorType *ResolveUnboundVariability(Variability v) const;
+
     const Type *GetSOAType(int width) const;
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
@@ -580,9 +634,10 @@ public:
     StructType(const std::string &name, const std::vector<const Type *> &elts, 
                const std::vector<std::string> &eltNames, 
                const std::vector<SourcePos> &eltPositions, bool isConst, 
-               bool isUniform, SourcePos pos);
+               Variability variability, SourcePos pos);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -592,6 +647,9 @@ public:
     const Type *GetBaseType() const;
     const StructType *GetAsVaryingType() const;
     const StructType *GetAsUniformType() const;
+    const StructType *GetAsUnboundVariabilityType() const;
+    const StructType *ResolveUnboundVariability(Variability v) const;
+
     const Type *GetSOAType(int width) const;
     const StructType *GetAsConstType() const;
     const StructType *GetAsNonConstType() const;
@@ -641,7 +699,7 @@ private:
     /** Source file position at which each structure element declaration
         appeared. */
     const std::vector<SourcePos> elementPositions;
-    const bool isUniform;
+    const Variability variability;
     const bool isConst;
     const SourcePos pos;
 };
@@ -653,7 +711,8 @@ class ReferenceType : public Type {
 public:
     ReferenceType(const Type *targetType);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -664,6 +723,9 @@ public:
     const Type *GetReferenceTarget() const;
     const ReferenceType *GetAsVaryingType() const;
     const ReferenceType *GetAsUniformType() const;
+    const ReferenceType *GetAsUnboundVariabilityType() const;
+    const ReferenceType *ResolveUnboundVariability(Variability v) const;
+
     const Type *GetSOAType(int width) const;
     const ReferenceType *GetAsConstType() const;
     const ReferenceType *GetAsNonConstType() const;
@@ -696,13 +758,14 @@ public:
     FunctionType(const Type *returnType, 
                  const std::vector<const Type *> &argTypes, SourcePos pos);
     FunctionType(const Type *returnType, 
-                 const std::vector<const Type *> &argTypes, SourcePos pos,
+                 const std::vector<const Type *> &argTypes,
                  const std::vector<std::string> &argNames,
                  const std::vector<ConstExpr *> &argDefaults,
                  const std::vector<SourcePos> &argPos,
                  bool isTask, bool isExported, bool isExternC);
 
-    bool IsUniformType() const;
+    Variability GetVariability() const;
+
     bool IsBoolType() const;
     bool IsFloatType() const;
     bool IsIntType() const;
@@ -712,6 +775,9 @@ public:
     const Type *GetBaseType() const;
     const Type *GetAsVaryingType() const;
     const Type *GetAsUniformType() const;
+    const Type *GetAsUnboundVariabilityType() const;
+    const FunctionType *ResolveUnboundVariability(Variability v) const;
+
     const Type *GetSOAType(int width) const;
     const Type *GetAsConstType() const;
     const Type *GetAsNonConstType() const;
@@ -752,6 +818,7 @@ public:
 
 private:
     const Type * const returnType;
+
     // The following four vectors should all have the same length (which is
     // in turn the length returned by GetNumParameters()).
     const std::vector<const Type *> paramTypes;

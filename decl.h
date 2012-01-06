@@ -156,7 +156,7 @@ public:
     /** Returns the symbol associated with the declarator. */
     Symbol *GetSymbol() const;
 
-    void Print() const;
+    void Print(int indent) const;
 
     /** Position of the declarator in the source program. */
     const SourcePos pos;
@@ -199,7 +199,7 @@ public:
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
     Declaration(DeclSpecs *ds, Declarator *d);
 
-    void Print() const;
+    void Print(int indent) const;
 
     /** This method walks through all of the Declarators in a declaration
         and returns a fully-initialized Symbol and (possibly) and

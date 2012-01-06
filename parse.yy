@@ -362,13 +362,7 @@ cast_expression
     : unary_expression
     | '(' type_name ')' cast_expression
       {
-          // Pass true here to try to preserve uniformity 
-          // so that things like:
-          // uniform int y = ...;
-          // uniform float x = 1. / (float)y;
-          // don't issue an error due to (float)y being inadvertently
-          // and undesirably-to-the-user "varying"...
-          $$ = new TypeCastExpr($2, $4, true, Union(@1,@4)); 
+          $$ = new TypeCastExpr($2, $4, Union(@1,@4)); 
       }
     ;
 
@@ -638,13 +632,13 @@ type_specifier
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::VaryingBool; }
-    | TOKEN_INT8 { $$ = AtomicType::VaryingInt8; }
-    | TOKEN_INT16 { $$ = AtomicType::VaryingInt16; }
-    | TOKEN_INT { $$ = AtomicType::VaryingInt32; }
-    | TOKEN_FLOAT { $$ = AtomicType::VaryingFloat; }
-    | TOKEN_DOUBLE { $$ = AtomicType::VaryingDouble; }
-    | TOKEN_INT64 { $$ = AtomicType::VaryingInt64; }
+    | TOKEN_BOOL { $$ = AtomicType::UnboundBool; }
+    | TOKEN_INT8 { $$ = AtomicType::UnboundInt8; }
+    | TOKEN_INT16 { $$ = AtomicType::UnboundInt16; }
+    | TOKEN_INT { $$ = AtomicType::UnboundInt32; }
+    | TOKEN_FLOAT { $$ = AtomicType::UnboundFloat; }
+    | TOKEN_DOUBLE { $$ = AtomicType::UnboundDouble; }
+    | TOKEN_INT64 { $$ = AtomicType::UnboundInt64; }
     ;
 
 short_vec_specifier
@@ -670,7 +664,7 @@ struct_or_union_specifier
           GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
                                        &elementPositions);
           StructType *st = new StructType($2, elementTypes, elementNames,
-                                          elementPositions, false, true, @2);
+                                          elementPositions, false, Type::Unbound, @2);
           m->symbolTable->AddType($2, st, @2);
           $$ = st;
       }
@@ -681,8 +675,9 @@ struct_or_union_specifier
           std::vector<SourcePos> elementPositions;
           GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                        &elementPositions);
+          // FIXME: should be unbound
           $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                              false, true, @1);
+                              false, Type::Unbound, @1);
       }
     | struct_or_union '{' '}' 
       {
@@ -748,7 +743,7 @@ specifier_qualifier_list
             else if ($1 == TYPEQUAL_SIGNED) {
                 if ($2->IsIntType() == false) {
                     Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
-                          $2->GetString().c_str());
+                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             }
@@ -758,7 +753,7 @@ specifier_qualifier_list
                     $$ = t;
                 else {
                     Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
-                          $2->GetString().c_str());
+                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             } 
@@ -775,8 +770,11 @@ specifier_qualifier_list
             else
                 FATAL("Unhandled type qualifier in parser.");
         }
-        else
+        else {
+            if (m->errorCount == 0)
+                Error(@1, "Lost type qualifier in parser.");  
             $$ = NULL;
+        }
     }
     ;
 
@@ -1558,19 +1556,21 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         const Type *t = decl->GetType(ds);
         if (t == NULL)
             return;
+
+        Symbol *sym = decl->GetSymbol();
+        Assert(sym != NULL);
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
         if (ft != NULL) {
-            Symbol *funSym = decl->GetSymbol();
-            Assert(funSym != NULL);
-            funSym->type = ft;
-            funSym->storageClass = ds->storageClass;
-
+            sym->type = ft;
+            sym->storageClass = ds->storageClass;
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
-            m->AddFunctionDeclaration(funSym, isInline);
+            m->AddFunctionDeclaration(sym, isInline);
         }
-        else
-            m->AddGlobalVariable(decl->GetSymbol(), decl->initExpr,
-                                 (ds->typeQualifiers & TYPEQUAL_CONST) != 0);
+        else {
+            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
+            m->AddGlobalVariable(sym, decl->initExpr, isConst);
+        }
     }
 }
 
@@ -1596,6 +1596,7 @@ lAddFunctionParams(Declarator *decl) {
             continue;
         Assert(pdecl->declarators.size() == 1);
         Symbol *sym = pdecl->declarators[0]->GetSymbol();
+        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 #ifndef NDEBUG
         bool ok = m->symbolTable->AddVariable(sym);
         if (ok == false)
@@ -1761,7 +1762,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                the actual enum type here and optimize it, which will have
                us end up with a ConstExpr with the desired EnumType... */
             Expr *castExpr = new TypeCastExpr(enumType, enums[i]->constValue,
-                                              false, enums[i]->pos);
+                                              enums[i]->pos);
             castExpr = Optimize(castExpr);
             enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
             Assert(enums[i]->constValue != NULL);

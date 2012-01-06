@@ -36,6 +36,7 @@
 */
 
 #include "expr.h"
+#include "ast.h"
 #include "type.h"
 #include "sym.h"
 #include "ctx.h"
@@ -224,7 +225,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             eltType = eltType->GetAsConstType();
         if (Type::Equal(toPointerType, 
                         new PointerType(eltType,
-                                        toPointerType->IsUniformType(),
+                                        toPointerType->GetVariability(),
                                         toPointerType->IsConstType())))
             goto typecast_ok;
         else {
@@ -466,7 +467,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
  typecast_ok:
     if (expr != NULL)
-        *expr = new TypeCastExpr(toType, *expr, false, pos);
+        *expr = new TypeCastExpr(toType, *expr, pos);
     return true;
 }
 
@@ -2709,7 +2710,7 @@ FunctionCallExpr::TypeCheck() {
                     !(argCouldBeNULL[i] == true &&
                       dynamic_cast<const PointerType *>(paramType) != NULL)) {
                     Error(args->exprs[i]->pos, "Can't convert argument of "
-                          "type \"%s\" to type \"%s\" for funcion call "
+                          "type \"%s\" to type \"%s\" for function call "
                           "argument.", argTypes[i]->GetString().c_str(),
                           paramType->GetString().c_str());
                     return NULL;
@@ -3525,6 +3526,12 @@ VectorMemberExpr::getElementType() const {
 MemberExpr *
 MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
                    bool derefLValue) {
+    // FIXME: we need to call TypeCheck() here so that we can call
+    // e->GetType() in the following.  But really we just shouldn't try to
+    // resolve this now but just have a generic MemberExpr type that
+    // handles all cases so that this is unnecessary.
+    e = ::TypeCheck(e);
+
     const Type *exprType;
     if (e == NULL || (exprType = e->GetType()) == NULL)
         return NULL;
@@ -4566,11 +4573,10 @@ ConstExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // TypeCastExpr
 
-TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, bool pu, SourcePos p) 
+TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) 
   : Expr(p) {
     type = t;
     expr = e;
-    preserveUniformity = pu;
 }
 
 
@@ -5213,7 +5219,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
             Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
-            arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, false, pos);
+            arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
             Assert(arrayAsPtr != NULL);
             arrayAsPtr = ::Optimize(arrayAsPtr);
@@ -5364,6 +5370,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const { 
+    Assert(type->HasUnboundVariability() == false);
     return type; 
 }
 
@@ -5373,7 +5380,7 @@ lDeconstifyType(const Type *t) {
     const PointerType *pt = dynamic_cast<const PointerType *>(t);
     if (pt != NULL)
         return new PointerType(lDeconstifyType(pt->GetBaseType()), 
-                               pt->IsUniformType(), false);
+                               pt->GetVariability(), false);
     else
         return t->GetAsNonConstType();
 }
@@ -5384,16 +5391,16 @@ TypeCastExpr::TypeCheck() {
     if (expr == NULL)
         return NULL;
 
-    const Type *toType = GetType(), *fromType = expr->GetType();
+    const Type *toType = type, *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL)
         return NULL;
 
-    if (preserveUniformity == true && fromType->IsUniformType() &&
-        toType->IsVaryingType()) {
+    if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
         TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(),
-                                             expr, false, pos);
+                                             expr, pos);
         return ::TypeCheck(tce);
     }
+    type = toType = type->ResolveUnboundVariability(Type::Varying);
 
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
@@ -5862,6 +5869,8 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
+    if (type->HasUnboundVariability())
+        type = type->ResolveUnboundVariability(Type::Varying);
 }
 
 
@@ -6026,7 +6035,8 @@ FunctionSymbolExpr::GetType() const {
         return NULL;
     }
 
-    return matchingFunc ? new PointerType(matchingFunc->type, true, true) : NULL;
+    return matchingFunc ? 
+        new PointerType(matchingFunc->type, Type::Uniform, true) : NULL;
 }
 
 

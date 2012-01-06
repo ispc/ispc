@@ -46,6 +46,18 @@
 #include <stdio.h>
 #include <set>
 
+static void
+lPrintTypeQualifiers(int typeQualifiers) {
+    if (typeQualifiers & TYPEQUAL_INLINE)    printf("inline ");
+    if (typeQualifiers & TYPEQUAL_CONST)     printf("const ");
+    if (typeQualifiers & TYPEQUAL_UNIFORM)   printf("uniform ");
+    if (typeQualifiers & TYPEQUAL_VARYING)   printf("varying ");
+    if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
+    if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
+    if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
+}
+
+
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
     the type, returning the type that is the result. 
 */
@@ -53,6 +65,16 @@ static const Type *
 lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if (type == NULL)
         return NULL;
+
+    if ((typeQualifiers & TYPEQUAL_CONST) != 0)
+        type = type->GetAsConstType();
+
+    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
+        type = type->GetAsUniformType();
+    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
+        type = type->GetAsVaryingType();
+    else
+        type = type->GetAsUnboundVariabilityType();
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
         if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)
@@ -64,29 +86,13 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
             type = unsignedType;
         else
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
-              type->GetString().c_str());
-
+                  type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
     }
 
     if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false)
         Error(pos, "\"signed\" qualifier is illegal with non-integer type "
-              "\"%s\".", type->GetString().c_str());
-
-    if ((typeQualifiers & TYPEQUAL_CONST) != 0)
-        type = type->GetAsConstType();
-
-    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
-        type = type->GetAsUniformType();
-    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
-        type = type->GetAsVaryingType();
-    else {
-        // otherwise, structs are uniform by default and everything
-        // else is varying by default
-        if (dynamic_cast<const StructType *>(type->GetBaseType()) != NULL)
-            type = type->GetAsUniformType();
-        else
-            type = type->GetAsVaryingType();
-    }
+              "\"%s\".", 
+              type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
 
     return type;
 }
@@ -138,21 +144,14 @@ lGetStorageClassName(StorageClass storageClass) {
 
 void
 DeclSpecs::Print() const {
-    printf("%s ", lGetStorageClassName(storageClass));
+    printf("Declspecs: [%s ", lGetStorageClassName(storageClass));
 
     if (soaWidth > 0) printf("soa<%d> ", soaWidth);
-
-    if (typeQualifiers & TYPEQUAL_INLINE)    printf("inline ");
-    if (typeQualifiers & TYPEQUAL_CONST)     printf("const ");
-    if (typeQualifiers & TYPEQUAL_UNIFORM)   printf("uniform ");
-    if (typeQualifiers & TYPEQUAL_VARYING)   printf("varying ");
-    if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
-    if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
-    if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
-
-    printf("%s", baseType->GetString().c_str());
+    lPrintTypeQualifiers(typeQualifiers);
+    printf("base type: %s", baseType->GetString().c_str());
 
     if (vectorSize > 0) printf("<%d>", vectorSize);
+    printf("]");
 }
 
 
@@ -192,19 +191,46 @@ Declarator::GetSymbol() const {
 
 
 void
-Declarator::Print() const {
+Declarator::Print(int indent) const {
+    printf("%*cdeclarator: [", indent, ' ');
+    pos.Print();
+
+    lPrintTypeQualifiers(typeQualifiers);
     Symbol *sym = GetSymbol();
     if (sym != NULL)
         printf("%s", sym->name.c_str());
     else
         printf("(null symbol)");
 
+    printf(", array size = %d", arraySize);
+
+    printf(", kind = ");
+    switch (kind) {
+    case DK_BASE:      printf("base");      break;
+    case DK_POINTER:   printf("pointer");   break;
+    case DK_REFERENCE: printf("reference"); break;
+    case DK_ARRAY:     printf("array");     break;
+    case DK_FUNCTION:  printf("function");  break;
+    default:           FATAL("Unhandled declarator kind");
+    }
+
     if (initExpr != NULL) {
         printf(" = (");
         initExpr->Print();
         printf(")");
     }
-    pos.Print();
+
+    if (functionParams.size() > 0) {
+        for (unsigned int i = 0; i < functionParams.size(); ++i) {
+            printf("\n%*cfunc param %d:\n", indent, ' ', i);
+            functionParams[i]->Print(indent+4);
+        }
+    }
+
+    if (child != NULL)
+        child->Print(indent + 4);
+
+    printf("]\n");
 }
 
 
@@ -237,8 +263,13 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
     for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
         Declaration *pdecl = d->functionParams[i];
         Assert(pdecl->declarators.size() == 1);
-        funArgs->push_back(pdecl->declarators[0]->GetSymbol());
+
+        Symbol *sym = pdecl->declarators[0]->GetSymbol();
+        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        funArgs->push_back(sym);
     }
+
+    funSym->type = funSym->type->ResolveUnboundVariability(Type::Varying);
 
     return funSym;
 }
@@ -258,6 +289,12 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     if (kind != DK_FUNCTION && isTask)
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
 
+    Type::Variability variability = Type::Unbound;
+    if (hasUniformQual)
+        variability = Type::Uniform;
+    else if (hasVaryingQual)
+        variability = Type::Varying;
+
     const Type *type = base;
     switch (kind) {
     case DK_BASE:
@@ -268,7 +305,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         return type;
 
     case DK_POINTER:
-        type = new PointerType(type, hasUniformQual, isConst);
+        type = new PointerType(type, variability, isConst);
         if (child != NULL)
             return child->GetType(type, ds);
         else
@@ -397,7 +434,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             Error(pos, "No return type provided in function declaration.");
             return NULL;
         }
-
+        
         bool isExported = ds && (ds->storageClass == SC_EXPORT);
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
@@ -418,9 +455,10 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             return NULL;
         }
 
-        Type *functionType = 
-            new FunctionType(returnType, args, pos, argNames, argDefaults,
+        const Type *functionType = 
+            new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
+        functionType = functionType->ResolveUnboundVariability(Type::Varying);
         return child->GetType(functionType, ds);
     }
     default:
@@ -497,6 +535,8 @@ Declaration::GetVariableDeclarations() const {
             continue;
 
         Symbol *sym = decl->GetSymbol();
+        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+
         if (dynamic_cast<const FunctionType *>(sym->type) != NULL) {
             // function declaration
             m->symbolTable->AddFunction(sym);
@@ -511,14 +551,12 @@ Declaration::GetVariableDeclarations() const {
 
 
 void
-Declaration::Print() const {
-    printf("Declaration: specs [");
+Declaration::Print(int indent) const {
+    printf("%*cDeclaration: specs [", indent, ' ');
     declSpecs->Print();
-    printf("], declarators [");
-    for (unsigned int i = 0 ; i < declarators.size(); ++i) {
-        declarators[i]->Print();
-        printf("%s", (i == declarators.size() - 1) ? "]" : ", ");
-    }
+    printf("], declarators:\n");
+    for (unsigned int i = 0 ; i < declarators.size(); ++i)
+        declarators[i]->Print(indent+4);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -539,7 +577,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
         DeclSpecs ds(type);
         if (type->IsUniformType()) 
             ds.typeQualifiers |= TYPEQUAL_UNIFORM;
-        else
+        else if (type->IsVaryingType())
             ds.typeQualifiers |= TYPEQUAL_VARYING;
 
         for (unsigned int j = 0; j < sd[i]->declarators->size(); ++j) {

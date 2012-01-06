@@ -70,63 +70,243 @@ lShouldPrintName(const std::string &name) {
 ///////////////////////////////////////////////////////////////////////////
 // AtomicType
 
-const AtomicType *AtomicType::UniformBool = new AtomicType(TYPE_BOOL, true, false);
-const AtomicType *AtomicType::VaryingBool = new AtomicType(TYPE_BOOL, false, false);
-const AtomicType *AtomicType::UniformInt8 = new AtomicType(TYPE_INT8, true, false);
-const AtomicType *AtomicType::VaryingInt8 = new AtomicType(TYPE_INT8, false, false);
-const AtomicType *AtomicType::UniformUInt8 = new AtomicType(TYPE_UINT8, true, false);
-const AtomicType *AtomicType::VaryingUInt8 = new AtomicType(TYPE_UINT8, false, false);
-const AtomicType *AtomicType::UniformInt16 = new AtomicType(TYPE_INT16, true, false);
-const AtomicType *AtomicType::VaryingInt16 = new AtomicType(TYPE_INT16, false, false);
-const AtomicType *AtomicType::UniformUInt16 = new AtomicType(TYPE_UINT16, true, false);
-const AtomicType *AtomicType::VaryingUInt16 = new AtomicType(TYPE_UINT16, false, false);
-const AtomicType *AtomicType::UniformInt32 = new AtomicType(TYPE_INT32, true, false);
-const AtomicType *AtomicType::VaryingInt32 = new AtomicType(TYPE_INT32, false, false);
-const AtomicType *AtomicType::UniformUInt32 = new AtomicType(TYPE_UINT32, true, false);
-const AtomicType *AtomicType::VaryingUInt32 = new AtomicType(TYPE_UINT32, false, false);
-const AtomicType *AtomicType::UniformFloat = new AtomicType(TYPE_FLOAT, true, false);
-const AtomicType *AtomicType::VaryingFloat = new AtomicType(TYPE_FLOAT, false, false);
-const AtomicType *AtomicType::UniformInt64 = new AtomicType(TYPE_INT64, true, false);
-const AtomicType *AtomicType::VaryingInt64 = new AtomicType(TYPE_INT64, false, false);
-const AtomicType *AtomicType::UniformUInt64 = new AtomicType(TYPE_UINT64, true, false);
-const AtomicType *AtomicType::VaryingUInt64 = new AtomicType(TYPE_UINT64, false, false);
-const AtomicType *AtomicType::UniformDouble = new AtomicType(TYPE_DOUBLE, true, false);
-const AtomicType *AtomicType::VaryingDouble = new AtomicType(TYPE_DOUBLE, false, false);
+// All of the details of the layout of this array are used implicitly in
+// the AtomicType implementation below; reoder it with care!  For example,
+// the fact that for signed integer types, the unsigned equivalent integer
+// type follows in the next major array element is used in the routine to
+// get unsigned types.
 
-const AtomicType *AtomicType::UniformConstBool = new AtomicType(TYPE_BOOL, true, true);
-const AtomicType *AtomicType::VaryingConstBool = new AtomicType(TYPE_BOOL, false, true);
-const AtomicType *AtomicType::UniformConstInt8 = new AtomicType(TYPE_INT8, true, true);
-const AtomicType *AtomicType::VaryingConstInt8 = new AtomicType(TYPE_INT8, false, true);
-const AtomicType *AtomicType::UniformConstUInt8 = new AtomicType(TYPE_UINT8, true, true);
-const AtomicType *AtomicType::VaryingConstUInt8 = new AtomicType(TYPE_UINT8, false, true);
-const AtomicType *AtomicType::UniformConstInt16 = new AtomicType(TYPE_INT16, true, true);
-const AtomicType *AtomicType::VaryingConstInt16 = new AtomicType(TYPE_INT16, false, true);
-const AtomicType *AtomicType::UniformConstUInt16 = new AtomicType(TYPE_UINT16, true, true);
-const AtomicType *AtomicType::VaryingConstUInt16 = new AtomicType(TYPE_UINT16, false, true);
-const AtomicType *AtomicType::UniformConstInt32 = new AtomicType(TYPE_INT32, true, true);
-const AtomicType *AtomicType::VaryingConstInt32 = new AtomicType(TYPE_INT32, false, true);
-const AtomicType *AtomicType::UniformConstUInt32 = new AtomicType(TYPE_UINT32, true, true);
-const AtomicType *AtomicType::VaryingConstUInt32 = new AtomicType(TYPE_UINT32, false, true);
-const AtomicType *AtomicType::UniformConstFloat = new AtomicType(TYPE_FLOAT, true, true);
-const AtomicType *AtomicType::VaryingConstFloat = new AtomicType(TYPE_FLOAT, false, true);
-const AtomicType *AtomicType::UniformConstInt64 = new AtomicType(TYPE_INT64, true, true);
-const AtomicType *AtomicType::VaryingConstInt64 = new AtomicType(TYPE_INT64, false, true);
-const AtomicType *AtomicType::UniformConstUInt64 = new AtomicType(TYPE_UINT64, true, true);
-const AtomicType *AtomicType::VaryingConstUInt64 = new AtomicType(TYPE_UINT64, false, true);
-const AtomicType *AtomicType::UniformConstDouble = new AtomicType(TYPE_DOUBLE, true, true);
-const AtomicType *AtomicType::VaryingConstDouble = new AtomicType(TYPE_DOUBLE, false, true);
+const AtomicType *AtomicType::typeTable[AtomicType::NUM_BASIC_TYPES][3][2] = {
+    { { NULL, NULL }, {NULL, NULL}, {NULL,NULL} }, /* NULL type */
+    { { new AtomicType(AtomicType::TYPE_BOOL, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_BOOL, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_BOOL, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_BOOL, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_BOOL, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_BOOL, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_INT8, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_INT8, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_INT8, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_INT8, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_INT8, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_INT8, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_UINT8, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_UINT8, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_UINT8, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_UINT8, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_UINT8, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_UINT8, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_INT16, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_INT16, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_INT16, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_INT16, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_INT16, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_INT16, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_UINT16, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_UINT16, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_UINT16, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_UINT16, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_UINT16, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_UINT16, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_INT32, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_INT32, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_INT32, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_INT32, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_INT32, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_INT32, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_UINT32, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_UINT32, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_UINT32, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_UINT32, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_UINT32, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_UINT32, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_FLOAT, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_FLOAT, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_FLOAT, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_FLOAT, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_FLOAT, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_FLOAT, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_INT64, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_INT64, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_INT64, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_INT64, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_INT64, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_INT64, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_UINT64, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_UINT64, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_UINT64, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_UINT64, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_UINT64, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_UINT64, Type::Unbound, true), } },
+    { { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Uniform, false), 
+        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Uniform, true), },
+      { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Varying, false), 
+        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Varying, true), },
+      { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Unbound, false), 
+        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Unbound, true), } } 
+};
 
-const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, true, false);
+const AtomicType *AtomicType::UniformBool;
+const AtomicType *AtomicType::VaryingBool;
+const AtomicType *AtomicType::UnboundBool;
+
+const AtomicType *AtomicType::UniformInt8;
+const AtomicType *AtomicType::VaryingInt8;
+const AtomicType *AtomicType::UnboundInt8;
+
+const AtomicType *AtomicType::UniformUInt8;
+const AtomicType *AtomicType::VaryingUInt8;
+const AtomicType *AtomicType::UnboundUInt8;
+
+const AtomicType *AtomicType::UniformInt16;
+const AtomicType *AtomicType::VaryingInt16;
+const AtomicType *AtomicType::UnboundInt16;
+
+const AtomicType *AtomicType::UniformUInt16;
+const AtomicType *AtomicType::VaryingUInt16;
+const AtomicType *AtomicType::UnboundUInt16;
+
+const AtomicType *AtomicType::UniformInt32;
+const AtomicType *AtomicType::VaryingInt32;
+const AtomicType *AtomicType::UnboundInt32;
+
+const AtomicType *AtomicType::UniformUInt32;
+const AtomicType *AtomicType::VaryingUInt32;
+const AtomicType *AtomicType::UnboundUInt32;
+
+const AtomicType *AtomicType::UniformFloat;
+const AtomicType *AtomicType::VaryingFloat;
+const AtomicType *AtomicType::UnboundFloat;
+
+const AtomicType *AtomicType::UniformInt64;
+const AtomicType *AtomicType::VaryingInt64;
+const AtomicType *AtomicType::UnboundInt64;
+
+const AtomicType *AtomicType::UniformUInt64;
+const AtomicType *AtomicType::VaryingUInt64;
+const AtomicType *AtomicType::UnboundUInt64;
+
+const AtomicType *AtomicType::UniformDouble;
+const AtomicType *AtomicType::VaryingDouble;
+const AtomicType *AtomicType::UnboundDouble;
 
 
-AtomicType::AtomicType(BasicType bt, bool iu, bool ic) 
-    : basicType(bt), isUniform(iu), isConst(ic) {
+const AtomicType *AtomicType::UniformConstBool;
+const AtomicType *AtomicType::VaryingConstBool;
+const AtomicType *AtomicType::UnboundConstBool;
+const AtomicType *AtomicType::UniformConstInt8;
+const AtomicType *AtomicType::VaryingConstInt8;
+const AtomicType *AtomicType::UnboundConstInt8;
+const AtomicType *AtomicType::UniformConstUInt8;
+const AtomicType *AtomicType::VaryingConstUInt8;
+const AtomicType *AtomicType::UnboundConstUInt8;
+const AtomicType *AtomicType::UniformConstInt16;
+const AtomicType *AtomicType::VaryingConstInt16;
+const AtomicType *AtomicType::UnboundConstInt16;
+const AtomicType *AtomicType::UniformConstUInt16;
+const AtomicType *AtomicType::VaryingConstUInt16;
+const AtomicType *AtomicType::UnboundConstUInt16;
+const AtomicType *AtomicType::UniformConstInt32;
+const AtomicType *AtomicType::VaryingConstInt32;
+const AtomicType *AtomicType::UnboundConstInt32;
+const AtomicType *AtomicType::UniformConstUInt32;
+const AtomicType *AtomicType::VaryingConstUInt32;
+const AtomicType *AtomicType::UnboundConstUInt32;
+const AtomicType *AtomicType::UniformConstFloat;
+const AtomicType *AtomicType::VaryingConstFloat;
+const AtomicType *AtomicType::UnboundConstFloat;
+const AtomicType *AtomicType::UniformConstInt64;
+const AtomicType *AtomicType::VaryingConstInt64;
+const AtomicType *AtomicType::UnboundConstInt64;
+const AtomicType *AtomicType::UniformConstUInt64;
+const AtomicType *AtomicType::VaryingConstUInt64;
+const AtomicType *AtomicType::UnboundConstUInt64;
+const AtomicType *AtomicType::UniformConstDouble;
+const AtomicType *AtomicType::VaryingConstDouble;
+const AtomicType *AtomicType::UnboundConstDouble;
+
+const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, Type::Uniform, false);
+
+
+void AtomicType::Init() {
+    UniformBool = typeTable[TYPE_BOOL][Type::Uniform][0];
+    VaryingBool = typeTable[TYPE_BOOL][Type::Varying][0];
+    UnboundBool = typeTable[TYPE_BOOL][Type::Unbound][0];
+    UniformInt8 = typeTable[TYPE_INT8][Type::Uniform][0];
+    VaryingInt8 = typeTable[TYPE_INT8][Type::Varying][0];
+    UnboundInt8 = typeTable[TYPE_INT8][Type::Unbound][0];
+    UniformUInt8 = typeTable[TYPE_UINT8][Type::Uniform][0];
+    VaryingUInt8 = typeTable[TYPE_UINT8][Type::Varying][0];
+    UnboundUInt8 = typeTable[TYPE_UINT8][Type::Unbound][0];
+    UniformInt16 = typeTable[TYPE_INT16][Type::Uniform][0];
+    VaryingInt16 = typeTable[TYPE_INT16][Type::Varying][0];
+    UnboundInt16 = typeTable[TYPE_INT16][Type::Unbound][0];
+    UniformUInt16 = typeTable[TYPE_UINT16][Type::Uniform][0];
+    VaryingUInt16 = typeTable[TYPE_UINT16][Type::Varying][0];
+    UnboundUInt16 = typeTable[TYPE_UINT16][Type::Unbound][0];
+    UniformInt32 = typeTable[TYPE_INT32][Type::Uniform][0];
+    VaryingInt32 = typeTable[TYPE_INT32][Type::Varying][0];
+    UnboundInt32 = typeTable[TYPE_INT32][Type::Unbound][0];
+    UniformUInt32 = typeTable[TYPE_UINT32][Type::Uniform][0];
+    VaryingUInt32 = typeTable[TYPE_UINT32][Type::Varying][0];
+    UnboundUInt32 = typeTable[TYPE_UINT32][Type::Unbound][0];
+    UniformFloat = typeTable[TYPE_FLOAT][Type::Uniform][0];
+    VaryingFloat = typeTable[TYPE_FLOAT][Type::Varying][0];
+    UnboundFloat = typeTable[TYPE_FLOAT][Type::Unbound][0];
+    UniformInt64 = typeTable[TYPE_INT64][Type::Uniform][0];
+    VaryingInt64 = typeTable[TYPE_INT64][Type::Varying][0];
+    UnboundInt64 = typeTable[TYPE_INT64][Type::Unbound][0];
+    UniformUInt64 = typeTable[TYPE_UINT64][Type::Uniform][0];
+    VaryingUInt64 = typeTable[TYPE_UINT64][Type::Varying][0];
+    UnboundUInt64 = typeTable[TYPE_UINT64][Type::Unbound][0];
+    UniformDouble = typeTable[TYPE_DOUBLE][Type::Uniform][0];
+    VaryingDouble = typeTable[TYPE_DOUBLE][Type::Varying][0];
+    UnboundDouble = typeTable[TYPE_DOUBLE][Type::Unbound][0];
+
+    UniformConstBool = typeTable[TYPE_BOOL][Type::Uniform][1];
+    VaryingConstBool = typeTable[TYPE_BOOL][Type::Varying][1];
+    UnboundConstBool = typeTable[TYPE_BOOL][Type::Unbound][1];
+    UniformConstInt8 = typeTable[TYPE_INT8][Type::Uniform][1];
+    VaryingConstInt8 = typeTable[TYPE_INT8][Type::Varying][1];
+    UnboundConstInt8 = typeTable[TYPE_INT8][Type::Unbound][1];
+    UniformConstUInt8 = typeTable[TYPE_UINT8][Type::Uniform][1];
+    VaryingConstUInt8 = typeTable[TYPE_UINT8][Type::Varying][1];
+    UnboundConstUInt8 = typeTable[TYPE_UINT8][Type::Unbound][1];
+    UniformConstInt16 = typeTable[TYPE_INT16][Type::Uniform][1];
+    VaryingConstInt16 = typeTable[TYPE_INT16][Type::Varying][1];
+    UnboundConstInt16 = typeTable[TYPE_INT16][Type::Unbound][1];
+    UniformConstUInt16 = typeTable[TYPE_UINT16][Type::Uniform][1];
+    VaryingConstUInt16 = typeTable[TYPE_UINT16][Type::Varying][1];
+    UnboundConstUInt16 = typeTable[TYPE_UINT16][Type::Unbound][1];
+    UniformConstInt32 = typeTable[TYPE_INT32][Type::Uniform][1];
+    VaryingConstInt32 = typeTable[TYPE_INT32][Type::Varying][1];
+    UnboundConstInt32 = typeTable[TYPE_INT32][Type::Unbound][1];
+    UniformConstUInt32 = typeTable[TYPE_UINT32][Type::Uniform][1];
+    VaryingConstUInt32 = typeTable[TYPE_UINT32][Type::Varying][1];
+    UnboundConstUInt32 = typeTable[TYPE_UINT32][Type::Unbound][1];
+    UniformConstFloat = typeTable[TYPE_FLOAT][Type::Uniform][1];
+    VaryingConstFloat = typeTable[TYPE_FLOAT][Type::Varying][1];
+    UnboundConstFloat = typeTable[TYPE_FLOAT][Type::Unbound][1];
+    UniformConstInt64 = typeTable[TYPE_INT64][Type::Uniform][1];
+    VaryingConstInt64 = typeTable[TYPE_INT64][Type::Varying][1];
+    UnboundConstInt64 = typeTable[TYPE_INT64][Type::Unbound][1];
+    UniformConstUInt64 = typeTable[TYPE_UINT64][Type::Uniform][1];
+    VaryingConstUInt64 = typeTable[TYPE_UINT64][Type::Varying][1];
+    UnboundConstUInt64 = typeTable[TYPE_UINT64][Type::Unbound][1];
+    UniformConstDouble = typeTable[TYPE_DOUBLE][Type::Uniform][1];
+    VaryingConstDouble = typeTable[TYPE_DOUBLE][Type::Varying][1];
+    UnboundConstDouble = typeTable[TYPE_DOUBLE][Type::Unbound][1];
 }
 
 
-bool
-AtomicType::IsUniformType() const {
-    return isUniform;
+AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
+    : basicType(bt), variability(v), isConst(ic) {
+}
+
+
+Type::Variability
+AtomicType::GetVariability() const {
+    return variability;
 }
 
 
@@ -166,26 +346,13 @@ AtomicType::IsConstType() const {
 
 const AtomicType *
 AtomicType::GetAsUnsignedType() const {
-    if (IsUnsignedType()) 
+    if (IsUnsignedType() == true) 
         return this;
 
-    if      (this == AtomicType::UniformInt8)       return AtomicType::UniformUInt8;
-    else if (this == AtomicType::VaryingInt8)       return AtomicType::VaryingUInt8;
-    else if (this == AtomicType::UniformInt16)      return AtomicType::UniformUInt16;
-    else if (this == AtomicType::VaryingInt16)      return AtomicType::VaryingUInt16;
-    else if (this == AtomicType::UniformInt32)      return AtomicType::UniformUInt32;
-    else if (this == AtomicType::VaryingInt32)      return AtomicType::VaryingUInt32;
-    else if (this == AtomicType::UniformInt64)      return AtomicType::UniformUInt64;
-    else if (this == AtomicType::VaryingInt64)      return AtomicType::VaryingUInt64;
-    else if (this == AtomicType::UniformConstInt8)  return AtomicType::UniformConstUInt8;
-    else if (this == AtomicType::VaryingConstInt8)  return AtomicType::VaryingConstUInt8;
-    else if (this == AtomicType::UniformConstInt16) return AtomicType::UniformConstUInt16;
-    else if (this == AtomicType::VaryingConstInt16) return AtomicType::VaryingConstUInt16;
-    else if (this == AtomicType::UniformConstInt32) return AtomicType::UniformConstUInt32;
-    else if (this == AtomicType::VaryingConstInt32) return AtomicType::VaryingConstUInt32;
-    else if (this == AtomicType::UniformConstInt64) return AtomicType::UniformConstUInt64;
-    else if (this == AtomicType::VaryingConstInt64) return AtomicType::VaryingConstUInt64;
-    else                                            return NULL;
+    if (IsIntType() == false)
+        return NULL;
+
+    return typeTable[basicType + 1][variability][isConst ? 1 : 0];
 }
 
 
@@ -193,23 +360,8 @@ const AtomicType *
 AtomicType::GetAsConstType() const {
     if (this == AtomicType::Void) 
         return this;
-
-    switch (basicType) {
-    case TYPE_BOOL:    return isUniform ? UniformConstBool   : VaryingConstBool;
-    case TYPE_INT8:    return isUniform ? UniformConstInt8   : VaryingConstInt8;
-    case TYPE_UINT8:   return isUniform ? UniformConstUInt8  : VaryingConstUInt8;
-    case TYPE_INT16:   return isUniform ? UniformConstInt16  : VaryingConstInt16;
-    case TYPE_UINT16:  return isUniform ? UniformConstUInt16 : VaryingConstUInt16;
-    case TYPE_INT32:   return isUniform ? UniformConstInt32  : VaryingConstInt32;
-    case TYPE_UINT32:  return isUniform ? UniformConstUInt32 : VaryingConstUInt32;
-    case TYPE_FLOAT:   return isUniform ? UniformConstFloat  : VaryingConstFloat;
-    case TYPE_INT64:   return isUniform ? UniformConstInt64  : VaryingConstInt64;
-    case TYPE_UINT64:  return isUniform ? UniformConstUInt64 : VaryingConstUInt64;
-    case TYPE_DOUBLE:  return isUniform ? UniformConstDouble : VaryingConstDouble;
-    default:
-        FATAL("logic error in AtomicType::GetAsConstType()");
-        return NULL;
-    }
+    
+    return typeTable[basicType][variability][1];
 }
 
 
@@ -218,22 +370,7 @@ AtomicType::GetAsNonConstType() const {
     if (this == AtomicType::Void) 
         return this;
 
-    switch (basicType) {
-    case TYPE_BOOL:    return isUniform ? UniformBool   : VaryingBool;
-    case TYPE_INT8:    return isUniform ? UniformInt8   : VaryingInt8;
-    case TYPE_UINT8:   return isUniform ? UniformUInt8  : VaryingUInt8;
-    case TYPE_INT16:   return isUniform ? UniformInt16  : VaryingInt16;
-    case TYPE_UINT16:  return isUniform ? UniformUInt16 : VaryingUInt16;
-    case TYPE_INT32:   return isUniform ? UniformInt32  : VaryingInt32;
-    case TYPE_UINT32:  return isUniform ? UniformUInt32 : VaryingUInt32;
-    case TYPE_FLOAT:   return isUniform ? UniformFloat  : VaryingFloat;
-    case TYPE_INT64:   return isUniform ? UniformInt64  : VaryingInt64;
-    case TYPE_UINT64:  return isUniform ? UniformUInt64 : VaryingUInt64;
-    case TYPE_DOUBLE:  return isUniform ? UniformDouble : VaryingDouble;
-    default:
-        FATAL("logic error in AtomicType::GetAsNonConstType()");
-        return NULL;
-    }
+    return typeTable[basicType][variability][0];
 }
 
 
@@ -245,49 +382,34 @@ AtomicType::GetBaseType() const {
 
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
-    if (IsVaryingType()) 
+    if (this == AtomicType::Void)
         return this;
-
-    switch (basicType) {
-    case TYPE_VOID:   return this;
-    case TYPE_BOOL:   return isConst ? VaryingConstBool   : VaryingBool;
-    case TYPE_INT8:   return isConst ? VaryingConstInt8   : VaryingInt8;
-    case TYPE_UINT8:  return isConst ? VaryingConstUInt8  : VaryingUInt8;
-    case TYPE_INT16:  return isConst ? VaryingConstInt16  : VaryingInt16;
-    case TYPE_UINT16: return isConst ? VaryingConstUInt16 : VaryingUInt16;
-    case TYPE_INT32:  return isConst ? VaryingConstInt32  : VaryingInt32;
-    case TYPE_UINT32: return isConst ? VaryingConstUInt32 : VaryingUInt32;
-    case TYPE_FLOAT:  return isConst ? VaryingConstFloat  : VaryingFloat;
-    case TYPE_INT64:  return isConst ? VaryingConstInt64  : VaryingInt64;
-    case TYPE_UINT64: return isConst ? VaryingConstUInt64 : VaryingUInt64;
-    case TYPE_DOUBLE: return isConst ? VaryingConstDouble : VaryingDouble;
-    default:          FATAL("Logic error in AtomicType::GetAsVaryingType()");
-    }
-    return NULL;
+    return typeTable[basicType][Varying][isConst ? 1 : 0];
 }
 
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
-    if (IsUniformType()) 
+    if (this == AtomicType::Void)
         return this;
+    return typeTable[basicType][Uniform][isConst ? 1 : 0];
+}
 
-    switch (basicType) {
-    case TYPE_VOID:   return this;
-    case TYPE_BOOL:   return isConst ? UniformConstBool   : UniformBool;
-    case TYPE_INT8:   return isConst ? UniformConstInt8   : UniformInt8;
-    case TYPE_UINT8:  return isConst ? UniformConstUInt8  : UniformUInt8;
-    case TYPE_INT16:  return isConst ? UniformConstInt16  : UniformInt16;
-    case TYPE_UINT16: return isConst ? UniformConstUInt16 : UniformUInt16;
-    case TYPE_INT32:  return isConst ? UniformConstInt32  : UniformInt32;
-    case TYPE_UINT32: return isConst ? UniformConstUInt32 : UniformUInt32;
-    case TYPE_FLOAT:  return isConst ? UniformConstFloat  : UniformFloat;
-    case TYPE_INT64:  return isConst ? UniformConstInt64  : UniformInt64;
-    case TYPE_UINT64: return isConst ? UniformConstUInt64 : UniformUInt64;
-    case TYPE_DOUBLE: return isConst ? UniformConstDouble : UniformDouble;
-    default:          FATAL("Logic error in AtomicType::GetAsUniformType()");
-    }
-    return NULL;
+
+const AtomicType *
+AtomicType::GetAsUnboundVariabilityType() const {
+    if (this == AtomicType::Void)
+        return this;
+    return typeTable[basicType][Unbound][isConst ? 1 : 0];
+}
+
+
+const AtomicType *
+AtomicType::ResolveUnboundVariability(Variability v) const {
+    Assert(v != Unbound);
+    if (variability != Unbound)
+        return this;
+    return typeTable[basicType][v][isConst ? 1 : 0];
 }
 
 
@@ -303,7 +425,11 @@ AtomicType::GetString() const {
     std::string ret;
     if (basicType != TYPE_VOID) {
         if (isConst)   ret += "const ";
-        if (isUniform) ret += "uniform ";
+        switch (variability) {
+        case Uniform: ret += "uniform ";     break;
+        case Varying: /*ret += "varying ";*/ break;
+        case Unbound: ret += "/*unbound*/ "; break;
+        }
     }
 
     switch (basicType) {
@@ -329,7 +455,12 @@ std::string
 AtomicType::Mangle() const {
     std::string ret;
     if (isConst)   ret += "C";
-    if (isUniform) ret += "U";
+    switch (variability) {
+    case Uniform: ret += "uf";     break;
+    case Varying: ret += "vy";     break;
+    case Unbound: FATAL("Variability shoudln't be unbound in call to "
+                        "AtomicType::Mangle().");
+    }
 
     switch (basicType) {
     case TYPE_VOID:   ret += "v"; break;
@@ -353,7 +484,7 @@ AtomicType::Mangle() const {
 std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
-    if (isUniform == false) {
+    if (variability != Uniform) {
         Assert(m->errorCount > 0);
         return ret;
     }
@@ -385,6 +516,9 @@ AtomicType::GetCDeclaration(const std::string &name) const {
 
 LLVM_TYPE_CONST llvm::Type *
 AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
+    Assert(variability != Unbound);
+    bool isUniform = (variability == Uniform);
+
     switch (basicType) {
     case TYPE_VOID:
         return llvm::Type::getVoidTy(*ctx);
@@ -415,7 +549,8 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 AtomicType::GetDIType(llvm::DIDescriptor scope) const {
-    if (isUniform) {
+    Assert(variability != Unbound);
+    if (variability == Uniform) {
         switch (basicType) {
         case TYPE_VOID:
             return llvm::DIType();
@@ -491,20 +626,20 @@ EnumType::EnumType(SourcePos p)
     : pos(p) {
     //    name = "/* (anonymous) */";
     isConst = false;
-    isUniform = false;
+    variability = Unbound;
 }
 
 
 EnumType::EnumType(const char *n, SourcePos p) 
     : pos(p), name(n) {
     isConst = false;
-    isUniform = false;
+    variability = Unbound;
 }
 
 
-bool 
-EnumType::IsUniformType() const {
-    return isUniform;
+Type::Variability
+EnumType::GetVariability() const {
+    return variability;
 }
 
 
@@ -545,24 +680,48 @@ EnumType::GetBaseType() const {
 
 
 const EnumType *
-EnumType::GetAsVaryingType() const {
-    if (IsVaryingType())
+EnumType::GetAsUniformType() const {
+    if (IsUniformType())
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
-        enumType->isUniform = false;
+        enumType->variability = Uniform;
         return enumType;
     }
 }
 
 
 const EnumType *
-EnumType::GetAsUniformType() const {
-    if (IsUniformType())
+EnumType::ResolveUnboundVariability(Variability v) const {
+    if (variability == v || variability != Unbound)
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
-        enumType->isUniform = true;
+        enumType->variability = v;
+        return enumType;
+    }
+}
+
+
+const EnumType *
+EnumType::GetAsVaryingType() const {
+    if (IsVaryingType())
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->variability = Varying;
+        return enumType;
+    }
+}
+
+
+const EnumType *
+EnumType::GetAsUnboundVariabilityType() const {
+    if (HasUnboundVariability())
+        return this;
+    else {
+        EnumType *enumType = new EnumType(*this);
+        enumType->variability = Unbound;
         return enumType;
     }
 }
@@ -603,7 +762,13 @@ std::string
 EnumType::GetString() const {
     std::string ret;
     if (isConst) ret += "const ";
-    if (isUniform) ret += "uniform ";
+
+    switch (variability) {
+    case Uniform: ret += "uniform ";     break;
+    case Varying: /*ret += "varying ";*/ break;
+    case Unbound: ret += "/*unbound*/ "; break;
+    }
+
     ret += "enum ";
     if (name.size())
         ret += name;
@@ -613,13 +778,25 @@ EnumType::GetString() const {
 
 std::string 
 EnumType::Mangle() const {
-    std::string ret = std::string("enum[") + name + std::string("]");
+    std::string ret;
+
+    Assert(variability != Unbound);
+    if (variability == Uniform) ret += "uf";
+    else ret += "vy";
+
+    ret += std::string("enum[") + name + std::string("]");
+
     return ret;
 }
 
 
 std::string 
 EnumType::GetCDeclaration(const std::string &varName) const {
+    if (variability != Uniform) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+
     std::string ret;
     if (isConst) ret += "const ";
     ret += "enum";
@@ -635,12 +812,15 @@ EnumType::GetCDeclaration(const std::string &varName) const {
 
 LLVM_TYPE_CONST llvm::Type *
 EnumType::LLVMType(llvm::LLVMContext *ctx) const {
-    return isUniform ? LLVMTypes::Int32Type : LLVMTypes::Int32VectorType;
+    Assert(variability != Unbound);
+    return (variability == Uniform) ? LLVMTypes::Int32Type : 
+                                      LLVMTypes::Int32VectorType;
 }
 
 
 llvm::DIType 
 EnumType::GetDIType(llvm::DIDescriptor scope) const {
+    Assert(variability != Unbound);
     std::vector<llvm::Value *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
@@ -704,23 +884,23 @@ EnumType::GetEnumerator(int i) const {
 ///////////////////////////////////////////////////////////////////////////
 // PointerType
 
-PointerType *PointerType::Void = new PointerType(AtomicType::Void, true, true);
+PointerType *PointerType::Void = new PointerType(AtomicType::Void, Uniform, false);
 
-PointerType::PointerType(const Type *t, bool iu, bool ic) 
-    : isUniform(iu), isConst(ic) {
+PointerType::PointerType(const Type *t, Variability v, bool ic) 
+    : variability(v), isConst(ic) {
     baseType = t;
 }
 
 
 PointerType *
 PointerType::GetUniform(const Type *t) {
-    return new PointerType(t, true, false);
+    return new PointerType(t, Uniform, false);
 }
 
 
 PointerType *
 PointerType::GetVarying(const Type *t) {
-    return new PointerType(t, false, false);
+    return new PointerType(t, Varying, false);
 }
 
 
@@ -731,9 +911,9 @@ PointerType::IsVoidPointer(const Type *t) {
 }
 
 
-bool
-PointerType::IsUniformType() const {
-    return isUniform;
+Type::Variability
+PointerType::GetVariability() const {
+    return variability;
 }
 
 
@@ -775,19 +955,36 @@ PointerType::GetBaseType() const {
 
 const PointerType *
 PointerType::GetAsVaryingType() const {
-    if (isUniform == false)
+    if (variability == Varying)
         return this;
     else
-        return new PointerType(baseType, false, isConst);
+        return new PointerType(baseType, Varying, isConst);
 }
 
 
 const PointerType *
 PointerType::GetAsUniformType() const {
-    if (isUniform == true)
+    if (variability == Uniform)
         return this;
     else
-        return new PointerType(baseType, true, isConst);
+        return new PointerType(baseType, Uniform, isConst);
+}
+
+
+const PointerType *
+PointerType::GetAsUnboundVariabilityType() const {
+    if (variability == Unbound)
+        return this;
+    else
+        return new PointerType(baseType, Unbound, isConst);
+}
+
+
+const PointerType *
+PointerType::ResolveUnboundVariability(Variability v) const {
+    return new PointerType(baseType->ResolveUnboundVariability(v),
+                           (variability == Unbound) ? v : variability,
+                           isConst);
 }
 
 
@@ -803,7 +1000,7 @@ PointerType::GetAsConstType() const {
     if (isConst == true)
         return this;
     else
-        return new PointerType(baseType, isUniform, true);
+        return new PointerType(baseType, variability, true);
 }
 
 
@@ -812,7 +1009,7 @@ PointerType::GetAsNonConstType() const {
     if (isConst == false)
         return this;
     else
-        return new PointerType(baseType, isUniform, false);
+        return new PointerType(baseType, variability, false);
 }
 
 
@@ -825,23 +1022,34 @@ PointerType::GetString() const {
 
     ret += std::string(" *");
     if (isConst) ret += " const";
-    if (isUniform) ret += " uniform";
+    switch (variability) {
+    case Uniform: ret += " uniform";     break;
+    case Varying: /*ret += " varying";*/ break;
+    case Unbound: ret += " /*unbound*/"; break;
+    }
+
     return ret;
 }
 
 
 std::string
 PointerType::Mangle() const {
+    Assert(variability != Unbound);
     if (baseType == NULL)
         return "";
 
-    return (isUniform ? std::string("uptr<") : std::string("vptr<")) + 
+    return ((variability == Uniform) ? std::string("uptr<") : std::string("vptr<")) + 
         baseType->Mangle() + std::string(">");
 }
 
 
 std::string
 PointerType::GetCDeclaration(const std::string &name) const {
+    if (variability != Uniform) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+
     if (baseType == NULL)
         return "";
 
@@ -856,10 +1064,13 @@ PointerType::GetCDeclaration(const std::string &name) const {
 
 LLVM_TYPE_CONST llvm::Type *
 PointerType::LLVMType(llvm::LLVMContext *ctx) const {
+    Assert(variability != Unbound);
     if (baseType == NULL)
         return NULL;
 
-    if (isUniform == false)
+    if (variability == Varying)
+        // always the same, since we currently use int vectors for varying
+        // pointers
         return LLVMTypes::VoidPointerVectorType;
 
     LLVM_TYPE_CONST llvm::Type *ptype = NULL;
@@ -908,12 +1119,13 @@ lCreateDIArray(llvm::DIType eltType, int count) {
 
 llvm::DIType
 PointerType::GetDIType(llvm::DIDescriptor scope) const {
+    Assert(variability != Unbound);
     if (baseType == NULL)
         return llvm::DIType();
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target.is32Bit ? 32 : 64;
-    if (isUniform)
+    if (variability == Uniform)
         return m->diBuilder->createPointerType(diTargetType, bitsSize);
     else {
         // emit them as an array of pointers
@@ -954,9 +1166,9 @@ ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 
-bool
-ArrayType::IsUniformType() const {
-    return child ? child->IsUniformType() : true;
+Type::Variability
+ArrayType::GetVariability() const {
+    return child ? child->GetVariability() : Uniform;
 }
 
 
@@ -1016,6 +1228,20 @@ ArrayType::GetAsUniformType() const {
     if (child == NULL)
         return NULL;
     return new ArrayType(child->GetAsUniformType(), numElements);
+}
+
+
+const ArrayType *
+ArrayType::GetAsUnboundVariabilityType() const {
+    if (child == NULL)
+        return NULL;
+    return new ArrayType(child->GetAsUnboundVariabilityType(), numElements);
+}
+
+
+const ArrayType *
+ArrayType::ResolveUnboundVariability(Variability v) const {
+    return new ArrayType(child->ResolveUnboundVariability(v), numElements);
 }
 
 
@@ -1226,6 +1452,19 @@ SOAArrayType::GetAsUniformType() const {
 }
 
 
+const SOAArrayType *
+SOAArrayType::GetAsUnboundVariabilityType() const {
+    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsUnboundVariabilityType()), 
+                            numElements, soaWidth);
+}
+
+const SOAArrayType *
+SOAArrayType::ResolveUnboundVariability(Variability v) const {
+    const StructType *sc = dynamic_cast<const StructType *>(child->ResolveUnboundVariability(v));
+    return new SOAArrayType(sc, numElements, soaWidth);
+}
+
+
 const Type *
 SOAArrayType::GetSOAType(int width) const {
     return new SOAArrayType(dynamic_cast<const StructType *>(child->GetSOAType(width)), 
@@ -1342,9 +1581,9 @@ VectorType::VectorType(const AtomicType *b, int a)
 }
 
 
-bool
-VectorType::IsUniformType() const {
-    return base->IsUniformType(); 
+Type::Variability
+VectorType::GetVariability() const {
+    return base->GetVariability(); 
 }
 
 
@@ -1393,6 +1632,18 @@ VectorType::GetAsVaryingType() const {
 const VectorType *
 VectorType::GetAsUniformType() const {
     return new VectorType(base->GetAsUniformType(), numElements);
+}
+
+
+const VectorType *
+VectorType::GetAsUnboundVariabilityType() const {
+    return new VectorType(base->GetAsUnboundVariabilityType(), numElements);
+}
+
+
+const VectorType *
+VectorType::ResolveUnboundVariability(Variability v) const {
+    return new VectorType(base->ResolveUnboundVariability(v), numElements);
 }
 
 
@@ -1525,15 +1776,15 @@ VectorType::getVectorMemoryCount() const {
 StructType::StructType(const std::string &n, const std::vector<const Type *> &elts, 
                        const std::vector<std::string> &en,
                        const std::vector<SourcePos> &ep,
-                       bool ic, bool iu, SourcePos p) 
+                       bool ic, Variability v, SourcePos p) 
     : name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
-      isUniform(iu), isConst(ic), pos(p) {
+      variability(v), isConst(ic), pos(p) {
 }
 
 
-bool
-StructType::IsUniformType() const  {
-    return isUniform; 
+Type::Variability
+StructType::GetVariability() const  {
+    return variability; 
 }
 
 
@@ -1579,7 +1830,7 @@ StructType::GetAsVaryingType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              isConst, false, pos);
+                              isConst, Varying, pos);
 }
 
 
@@ -1589,7 +1840,34 @@ StructType::GetAsUniformType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              isConst, true, pos);
+                              isConst, Uniform, pos);
+}
+
+
+const StructType *
+StructType::GetAsUnboundVariabilityType() const {
+    if (HasUnboundVariability()) 
+        return this;
+    else
+        return new StructType(name, elementTypes, elementNames, elementPositions,
+                              isConst, Unbound, pos);
+}
+
+
+const StructType *
+StructType::ResolveUnboundVariability(Variability v) const {
+    std::vector<const Type *> et;
+    for (unsigned int i = 0; i < elementTypes.size(); ++i)
+        et.push_back((elementTypes[i] == NULL) ? NULL :
+                     elementTypes[i]->ResolveUnboundVariability(v));
+
+    // FIXME
+    if (v == Varying) 
+        v = Uniform;
+
+    return new StructType(name, et, elementNames, elementPositions,
+                          isConst, (variability != Unbound) ? variability : v,
+                          pos);
 }
 
 
@@ -1603,7 +1881,7 @@ StructType::GetSOAType(int width) const {
         et.push_back(t->GetSOAType(width));
     }
     return new StructType(name, et, elementNames, elementPositions,
-                          isConst, isUniform, pos);
+                          isConst, variability, pos);
 }
 
 
@@ -1613,7 +1891,7 @@ StructType::GetAsConstType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, 
-                              elementPositions, true, isUniform, pos);
+                              elementPositions, true, variability, pos);
 }
 
 
@@ -1623,7 +1901,7 @@ StructType::GetAsNonConstType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              false, isUniform, pos);
+                              false, variability, pos);
 }
 
 
@@ -1631,8 +1909,12 @@ std::string
 StructType::GetString() const {
     std::string ret;
     if (isConst)   ret += "const ";
-    if (isUniform) ret += "uniform ";
-    else           ret += "varying ";
+
+    switch (variability) {
+    case Uniform: ret += "uniform ";     break;
+    case Varying: /*ret += "varying ";*/ break;
+    case Unbound: ret += "/*unbound*/ "; break;
+    }
 
     // Don't print the entire struct declaration, just print the struct's name.
     // @todo Do we need a separate method that prints the declaration?
@@ -1655,12 +1937,16 @@ StructType::GetString() const {
 
 std::string
 StructType::Mangle() const {
+    Assert(variability != Unbound);
+
     std::string ret;
     ret += "s[";
     if (isConst)
         ret += "_c_";
-    if (isUniform)
+    if (variability == Uniform)
         ret += "_u_";
+    else
+        ret += "_v_";
     ret += name + std::string("]<");
     for (unsigned int i = 0; i < elementTypes.size(); ++i)
         ret += elementTypes[i]->Mangle();
@@ -1671,16 +1957,16 @@ StructType::Mangle() const {
 
 std::string
 StructType::GetCDeclaration(const std::string &n) const {
+    if (variability != Uniform) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+
     std::string ret;
     if (isConst) ret += "const ";
     ret += std::string("struct ") + name;
     if (lShouldPrintName(n))
         ret += std::string(" ") + n;
-    if (!isUniform) {
-        char buf[16];
-        sprintf(buf, "[%d]", g->target.vectorWidth);
-        ret += buf;
-    }
     return ret;
 }
 
@@ -1762,8 +2048,9 @@ StructType::GetElementType(int i) const {
     // If the struct is uniform qualified, then each member comes out with
     // the same type as in the original source file.  If it's varying, then
     // all members are promoted to varying.
-    const Type *ret = isUniform ? elementTypes[i] : 
-        elementTypes[i]->GetAsVaryingType();
+    const Type *ret = elementTypes[i];
+    if (variability == Varying)
+        ret = ret->GetAsVaryingType();
     return isConst ? ret->GetAsConstType() : ret;
 }
 
@@ -1771,11 +2058,8 @@ StructType::GetElementType(int i) const {
 const Type *
 StructType::GetElementType(const std::string &n) const {
     for (unsigned int i = 0; i < elementNames.size(); ++i)
-        if (elementNames[i] == n) {
-            const Type *ret = isUniform ? elementTypes[i] : 
-                elementTypes[i]->GetAsVaryingType();
-            return isConst ? ret->GetAsConstType() : ret;
-        }
+        if (elementNames[i] == n)
+            return GetElementType(i);
     return NULL;
 }
 
@@ -1797,9 +2081,9 @@ ReferenceType::ReferenceType(const Type *t)
 }
 
 
-bool
-ReferenceType::IsUniformType() const {
-    return targetType->IsUniformType(); 
+Type::Variability
+ReferenceType::GetVariability() const {
+    return targetType->GetVariability(); 
 }
 
 
@@ -1860,6 +2144,20 @@ ReferenceType::GetAsUniformType() const {
     return new ReferenceType(targetType->GetAsUniformType());
 }
 
+
+const ReferenceType *
+ReferenceType::GetAsUnboundVariabilityType() const {
+    if (HasUnboundVariability()) 
+        return this;
+    return new ReferenceType(targetType->GetAsUnboundVariabilityType());
+}
+
+
+const ReferenceType *
+ReferenceType::ResolveUnboundVariability(Variability v) const {
+    return new ReferenceType(targetType->ResolveUnboundVariability(v));
+}
+    
 
 const Type *
 ReferenceType::GetSOAType(int width) const {
@@ -1963,7 +2261,7 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
 
 
 FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
-                           SourcePos p, const std::vector<std::string> &an, 
+                           const std::vector<std::string> &an, 
                            const std::vector<ConstExpr *> &ad,
                            const std::vector<SourcePos> &ap,
                            bool it, bool is, bool ec) 
@@ -1976,9 +2274,9 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
 }
 
 
-bool
-FunctionType::IsUniformType() const {
-    return true;
+Type::Variability
+FunctionType::GetVariability() const {
+    return Uniform;
 }
 
 
@@ -2030,6 +2328,25 @@ const Type *
 FunctionType::GetAsUniformType() const {
     FATAL("FunctionType::GetAsUniformType shouldn't be called");
     return NULL;
+}
+
+
+const Type *
+FunctionType::GetAsUnboundVariabilityType() const {
+    FATAL("FunctionType::GetAsUnboundVariabilityType shouldn't be called");
+    return NULL;
+}
+
+
+const FunctionType *
+FunctionType::ResolveUnboundVariability(Variability v) const {
+    const Type *rt = returnType->ResolveUnboundVariability(v);
+    std::vector<const Type *> pt;
+    for (unsigned int i = 0; i < paramTypes.size(); ++i)
+        pt.push_back((paramTypes[i] == NULL) ? NULL :
+                     paramTypes[i]->ResolveUnboundVariability(v));
+    return new FunctionType(rt, pt, paramNames, paramDefaults,
+                            paramPositions, isTask, isExported, isExternC);
 }
 
 

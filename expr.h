@@ -493,8 +493,7 @@ private:
     probably-different type. */
 class TypeCastExpr : public Expr {
 public:
-    TypeCastExpr(const Type *t, Expr *e, bool preserveUniformity,
-                 SourcePos p);
+    TypeCastExpr(const Type *t, Expr *e, SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
@@ -507,7 +506,6 @@ public:
 
     const Type *type;
     Expr *expr;
-    bool preserveUniformity;
 };
 
 

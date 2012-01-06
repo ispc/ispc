@@ -1133,7 +1133,7 @@ DoStmt::TypeCheck() {
                             !lHasVaryingBreakOrContinue(bodyStmts));
         testExpr = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
                                                   AtomicType::VaryingBool,
-                                    testExpr, false, testExpr->pos);
+                                    testExpr, testExpr->pos);
     }
 
     return this;
@@ -1318,8 +1318,7 @@ ForStmt::TypeCheck() {
                             !g->opt.disableUniformControlFlow &&
                             !lHasVaryingBreakOrContinue(stmts));
         test = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
-                                AtomicType::VaryingBool,
-                                test, false, test->pos);
+                                AtomicType::VaryingBool, test, test->pos);
         test = ::TypeCheck(test);
         if (test == NULL)
             return NULL;
@@ -2147,7 +2146,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
         baseType == AtomicType::UniformUInt16) {
         expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
                                                         AtomicType::VaryingInt32, 
-                                expr, false, expr->pos);
+                                expr, expr->pos);
         type = expr->GetType();
     }
         
@@ -2350,7 +2349,7 @@ AssertStmt::TypeCheck() {
         }
         expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
                                             AtomicType::VaryingBool, 
-                                expr, false, expr->pos);
+                                expr, expr->pos);
         expr = ::TypeCheck(expr);
     }
     return this;
