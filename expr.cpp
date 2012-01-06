@@ -639,6 +639,9 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 
 static llvm::Value *
 lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
+    if (baseSym == NULL)
+        return ctx->GetFullMask();
+
     if (dynamic_cast<const PointerType *>(baseSym->type) != NULL ||
         dynamic_cast<const ReferenceType *>(baseSym->type) != NULL)
         // FIXME: for pointers, we really only want to do this for
@@ -659,10 +662,11 @@ lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
 static void
 lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
                    FunctionEmitContext *ctx, Symbol *baseSym) {
-    Assert(baseSym != NULL &&
+    Assert(baseSym == NULL ||
            baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore &&
         !g->opt.disableMaskAllOnOptimizations &&
+        baseSym != NULL &&
         baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
         baseSym->storageClass != SC_STATIC &&
         dynamic_cast<const ReferenceType *>(baseSym->type) == NULL &&
@@ -2017,14 +2021,13 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     Symbol *baseSym = lvalue->GetBaseSymbol();
-    // Should be caught during type-checking...
-    assert(baseSym != NULL);
 
     switch (op) {
     case Assign: {
         llvm::Value *lv = lvalue->GetLValue(ctx);
         if (lv == NULL) {
-            Assert(m->errorCount > 0);
+            Error(lvalue->pos, "Left hand side of assignment expression can't "
+                  "be assigned to.");
             return NULL;
         }
         const Type *lvalueType = lvalue->GetLValueType();
@@ -2147,13 +2150,13 @@ AssignExpr::TypeCheck() {
         }
     }
 
-    if (lvalue->GetBaseSymbol() == NULL) {
-        Error(lvalue->pos, "Left hand side of assignment statement can't be "
-              "assigned to.");
+    const Type *lhsType = lvalue->GetType();
+    if (lhsType->IsConstType()) {
+        Error(lvalue->pos, "Can't assign to type \"%s\" on left-hand side of "
+              "expression.", lhsType->GetString().c_str());
         return NULL;
     }
 
-    const Type *lhsType = lvalue->GetType();
     if (dynamic_cast<const PointerType *>(lhsType) != NULL) {
         if (op == AddAssign || op == SubAssign) {
             if (PointerType::IsVoidPointer(lhsType)) {
@@ -2186,12 +2189,6 @@ AssignExpr::TypeCheck() {
 
     if (rvalue == NULL)
         return NULL;
-
-    if (lhsType->IsConstType()) {
-        Error(pos, "Can't assign to type \"%s\" on left-hand side of "
-              "expression.", lhsType->GetString().c_str());
-        return NULL;
-    }
 
     // Make sure we're not assigning to a struct that has a constant member
     const StructType *st = dynamic_cast<const StructType *>(lhsType);
