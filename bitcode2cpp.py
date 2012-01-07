@@ -26,17 +26,20 @@ if platform.system() == 'Windows' or string.find(platform.system(), "CYGWIN_NT")
 try:
     as_out=subprocess.Popen([llvm_as, "-", "-o", "-"], stdout=subprocess.PIPE)
 except IOError:
-    print >> sys.stderr, "Couldn't open " + src
+    print("Couldn't open " + src, file=sys.stderr)
     sys.exit(1)
 
-print "unsigned char builtins_bitcode_" + target + "[] = {"
+print("unsigned char builtins_bitcode_" + target + "[] = {")
+num = 0
 for line in as_out.stdout.readlines():
     length = length + len(line)
     for c in line:
-        print ord(c)
-        print ", "
-print " 0 };\n\n"
-print "int builtins_bitcode_" + target + "_length = " + str(length) + ";\n"
+        num+=1
+        print("0x%0.2X, " % c, end="")
+        if num%16 == 0:
+            print()
+print(" 0 };\n\n")
+print("int builtins_bitcode_" + target + "_length = " + str(length) + ";\n")
 
 as_out.wait()
 
