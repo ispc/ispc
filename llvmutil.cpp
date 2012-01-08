@@ -109,7 +109,7 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
             llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.vectorWidth);
     else {
-        assert(target.maskBitCount == 32);
+        Assert(target.maskBitCount == 32);
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
             llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.vectorWidth);
     }

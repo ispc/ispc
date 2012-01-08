@@ -155,7 +155,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
     else {
         ///////////////////////////////////////////////////////////////////////////
         // Handle expressions
-        assert(dynamic_cast<Expr *>(node) != NULL);
+        Assert(dynamic_cast<Expr *>(node) != NULL);
         UnaryExpr *ue;
         BinaryExpr *be;
         AssignExpr *ae;

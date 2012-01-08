@@ -550,7 +550,7 @@ lGetMask(llvm::Value *factor) {
     /* FIXME: This will break if we ever do 32-wide compilation, in which case
        it don't be possible to distinguish between -1 for "don't know" and
        "known and all bits on". */
-    assert(g->target.vectorWidth < 32);
+    Assert(g->target.vectorWidth < 32);
 
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
     if (cv) {
@@ -2266,7 +2266,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         llvm::ConstantInt *offsetScaleInt = 
             llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
-        assert(offsetScaleInt != NULL);
+        Assert(offsetScaleInt != NULL);
 
         if (offsets->getType() == LLVMTypes::Int64VectorType)
             // offsetScale is an i32, so sext it so that if we use it in a

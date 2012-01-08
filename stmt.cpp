@@ -1989,7 +1989,7 @@ LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p)
 void
 LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bblock = ctx->GetLabeledBasicBlock(name);
-    assert(bblock != NULL);
+    Assert(bblock != NULL);
 
     // End the current basic block with a jump to our basic block and then
     // set things up for emission to continue there.  Note that the current
