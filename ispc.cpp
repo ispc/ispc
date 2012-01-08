@@ -358,10 +358,46 @@ Target::GetISAString() const {
 }
 
 
+static bool
+lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
+    if (type->isPrimitiveType() || type->isIntegerTy())
+        return false;
+
+    if (type == LLVMTypes::BoolVectorType ||
+        type == LLVMTypes::MaskType ||
+        type == LLVMTypes::Int1VectorType)
+        return true;
+
+    LLVM_TYPE_CONST llvm::ArrayType *at = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
+    if (at != NULL)
+        return lGenericTypeLayoutIndeterminate(at->getElementType());
+
+    LLVM_TYPE_CONST llvm::PointerType *pt = 
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+    if (pt != NULL)
+        return false;
+
+    LLVM_TYPE_CONST llvm::StructType *st =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    if (st != NULL) {
+        for (int i = 0; i < (int)st->getNumElements(); ++i)
+            if (lGenericTypeLayoutIndeterminate(st->getElementType(i)))
+                return true;
+        return false;
+    }
+
+    type->dump();
+    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type));
+    return true;
+}
+
+
 llvm::Value *
 Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type, 
                llvm::BasicBlock *insertAtEnd) {
-    if (isa == Target::GENERIC && type->isPrimitiveType() == false) {
+    if (isa == Target::GENERIC &&
+        lGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = { LLVMInt32(1) };
         LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
@@ -396,7 +432,8 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 llvm::Value *
 Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
-    if (isa == Target::GENERIC && type->isPrimitiveType() == false) {
+    if (isa == Target::GENERIC && 
+        lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
         LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
