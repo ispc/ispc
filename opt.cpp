@@ -1063,7 +1063,8 @@ lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1,
     *offsets with an int vector of the per-lane offsets
  */
 static llvm::Value *
-lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
+lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
+                      llvm::Instruction *insertBefore) {
     llvm::Value *base = lGetBasePointer(ptrs);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
@@ -1079,12 +1080,20 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets) {
     if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
         // If we have a common pointer plus something, then we're also
         // good.
-        if ((base = lGetBasePointer(bop->getOperand(0))) != NULL) {
-            *offsets = bop->getOperand(1);
+        if ((base = lGetBasePtrAndOffsets(bop->getOperand(0), 
+                                          offsets, insertBefore)) != NULL) {
+            *offsets = 
+                llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
+                                             bop->getOperand(1), "new_offsets",
+                                             insertBefore);
             return base;
         }
-        else if ((base = lGetBasePointer(bop->getOperand(1))) != NULL) {
-            *offsets = bop->getOperand(0);
+        else if ((base = lGetBasePtrAndOffsets(bop->getOperand(1), 
+                                               offsets, insertBefore)) != NULL) {
+            *offsets = 
+                llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
+                                             bop->getOperand(0), "new_offsets",
+                                             insertBefore);
             return base;
         }
     }
@@ -1316,7 +1325,8 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         // lGetBasePtrAndOffsets).
         llvm::Value *ptrs = callInst->getArgOperand(0);
         llvm::Value *offsetVector = NULL;
-        llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector);
+        llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector, 
+                                                     callInst);
 
         if (basePtr == NULL || offsetVector == NULL)
             // It's actually a fully general gather/scatter with a varying
