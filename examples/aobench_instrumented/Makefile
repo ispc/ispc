@@ -14,13 +14,13 @@ dirs:
 clean:
 	/bin/rm -rf objs *~ ao
 
-ao: dirs objs/ao.o objs/instrument.o objs/ao_ispc.o
-	$(CXX) $(CXXFLAGS) -o $@ objs/ao.o objs/ao_ispc.o objs/instrument.o -lm -lpthread
+ao: objs/ao.o objs/instrument.o objs/ao_ispc.o ../tasksys.cpp
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lm -lpthread
 
-objs/%.o: %.cpp
+objs/%.o: %.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
 objs/ao.o: objs/ao_ispc.h 
 
-objs/%_ispc.h objs/%_ispc.o: %.ispc
-	$(ISPC) $(ISPCFLAGS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
+objs/%_ispc.h objs/%_ispc.o: %.ispc dirs
+	$(ISPC) $(ISPCFLAGS) $< -o objs/$*_ispc.o -h objs/$*_instrumented_ispc.h
