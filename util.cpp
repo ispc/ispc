@@ -187,6 +187,32 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
 }
 
 
+#ifdef ISPC_IS_WINDOWS
+// we cover for the lack vasprintf and asprintf on windows (also covers mingw)
+int
+vasprintf(char **sptr, const char *fmt, va_list argv)
+{
+    int wanted = vsnprintf(*sptr = NULL, 0, fmt, argv);
+    if((wanted < 0) || ((*sptr = (char*)malloc( 1 + wanted )) == NULL))
+        return -1;
+
+    return vsprintf(*sptr, fmt, argv);
+}
+
+
+int
+asprintf(char **sptr, const char *fmt, ...)
+{
+    int retval;
+    va_list argv;
+    va_start(argv, fmt);
+    retval = vasprintf(sptr, fmt, argv);
+    va_end(argv);
+    return retval;
+}
+#endif
+
+
 /** Helper function for Error(), Warning(), etc.
 
     @param type   The type of message being printed (e.g. "Warning")
@@ -197,30 +223,6 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
 */
 static void
 lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
-#ifdef ISPC_IS_WINDOWS
-    char errorBuf[2048], formattedBuf[2048];
-    if (vsnprintf_s(errorBuf, sizeof(errorBuf), _TRUNCATE, fmt, args) == -1) {
-        fprintf(stderr, "vsnprintf_s() error!\n");
-        return;
-    }
-
-    if (p.first_line == 0) {
-        // We don't have a valid SourcePos, so create a message without it
-        if (sprintf_s(formattedBuf, sizeof(formattedBuf), "%s: %s\n", 
-                       type, errorBuf) == -1) {
-            fprintf(stderr, "vsnprintf_s() error!\n");
-            exit(1);
-        }
-    }
-    else {
-        // Create an error message that includes the file and line number
-        if (sprintf_s(formattedBuf, sizeof(formattedBuf), "%s(%d): %s: %s\n", 
-                      p.name, p.first_line, type, errorBuf) == -1) {
-            fprintf(stderr, "vsnprintf_s() error!\n");
-            exit(1);
-        }
-    }
-#else
     char *errorBuf, *formattedBuf;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
         fprintf(stderr, "vasprintf() unable to allocate memory!\n");
@@ -241,7 +243,6 @@ lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
             exit(1);
         }
     }
-#endif
 
     // Now that we've done all that work, see if we've already printed the
     // exact same error message.  If so, return, so we don't redundantly
@@ -254,10 +255,8 @@ lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
     lPrintWithWordBreaks(formattedBuf, lTerminalWidth(), stderr);
     lPrintFileLineContext(p);
 
-#ifndef ISPC_IS_WINDOWS
     free(errorBuf);
     free(formattedBuf);
-#endif // !ISPC_IS_WINDOWS
 }
 
 
