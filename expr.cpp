@@ -43,7 +43,9 @@
 #include "module.h"
 #include "util.h"
 #include "llvmutil.h"
+#ifndef _MSC_VER
 #include <inttypes.h>
+#endif
 #ifndef PRId64
 #define PRId64 "lld"
 #endif

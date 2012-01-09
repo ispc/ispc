@@ -16,7 +16,10 @@
 #warning "The C++ backend isn't supported when building with LLVM 2.9"
 #else
 
+#ifndef _MSC_VER
 #include <inttypes.h>
+#endif
+
 #ifndef PRIx64
 #define PRIx64 "llx"
 #endif
