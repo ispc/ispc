@@ -155,7 +155,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
     if (yytext[0] == '0' && yytext[1] == 'b')
         yylval->intVal = lParseBinary(yytext+2, *yylloc, &endPtr);
     else {
-#ifdef ISPC_IS_WINDOWS
+#if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
         yylval->intVal = _strtoi64(yytext, &endPtr, 0);
 #else
         // FIXME: should use strtouq and then issue an error if we can't
