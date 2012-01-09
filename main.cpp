@@ -54,7 +54,9 @@
 
 #ifdef ISPC_IS_WINDOWS
 #define strcasecmp stricmp
+#ifndef BUILD_DATE
 #define BUILD_DATE __DATE__
+#endif
 #define BUILD_VERSION ""
 #endif // ISPC_IS_WINDOWS
 
