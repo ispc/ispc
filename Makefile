@@ -3,6 +3,7 @@
 #
 
 ARCH_OS = $(shell uname)
+ARCH_OS2 = $(shell uname -o)
 ARCH_TYPE = $(shell arch)
 
 ifeq ($(shell llvm-config --version), 3.1svn)
@@ -26,7 +27,15 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
 ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
-	-lpthread -ldl
+	-lpthread
+
+ifeq ($(ARCH_OS),Linux)
+	ISPC_LIBS += -ldl
+endif
+
+ifeq ($(ARCH_OS2),Msys)
+	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
+endif
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
@@ -133,22 +142,22 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 
 objs/builtins-%.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
-	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | ./bitcode2cpp.py $< > $@
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | python bitcode2cpp.py $< > $@
 
 objs/builtins-c-32.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-32 > $@
+	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-32 > $@
 
 objs/builtins-c-64.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-64 > $@
+	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-64 > $@
 
 objs/stdlib_generic_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for generic
 	@$(CLANG) -E -x c -DISPC_TARGET_GENERIC=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		./stdlib2cpp.py generic > $@
+		python stdlib2cpp.py generic > $@
 
 objs/stdlib_x86_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for x86
 	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		./stdlib2cpp.py x86 > $@
+		python stdlib2cpp.py x86 > $@

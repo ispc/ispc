@@ -16,6 +16,11 @@
 #warning "The C++ backend isn't supported when building with LLVM 2.9"
 #else
 
+#include <inttypes.h>
+#ifndef PRIx64
+#define PRIx64 "llx"
+#endif
+
 #include "llvm/CallingConv.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
@@ -1280,7 +1285,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         char Buffer[100];
 
         uint64_t ll = DoubleToBits(V);
-        sprintf(Buffer, "0x%llx", static_cast<long long>(ll));
+        sprintf(Buffer, "0x%"PRIx64, static_cast<long long>(ll));
 
         std::string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);

@@ -79,7 +79,9 @@
   #include <alloca.h>
 #elif defined(ISPC_IS_WINDOWS)
   #include <malloc.h>
-  #define alloca _alloca
+  #ifndef __MINGW32__
+    #define alloca _alloca
+  #endif
 #endif // ISPC_IS_WINDOWS
 
 static llvm::Pass *CreateIntrinsicsOptPass();
