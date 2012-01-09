@@ -39,6 +39,9 @@
 #include "module.h"
 #ifdef ISPC_IS_WINDOWS
 #include <shlwapi.h>
+#ifdef __MINGW32__
+#include <malloc.h> // for alloca()
+#endif
 #else
 #include <alloca.h>
 #endif
