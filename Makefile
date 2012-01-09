@@ -3,6 +3,7 @@
 #
 
 ARCH_OS = $(shell uname)
+ARCH_OS2 = $(shell uname -o)
 ARCH_TYPE = $(shell arch)
 
 ifeq ($(shell llvm-config --version), 3.1svn)
@@ -26,7 +27,15 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
 ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
-	-lpthread -ldl
+	-lpthread
+
+ifeq ($(ARCH_OS),Linux)
+	ISPC_LIBS += -ldl
+endif
+
+ifeq ($(ARCH_OS2),Msys)
+	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
+endif
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
