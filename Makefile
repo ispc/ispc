@@ -3,7 +3,11 @@
 #
 
 ARCH_OS = $(shell uname)
-ARCH_OS2 = $(shell uname -o)
+ifeq ($(ARCH_OS), Darwin)
+	ARCH_OS2 = "OSX"
+else
+	ARCH_OS2 = $(shell uname -o)
+endif
 ARCH_TYPE = $(shell arch)
 
 ifeq ($(shell llvm-config --version), 3.1svn)
