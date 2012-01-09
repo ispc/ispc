@@ -2299,16 +2299,6 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
                     m->module->getFunction("__do_assert_varying");
     Assert(assertFunc != NULL);
 
-#ifdef ISPC_IS_WINDOWS
-    char errorString[2048];
-    if (sprintf_s(errorString, sizeof(errorString),
-                  "%s(%d): Assertion failed: %s\n", pos.name,
-                  pos.first_line, message.c_str()) == -1) {
-        Error(pos, "Fatal error in sprintf_s() call when generating assert "
-              "string.");
-        return;
-    }
-#else
     char *errorString;
     if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s\n", 
                  pos.name, pos.first_line, pos.first_column, 
@@ -2317,7 +2307,6 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
               "unable to allocate memory!");
         return;
     }
-#endif
 
     std::vector<llvm::Value *> args;
     args.push_back(ctx->GetStringPtr(errorString));
@@ -2325,9 +2314,7 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, NULL, args, "");
 
-#ifndef ISPC_IS_WINDOWS
     free(errorString);
-#endif // !ISPC_IS_WINDOWS
 }
 
 

@@ -43,6 +43,13 @@
 #include "module.h"
 #include "util.h"
 #include "llvmutil.h"
+#include <inttypes.h>
+#ifndef PRId64
+#define PRId64 "lld"
+#endif
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
 
 #include <list>
 #include <set>
@@ -4540,18 +4547,10 @@ ConstExpr::Print() const {
             printf("%f", floatVal[i]);
             break;
         case AtomicType::TYPE_INT64:
-#ifdef ISPC_IS_LINUX
-            printf("%ld", int64Val[i]);
-#else
-            printf("%lld", int64Val[i]);
-#endif
+            printf("%"PRId64, int64Val[i]);
             break;
         case AtomicType::TYPE_UINT64:
-#ifdef ISPC_IS_LINUX
-            printf("%lu", uint64Val[i]);
-#else
-            printf("%llu", uint64Val[i]);
-#endif
+            printf("%"PRIu64, uint64Val[i]);
             break;
         case AtomicType::TYPE_DOUBLE:
             printf("%f", doubleVal[i]);
