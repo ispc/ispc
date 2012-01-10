@@ -29,17 +29,18 @@ except IOError:
     sys.stderr.write("Couldn't open " + src)
     sys.exit(1)
 
+width = 16;
 sys.stdout.write("unsigned char builtins_bitcode_" + target + "[] = {\n")
-num = 0
-for line in as_out.stdout.readlines():
-    length = length + len(line)
-    for c in line:
-        num+=1
-        sys.stdout.write("0x%0.2X, " % ord(c))
-        if num%16 == 0:
-            sys.stdout.write("\n");
-sys.stdout.write(" 0 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + target + "_length = " + str(length) + ";\n")
+
+data = as_out.stdout.read()
+for i in range(0, len(data), 1):
+        sys.stdout.write("0x%0.2X, " % ord(data[i:i+1]))
+
+        if i%width == (width-1):
+            sys.stdout.write("\n")
+
+sys.stdout.write("0x00 };\n\n")
+sys.stdout.write("int builtins_bitcode_" + target + "_length = " + str(i) + ";\n")
 
 as_out.wait()
 
