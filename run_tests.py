@@ -51,13 +51,13 @@ else:
 is_generic_target = options.target.find("generic-") != -1
 if is_generic_target and options.include_file == None:
     if options.target == "generic-4":
-        print "No generics #include specified; using examples/intrinsics/sse4.h"
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/sse4.h")
         options.include_file = "examples/intrinsics/sse4.h"
     elif options.target == "generic-8":
-        print "No generics #include specified and no default available for \"generic-8\" target.";
+        sys.stderr.write("No generics #include specified and no default available for \"generic-8\" target.")
         sys.exit(1)
     elif options.target == "generic-16":
-        print "No generics #include specified; using examples/intrinsics/generic-16.h"
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-16.h")
         options.include_file = "examples/intrinsics/generic-16.h"
 
 if options.compiler_exe == None:
@@ -107,7 +107,7 @@ def update_progress(fn):
 
 def run_command(cmd):
     if options.verbose:
-        print "Running: %s" % cmd
+        sys.stdout.write("Running: %s" % cmd)
     sp = subprocess.Popen(shlex.split(cmd), stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
@@ -123,9 +123,9 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         (return_code, output) = run_command(cmd)
         compile_failed = (return_code != 0)
         if compile_failed:
-            print "Compilation of test %s failed            " % filename
+            sys.stdout.write("Compilation of test %s failed            " % filename)
             if output != "":
-                print "%s" % output
+                sys.stdout.write("%s" % output)
             return (1, 0)
 
     (return_code, output) = run_command(run_cmd)
@@ -134,11 +134,11 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
     surprise = ((expect_failure and not run_failed) or
                 (not expect_failure and run_failed))
     if surprise == True:
-        print "Test %s %s (return code %d)            " % \
+        sys.stdout.write("Test %s %s (return code %d)            " % \
             (filename, "unexpectedly passed" if expect_failure else "failed",
-             return_code)
+             return_code))
     if output != "":
-        print "%s" % output
+        sys.stdout.write("%s" % output)
     if surprise == True:
         return (0, 1)
     else:
@@ -163,12 +163,12 @@ def run_test(filename):
         file.close()
 
         if (output.find(firstline) == -1):
-            print "OUT %s" % filename
-            print "Didnt see expected error message %s from test %s.\nActual output:\n%s" % \
-                (firstline, filename, output)
+            sys.stderr.write("OUT %s" % filename)
+            sys.stderr.write("Didnt see expected error message %s from test %s.\nActual output:\n%s" % \
+                (firstline, filename, output))
             return (1, 0)
         elif got_error == False:
-            print "Unexpectedly no errors issued from test %s" % filename
+            sys.stderr.write("Unexpectedly no errors issued from test %s" % filename)
             return (1, 0)
         else:
             return (0, 0)
@@ -194,8 +194,8 @@ def run_test(filename):
                     break
         file.close()
         if match == -1:
-            print "Fatal error: unable to find function signature " + \
-                  "in test %s" % filename
+            sys.stderr.write("Fatal error: unable to find function signature " + \
+                  "in test %s" % filename)
             return (1, 0)
         else:
             is_generic_target = options.target.find("generic-") != -1
@@ -296,7 +296,7 @@ if __name__ == '__main__':
         # exe in the end.  So run serially. :-(
         nthreads = 1
         num_done = 0
-        print "Running %d tests." % (total_tests)
+        sys.stdout.write("Running %d tests." % (total_tests))
         for fn in files:
             (compile_error, run_error) = run_test(fn)
             if compile_error != 0:
@@ -314,7 +314,7 @@ if __name__ == '__main__':
             sys.stdout.flush()
     else:
         nthreads = multiprocessing.cpu_count()
-        print "Found %d CPUs. Running %d tests." % (nthreads, total_tests)
+        sys.stdout.write("Found %d CPUs. Running %d tests." % (nthreads, total_tests))
 
         # put each of the test filenames into a queue
         q = multiprocessing.Queue()
@@ -338,7 +338,7 @@ if __name__ == '__main__':
         # (i.e. return 0 if all is ok)
         for t in task_threads:
             t.join()
-        print
+        sys.stdout.write("\n")
 
         while not qret.empty():
             (c, r) = qret.get()
@@ -347,13 +347,13 @@ if __name__ == '__main__':
 
     if len(compile_error_files) > 0:
         compile_error_files.sort()
-        print "%d / %d tests FAILED compilation:" % (len(compile_error_files), total_tests)
+        sys.stdout.write("%d / %d tests FAILED compilation:" % (len(compile_error_files), total_tests))
         for f in compile_error_files:
-            print "\t%s" % f
+            sys.stdout.write("\t%s" % f)
     if len(run_error_files) > 0:
         run_error_files.sort()
-        print "%d / %d tests FAILED execution:" % (len(run_error_files), total_tests)
+        sys.stdout.write("%d / %d tests FAILED execution:" % (len(run_error_files), total_tests))
         for f in run_error_files:
-            print "\t%s" % f
+            sys.stdout.write("\t%s" % f)
 
     sys.exit(len(compile_error_files) + len(run_error_files))
