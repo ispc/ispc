@@ -149,7 +149,7 @@ def run_test(filename):
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
-        ispc_cmd = "ispc --werror --nowrap %s --arch=%s --target=%s" % \
+        ispc_cmd = "./ispc --werror --nowrap %s --arch=%s --target=%s" % \
             (filename, options.arch, options.target)
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
@@ -228,7 +228,7 @@ def run_test(filename):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
-            ispc_cmd = "ispc --woff %s -o %s --arch=%s --target=%s" % \
+            ispc_cmd = "./ispc --woff %s -o %s --arch=%s --target=%s" % \
                        (filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
