@@ -2046,9 +2046,6 @@ LabeledStmt::EstimateCost() const {
 
 void
 StmtList::EmitCode(FunctionEmitContext *ctx) const {
-    if (!ctx->GetCurrentBasicBlock()) 
-        return;
-
     ctx->StartScope();
     ctx->SetDebugPos(pos);
     for (unsigned int i = 0; i < stmts.size(); ++i)
