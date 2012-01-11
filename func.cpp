@@ -334,11 +334,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             if (ctx->GetCurrentBasicBlock())
                 ctx->ReturnInst();
         }
-        else
+        else {
             // Set up basic blocks for goto targets
             ctx->InitializeLabelMap(code);
             // No check, just emit the code
             code->EmitCode(ctx);
+        }
     }
 
     if (ctx->GetCurrentBasicBlock()) {
