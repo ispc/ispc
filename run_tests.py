@@ -12,10 +12,12 @@ import re
 import signal
 import random
 import string
-import mutex
 import subprocess
 import shlex
 import platform
+
+# This script is affected by http://bugs.python.org/issue5261 on OSX 10.5 Leopard
+# git history has a workaround for that issue.
 
 is_windows = (platform.system() == 'Windows' or
               'CYGWIN_NT' in platform.system())
@@ -44,20 +46,25 @@ if not is_windows:
 (options, args) = parser.parse_args()
 
 if not is_windows and options.valgrind:
-    valgrind_cmd = "valgrind "
+    valgrind_exe = "valgrind "
 else:
-    valgrind_cmd = ""
+    valgrind_exe = ""
+
+if not is_windows:
+    ispc_exe = "./ispc"
+else:
+    ispc_exe = "Release/ispc.exe"
 
 is_generic_target = options.target.find("generic-") != -1
 if is_generic_target and options.include_file == None:
     if options.target == "generic-4":
-        sys.stderr.write("No generics #include specified; using examples/intrinsics/sse4.h")
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/sse4.h\n")
         options.include_file = "examples/intrinsics/sse4.h"
     elif options.target == "generic-8":
-        sys.stderr.write("No generics #include specified and no default available for \"generic-8\" target.")
+        sys.stderr.write("No generics #include specified and no default available for \"generic-8\" target.\n")
         sys.exit(1)
     elif options.target == "generic-16":
-        sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-16.h")
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-16.h\n")
         options.include_file = "examples/intrinsics/generic-16.h"
 
 if options.compiler_exe == None:
@@ -82,18 +89,11 @@ if (options.random):
 # counter
 total_tests = 0
 
-# We'd like to use the Lock class from the multiprocessing package to
-# serialize accesses to finished_tests_counter.  Unfortunately, the version of
-# python that ships with OSX 10.5 has this bug:
-# http://bugs.python.org/issue5261.  Therefore, we use the (deprecated but
-# still available) mutex class.
-#finished_tests_counter_lock = multiprocessing.Lock()
-if not is_windows:
-    finished_tests_mutex = mutex.mutex()
-    finished_tests_counter = multiprocessing.Value(c_int)
+finished_tests_counter = multiprocessing.Value(c_int)
+finished_tests_counter_lock = multiprocessing.Lock()
 
 # utility routine to print an update on the number of tests that have been
-# finished.  Should be called with the mutex (or lock) held..
+# finished.  Should be called with the lock held..
 def update_progress(fn):
     finished_tests_counter.value = finished_tests_counter.value + 1
     progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests, fn)
@@ -103,18 +103,18 @@ def update_progress(fn):
     progress_str += '\r'
     sys.stdout.write(progress_str)
     sys.stdout.flush()
-    finished_tests_mutex.unlock()
 
 def run_command(cmd):
     if options.verbose:
-        sys.stdout.write("Running: %s" % cmd)
+        sys.stdout.write("Running: %s\n" % cmd)
     sp = subprocess.Popen(shlex.split(cmd), stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
     out = sp.communicate()
     output = ""
-    output += out[0]
-    output += out[1]
+    output += out[0].decode("utf-8")
+    output += out[1].decode("utf-8")
+
     return (sp.returncode, output)
 
 # run the commands in cmd_list
@@ -123,7 +123,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         (return_code, output) = run_command(cmd)
         compile_failed = (return_code != 0)
         if compile_failed:
-            sys.stdout.write("Compilation of test %s failed            " % filename)
+            sys.stdout.write("Compilation of test %s failed            \n" % filename)
             if output != "":
                 sys.stdout.write("%s" % output)
             return (1, 0)
@@ -134,11 +134,11 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
     surprise = ((expect_failure and not run_failed) or
                 (not expect_failure and run_failed))
     if surprise == True:
-        sys.stdout.write("Test %s %s (return code %d)            " % \
+        sys.stderr.write("Test %s %s (return code %d)            \n" % \
             (filename, "unexpectedly passed" if expect_failure else "failed",
              return_code))
     if output != "":
-        sys.stdout.write("%s" % output)
+        sys.stdout.write("%s\n" % output)
     if surprise == True:
         return (0, 1)
     else:
@@ -149,7 +149,7 @@ def run_test(filename):
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
-        ispc_cmd = "./ispc --werror --nowrap %s --arch=%s --target=%s" % \
+        ispc_cmd = ispc_exe + " --werror --nowrap %s --arch=%s --target=%s" % \
             (filename, options.arch, options.target)
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
@@ -157,18 +157,17 @@ def run_test(filename):
         # figure out the error message we're expecting
         file = open(filename, 'r')
         firstline = file.readline()
-        firstline = string.replace(firstline, "//", "")
-        firstline = string.lstrip(firstline)
-        firstline = string.rstrip(firstline)
+        firstline = firstline.replace("//", "")
+        firstline = firstline.lstrip()
+        firstline = firstline.rstrip()
         file.close()
 
         if (output.find(firstline) == -1):
-            sys.stderr.write("OUT %s" % filename)
-            sys.stderr.write("Didnt see expected error message %s from test %s.\nActual output:\n%s" % \
+            sys.stderr.write("Didn't see expected error message %s from test %s.\nActual output:\n%s\n" % \
                 (firstline, filename, output))
             return (1, 0)
         elif got_error == False:
-            sys.stderr.write("Unexpectedly no errors issued from test %s" % filename)
+            sys.stderr.write("Unexpectedly no errors issued from test %s\n" % filename)
             return (1, 0)
         else:
             return (0, 0)
@@ -188,14 +187,14 @@ def run_test(filename):
                 continue
             # one of them should have a function with one of the
             # declarations in sig2def
-            for pattern, ident in sig2def.items():
+            for pattern, ident in list(sig2def.items()):
                 if line.find(pattern) != -1:
                     match = ident
                     break
         file.close()
         if match == -1:
             sys.stderr.write("Fatal error: unable to find function signature " + \
-                  "in test %s" % filename)
+                  "in test %s\n" % filename)
             return (1, 0)
         else:
             is_generic_target = options.target.find("generic-") != -1
@@ -208,7 +207,7 @@ def run_test(filename):
                     obj_name = "%s.obj" % filename
                 exe_name = "%s.exe" % filename
 
-                cc_cmd = "%s /I. /Zi /nologo /DTEST_SIG=%d test_static.cpp %s /Fe%s" % \
+                cc_cmd = "%s /I. /Iwinstuff /Zi /nologo /DTEST_SIG=%d test_static.cpp %s /Fe%s" % \
                          (options.compiler_exe, match, obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
@@ -228,18 +227,19 @@ def run_test(filename):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
-            ispc_cmd = "./ispc --woff %s -o %s --arch=%s --target=%s" % \
+            ispc_cmd = ispc_exe + " --woff %s -o %s --arch=%s --target=%s" % \
                        (filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % options.include_file
-    
+
         # compile the ispc code, make the executable, and run it...
-        global valgrind_cmd
+        global valgrind_exe
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
-                                              valgrind_cmd + " " + exe_name, \
+                                              valgrind_exe + " " + exe_name, \
                                               filename, should_fail)
+
         # clean up after running the test
         try:
             if not run_error:
@@ -271,11 +271,8 @@ def run_tasks_from_queue(queue, queue_ret):
         if run_error != 0:
             run_error_files += [ filename ]
 
-        # If not for http://bugs.python.org/issue5261 on OSX, we'd like to do this:
-        #with finished_tests_counter_lock:
-            #update_progress(filename)
-        # but instead we do this...
-        finished_tests_mutex.lock(update_progress, filename)
+        with finished_tests_counter_lock:
+            update_progress(filename)
 
 task_threads = []
 
@@ -296,16 +293,16 @@ if __name__ == '__main__':
         # exe in the end.  So run serially. :-(
         nthreads = 1
         num_done = 0
-        sys.stdout.write("Running %d tests." % (total_tests))
+        sys.stdout.write("Running %d tests.\n" % (total_tests))
         for fn in files:
+            fn = fn.replace("\\",'/')
             (compile_error, run_error) = run_test(fn)
             if compile_error != 0:
-                compile_error_files += fn
+                compile_error_files += [ fn ]
             if run_error != 0:
-                run_error_files += fn
-
+                run_error_files += [ fn ]
             num_done += 1
-            progress_str = " Done %d / %d [%s]" % (num_done, total_tests, fn)
+            progress_str = " Done %d / %d [%s]\n" % (num_done, total_tests, fn)
             # spaces to clear out detrius from previous printing...
             for x in range(30):
                 progress_str += ' '
@@ -314,7 +311,7 @@ if __name__ == '__main__':
             sys.stdout.flush()
     else:
         nthreads = multiprocessing.cpu_count()
-        sys.stdout.write("Found %d CPUs. Running %d tests." % (nthreads, total_tests))
+        sys.stdout.write("Found %d CPUs. Running %d tests.\n" % (nthreads, total_tests))
 
         # put each of the test filenames into a queue
         q = multiprocessing.Queue()
@@ -347,13 +344,13 @@ if __name__ == '__main__':
 
     if len(compile_error_files) > 0:
         compile_error_files.sort()
-        sys.stdout.write("%d / %d tests FAILED compilation:" % (len(compile_error_files), total_tests))
+        sys.stdout.write("%d / %d tests FAILED compilation:\n" % (len(compile_error_files), total_tests))
         for f in compile_error_files:
-            sys.stdout.write("\t%s" % f)
+            sys.stdout.write("\t%s\n" % f)
     if len(run_error_files) > 0:
         run_error_files.sort()
-        sys.stdout.write("%d / %d tests FAILED execution:" % (len(run_error_files), total_tests))
+        sys.stdout.write("%d / %d tests FAILED execution:\n" % (len(run_error_files), total_tests))
         for f in run_error_files:
-            sys.stdout.write("\t%s" % f)
+            sys.stdout.write("\t%s\n" % f)
 
     sys.exit(len(compile_error_files) + len(run_error_files))
