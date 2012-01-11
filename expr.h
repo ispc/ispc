@@ -314,7 +314,6 @@ public:
     std::string identifier;
     const SourcePos identifierPos;
 
-protected:
     MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
                SourcePos identifierPos, bool derefLValue);
 

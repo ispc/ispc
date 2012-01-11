@@ -695,6 +695,23 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         }
 
         // All indices are in-bounds
+        return true;
+    }
+
+    MemberExpr *me;
+    if ((me = dynamic_cast<MemberExpr *>(node)) != NULL &&
+        me->dereferenceExpr) {
+        *okPtr = false;
+        return false;
+    }
+
+    DereferenceExpr *de;
+    if ((de = dynamic_cast<DereferenceExpr *>(node)) != NULL) {
+        const Type *exprType = de->expr->GetType();
+        if (dynamic_cast<const PointerType *>(exprType) != NULL) {
+            *okPtr = false;
+            return false;
+        }
     }
 
     return true;
