@@ -1,0 +1,54 @@
+
+export uniform int width() { return programCount; }
+
+int switchit(int a, uniform int b) {
+    switch (a) {
+    case 3:
+        return 1;
+    case 7:
+    case 6:
+    case 4:
+    case 5:
+        if (a & 1)
+            break;
+        return 2;
+    case 1: {
+        switch (a+b) {
+        case 60:
+            return -1234;
+        default:
+            break;
+        case 6:
+            int count = 0;
+            for (count = 0; count < 10; ++count) {
+                a += b;
+                if (a == 11)
+                    break;
+            }
+            return a;
+        case 12:
+            return -1;
+        }
+        return 42;
+    }
+    case 32:
+        *((int *)NULL) = 0;
+    default:
+        return 0;
+    }
+    return 3;
+}
+
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    int a = aFOO[programIndex]; 
+    int x = switchit(a, b);
+    RET[programIndex] = x; 
+}
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = 0;
+    RET[0] = 11;
+    RET[2] = 1;
+    RET[6] = RET[4] = 3;
+    RET[5] = RET[3] = 2;
+}

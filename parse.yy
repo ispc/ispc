@@ -1265,9 +1265,17 @@ labeled_statement
         $$ = new LabeledStmt($1, $3, @1);
     }
     | TOKEN_CASE constant_expression ':' statement
-      { UNIMPLEMENTED; }
+      { 
+          int value;
+          if ($2 != NULL && 
+              lGetConstantInt($2, &value, @2, "Case statement value")) {
+              $$ = new CaseStmt(value, $4, Union(@1, @2));
+          }
+          else
+              $$ = NULL;
+      }
     | TOKEN_DEFAULT ':' statement
-      { UNIMPLEMENTED; }
+      { $$ = new DefaultStmt($3, @1); }
     ;
 
 start_scope
@@ -1313,7 +1321,7 @@ selection_statement
     | TOKEN_CIF '(' expression ')' statement TOKEN_ELSE statement
       { $$ = new IfStmt($3, $5, $7, true, @1); }
     | TOKEN_SWITCH '(' expression ')' statement
-      { UNIMPLEMENTED; }
+      { $$ = new SwitchStmt($3, $5, @1); }
     ;
 
 for_test

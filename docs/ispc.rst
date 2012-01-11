@@ -99,6 +99,7 @@ Contents:
   + `Control Flow`_
 
     * `Conditional Statements: "if"`_
+    * `Conditional Statements: "switch"`_
     * `Basic Iteration Statements: "for", "while", and "do"`_
     * `Unstructured Control Flow: "goto"`_
     * `"Coherent" Control Flow Statements: "cif" and Friends`_
@@ -1993,6 +1994,31 @@ executes if the condition is false.
         y = -y;
     else
         x *= 2.;
+
+Conditional Statements: "switch"
+--------------------------------
+
+The ``switch`` conditional statement is also available, again with the same
+behavior as in C; the expression used in the ``switch`` must be of integer
+type (but it can be uniform or varying).  As in C, if there is no ``break``
+statement at the end of the code for a given case, execution "falls
+through" to the following case.  These features are demonstrated in the
+code below.
+
+::
+
+    int x = ...;
+    switch (x) {
+    case 0:
+    case 1:
+        foo(x);
+        /* fall through */
+    case 5:
+        x = 0;
+        break;
+    default:
+        x *= x;
+    }
 
 Basic Iteration Statements: "for", "while", and "do"
 ----------------------------------------------------
