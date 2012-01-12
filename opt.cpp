@@ -643,7 +643,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (!callInst)
+        if (callInst == NULL || callInst->getCalledFunction() == NULL)
             continue;
 
         BlendInstruction *blend = matchingBlendInstruction(callInst->getCalledFunction());
@@ -867,7 +867,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         llvm::Function *calledFunc = callInst->getCalledFunction();
-        if (calledFunc != m->module->getFunction("__movmsk"))
+        if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
             continue;
 
         int mask = lGetMask(callInst->getArgOperand(0));
@@ -1479,10 +1479,13 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     // masked store functions
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (!callInst)
+        if (callInst == NULL)
             continue;
 
         llvm::Function *called = callInst->getCalledFunction();
+        if (called == NULL)
+            continue;
+
         int nMSFuncs = sizeof(msInfo) / sizeof(msInfo[0]);
         MSInfo *info = NULL;
         for (int i = 0; i < nMSFuncs; ++i) {
@@ -1588,6 +1591,9 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         llvm::Function *called = callInst->getCalledFunction();
+        if (called == NULL)
+            continue;
+
         int nFuncs = sizeof(mlInfo) / sizeof(mlInfo[0]);
         MLInfo *info = NULL;
         for (int i = 0; i < nFuncs; ++i) {
@@ -2246,7 +2252,11 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
         if (callInst == NULL)
             continue;
+
         llvm::Function *calledFunc = callInst->getCalledFunction();
+        if (calledFunc == NULL)
+            continue;
+
         GatherImpInfo *gatherInfo = NULL;
         ScatterImpInfo *scatterInfo = NULL;
         for (unsigned int i = 0; i < sizeof(gInfo) / sizeof(gInfo[0]); ++i) {
@@ -2533,7 +2543,11 @@ LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
         if (callInst == NULL)
             continue;
+
         llvm::Function *calledFunc = callInst->getCalledFunction();
+        if (calledFunc == NULL)
+            continue;
+
         LowerGSInfo *info = NULL;
         for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
             if (lgsInfo[i].pseudoFunc != NULL &&
