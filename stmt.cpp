@@ -2156,7 +2156,7 @@ SwitchStmt::TypeCheck() {
     // within a switch with a "uniform" condition, we promote the condition
     // to varying so that everything works out and we are set to handle the
     // resulting divergent control flow.  This is somewhat sub-optimal; see
-    // Issue #XXX for details.
+    // https://github.com/ispc/ispc/issues/156 for details.
     bool isUniform = (exprType->IsUniformType() && 
                       lHasVaryingBreakOrContinue(stmts) == false);
 

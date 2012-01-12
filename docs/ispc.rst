@@ -1142,7 +1142,7 @@ in C:
 
 * Expression syntax and basic types
 * Syntax for variable declarations
-* Control flow structures: if, for, while, do
+* Control flow structures: ``if``, ``for``, ``while``, ``do``, and ``switch``.
 * Pointers, including function pointers, ``void *``, and C's array/pointer
   duality (arrays are converted to pointers when passed to functions, etc.)
 * Structs and arrays
@@ -1186,7 +1186,6 @@ but are likely to be supported in future releases:
   ``int64`` types
 * Character constants
 * String constants and arrays of characters as strings
-* ``switch`` statements
 * ``goto`` statements are partially supported (see `Unstructured Control Flow: "goto"`_)
 * ``union`` types
 * Bitfield members of ``struct`` types
