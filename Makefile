@@ -58,11 +58,7 @@ LDFLAGS=
 ifeq ($(ARCH_OS),Linux)
   # try to link everything statically under Linux (including libstdc++) so
   # that the binaries we generate will be portable across distributions...
-  ifeq ($(ARCH_TYPE),x86_64)
-    LDFLAGS=-static -L/usr/lib/gcc/x86_64-linux-gnu/4.4
-  else
-    LDFLAGS=-L/usr/lib/gcc/i686-redhat-linux/4.6.0
-  endif
+    LDFLAGS=-static
 endif
 
 LEX=flex
