@@ -171,33 +171,6 @@ define <16 x float> @__min_varying_float(<16 x float>,
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
-
-define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary4to16(ret, i32, @llvm.x86.sse41.pminsd, %0, %1)
-  ret <16 x i32> %ret
-}
-
-define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary4to16(ret, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
-  ret <16 x i32> %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unsigned int min/max
-
-define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary4to16(ret, i32, @llvm.x86.sse41.pminud, %0, %1)
-  ret <16 x i32> %ret
-}
-
-define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
-  binary4to16(ret, i32, @llvm.x86.sse41.pmaxud, %0, %1)
-  ret <16 x i32> %ret
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops
 
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
@@ -622,12 +595,7 @@ define void @__masked_store_blend_64(<16 x i64>* nocapture %ptr, <16 x i64> %new
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; gather/scatter
-
-gen_gather(16, i8)
-gen_gather(16, i16)
-gen_gather(16, i32)
-gen_gather(16, i64)
+;; scatter
 
 gen_scatter(16, i8)
 gen_scatter(16, i16)

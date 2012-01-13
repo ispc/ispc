@@ -171,33 +171,6 @@ define <8 x float> @__min_varying_float(<8 x float>,
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; int min/max
-
-define <8 x i32> @__min_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(ret, i32, @llvm.x86.sse41.pminsd, %0, %1)
-  ret <8 x i32> %ret
-}
-
-define <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(ret, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
-  ret <8 x i32> %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; unsigned int min/max
-
-define <8 x i32> @__min_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(ret, i32, @llvm.x86.sse41.pminud, %0, %1)
-  ret <8 x i32> %ret
-}
-
-define <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly alwaysinline {
-  binary4to8(ret, i32, @llvm.x86.sse41.pmaxud, %0, %1)
-  ret <8 x i32> %ret
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops
 
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
@@ -238,7 +211,7 @@ reduce_equal(8)
 ;; horizontal int32 ops
 
 define <8 x i32> @__add_varying_int32(<8 x i32>,
-                                               <8 x i32>) nounwind readnone alwaysinline {
+                                      <8 x i32>) nounwind readnone alwaysinline {
   %s = add <8 x i32> %0, %1
   ret <8 x i32> %s
 }
@@ -314,7 +287,7 @@ define double @__reduce_max_double(<8 x double>) nounwind readnone alwaysinline 
 ;; horizontal int64 ops
 
 define <8 x i64> @__add_varying_int64(<8 x i64>,
-                                               <8 x i64>) nounwind readnone alwaysinline {
+                                      <8 x i64>) nounwind readnone alwaysinline {
   %s = add <8 x i64> %0, %1
   ret <8 x i64> %s
 }
@@ -403,9 +376,6 @@ define <8 x i64> @__masked_load_64(i8 *, <8 x i32> %mask) nounwind alwaysinline 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-; FIXME: there is no AVX instruction for these, but we could be clever
-; by packing the bits down and setting the last 3/4 or half, respectively,
-; of the mask to zero...  Not sure if this would be a win in the end
 gen_masked_store(8, i8, 8)
 gen_masked_store(8, i16, 16)
 
@@ -520,12 +490,7 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; gather/scatter
-
-gen_gather(8, i8)
-gen_gather(8, i16)
-gen_gather(8, i32)
-gen_gather(8, i64)
+;; scatter
 
 gen_scatter(8, i8)
 gen_scatter(8, i16)

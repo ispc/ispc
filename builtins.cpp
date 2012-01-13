@@ -717,11 +717,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         extern int builtins_bitcode_sse4_x2_length;
         switch (g->target.vectorWidth) {
         case 4: 
-            AddBitcodeToModule(builtins_bitcode_sse4, builtins_bitcode_sse4_length, 
+            AddBitcodeToModule(builtins_bitcode_sse4,
+                               builtins_bitcode_sse4_length, 
                                module, symbolTable);
             break;
         case 8:
-            AddBitcodeToModule(builtins_bitcode_sse4_x2, builtins_bitcode_sse4_x2_length, 
+            AddBitcodeToModule(builtins_bitcode_sse4_x2, 
+                               builtins_bitcode_sse4_x2_length, 
                                module, symbolTable);
             break;
         default:
@@ -729,18 +731,39 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX:
-    case Target::AVX2:
         switch (g->target.vectorWidth) {
         case 8:
-            extern unsigned char builtins_bitcode_avx[];
-            extern int builtins_bitcode_avx_length;
-            AddBitcodeToModule(builtins_bitcode_avx, builtins_bitcode_avx_length, 
+            extern unsigned char builtins_bitcode_avx1[];
+            extern int builtins_bitcode_avx1_length;
+            AddBitcodeToModule(builtins_bitcode_avx1, 
+                               builtins_bitcode_avx1_length, 
                                module, symbolTable);
             break;
         case 16:
-            extern unsigned char builtins_bitcode_avx_x2[];
-            extern int builtins_bitcode_avx_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx_x2, builtins_bitcode_avx_x2_length,
+            extern unsigned char builtins_bitcode_avx1_x2[];
+            extern int builtins_bitcode_avx1_x2_length;
+            AddBitcodeToModule(builtins_bitcode_avx1_x2, 
+                               builtins_bitcode_avx1_x2_length,
+                               module,  symbolTable);
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
+        break;
+    case Target::AVX2:
+        switch (g->target.vectorWidth) {
+        case 8:
+            extern unsigned char builtins_bitcode_avx2[];
+            extern int builtins_bitcode_avx2_length;
+            AddBitcodeToModule(builtins_bitcode_avx2, 
+                               builtins_bitcode_avx2_length, 
+                               module, symbolTable);
+            break;
+        case 16:
+            extern unsigned char builtins_bitcode_avx2_x2[];
+            extern int builtins_bitcode_avx2_x2_length;
+            AddBitcodeToModule(builtins_bitcode_avx2_x2, 
+                               builtins_bitcode_avx2_x2_length,
                                module,  symbolTable);
             break;
         default:
