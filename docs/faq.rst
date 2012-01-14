@@ -1,10 +1,10 @@
-=============================================================
-Intel® SPMD Program Compiler Frequently Asked Questions (FAQ)
-=============================================================
+=====================================
+Frequently Asked Questions About ispc
+=====================================
 
 This document includes a number of frequently (and not frequently) asked
 questions about ispc, the Intel® SPMD Program Compiler.  The source to this
-document is in the file ``docs/faq.txt`` in the ``ispc`` source
+document is in the file ``docs/faq.rst`` in the ``ispc`` source
 distribution.
 
 * Understanding ispc's Output
