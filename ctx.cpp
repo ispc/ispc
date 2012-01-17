@@ -576,7 +576,7 @@ FunctionEmitContext::EndLoop() {
 
 
 void
-FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
+FunctionEmitContext::StartForeach() {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
@@ -588,7 +588,7 @@ FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
 
     continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
-    continueTarget = ct;
+    continueTarget = NULL; // should be set by SetContinueTarget()
 
     loopMask = NULL;
 }

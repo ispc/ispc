@@ -1575,9 +1575,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL) 
         return;
 
-    llvm::BasicBlock *bbCheckExtras = ctx->CreateBasicBlock("foreach_check_extras");
-    llvm::BasicBlock *bbDoExtras = ctx->CreateBasicBlock("foreach_do_extras");
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
+    llvm::BasicBlock *bbFullBody = ctx->CreateBasicBlock("foreach_full_body");
+    llvm::BasicBlock *bbMaskedBody = ctx->CreateBasicBlock("foreach_masked_body");
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
 
     llvm::Value *oldMask = ctx->GetInternalMask();
@@ -1595,8 +1594,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // dimension and a number of derived values.
     std::vector<llvm::BasicBlock *> bbReset, bbStep, bbTest;
     std::vector<llvm::Value *> startVals, endVals, uniformCounterPtrs;
-    std::vector<llvm::Value *> nItems, nExtras, alignedEnd;
-    std::vector<llvm::Value *> extrasMaskPtrs;
+    std::vector<llvm::Value *> nExtras, alignedEnd, extrasMaskPtrs;
 
     std::vector<int> span(nDims, 0);
     lGetSpans(nDims-1, nDims, g->target.vectorWidth, isTiled, &span[0]);
@@ -1605,7 +1603,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // Basic blocks that we'll fill in later with the looping logic for
         // this dimension.
         bbReset.push_back(ctx->CreateBasicBlock("foreach_reset"));
-        bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
+        if (i < nDims-1)
+            // stepping for the innermost dimension is handled specially
+            bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
         bbTest.push_back(ctx->CreateBasicBlock("foreach_test"));
 
         // Start and end value for this loop dimension
@@ -1617,14 +1617,14 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         endVals.push_back(ev);
 
         // nItems = endVal - startVal
-        nItems.push_back(ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv,
-                                             "nitems"));
+        llvm::Value *nItems = 
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, "nitems");
 
         // nExtras = nItems % (span for this dimension)
         // This gives us the number of extra elements we need to deal with
         // at the end of the loop for this dimension that don't fit cleanly
         // into a vector width.
-        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems[i],
+        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems,
                                               LLVMInt32(span[i]), "nextras"));
 
         // alignedEnd = endVal - nExtras
@@ -1643,8 +1643,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // There is also a varying variable that holds the set of index
         // values for each dimension in the current loop iteration; this is
         // the value that is program-visible.
-        dimVariables[i]->storagePtr = ctx->AllocaInst(LLVMTypes::Int32VectorType, 
-                                                  dimVariables[i]->name.c_str());
+        dimVariables[i]->storagePtr = 
+            ctx->AllocaInst(LLVMTypes::Int32VectorType, 
+                            dimVariables[i]->name.c_str());
         dimVariables[i]->parentFunction = ctx->GetFunction();
         ctx->EmitVariableDebugInfo(dimVariables[i]);
 
@@ -1656,7 +1657,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
 
-    ctx->StartForeach(bbStep[nDims-1]);
+    ctx->StartForeach();
 
     // On to the outermost loop's test
     ctx->BranchInst(bbTest[0]);
@@ -1677,9 +1678,25 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_test
+    // foreach_step: increment the uniform counter by the vector width.
+    // Note that we don't increment the varying counter here as well but
+    // just generate its value when we need it in the loop body.  Don't do
+    // this for the innermost dimension, which has a more complex stepping
+    // structure..
+    for (int i = 0; i < nDims-1; ++i) {
+        ctx->SetCurrentBasicBlock(bbStep[i]);
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[i]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
+        ctx->BranchInst(bbTest[i]);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_test (for all dimensions other than the innermost...)
     std::vector<llvm::Value *> inExtras;
-    for (int i = 0; i < nDims; ++i) {
+    for (int i = 0; i < nDims-1; ++i) {
         ctx->SetCurrentBasicBlock(bbTest[i]);
 
         llvm::Value *haveExtras = 
@@ -1717,8 +1734,6 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (i == 0)
             ctx->StoreInst(emask, extrasMaskPtrs[i]);
         else {
-            // FIXME: at least specialize the innermost loop to not do all
-            // this mask stuff each time through the test...
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i-1]);
             llvm::Value *newMask =
                 ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
@@ -1729,59 +1744,267 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *notAtEnd = 
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
                          counter, endVals[i]);
-        if (i != nDims-1)
-            ctx->BranchInst(bbTest[i+1], bbReset[i], notAtEnd);
+        ctx->BranchInst(bbTest[i+1], bbReset[i], notAtEnd);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_test (for innermost dimension)
+    //
+    // All of the outer dimensions are handled generically--basically as a
+    // for() loop from the start value to the end value, where at each loop
+    // test, we compute the mask of active elements for the current
+    // dimension and then update an overall mask that is the AND
+    // combination of all of the outer ones.
+    //
+    // The innermost loop is handled specially, for performance purposes.
+    // When starting the innermost dimension, we start by checking once
+    // whether any of the outer dimensions has set the mask to be
+    // partially-active or not.  We follow different code paths for these
+    // two cases, taking advantage of the knowledge that the mask is all
+    // on, when this is the case.
+    //
+    // In each of these code paths, we start with a loop from the starting
+    // value to the aligned end value for the innermost dimension; we can
+    // guarantee that the innermost loop will have an "all on" mask (as far
+    // as its dimension is concerned) for the duration of this loop.  Doing
+    // so allows us to emit code that assumes the mask is all on (for the
+    // case where none of the outer dimensions has set the mask to be
+    // partially on), or allows us to emit code that just uses the mask
+    // from the outer dimensions directly (for the case where they have).
+    //
+    // After this loop, we just need to deal with one vector's worth of
+    // "ragged extra bits", where the mask used includes the effect of the
+    // mask for the innermost dimension.
+    //
+    // We start out this process by emitting the check that determines
+    // whether any of the enclosing dimensions is partially active
+    // (i.e. processing extra elements that don't exactly fit into a
+    // vector).
+    llvm::BasicBlock *bbOuterInExtras = 
+        ctx->CreateBasicBlock("outer_in_extras");
+    llvm::BasicBlock *bbOuterNotInExtras = 
+        ctx->CreateBasicBlock("outer_not_in_extras");
+
+    ctx->SetCurrentBasicBlock(bbTest[nDims-1]);
+    if (inExtras.size())
+        ctx->BranchInst(bbOuterInExtras, bbOuterNotInExtras,
+                        inExtras.back());
+    else
+        // for a 1D iteration domain, we certainly don't have any enclosing
+        // dimensions that are processing extra elements.
+        ctx->BranchInst(bbOuterNotInExtras);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // One or more outer dimensions in extras, so we need to mask for the loop
+    // body regardless.  We break this into two cases, roughly:
+    // for (counter = start; counter < alignedEnd; counter += step) {
+    //   // mask is all on for inner, so set mask to outer mask
+    //   // run loop body with mask
+    // }
+    // // counter == alignedEnd
+    // if (counter < end) {
+    //   // set mask to outermask & (counter+programCounter < end)
+    //   // run loop body with mask
+    // }
+    llvm::BasicBlock *bbAllInnerPartialOuter =
+        ctx->CreateBasicBlock("all_inner_partial_outer");
+    llvm::BasicBlock *bbPartial =
+        ctx->CreateBasicBlock("both_partial");
+    ctx->SetCurrentBasicBlock(bbOuterInExtras); {
+        // Update the varying counter value here, since all subsequent
+        // blocks along this path need it.
+        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                              dimVariables[nDims-1]->storagePtr, span);
+
+        // here we just check to see if counter < alignedEnd
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeAlignedEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, alignedEnd[nDims-1], "before_aligned_end");
+        ctx->BranchInst(bbAllInnerPartialOuter, bbPartial, beforeAlignedEnd);
+    }
+
+    // Below we have a basic block that runs the loop body code for the
+    // case where the mask is partially but not fully on.  This same block
+    // runs in multiple cases: both for handling any ragged extra data for
+    // the innermost dimension but also when outer dimensions have set the
+    // mask to be partially on. 
+    //
+    // The value stored in stepIndexAfterMaskedBodyPtr is used after each
+    // execution of the body code to determine whether the innermost index
+    // value should be incremented by the step (we're running the "for"
+    // loop of full vectors at the innermost dimension, with outer
+    // dimensions having set the mask to be partially on), or whether we're
+    // running once for the ragged extra bits at the end of the innermost
+    // dimension, in which case we're done with the innermost dimension and
+    // should step the loop counter for the next enclosing dimension
+    // instead.
+    llvm::Value *stepIndexAfterMaskedBodyPtr =
+        ctx->AllocaInst(LLVMTypes::BoolType, "step_index");
+
+    ///////////////////////////////////////////////////////////////////////////
+    // We're in the inner loop part where the only masking is due to outer
+    // dimensions but the innermost dimension fits fully into a vector's
+    // width.  Set the mask and jump to the masked loop body.
+    ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter); {
+        llvm::Value *mask;
+        if (extrasMaskPtrs.size() == 0)
+            // 1D loop; we shouldn't ever get here anyway
+            mask = LLVMMaskAllOff;
         else
-            ctx->BranchInst(bbCheckExtras, bbReset[i], notAtEnd);
+            mask = ctx->LoadInst(extrasMaskPtrs.back());
+        ctx->SetInternalMask(mask);
+
+        ctx->StoreInst(LLVMTrue, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_step: increment the uniform counter by the vector width.
-    // Note that we don't increment the varying counter here as well but
-    // just generate its value when we need it in the loop body.
-    for (int i = 0; i < nDims; ++i) {
-        ctx->SetCurrentBasicBlock(bbStep[i]);
-        if (i == nDims-1)
-            ctx->RestoreContinuedLanes();
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
-        llvm::Value *newCounter =  
-            ctx->BinaryOperator(llvm::Instruction::Add, counter,
-                                LLVMInt32(span[i]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
-        ctx->BranchInst(bbTest[i]);
+    // We need to include the effect of the innermost dimension in the mask
+    // for the final bits here
+    ctx->SetCurrentBasicBlock(bbPartial); {
+        llvm::Value *varyingCounter = 
+            ctx->LoadInst(dimVariables[nDims-1]->storagePtr);
+        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+        for (int j = 0; j < g->target.vectorWidth; ++j)
+            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *emask = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         varyingCounter, smearEnd);
+        emask = ctx->I1VecToBoolVec(emask);
+
+        if (nDims == 1)
+            ctx->SetInternalMask(emask);
+        else {
+            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
+            llvm::Value *newMask =
+                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
+                                    "extras_mask");
+            ctx->SetInternalMask(newMask);
+        }
+
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_check_extras: see if we need to deal with any partial
-    // vector's worth of work that's left.
-    ctx->SetCurrentBasicBlock(bbCheckExtras);
-    ctx->AddInstrumentationPoint("foreach loop check extras");
-    ctx->BranchInst(bbDoExtras, bbBody, inExtras[nDims-1]);
+    // None of the outer dimensions is processing extras; along the lines
+    // of above, we can express this as:
+    // for (counter = start; counter < alignedEnd; counter += step) {
+    //   // mask is all on
+    //   // run loop body with mask all on
+    // }
+    // // counter == alignedEnd
+    // if (counter < end) {
+    //   // set mask to (counter+programCounter < end)
+    //   // run loop body with mask
+    // }
+    llvm::BasicBlock *bbPartialInnerAllOuter =
+        ctx->CreateBasicBlock("partial_inner_all_outer");
+    ctx->SetCurrentBasicBlock(bbOuterNotInExtras); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeAlignedEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, alignedEnd[nDims-1], "before_aligned_end");
+        ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter,
+                        beforeAlignedEnd);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_body: do a full vector's worth of work.  We know that all
+    // full_body: do a full vector's worth of work.  We know that all
     // lanes will be running here, so we explicitly set the mask to be 'all
     // on'.  This ends up being relatively straightforward: just update the
     // value of the varying loop counter and have the statements in the
     // loop body emit their code.
-    ctx->SetCurrentBasicBlock(bbBody);
-    ctx->SetInternalMask(LLVMMaskAllOn);
-    ctx->AddInstrumentationPoint("foreach loop body");
-    stmts->EmitCode(ctx);
-    Assert(ctx->GetCurrentBasicBlock() != NULL);
-    ctx->BranchInst(bbStep[nDims-1]);
+    llvm::BasicBlock *bbFullBodyContinue = 
+        ctx->CreateBasicBlock("foreach_full_continue");
+    ctx->SetCurrentBasicBlock(bbFullBody); {
+        ctx->SetInternalMask(LLVMMaskAllOn);
+        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                              dimVariables[nDims-1]->storagePtr, span);
+        ctx->SetContinueTarget(bbFullBodyContinue);
+        ctx->AddInstrumentationPoint("foreach loop body (all on)");
+        stmts->EmitCode(ctx);
+        Assert(ctx->GetCurrentBasicBlock() != NULL);
+        ctx->BranchInst(bbFullBodyContinue);
+    }
+    ctx->SetCurrentBasicBlock(bbFullBodyContinue); {
+        ctx->RestoreContinuedLanes();
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[nDims-1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+        ctx->BranchInst(bbOuterNotInExtras);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_doextras: set the mask and have the statements emit their
+    // We're done running blocks with the mask all on; see if the counter is
+    // less than the end value, in which case we need to run the body one
+    // more time to get the extra bits.
+    llvm::BasicBlock *bbSetInnerMask = 
+        ctx->CreateBasicBlock("partial_inner_only");
+    ctx->SetCurrentBasicBlock(bbPartialInnerAllOuter); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeFullEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, endVals[nDims-1], "before_full_end");
+        ctx->BranchInst(bbSetInnerMask, bbReset[nDims-1], beforeFullEnd);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // The outer dimensions are all on, so the mask is just given by the
+    // mask for the innermost dimension
+    ctx->SetCurrentBasicBlock(bbSetInnerMask); {
+        llvm::Value *varyingCounter = 
+            lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                                  dimVariables[nDims-1]->storagePtr, span);
+        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+        for (int j = 0; j < g->target.vectorWidth; ++j)
+            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *emask = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         varyingCounter, smearEnd);
+        emask = ctx->I1VecToBoolVec(emask);
+        ctx->SetInternalMask(emask);
+
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // masked_body: set the mask and have the statements emit their
     // code again.  Note that it's generally worthwhile having two copies
     // of the statements' code, since the code above is emitted with the
     // mask known to be all-on, which in turn leads to more efficient code
     // for that case.
-    ctx->SetCurrentBasicBlock(bbDoExtras);
-    llvm::Value *mask = ctx->LoadInst(extrasMaskPtrs[nDims-1]);
-    ctx->SetInternalMask(mask);
-    stmts->EmitCode(ctx);
-    ctx->BranchInst(bbStep[nDims-1]);
+    llvm::BasicBlock *bbStepInnerIndex = 
+        ctx->CreateBasicBlock("step_inner_index");
+    llvm::BasicBlock *bbMaskedBodyContinue = 
+        ctx->CreateBasicBlock("foreach_masked_continue");
+    ctx->SetCurrentBasicBlock(bbMaskedBody); {
+        ctx->AddInstrumentationPoint("foreach loop body (masked)");
+        ctx->SetContinueTarget(bbMaskedBodyContinue);
+        stmts->EmitCode(ctx);
+        ctx->BranchInst(bbMaskedBodyContinue);
+    }
+    ctx->SetCurrentBasicBlock(bbMaskedBodyContinue); {
+        ctx->RestoreContinuedLanes();
+        llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbStepInnerIndex, bbReset[nDims-1], stepIndex);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // step the innermost index, for the case where we're doing the
+    // innermost for loop over full vectors.
+    ctx->SetCurrentBasicBlock(bbStepInnerIndex); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[nDims-1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+        ctx->BranchInst(bbOuterInExtras);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done.  Restore the old mask and clean up

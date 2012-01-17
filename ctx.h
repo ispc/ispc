@@ -161,10 +161,8 @@ public:
     void EndLoop();
 
     /** Indicates that code generation for a 'foreach' or 'foreach_tiled'
-        loop is about to start.  The provided basic block pointer indicates
-        where control flow should go if a 'continue' statement is executed
-        in the loop. */
-    void StartForeach(llvm::BasicBlock *continueTarget);
+        loop is about to start. */
+    void StartForeach();
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck
@@ -231,6 +229,8 @@ public:
     int VaryingCFDepth() const;
 
     bool InForeachLoop() const;
+
+    void SetContinueTarget(llvm::BasicBlock *bb) { continueTarget = bb; }
 
     /** Step through the code and find label statements; create a basic
         block for each one, so that subsequent calls to
