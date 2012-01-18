@@ -2328,7 +2328,7 @@ static FORCEINLINE uint64_t __reduce_max_uint64(__vec4_i64 v) {
 ///////////////////////////////////////////////////////////////////////////
 // masked load/store
 
-static FORCEINLINE __vec4_i8 __masked_load_8(unsigned char *p, 
+static FORCEINLINE __vec4_i8 __masked_load_8(void *p, 
                                              __vec4_i1 mask) {
     int8_t r[4];
     int8_t *ptr = (int8_t *)p;
@@ -2348,7 +2348,7 @@ static FORCEINLINE __vec4_i8 __masked_load_8(unsigned char *p,
     return __vec4_i8(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i16 __masked_load_16(unsigned char *p, 
+static FORCEINLINE __vec4_i16 __masked_load_16(void *p, 
                                                __vec4_i1 mask) {
     int16_t r[4];
     int16_t *ptr = (int16_t *)p;
@@ -2372,7 +2372,7 @@ static FORCEINLINE __vec4_i16 __masked_load_16(unsigned char *p,
     return __vec4_i16(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i32 __masked_load_32(unsigned char *p, 
+static FORCEINLINE __vec4_i32 __masked_load_32(void *p, 
                                                __vec4_i1 mask) {
     __m128i r = _mm_set_epi32(0, 0, 0, 0);
     int32_t *ptr = (int32_t *)p;
@@ -2395,7 +2395,7 @@ static FORCEINLINE __vec4_i32 __masked_load_32(unsigned char *p,
     return r;
 }
 
-static FORCEINLINE __vec4_i64 __masked_load_64(unsigned char *p, 
+static FORCEINLINE __vec4_i64 __masked_load_64(void *p, 
                                                __vec4_i1 mask) {
     uint64_t r[4];
     uint64_t *ptr = (uint64_t *)p;
@@ -2418,7 +2418,7 @@ static FORCEINLINE __vec4_i64 __masked_load_64(unsigned char *p,
     return __vec4_i64(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE void __masked_store_8(unsigned char *p, __vec4_i8 val, 
+static FORCEINLINE void __masked_store_8(void *p, __vec4_i8 val, 
                                          __vec4_i1 mask) {
     int8_t *ptr = (int8_t *)p;
 
@@ -2439,7 +2439,7 @@ static FORCEINLINE void __masked_store_8(unsigned char *p, __vec4_i8 val,
         ptr[3] = _mm_extract_epi8(val.v, 3);
 }
 
-static FORCEINLINE void __masked_store_16(unsigned char *p, __vec4_i16 val, __vec4_i1 mask) {
+static FORCEINLINE void __masked_store_16(void *p, __vec4_i16 val, __vec4_i1 mask) {
     int16_t *ptr = (int16_t *)p;
 
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -2459,7 +2459,7 @@ static FORCEINLINE void __masked_store_16(unsigned char *p, __vec4_i16 val, __ve
         ptr[3] = _mm_extract_epi16(val.v, 3);
 }
 
-static FORCEINLINE void __masked_store_32(unsigned char *p, __vec4_i32 val, 
+static FORCEINLINE void __masked_store_32(void *p, __vec4_i32 val, 
                                           __vec4_i1 mask) {
     int32_t *ptr = (int32_t *)p;
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -2479,7 +2479,7 @@ static FORCEINLINE void __masked_store_32(unsigned char *p, __vec4_i32 val,
         ptr[3] = _mm_extract_epi32(val.v, 3);
 }
 
-static FORCEINLINE void __masked_store_64(unsigned char *p, __vec4_i64 val, 
+static FORCEINLINE void __masked_store_64(void *p, __vec4_i64 val, 
                                           __vec4_i1 mask) {
     int64_t *ptr = (int64_t *)p;
     uint32_t m = _mm_extract_ps(mask.v, 0);
