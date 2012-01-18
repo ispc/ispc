@@ -2439,7 +2439,8 @@ static FORCEINLINE void __masked_store_8(void *p, __vec4_i8 val,
         ptr[3] = _mm_extract_epi8(val.v, 3);
 }
 
-static FORCEINLINE void __masked_store_16(void *p, __vec4_i16 val, __vec4_i1 mask) {
+static FORCEINLINE void __masked_store_16(void *p, __vec4_i16 val,
+                                          __vec4_i1 mask) {
     int16_t *ptr = (int16_t *)p;
 
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -2497,6 +2498,28 @@ static FORCEINLINE void __masked_store_64(void *p, __vec4_i64 val,
     m = _mm_extract_ps(mask.v, 3);
     if (m != 0) 
         ptr[3] = _mm_extract_epi64(val.v[1], 1);
+}
+
+static FORCEINLINE void __masked_store_blend_8(void *p, __vec4_i8 val, 
+                                               __vec4_i1 mask) {
+    __masked_store_8(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_16(void *p, __vec4_i16 val, 
+                                                __vec4_i1 mask) {
+    __masked_store_16(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_32(void *p, __vec4_i32 val, 
+                                                __vec4_i1 mask) {
+    // FIXME: do a load, blendvps, store here...
+    __masked_store_32(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_64(void *p, __vec4_i64 val, 
+                                                __vec4_i1 mask) {
+    // FIXME: do a 2x (load, blendvps, store) here...
+    __masked_store_64(p, val, mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////

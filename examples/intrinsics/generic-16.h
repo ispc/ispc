@@ -1010,6 +1010,26 @@ static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
             ptr[i] = val.v[i];
 }
 
+static FORCEINLINE void __masked_store_blend_8(void *p, __vec16_i8 val,
+                                               __vec16_i1 mask) {
+    __masked_store_8(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_16(void *p, __vec16_i16 val,
+                                                __vec16_i1 mask) {
+    __masked_store_16(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_32(void *p, __vec16_i32 val,
+                                                __vec16_i1 mask) {
+    __masked_store_32(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_64(void *p, __vec16_i64 val,
+                                                __vec16_i1 mask) {
+    __masked_store_64(p, val, mask);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // gather/scatter
 
