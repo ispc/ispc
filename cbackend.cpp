@@ -842,7 +842,8 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     }
     Out << '\"';
   } else {
-    Out << '{';
+    if (Static)
+      Out << '{';
     if (CPA->getNumOperands()) {
       Out << ' ';
       printConstant(cast<Constant>(CPA->getOperand(0)), Static);
@@ -851,7 +852,8 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
         printConstant(cast<Constant>(CPA->getOperand(i)), Static);
       }
     }
-    Out << " }";
+    if (Static)
+      Out << " }";
   }
 }
 
@@ -1321,8 +1323,9 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     break;
   }
 
-  case Type::ArrayTyID:
-    if (Static)
+  case Type::ArrayTyID: {
+    ArrayType *AT = cast<ArrayType>(CPV->getType());
+    if (Static || !isa<StructType>(AT->getElementType()))
       // arrays are wrapped in structs...
       Out << "{ ";
     else {
@@ -1334,7 +1337,6 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       printConstantArray(CA, Static);
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
-      ArrayType *AT = cast<ArrayType>(CPV->getType());
       if (AT->getNumElements()) {
         Out << ' ';
         Constant *CZ = Constant::getNullValue(AT->getElementType());
@@ -1345,12 +1347,12 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         }
       }
     }
-    if (Static)
+    if (Static || !isa<StructType>(AT->getElementType()))
         Out << " }";
     else
         Out << ")";
     break;
-
+  }
   case Type::VectorTyID:
     printType(Out, CPV->getType());
     Out << "(";
@@ -2203,7 +2205,7 @@ bool CWriter::doInitialization(Module &M) {
         // FIXME common linkage should avoid this problem.
         if (!I->getInitializer()->isNullValue()) {
           Out << " = " ;
-          writeOperand(I->getInitializer(), true);
+          writeOperand(I->getInitializer(), false);
         } else if (I->hasWeakLinkage()) {
           // We have to specify an initializer, but it doesn't have to be
           // complete.  If the value is an aggregate, print out { 0 }, and let
@@ -2218,7 +2220,7 @@ bool CWriter::doInitialization(Module &M) {
             Out << "{ { 0 } }";
           } else {
             // Just print it out normally.
-            writeOperand(I->getInitializer(), true);
+            writeOperand(I->getInitializer(), false);
           }
         }
         Out << ";\n";
