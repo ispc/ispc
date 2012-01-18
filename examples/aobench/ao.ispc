@@ -124,7 +124,7 @@ ray_sphere_intersect(Isect &isect, Ray &ray, Sphere &sphere) {
 }
 
 
-static inline void
+static void
 orthoBasis(vec basis[3], vec n) {
     basis[2] = n;
     basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
