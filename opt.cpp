@@ -1674,18 +1674,32 @@ llvm::RegisterPass<LowerMaskedStorePass> lms("masked-store-lower",
     comes from an AllocaInst.
 */
 static bool
-lIsStackVariablePointer(llvm::Value *lvalue) {
+lIsSafeToBlend(llvm::Value *lvalue) {
     llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
-    if (bc)
-        return lIsStackVariablePointer(bc->getOperand(0));
+    if (bc != NULL)
+        return lIsSafeToBlend(bc->getOperand(0));
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
-        if (ai)
-            return true;
+        if (ai) {
+            LLVM_TYPE_CONST llvm::Type *type = ai->getType();
+            LLVM_TYPE_CONST llvm::PointerType *pt = 
+                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+            assert(pt != NULL);
+            type = pt->getElementType();
+            LLVM_TYPE_CONST llvm::ArrayType *at;
+            while ((at = llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type))) {
+                type = at->getElementType();
+            }
+            LLVM_TYPE_CONST llvm::VectorType *vt = 
+                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+            return (vt != NULL && 
+                    (int)vt->getNumElements() == g->target.vectorWidth);
+        }
         else {
-            llvm::GetElementPtrInst *gep = llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
-            if (gep)
-                return lIsStackVariablePointer(gep->getOperand(0));
+            llvm::GetElementPtrInst *gep = 
+                llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
+            if (gep != NULL)
+                return lIsSafeToBlend(gep->getOperand(0));
             else
                 return false;
         }
@@ -1747,8 +1761,8 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // or serializing the masked store.  Even on targets with a native
         // masked store instruction, this is preferable since it lets us
         // keep values in registers rather than going out to the stack.
-        bool doBlend = (!g->opt.disableBlendedMaskedStores ||
-                        lIsStackVariablePointer(lvalue));
+        bool doBlend = (!g->opt.disableBlendedMaskedStores &&
+                        lIsSafeToBlend(lvalue));
 
         // Generate the call to the appropriate masked store function and
         // replace the __pseudo_* one with it.

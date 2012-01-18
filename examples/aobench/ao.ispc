@@ -82,7 +82,7 @@ static inline void vnormalize(vec &v) {
 }
 
 
-static inline void
+static void
 ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
@@ -147,7 +147,7 @@ orthoBasis(vec basis[3], vec n) {
 }
 
 
-static inline float
+static float
 ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3], 
                   RNGState &rngstate) {
     float eps = 0.0001f;
