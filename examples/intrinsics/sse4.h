@@ -303,6 +303,13 @@ static FORCEINLINE __vec4_i8 __shl(__vec4_i8 a, __vec4_i8 b) {
                      _mm_extract_epi8(a.v, 3) << _mm_extract_epi8(b.v, 3));
 }
 
+static FORCEINLINE __vec4_i8 __shl(__vec4_i8 a, int32_t b) {
+    return __vec4_i8(_mm_extract_epi8(a.v, 0) << b,
+                     _mm_extract_epi8(a.v, 1) << b,
+                     _mm_extract_epi8(a.v, 2) << b,
+                     _mm_extract_epi8(a.v, 3) << b);
+}
+
 static FORCEINLINE __vec4_i8 __udiv(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i8((uint8_t)_mm_extract_epi8(a.v, 0) / 
                      (uint8_t)_mm_extract_epi8(b.v, 0),
@@ -358,6 +365,13 @@ static FORCEINLINE __vec4_i8 __lshr(__vec4_i8 a, __vec4_i8 b) {
                      (uint8_t)_mm_extract_epi8(b.v, 3));
 }
 
+static FORCEINLINE __vec4_i8 __lshr(__vec4_i8 a, int32_t b) {
+    return __vec4_i8((uint8_t)_mm_extract_epi8(a.v, 0) >> b,
+                     (uint8_t)_mm_extract_epi8(a.v, 1) >> b,
+                     (uint8_t)_mm_extract_epi8(a.v, 2) >> b,
+                     (uint8_t)_mm_extract_epi8(a.v, 3) >> b);
+}
+
 static FORCEINLINE __vec4_i8 __ashr(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i8((int8_t)_mm_extract_epi8(a.v, 0) >>
                      (int8_t)_mm_extract_epi8(b.v, 0),
@@ -367,6 +381,13 @@ static FORCEINLINE __vec4_i8 __ashr(__vec4_i8 a, __vec4_i8 b) {
                      (int8_t)_mm_extract_epi8(b.v, 2),
                      (int8_t)_mm_extract_epi8(a.v, 3) >>
                      (int8_t)_mm_extract_epi8(b.v, 3));
+}
+
+static FORCEINLINE __vec4_i8 __ashr(__vec4_i8 a, int32_t b) {
+    return __vec4_i8((int8_t)_mm_extract_epi8(a.v, 0) >> b,
+                     (int8_t)_mm_extract_epi8(a.v, 1) >> b,
+                     (int8_t)_mm_extract_epi8(a.v, 2) >> b,
+                     (int8_t)_mm_extract_epi8(a.v, 3) >> b);
 }
 
 static FORCEINLINE __vec4_i1 __equal(__vec4_i8 a, __vec4_i8 b) {
@@ -547,6 +568,10 @@ static FORCEINLINE __vec4_i16 __shl(__vec4_i16 a, __vec4_i16 b) {
                       _mm_extract_epi16(a.v, 3) << _mm_extract_epi16(b.v, 3));
 }
 
+static FORCEINLINE __vec4_i16 __shl(__vec4_i16 a, int32_t b) {
+    return _mm_sll_epi16(a.v, _mm_set_epi32(0, 0, 0, b));
+}
+
 static FORCEINLINE __vec4_i16 __udiv(__vec4_i16 a, __vec4_i16 b) {
     return __vec4_i16((uint16_t)_mm_extract_epi16(a.v, 0) /
                       (uint16_t)_mm_extract_epi16(b.v, 0),
@@ -602,6 +627,10 @@ static FORCEINLINE __vec4_i16 __lshr(__vec4_i16 a, __vec4_i16 b) {
                       (uint16_t)_mm_extract_epi16(b.v, 3));
 }
 
+static FORCEINLINE __vec4_i16 __lshr(__vec4_i16 a, int32_t b) {
+    return _mm_srl_epi16(a.v, _mm_set_epi32(0, 0, 0, b));
+}
+
 static FORCEINLINE __vec4_i16 __ashr(__vec4_i16 a, __vec4_i16 b) {
     return __vec4_i16((int16_t)_mm_extract_epi16(a.v, 0) >>
                       (int16_t)_mm_extract_epi16(b.v, 0),
@@ -611,6 +640,10 @@ static FORCEINLINE __vec4_i16 __ashr(__vec4_i16 a, __vec4_i16 b) {
                       (int16_t)_mm_extract_epi16(b.v, 2),
                       (int16_t)_mm_extract_epi16(a.v, 3) >>
                       (int16_t)_mm_extract_epi16(b.v, 3));
+}
+
+static FORCEINLINE __vec4_i16 __ashr(__vec4_i16 a, int32_t b) {
+    return _mm_sra_epi16(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
 static FORCEINLINE __vec4_i1 __equal(__vec4_i16 a, __vec4_i16 b) {
@@ -789,9 +822,6 @@ static FORCEINLINE __vec4_i32 __xor(__vec4_i32 a, __vec4_i32 b) {
 }
 
 static FORCEINLINE __vec4_i32 __shl(__vec4_i32 a, __vec4_i32 b) {
-    // FIXME: if we can determine at compile time that b has the same value
-    // across all elements, then we can use _mm_sll_epi32.
-
     /* fixme: llvm generates thie code for shift left, which is presumably
        more efficient than doing each component individually as below.
 
@@ -813,57 +843,92 @@ _f___ii:                                ## @f___ii
         ret
 
      */
-    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) << _mm_extract_epi32(b.v, 0),
-                      (uint32_t)_mm_extract_epi32(a.v, 1) << _mm_extract_epi32(b.v, 1),
-                      (uint32_t)_mm_extract_epi32(a.v, 2) << _mm_extract_epi32(b.v, 2),
-                      (uint32_t)_mm_extract_epi32(a.v, 3) << _mm_extract_epi32(b.v, 3));
+    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) << 
+                      _mm_extract_epi32(b.v, 0),
+                      (uint32_t)_mm_extract_epi32(a.v, 1) << 
+                      _mm_extract_epi32(b.v, 1),
+                      (uint32_t)_mm_extract_epi32(a.v, 2) << 
+                      _mm_extract_epi32(b.v, 2),
+                      (uint32_t)_mm_extract_epi32(a.v, 3) << 
+                      _mm_extract_epi32(b.v, 3));
+}
+
+static FORCEINLINE __vec4_i32 __shl(__vec4_i32 a, int32_t b) {
+    return _mm_sll_epi32(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
 static FORCEINLINE __vec4_i32 __udiv(__vec4_i32 a, __vec4_i32 b) {
-    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) / (uint32_t)_mm_extract_epi32(b.v, 0),
-                      (uint32_t)_mm_extract_epi32(a.v, 1) / (uint32_t)_mm_extract_epi32(b.v, 1),
-                      (uint32_t)_mm_extract_epi32(a.v, 2) / (uint32_t)_mm_extract_epi32(b.v, 2),
-                      (uint32_t)_mm_extract_epi32(a.v, 3) / (uint32_t)_mm_extract_epi32(b.v, 3));
+    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) / 
+                      (uint32_t)_mm_extract_epi32(b.v, 0),
+                      (uint32_t)_mm_extract_epi32(a.v, 1) / 
+                      (uint32_t)_mm_extract_epi32(b.v, 1),
+                      (uint32_t)_mm_extract_epi32(a.v, 2) / 
+                      (uint32_t)_mm_extract_epi32(b.v, 2),
+                      (uint32_t)_mm_extract_epi32(a.v, 3) / 
+                      (uint32_t)_mm_extract_epi32(b.v, 3));
 }
 
 static FORCEINLINE __vec4_i32 __sdiv(__vec4_i32 a, __vec4_i32 b) {
-    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) / (int32_t)_mm_extract_epi32(b.v, 0),
-                      (int32_t)_mm_extract_epi32(a.v, 1) / (int32_t)_mm_extract_epi32(b.v, 1),
-                      (int32_t)_mm_extract_epi32(a.v, 2) / (int32_t)_mm_extract_epi32(b.v, 2),
-                      (int32_t)_mm_extract_epi32(a.v, 3) / (int32_t)_mm_extract_epi32(b.v, 3));
+    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) / 
+                      (int32_t)_mm_extract_epi32(b.v, 0),
+                      (int32_t)_mm_extract_epi32(a.v, 1) / 
+                      (int32_t)_mm_extract_epi32(b.v, 1),
+                      (int32_t)_mm_extract_epi32(a.v, 2) / 
+                      (int32_t)_mm_extract_epi32(b.v, 2),
+                      (int32_t)_mm_extract_epi32(a.v, 3) / 
+                      (int32_t)_mm_extract_epi32(b.v, 3));
 }
 
 static FORCEINLINE __vec4_i32 __urem(__vec4_i32 a, __vec4_i32 b) {
-    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) % (uint32_t)_mm_extract_epi32(b.v, 0),
-                      (uint32_t)_mm_extract_epi32(a.v, 1) % (uint32_t)_mm_extract_epi32(b.v, 1),
-                      (uint32_t)_mm_extract_epi32(a.v, 2) % (uint32_t)_mm_extract_epi32(b.v, 2),
-                      (uint32_t)_mm_extract_epi32(a.v, 3) % (uint32_t)_mm_extract_epi32(b.v, 3));
+    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) %
+                      (uint32_t)_mm_extract_epi32(b.v, 0),
+                      (uint32_t)_mm_extract_epi32(a.v, 1) %
+                      (uint32_t)_mm_extract_epi32(b.v, 1),
+                      (uint32_t)_mm_extract_epi32(a.v, 2) %
+                      (uint32_t)_mm_extract_epi32(b.v, 2),
+                      (uint32_t)_mm_extract_epi32(a.v, 3) %
+                      (uint32_t)_mm_extract_epi32(b.v, 3));
 }
 
 static FORCEINLINE __vec4_i32 __srem(__vec4_i32 a, __vec4_i32 b) {
-    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) % (int32_t)_mm_extract_epi32(b.v, 0),
-                      (int32_t)_mm_extract_epi32(a.v, 1) % (int32_t)_mm_extract_epi32(b.v, 1),
-                      (int32_t)_mm_extract_epi32(a.v, 2) % (int32_t)_mm_extract_epi32(b.v, 2),
-                      (int32_t)_mm_extract_epi32(a.v, 3) % (int32_t)_mm_extract_epi32(b.v, 3));
+    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) %
+                      (int32_t)_mm_extract_epi32(b.v, 0),
+                      (int32_t)_mm_extract_epi32(a.v, 1) %
+                      (int32_t)_mm_extract_epi32(b.v, 1),
+                      (int32_t)_mm_extract_epi32(a.v, 2) %
+                      (int32_t)_mm_extract_epi32(b.v, 2),
+                      (int32_t)_mm_extract_epi32(a.v, 3) %
+                      (int32_t)_mm_extract_epi32(b.v, 3));
 }
 
 static FORCEINLINE __vec4_i32 __lshr(__vec4_i32 a, __vec4_i32 b) {
-    // FIXME: if we can determine at compile time that b has the same value
-    // across all elements, e.g. using gcc's __builtin_constant_p, then we
-    // can use _mm_srl_epi32.
-    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) >> _mm_extract_epi32(b.v, 0),
-                      (uint32_t)_mm_extract_epi32(a.v, 1) >> _mm_extract_epi32(b.v, 1),
-                      (uint32_t)_mm_extract_epi32(a.v, 2) >> _mm_extract_epi32(b.v, 2),
-                      (uint32_t)_mm_extract_epi32(a.v, 3) >> _mm_extract_epi32(b.v, 3));
+    return __vec4_i32((uint32_t)_mm_extract_epi32(a.v, 0) >>
+                      _mm_extract_epi32(b.v, 0),
+                      (uint32_t)_mm_extract_epi32(a.v, 1) >>
+                      _mm_extract_epi32(b.v, 1),
+                      (uint32_t)_mm_extract_epi32(a.v, 2) >>
+                      _mm_extract_epi32(b.v, 2),
+                      (uint32_t)_mm_extract_epi32(a.v, 3) >>
+                      _mm_extract_epi32(b.v, 3));
+}
+
+static FORCEINLINE __vec4_i32 __lshr(__vec4_i32 a, int32_t b) {
+    return _mm_srl_epi32(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
 static FORCEINLINE __vec4_i32 __ashr(__vec4_i32 a, __vec4_i32 b) {
-    // FIXME: if we can determine at compile time that b has the same value
-    // across all elements, then we can use _mm_sra_epi32.
-    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) >> _mm_extract_epi32(b.v, 0),
-                      (int32_t)_mm_extract_epi32(a.v, 1) >> _mm_extract_epi32(b.v, 1),
-                      (int32_t)_mm_extract_epi32(a.v, 2) >> _mm_extract_epi32(b.v, 2),
-                      (int32_t)_mm_extract_epi32(a.v, 3) >> _mm_extract_epi32(b.v, 3));
+    return __vec4_i32((int32_t)_mm_extract_epi32(a.v, 0) >>
+                      _mm_extract_epi32(b.v, 0),
+                      (int32_t)_mm_extract_epi32(a.v, 1) >>
+                      _mm_extract_epi32(b.v, 1),
+                      (int32_t)_mm_extract_epi32(a.v, 2) >>
+                      _mm_extract_epi32(b.v, 2),
+                      (int32_t)_mm_extract_epi32(a.v, 3) >>
+                      _mm_extract_epi32(b.v, 3));
+}
+
+static FORCEINLINE __vec4_i32 __ashr(__vec4_i32 a, int32_t b) {
+    return _mm_sra_epi32(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
 static FORCEINLINE __vec4_i1 __equal(__vec4_i32 a, __vec4_i32 b) {
@@ -1016,6 +1081,12 @@ static FORCEINLINE __vec4_i64 __shl(__vec4_i64 a, __vec4_i64 b) {
                       _mm_extract_epi64(a.v[1], 1) << _mm_extract_epi64(b.v[1], 1));
 }
 
+static FORCEINLINE __vec4_i64 __shl(__vec4_i64 a, int32_t b) {
+    __m128i amt = _mm_set_epi32(0, 0, 0, b);
+    return __vec4_i64(_mm_sll_epi64(a.v[0], amt),
+                      _mm_sll_epi64(a.v[1], amt));
+}
+
 static FORCEINLINE __vec4_i64 __udiv(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i64((uint64_t)_mm_extract_epi64(a.v[0], 0) /
                       (uint64_t)_mm_extract_epi64(b.v[0], 0),
@@ -1071,6 +1142,12 @@ static FORCEINLINE __vec4_i64 __lshr(__vec4_i64 a, __vec4_i64 b) {
                       (uint64_t)_mm_extract_epi64(b.v[1], 1));
 }
 
+static FORCEINLINE __vec4_i64 __lshr(__vec4_i64 a, int32_t b) {
+    __m128i amt = _mm_set_epi32(0, 0, 0, b);
+    return __vec4_i64(_mm_srl_epi64(a.v[0], amt),
+                      _mm_srl_epi64(a.v[1], amt));
+}
+
 static FORCEINLINE __vec4_i64 __ashr(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i64((int64_t)_mm_extract_epi64(a.v[0], 0) >>
                       (int64_t)_mm_extract_epi64(b.v[0], 0),
@@ -1080,6 +1157,13 @@ static FORCEINLINE __vec4_i64 __ashr(__vec4_i64 a, __vec4_i64 b) {
                       (int64_t)_mm_extract_epi64(b.v[1], 0),
                       (int64_t)_mm_extract_epi64(a.v[1], 1) >>
                       (int64_t)_mm_extract_epi64(b.v[1], 1));
+}
+
+static FORCEINLINE __vec4_i64 __ashr(__vec4_i64 a, int32_t b) {
+    return __vec4_i64((int64_t)_mm_extract_epi64(a.v[0], 0) >> b,
+                      (int64_t)_mm_extract_epi64(a.v[0], 1) >> b,
+                      (int64_t)_mm_extract_epi64(a.v[1], 0) >> b,
+                      (int64_t)_mm_extract_epi64(a.v[1], 1) >> b);
 }
 
 static FORCEINLINE __vec4_i1 __equal(__vec4_i64 a, __vec4_i64 b) {

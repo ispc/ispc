@@ -251,6 +251,14 @@ static FORCEINLINE TYPE __select(bool cond, TYPE a, TYPE b) {       \
     return cond ? a : b;                                            \
 }
 
+#define SHIFT_UNIFORM(TYPE, CAST, NAME, OP)                         \
+static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
+   TYPE ret;                                                        \
+   for (int i = 0; i < 16; ++i)                                     \
+       ret.v[i] = (CAST)(a.v[i]) OP b;                              \
+   return ret;                                                      \
+}
+
 #define SMEAR(VTYPE, NAME, STYPE)               \
 static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {        \
     VTYPE ret;                                  \
@@ -386,6 +394,10 @@ BINARY_OP_CAST(__vec16_i8, int8_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i8, uint8_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i8, int8_t,  __ashr, >>)
 
+SHIFT_UNIFORM(__vec16_i8, uint8_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __shl, <<)
+
 CMP_OP(__vec16_i8, int8_t,  __equal, ==)
 CMP_OP(__vec16_i8, int8_t,  __not_equal, !=)
 CMP_OP(__vec16_i8, uint8_t, __unsigned_less_equal, <=)
@@ -424,6 +436,10 @@ BINARY_OP_CAST(__vec16_i16, uint16_t, __urem, %)
 BINARY_OP_CAST(__vec16_i16, int16_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i16, uint16_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i16, int16_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i16, uint16_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __shl, <<)
 
 CMP_OP(__vec16_i16, int16_t,  __equal, ==)
 CMP_OP(__vec16_i16, int16_t,  __not_equal, !=)
@@ -464,6 +480,10 @@ BINARY_OP_CAST(__vec16_i32, int32_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i32, uint32_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i32, int32_t,  __ashr, >>)
 
+SHIFT_UNIFORM(__vec16_i32, uint32_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i32, int32_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i32, int32_t, __shl, <<)
+
 CMP_OP(__vec16_i32, int32_t,  __equal, ==)
 CMP_OP(__vec16_i32, int32_t,  __not_equal, !=)
 CMP_OP(__vec16_i32, uint32_t, __unsigned_less_equal, <=)
@@ -502,6 +522,10 @@ BINARY_OP_CAST(__vec16_i64, uint64_t, __urem, %)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i64, uint64_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i64, uint64_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i64, int64_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i64, int64_t, __shl, <<)
 
 CMP_OP(__vec16_i64, int64_t,  __equal, ==)
 CMP_OP(__vec16_i64, int64_t,  __not_equal, !=)

@@ -24,6 +24,8 @@
 #define PRIx64 "llx"
 #endif
 
+#include "llvmutil.h"
+
 #include "llvm/CallingConv.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
@@ -232,6 +234,7 @@ namespace {
     unsigned NextAnonValueNumber;
     
     std::string includeName;
+    int vectorWidth;
 
     /// UnnamedStructIDs - This contains a unique ID for each struct that is
     /// either anonymous or has no name.
@@ -240,11 +243,13 @@ namespace {
 
   public:
     static char ID;
-    explicit CWriter(formatted_raw_ostream &o, const char *incname)
+      explicit CWriter(formatted_raw_ostream &o, const char *incname,
+                       int vecwidth)
       : FunctionPass(ID), Out(o), IL(0), Mang(0), LI(0),
         TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
         OpaqueCounter(0), NextAnonValueNumber(0), 
-        includeName(incname ? incname : "generic_defs.h") {
+        includeName(incname ? incname : "generic_defs.h"),
+        vectorWidth(vecwidth) {
       initializeLoopInfoPass(*PassRegistry::getPassRegistry());
       FPCounter = 0;
     }
@@ -2894,7 +2899,21 @@ void CWriter::visitBinaryOperator(Instruction &I) {
       Out << "(";
       writeOperand(I.getOperand(0));
       Out << ", ";
-      writeOperand(I.getOperand(1));
+      if ((I.getOpcode() == Instruction::Shl ||
+           I.getOpcode() == Instruction::LShr ||
+           I.getOpcode() == Instruction::AShr)) {
+          std::vector<PHINode *> phis;
+          if (LLVMVectorValuesAllEqual(I.getOperand(1),
+                                       vectorWidth, phis)) {
+              Out << "__extract_element(";
+              writeOperand(I.getOperand(1));
+              Out << ", 0) ";
+          }
+          else
+              writeOperand(I.getOperand(1));
+      }
+      else
+          writeOperand(I.getOperand(1));
       Out << ")";
       return;
   }
@@ -3635,7 +3654,7 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
 #endif
 
   std::string E;
-  if (const Target *Match = TargetRegistry::lookupTarget(Triple, E))
+  if (const llvm::Target *Match = TargetRegistry::lookupTarget(Triple, E))
     TargetAsm = Match->createMCAsmInfo(Triple);
   else
     return c.Codes[0];
@@ -4337,7 +4356,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(new BitcastCleanupPass);
     pm.add(createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(createPrintModulePass(&fos));
-    pm.add(new CWriter(fos, includeName));
+    pm.add(new CWriter(fos, includeName, vectorWidth));
     pm.add(createGCInfoDeleter());
 //CO    pm.add(createVerifierPass());
 
