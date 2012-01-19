@@ -3095,16 +3095,15 @@ static inline unsigned int random(RNGState * uniform state)
 {
     unsigned int b;
 
-    // FIXME: state->z1, etc..
-    b  = (((*state).z1 << 6) ^ (*state).z1) >> 13;
-    (*state).z1 = (((*state).z1 & 4294967294U) << 18) ^ b;
-    b  = (((*state).z2 << 2) ^ (*state).z2) >> 27; 
-    (*state).z2 = (((*state).z2 & 4294967288U) << 2) ^ b;
-    b  = (((*state).z3 << 13) ^ (*state).z3) >> 21;
-    (*state).z3 = (((*state).z3 & 4294967280U) << 7) ^ b;
-    b  = (((*state).z4 << 3) ^ (*state).z4) >> 12;
-    (*state).z4 = (((*state).z4 & 4294967168U) << 13) ^ b;
-    return ((*state).z1 ^ (*state).z2 ^ (*state).z3 ^ (*state).z4);
+    b  = ((state->z1 << 6) ^ state->z1) >> 13;
+    state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
+    b  = ((state->z2 << 2) ^ state->z2) >> 27; 
+    state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
+    b  = ((state->z3 << 13) ^ state->z3) >> 21;
+    state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
+    b  = ((state->z4 << 3) ^ state->z4) >> 12;
+    state->z4 = ((state->z4 & 4294967168U) << 13) ^ b;
+    return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
 }
 
 static inline float frandom(RNGState * uniform state)
@@ -3120,30 +3119,30 @@ static inline uniform unsigned int __seed4(RNGState * uniform state,
     uniform unsigned int c1 = 0xf0f0f0f0;
     uniform unsigned int c2 = 0x0f0f0f0f;
 
-    (*state).z1 = insert((*state).z1, start + 0, seed);
-    (*state).z1 = insert((*state).z1, start + 1, seed ^ c1);
-    (*state).z1 = insert((*state).z1, start + 2, (seed << 3) ^ c1);
-    (*state).z1 = insert((*state).z1, start + 3, (seed << 2) ^ c2);
+    state->z1 = insert(state->z1, start + 0, seed);
+    state->z1 = insert(state->z1, start + 1, seed ^ c1);
+    state->z1 = insert(state->z1, start + 2, (seed << 3) ^ c1);
+    state->z1 = insert(state->z1, start + 3, (seed << 2) ^ c2);
 
     seed += 131;
-    (*state).z2 = insert((*state).z2, start + 0, seed);
-    (*state).z2 = insert((*state).z2, start + 1, seed ^ c1);
-    (*state).z2 = insert((*state).z2, start + 2, (seed << 3) ^ c1);
-    (*state).z2 = insert((*state).z2, start + 3, (seed << 2) ^ c2);
+    state->z2 = insert(state->z2, start + 0, seed);
+    state->z2 = insert(state->z2, start + 1, seed ^ c1);
+    state->z2 = insert(state->z2, start + 2, (seed << 3) ^ c1);
+    state->z2 = insert(state->z2, start + 3, (seed << 2) ^ c2);
 
-    seed ^= extract((*state).z2, 2);
-    (*state).z3 = insert((*state).z3, start + 0, seed);
-    (*state).z3 = insert((*state).z3, start + 1, seed ^ c1);
-    (*state).z3 = insert((*state).z3, start + 2, (seed << 3) ^ c1);
-    (*state).z3 = insert((*state).z3, start + 3, (seed << 2) ^ c2);
+    seed ^= extract(state->z2, 2);
+    state->z3 = insert(state->z3, start + 0, seed);
+    state->z3 = insert(state->z3, start + 1, seed ^ c1);
+    state->z3 = insert(state->z3, start + 2, (seed << 3) ^ c1);
+    state->z3 = insert(state->z3, start + 3, (seed << 2) ^ c2);
 
     seed <<= 4;
     seed += 3;
-    seed ^= extract((*state).z1, 3);
-    (*state).z4 = insert((*state).z4, start + 0, seed);
-    (*state).z4 = insert((*state).z4, start + 1, seed ^ c1);
-    (*state).z4 = insert((*state).z4, start + 2, (seed << 3) ^ c1);
-    (*state).z4 = insert((*state).z4, start + 3, (seed << 2) ^ c2);
+    seed ^= extract(state->z1, 3);
+    state->z4 = insert(state->z4, start + 0, seed);
+    state->z4 = insert(state->z4, start + 1, seed ^ c1);
+    state->z4 = insert(state->z4, start + 2, (seed << 3) ^ c1);
+    state->z4 = insert(state->z4, start + 3, (seed << 2) ^ c2);
 
     return seed;
 }
