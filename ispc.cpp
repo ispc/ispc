@@ -387,7 +387,6 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         return false;
     }
 
-    type->dump();
     Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type));
     return true;
 }

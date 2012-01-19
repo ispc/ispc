@@ -778,6 +778,16 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     Out << "    return ret;\n";
     Out << "  }\n  ";
 
+    // if it's an array of i8s, also provide a version that takes a const
+    // char *
+    if (ATy->getElementType() == LLVMTypes::Int8Type) {
+        Out << "  static " << NameSoFar << " init(const char *p) {\n";
+        Out << "    " << NameSoFar << " ret;\n";
+        Out << "    strncpy((char *)ret.array, p, " << NumElements << ");\n";
+        Out << "    return ret;\n";
+        Out << "  }\n";
+    }
+
     printType(Out, ATy->getElementType(), false,
               "array[" + utostr(NumElements) + "]");
     return Out << ";\n} ";
@@ -1330,7 +1340,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
 
   case Type::ArrayTyID: {
     ArrayType *AT = cast<ArrayType>(CPV->getType());
-    if (Static || !isa<StructType>(AT->getElementType()))
+    if (Static)
       // arrays are wrapped in structs...
       Out << "{ ";
     else {
@@ -1352,7 +1362,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         }
       }
     }
-    if (Static || !isa<StructType>(AT->getElementType()))
+    if (Static)
         Out << " }";
     else
         Out << ")";
