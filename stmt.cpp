@@ -2335,7 +2335,9 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
-    ctx->StartSwitch(type->IsUniformType(), bbDone);
+    bool isUniformCF = (type->IsUniformType() &&
+                        lHasVaryingBreakOrContinue(stmts) == false);
+    ctx->StartSwitch(isUniformCF, bbDone);
     ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone,
                     svi.caseBlocks, svi.nextBlock);
 
@@ -2375,15 +2377,7 @@ SwitchStmt::TypeCheck() {
                     exprType->GetAsUniformType() == 
                     AtomicType::UniformConstInt64);
 
-    // FIXME: if there's a break or continue under varying control flow
-    // within a switch with a "uniform" condition, we promote the condition
-    // to varying so that everything works out and we are set to handle the
-    // resulting divergent control flow.  This is somewhat sub-optimal; see
-    // https://github.com/ispc/ispc/issues/156 for details.
-    bool isUniform = (exprType->IsUniformType() && 
-                      lHasVaryingBreakOrContinue(stmts) == false);
-
-    if (isUniform) {
+    if (exprType->IsUniformType()) {
         if (is64bit) toType = AtomicType::UniformInt64;
         else         toType = AtomicType::UniformInt32;
     }

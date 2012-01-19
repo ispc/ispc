@@ -580,6 +580,13 @@ private:
         if present), this map gives the basic block for the immediately
         following case/default label. */
     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *nextBlocks;
+
+    /** Records whether the switch condition was uniform; this is a
+        distinct notion from whether the switch represents uniform or
+        varying control flow; we may have varying control flow from a
+        uniform switch condition if there is a 'break' inside the switch
+        that's under varying control flow. */
+    bool switchConditionWasUniform;
     /** @} */
 
     /** A pointer to memory that records which of the program instances
@@ -634,8 +641,7 @@ private:
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
     void addSwitchMaskCheck(llvm::Value *mask);
-    bool inUniformSwitch() const;
-    bool inVaryingSwitch() const;
+    bool inSwitchStatement() const;
     llvm::Value *getMaskAtSwitchEntry();
 
     CFInfo *popCFState();
