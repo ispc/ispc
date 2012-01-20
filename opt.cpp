@@ -1174,21 +1174,47 @@ lExtractOffsetVector248Scale(llvm::Value **vec) {
         return scale;
     }
 
-    // If we don't have a multiply, then just return
+
+    // If we don't have a binary operator, then just give up
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(*vec);
-    if (bop == NULL || bop->getOpcode() != llvm::Instruction::Mul)
+    if (bop == NULL)
         return LLVMInt32(1);
 
-    // Check each operand for being one of the scale factors we care about.
     llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-    int splat;
-    if (lIs248Splat(op0, &splat)) {
-        *vec = op1;
-        return LLVMInt32(splat);
+    if (bop->getOpcode() == llvm::Instruction::Add) {
+        if (llvm::isa<llvm::ConstantAggregateZero>(op0)) {
+            *vec = op1;
+            return lExtractOffsetVector248Scale(vec);
+        }
+        else if (llvm::isa<llvm::ConstantAggregateZero>(op1)) {
+            *vec = op0;
+            return lExtractOffsetVector248Scale(vec);
+        }
+        else {
+            llvm::Value *s0 = lExtractOffsetVector248Scale(&op0);
+            llvm::Value *s1 = lExtractOffsetVector248Scale(&op1);
+            if (s0 == s1) {
+                *vec = llvm::BinaryOperator::Create(llvm::Instruction::Add,
+                                                    op0, op1, "new_add", bop);
+                return s0;
+            }
+            else
+                return LLVMInt32(1);
+        }
     }
-    else if (lIs248Splat(op1, &splat)) {
-        *vec = op0;
-        return LLVMInt32(splat);
+    else if (bop->getOpcode() == llvm::Instruction::Mul) {
+        // Check each operand for being one of the scale factors we care about.
+        int splat;
+        if (lIs248Splat(op0, &splat)) {
+            *vec = op1;
+            return LLVMInt32(splat);
+        }
+        else if (lIs248Splat(op1, &splat)) {
+            *vec = op0;
+            return LLVMInt32(splat);
+        }
+        else
+            return LLVMInt32(1);
     }
     else
         return LLVMInt32(1);
