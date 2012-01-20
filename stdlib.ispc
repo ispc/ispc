@@ -808,8 +808,7 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
-                                                            (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
@@ -824,22 +823,80 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
             continue;                                                   \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
-        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
-                                                      (MASKTYPE)__mask); \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
-#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB, MASKTYPE)                \
+#define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
+static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
+    memory_barrier();                                                   \
+    uniform int i = 0;                                                  \
+    TA ret[programCount];                                               \
+    TA memVal;                                                          \
+    uniform int lastSwap;                                               \
+    uniform int mask = lanemask();                                      \
+    /* First, have the first running program instance (if any) perform  \
+       the swap with memory with its value of "value"; record the       \
+       value returned. */                                               \
+    for (; i < programCount; ++i) {                                     \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        memVal = __atomic_swap_uniform_##TB##_global(ptr, extract(value, i)); \
+        lastSwap = i;                                                   \
+        break;                                                          \
+    }                                                                   \
+    /* Now, for all of the remaining running program instances, set the \
+       return value of the last instance that did a swap with this      \
+       instance's value of "value"; this gives the same effect as if the \
+       current instance had executed a hardware atomic swap right before \
+       the last one that did a swap. */                                 \
+    for (; i < programCount; ++i) {                                     \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        ret[lastSwap] = extract(value, i);                              \
+        lastSwap = i;                                                   \
+    }                                                                   \
+    /* And the last instance that wanted to swap gets the value we      \
+       originally got back from memory... */                            \
+    ret[lastSwap] = memVal;                                             \
+    memory_barrier();                                                   \
+    return ret[programIndex];                                           \
+}                                                                       \
+static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
+                                            uniform TA value) {         \
+    memory_barrier();                                                   \
+    uniform TA ret = __atomic_swap_uniform_##TB##_global(ptr, value);   \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
+static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
+    uniform TA * uniform ptrArray[programCount];                        \
+    ptrArray[programIndex] = ptr;                                       \
+    memory_barrier();                                                   \
+    TA ret;                                                             \
+    uniform int mask = lanemask();                                      \
+    for (uniform int i = 0; i < programCount; ++i) {                    \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        uniform TA * uniform p = ptrArray[i];                           \
+        uniform TA v = extract(value, i);                               \
+        uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);       \
+        ret = insert(ret, i, r);                                        \
+    }                                                                   \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
+
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval,       \
-                                                     (MASKTYPE)__mask); \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval);      \
         memory_barrier();                                               \
     }                                                                   \
     return ret;                                                         \
@@ -847,8 +904,7 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
-                                                            (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
@@ -864,8 +920,7 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
             continue;                                                   \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
-        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
-                                                      (MASKTYPE)__mask); \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     memory_barrier();                                                   \
@@ -874,49 +929,51 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
 
 DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max,IntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
 DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(int32,int32)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax,UIntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
 DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap,UIntMaskType)
+DEFINE_ATOMIC_SWAP(unsigned int32,int32)
 
-DEFINE_ATOMIC_OP(float,float,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(float,float)
 
 DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max,IntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
 DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(int64,int64)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax,UIntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
 DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap,UIntMaskType)
+DEFINE_ATOMIC_SWAP(unsigned int64,int64)
 
-DEFINE_ATOMIC_OP(double,double,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(double,double)
 
 #undef DEFINE_ATOMIC_OP
+#undef DEFINE_ATOMIC_MINMAX_OP
+#undef DEFINE_ATOMIC_SWAP
 
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline TA atomic_compare_exchange_global(                           \
@@ -931,8 +988,7 @@ static inline uniform TA atomic_compare_exchange_global(               \
          uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
     memory_barrier();                                                      \
     uniform TA ret =                                                    \
-        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval, \
-                                                        (MASKTYPE)__mask); \
+        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }

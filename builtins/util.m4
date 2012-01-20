@@ -760,14 +760,12 @@ define(`global_atomic_uniform', `
 ifelse(LLVM_VERSION, `LLVM_2_9',`
 declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
-                                         <$1 x MASK> %mask) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
   %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
   ret $3 %r
 }
 ', `
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
-                                         <$1 x MASK> %mask) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
   %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
   ret $3 %r
 }
@@ -786,26 +784,7 @@ declare i32 @llvm.atomic.swap.i32.p0i32(i32 * %ptr, i32 %val)
 declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)')
 
 define(`global_swap', `
-
-define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
-                                          <$1 x MASK> %mask) nounwind alwaysinline {
-  %rptr = alloca <$1 x $2>
-  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
-
-  per_lane($1, <$1 x MASK> %mask, `
-   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-   %r_LANE_ID = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val_LANE_ID)', `
-   %r_LANE_ID = atomicrmw xchg $2 * %ptr, $2 %val_LANE_ID seq_cst')
-   %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
-   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
-
-  %r = load <$1 x $2> * %rptr
-  ret <$1 x $2> %r
-}
-
-define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
-                                           <$1 x MASK> %mask) nounwind alwaysinline {
+define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
 ifelse(LLVM_VERSION, `LLVM_2_9',`
  %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)', `
  %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst')
@@ -845,7 +824,7 @@ ifelse(LLVM_VERSION, `LLVM_2_9',`
 }
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                               $2 %val, <$1 x MASK> %mask) nounwind alwaysinline {
+                                                       $2 %val) nounwind alwaysinline {
 ifelse(LLVM_VERSION, `LLVM_2_9',`
   %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)', `
   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst')
@@ -1997,38 +1976,18 @@ global_atomic_uniform(WIDTH, umax, i64, uint64)
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
 
-define <WIDTH x float> @__atomic_swap_float_global(float * %ptr, <WIDTH x float> %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
-  %iret = call <WIDTH x i32> @__atomic_swap_int32_global(i32 * %iptr, <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
-  ret <WIDTH x float> %ret
-}
-
-define <WIDTH x double> @__atomic_swap_double_global(double * %ptr, <WIDTH x double> %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
-  %iret = call <WIDTH x i64> @__atomic_swap_int64_global(i64 * %iptr, <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
-  ret <WIDTH x double> %ret
-}
-
-define float @__atomic_swap_uniform_float_global(float * %ptr, float %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival, <WIDTH x MASK> %mask)
+  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
-define double @__atomic_swap_uniform_double_global(double * %ptr, double %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival, <WIDTH x MASK> %mask)
+  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
@@ -2058,24 +2017,23 @@ define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
   ret <WIDTH x double> %ret
 }
 
-define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp, float %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+                                                             float %val) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast float %cmp to i32
   %ival = bitcast float %val to i32
   %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
-                                                                   i32 %ival, <WIDTH x MASK> %mask)
+                                                                   i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
 define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                            double %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
+                                                               double %val) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast double %cmp to i64
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp,
-                                                                   i64 %ival, <WIDTH x MASK> %mask)
+  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
