@@ -1221,100 +1221,6 @@ lExtractOffsetVector248Scale(llvm::Value **vec) {
 }
 
 
-static llvm::Value *
-lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
-    llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(*vec);
-    if (sext != NULL) {
-        llvm::Value *sextOp = sext->getOperand(0);
-        // Check the sext target.
-        llvm::Value *unif = lExtractUniforms(&sextOp, insertBefore);
-        if (unif == NULL)
-            return NULL;
-
-        // make a new sext instruction so that we end up with the right
-        // type
-        *vec = new llvm::SExtInst(sextOp, sext->getType(), "offset_sext", sext);
-        return unif;
-    }
-
-    std::vector<llvm::PHINode *> phis;
-    if (LLVMVectorValuesAllEqual(*vec, g->target.vectorWidth, phis)) {
-        // FIXME: we may want to redo all of the expression here, in scalar
-        // form (if at all possible), for code quality...
-        llvm::Value *unif = 
-            llvm::ExtractElementInst::Create(*vec, LLVMInt32(0),
-                                             "first_uniform", insertBefore);
-        *vec = NULL;
-        return unif;
-    }
-
-    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(*vec);
-    if (bop == NULL)
-        return LLVMInt32(1);
-
-    llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-    if (bop->getOpcode() == llvm::Instruction::Add) {
-        llvm::Value *s0 = lExtractUniforms(&op0, insertBefore);
-        llvm::Value *s1 = lExtractUniforms(&op1, insertBefore);
-        if (s0 == NULL && s1 == NULL)
-            return NULL;
-
-        *vec = llvm::BinaryOperator::Create(llvm::Instruction::Add,
-                                            op0, op1, "new_add", insertBefore);
-        if (s0 == NULL)
-            return s1;
-        else if (s1 == NULL)
-            return s0;
-        else
-            return llvm::BinaryOperator::Create(llvm::Instruction::Add, s0, s1,
-                                                "add_unif", insertBefore);
-    }
-#if 0
-    else if (bop->getOpcode() == llvm::Instruction::Mul) {
-        // Check each operand for being one of the scale factors we care about.
-        int splat;
-        if (lIs248Splat(op0, &splat)) {
-            *vec = op1;
-            return LLVMInt32(splat);
-        }
-        else if (lIs248Splat(op1, &splat)) {
-            *vec = op0;
-            return LLVMInt32(splat);
-        }
-        else
-            return LLVMInt32(1);
-    }
-#endif
-    else
-        return NULL;
-}
-
-
-static void
-lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector, 
-                           llvm::Value *offsetScale, 
-                           llvm::Instruction *insertBefore) {
-    llvm::Value *uniformDelta = lExtractUniforms(offsetVector, insertBefore);
-    if (uniformDelta == NULL)
-        return;
-
-    llvm::Value *index[1] = { uniformDelta };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    *basePtr = llvm::GetElementPtrInst::Create(*basePtr, arrayRef, "new_base",
-                                               insertBefore);
-#else
-    *basePtr = llvm::GetElementPtrInst::Create(*basePtr, &index[0], 
-                                               &index[1], "new_base",
-                                               insertBefore);
-#endif
-
-    // this should only happen if we have only uniforms, but that in turn
-    // shouldn't be a gather/scatter!
-    Assert(*offsetVector != NULL);
-}
-
-
 struct GSInfo {
     GSInfo(const char *pgFuncName, const char *pgboFuncName, 
            const char *pgbo32FuncName, bool ig) 
@@ -1405,11 +1311,6 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         llvm::Value *offsetScale = lExtractOffsetVector248Scale(&offsetVector);
-
-        // If we're adding any smeared uniform values into the offset vector,
-        // move them over to be added to the base pointer
-        lExtractUniformsFromOffset(&basePtr, &offsetVector, offsetScale,
-                                   callInst);
 
         // Cast the base pointer to a void *, since that's what the
         // __pseudo_*_base_offsets_* functions want.
