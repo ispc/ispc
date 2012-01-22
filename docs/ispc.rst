@@ -3444,12 +3444,27 @@ pointer types.
 System Information
 ------------------
 
-A routine is available to find the number of CPU cores available in the
-system:
+The value of a  high-precision hardware clock counter is returned by the
+``clock()`` routine; its value increments by one each processor cycle.
+Thus, taking the difference between the values returned by ``clock()`` and
+different points in program execution gives the number of cycles between
+those points in the program.
 
 ::
 
-    int num_cores()
+    uniform int64 clock()
+
+Note that ``clock()`` flushes the processor pipeline.  It has an overhead
+of a hundred or so cycles, so for very fine-grained measurements, it may be
+worthwhile to measure the cost of calling ``clock()`` and subtracting that
+value from reported results.
+    
+A routine is also available to find the number of CPU cores available in
+the system:
+
+::
+
+    uniform int num_cores()
 
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.

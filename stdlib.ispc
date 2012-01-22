@@ -787,8 +787,12 @@ packed_store_active(uniform int * uniform a, int vals) {
 ///////////////////////////////////////////////////////////////////////////
 // System information
 
-static inline int num_cores() {
+static inline uniform int num_cores() {
     return __num_cores();
+}
+
+static inline uniform int64 clock() {
+    return __clock();
 }
 
 ///////////////////////////////////////////////////////////////////////////
