@@ -386,6 +386,7 @@ lSetInternalFunctions(llvm::Module *module) {
         "__ceil_uniform_float",
         "__ceil_varying_double",
         "__ceil_varying_float",
+        "__clock",
         "__count_trailing_zeros_i32",
         "__count_trailing_zeros_i64",
         "__count_leading_zeros_i32",
