@@ -176,6 +176,66 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
 }
 
 
+static llvm::Instruction *
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+          const char *name, llvm::Instruction *insertBefore = NULL) {
+    llvm::Value *args[2] = { arg0, arg1 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+#else
+    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[2],
+                                  name, insertBefore);
+#endif
+}
+
+
+static llvm::Instruction *
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+          llvm::Value *arg2, const char *name,
+          llvm::Instruction *insertBefore = NULL) {
+    llvm::Value *args[3] = { arg0, arg1, arg2 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+#else
+    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[3],
+                                  name, insertBefore);
+#endif
+}
+
+
+static llvm::Instruction *
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+          llvm::Value *arg2, llvm::Value *arg3, const char *name,
+          llvm::Instruction *insertBefore = NULL) {
+    llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+#else
+    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[4],
+                                  name, insertBefore);
+#endif
+}
+
+
+static llvm::Instruction *
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+          llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4,
+          const char *name, llvm::Instruction *insertBefore = NULL) {
+    llvm::Value *args[5] = { arg0, arg1, arg2, arg3, arg4 };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
+    return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
+#else
+    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[5],
+                                  name, insertBefore);
+#endif
+}
+
+///////////////////////////////////////////////////////////////////////////
+
 void
 Optimize(llvm::Module *module, int optLevel) {
     if (g->debugPrint) {
@@ -509,7 +569,6 @@ private:
 };
 
 char IntrinsicsOpt::ID = 0;
-llvm::RegisterPass<IntrinsicsOpt> sse("sse-constants", "Intrinsics Cleanup Pass");
 
 
 IntrinsicsOpt::IntrinsicsOpt() 
@@ -829,7 +888,6 @@ public:
 };
 
 char VSelMovmskOpt::ID = 0;
-llvm::RegisterPass<VSelMovmskOpt> vsel("vector-select", "Vector Select Pass");
 
 
 bool
@@ -918,7 +976,6 @@ public:
 
 char GatherScatterFlattenOpt::ID = 0;
 
-llvm::RegisterPass<GatherScatterFlattenOpt> gsf("gs-flatten", "Gather/Scatter Flatten Pass");
 
 
 /** Check to make sure that this value is actually a pointer in the end.
@@ -1345,17 +1402,9 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Value *newArgs[4] = { basePtr, offsetVector, offsetScale, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-            llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[4]);
             llvm::Instruction *newCall = 
-                llvm::CallInst::Create(gatherScatterFunc, newArgArray, "newgather",
-                                       (llvm::Instruction *)NULL);
-#else
-            llvm::Instruction *newCall = 
-                llvm::CallInst::Create(gatherScatterFunc, &newArgs[0], &newArgs[4],
-                                       "newgather");
-#endif
+                lCallInst(gatherScatterFunc, basePtr, offsetVector, offsetScale,
+                          mask, "newgather", NULL);
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -1366,18 +1415,9 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Value *newArgs[5] = { basePtr, offsetVector, offsetScale, 
-                                        storeValue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-            llvm::ArrayRef<llvm::Value *> newArgArray(&newArgs[0], &newArgs[5]);
             llvm::Instruction *newCall = 
-                llvm::CallInst::Create(gatherScatterFunc, newArgArray, "", 
-                                       (llvm::Instruction *)NULL);
-#else
-            llvm::Instruction *newCall = 
-                llvm::CallInst::Create(gatherScatterFunc, &newArgs[0], 
-                                       &newArgs[5]);
-#endif
+                lCallInst(gatherScatterFunc, basePtr, offsetVector, offsetScale,
+                          storeValue, mask, "", NULL);
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -1415,9 +1455,6 @@ public:
 
 
 char MaskedStoreOptPass::ID = 0;
-
-llvm::RegisterPass<MaskedStoreOptPass> mss("masked-store-scalarize",
-                                           "Masked Store Scalarize Pass");
 
 struct MSInfo {
     MSInfo(const char *name, const int a) 
@@ -1532,9 +1569,6 @@ public:
 
 char MaskedLoadOptPass::ID = 0;
 
-llvm::RegisterPass<MaskedLoadOptPass> ml("masked-load-improvements",
-                                         "Masked Load Improvements Pass");
-
 struct MLInfo {
     MLInfo(const char *name, const int a) 
         : align(a) {
@@ -1635,9 +1669,6 @@ public:
 
 
 char LowerMaskedStorePass::ID = 0;
-
-llvm::RegisterPass<LowerMaskedStorePass> lms("masked-store-lower",
-                                             "Lower Masked Store Pass");
 
 
 /** This routine attempts to determine if the given pointer in lvalue is
@@ -1741,15 +1772,7 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // Generate the call to the appropriate masked store function and
         // replace the __pseudo_* one with it.
         llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
-        llvm::Value *args[3] = { lvalue, rvalue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
-        llvm::Instruction *inst = llvm::CallInst::Create(fms, newArgArray, "", 
-                                                         callInst);
-#else
-        llvm::Instruction *inst = llvm::CallInst::Create(fms, &args[0], &args[3], "", 
-                                                         callInst);
-#endif
+        llvm::Instruction *inst = lCallInst(fms, lvalue, rvalue, mask, "", callInst);
         lCopyMetadata(inst, callInst);
 
         callInst->eraseFromParent();
@@ -1795,8 +1818,6 @@ public:
 
 char GSImprovementsPass::ID = 0;
 
-llvm::RegisterPass<GSImprovementsPass> gsi("gs-improvements",
-                                           "Gather/Scatter Improvements Pass");
 
 
 /** Given a vector of compile-time constant integer values, test to see if
@@ -2117,11 +2138,7 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             llvm::Value *firstOffset = 
                 llvm::ExtractElementInst::Create(offsets, LLVMInt32(0), "first_offset",
                                                  callInst);
-            llvm::Value *scaledOffset = 
-                llvm::BinaryOperator::Create(llvm::Instruction::Mul, firstOffset,
-                                             offsetScale, "scaled_offset", callInst);
-
-            llvm::Value *indices[1] = { scaledOffset };
+            llvm::Value *indices[1] = { firstOffset };
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[1]);
             llvm::Value *ptr = 
@@ -2141,17 +2158,9 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // access memory if the mask is all off (the location may
                 // be invalid in that case).
                 Debug(pos, "Transformed gather to scalar load and broadcast!");
-                llvm::Value *args[2] = { ptr, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-                llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
                 llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(gatherInfo->loadBroadcastFunc, newArgArray,
-                                           "load_broadcast", (llvm::Instruction *)NULL);
-#else
-                llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(gatherInfo->loadBroadcastFunc, &args[0], 
-                                           &args[2], "load_broadcast");
-#endif
+                    lCallInst(gatherInfo->loadBroadcastFunc, ptr, mask, 
+                              "load_braodcast");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }
@@ -2213,17 +2222,8 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
             if (gatherInfo != NULL) {
                 Debug(pos, "Transformed gather to unaligned vector load!");
-                llvm::Value *args[2] = { ptr, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-                llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
                 llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(gatherInfo->loadMaskedFunc, argArray, 
-                                           "masked_load", (llvm::Instruction *)NULL);
-#else
-                llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(gatherInfo->loadMaskedFunc, &args[0],
-                                           &args[2], "masked_load");
-#endif
+                    lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, "masked_load");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }
@@ -2231,18 +2231,9 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
                 ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", 
                                             callInst);
-
-                llvm::Value *args[3] = { ptr, storeValue, mask };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-                llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
-                llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(scatterInfo->maskedStoreFunc, argArray,
-                                           "", (llvm::Instruction *)NULL);
-#else
-                llvm::Instruction *newCall = 
-                    llvm::CallInst::Create(scatterInfo->maskedStoreFunc,
-                                           &args[0], &args[3], "");
-#endif
+                llvm::Instruction *newCall =
+                    lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, 
+                              mask, "");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
             }
@@ -2281,8 +2272,6 @@ public:
 
 char LowerGSPass::ID = 0;
 
-llvm::RegisterPass<LowerGSPass> lgs("lower-gs",
-                                    "Lower Gather/Scatter Pass");
 
 struct LowerGSInfo {
     LowerGSInfo(const char *pName, const char *aName, bool ig)
@@ -2422,9 +2411,6 @@ public:
 
 char IsCompileTimeConstantPass::ID = 0;
 
-llvm::RegisterPass<IsCompileTimeConstantPass> 
-    ctcrp("compile-time-constant", "Compile-Time Constant Resolve Pass");
-
 bool
 IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     llvm::Function *funcs[] = {
@@ -2519,10 +2505,6 @@ public:
 };
 
 char MakeInternalFuncsStaticPass::ID = 0;
-
-llvm::RegisterPass<MakeInternalFuncsStaticPass> 
-  mifsp("make-internal-funcs-static", "Make Internal Funcs Static Pass");
-
 
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
