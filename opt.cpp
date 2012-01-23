@@ -86,10 +86,10 @@
 
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateVSelMovmskOptPass();
-static llvm::Pass *CreateGatherScatterFlattenPass();
-static llvm::Pass *CreateGatherScatterImprovementsPass();
-static llvm::Pass *CreateLowerGatherScatterPass();
-static llvm::Pass *CreateLowerMaskedStorePass();
+static llvm::Pass *CreateDetectGSBaseOffsetsPass();
+static llvm::Pass *CreateGSToLoadStorePass();
+static llvm::Pass *CreatePseudoGSToGSPass();
+static llvm::Pass *CreatePseudoMaskedStorePass();
 static llvm::Pass *CreateMaskedStoreOptPass();
 static llvm::Pass *CreateMaskedLoadOptPass();
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
@@ -264,10 +264,10 @@ Optimize(llvm::Module *module, int optLevel) {
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
-        optPM.add(CreateGatherScatterFlattenPass());
+        optPM.add(CreateDetectGSBaseOffsetsPass());
         if (g->opt.disableHandlePseudoMemoryOps == false) {
-            optPM.add(CreateLowerGatherScatterPass());
-            optPM.add(CreateLowerMaskedStorePass());
+            optPM.add(CreatePseudoGSToGSPass());
+            optPM.add(CreatePseudoMaskedStorePass());
         }
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
@@ -302,7 +302,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
-        optPM.add(CreateGatherScatterFlattenPass());
+        optPM.add(CreateDetectGSBaseOffsetsPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createConstantPropagationPass());
 
@@ -353,12 +353,12 @@ Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
-        optPM.add(CreateLowerMaskedStorePass());
+        optPM.add(CreatePseudoMaskedStorePass());
         if (!g->opt.disableGatherScatterOptimizations)
-            optPM.add(CreateGatherScatterImprovementsPass());
+            optPM.add(CreateGSToLoadStorePass());
         if (g->opt.disableHandlePseudoMemoryOps == false) {
-            optPM.add(CreateLowerMaskedStorePass());
-            optPM.add(CreateLowerGatherScatterPass());
+            optPM.add(CreatePseudoMaskedStorePass());
+            optPM.add(CreatePseudoGSToGSPass());
         }
         if (!g->opt.disableMaskAllOnOptimizations) {
             optPM.add(CreateMaskedStoreOptPass());
@@ -953,7 +953,7 @@ CreateVSelMovmskOptPass() {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// GatherScatterFlattenOpt
+// DetectGSBaseOffsetsPass
 
 /** When the front-end emits gathers and scatters, it generates an array of
     vector-width pointers to represent the set of addresses to read from or
@@ -965,16 +965,16 @@ CreateVSelMovmskOptPass() {
     See for example the comments discussing the __pseudo_gather functions
     in builtins.cpp for more information about this.
  */
-class GatherScatterFlattenOpt : public llvm::BasicBlockPass {
+class DetectGSBaseOffsetsPass : public llvm::BasicBlockPass {
 public:
     static char ID;
-    GatherScatterFlattenOpt() : BasicBlockPass(ID) { }
+    DetectGSBaseOffsetsPass() : BasicBlockPass(ID) { }
 
     const char *getPassName() const { return "Gather/Scatter Flattening"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
-char GatherScatterFlattenOpt::ID = 0;
+char DetectGSBaseOffsetsPass::ID = 0;
 
 
 
@@ -1293,7 +1293,7 @@ struct GSInfo {
 
 
 bool
-GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
+DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     GSInfo gsFuncs[] = {
         GSInfo("__pseudo_gather32_8",  "__pseudo_gather_base_offsets32_8",
                "__pseudo_gather_base_offsets32_8", true),
@@ -1430,8 +1430,8 @@ GatherScatterFlattenOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 
 static llvm::Pass *
-CreateGatherScatterFlattenPass() {
-    return new GatherScatterFlattenOpt;
+CreateDetectGSBaseOffsetsPass() {
+    return new DetectGSBaseOffsetsPass;
 }
 
 
@@ -1652,23 +1652,23 @@ CreateMaskedLoadOptPass() {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// LowerMaskedStorePass
+// PseudoMaskedStorePass
 
 /** When the front-end needs to do a masked store, it emits a
     __pseudo_masked_store* call as a placeholder.  This pass lowers these
     calls to either __masked_store* or __masked_store_blend* calls.  
 */
-class LowerMaskedStorePass : public llvm::BasicBlockPass {
+class PseudoMaskedStorePass : public llvm::BasicBlockPass {
 public:
     static char ID;
-    LowerMaskedStorePass() : BasicBlockPass(ID) { }
+    PseudoMaskedStorePass() : BasicBlockPass(ID) { }
 
     const char *getPassName() const { return "Lower Masked Stores"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
 
-char LowerMaskedStorePass::ID = 0;
+char PseudoMaskedStorePass::ID = 0;
 
 
 /** This routine attempts to determine if the given pointer in lvalue is
@@ -1727,7 +1727,7 @@ struct LMSInfo {
 
 
 bool
-LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
+PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     LMSInfo msInfo[] = {
         LMSInfo("__pseudo_masked_store_8", "__masked_store_blend_8", 
                 "__masked_store_8"),
@@ -1784,12 +1784,12 @@ LowerMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 
 static llvm::Pass *
-CreateLowerMaskedStorePass() {
-    return new LowerMaskedStorePass;
+CreatePseudoMaskedStorePass() {
+    return new PseudoMaskedStorePass;
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// GSImprovementsPass
+// GSToLoadStorePass
 
 /** After earlier optimization passes have run, we are sometimes able to
     determine that gathers/scatters are actually accessing memory in a more
@@ -1806,17 +1806,17 @@ CreateLowerMaskedStorePass() {
     shuffle or things that could be handled with hybrids of e.g. 2 4-wide
     vector loads with AVX, etc.
 */
-class GSImprovementsPass : public llvm::BasicBlockPass {
+class GSToLoadStorePass : public llvm::BasicBlockPass {
 public:
     static char ID;
-    GSImprovementsPass() : BasicBlockPass(ID) { }
+    GSToLoadStorePass() : BasicBlockPass(ID) { }
 
     const char *getPassName() const { return "Gather/Scatter Improvements"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
 
-char GSImprovementsPass::ID = 0;
+char GSToLoadStorePass::ID = 0;
 
 
 
@@ -2033,7 +2033,7 @@ struct ScatterImpInfo {
     
 
 bool
-GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     GatherImpInfo gInfo[] = {
         GatherImpInfo("__pseudo_gather_base_offsets32_8", "__load_and_broadcast_8",
                       "__masked_load_8", 1),
@@ -2248,29 +2248,29 @@ GSImprovementsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 
 static llvm::Pass *
-CreateGatherScatterImprovementsPass() {
-    return new GSImprovementsPass;
+CreateGSToLoadStorePass() {
+    return new GSToLoadStorePass;
 }
 
 
 ///////////////////////////////////////////////////////////////////////////
-// LowerGSPass
+// PseudoGSToGSPass
 
-/** For any gathers and scatters remaining after the GSImprovementsPass
+/** For any gathers and scatters remaining after the GSToLoadStorePass
     runs, we need to turn them into actual native gathers and scatters.
-    This task is handled by the LowerGSPass here.
+    This task is handled by the PseudoGSToGSPass here.
  */
-class LowerGSPass : public llvm::BasicBlockPass {
+class PseudoGSToGSPass : public llvm::BasicBlockPass {
 public:
     static char ID;
-    LowerGSPass() : BasicBlockPass(ID) { }
+    PseudoGSToGSPass() : BasicBlockPass(ID) { }
 
     const char *getPassName() const { return "Gather/Scatter Improvements"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
 
-char LowerGSPass::ID = 0;
+char PseudoGSToGSPass::ID = 0;
 
 
 struct LowerGSInfo {
@@ -2287,7 +2287,7 @@ struct LowerGSInfo {
 
 
 bool
-LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     LowerGSInfo lgsInfo[] = {
         LowerGSInfo("__pseudo_gather_base_offsets32_8",  "__gather_base_offsets32_i8",  true),
         LowerGSInfo("__pseudo_gather_base_offsets32_16", "__gather_base_offsets32_i16", true),
@@ -2375,8 +2375,8 @@ LowerGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 
 static llvm::Pass *
-CreateLowerGatherScatterPass() {
-    return new LowerGSPass;
+CreatePseudoGSToGSPass() {
+    return new PseudoGSToGSPass;
 }
 
 
