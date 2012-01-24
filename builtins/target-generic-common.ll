@@ -289,18 +289,18 @@ declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
 
 define(`gather_scatter', `
 declare <WIDTH x $1> @__gather_base_offsets32_$1(i8 * nocapture, <WIDTH x i32>,
-                        i32, <WIDTH x i1>) nounwind readonly 
+                        i32, <WIDTH x i32>, <WIDTH x i1>) nounwind readonly 
 declare <WIDTH x $1> @__gather_base_offsets64_$1(i8 * nocapture, <WIDTH x i64>,
-                        i32, <WIDTH x i1>) nounwind readonly 
+                        i32, <WIDTH x i64>, <WIDTH x i1>) nounwind readonly 
 declare <WIDTH x $1> @__gather32_$1(<WIDTH x i32>, 
                                     <WIDTH x i1>) nounwind readonly 
 declare <WIDTH x $1> @__gather64_$1(<WIDTH x i64>, 
                                     <WIDTH x i1>) nounwind readonly 
 
 declare void @__scatter_base_offsets32_$1(i8* nocapture, <WIDTH x i32>,
-                  i32, <WIDTH x $1>, <WIDTH x i1>) nounwind 
+                  i32, <WIDTH x i32>, <WIDTH x $1>, <WIDTH x i1>) nounwind 
 declare void @__scatter_base_offsets64_$1(i8* nocapture, <WIDTH x i64>,
-                  i32, <WIDTH x $1>, <WIDTH x i1>) nounwind 
+                  i32, <WIDTH x i64>, <WIDTH x $1>, <WIDTH x i1>) nounwind 
 declare void @__scatter32_$1(<WIDTH x i32>, <WIDTH x $1>,
                              <WIDTH x i1>) nounwind 
 declare void @__scatter64_$1(<WIDTH x i64>, <WIDTH x $1>,
