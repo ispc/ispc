@@ -822,6 +822,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module,
                            symbolTable);
 
+    lDefineConstantInt("__have_native_half", (g->target.isa == Target::AVX2),
+                       module, symbolTable);
+
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its

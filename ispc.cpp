@@ -210,7 +210,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
-        t->attributes = "+avx2,+popcnt,+cmov";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
         t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
@@ -219,7 +219,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 16;
         t->vectorWidth = 16;
-        t->attributes = "+avx2,+popcnt,+cmov";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
         t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;

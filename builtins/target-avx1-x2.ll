@@ -59,6 +59,14 @@ define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonl
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; half conversion routines
+
+declare float @__half_to_float_uniform(i16 %v) nounwind readnone
+declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
+declare i16 @__float_to_half_uniform(float %v) nounwind readnone
+declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 
 gen_gather(16, i8)
