@@ -2187,9 +2187,9 @@ return:
 define(`gen_masked_store', `
 define void @__masked_store_$3(<$1 x $2>* nocapture, <$1 x $2>, <$1 x i32>) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %2, `
-      %ptr_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
-      %storeval_ID = extractelement <$1 x $2> %1, i32 LANE
-      store $2 %storeval_ID, $2 * %ptr_ID')
+      %ptr_LANE_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
+      %storeval_LANE_ID = extractelement <$1 x $2> %1, i32 LANE
+      store $2 %storeval_LANE_ID, $2 * %ptr_LANE_ID')
   ret void
 }
 ')
@@ -2644,7 +2644,7 @@ pl_known_mask:
 pl_all_on:
   ;; the mask is all on--just expand the code for each lane sequentially
   forloop(i, 0, eval($1-1), 
-          `patsubst(`$3', `ID\|LANE', i)')
+          `patsubst(`$3', `LANE', i)')
   br label %pl_done
 
 pl_unknown_mask:
@@ -2806,11 +2806,11 @@ define <$1 x $2> @__gather32_$2(<$1 x i32> %ptrs,
                                 <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <$1 x $2>
   per_lane($1, <$1 x i32> %vecmask, `
-  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
-  %val_ID = load $2 * %ptr_ID
-  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
-  store $2 %val_ID, $2 * %store_ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = load $2 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_LANE_ID, $2 * %store_ptr_LANE_ID
  ')
 
   %ret = load <$1 x $2> * %ret_ptr
@@ -2822,11 +2822,11 @@ define <$1 x $2> @__gather64_$2(<$1 x i64> %ptrs,
                                 <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <$1 x $2>
   per_lane($1, <$1 x i32> %vecmask, `
-  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
-  %val_ID = load $2 * %ptr_ID
-  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
-  store $2 %val_ID, $2 * %store_ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = load $2 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_LANE_ID, $2 * %store_ptr_LANE_ID
  ')
 
   %ret = load <$1 x $2> * %ret_ptr
@@ -2910,10 +2910,10 @@ define void @__scatter_base_offsets64_$2(i8* %base, <$1 x i64> %offsets, i32 %of
 define void @__scatter32_$2(<$1 x i32> %ptrs, <$1 x $2> %values,
                             <$1 x i32> %mask) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %mask, `
-  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
-  %val_ID = extractelement <$1 x $2> %values, i32 LANE
-  store $2 %val_ID, $2 * %ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_LANE_ID, $2 * %ptr_LANE_ID
  ')
   ret void
 }
@@ -2922,10 +2922,10 @@ define void @__scatter32_$2(<$1 x i32> %ptrs, <$1 x $2> %values,
 define void @__scatter64_$2(<$1 x i64> %ptrs, <$1 x $2> %values,
                             <$1 x i32> %mask) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %mask, `
-  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
-  %val_ID = extractelement <$1 x $2> %values, i32 LANE
-  store $2 %val_ID, $2 * %ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_LANE_ID, $2 * %ptr_LANE_ID
  ')
   ret void
 }
