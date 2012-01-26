@@ -266,7 +266,8 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
         funArgs->push_back(sym);
     }
 
-    funSym->type = funSym->type->ResolveUnboundVariability(Type::Varying);
+    if (funSym != NULL)
+        funSym->type = funSym->type->ResolveUnboundVariability(Type::Varying);
 
     return funSym;
 }
