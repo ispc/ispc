@@ -38,6 +38,8 @@ parser.add_option("-c", "--compiler", dest="compiler_exe", help="Compiler binary
                   default=None)
 parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
                   default=False, action="store_true")
+parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs to run in parallel',
+                  default="1024", type="int")
 parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
 if not is_windows:
@@ -54,7 +56,7 @@ else:
 if not is_windows:
     ispc_exe = "./ispc"
 else:
-    ispc_exe = "Release/ispc.exe"
+    ispc_exe = "../Release/ispc.exe"
 
 is_generic_target = options.target.find("generic-") != -1
 if is_generic_target and options.include_file == None:
@@ -83,7 +85,7 @@ else:
     files = [ ]
     for f in args:
         if os.path.splitext(string.lower(f))[1] != ".ispc":
-            print "Ignoring file %s, which doesn't have an .ispc extension." % f
+            sys.stdout.write("Ignoring file %s, which doesn't have an .ispc extension.\n" % f)
         else:
             files += [ f ]
 
@@ -218,7 +220,7 @@ def run_test(filename):
                     obj_name = "%s%s.obj" % (input_prefix, filename)
                 exe_name = "%s%s.exe" % (input_prefix, filename)
 
-                cc_cmd = "%s /I. /Iwinstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
+                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
                          (options.compiler_exe, match, input_prefix, obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
@@ -256,8 +258,8 @@ def run_test(filename):
             if not run_error:
                 os.unlink(exe_name)
                 if is_windows:
-                    os.unlink(filename + ".pdb")
-                    os.unlink(filename + ".ilk")
+                    os.unlink("%s%s.pdb" % (input_prefix, filename))
+                    os.unlink("%s%s.ilk" % (input_prefix, filename))
             os.unlink(obj_name)
         except:
             None
@@ -314,12 +316,14 @@ if __name__ == '__main__':
     compile_error_files = [ ]
     run_error_files = [ ]
 
-    nthreads = multiprocessing.cpu_count()
-    print "Found %d CPUs. Running %d tests." % (nthreads, total_tests)
+    nthreads = min(multiprocessing.cpu_count(), options.num_jobs)
+    sys.stdout.write("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests))
 
     # put each of the test filenames into a queue
     q = multiprocessing.Queue()
     for fn in files:
+        if is_windows:
+            fn = fn.replace("\\",'/')
         q.put(fn)
     for x in range(nthreads):
         q.put('STOP')
@@ -339,7 +343,7 @@ if __name__ == '__main__':
     # (i.e. return 0 if all is ok)
     for t in task_threads:
         t.join()
-    print
+    sys.stdout.write("\n")
 
     while not qret.empty():
         (c, r) = qret.get()
