@@ -39,6 +39,7 @@
 #define ISPC_CTX_H 1
 
 #include "ispc.h"
+#include <map>
 #include <llvm/InstrTypes.h>
 #include <llvm/Instructions.h>
 #include <llvm/Analysis/DIBuilder.h>
@@ -160,10 +161,8 @@ public:
     void EndLoop();
 
     /** Indicates that code generation for a 'foreach' or 'foreach_tiled'
-        loop is about to start.  The provided basic block pointer indicates
-        where control flow should go if a 'continue' statement is executed
-        in the loop. */
-    void StartForeach(llvm::BasicBlock *continueTarget);
+        loop is about to start. */
+    void StartForeach();
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck
@@ -186,11 +185,61 @@ public:
         previous iteration. */
     void RestoreContinuedLanes();
 
+    /** Indicates that code generation for a "switch" statement is about to
+        start.  isUniform indicates whether the "switch" value is uniform,
+        and bbAfterSwitch gives the basic block immediately following the
+        "switch" statement.  (For example, if the switch condition is
+        uniform, we jump here upon executing a "break" statement.) */
+    void StartSwitch(bool isUniform, llvm::BasicBlock *bbAfterSwitch);
+    /** Indicates the end of code generation for a "switch" statement. */
+    void EndSwitch();
+
+    /** Emits code for a "switch" statement in the program.
+        @param expr         Gives the value of the expression after the "switch"
+        @param defaultBlock Basic block to execute for the "default" case.  This
+                            should be NULL if there is no "default" label inside
+                            the switch.
+        @param caseBlocks   vector that stores the mapping from label values
+                            after "case" statements to basic blocks corresponding
+                            to the "case" labels.
+        @param nextBlocks   For each basic block for a "case" or "default" 
+                            label, this gives the basic block for the 
+                            immediately-following "case" or "default" label (or
+                            the basic block after the "switch" statement for the
+                            last label.)
+    */
+    void SwitchInst(llvm::Value *expr, llvm::BasicBlock *defaultBlock,
+                    const std::vector<std::pair<int, llvm::BasicBlock *> > &caseBlocks,
+                    const std::map<llvm::BasicBlock *, llvm::BasicBlock *> &nextBlocks);
+
+    /** Generates code for a "default" label after a "switch" statement.
+        The checkMask parameter indicates whether additional code should be
+        generated to check to see if the execution mask is all off after
+        the default label (in which case a jump to the following label will
+        be issued. */
+    void EmitDefaultLabel(bool checkMask, SourcePos pos);
+
+    /** Generates code for a "case" label after a "switch" statement.  See
+        the documentation for EmitDefaultLabel() for discussion of the
+        checkMask parameter. */
+    void EmitCaseLabel(int value, bool checkMask, SourcePos pos);
+
     /** Returns the current number of nested levels of 'varying' control
         flow */
     int VaryingCFDepth() const;
 
     bool InForeachLoop() const;
+
+    void SetContinueTarget(llvm::BasicBlock *bb) { continueTarget = bb; }
+
+    /** Step through the code and find label statements; create a basic
+        block for each one, so that subsequent calls to
+        GetLabeledBasicBlock() return the corresponding basic block. */
+    void InitializeLabelMap(Stmt *code);
+
+    /** If there is a label in the function with the given name, return the
+        new basic block that it starts. */
+    llvm::BasicBlock *GetLabeledBasicBlock(const std::string &label);
 
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
@@ -210,6 +259,10 @@ public:
     /** Given a boolean mask value of type LLVMTypes::MaskType, return an
         i1 value that indicates if all of the mask lanes are on. */
     llvm::Value *All(llvm::Value *mask);
+
+    /** Given a boolean mask value of type LLVMTypes::MaskType, return an
+        i1 value that indicates if all of the mask lanes are off. */
+    llvm::Value *None(llvm::Value *mask);
 
     /** Given a boolean mask value of type LLVMTypes::MaskType, return an
         i32 value wherein the i'th bit is on if and only if the i'th lane
@@ -446,6 +499,9 @@ private:
     /** Pointer to the Function for which we're currently generating code. */
     Function *function;
 
+    /** LLVM function representation for the current function. */
+    llvm::Function *llvmFunction;
+
     /** The basic block into which we add any alloca instructions that need
         to go at the very start of the function. */
     llvm::BasicBlock *allocaBlock;
@@ -479,10 +535,10 @@ private:
         the loop. */
     llvm::Value *loopMask;
 
-    /** If currently in a loop body, this is a pointer to memory to store a
-        mask value that represents which of the lanes have executed a
-        'break' statement.  If we're not in a loop body, this should be
-        NULL. */
+    /** If currently in a loop body or switch statement, this is a pointer
+        to memory to store a mask value that represents which of the lanes
+        have executed a 'break' statement.  If we're not in a loop body or
+        switch, this should be NULL. */
     llvm::Value *breakLanesPtr;
 
     /** Similar to breakLanesPtr, if we're inside a loop, this is a pointer
@@ -490,15 +546,48 @@ private:
         'continue' statement. */
     llvm::Value *continueLanesPtr;
 
-    /** If we're inside a loop, this gives the basic block immediately
-        after the current loop, which we will jump to if all of the lanes
-        have executed a break statement or are otherwise done with the
-        loop. */
+    /** If we're inside a loop or switch statement, this gives the basic
+        block immediately after the current loop or switch, which we will
+        jump to if all of the lanes have executed a break statement or are
+        otherwise done with it. */
     llvm::BasicBlock *breakTarget;
 
     /** If we're inside a loop, this gives the block to jump to if all of
         the running lanes have executed a 'continue' statement. */
     llvm::BasicBlock *continueTarget;
+
+    /** @name Switch statement state
+
+        These variables store various state that's active when we're
+        generating code for a switch statement.  They should all be NULL
+        outside of a switch.
+        @{
+    */
+
+    /** The value of the expression used to determine which case in the
+        statements after the switch to execute. */
+    llvm::Value *switchExpr;
+
+    /** Map from case label numbers to the basic block that will hold code
+        for that case. */
+    const std::vector<std::pair<int, llvm::BasicBlock *> > *caseBlocks;
+
+    /** The basic block of code to run for the "default" label in the
+        switch statement. */
+    llvm::BasicBlock *defaultBlock;
+
+    /** For each basic block for the code for cases (and the default label,
+        if present), this map gives the basic block for the immediately
+        following case/default label. */
+    const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *nextBlocks;
+
+    /** Records whether the switch condition was uniform; this is a
+        distinct notion from whether the switch represents uniform or
+        varying control flow; we may have varying control flow from a
+        uniform switch condition if there is a 'break' inside the switch
+        that's under varying control flow. */
+    bool switchConditionWasUniform;
+    /** @} */
 
     /** A pointer to memory that records which of the program instances
         have executed a 'return' statement (and are thus really truly done
@@ -537,9 +626,13 @@ private:
         tasks launched from the current function. */
     llvm::Value *launchGroupHandlePtr;
 
+    std::map<std::string, llvm::BasicBlock *> labelMap;
+
+    static bool initLabelBBlocks(ASTNode *node, void *data);
+
     llvm::Value *pointerVectorToVoidPointers(llvm::Value *value);
     static void addGSMetadata(llvm::Value *inst, SourcePos pos);
-    bool ifsInLoopAllUniform() const;
+    bool ifsInCFAllUniform(int cfType) const;
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
@@ -547,6 +640,11 @@ private:
                                  const Type *ptrType);
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
+    void addSwitchMaskCheck(llvm::Value *mask);
+    bool inSwitchStatement() const;
+    llvm::Value *getMaskAtSwitchEntry();
+
+    CFInfo *popCFState();
 
     void scatter(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, 
                  llvm::Value *mask);

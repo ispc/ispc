@@ -3,6 +3,11 @@
 #
 
 ARCH_OS = $(shell uname)
+ifeq ($(ARCH_OS), Darwin)
+	ARCH_OS2 = "OSX"
+else
+	ARCH_OS2 = $(shell uname -o)
+endif
 ARCH_TYPE = $(shell arch)
 
 ifeq ($(shell llvm-config --version), 3.1svn)
@@ -26,7 +31,15 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
 
 ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
-	-lpthread -ldl
+	-lpthread
+
+ifeq ($(ARCH_OS),Linux)
+	ISPC_LIBS += -ldl
+endif
+
+ifeq ($(ARCH_OS2),Msys)
+	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
+endif
 
 LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
 LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
@@ -58,7 +71,8 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=avx avx-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 generic-16
+TARGETS=avx1 avx1-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 \
+	generic-16
 BUILTINS_SRC=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS))) \
 	builtins/dispatch.ll
 BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC:.ll=.o))) \
@@ -129,22 +143,22 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 
 objs/builtins-%.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
-	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | ./bitcode2cpp.py $< > $@
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | python bitcode2cpp.py $< > $@
 
 objs/builtins-c-32.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-32 > $@
+	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-32 > $@
 
 objs/builtins-c-64.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | ./bitcode2cpp.py c-64 > $@
+	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-64 > $@
 
 objs/stdlib_generic_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for generic
 	@$(CLANG) -E -x c -DISPC_TARGET_GENERIC=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		./stdlib2cpp.py generic > $@
+		python stdlib2cpp.py generic > $@
 
 objs/stdlib_x86_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for x86
 	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		./stdlib2cpp.py x86 > $@
+		python stdlib2cpp.py x86 > $@

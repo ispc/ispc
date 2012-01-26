@@ -38,11 +38,22 @@
 #ifndef ISPC_LLVMUTIL_H
 #define ISPC_LLVMUTIL_H 1
 
-#include "ispc.h"
 #include <llvm/LLVMContext.h>
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
 #include <llvm/Constants.h>
+
+namespace llvm {
+    class PHINode;
+    class InsertElementInst;
+}
+
+// llvm::Type *s are no longer const in llvm 3.0
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+#define LLVM_TYPE_CONST
+#else
+#define LLVM_TYPE_CONST const
+#endif
 
 
 /** This structure holds pointers to a variety of LLVM types; code
@@ -99,6 +110,7 @@ extern llvm::Constant *LLVMTrue, *LLVMFalse;
     of LLVMTypes and the LLVMTrue/LLVMFalse constants.  However, it can't
     be called until the compilation target is known.
  */
+struct Target;
 extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target target);
 
 /** Returns an LLVM i8 constant of the given value */
@@ -204,5 +216,14 @@ extern llvm::Constant *LLVMDoubleVector(const double *f);
 extern llvm::Constant *LLVMMaskAllOn;
 /** LLVM constant value representing an 'all off' SIMD lane mask */
 extern llvm::Constant *LLVMMaskAllOff;
+
+/** Tests to see if all of the elements of the vector in the 'v' parameter
+    are equal.  Like lValuesAreEqual(), this is a conservative test and may
+    return false for arrays where the values are actually all equal.  */
+extern bool LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
+                                     std::vector<llvm::PHINode *> &seenPhis);
+
+void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
+                            llvm::Value **elements);
 
 #endif // ISPC_LLVMUTIL_H

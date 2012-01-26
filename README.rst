@@ -47,7 +47,7 @@ remarkable `LLVM Compiler Infrastructure <http://llvm.org>`_ for back-end
 code generation and optimization and is `hosted on
 github <http://github.com/ispc/ispc/>`_. It supports Windows, Mac, and
 Linux, with both x86 and x86-64 targets.  It currently supports the SSE2,
-SSE4, and AVX instruction sets.
+SSE4, AVX1, and AVX2 instruction sets.
 
 Features
 --------

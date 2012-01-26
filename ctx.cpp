@@ -74,18 +74,35 @@ struct CFInfo {
                               llvm::Value *savedContinueLanesPtr,
                               llvm::Value *savedMask, llvm::Value *savedLoopMask);
 
+    static CFInfo *GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
+                             llvm::BasicBlock *continueTarget, 
+                             llvm::Value *savedBreakLanesPtr,
+                             llvm::Value *savedContinueLanesPtr,
+                             llvm::Value *savedMask, llvm::Value *savedLoopMask,
+                             llvm::Value *switchExpr,
+                             llvm::BasicBlock *bbDefault,
+                             const std::vector<std::pair<int, llvm::BasicBlock *> > *bbCases,
+                             const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbNext,
+                             bool scUniform);
+    
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
     bool IsForeach() { return type == Foreach; }
-    bool IsVaryingType() { return !isUniform; }
+    bool IsSwitch() { return type == Switch; }
+    bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop, Foreach };
+    enum CFType { If, Loop, Foreach, Switch };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
     llvm::Value *savedBreakLanesPtr, *savedContinueLanesPtr;
     llvm::Value *savedMask, *savedLoopMask;
+    llvm::Value *savedSwitchExpr;
+    llvm::BasicBlock *savedDefaultBlock;
+    const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCaseBlocks;
+    const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNextBlocks;
+    bool savedSwitchConditionWasUniform;
 
 private:
     CFInfo(CFType t, bool uniformIf, llvm::Value *sm) {
@@ -95,11 +112,18 @@ private:
         savedBreakTarget = savedContinueTarget = NULL;
         savedBreakLanesPtr = savedContinueLanesPtr = NULL;
         savedMask = savedLoopMask = sm;
+        savedSwitchExpr = NULL;
+        savedDefaultBlock = NULL;
+        savedCaseBlocks = NULL;
+        savedNextBlocks = NULL;
     }
     CFInfo(CFType t, bool iu, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
            llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
-           llvm::Value *lm) {
-        Assert(t == Loop);
+           llvm::Value *lm, llvm::Value *sse = NULL, llvm::BasicBlock *bbd = NULL, 
+           const std::vector<std::pair<int, llvm::BasicBlock *> > *bbc = NULL,
+           const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *bbn = NULL,
+           bool scu = false) {
+        Assert(t == Loop || t == Switch);
         type = t;
         isUniform = iu;
         savedBreakTarget = bt;
@@ -108,6 +132,11 @@ private:
         savedContinueLanesPtr = sc;
         savedMask = sm;
         savedLoopMask = lm;
+        savedSwitchExpr = sse;
+        savedDefaultBlock = bbd;
+        savedCaseBlocks = bbc;
+        savedNextBlocks = bbn;
+        savedSwitchConditionWasUniform = scu;
     }
     CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
            llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
@@ -121,6 +150,10 @@ private:
         savedContinueLanesPtr = sc;
         savedMask = sm;
         savedLoopMask = lm;
+        savedSwitchExpr = NULL;
+        savedDefaultBlock = NULL;
+        savedCaseBlocks = NULL;
+        savedNextBlocks = NULL;
     }
 };
 
@@ -154,12 +187,30 @@ CFInfo::GetForeach(llvm::BasicBlock *breakTarget,
                       savedMask, savedForeachMask);
 }
 
+
+CFInfo *
+CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
+                  llvm::BasicBlock *continueTarget, 
+                  llvm::Value *savedBreakLanesPtr,
+                  llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
+                  llvm::Value *savedLoopMask, llvm::Value *savedSwitchExpr,
+                  llvm::BasicBlock *savedDefaultBlock,
+                  const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCases,
+                  const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
+                  bool savedSwitchConditionUniform) {
+    return new CFInfo(Switch, isUniform, breakTarget, continueTarget, 
+                      savedBreakLanesPtr, savedContinueLanesPtr,
+                      savedMask, savedLoopMask, savedSwitchExpr, savedDefaultBlock, 
+                      savedCases, savedNext, savedSwitchConditionUniform);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
-                                         llvm::Function *llvmFunction,
+                                         llvm::Function *lf,
                                          SourcePos firstStmtPos) {
     function = func;
+    llvmFunction = lf;
 
     /* Create a new basic block to store all of the allocas */
     allocaBlock = llvm::BasicBlock::Create(*g->ctx, "allocas", llvmFunction, 0);
@@ -180,6 +231,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     loopMask = NULL;
     breakLanesPtr = continueLanesPtr = NULL;
     breakTarget = continueTarget = NULL;
+
+    switchExpr = NULL;
+    caseBlocks = NULL;
+    defaultBlock = NULL;
+    nextBlocks = NULL;
 
     returnedLanesPtr = AllocaInst(LLVMTypes::MaskType, "returned_lanes_memory");
     StoreInst(LLVMMaskAllOff, returnedLanesPtr);
@@ -421,51 +477,61 @@ FunctionEmitContext::StartVaryingIf(llvm::Value *oldMask) {
 
 void
 FunctionEmitContext::EndIf() {
+    CFInfo *ci = popCFState();
     // Make sure we match up with a Start{Uniform,Varying}If().
-    Assert(controlFlowInfo.size() > 0 && controlFlowInfo.back()->IsIf());
-    CFInfo *ci = controlFlowInfo.back();
-    controlFlowInfo.pop_back();
+    Assert(ci->IsIf());
 
     // 'uniform' ifs don't change the mask so we only need to restore the
     // mask going into the if for 'varying' if statements
-    if (!ci->IsUniform() && bblock != NULL) {
-        // We can't just restore the mask as it was going into the 'if'
-        // statement.  First we have to take into account any program
-        // instances that have executed 'return' statements; the restored
-        // mask must be off for those lanes.
-        restoreMaskGivenReturns(ci->savedMask);
+    if (ci->IsUniform() || bblock == NULL)
+        return;
 
-        // If the 'if' statement is inside a loop with a 'varying'
-        // consdition, we also need to account for any break or continue
-        // statements that executed inside the 'if' statmeent; we also must
-        // leave the lane masks for the program instances that ran those
-        // off after we restore the mask after the 'if'.  The code below
-        // ends up being optimized out in the case that there were no break
-        // or continue statements (and breakLanesPtr and continueLanesPtr
-        // have their initial 'all off' values), so we don't need to check
-        // for that here.
-        if (continueLanesPtr != NULL) {
-            // We want to compute:
-            // newMask = (oldMask & ~(breakLanes | continueLanes))
-            llvm::Value *oldMask = GetInternalMask();
-            llvm::Value *continueLanes = LoadInst(continueLanesPtr,
-                                                  "continue_lanes");
-            llvm::Value *bcLanes = continueLanes;
+    // We can't just restore the mask as it was going into the 'if'
+    // statement.  First we have to take into account any program
+    // instances that have executed 'return' statements; the restored
+    // mask must be off for those lanes.
+    restoreMaskGivenReturns(ci->savedMask);
 
-            if (breakLanesPtr != NULL) {
-                // breakLanesPtr will be NULL if we're inside a 'foreach' loop
-                llvm::Value *breakLanes = LoadInst(breakLanesPtr, "break_lanes");
-                bcLanes = BinaryOperator(llvm::Instruction::Or, breakLanes, 
-                                         continueLanes, "break|continue_lanes");
-            }
+    // If the 'if' statement is inside a loop with a 'varying'
+    // condition, we also need to account for any break or continue
+    // statements that executed inside the 'if' statmeent; we also must
+    // leave the lane masks for the program instances that ran those
+    // off after we restore the mask after the 'if'.  The code below
+    // ends up being optimized out in the case that there were no break
+    // or continue statements (and breakLanesPtr and continueLanesPtr
+    // have their initial 'all off' values), so we don't need to check
+    // for that here.
+    // 
+    // There are three general cases to deal with here:
+    // - Loops: both break and continue are allowed, and thus the corresponding
+    //   lane mask pointers are non-NULL
+    // - Foreach: only continueLanesPtr may be non-NULL
+    // - Switch: only breakLanesPtr may be non-NULL
+    if (continueLanesPtr != NULL || breakLanesPtr != NULL) {
+        // We want to compute:
+        // newMask = (oldMask & ~(breakLanes | continueLanes)),
+        // treading breakLanes or continueLanes as "all off" if the
+        // corresponding pointer is NULL.
+        llvm::Value *bcLanes = NULL;
 
-            llvm::Value *notBreakOrContinue = 
-                NotOperator(bcLanes, "!(break|continue)_lanes");
-            llvm::Value *newMask = 
-                BinaryOperator(llvm::Instruction::And, oldMask, 
-                               notBreakOrContinue, "new_mask");
-            SetInternalMask(newMask);
+        if (continueLanesPtr != NULL)
+            bcLanes = LoadInst(continueLanesPtr, "continue_lanes");
+        else
+            bcLanes = LLVMMaskAllOff;
+
+        if (breakLanesPtr != NULL) {
+            llvm::Value *breakLanes = LoadInst(breakLanesPtr, "break_lanes");
+            bcLanes = BinaryOperator(llvm::Instruction::Or, bcLanes, 
+                                     breakLanes, "|break_lanes");
         }
+
+        llvm::Value *notBreakOrContinue = 
+            NotOperator(bcLanes, "!(break|continue)_lanes");
+        llvm::Value *oldMask = GetInternalMask();
+        llvm::Value *newMask = 
+            BinaryOperator(llvm::Instruction::And, oldMask, 
+                           notBreakOrContinue, "new_mask");
+        SetInternalMask(newMask);
     }
 }
 
@@ -501,17 +567,8 @@ FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
 
 void
 FunctionEmitContext::EndLoop() {
-    Assert(controlFlowInfo.size() && controlFlowInfo.back()->IsLoop());
-    CFInfo *ci = controlFlowInfo.back();
-    controlFlowInfo.pop_back();
-
-    // Restore the break/continue state information to what it was before
-    // we went into this loop.
-    breakTarget = ci->savedBreakTarget;
-    continueTarget = ci->savedContinueTarget;
-    breakLanesPtr = ci->savedBreakLanesPtr;
-    continueLanesPtr = ci->savedContinueLanesPtr;
-    loopMask = ci->savedLoopMask;
+    CFInfo *ci = popCFState();
+    Assert(ci->IsLoop());
 
     if (!ci->IsUniform())
         // If the loop had a 'uniform' test, then it didn't make any
@@ -524,7 +581,7 @@ FunctionEmitContext::EndLoop() {
 
 
 void
-FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
+FunctionEmitContext::StartForeach() {
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
@@ -536,7 +593,7 @@ FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
 
     continueLanesPtr = AllocaInst(LLVMTypes::MaskType, "foreach_continue_lanes");
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
-    continueTarget = ct;
+    continueTarget = NULL; // should be set by SetContinueTarget()
 
     loopMask = NULL;
 }
@@ -544,17 +601,8 @@ FunctionEmitContext::StartForeach(llvm::BasicBlock *ct) {
 
 void
 FunctionEmitContext::EndForeach() {
-    Assert(controlFlowInfo.size() && controlFlowInfo.back()->IsForeach());
-    CFInfo *ci = controlFlowInfo.back();
-    controlFlowInfo.pop_back();
-
-    // Restore the break/continue state information to what it was before
-    // we went into this loop.
-    breakTarget = ci->savedBreakTarget;
-    continueTarget = ci->savedContinueTarget;
-    breakLanesPtr = ci->savedBreakLanesPtr;
-    continueLanesPtr = ci->savedContinueLanesPtr;
-    loopMask = ci->savedLoopMask;
+    CFInfo *ci = popCFState();
+    Assert(ci->IsForeach());
 }
 
 
@@ -575,28 +623,64 @@ FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
 }
 
 
+/** Returns "true" if the first enclosing non-if control flow expression is
+    a "switch" statement.
+*/
+bool
+FunctionEmitContext::inSwitchStatement() const {
+    // Go backwards through controlFlowInfo, since we add new nested scopes
+    // to the back.
+    int i = controlFlowInfo.size() - 1;
+    while (i >= 0 && controlFlowInfo[i]->IsIf())
+        --i;
+    // Got to the first non-if (or end of CF info)
+    if (i == -1)
+        return false;
+    return controlFlowInfo[i]->IsSwitch();
+}
+
+
 void
 FunctionEmitContext::Break(bool doCoherenceCheck) {
+    Assert(controlFlowInfo.size() > 0);
     if (breakTarget == NULL) {
         Error(currentPos, "\"break\" statement is illegal outside of "
-              "for/while/do loops.");
+              "for/while/do loops and \"switch\" statements.");
+        return;
+    }
+
+    if (bblock == NULL)
+        return;
+
+    if (inSwitchStatement() == true &&
+        switchConditionWasUniform == true && 
+        ifsInCFAllUniform(CFInfo::Switch)) {
+        // We know that all program instances are executing the break, so
+        // just jump to the block immediately after the switch.
+        Assert(breakTarget != NULL);
+        BranchInst(breakTarget);
+        bblock = NULL;
         return;
     }
 
     // If all of the enclosing 'if' tests in the loop have uniform control
     // flow or if we can tell that the mask is all on, then we can just
     // jump to the break location.
-    if (ifsInLoopAllUniform() || GetInternalMask() == LLVMMaskAllOn) {
+    if (inSwitchStatement() == false && 
+        (ifsInCFAllUniform(CFInfo::Loop) || 
+         GetInternalMask() == LLVMMaskAllOn)) {
         BranchInst(breakTarget);
-        if (ifsInLoopAllUniform() && doCoherenceCheck)
-            Warning(currentPos, "Coherent break statement not necessary in fully uniform "
-                    "control flow.");
+        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
+            Warning(currentPos, "Coherent break statement not necessary in "
+                    "fully uniform control flow.");
         // Set bblock to NULL since the jump has terminated the basic block
         bblock = NULL;
     }
     else {
-        // Otherwise we need to update the mask of the lanes that have
-        // executed a 'break' statement:
+        // Varying switch, uniform switch where the 'break' is under
+        // varying control flow, or a loop with varying 'if's above the
+        // break.  In these cases, we need to update the mask of the lanes
+        // that have executed a 'break' statement: 
         // breakLanes = breakLanes | mask
         Assert(breakLanesPtr != NULL);
         llvm::Value *mask = GetInternalMask();
@@ -612,16 +696,20 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
         // an 'if' statement and restore the mask then.
         SetInternalMask(LLVMMaskAllOff);
 
-        if (doCoherenceCheck)
-            // If the user has indicated that this is a 'coherent' break
-            // statement, then check to see if the mask is all off.  If so,
-            // we have to conservatively jump to the continueTarget, not
-            // the breakTarget, since part of the reason the mask is all
-            // off may be due to 'continue' statements that executed in the
-            // current loop iteration.  
-            // FIXME: if the loop only has break statements and no
-            // continues, we can jump to breakTarget in that case.
-            jumpIfAllLoopLanesAreDone(continueTarget);
+        if (doCoherenceCheck) {
+            if (continueTarget != NULL)
+                // If the user has indicated that this is a 'coherent'
+                // break statement, then check to see if the mask is all
+                // off.  If so, we have to conservatively jump to the
+                // continueTarget, not the breakTarget, since part of the
+                // reason the mask is all off may be due to 'continue'
+                // statements that executed in the current loop iteration.
+                jumpIfAllLoopLanesAreDone(continueTarget);
+            else if (breakTarget != NULL)
+                // Similarly handle these for switch statements, where we
+                // only have a break target.
+                jumpIfAllLoopLanesAreDone(breakTarget);
+        }
     }
 }
 
@@ -634,12 +722,12 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         return;
     }
 
-    if (ifsInLoopAllUniform() || GetInternalMask() == LLVMMaskAllOn) {
+    if (ifsInCFAllUniform(CFInfo::Loop) || GetInternalMask() == LLVMMaskAllOn) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
         // loop or if we can tell that the mask is all on.
         AddInstrumentationPoint("continue: uniform CF, jumped");
-        if (ifsInLoopAllUniform() && doCoherenceCheck)
+        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
             Warning(currentPos, "Coherent continue statement not necessary in "
                     "fully uniform control flow.");
         BranchInst(continueTarget);
@@ -652,8 +740,9 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         llvm::Value *mask = GetInternalMask();
         llvm::Value *continueMask = 
             LoadInst(continueLanesPtr, "continue_mask");
-        llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or,
-                                              mask, continueMask, "mask|continueMask");
+        llvm::Value *newMask = 
+            BinaryOperator(llvm::Instruction::Or, mask, continueMask,
+                           "mask|continueMask");
         StoreInst(newMask, continueLanesPtr);
 
         // And set the current mask to be all off in case there are any
@@ -670,22 +759,23 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
 
 
 /** This function checks to see if all of the 'if' statements (if any)
-    between the current scope and the first enclosing loop have 'uniform'
-    tests.
+    between the current scope and the first enclosing loop/switch of given
+    control flow type have 'uniform' tests.
  */
 bool
-FunctionEmitContext::ifsInLoopAllUniform() const {
+FunctionEmitContext::ifsInCFAllUniform(int type) const {
     Assert(controlFlowInfo.size() > 0);
     // Go backwards through controlFlowInfo, since we add new nested scopes
-    // to the back.  Stop once we come to the first enclosing loop.
+    // to the back.  Stop once we come to the first enclosing control flow
+    // structure of the desired type.
     int i = controlFlowInfo.size() - 1;
-    while (i >= 0 && controlFlowInfo[i]->type != CFInfo::Loop) {
+    while (i >= 0 && controlFlowInfo[i]->type != type) {
         if (controlFlowInfo[i]->isUniform == false)
             // Found a scope due to an 'if' statement with a varying test
             return false;
         --i;
     }
-    Assert(i >= 0); // else we didn't find a loop!
+    Assert(i >= 0); // else we didn't find the expected control flow type!
     return true;
 }
 
@@ -758,11 +848,249 @@ FunctionEmitContext::RestoreContinuedLanes() {
 }
 
 
+void
+FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
+    llvm::Value *oldMask = GetInternalMask();
+    controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, breakTarget, 
+                                                continueTarget, breakLanesPtr,
+                                                continueLanesPtr, oldMask, 
+                                                loopMask, switchExpr, defaultBlock, 
+                                                caseBlocks, nextBlocks,
+                                                switchConditionWasUniform));
+
+    breakLanesPtr = AllocaInst(LLVMTypes::MaskType, "break_lanes_memory");
+    StoreInst(LLVMMaskAllOff, breakLanesPtr);
+    breakTarget = bbBreak;
+
+    continueLanesPtr = NULL;
+    continueTarget = NULL;
+    loopMask = NULL;
+
+    // These will be set by the SwitchInst() method
+    switchExpr = NULL;
+    defaultBlock = NULL;
+    caseBlocks = NULL;
+    nextBlocks = NULL;
+}
+
+
+void
+FunctionEmitContext::EndSwitch() {
+    Assert(bblock != NULL);
+
+    CFInfo *ci = popCFState();
+    if (ci->IsVarying() && bblock != NULL)
+        restoreMaskGivenReturns(ci->savedMask);
+}
+
+
+/** Emit code to check for an "all off" mask before the code for a 
+    case or default label in a "switch" statement.
+ */
+void
+FunctionEmitContext::addSwitchMaskCheck(llvm::Value *mask) {
+    llvm::Value *allOff = None(mask);
+    llvm::BasicBlock *bbSome = CreateBasicBlock("case_default_on");
+
+    // Find the basic block for the case or default label immediately after
+    // the current one in the switch statement--that's where we want to
+    // jump if the mask is all off at this label.
+    Assert(nextBlocks->find(bblock) != nextBlocks->end());
+    llvm::BasicBlock *bbNext = nextBlocks->find(bblock)->second;
+
+    // Jump to the next one of the mask is all off; otherwise jump to the
+    // newly created block that will hold the actual code for this label.
+    BranchInst(bbNext, bbSome, allOff);
+    SetCurrentBasicBlock(bbSome);
+}
+
+
+/** Returns the execution mask at entry to the first enclosing "switch"
+    statement. */
+llvm::Value *
+FunctionEmitContext::getMaskAtSwitchEntry() {
+    Assert(controlFlowInfo.size() > 0);
+    int i = controlFlowInfo.size() - 1;
+    while (i >= 0 && controlFlowInfo[i]->type != CFInfo::Switch)
+        --i;
+    Assert(i != -1);
+    return controlFlowInfo[i]->savedMask;
+}
+
+
+void
+FunctionEmitContext::EmitDefaultLabel(bool checkMask, SourcePos pos) {
+    if (inSwitchStatement() == false) {
+        Error(pos, "\"default\" label illegal outside of \"switch\" "
+              "statement.");
+        return;
+    }
+
+    // If there's a default label in the switch, a basic block for it
+    // should have been provided in the previous call to SwitchInst().
+    Assert(defaultBlock != NULL);
+
+    if (bblock != NULL)
+        // The previous case in the switch fell through, or we're in a
+        // varying switch; terminate the current block with a jump to the
+        // block for the code for the default label.
+        BranchInst(defaultBlock);
+    SetCurrentBasicBlock(defaultBlock);
+
+    if (switchConditionWasUniform)
+        // Nothing more to do for this case; return back to the caller,
+        // which will then emit the code for the default case.
+        return;
+
+    // For a varying switch, we need to update the execution mask.
+    //
+    // First, compute the mask that corresponds to which program instances
+    // should execute the "default" code; this corresponds to the set of
+    // program instances that don't match any of the case statements.
+    // Therefore, we generate code that compares the value of the switch
+    // expression to the value associated with each of the "case"
+    // statements such that the surviving lanes didn't match any of them.
+    llvm::Value *matchesDefault = getMaskAtSwitchEntry();
+    for (int i = 0; i < (int)caseBlocks->size(); ++i) {
+        int value = (*caseBlocks)[i].first;
+        llvm::Value *valueVec = (switchExpr->getType() == LLVMTypes::Int32VectorType) ?
+            LLVMInt32Vector(value) : LLVMInt64Vector(value);
+        // TODO: for AVX2 at least, the following generates better code
+        // than doing ICMP_NE and skipping the NotOperator() below; file a
+        // LLVM bug?
+        llvm::Value *matchesCaseValue = 
+            CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr,
+                    valueVec, "cmp_case_value");
+        matchesCaseValue = I1VecToBoolVec(matchesCaseValue);
+
+        llvm::Value *notMatchesCaseValue = NotOperator(matchesCaseValue);
+        matchesDefault = BinaryOperator(llvm::Instruction::And, matchesDefault, 
+                                        notMatchesCaseValue, "default&~case_match");
+    }
+
+    // The mask may have some lanes on, which corresponds to the previous
+    // label falling through; compute the updated mask by ANDing with the
+    // current mask.
+    llvm::Value *oldMask = GetInternalMask();
+    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask, 
+                                          matchesDefault, "old_mask|matches_default");
+    SetInternalMask(newMask);
+
+    if (checkMask)
+        addSwitchMaskCheck(newMask);
+}
+
+
+void
+FunctionEmitContext::EmitCaseLabel(int value, bool checkMask, SourcePos pos) {
+    if (inSwitchStatement() == false) {
+        Error(pos, "\"case\" label illegal outside of \"switch\" statement.");
+        return;
+    }
+
+    // Find the basic block for this case statement.
+    llvm::BasicBlock *bbCase = NULL;
+    Assert(caseBlocks != NULL);
+    for (int i = 0; i < (int)caseBlocks->size(); ++i)
+        if ((*caseBlocks)[i].first == value) {
+            bbCase = (*caseBlocks)[i].second;
+            break;
+        }
+    Assert(bbCase != NULL);
+
+    if (bblock != NULL)
+        // fall through from the previous case
+        BranchInst(bbCase);
+    SetCurrentBasicBlock(bbCase);
+
+    if (switchConditionWasUniform)
+        return;
+
+    // update the mask: first, get a mask that indicates which program
+    // instances have a value for the switch expression that matches this
+    // case statement.
+    llvm::Value *valueVec = (switchExpr->getType() == LLVMTypes::Int32VectorType) ?
+        LLVMInt32Vector(value) : LLVMInt64Vector(value);
+    llvm::Value *matchesCaseValue = 
+        CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, switchExpr,
+                valueVec, "cmp_case_value");
+    matchesCaseValue = I1VecToBoolVec(matchesCaseValue);
+
+    // If a lane was off going into the switch, we don't care if has a
+    // value in the switch expression that happens to match this case.
+    llvm::Value *entryMask = getMaskAtSwitchEntry();
+    matchesCaseValue = BinaryOperator(llvm::Instruction::And, entryMask,
+                                      matchesCaseValue, "entry_mask&case_match");
+
+    // Take the surviving lanes and turn on the mask for them.
+    llvm::Value *oldMask = GetInternalMask();
+    llvm::Value *newMask = BinaryOperator(llvm::Instruction::Or, oldMask, 
+                                          matchesCaseValue, "mask|case_match");
+    SetInternalMask(newMask);
+
+    if (checkMask)
+        addSwitchMaskCheck(newMask);
+}
+
+
+void
+FunctionEmitContext::SwitchInst(llvm::Value *expr, llvm::BasicBlock *bbDefault,
+                const std::vector<std::pair<int, llvm::BasicBlock *> > &bbCases,
+                const std::map<llvm::BasicBlock *, llvm::BasicBlock *> &bbNext) {
+    // The calling code should have called StartSwitch() before calling
+    // SwitchInst().
+    Assert(controlFlowInfo.size() &&
+           controlFlowInfo.back()->IsSwitch());
+
+    switchExpr = expr;
+    defaultBlock = bbDefault;
+    caseBlocks = new std::vector<std::pair<int, llvm::BasicBlock *> >(bbCases);
+    nextBlocks = new std::map<llvm::BasicBlock *, llvm::BasicBlock *>(bbNext);
+    switchConditionWasUniform = 
+        (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(expr->getType()) == false);
+
+    if (switchConditionWasUniform == true) {
+        // For a uniform switch condition, just wire things up to the LLVM
+        // switch instruction.
+        llvm::SwitchInst *s = llvm::SwitchInst::Create(expr, bbDefault, 
+                                                       bbCases.size(), bblock);
+        for (int i = 0; i < (int)bbCases.size(); ++i) {
+            if (expr->getType() == LLVMTypes::Int32Type)
+                s->addCase(LLVMInt32(bbCases[i].first), bbCases[i].second);
+            else {
+                Assert(expr->getType() == LLVMTypes::Int64Type);
+                s->addCase(LLVMInt64(bbCases[i].first), bbCases[i].second);
+            }
+        }
+
+        AddDebugPos(s);
+        // switch is a terminator
+        bblock = NULL;
+    }
+    else {
+        // For a varying switch, we first turn off all lanes of the mask
+        SetInternalMask(LLVMMaskAllOff);
+
+        if (nextBlocks->size() > 0) {
+            // If there are any labels inside the switch, jump to the first
+            // one; any code before the first label won't be executed by
+            // anyone.
+            std::map<llvm::BasicBlock *, llvm::BasicBlock *>::const_iterator iter;
+            iter = nextBlocks->find(NULL);
+            Assert(iter != nextBlocks->end());
+            llvm::BasicBlock *bbFirst = iter->second;
+            BranchInst(bbFirst);
+            bblock = NULL;
+        }
+    }
+}
+
+
 int
 FunctionEmitContext::VaryingCFDepth() const { 
     int sum = 0;
     for (unsigned int i = 0; i < controlFlowInfo.size(); ++i)
-        if (controlFlowInfo[i]->IsVaryingType())
+        if (controlFlowInfo[i]->IsVarying())
             ++sum;
     return sum;
 }
@@ -774,6 +1102,41 @@ FunctionEmitContext::InForeachLoop() const {
         if (controlFlowInfo[i]->IsForeach())
             return true;
     return false;
+}
+
+
+bool
+FunctionEmitContext::initLabelBBlocks(ASTNode *node, void *data) {
+    LabeledStmt *ls = dynamic_cast<LabeledStmt *>(node);
+    if (ls == NULL)
+        return true;
+
+    FunctionEmitContext *ctx = (FunctionEmitContext *)data;
+
+    if (ctx->labelMap.find(ls->name) != ctx->labelMap.end())
+        Error(ls->pos, "Multiple labels named \"%s\" in function.",
+              ls->name.c_str());
+    else {
+        llvm::BasicBlock *bb = ctx->CreateBasicBlock(ls->name.c_str());
+        ctx->labelMap[ls->name] = bb;
+    }
+    return true;
+}
+
+
+void
+FunctionEmitContext::InitializeLabelMap(Stmt *code) {
+    labelMap.erase(labelMap.begin(), labelMap.end());
+    WalkAST(code, initLabelBBlocks, NULL, this);
+}
+
+
+llvm::BasicBlock *
+FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
+    if (labelMap.find(label) != labelMap.end())
+        return labelMap[label];
+    else
+        return NULL;
 }
 
 
@@ -870,6 +1233,14 @@ FunctionEmitContext::All(llvm::Value *mask) {
 
 
 llvm::Value *
+FunctionEmitContext::None(llvm::Value *mask) {
+    llvm::Value *mmval = LaneMask(mask);
+    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mmval,
+                   LLVMInt32(0), "none_mm_cmp");
+}
+
+
+llvm::Value *
 FunctionEmitContext::LaneMask(llvm::Value *v) {
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i32 value
@@ -920,8 +1291,7 @@ FunctionEmitContext::GetStringPtr(const std::string &str) {
 
 llvm::BasicBlock *
 FunctionEmitContext::CreateBasicBlock(const char *name) {
-    llvm::Function *function = bblock->getParent();
-    return llvm::BasicBlock::Create(*g->ctx, name, function);
+    return llvm::BasicBlock::Create(*g->ctx, name, llvmFunction);
 }
 
 
@@ -2596,4 +2966,38 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
         offset = SExtInst(offset, LLVMTypes::Int64VectorType, "offset_to_64");
 
     return BinaryOperator(llvm::Instruction::Add, ptr, offset);
+}
+
+
+CFInfo *
+FunctionEmitContext::popCFState() {
+    Assert(controlFlowInfo.size() > 0);
+    CFInfo *ci = controlFlowInfo.back();
+    controlFlowInfo.pop_back();
+
+    if (ci->IsSwitch()) {
+        breakTarget = ci->savedBreakTarget;
+        continueTarget = ci->savedContinueTarget;
+        breakLanesPtr = ci->savedBreakLanesPtr;
+        continueLanesPtr = ci->savedContinueLanesPtr;
+        loopMask = ci->savedLoopMask;
+        switchExpr = ci->savedSwitchExpr;
+        defaultBlock = ci->savedDefaultBlock;
+        caseBlocks = ci->savedCaseBlocks;
+        nextBlocks = ci->savedNextBlocks;
+        switchConditionWasUniform = ci->savedSwitchConditionWasUniform;
+    }
+    else if (ci->IsLoop() || ci->IsForeach()) {
+        breakTarget = ci->savedBreakTarget;
+        continueTarget = ci->savedContinueTarget;
+        breakLanesPtr = ci->savedBreakLanesPtr;
+        continueLanesPtr = ci->savedContinueLanesPtr;
+        loopMask = ci->savedLoopMask;
+    }
+    else {
+        Assert(ci->IsIf());
+        // nothing to do
+    }
+
+    return ci;
 }

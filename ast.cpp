@@ -90,7 +90,11 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         DoStmt *dos;
         ForStmt *fs;
         ForeachStmt *fes;
+        CaseStmt *cs;
+        DefaultStmt *defs;
+        SwitchStmt *ss;
         ReturnStmt *rs;
+        LabeledStmt *ls;
         StmtList *sl;
         PrintStmt *ps;
         AssertStmt *as;
@@ -130,10 +134,21 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
                                                    postFunc, data);
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
         }
-        else if (dynamic_cast<BreakStmt *>(node) != NULL ||
-                 dynamic_cast<ContinueStmt *>(node) != NULL) {
-            // nothing 
+        else if ((cs = dynamic_cast<CaseStmt *>(node)) != NULL)
+            cs->stmts = (Stmt *)WalkAST(cs->stmts, preFunc, postFunc, data);
+        else if ((defs = dynamic_cast<DefaultStmt *>(node)) != NULL)
+            defs->stmts = (Stmt *)WalkAST(defs->stmts, preFunc, postFunc, data);
+        else if ((ss = dynamic_cast<SwitchStmt *>(node)) != NULL) {
+            ss->expr = (Expr *)WalkAST(ss->expr, preFunc, postFunc, data);
+            ss->stmts = (Stmt *)WalkAST(ss->stmts, preFunc, postFunc, data);
         }
+        else if (dynamic_cast<BreakStmt *>(node) != NULL ||
+                 dynamic_cast<ContinueStmt *>(node) != NULL ||
+                 dynamic_cast<GotoStmt *>(node) != NULL) {
+            // nothing
+        }
+        else if ((ls = dynamic_cast<LabeledStmt *>(node)) != NULL)
+            ls->stmt = (Stmt *)WalkAST(ls->stmt, preFunc, postFunc, data);
         else if ((rs = dynamic_cast<ReturnStmt *>(node)) != NULL)
             rs->val = (Expr *)WalkAST(rs->val, preFunc, postFunc, data);
         else if ((sl = dynamic_cast<StmtList *>(node)) != NULL) {
@@ -151,7 +166,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
     else {
         ///////////////////////////////////////////////////////////////////////////
         // Handle expressions
-        assert(dynamic_cast<Expr *>(node) != NULL);
+        Assert(dynamic_cast<Expr *>(node) != NULL);
         UnaryExpr *ue;
         BinaryExpr *be;
         AssignExpr *ae;
@@ -289,3 +304,4 @@ EstimateCost(ASTNode *root) {
     WalkAST(root, lCostCallback, NULL, &cost);
     return cost;
 }
+

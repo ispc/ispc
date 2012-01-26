@@ -48,23 +48,42 @@ declare void @abort() noreturn
 ;; corresponding to one of the Target::ISA enumerant values that gives the
 ;; most capable ISA that the curremt system can run.
 ;;
-;; #ifdef _MSC_VER
-;; extern void __stdcall __cpuid(int info[4], int infoType);
-;; #else
+;; Note: clang from LLVM 2.9 should be used if this is updated, for maximum
+;; backwards compatibility for anyone building ispc with LLVM 2.9.
+;;
+;; #include <stdint.h>
+;; #include <stdlib.h>
+;; 
 ;; static void __cpuid(int info[4], int infoType) {
 ;;     __asm__ __volatile__ ("cpuid"
 ;;                           : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
 ;;                           : "0" (infoType));
 ;; }
-;; #endif
+;; 
+;; /* Save %ebx in case it's the PIC register */
+;; static void __cpuid_count(int info[4], int level, int count) {
+;;   __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
+;;                         "cpuid\n\t"
+;;                         "xchg{l}\t{%%}ebx, %1\n\t"
+;;                         : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
+;;                         : "0" (level), "2" (count));
+;; }
 ;; 
 ;; int32_t __get_system_isa() {
 ;;     int info[4];
 ;;     __cpuid(info, 1);
+;; 
 ;;     /* NOTE: the values returned below must be the same as the
 ;;        corresponding enumerant values in Target::ISA. */
-;;     if ((info[2] & (1 << 28)) != 0)
-;;         return 2; // AVX
+;;     if ((info[2] & (1 << 28)) != 0) {
+;;         // AVX1 for sure. Do we have AVX2?
+;;         // Call cpuid with eax=7, ecx=0
+;;         __cpuid_count(info, 7, 0);
+;;         if ((info[1] & (1 << 5)) != 0)
+;;             return 3; // AVX2
+;;         else
+;;             return 2; // AVX1
+;;     }
 ;;     else if ((info[2] & (1 << 19)) != 0)
 ;;         return 1; // SSE4
 ;;     else if ((info[3] & (1 << 26)) != 0)
@@ -76,33 +95,42 @@ declare void @abort() noreturn
 %0 = type { i32, i32, i32, i32 }
 
 define i32 @__get_system_isa() nounwind ssp {
-  %1 = tail call %0 asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
-  %2 = extractvalue %0 %1, 2
-  %3 = extractvalue %0 %1, 3
-  %4 = and i32 %2, 268435456
-  %5 = icmp eq i32 %4, 0
-  br i1 %5, label %6, label %13
+entry:
+  %0 = tail call %0 asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
+  %asmresult9.i = extractvalue %0 %0, 2
+  %asmresult10.i = extractvalue %0 %0, 3
+  %and = and i32 %asmresult9.i, 268435456
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.else7, label %if.then
 
-; <label>:6                                       ; preds = %0
-  %7 = and i32 %2, 524288
-  %8 = icmp eq i32 %7, 0
-  br i1 %8, label %9, label %13
+if.then:                                          ; preds = %entry
+  %1 = tail call %0 asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %asmresult9.i24 = extractvalue %0 %1, 1
+  %and4 = lshr i32 %asmresult9.i24, 5
+  %2 = and i32 %and4, 1
+  %3 = or i32 %2, 2
+  br label %return
 
-; <label>:9                                       ; preds = %6
-  %10 = and i32 %3, 67108864
-  %11 = icmp eq i32 %10, 0
-  br i1 %11, label %12, label %13
+if.else7:                                         ; preds = %entry
+  %and10 = and i32 %asmresult9.i, 524288
+  %cmp11 = icmp eq i32 %and10, 0
+  br i1 %cmp11, label %if.else13, label %return
 
-; <label>:12                                      ; preds = %9
+if.else13:                                        ; preds = %if.else7
+  %and16 = and i32 %asmresult10.i, 67108864
+  %cmp17 = icmp eq i32 %and16, 0
+  br i1 %cmp17, label %if.else19, label %return
+
+if.else19:                                        ; preds = %if.else13
   tail call void @abort() noreturn nounwind
   unreachable
 
-; <label>:13                                      ; preds = %9, %6, %0
-  %.0 = phi i32 [ 2, %0 ], [ 1, %6 ], [ 0, %9 ]
-  ret i32 %.0
+return:                                           ; preds = %if.else13, %if.else7, %if.then
+  %retval.0 = phi i32 [ %3, %if.then ], [ 1, %if.else7 ], [ 0, %if.else13 ]
+  ret i32 %retval.0
 }
 
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This function is called by each of the dispatch functions we generate;
 ;; it sets @__system_best_isa if it is unset.
 

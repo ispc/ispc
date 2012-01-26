@@ -494,6 +494,7 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
         ctx->EndScope();
 }
 
+
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     // First check all of the things that might happen due to errors
@@ -694,6 +695,23 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         }
 
         // All indices are in-bounds
+        return true;
+    }
+
+    MemberExpr *me;
+    if ((me = dynamic_cast<MemberExpr *>(node)) != NULL &&
+        me->dereferenceExpr) {
+        *okPtr = false;
+        return false;
+    }
+
+    DereferenceExpr *de;
+    if ((de = dynamic_cast<DereferenceExpr *>(node)) != NULL) {
+        const Type *exprType = de->expr->GetType();
+        if (dynamic_cast<const PointerType *>(exprType) != NULL) {
+            *okPtr = false;
+            return false;
+        }
     }
 
     return true;
@@ -1132,7 +1150,7 @@ DoStmt::TypeCheck() {
                             !lHasVaryingBreakOrContinue(bodyStmts));
         testExpr = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
                                                   AtomicType::VaryingBool,
-                                    testExpr, false, testExpr->pos);
+                                    testExpr, testExpr->pos);
     }
 
     return this;
@@ -1317,8 +1335,7 @@ ForStmt::TypeCheck() {
                             !g->opt.disableUniformControlFlow &&
                             !lHasVaryingBreakOrContinue(stmts));
         test = new TypeCastExpr(uniformTest ? AtomicType::UniformBool :
-                                AtomicType::VaryingBool,
-                                test, false, test->pos);
+                                AtomicType::VaryingBool, test, test->pos);
         test = ::TypeCheck(test);
         if (test == NULL)
             return NULL;
@@ -1558,9 +1575,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (ctx->GetCurrentBasicBlock() == NULL || stmts == NULL) 
         return;
 
-    llvm::BasicBlock *bbCheckExtras = ctx->CreateBasicBlock("foreach_check_extras");
-    llvm::BasicBlock *bbDoExtras = ctx->CreateBasicBlock("foreach_do_extras");
-    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
+    llvm::BasicBlock *bbFullBody = ctx->CreateBasicBlock("foreach_full_body");
+    llvm::BasicBlock *bbMaskedBody = ctx->CreateBasicBlock("foreach_masked_body");
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
 
     llvm::Value *oldMask = ctx->GetInternalMask();
@@ -1578,8 +1594,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // dimension and a number of derived values.
     std::vector<llvm::BasicBlock *> bbReset, bbStep, bbTest;
     std::vector<llvm::Value *> startVals, endVals, uniformCounterPtrs;
-    std::vector<llvm::Value *> nItems, nExtras, alignedEnd;
-    std::vector<llvm::Value *> extrasMaskPtrs;
+    std::vector<llvm::Value *> nExtras, alignedEnd, extrasMaskPtrs;
 
     std::vector<int> span(nDims, 0);
     lGetSpans(nDims-1, nDims, g->target.vectorWidth, isTiled, &span[0]);
@@ -1588,7 +1603,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // Basic blocks that we'll fill in later with the looping logic for
         // this dimension.
         bbReset.push_back(ctx->CreateBasicBlock("foreach_reset"));
-        bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
+        if (i < nDims-1)
+            // stepping for the innermost dimension is handled specially
+            bbStep.push_back(ctx->CreateBasicBlock("foreach_step"));
         bbTest.push_back(ctx->CreateBasicBlock("foreach_test"));
 
         // Start and end value for this loop dimension
@@ -1600,14 +1617,14 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         endVals.push_back(ev);
 
         // nItems = endVal - startVal
-        nItems.push_back(ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv,
-                                             "nitems"));
+        llvm::Value *nItems = 
+            ctx->BinaryOperator(llvm::Instruction::Sub, ev, sv, "nitems");
 
         // nExtras = nItems % (span for this dimension)
         // This gives us the number of extra elements we need to deal with
         // at the end of the loop for this dimension that don't fit cleanly
         // into a vector width.
-        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems[i],
+        nExtras.push_back(ctx->BinaryOperator(llvm::Instruction::SRem, nItems,
                                               LLVMInt32(span[i]), "nextras"));
 
         // alignedEnd = endVal - nExtras
@@ -1626,8 +1643,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         // There is also a varying variable that holds the set of index
         // values for each dimension in the current loop iteration; this is
         // the value that is program-visible.
-        dimVariables[i]->storagePtr = ctx->AllocaInst(LLVMTypes::Int32VectorType, 
-                                                  dimVariables[i]->name.c_str());
+        dimVariables[i]->storagePtr = 
+            ctx->AllocaInst(LLVMTypes::Int32VectorType, 
+                            dimVariables[i]->name.c_str());
         dimVariables[i]->parentFunction = ctx->GetFunction();
         ctx->EmitVariableDebugInfo(dimVariables[i]);
 
@@ -1639,7 +1657,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
 
-    ctx->StartForeach(bbStep[nDims-1]);
+    ctx->StartForeach();
 
     // On to the outermost loop's test
     ctx->BranchInst(bbTest[0]);
@@ -1660,9 +1678,25 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_test
+    // foreach_step: increment the uniform counter by the vector width.
+    // Note that we don't increment the varying counter here as well but
+    // just generate its value when we need it in the loop body.  Don't do
+    // this for the innermost dimension, which has a more complex stepping
+    // structure..
+    for (int i = 0; i < nDims-1; ++i) {
+        ctx->SetCurrentBasicBlock(bbStep[i]);
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[i]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
+        ctx->BranchInst(bbTest[i]);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_test (for all dimensions other than the innermost...)
     std::vector<llvm::Value *> inExtras;
-    for (int i = 0; i < nDims; ++i) {
+    for (int i = 0; i < nDims-1; ++i) {
         ctx->SetCurrentBasicBlock(bbTest[i]);
 
         llvm::Value *haveExtras = 
@@ -1700,8 +1734,6 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (i == 0)
             ctx->StoreInst(emask, extrasMaskPtrs[i]);
         else {
-            // FIXME: at least specialize the innermost loop to not do all
-            // this mask stuff each time through the test...
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[i-1]);
             llvm::Value *newMask =
                 ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
@@ -1712,59 +1744,267 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *notAtEnd = 
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
                          counter, endVals[i]);
-        if (i != nDims-1)
-            ctx->BranchInst(bbTest[i+1], bbReset[i], notAtEnd);
+        ctx->BranchInst(bbTest[i+1], bbReset[i], notAtEnd);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // foreach_test (for innermost dimension)
+    //
+    // All of the outer dimensions are handled generically--basically as a
+    // for() loop from the start value to the end value, where at each loop
+    // test, we compute the mask of active elements for the current
+    // dimension and then update an overall mask that is the AND
+    // combination of all of the outer ones.
+    //
+    // The innermost loop is handled specially, for performance purposes.
+    // When starting the innermost dimension, we start by checking once
+    // whether any of the outer dimensions has set the mask to be
+    // partially-active or not.  We follow different code paths for these
+    // two cases, taking advantage of the knowledge that the mask is all
+    // on, when this is the case.
+    //
+    // In each of these code paths, we start with a loop from the starting
+    // value to the aligned end value for the innermost dimension; we can
+    // guarantee that the innermost loop will have an "all on" mask (as far
+    // as its dimension is concerned) for the duration of this loop.  Doing
+    // so allows us to emit code that assumes the mask is all on (for the
+    // case where none of the outer dimensions has set the mask to be
+    // partially on), or allows us to emit code that just uses the mask
+    // from the outer dimensions directly (for the case where they have).
+    //
+    // After this loop, we just need to deal with one vector's worth of
+    // "ragged extra bits", where the mask used includes the effect of the
+    // mask for the innermost dimension.
+    //
+    // We start out this process by emitting the check that determines
+    // whether any of the enclosing dimensions is partially active
+    // (i.e. processing extra elements that don't exactly fit into a
+    // vector).
+    llvm::BasicBlock *bbOuterInExtras = 
+        ctx->CreateBasicBlock("outer_in_extras");
+    llvm::BasicBlock *bbOuterNotInExtras = 
+        ctx->CreateBasicBlock("outer_not_in_extras");
+
+    ctx->SetCurrentBasicBlock(bbTest[nDims-1]);
+    if (inExtras.size())
+        ctx->BranchInst(bbOuterInExtras, bbOuterNotInExtras,
+                        inExtras.back());
+    else
+        // for a 1D iteration domain, we certainly don't have any enclosing
+        // dimensions that are processing extra elements.
+        ctx->BranchInst(bbOuterNotInExtras);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // One or more outer dimensions in extras, so we need to mask for the loop
+    // body regardless.  We break this into two cases, roughly:
+    // for (counter = start; counter < alignedEnd; counter += step) {
+    //   // mask is all on for inner, so set mask to outer mask
+    //   // run loop body with mask
+    // }
+    // // counter == alignedEnd
+    // if (counter < end) {
+    //   // set mask to outermask & (counter+programCounter < end)
+    //   // run loop body with mask
+    // }
+    llvm::BasicBlock *bbAllInnerPartialOuter =
+        ctx->CreateBasicBlock("all_inner_partial_outer");
+    llvm::BasicBlock *bbPartial =
+        ctx->CreateBasicBlock("both_partial");
+    ctx->SetCurrentBasicBlock(bbOuterInExtras); {
+        // Update the varying counter value here, since all subsequent
+        // blocks along this path need it.
+        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                              dimVariables[nDims-1]->storagePtr, span);
+
+        // here we just check to see if counter < alignedEnd
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeAlignedEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, alignedEnd[nDims-1], "before_aligned_end");
+        ctx->BranchInst(bbAllInnerPartialOuter, bbPartial, beforeAlignedEnd);
+    }
+
+    // Below we have a basic block that runs the loop body code for the
+    // case where the mask is partially but not fully on.  This same block
+    // runs in multiple cases: both for handling any ragged extra data for
+    // the innermost dimension but also when outer dimensions have set the
+    // mask to be partially on. 
+    //
+    // The value stored in stepIndexAfterMaskedBodyPtr is used after each
+    // execution of the body code to determine whether the innermost index
+    // value should be incremented by the step (we're running the "for"
+    // loop of full vectors at the innermost dimension, with outer
+    // dimensions having set the mask to be partially on), or whether we're
+    // running once for the ragged extra bits at the end of the innermost
+    // dimension, in which case we're done with the innermost dimension and
+    // should step the loop counter for the next enclosing dimension
+    // instead.
+    llvm::Value *stepIndexAfterMaskedBodyPtr =
+        ctx->AllocaInst(LLVMTypes::BoolType, "step_index");
+
+    ///////////////////////////////////////////////////////////////////////////
+    // We're in the inner loop part where the only masking is due to outer
+    // dimensions but the innermost dimension fits fully into a vector's
+    // width.  Set the mask and jump to the masked loop body.
+    ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter); {
+        llvm::Value *mask;
+        if (extrasMaskPtrs.size() == 0)
+            // 1D loop; we shouldn't ever get here anyway
+            mask = LLVMMaskAllOff;
         else
-            ctx->BranchInst(bbCheckExtras, bbReset[i], notAtEnd);
+            mask = ctx->LoadInst(extrasMaskPtrs.back());
+        ctx->SetInternalMask(mask);
+
+        ctx->StoreInst(LLVMTrue, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_step: increment the uniform counter by the vector width.
-    // Note that we don't increment the varying counter here as well but
-    // just generate its value when we need it in the loop body.
-    for (int i = 0; i < nDims; ++i) {
-        ctx->SetCurrentBasicBlock(bbStep[i]);
-        if (i == nDims-1)
-            ctx->RestoreContinuedLanes();
-        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[i]);
-        llvm::Value *newCounter =  
-            ctx->BinaryOperator(llvm::Instruction::Add, counter,
-                                LLVMInt32(span[i]), "new_counter");
-        ctx->StoreInst(newCounter, uniformCounterPtrs[i]);
-        ctx->BranchInst(bbTest[i]);
+    // We need to include the effect of the innermost dimension in the mask
+    // for the final bits here
+    ctx->SetCurrentBasicBlock(bbPartial); {
+        llvm::Value *varyingCounter = 
+            ctx->LoadInst(dimVariables[nDims-1]->storagePtr);
+        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+        for (int j = 0; j < g->target.vectorWidth; ++j)
+            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *emask = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         varyingCounter, smearEnd);
+        emask = ctx->I1VecToBoolVec(emask);
+
+        if (nDims == 1)
+            ctx->SetInternalMask(emask);
+        else {
+            llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
+            llvm::Value *newMask =
+                ctx->BinaryOperator(llvm::Instruction::And, oldMask, emask,
+                                    "extras_mask");
+            ctx->SetInternalMask(newMask);
+        }
+
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_check_extras: see if we need to deal with any partial
-    // vector's worth of work that's left.
-    ctx->SetCurrentBasicBlock(bbCheckExtras);
-    ctx->AddInstrumentationPoint("foreach loop check extras");
-    ctx->BranchInst(bbDoExtras, bbBody, inExtras[nDims-1]);
+    // None of the outer dimensions is processing extras; along the lines
+    // of above, we can express this as:
+    // for (counter = start; counter < alignedEnd; counter += step) {
+    //   // mask is all on
+    //   // run loop body with mask all on
+    // }
+    // // counter == alignedEnd
+    // if (counter < end) {
+    //   // set mask to (counter+programCounter < end)
+    //   // run loop body with mask
+    // }
+    llvm::BasicBlock *bbPartialInnerAllOuter =
+        ctx->CreateBasicBlock("partial_inner_all_outer");
+    ctx->SetCurrentBasicBlock(bbOuterNotInExtras); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeAlignedEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, alignedEnd[nDims-1], "before_aligned_end");
+        ctx->BranchInst(bbFullBody, bbPartialInnerAllOuter,
+                        beforeAlignedEnd);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_body: do a full vector's worth of work.  We know that all
+    // full_body: do a full vector's worth of work.  We know that all
     // lanes will be running here, so we explicitly set the mask to be 'all
     // on'.  This ends up being relatively straightforward: just update the
     // value of the varying loop counter and have the statements in the
     // loop body emit their code.
-    ctx->SetCurrentBasicBlock(bbBody);
-    ctx->SetInternalMask(LLVMMaskAllOn);
-    ctx->AddInstrumentationPoint("foreach loop body");
-    stmts->EmitCode(ctx);
-    Assert(ctx->GetCurrentBasicBlock() != NULL);
-    ctx->BranchInst(bbStep[nDims-1]);
+    llvm::BasicBlock *bbFullBodyContinue = 
+        ctx->CreateBasicBlock("foreach_full_continue");
+    ctx->SetCurrentBasicBlock(bbFullBody); {
+        ctx->SetInternalMask(LLVMMaskAllOn);
+        lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                              dimVariables[nDims-1]->storagePtr, span);
+        ctx->SetContinueTarget(bbFullBodyContinue);
+        ctx->AddInstrumentationPoint("foreach loop body (all on)");
+        stmts->EmitCode(ctx);
+        Assert(ctx->GetCurrentBasicBlock() != NULL);
+        ctx->BranchInst(bbFullBodyContinue);
+    }
+    ctx->SetCurrentBasicBlock(bbFullBodyContinue); {
+        ctx->RestoreContinuedLanes();
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[nDims-1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+        ctx->BranchInst(bbOuterNotInExtras);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
-    // foreach_doextras: set the mask and have the statements emit their
+    // We're done running blocks with the mask all on; see if the counter is
+    // less than the end value, in which case we need to run the body one
+    // more time to get the extra bits.
+    llvm::BasicBlock *bbSetInnerMask = 
+        ctx->CreateBasicBlock("partial_inner_only");
+    ctx->SetCurrentBasicBlock(bbPartialInnerAllOuter); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1], "counter");
+        llvm::Value *beforeFullEnd = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         counter, endVals[nDims-1], "before_full_end");
+        ctx->BranchInst(bbSetInnerMask, bbReset[nDims-1], beforeFullEnd);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // The outer dimensions are all on, so the mask is just given by the
+    // mask for the innermost dimension
+    ctx->SetCurrentBasicBlock(bbSetInnerMask); {
+        llvm::Value *varyingCounter = 
+            lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
+                                  dimVariables[nDims-1]->storagePtr, span);
+        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+        for (int j = 0; j < g->target.vectorWidth; ++j)
+            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *emask = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
+                         varyingCounter, smearEnd);
+        emask = ctx->I1VecToBoolVec(emask);
+        ctx->SetInternalMask(emask);
+
+        ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbMaskedBody);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // masked_body: set the mask and have the statements emit their
     // code again.  Note that it's generally worthwhile having two copies
     // of the statements' code, since the code above is emitted with the
     // mask known to be all-on, which in turn leads to more efficient code
     // for that case.
-    ctx->SetCurrentBasicBlock(bbDoExtras);
-    llvm::Value *mask = ctx->LoadInst(extrasMaskPtrs[nDims-1]);
-    ctx->SetInternalMask(mask);
-    stmts->EmitCode(ctx);
-    ctx->BranchInst(bbStep[nDims-1]);
+    llvm::BasicBlock *bbStepInnerIndex = 
+        ctx->CreateBasicBlock("step_inner_index");
+    llvm::BasicBlock *bbMaskedBodyContinue = 
+        ctx->CreateBasicBlock("foreach_masked_continue");
+    ctx->SetCurrentBasicBlock(bbMaskedBody); {
+        ctx->AddInstrumentationPoint("foreach loop body (masked)");
+        ctx->SetContinueTarget(bbMaskedBodyContinue);
+        stmts->EmitCode(ctx);
+        ctx->BranchInst(bbMaskedBodyContinue);
+    }
+    ctx->SetCurrentBasicBlock(bbMaskedBodyContinue); {
+        ctx->RestoreContinuedLanes();
+        llvm::Value *stepIndex = ctx->LoadInst(stepIndexAfterMaskedBodyPtr);
+        ctx->BranchInst(bbStepInnerIndex, bbReset[nDims-1], stepIndex);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // step the innermost index, for the case where we're doing the
+    // innermost for loop over full vectors.
+    ctx->SetCurrentBasicBlock(bbStepInnerIndex); {
+        llvm::Value *counter = ctx->LoadInst(uniformCounterPtrs[nDims-1]);
+        llvm::Value *newCounter =  
+            ctx->BinaryOperator(llvm::Instruction::Add, counter,
+                                LLVMInt32(span[nDims-1]), "new_counter");
+        ctx->StoreInst(newCounter, uniformCounterPtrs[nDims-1]);
+        ctx->BranchInst(bbOuterInExtras);
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done.  Restore the old mask and clean up
@@ -1870,6 +2110,301 @@ ForeachStmt::Print(int indent) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// CaseStmt
+
+/** Given the statements following a 'case' or 'default' label, this
+    function determines whether the mask should be checked to see if it is
+    "all off" immediately after the label, before executing the code for
+    the statements.
+ */
+static bool
+lCheckMask(Stmt *stmts) {
+    if (stmts == NULL)
+        return false;
+
+    int cost = EstimateCost(stmts);
+
+    bool safeToRunWithAllLanesOff = true;
+    WalkAST(stmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
+
+    // The mask should be checked if the code following the
+    // 'case'/'default' is relatively complex, or if it would be unsafe to
+    // run that code with the execution mask all off.
+    return (cost > PREDICATE_SAFE_IF_STATEMENT_COST ||
+            safeToRunWithAllLanesOff == false);
+}
+
+
+CaseStmt::CaseStmt(int v, Stmt *s, SourcePos pos) 
+    : Stmt(pos), value(v) {
+    stmts = s;
+}
+
+
+void
+CaseStmt::EmitCode(FunctionEmitContext *ctx) const {
+    ctx->EmitCaseLabel(value, lCheckMask(stmts), pos);
+    if (stmts)
+        stmts->EmitCode(ctx);
+}
+
+
+void
+CaseStmt::Print(int indent) const {
+    printf("%*cCase [%d] label", indent, ' ', value);
+    pos.Print();
+    printf("\n");
+    stmts->Print(indent+4);
+}
+
+
+Stmt *
+CaseStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+CaseStmt::EstimateCost() const {
+    return 0;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// DefaultStmt
+
+DefaultStmt::DefaultStmt(Stmt *s, SourcePos pos) 
+    : Stmt(pos) {
+    stmts = s;
+}
+
+
+void
+DefaultStmt::EmitCode(FunctionEmitContext *ctx) const {
+    ctx->EmitDefaultLabel(lCheckMask(stmts), pos);
+    if (stmts)
+        stmts->EmitCode(ctx);
+}
+
+
+void
+DefaultStmt::Print(int indent) const {
+    printf("%*cDefault Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+    stmts->Print(indent+4);
+}
+
+
+Stmt *
+DefaultStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+DefaultStmt::EstimateCost() const {
+    return 0;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// SwitchStmt
+
+SwitchStmt::SwitchStmt(Expr *e, Stmt *s, SourcePos pos) 
+    : Stmt(pos) {
+    expr = e;
+    stmts = s;
+}
+
+
+/* An instance of this structure is carried along as we traverse the AST
+   nodes for the statements after a "switch" statement.  We use this
+   structure to record all of the 'case' and 'default' statements after the
+   "switch". */
+struct SwitchVisitInfo {
+    SwitchVisitInfo(FunctionEmitContext *c) { 
+        ctx = c;
+        defaultBlock = NULL; 
+        lastBlock = NULL;
+    }
+
+    FunctionEmitContext *ctx;
+
+    /* Basic block for the code following the "default" label (if any). */
+    llvm::BasicBlock *defaultBlock;
+
+    /* Map from integer values after "case" labels to the basic blocks that
+       follow the corresponding "case" label. */
+    std::vector<std::pair<int, llvm::BasicBlock *> > caseBlocks;
+
+    /* For each basic block for a "case" label or a "default" label,
+       nextBlock[block] stores the basic block pointer for the next
+       subsequent "case" or "default" label in the program. */
+    std::map<llvm::BasicBlock *, llvm::BasicBlock *> nextBlock;
+
+    /* The last basic block created for a "case" or "default" label; when
+       we create the basic block for the next one, we'll use this to update
+       the nextBlock map<> above. */
+    llvm::BasicBlock *lastBlock;
+};
+
+
+static bool
+lSwitchASTPreVisit(ASTNode *node, void *d) {
+    if (dynamic_cast<SwitchStmt *>(node) != NULL)
+        // don't continue recursively into a nested switch--we only want
+        // our own case and default statements!
+        return false;
+
+    CaseStmt *cs = dynamic_cast<CaseStmt *>(node);
+    DefaultStmt *ds = dynamic_cast<DefaultStmt *>(node);
+
+    SwitchVisitInfo *svi = (SwitchVisitInfo *)d;
+    llvm::BasicBlock *bb = NULL;
+    if (cs != NULL) {
+        // Complain if we've seen a case statement with the same value
+        // already
+        for (int i = 0; i < (int)svi->caseBlocks.size(); ++i) {
+            if (svi->caseBlocks[i].first == cs->value) {
+                Error(cs->pos, "Duplicate case value \"%d\".", cs->value); 
+                return true;
+            }
+        }
+        
+        // Otherwise create a new basic block for the code following this
+        // 'case' statement and record the mappign between the case label
+        // value and the basic block
+        char buf[32];
+        sprintf(buf, "case_%d", cs->value);
+        bb = svi->ctx->CreateBasicBlock(buf);
+        svi->caseBlocks.push_back(std::make_pair(cs->value, bb));
+    }
+    else if (ds != NULL) {
+        // And complain if we've seen another 'default' label..
+        if (svi->defaultBlock != NULL) {
+            Error(ds->pos, "Multiple \"default\" lables in switch statement.");
+            return true;
+        }
+        else {
+            // Otherwise create a basic block for the code following the
+            // "default".
+            bb = svi->ctx->CreateBasicBlock("default");
+            svi->defaultBlock = bb;
+        }
+    }
+
+    // If we saw a "case" or "default" label, then update the map to record
+    // that the block we just created follows the block created for the
+    // previous label in the "switch".
+    if (bb != NULL) {
+        svi->nextBlock[svi->lastBlock] = bb;
+        svi->lastBlock = bb;
+    }
+
+    return true;
+}
+
+
+void
+SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (ctx->GetCurrentBasicBlock() == NULL)
+        return;
+
+    const Type *type;
+    if (expr == NULL || ((type = expr->GetType()) == NULL)) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    // Basic block we'll end up after the switch statement
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("switch_done");
+
+    // Walk the AST of the statements after the 'switch' to collect a bunch
+    // of information about the structure of the 'case' and 'default'
+    // statements.
+    SwitchVisitInfo svi(ctx);
+    WalkAST(stmts, lSwitchASTPreVisit, NULL, &svi);
+    // Record that the basic block following the last one created for a
+    // case/default is the block after the end of the switch statement.
+    svi.nextBlock[svi.lastBlock] = bbDone;
+
+    llvm::Value *exprValue = expr->GetValue(ctx);
+    if (exprValue == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    bool isUniformCF = (type->IsUniformType() &&
+                        lHasVaryingBreakOrContinue(stmts) == false);
+    ctx->StartSwitch(isUniformCF, bbDone);
+    ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone,
+                    svi.caseBlocks, svi.nextBlock);
+
+    if (stmts != NULL)
+        stmts->EmitCode(ctx);
+
+    if (ctx->GetCurrentBasicBlock() != NULL)
+        ctx->BranchInst(bbDone);
+
+    ctx->SetCurrentBasicBlock(bbDone);
+    ctx->EndSwitch();
+}
+
+
+void
+SwitchStmt::Print(int indent) const {
+    printf("%*cSwitch Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+    printf("%*cexpr = ", indent, ' ');
+    expr->Print();
+    printf("\n");
+    stmts->Print(indent+4);
+}
+
+
+Stmt *
+SwitchStmt::TypeCheck() {
+    const Type *exprType = expr->GetType();
+    if (exprType == NULL)
+        return NULL;
+
+    const Type *toType = NULL;
+    exprType = exprType->GetAsConstType();
+    bool is64bit = (exprType->GetAsUniformType() == 
+                    AtomicType::UniformConstUInt64 ||
+                    exprType->GetAsUniformType() == 
+                    AtomicType::UniformConstInt64);
+
+    if (exprType->IsUniformType()) {
+        if (is64bit) toType = AtomicType::UniformInt64;
+        else         toType = AtomicType::UniformInt32;
+    }
+    else {
+        if (is64bit) toType = AtomicType::VaryingInt64;
+        else         toType = AtomicType::VaryingInt32;
+    }
+
+    expr = TypeConvertExpr(expr, toType, "switch expression");
+    if (expr == NULL)
+        return NULL;
+
+    return this;
+}
+
+
+int
+SwitchStmt::EstimateCost() const {
+    const Type *type = expr->GetType();
+    if (type && type->IsVaryingType())
+        return COST_VARYING_SWITCH;
+    else
+        return COST_UNIFORM_SWITCH;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
 ReturnStmt::ReturnStmt(Expr *v, bool cc, SourcePos p) 
@@ -1916,13 +2451,136 @@ ReturnStmt::Print(int indent) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// GotoStmt
+
+GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip) 
+    : Stmt(gotoPos) {
+    label = l;
+    identifierPos = ip;
+}
+
+
+void
+GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (ctx->VaryingCFDepth() > 0) {
+        Error(pos, "\"goto\" statements are only legal under \"uniform\" "
+              "control flow.");
+        return;
+    }
+    if (ctx->InForeachLoop()) {
+        Error(pos, "\"goto\" statements are currently illegal inside "
+              "\"foreach\" loops.");
+        return;
+    }
+
+    llvm::BasicBlock *bb = ctx->GetLabeledBasicBlock(label);
+    if (bb == NULL) {
+        // TODO: use the string distance stuff to suggest alternatives if
+        // there are some with names close to the label name we have here..
+        Error(identifierPos, "No label named \"%s\" found in current function.",
+              label.c_str());
+        return;
+    }
+
+    ctx->BranchInst(bb);
+    ctx->SetCurrentBasicBlock(NULL);
+}
+
+
+void
+GotoStmt::Print(int indent) const {
+    printf("%*cGoto label \"%s\"\n", indent, ' ', label.c_str());
+}
+
+
+Stmt *
+GotoStmt::Optimize() {
+    return this;
+}
+
+
+Stmt *
+GotoStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+GotoStmt::EstimateCost() const {
+    return COST_GOTO;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// LabeledStmt
+
+LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p) 
+    : Stmt(p) {
+    name = n;
+    stmt = s;
+}
+
+
+void
+LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
+    llvm::BasicBlock *bblock = ctx->GetLabeledBasicBlock(name);
+    Assert(bblock != NULL);
+
+    // End the current basic block with a jump to our basic block and then
+    // set things up for emission to continue there.  Note that the current
+    // basic block may validly be NULL going into this statement due to an
+    // earlier goto that NULLed it out; that doesn't stop us from
+    // re-establishing a current basic block starting at the label..
+    if (ctx->GetCurrentBasicBlock() != NULL)
+        ctx->BranchInst(bblock);
+    ctx->SetCurrentBasicBlock(bblock);
+
+    if (stmt != NULL)
+        stmt->EmitCode(ctx);
+}
+
+
+void
+LabeledStmt::Print(int indent) const {
+    printf("%*cLabel \"%s\"\n", indent, ' ', name.c_str());
+    if (stmt != NULL)
+        stmt->Print(indent);
+}
+
+
+Stmt *
+LabeledStmt::Optimize() {
+    return this;
+}
+
+
+Stmt *
+LabeledStmt::TypeCheck() {
+    if (!isalpha(name[0]) || name[0] == '_') {
+        Error(pos, "Label must start with either alphabetic character or '_'.");
+        return NULL;
+    }
+    for (unsigned int i = 1; i < name.size(); ++i) {
+        if (!isalnum(name[i]) && name[i] != '_') {
+            Error(pos, "Character \"%c\" is illegal in labels.", name[i]);
+            return NULL;
+        }
+    }
+    return this;
+}
+
+
+int
+LabeledStmt::EstimateCost() const {
+    return 0;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // StmtList
 
 void
 StmtList::EmitCode(FunctionEmitContext *ctx) const {
-    if (!ctx->GetCurrentBasicBlock()) 
-        return;
-
     ctx->StartScope();
     ctx->SetDebugPos(pos);
     for (unsigned int i = 0; i < stmts.size(); ++i)
@@ -2020,7 +2678,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
         baseType == AtomicType::UniformUInt16) {
         expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
                                                         AtomicType::VaryingInt32, 
-                                expr, false, expr->pos);
+                                expr, expr->pos);
         type = expr->GetType();
     }
         
@@ -2173,16 +2831,6 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
                     m->module->getFunction("__do_assert_varying");
     Assert(assertFunc != NULL);
 
-#ifdef ISPC_IS_WINDOWS
-    char errorString[2048];
-    if (sprintf_s(errorString, sizeof(errorString),
-                  "%s(%d): Assertion failed: %s\n", pos.name,
-                  pos.first_line, message.c_str()) == -1) {
-        Error(pos, "Fatal error in sprintf_s() call when generating assert "
-              "string.");
-        return;
-    }
-#else
     char *errorString;
     if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s\n", 
                  pos.name, pos.first_line, pos.first_column, 
@@ -2191,7 +2839,6 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
               "unable to allocate memory!");
         return;
     }
-#endif
 
     std::vector<llvm::Value *> args;
     args.push_back(ctx->GetStringPtr(errorString));
@@ -2199,9 +2846,7 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, NULL, args, "");
 
-#ifndef ISPC_IS_WINDOWS
     free(errorString);
-#endif // !ISPC_IS_WINDOWS
 }
 
 
@@ -2223,7 +2868,7 @@ AssertStmt::TypeCheck() {
         }
         expr = new TypeCastExpr(isUniform ? AtomicType::UniformBool : 
                                             AtomicType::VaryingBool, 
-                                expr, false, expr->pos);
+                                expr, expr->pos);
         expr = ::TypeCheck(expr);
     }
     return this;

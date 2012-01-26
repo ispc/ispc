@@ -1,4 +1,4 @@
-// Left hand side of assignment statement can't be assigned to
+// Left hand side of assignment expression can't be assigned to
 
 int foo() {return 2;}
 

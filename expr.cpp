@@ -36,12 +36,22 @@
 */
 
 #include "expr.h"
+#include "ast.h"
 #include "type.h"
 #include "sym.h"
 #include "ctx.h"
 #include "module.h"
 #include "util.h"
 #include "llvmutil.h"
+#ifndef _MSC_VER
+#include <inttypes.h>
+#endif
+#ifndef PRId64
+#define PRId64 "lld"
+#endif
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
 
 #include <list>
 #include <set>
@@ -224,7 +234,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             eltType = eltType->GetAsConstType();
         if (Type::Equal(toPointerType, 
                         new PointerType(eltType,
-                                        toPointerType->IsUniformType(),
+                                        toPointerType->GetVariability(),
                                         toPointerType->IsConstType())))
             goto typecast_ok;
         else {
@@ -466,7 +476,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
  typecast_ok:
     if (expr != NULL)
-        *expr = new TypeCastExpr(toType, *expr, false, pos);
+        *expr = new TypeCastExpr(toType, *expr, pos);
     return true;
 }
 
@@ -638,6 +648,9 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
 
 static llvm::Value *
 lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
+    if (baseSym == NULL)
+        return ctx->GetFullMask();
+
     if (dynamic_cast<const PointerType *>(baseSym->type) != NULL ||
         dynamic_cast<const ReferenceType *>(baseSym->type) != NULL)
         // FIXME: for pointers, we really only want to do this for
@@ -658,10 +671,11 @@ lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
 static void
 lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
                    FunctionEmitContext *ctx, Symbol *baseSym) {
-    Assert(baseSym != NULL &&
+    Assert(baseSym == NULL ||
            baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore &&
         !g->opt.disableMaskAllOnOptimizations &&
+        baseSym != NULL &&
         baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
         baseSym->storageClass != SC_STATIC &&
         dynamic_cast<const ReferenceType *>(baseSym->type) == NULL &&
@@ -2016,14 +2030,13 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
 
     Symbol *baseSym = lvalue->GetBaseSymbol();
-    // Should be caught during type-checking...
-    assert(baseSym != NULL);
 
     switch (op) {
     case Assign: {
         llvm::Value *lv = lvalue->GetLValue(ctx);
         if (lv == NULL) {
-            Assert(m->errorCount > 0);
+            Error(lvalue->pos, "Left hand side of assignment expression can't "
+                  "be assigned to.");
             return NULL;
         }
         const Type *lvalueType = lvalue->GetLValueType();
@@ -2146,13 +2159,13 @@ AssignExpr::TypeCheck() {
         }
     }
 
-    if (lvalue->GetBaseSymbol() == NULL) {
-        Error(lvalue->pos, "Left hand side of assignment statement can't be "
-              "assigned to.");
+    const Type *lhsType = lvalue->GetType();
+    if (lhsType->IsConstType()) {
+        Error(lvalue->pos, "Can't assign to type \"%s\" on left-hand side of "
+              "expression.", lhsType->GetString().c_str());
         return NULL;
     }
 
-    const Type *lhsType = lvalue->GetType();
     if (dynamic_cast<const PointerType *>(lhsType) != NULL) {
         if (op == AddAssign || op == SubAssign) {
             if (PointerType::IsVoidPointer(lhsType)) {
@@ -2185,12 +2198,6 @@ AssignExpr::TypeCheck() {
 
     if (rvalue == NULL)
         return NULL;
-
-    if (lhsType->IsConstType()) {
-        Error(pos, "Can't assign to type \"%s\" on left-hand side of "
-              "expression.", lhsType->GetString().c_str());
-        return NULL;
-    }
 
     // Make sure we're not assigning to a struct that has a constant member
     const StructType *st = dynamic_cast<const StructType *>(lhsType);
@@ -2709,7 +2716,7 @@ FunctionCallExpr::TypeCheck() {
                     !(argCouldBeNULL[i] == true &&
                       dynamic_cast<const PointerType *>(paramType) != NULL)) {
                     Error(args->exprs[i]->pos, "Can't convert argument of "
-                          "type \"%s\" to type \"%s\" for funcion call "
+                          "type \"%s\" to type \"%s\" for function call "
                           "argument.", argTypes[i]->GetString().c_str(),
                           paramType->GetString().c_str());
                     return NULL;
@@ -3525,6 +3532,12 @@ VectorMemberExpr::getElementType() const {
 MemberExpr *
 MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
                    bool derefLValue) {
+    // FIXME: we need to call TypeCheck() here so that we can call
+    // e->GetType() in the following.  But really we just shouldn't try to
+    // resolve this now but just have a generic MemberExpr type that
+    // handles all cases so that this is unnecessary.
+    e = ::TypeCheck(e);
+
     const Type *exprType;
     if (e == NULL || (exprType = e->GetType()) == NULL)
         return NULL;
@@ -4536,18 +4549,10 @@ ConstExpr::Print() const {
             printf("%f", floatVal[i]);
             break;
         case AtomicType::TYPE_INT64:
-#ifdef ISPC_IS_LINUX
-            printf("%ld", int64Val[i]);
-#else
-            printf("%lld", int64Val[i]);
-#endif
+            printf("%"PRId64, int64Val[i]);
             break;
         case AtomicType::TYPE_UINT64:
-#ifdef ISPC_IS_LINUX
-            printf("%lu", uint64Val[i]);
-#else
-            printf("%llu", uint64Val[i]);
-#endif
+            printf("%"PRIu64, uint64Val[i]);
             break;
         case AtomicType::TYPE_DOUBLE:
             printf("%f", doubleVal[i]);
@@ -4566,11 +4571,10 @@ ConstExpr::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // TypeCastExpr
 
-TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, bool pu, SourcePos p) 
+TypeCastExpr::TypeCastExpr(const Type *t, Expr *e, SourcePos p) 
   : Expr(p) {
     type = t;
     expr = e;
-    preserveUniformity = pu;
 }
 
 
@@ -5213,7 +5217,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
             Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
-            arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, false, pos);
+            arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
             Assert(arrayAsPtr != NULL);
             arrayAsPtr = ::Optimize(arrayAsPtr);
@@ -5364,6 +5368,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const { 
+    Assert(type->HasUnboundVariability() == false);
     return type; 
 }
 
@@ -5373,7 +5378,7 @@ lDeconstifyType(const Type *t) {
     const PointerType *pt = dynamic_cast<const PointerType *>(t);
     if (pt != NULL)
         return new PointerType(lDeconstifyType(pt->GetBaseType()), 
-                               pt->IsUniformType(), false);
+                               pt->GetVariability(), false);
     else
         return t->GetAsNonConstType();
 }
@@ -5384,16 +5389,16 @@ TypeCastExpr::TypeCheck() {
     if (expr == NULL)
         return NULL;
 
-    const Type *toType = GetType(), *fromType = expr->GetType();
+    const Type *toType = type, *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL)
         return NULL;
 
-    if (preserveUniformity == true && fromType->IsUniformType() &&
-        toType->IsVaryingType()) {
+    if (toType->HasUnboundVariability() && fromType->IsUniformType()) {
         TypeCastExpr *tce = new TypeCastExpr(toType->GetAsUniformType(),
-                                             expr, false, pos);
+                                             expr, pos);
         return ::TypeCheck(tce);
     }
+    type = toType = type->ResolveUnboundVariability(Type::Varying);
 
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
@@ -5862,6 +5867,8 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
+    if (type->HasUnboundVariability())
+        type = type->ResolveUnboundVariability(Type::Varying);
 }
 
 
@@ -6026,7 +6033,8 @@ FunctionSymbolExpr::GetType() const {
         return NULL;
     }
 
-    return matchingFunc ? new PointerType(matchingFunc->type, true, true) : NULL;
+    return matchingFunc ? 
+        new PointerType(matchingFunc->type, Type::Uniform, true) : NULL;
 }
 
 

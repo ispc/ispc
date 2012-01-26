@@ -40,6 +40,9 @@
 #define ISPC_UTIL_H
 
 #include "ispc.h"
+#ifdef ISPC_IS_WINDOWS
+#include <stdarg.h>
+#endif
 
 struct SourcePos;
 
@@ -61,6 +64,12 @@ inline uint32_t RoundUpPow2(uint32_t v) {
 #else
 #define PRINTF_FUNC
 #endif // __GNUG__
+
+// for cross-platform compatibility
+#ifdef ISPC_IS_WINDOWS
+int vasprintf(char **sptr, const char *fmt, va_list argv);
+int  asprintf(char **sptr, const char *fmt, ...);
+#endif
 
 /** Prints a debugging message.  These messages are only printed if
     g->debugPrint is \c true.  In addition to a program source code

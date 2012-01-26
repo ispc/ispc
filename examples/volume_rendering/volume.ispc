@@ -129,8 +129,8 @@ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
-                            uniform float density[], uniform int nVoxels[3]) {
+static float Density(float3 Pobj, float3 pMin, float3 pMax, 
+                     uniform float density[], uniform int nVoxels[3]) {
     if (!Inside(Pobj, pMin, pMax)) 
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_

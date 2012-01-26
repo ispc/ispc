@@ -99,7 +99,9 @@ Contents:
   + `Control Flow`_
 
     * `Conditional Statements: "if"`_
+    * `Conditional Statements: "switch"`_
     * `Basic Iteration Statements: "for", "while", and "do"`_
+    * `Unstructured Control Flow: "goto"`_
     * `"Coherent" Control Flow Statements: "cif" and Friends`_
     * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
     * `Parallel Iteration with "programIndex" and "programCount"`_
@@ -1140,7 +1142,7 @@ in C:
 
 * Expression syntax and basic types
 * Syntax for variable declarations
-* Control flow structures: if, for, while, do
+* Control flow structures: ``if``, ``for``, ``while``, ``do``, and ``switch``.
 * Pointers, including function pointers, ``void *``, and C's array/pointer
   duality (arrays are converted to pointers when passed to functions, etc.)
 * Structs and arrays
@@ -1184,7 +1186,7 @@ but are likely to be supported in future releases:
   ``int64`` types
 * Character constants
 * String constants and arrays of characters as strings
-* ``switch`` and ``goto`` statements
+* ``goto`` statements are partially supported (see `Unstructured Control Flow: "goto"`_)
 * ``union`` types
 * Bitfield members of ``struct`` types
 * Variable numbers of arguments to functions
@@ -1244,6 +1246,18 @@ Here are three ways of specifying the integer value "15":
    int fifteen_decimal = 15;
    int fifteen_hex     = 0xf;
    int fifteen_binary  = 0b1111;
+
+A number of suffixes can be provided with integer numeric constants.
+First, "u" denotes that the constant is unsigned, and "ll" denotes a 64-bit
+integer constant (while "l" denotes a 32-bit integer constant).  It is also
+possible to denote units of 1024, 1024*1024, or 1024*1024*1024 with the
+SI-inspired suffixes "k", "M", and "G" respectively:
+
+::
+
+   int two_kb = 2k;   // 2048
+   int two_megs = 2M; // 2 * 1024 * 1024
+   int one_gig = 1G;  // 1024 * 1024 * 1024
 
 Floating-point constants can be specified in one of three ways.  First,
 they may be a sequence of zero or more digits from 0 to 9, followed by a
@@ -1980,6 +1994,31 @@ executes if the condition is false.
     else
         x *= 2.;
 
+Conditional Statements: "switch"
+--------------------------------
+
+The ``switch`` conditional statement is also available, again with the same
+behavior as in C; the expression used in the ``switch`` must be of integer
+type (but it can be uniform or varying).  As in C, if there is no ``break``
+statement at the end of the code for a given case, execution "falls
+through" to the following case.  These features are demonstrated in the
+code below.
+
+::
+
+    int x = ...;
+    switch (x) {
+    case 0:
+    case 1:
+        foo(x);
+        /* fall through */
+    case 5:
+        x = 0;
+        break;
+    default:
+        x *= x;
+    }
+
 Basic Iteration Statements: "for", "while", and "do"
 ----------------------------------------------------
 
@@ -2004,6 +2043,37 @@ independently for each of the program instances in a gang; for example, if
 one of them executes a ``continue`` statement, other program instances
 executing code in the loop body that didn't execute the ``continue`` will
 be unaffected by it.
+
+Unstructured Control Flow: "goto"
+---------------------------------
+
+``goto`` statements are allowed in ``ispc`` programs under limited
+circumstances; specifically, only when the compiler can determine that if
+any program instance executes a ``goto`` statement, then all of the program
+instances will be running at that statement, such that all will follow the
+``goto``.
+
+Put another way: it's illegal for there to be "varying" control flow
+statements in scopes that enclose a ``goto`` statement.  An error is issued
+if a ``goto`` is used in this situation.
+
+The syntax for adding labels to ``ispc`` programs and jumping to them with
+``goto`` is the same as in C.  The following code shows a ``goto`` based
+equivalent of a ``for`` loop where the induction variable ``i`` goes from
+zero to ten.
+
+::
+
+      uniform int i = 0;
+    check:
+      if (i > 10)
+          goto done;
+      // loop body
+      ++i;
+      goto check;
+    done:
+      // ...
+
 
 "Coherent" Control Flow Statements: "cif" and Friends
 -----------------------------------------------------
@@ -3374,12 +3444,27 @@ pointer types.
 System Information
 ------------------
 
-A routine is available to find the number of CPU cores available in the
-system:
+The value of a  high-precision hardware clock counter is returned by the
+``clock()`` routine; its value increments by one each processor cycle.
+Thus, taking the difference between the values returned by ``clock()`` and
+different points in program execution gives the number of cycles between
+those points in the program.
 
 ::
 
-    int num_cores()
+    uniform int64 clock()
+
+Note that ``clock()`` flushes the processor pipeline.  It has an overhead
+of a hundred or so cycles, so for very fine-grained measurements, it may be
+worthwhile to measure the cost of calling ``clock()`` and subtracting that
+value from reported results.
+    
+A routine is also available to find the number of CPU cores available in
+the system:
+
+::
+
+    uniform int num_cores()
 
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.

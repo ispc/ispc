@@ -15,6 +15,7 @@ import string
 import subprocess
 import shlex
 import platform
+import tempfile
 
 # This script is affected by http://bugs.python.org/issue5261 on OSX 10.5 Leopard
 # git history has a workaround for that issue.
@@ -79,7 +80,12 @@ if len(args) == 0:
     files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc") + \
         glob.glob("tests_errors/*ispc")
 else:
-    files = args
+    files = [ ]
+    for f in args:
+        if os.path.splitext(string.lower(f))[1] != ".ispc":
+            print "Ignoring file %s, which doesn't have an .ispc extension." % f
+        else:
+            files += [ f ]
 
 # randomly shuffle the tests if asked to do so
 if (options.random):
@@ -146,16 +152,22 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
 
 
 def run_test(filename):
+    global is_windows
+    if is_windows:
+        input_prefix = "../"
+    else:
+        input_prefix = ""
+        
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
         ispc_cmd = ispc_exe + " --werror --nowrap %s --arch=%s --target=%s" % \
-            (filename, options.arch, options.target)
+            (input_prefix + filename, options.arch, options.target)
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
 
         # figure out the error message we're expecting
-        file = open(filename, 'r')
+        file = open(input_prefix + filename, 'r')
         firstline = file.readline()
         firstline = firstline.replace("//", "")
         firstline = firstline.lstrip()
@@ -179,7 +191,7 @@ def run_test(filename):
         # function that this test has.
         sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3, 
                     "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6 }
-        file = open(filename, 'r')
+        file = open(input_prefix + filename, 'r')
         match = -1
         for line in file:
             # look for lines with 'export'...
@@ -201,14 +213,13 @@ def run_test(filename):
             if is_generic_target:
                 obj_name = "%s.cpp" % filename
 
-            global is_windows
             if is_windows:
                 if not is_generic_target:
-                    obj_name = "%s.obj" % filename
-                exe_name = "%s.exe" % filename
+                    obj_name = "%s%s.obj" % (input_prefix, filename)
+                exe_name = "%s%s.exe" % (input_prefix, filename)
 
-                cc_cmd = "%s /I. /Iwinstuff /Zi /nologo /DTEST_SIG=%d test_static.cpp %s /Fe%s" % \
-                         (options.compiler_exe, match, obj_name, exe_name)
+                cc_cmd = "%s /I. /Iwinstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
+                         (options.compiler_exe, match, input_prefix, obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -220,7 +231,7 @@ def run_test(filename):
                     gcc_arch = '-m32'
                 else:
                     gcc_arch = '-m64'
-                cc_cmd = "%s -msse4.2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                cc_cmd = "%s -O2 -msse4.2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
                          (options.compiler_exe, gcc_arch, match, obj_name, exe_name)
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
@@ -228,7 +239,7 @@ def run_test(filename):
                     cc_cmd += " -DEXPECT_FAILURE"
 
             ispc_cmd = ispc_exe + " --woff %s -o %s --arch=%s --target=%s" % \
-                       (filename, obj_name, options.arch, options.target)
+                       (input_prefix+filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
@@ -257,12 +268,28 @@ def run_test(filename):
 # this function will be running in parallel across all of the CPU cores of
 # the system.
 def run_tasks_from_queue(queue, queue_ret):
+    if is_windows:
+        tmpdir = "tmp%d" % os.getpid()
+        os.mkdir(tmpdir)
+        os.chdir(tmpdir)
+    else:
+        olddir = ""
+        
     compile_error_files = [ ]
     run_error_files = [ ]
     while True:
         filename = queue.get()
         if (filename == 'STOP'):
             queue_ret.put((compile_error_files, run_error_files))
+            if is_windows:
+                try:
+                    os.remove("test_static.obj")
+                    os.remove("/vc100.pdb")
+                    os.chdir("..")
+                    os.rmdir(tmpdir)
+                except:
+                    None
+                
             sys.exit(0)
 
         (compile_error, run_error) = run_test(filename)
@@ -286,61 +313,38 @@ if __name__ == '__main__':
 
     compile_error_files = [ ]
     run_error_files = [ ]
-    if is_windows:
-        # cl.exe gets itself all confused if we have multiple instances of
-        # it running concurrently and operating on the same .cpp file
-        # (test_static.cpp), even if we are generating a differently-named
-        # exe in the end.  So run serially. :-(
-        nthreads = 1
-        num_done = 0
-        sys.stdout.write("Running %d tests.\n" % (total_tests))
-        for fn in files:
-            fn = fn.replace("\\",'/')
-            (compile_error, run_error) = run_test(fn)
-            if compile_error != 0:
-                compile_error_files += [ fn ]
-            if run_error != 0:
-                run_error_files += [ fn ]
-            num_done += 1
-            progress_str = " Done %d / %d [%s]\n" % (num_done, total_tests, fn)
-            # spaces to clear out detrius from previous printing...
-            for x in range(30):
-                progress_str += ' '
-            progress_str += '\r'
-            sys.stdout.write(progress_str)
-            sys.stdout.flush()
-    else:
-        nthreads = multiprocessing.cpu_count()
-        sys.stdout.write("Found %d CPUs. Running %d tests.\n" % (nthreads, total_tests))
 
-        # put each of the test filenames into a queue
-        q = multiprocessing.Queue()
-        for fn in files:
-            q.put(fn)
-        for x in range(nthreads):
-            q.put('STOP')
-        qret = multiprocessing.Queue()
+    nthreads = multiprocessing.cpu_count()
+    print "Found %d CPUs. Running %d tests." % (nthreads, total_tests)
 
-        # need to catch sigint so that we can terminate all of the tasks if
-        # we're interrupted
-        signal.signal(signal.SIGINT, sigint)
+    # put each of the test filenames into a queue
+    q = multiprocessing.Queue()
+    for fn in files:
+        q.put(fn)
+    for x in range(nthreads):
+        q.put('STOP')
+    qret = multiprocessing.Queue()
 
-        # launch jobs to run tests
-        for x in range(nthreads):
-            t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret))
-            task_threads.append(t)
-            t.start()
+    # need to catch sigint so that we can terminate all of the tasks if
+    # we're interrupted
+    signal.signal(signal.SIGINT, sigint)
 
-        # wait for them to all finish and then return the number that failed
-        # (i.e. return 0 if all is ok)
-        for t in task_threads:
-            t.join()
-        sys.stdout.write("\n")
+    # launch jobs to run tests
+    for x in range(nthreads):
+        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret))
+        task_threads.append(t)
+        t.start()
 
-        while not qret.empty():
-            (c, r) = qret.get()
-            compile_error_files += c
-            run_error_files += r
+    # wait for them to all finish and then return the number that failed
+    # (i.e. return 0 if all is ok)
+    for t in task_threads:
+        t.join()
+    print
+
+    while not qret.empty():
+        (c, r) = qret.get()
+        compile_error_files += c
+        run_error_files += r
 
     if len(compile_error_files) > 0:
         compile_error_files.sort()

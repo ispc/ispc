@@ -282,6 +282,97 @@ public:
 };
 
 
+/** Statement corresponding to a "case" label in the program.  In addition
+    to the value associated with the "case", this statement also stores the
+    statements following it. */
+class CaseStmt : public Stmt {
+public:
+    CaseStmt(int value, Stmt *stmt, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Integer value after the "case" statement */
+    const int value;
+    Stmt *stmts;
+};
+
+
+/** Statement for a "default" label (as would be found inside a "switch"
+    statement). */
+class DefaultStmt : public Stmt {
+public:
+    DefaultStmt(Stmt *stmt, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Stmt *stmts;
+};
+
+
+/** A "switch" statement in the program. */
+class SwitchStmt : public Stmt {
+public:
+    SwitchStmt(Expr *expr, Stmt *stmts, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Expression that is used to determine which label to jump to. */
+    Expr *expr;
+    /** Statement block after the "switch" expression. */
+    Stmt *stmts;
+};
+
+
+/** A "goto" in an ispc program. */
+class GotoStmt : public Stmt {
+public:
+    GotoStmt(const char *label, SourcePos gotoPos, SourcePos idPos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Name of the label to jump to when the goto is executed. */
+    std::string label;
+    SourcePos identifierPos;
+};
+
+
+/** Statement corresponding to a label (as would be used as a goto target)
+    in the program. */
+class LabeledStmt : public Stmt {
+public:
+    LabeledStmt(const char *label, Stmt *stmt, SourcePos p);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *Optimize();
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Name of the label. */
+    std::string name;
+    /** Statements following the label. */
+    Stmt *stmt;
+};
+
+
 /** @brief Representation of a list of statements in the program.
  */
 class StmtList : public Stmt {

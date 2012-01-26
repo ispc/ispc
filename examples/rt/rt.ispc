@@ -104,8 +104,8 @@ static void generateRay(uniform const float raster2camera[4][4],
 }
 
 
-static inline bool BBoxIntersect(const uniform float bounds[2][3], 
-                                 const Ray &ray) {
+static bool BBoxIntersect(const uniform float bounds[2][3], 
+                          const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
     uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
     float t0 = ray.mint, t1 = ray.maxt;
@@ -143,7 +143,7 @@ static inline bool BBoxIntersect(const uniform float bounds[2][3],
 
 
 
-static inline bool TriIntersect(const Triangle &tri, Ray &ray) {
+static bool TriIntersect(const Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
     uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };

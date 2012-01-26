@@ -45,8 +45,7 @@
               developers mailing list</a></li>
               <li><a href="http://github.com/ispc/ispc/wiki/">Wiki</a></li>
               <li><a href="http://github.com/ispc/ispc/issues/">Bug tracking</a></li>
-              <li><a href="doxygen/index.html">Doxygen documentation of
-              <tt>ispc</tt> source code</a></li>
+              <li><a href="doxygen/index.html">Doxygen</a></li>
             </ul>
         </div>
       </div>

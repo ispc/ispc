@@ -153,10 +153,12 @@ public:
         declarator and symbols for its arguments in *args. */
     Symbol *GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *args);
 
+    Symbol *GetSymbolForFunctionParameter(int paramNum) const;
+
     /** Returns the symbol associated with the declarator. */
     Symbol *GetSymbol() const;
 
-    void Print() const;
+    void Print(int indent) const;
 
     /** Position of the declarator in the source program. */
     const SourcePos pos;
@@ -199,7 +201,7 @@ public:
     Declaration(DeclSpecs *ds, std::vector<Declarator *> *dlist = NULL);
     Declaration(DeclSpecs *ds, Declarator *d);
 
-    void Print() const;
+    void Print(int indent) const;
 
     /** This method walks through all of the Declarators in a declaration
         and returns a fully-initialized Symbol and (possibly) and
@@ -207,6 +209,10 @@ public:
         the system to not have to worry about the mess of the general
         Declarator representation.) */
     std::vector<VariableDeclaration> GetVariableDeclarations() const;
+
+    /** For any function declarations in the Declaration, add the
+        declaration to the module. */
+    void DeclareFunctions();
 
     DeclSpecs *declSpecs;
     std::vector<Declarator *> declarators;
