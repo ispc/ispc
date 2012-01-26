@@ -1469,23 +1469,23 @@ jump_statement
     ;
 
 sync_statement
-    : TOKEN_SYNC 
+    : TOKEN_SYNC ';'
       { $$ = new ExprStmt(new SyncExpr(@1), @1); }
     ;
 
 print_statement
-    : TOKEN_PRINT '(' string_constant ')'
+    : TOKEN_PRINT '(' string_constant ')' ';'
       {
            $$ = new PrintStmt(*$3, NULL, @1); 
       }
-    | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')'
+    | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')' ';'
       {
            $$ = new PrintStmt(*$3, $5, @1); 
       }
     ;
 
 assert_statement
-    : TOKEN_ASSERT '(' string_constant ',' expression ')'
+    : TOKEN_ASSERT '(' string_constant ',' expression ')' ';'
       {
           $$ = new AssertStmt(*$3, $5, @1);
       }
