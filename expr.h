@@ -685,6 +685,38 @@ public:
 };
 
 
+/** An expression representing a "new" expression, used for dynamically
+    allocating memory. 
+*/
+class NewExpr : public Expr {
+public:
+    NewExpr(int typeQual, const Type *type, Expr *initializer, Expr *count, 
+            SourcePos tqPos, SourcePos p);
+
+    llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    const Type *GetType() const;
+    Expr *TypeCheck();
+    Expr *Optimize();
+    void Print() const;
+    int EstimateCost() const;
+
+    /** Type of object to allocate storage for. */
+    const Type *allocType;
+    /** Expression giving the number of elements to allocate, when the 
+        "new Foo[expr]" form is used.  This may be NULL, in which case a
+        single element of the given type will be allocated. */
+    Expr *countExpr;
+    /** Optional initializer expression used to initialize the allocated
+        memory. */
+    Expr *initExpr;
+    /** Indicates whether this is a "varying new" or "uniform new"
+        (i.e. whether a separate allocation is performed per program
+        instance, or whether a single allocation is performed for the
+        entire gang of program instances.) */
+    bool isVarying;
+};
+
+
 /** This function indicates whether it's legal to convert from fromType to
     toType.  If the optional errorMsgBase and source position parameters
     are provided, then an error message is issued if the type conversion
@@ -702,5 +734,21 @@ bool CanConvertTypes(const Type *fromType, const Type *toType,
     parameter").
  */
 Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase);
+
+/** Utility routine that emits code to initialize a symbol given an
+    initializer expression.
+
+    @param lvalue    Memory location of storage for the symbol's data
+    @param symName   Name of symbol (used in error messages)
+    @param symType   Type of variable being initialized
+    @param initExpr  Expression for the initializer
+    @param ctx       FunctionEmitContext to use for generating instructions
+    @param pos       Source file position of the variable being initialized
+*/
+void
+InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
+           FunctionEmitContext *ctx, SourcePos pos);
+
+bool PossiblyResolveFunctionOverloads(Expr *expr, const Type *type);
 
 #endif // ISPC_EXPR_H

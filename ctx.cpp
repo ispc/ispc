@@ -2923,7 +2923,7 @@ FunctionEmitContext::SyncInst() {
 
 
 /** When we gathering from or scattering to a varying atomic type, we need
-    to add an appropraite offset to the final address for each lane right
+    to add an appropriate offset to the final address for each lane right
     before we use it.  Given a varying pointer we're about to use and its
     type, this function determines whether these offsets are needed and
     returns an updated pointer that incorporates these offsets if needed.

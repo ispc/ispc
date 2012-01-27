@@ -1806,6 +1806,65 @@ ok:
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; new/delete
+
+declare i8 * @malloc(i64)
+declare void @free(i8 *)
+
+define i8 * @__new_uniform(i64 %size) {
+  %a = call i8 * @malloc(i64 %size)
+  ret i8 * %a
+}
+
+define <WIDTH x i64> @__new_varying32(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
+    %ptr_LANE_ID = call i8 * @malloc(i64 %sz64_LANE_ID)
+    %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define <WIDTH x i64> @__new_varying64(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %ptr_LANE_ID = call i8 * @malloc(i64 %sz_LANE_ID)
+    %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define void @__delete_uniform(i8 * %ptr) {
+  call void @free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
 define i64 @__clock() nounwind uwtable ssp {

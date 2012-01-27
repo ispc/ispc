@@ -98,6 +98,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         StmtList *sl;
         PrintStmt *ps;
         AssertStmt *as;
+        DeleteStmt *dels;
 
         if ((es = dynamic_cast<ExprStmt *>(node)) != NULL)
             es->expr = (Expr *)WalkAST(es->expr, preFunc, postFunc, data);
@@ -160,6 +161,8 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             ps->values = (Expr *)WalkAST(ps->values, preFunc, postFunc, data);
         else if ((as = dynamic_cast<AssertStmt *>(node)) != NULL)
             as->expr = (Expr *)WalkAST(as->expr, preFunc, postFunc, data);
+        else if ((dels = dynamic_cast<DeleteStmt *>(node)) != NULL)
+            dels->expr = (Expr *)WalkAST(dels->expr, preFunc, postFunc, data);
         else
             FATAL("Unhandled statement type in WalkAST()");
     }
@@ -180,6 +183,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         DereferenceExpr *dre;
         SizeOfExpr *soe;
         AddressOfExpr *aoe;
+        NewExpr *newe;
 
         if ((ue = dynamic_cast<UnaryExpr *>(node)) != NULL)
             ue->expr = (Expr *)WalkAST(ue->expr, preFunc, postFunc, data);
@@ -223,6 +227,12 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             soe->expr = (Expr *)WalkAST(soe->expr, preFunc, postFunc, data);
         else if ((aoe = dynamic_cast<AddressOfExpr *>(node)) != NULL)
             aoe->expr = (Expr *)WalkAST(aoe->expr, preFunc, postFunc, data);
+        else if ((newe = dynamic_cast<NewExpr *>(node)) != NULL) {
+            newe->countExpr = (Expr *)WalkAST(newe->countExpr, preFunc, 
+                                              postFunc, data);
+            newe->initExpr = (Expr *)WalkAST(newe->initExpr, preFunc, 
+                                             postFunc, data);
+        }
         else if (dynamic_cast<SymbolExpr *>(node) != NULL ||
                  dynamic_cast<ConstExpr *>(node) != NULL ||
                  dynamic_cast<FunctionSymbolExpr *>(node) != NULL ||

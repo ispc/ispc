@@ -106,13 +106,14 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
-    "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo", "cfor",
-    "cif", "cwhile", "const", "continue", "creturn", "default", "do", "double", 
-    "else", "enum", "export", "extern", "false", "float", "for", "foreach",
-    "foreach_tiled", "goto", "if", "inline", "int", "int8", "int16",
-    "int32", "int64", "launch", "NULL", "print", "return", "signed", "sizeof",
-    "static", "struct", "switch", "sync", "task", "true", "typedef", "uniform",
-    "unsigned", "varying", "void", "while", NULL 
+    "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo",
+    "cfor", "cif", "cwhile", "const", "continue", "creturn", "default",
+    "do", "delete", "double", "else", "enum", "export", "extern", "false",
+    "float", "for", "foreach", "foreach_tiled", "goto", "if", "inline",
+    "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
+    "print", "return", "signed", "sizeof", "static", "struct", "switch",
+    "sync", "task", "true", "typedef", "uniform", "unsigned", "varying",
+    "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
@@ -170,7 +171,7 @@ struct ForeachDimension {
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
 %token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN 
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
-%token TOKEN_SIZEOF
+%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK 
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
@@ -189,7 +190,7 @@ struct ForeachDimension {
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
-%type <expr> logical_and_expression logical_or_expression 
+%type <expr> logical_and_expression logical_or_expression new_expression
 %type <expr> conditional_expression assignment_expression expression
 %type <expr> initializer constant_expression for_test
 %type <exprList> argument_expression_list initializer_list
@@ -197,7 +198,7 @@ struct ForeachDimension {
 %type <stmt> statement labeled_statement compound_statement for_init_statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
-%type <stmt> assert_statement sync_statement
+%type <stmt> assert_statement sync_statement delete_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
@@ -215,7 +216,7 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
-%type <type> type_specifier type_name
+%type <type> type_specifier type_name rate_qualified_new_type
 %type <type> short_vec_specifier
 %type <atomicType> atomic_var_type_specifier
 
@@ -225,7 +226,7 @@ struct ForeachDimension {
 
 %type <stringVal> string_constant
 %type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
-%type <intVal> int_constant soa_width_specifier
+%type <intVal> int_constant soa_width_specifier rate_qualified_new
 
 %type <foreachDimension> foreach_dimension_specifier
 %type <foreachDimensionList> foreach_dimension_list
@@ -448,8 +449,36 @@ conditional_expression
       { $$ = new SelectExpr($1, $3, $5, Union(@1,@5)); }
     ;
 
-assignment_expression
+rate_qualified_new
+    : TOKEN_NEW { $$ = 0; }
+    | TOKEN_UNIFORM TOKEN_NEW { $$ = TYPEQUAL_UNIFORM; }
+    | TOKEN_VARYING TOKEN_NEW { $$ = TYPEQUAL_VARYING; }
+    ;
+
+rate_qualified_new_type
+    : type_specifier { $$ = $1; }
+    | TOKEN_UNIFORM type_specifier { $$ = $2->GetAsUniformType(); }
+    | TOKEN_VARYING type_specifier { $$ = $2->GetAsVaryingType(); }
+    ;
+
+new_expression
     : conditional_expression
+    | rate_qualified_new rate_qualified_new_type
+    {
+        $$ = new NewExpr($1, $2, NULL, NULL, @1, Union(@1, @2));
+    }
+    | rate_qualified_new rate_qualified_new_type '(' initializer_list ')'
+    {
+        $$ = new NewExpr($1, $2, $4, NULL, @1, Union(@1, @2));
+    }
+    | rate_qualified_new rate_qualified_new_type '[' expression ']'
+    {
+        $$ = new NewExpr($1, $2, NULL, $4, @1, Union(@1, @4));
+    }
+    ;
+
+assignment_expression
+    : new_expression
     | unary_expression '=' assignment_expression
       { $$ = new AssignExpr(AssignExpr::Assign, $1, $3, Union(@1, @3)); }
     | unary_expression TOKEN_MUL_ASSIGN assignment_expression
@@ -1240,6 +1269,7 @@ statement
     | print_statement
     | assert_statement
     | sync_statement
+    | delete_statement
     | error
     {
         std::vector<std::string> builtinTokens;
@@ -1471,6 +1501,13 @@ jump_statement
 sync_statement
     : TOKEN_SYNC ';'
       { $$ = new ExprStmt(new SyncExpr(@1), @1); }
+    ;
+
+delete_statement
+    : TOKEN_DELETE expression ';'
+    {
+        $$ = new DeleteStmt($2, Union(@1, @2));
+    }
     ;
 
 print_statement

@@ -93,6 +93,8 @@ continue { return TOKEN_CONTINUE; }
 creturn { return TOKEN_CRETURN; }
 default { return TOKEN_DEFAULT; }
 do { return TOKEN_DO; }
+delete { return TOKEN_DELETE; }
+delete\[\] { return TOKEN_DELETE; }
 double { return TOKEN_DOUBLE; }
 else { return TOKEN_ELSE; }
 enum { return TOKEN_ENUM; }
@@ -112,6 +114,7 @@ int16 { return TOKEN_INT16; }
 int32 { return TOKEN_INT; }
 int64 { return TOKEN_INT64; }
 launch { return TOKEN_LAUNCH; }
+new { return TOKEN_NEW; }
 NULL { return TOKEN_NULL; }
 print { return TOKEN_PRINT; }
 reference { Error(*yylloc, "\"reference\" qualifier is no longer supported; "
