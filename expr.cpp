@@ -2678,12 +2678,12 @@ FunctionCallExpr::TypeCheck() {
         const Type *fptrType = func->GetType();
         if (fptrType == NULL)
             return NULL;
-           
-        Assert(dynamic_cast<const PointerType *>(fptrType) != NULL);
-        const FunctionType *funcType = 
-            dynamic_cast<const FunctionType *>(fptrType->GetBaseType());
-        if (funcType == NULL) {
-            Error(pos, "Must provide function name or function pointer for "
+
+        // Make sure we do in fact have a function to call
+        const FunctionType *funcType;
+        if (dynamic_cast<const PointerType *>(fptrType) == NULL ||
+            (funcType = dynamic_cast<const FunctionType *>(fptrType->GetBaseType())) == NULL) {
+            Error(func->pos, "Must provide function name or function pointer for "
                   "function call expression.");
             return NULL;
         }
