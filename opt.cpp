@@ -632,7 +632,13 @@ lGetMask(llvm::Value *factor) {
     if (cv) {
         int mask = 0;
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        Assert((int)cv->getNumOperands() == g->target.vectorWidth);
+#ifdef LLVM_3_1svn
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i)
+            elements.push_back(cv->getOperand(i));
+#else
         cv->getVectorElements(elements);
+#endif
 
         for (unsigned int i = 0; i < elements.size(); ++i) {
             llvm::APInt intMaskValue;
@@ -1125,7 +1131,12 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // Indexing into global arrays can lead to this form, with
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+#ifdef LLVM_3_1svn
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i)
+            elements.push_back(cv->getOperand(i));
+#else
         cv->getVectorElements(elements);
+#endif
 
         llvm::Constant *delta[ISPC_MAX_NVEC];
         for (unsigned int i = 0; i < elements.size(); ++i) {
@@ -2143,7 +2154,12 @@ lVectorIsLinearConstantInts(llvm::ConstantVector *cv, int vectorLength,
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+#ifdef LLVM_3_1svn
+    for (int i = 0; i < (int)cv->getNumOperands(); ++i)
+        elements.push_back(cv->getOperand(i));
+#else
     cv->getVectorElements(elements);
+#endif
     Assert((int)elements.size() == vectorLength);
 
     llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[0]);
