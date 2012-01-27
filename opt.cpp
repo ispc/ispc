@@ -632,7 +632,6 @@ lGetMask(llvm::Value *factor) {
     if (cv) {
         int mask = 0;
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-        Assert((int)cv->getNumOperands() == g->target.vectorWidth);
 #ifdef LLVM_3_1svn
         for (int i = 0; i < (int)cv->getNumOperands(); ++i)
             elements.push_back(cv->getOperand(i));
