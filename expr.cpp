@@ -3065,8 +3065,10 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         if (baseValue == NULL || indexValue == NULL)
             return NULL;
         ctx->SetDebugPos(pos);
-        return ctx->GetElementPtrInst(baseValue, indexValue,
-                                      baseExprType, "ptr_offset");
+        llvm::Value *ptr = ctx->GetElementPtrInst(baseValue, indexValue,
+                                                  baseExprType, "ptr_offset");
+        ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
+        return ptr;
     }
 
     // Otherwise it's an array or vector
