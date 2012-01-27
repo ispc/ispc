@@ -2200,8 +2200,12 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
     if (cv == NULL)
         return false;
-    llvm::ConstantInt *splat = 
-        llvm::dyn_cast<llvm::ConstantInt>(cv->getSplatValue());
+
+    llvm::Constant *csplat = cv->getSplatValue();
+    if (csplat == NULL)
+        return false;
+
+    llvm::ConstantInt *splat = llvm::dyn_cast<llvm::ConstantInt>(csplat);
     if (splat == NULL)
         return false;
 
