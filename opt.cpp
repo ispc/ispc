@@ -2517,6 +2517,9 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // A scatter with everyone going to the same location is
                 // undefined.  Issue a warning and arbitrarily let the
                 // first guy win.
+
+	        // skip warning if this is a 1-wide vector!
+	      if (1!=g->target.vectorWidth)
                 Warning(pos, "Undefined behavior: all program instances are "
                         "writing to the same location!");
 
