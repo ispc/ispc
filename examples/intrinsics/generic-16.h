@@ -1106,7 +1106,7 @@ GATHER_GENERAL(__vec16_i64, int64_t, __vec16_i64, __gather64_i64)
 
 // scatter
 
-#define SCATTER_BASE_VARYINGOFFSET(VTYPE, STYPE, OTYPE, FUNC)           \
+#define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                 \
 static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
                              uint32_t scale, OTYPE constOffset,         \
                              VTYPE val, __vec16_i1 mask) {              \
