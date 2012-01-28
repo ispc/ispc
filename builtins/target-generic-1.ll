@@ -63,9 +63,17 @@ define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
 ;  %masked_new = and <1 x i8> %1, %mv
 ;  %new = or <1 x i8> %cleared_old, %masked_new
 ;  ret <1 x i8> %new
-   %cmp = icmp eq <1 x i32> %mask, <i32 0>
-   %sel = select <1 x i1> %cmp, <1 x i8> %0, <1 x i8> %1
-   ret <1 x i8> %sel
+
+   ; not doing this the easy way because of problems with LLVM's scalarizer
+;   %cmp = icmp eq <1 x i32> %mask, <i32 0>
+;   %sel = select <1 x i1> %cmp, <1 x i8> %0, <1 x i8> %1
+    %m = extractelement <1 x i32> %mask, i32 0
+    %cmp = icmp eq i32 %m, 0
+    %d0 = extractelement <1 x i8> %0, i32 0
+    %d1 = extractelement <1 x i8> %1, i32 0
+    %sel = select i1 %cmp, i8 %d0, i8 %d1    
+    %r = insertelement <1 x i8> undef, i8 %sel, i32 0
+   ret <1 x i8> %r
 }
 
 define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
@@ -76,9 +84,17 @@ define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
 ;  %masked_new = and <1 x i16> %1, %mv
 ;  %new = or <1 x i16> %cleared_old, %masked_new
 ;  ret <1 x i16> %new
-   %cmp = icmp eq <1 x i32> %mask, <i32 0>
-   %sel = select <1 x i1> %cmp, <1 x i16> %0, <1 x i16> %1
-   ret <1 x i16> %sel
+;   %cmp = icmp eq <1 x i32> %mask, <i32 0>
+;   %sel = select <1 x i1> %cmp, <1 x i16> %0, <1 x i16> %1
+    %m = extractelement <1 x i32> %mask, i32 0
+    %cmp = icmp eq i32 %m, 0
+    %d0 = extractelement <1 x i16> %0, i32 0
+    %d1 = extractelement <1 x i16> %1, i32 0
+    %sel = select i1 %cmp, i16 %d0, i16 %d1    
+    %r = insertelement <1 x i16> undef, i16 %sel, i32 0
+   ret <1 x i16> %r
+
+;   ret <1 x i16> %sel
 }
 
 
@@ -89,9 +105,17 @@ define  <1 x i32> @__vselect_i32(<1 x i32>, <1 x i32> ,
 ;  %masked_new = and <1 x i32> %1, %mask
 ;  %new = or <1 x i32> %cleared_old, %masked_new
 ;  ret <1 x i32> %new
-   %cmp = icmp eq <1 x i32> %mask, <i32 0>
-   %sel = select <1 x i1> %cmp, <1 x i32> %0, <1 x i32> %1
-   ret <1 x i32> %sel
+;   %cmp = icmp eq <1 x i32> %mask, <i32 0>
+;   %sel = select <1 x i1> %cmp, <1 x i32> %0, <1 x i32> %1
+;   ret <1 x i32> %sel
+    %m = extractelement <1 x i32> %mask, i32 0
+    %cmp = icmp eq i32 %m, 0
+    %d0 = extractelement <1 x i32> %0, i32 0
+    %d1 = extractelement <1 x i32> %1, i32 0
+    %sel = select i1 %cmp, i32 %d0, i32 %d1    
+    %r = insertelement <1 x i32> undef, i32 %sel, i32 0
+   ret <1 x i32> %r
+
 }
 define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
                                          <1 x i32> %mask) nounwind readnone alwaysinline {
@@ -101,9 +125,16 @@ define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
 ;  %masked_new = and <1 x i64> %1, %newmask
 ;  %new = or <1 x i64> %cleared_old, %masked_new
 ;  ret <1 x i64> %new
-   %cmp = icmp eq <1 x i32> %mask, <i32 0>
-   %sel = select <1 x i1> %cmp, <1 x i64> %0, <1 x i64> %1
-   ret <1 x i64> %sel
+;   %cmp = icmp eq <1 x i32> %mask, <i32 0>
+;   %sel = select <1 x i1> %cmp, <1 x i64> %0, <1 x i64> %1
+;   ret <1 x i64> %sel
+    %m = extractelement <1 x i32> %mask, i32 0
+    %cmp = icmp eq i32 %m, 0
+    %d0 = extractelement <1 x i64> %0, i32 0
+    %d1 = extractelement <1 x i64> %1, i32 0
+    %sel = select i1 %cmp, i64 %d0, i64 %d1    
+    %r = insertelement <1 x i64> undef, i64 %sel, i32 0
+   ret <1 x i64> %r
 
 }
 
@@ -114,11 +145,20 @@ define  <1 x float> @__vselect_float(<1 x float>, <1 x float>,
 ;  %r = call <1 x i32> @__vselect_i32(<1 x i32> %v0, <1 x i32> %v1, <1 x i32> %mask)
 ;  %rf = bitcast <1 x i32> %r to <1 x float>
 ;  ret <1 x float> %rf
-   %cmp = icmp eq <1 x i32> %mask, <i32 0>
-   %sel = select <1 x i1> %cmp, <1 x float> %0, <1 x float> %1
-   ret <1 x float> %sel
+;   %cmp = icmp eq <1 x i32> %mask, <i32 0>
+;   %sel = select <1 x i1> %cmp, <1 x float> %0, <1 x float> %1
+;   ret <1 x float> %sel
+    %m = extractelement <1 x i32> %mask, i32 0
+    %cmp = icmp eq i32 %m, 0
+    %d0 = extractelement <1 x float> %0, i32 0
+    %d1 = extractelement <1 x float> %1, i32 0
+    %sel = select i1 %cmp, float %d0, float %d1    
+    %r = insertelement <1 x float> undef, float %sel, i32 0
+   ret <1 x float> %r
 
 }
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
