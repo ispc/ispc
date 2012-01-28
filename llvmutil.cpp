@@ -669,6 +669,10 @@ LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
         return true;
     }
 
+    if (llvm::isa<llvm::UndefValue>(v))
+        // ?
+        return false;
+
     Assert(!llvm::isa<llvm::Constant>(v));
 
     if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v) ||
