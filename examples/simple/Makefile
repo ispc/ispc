@@ -2,7 +2,7 @@
 CXX=g++ -m64
 CXXFLAGS=-Iobjs/ -O3 -Wall
 ISPC=ispc
-ISPCFLAGS=-O2 --arch=x86-64 --target=generic-1
+ISPCFLAGS=-O2 --arch=x86-64 --target=sse2
 
 default: simple
 
