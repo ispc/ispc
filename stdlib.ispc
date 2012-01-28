@@ -787,8 +787,12 @@ packed_store_active(uniform int * uniform a, int vals) {
 ///////////////////////////////////////////////////////////////////////////
 // System information
 
-static inline int num_cores() {
+static inline uniform int num_cores() {
     return __num_cores();
+}
+
+static inline uniform int64 clock() {
+    return __clock();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -808,8 +812,7 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
-                                                            (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
@@ -824,22 +827,80 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
             continue;                                                   \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
-        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
-                                                      (MASKTYPE)__mask); \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
-#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB, MASKTYPE)                \
+#define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
+static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
+    memory_barrier();                                                   \
+    uniform int i = 0;                                                  \
+    TA ret[programCount];                                               \
+    TA memVal;                                                          \
+    uniform int lastSwap;                                               \
+    uniform int mask = lanemask();                                      \
+    /* First, have the first running program instance (if any) perform  \
+       the swap with memory with its value of "value"; record the       \
+       value returned. */                                               \
+    for (; i < programCount; ++i) {                                     \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        memVal = __atomic_swap_uniform_##TB##_global(ptr, extract(value, i)); \
+        lastSwap = i;                                                   \
+        break;                                                          \
+    }                                                                   \
+    /* Now, for all of the remaining running program instances, set the \
+       return value of the last instance that did a swap with this      \
+       instance's value of "value"; this gives the same effect as if the \
+       current instance had executed a hardware atomic swap right before \
+       the last one that did a swap. */                                 \
+    for (; i < programCount; ++i) {                                     \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        ret[lastSwap] = extract(value, i);                              \
+        lastSwap = i;                                                   \
+    }                                                                   \
+    /* And the last instance that wanted to swap gets the value we      \
+       originally got back from memory... */                            \
+    ret[lastSwap] = memVal;                                             \
+    memory_barrier();                                                   \
+    return ret[programIndex];                                           \
+}                                                                       \
+static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
+                                            uniform TA value) {         \
+    memory_barrier();                                                   \
+    uniform TA ret = __atomic_swap_uniform_##TB##_global(ptr, value);   \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
+static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
+    uniform TA * uniform ptrArray[programCount];                        \
+    ptrArray[programIndex] = ptr;                                       \
+    memory_barrier();                                                   \
+    TA ret;                                                             \
+    uniform int mask = lanemask();                                      \
+    for (uniform int i = 0; i < programCount; ++i) {                    \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        uniform TA * uniform p = ptrArray[i];                           \
+        uniform TA v = extract(value, i);                               \
+        uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);       \
+        ret = insert(ret, i, r);                                        \
+    }                                                                   \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
+
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
     if (lanemask() != 0) {                                              \
         memory_barrier();                                               \
-        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval,       \
-                                                     (MASKTYPE)__mask); \
+        ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval);      \
         memory_barrier();                                               \
     }                                                                   \
     return ret;                                                         \
@@ -847,8 +908,7 @@ static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
     memory_barrier();                                                   \
-    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value, \
-                                                            (MASKTYPE)__mask); \
+    uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
@@ -864,8 +924,7 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
             continue;                                                   \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
-        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v,     \
-                                                      (MASKTYPE)__mask); \
+        uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     memory_barrier();                                                   \
@@ -874,49 +933,51 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
 
 DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max,IntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
 DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType)
 DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(int32,int32)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax,UIntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
 DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,swap,swap,UIntMaskType)
+DEFINE_ATOMIC_SWAP(unsigned int32,int32)
 
-DEFINE_ATOMIC_OP(float,float,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(float,float)
 
 DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max,IntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
 DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType)
 DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(int64,int64)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
 DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax,UIntMaskType)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
 DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType)
 DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,swap,swap,UIntMaskType)
+DEFINE_ATOMIC_SWAP(unsigned int64,int64)
 
-DEFINE_ATOMIC_OP(double,double,swap,swap,IntMaskType)
+DEFINE_ATOMIC_SWAP(double,double)
 
 #undef DEFINE_ATOMIC_OP
+#undef DEFINE_ATOMIC_MINMAX_OP
+#undef DEFINE_ATOMIC_SWAP
 
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline TA atomic_compare_exchange_global(                           \
@@ -931,8 +992,7 @@ static inline uniform TA atomic_compare_exchange_global(               \
          uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
     memory_barrier();                                                      \
     uniform TA ret =                                                    \
-        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval, \
-                                                        (MASKTYPE)__mask); \
+        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
@@ -2764,114 +2824,124 @@ static inline uniform double pow(uniform double a, uniform double b) {
 // half-precision floats
 
 static inline uniform float half_to_float(uniform unsigned int16 h) {
-    if ((h & 0x7FFFu) == 0) 
-        // Signed zero
-        return floatbits(((unsigned int32) h) << 16);
+    if (__have_native_half) {
+        return __half_to_float_uniform(h);
+    }
     else {
-        // Though these are int16 quantities, we get much better code 
-        // with them stored as int32s...
-        uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-        uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-        uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
-        if (he == 0) {  
-            // Denormal will convert to normalized
-            uniform int e = -1;
-            // The following loop figures out how much extra to adjust the exponent
-            // Shift until leading bit overflows into exponent bit
-            do {
-                e++;
-                hm <<= 1;
-            } while((hm & 0x0400u) == 0);
-
-            // Sign bit
-            uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
-            // Exponent: unbias the halfp, then bias the single
-            uniform int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
-            // Exponent
-            uniform unsigned int32 xe = (unsigned int32) (xes << 23); 
-            // Mantissa
-            uniform unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
-            return floatbits(xs | xe | xm);
-        } 
+        if ((h & 0x7FFFu) == 0) 
+            // Signed zero
+            return floatbits(((unsigned int32) h) << 16);
         else {
-            if (he == 0x7C00u) {  
-                // Inf or NaN (all the exponent bits are set)
-                if (hm == 0)
-                    // Zero mantissa -> signed inf
-                    return floatbits((((unsigned int32) hs) << 16) | 
-                                     ((unsigned int32) 0x7F800000u));
-                else
-                    // NaN
-                    return floatbits(0xFFC00000u);
-            }
-            else { 
-                // Normalized number
-                // sign
+            // Though these are int16 quantities, we get much better code 
+            // with them stored as int32s...
+            uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+            uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+            uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+            if (he == 0) {  
+                // Denormal will convert to normalized
+                uniform int e = -1;
+                // The following loop figures out how much extra to adjust the exponent
+                // Shift until leading bit overflows into exponent bit
+                do {
+                    e++;
+                    hm <<= 1;
+                } while((hm & 0x0400u) == 0);
+
+                // Sign bit
                 uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
                 // Exponent: unbias the halfp, then bias the single
-                uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                uniform int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
                 // Exponent
-                uniform unsigned int32 xe = (unsigned int32) (xes << 23);
+                uniform unsigned int32 xe = (unsigned int32) (xes << 23); 
                 // Mantissa
-                uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                uniform unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
                 return floatbits(xs | xe | xm);
+            } 
+            else {
+                if (he == 0x7C00u) {  
+                    // Inf or NaN (all the exponent bits are set)
+                    if (hm == 0)
+                        // Zero mantissa -> signed inf
+                        return floatbits((((unsigned int32) hs) << 16) | 
+                                         ((unsigned int32) 0x7F800000u));
+                    else
+                        // NaN
+                        return floatbits(0xFFC00000u);
+                }
+                else { 
+                    // Normalized number
+                    // sign
+                    uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
+                    // Exponent: unbias the halfp, then bias the single
+                    uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                    // Exponent
+                    uniform unsigned int32 xe = (unsigned int32) (xes << 23);
+                    // Mantissa
+                    uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                    return floatbits(xs | xe | xm);
+                }
             }
         }
     }
 }
 
 static inline float half_to_float(unsigned int16 h) {
-    if ((h & 0x7FFFu) == 0) 
-        // Signed zero
-        return floatbits(((unsigned int32) h) << 16);
+    if (__have_native_half) {
+        return __half_to_float_varying(h);
+    }
     else {
-        // Though these are int16 quantities, we get much better code 
-        // with them stored as int32s...
-        unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-        unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-        unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
-        cif (he == 0) {  
-            // Denormal will convert to normalized
-            int e = -1;
-            // The following loop figures out how much extra to adjust the exponent
-            // Shift until leading bit overflows into exponent bit
-            do {
-                e++;
-                hm <<= 1;
-            } while((hm & 0x0400u) == 0);
-
-            // Sign bit
-            unsigned int32 xs = ((unsigned int32) hs) << 16; 
-            // Exponent: unbias the halfp, then bias the single
-            int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
-            // Exponent
-            unsigned int32 xe = (unsigned int32) (xes << 23); 
-            // Mantissa
-            unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
-            return floatbits(xs | xe | xm);
-        } 
+        if ((h & 0x7FFFu) == 0) 
+            // Signed zero
+            return floatbits(((unsigned int32) h) << 16);
         else {
-            if (he == 0x7C00u) {  
-                // Inf or NaN (all the exponent bits are set)
-                if (hm == 0)
-                    // Zero mantissa -> signed inf
-                    return floatbits((((unsigned int32) hs) << 16) | 
-                                     ((unsigned int32) 0x7F800000u));
-                else
-                    // NaN
-                    return floatbits(0xFFC00000u);
-            }
-            else { 
-                // Normalized number
-                // sign
+            // Though these are int16 quantities, we get much better code 
+            // with them stored as int32s...
+            unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+            unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+            unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+            cif (he == 0) {  
+                // Denormal will convert to normalized
+                int e = -1;
+                // The following loop figures out how much extra to adjust the exponent
+                // Shift until leading bit overflows into exponent bit
+                do {
+                    e++;
+                    hm <<= 1;
+                } while((hm & 0x0400u) == 0);
+
+                // Sign bit
                 unsigned int32 xs = ((unsigned int32) hs) << 16; 
                 // Exponent: unbias the halfp, then bias the single
-                int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
                 // Exponent
-                unsigned int32 xe = (unsigned int32) (xes << 23);
+                unsigned int32 xe = (unsigned int32) (xes << 23); 
                 // Mantissa
-                unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
                 return floatbits(xs | xe | xm);
+            } 
+            else {
+                if (he == 0x7C00u) {  
+                    // Inf or NaN (all the exponent bits are set)
+                    if (hm == 0)
+                        // Zero mantissa -> signed inf
+                        return floatbits((((unsigned int32) hs) << 16) | 
+                                         ((unsigned int32) 0x7F800000u));
+                    else
+                        // NaN
+                        return floatbits(0xFFC00000u);
+                }
+                else { 
+                    // Normalized number
+                    // sign
+                    unsigned int32 xs = ((unsigned int32) hs) << 16; 
+                    // Exponent: unbias the halfp, then bias the single
+                    int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+                    // Exponent
+                    unsigned int32 xe = (unsigned int32) (xes << 23);
+                    // Mantissa
+                    unsigned int32 xm = ((unsigned int32) hm) << 13; 
+                    return floatbits(xs | xe | xm);
+                }
             }
         }
     }
@@ -2879,209 +2949,237 @@ static inline float half_to_float(unsigned int16 h) {
 
 
 static inline uniform int16 float_to_half(uniform float f) {
-    uniform int32 x = intbits(f);
-    // Store the return value in an int32 until the very end; this ends up
-    // generating better code...
-    uniform int32 ret;
-    if ((x & 0x7FFFFFFFu) == 0)
-        // Signed zero
-        ret = (x >> 16); 
+    if (__have_native_half) {
+        return __float_to_half_uniform(f);
+    }
     else {
-        uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-        uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-        uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
-        if (xe == 0) {  
-            // Denormal will underflow, return a signed zero
-            ret = (xs >> 16);
-        } 
+        uniform int32 x = intbits(f);
+        // Store the return value in an int32 until the very end; this ends up
+        // generating better code...
+        uniform int32 ret;
+        if ((x & 0x7FFFFFFFu) == 0)
+            // Signed zero
+            ret = (x >> 16); 
         else {
-            if (xe == 0x7F800000u) {  
-                // Inf or NaN (all the exponent bits are set)
-                if (xm == 0)
-                    // Zero mantissa -> signed infinity
-                    ret = ((xs >> 16) | 0x7C00u);
-                else
-                    // NaN, only 1st mantissa bit set
-                    ret = 0xFE00u;
-            }
-            else { 
-                // Normalized number
-                uniform unsigned int32 hs = (xs >> 16); // Sign bit
-                uniform unsigned int32 hm;
-                // Exponent unbias the single, then bias the halfp
-                uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-                if (hes >= 0x1F)  
-                    // Overflow: return signed infinity
-                    ret = ((xs >> 16) | 0x7C00u);
-                else if (hes <= 0) {
-                    // Underflow
-                    if ((14 - hes) > 24) {  
-                        // Mantissa shifted all the way off & no rounding possibility
-                        hm = 0u;  // Set mantissa to zero
+            uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+            uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+            uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+            if (xe == 0) {  
+                // Denormal will underflow, return a signed zero
+                ret = (xs >> 16);
+            } 
+            else {
+                if (xe == 0x7F800000u) {  
+                    // Inf or NaN (all the exponent bits are set)
+                    if (xm == 0)
+                        // Zero mantissa -> signed infinity
+                        ret = ((xs >> 16) | 0x7C00u);
+                    else
+                        // NaN, only 1st mantissa bit set
+                        ret = 0xFE00u;
+                }
+                else { 
+                    // Normalized number
+                    uniform unsigned int32 hs = (xs >> 16); // Sign bit
+                    uniform unsigned int32 hm;
+                    // Exponent unbias the single, then bias the halfp
+                    uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+                    if (hes >= 0x1F)  
+                        // Overflow: return signed infinity
+                        ret = ((xs >> 16) | 0x7C00u);
+                    else if (hes <= 0) {
+                        // Underflow
+                        if ((14 - hes) > 24) {  
+                            // Mantissa shifted all the way off & no rounding possibility
+                            hm = 0u;  // Set mantissa to zero
+                        } 
+                        else {
+                            xm |= 0x00800000u;  // Add the hidden leading bit
+                            hm = (xm >> (14 - hes)); // Mantissa
+                            if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
+                                // Round, might overflow into exp bit, but this is OK
+                                hm += 1u; 
+                        }
+                        ret = (hs | hm);
                     } 
                     else {
-                        xm |= 0x00800000u;  // Add the hidden leading bit
-                        hm = (xm >> (14 - hes)); // Mantissa
-                        if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
-                            // Round, might overflow into exp bit, but this is OK
-                            hm += 1u; 
+                        uniform unsigned int32 he = (hes << 10); // Exponent
+                        hm = (xm >> 13); // Mantissa
+                        if (xm & 0x00001000u) // Check for rounding
+                            // Round, might overflow to inf, this is OK
+                            ret = (hs | he | hm) + 1u; 
+                        else
+                            ret = (hs | he | hm);
                     }
-                    ret = (hs | hm);
-                } 
-                else {
-                    uniform unsigned int32 he = (hes << 10); // Exponent
-                    hm = (xm >> 13); // Mantissa
-                    if (xm & 0x00001000u) // Check for rounding
-                        // Round, might overflow to inf, this is OK
-                        ret = (hs | he | hm) + 1u; 
-                    else
-                        ret = (hs | he | hm);
                 }
             }
         }
+        return (int16)ret;
     }
-    return (int16)ret;
 }
 
 
 static inline int16 float_to_half(float f) {
-    int32 x = intbits(f);
-    // Store the return value in an int32 until the very end; this ends up
-    // generating better code...
-    int32 ret;
-    if ((x & 0x7FFFFFFFu) == 0)
-        // Signed zero
-        ret = (x >> 16); 
+    if (__have_native_half) {
+        return __float_to_half_varying(f);
+    }
     else {
-        unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-        unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-        unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
-        if (xe == 0) {  
-            // Denormal will underflow, return a signed zero
-            ret = (xs >> 16);
-        } 
+        int32 x = intbits(f);
+        // Store the return value in an int32 until the very end; this ends up
+        // generating better code...
+        int32 ret;
+        if ((x & 0x7FFFFFFFu) == 0)
+            // Signed zero
+            ret = (x >> 16); 
         else {
-            cif (xe == 0x7F800000u) {  
-                // Inf or NaN (all the exponent bits are set)
-                if (xm == 0)
-                    // Zero mantissa -> signed infinity
-                    ret = ((xs >> 16) | 0x7C00u);
-                else
-                    // NaN, only 1st mantissa bit set
-                    ret = 0xFE00u;
-            }
-            else { 
-                // Normalized number
-                unsigned int32 hs = (xs >> 16); // Sign bit
-                unsigned int32 hm;
-                // Exponent unbias the single, then bias the halfp
-                int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-                if (hes >= 0x1F)  
-                    // Overflow: return signed infinity
-                    ret = ((xs >> 16) | 0x7C00u);
-                else if (hes <= 0) {
-                    // Underflow
-                    if ((14 - hes) > 24) {  
-                        // Mantissa shifted all the way off & no rounding possibility
-                        hm = 0u;  // Set mantissa to zero
+            unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+            unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+            unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+            if (xe == 0) {  
+                // Denormal will underflow, return a signed zero
+                ret = (xs >> 16);
+            } 
+            else {
+                cif (xe == 0x7F800000u) {  
+                    // Inf or NaN (all the exponent bits are set)
+                    if (xm == 0)
+                        // Zero mantissa -> signed infinity
+                        ret = ((xs >> 16) | 0x7C00u);
+                    else
+                        // NaN, only 1st mantissa bit set
+                        ret = 0xFE00u;
+                }
+                else { 
+                    // Normalized number
+                    unsigned int32 hs = (xs >> 16); // Sign bit
+                    unsigned int32 hm;
+                    // Exponent unbias the single, then bias the halfp
+                    int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+                    if (hes >= 0x1F)  
+                        // Overflow: return signed infinity
+                        ret = ((xs >> 16) | 0x7C00u);
+                    else if (hes <= 0) {
+                        // Underflow
+                        if ((14 - hes) > 24) {  
+                            // Mantissa shifted all the way off & no rounding possibility
+                            hm = 0u;  // Set mantissa to zero
+                        } 
+                        else {
+                            xm |= 0x00800000u;  // Add the hidden leading bit
+                            hm = (xm >> (14 - hes)); // Mantissa
+                            if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
+                                // Round, might overflow into exp bit, but this is OK
+                                hm += 1u; 
+                        }
+                        ret = (hs | hm);
                     } 
                     else {
-                        xm |= 0x00800000u;  // Add the hidden leading bit
-                        hm = (xm >> (14 - hes)); // Mantissa
-                        if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
-                            // Round, might overflow into exp bit, but this is OK
-                            hm += 1u; 
+                        unsigned int32 he = (hes << 10); // Exponent
+                        hm = (xm >> 13); // Mantissa
+                        if (xm & 0x00001000u) // Check for rounding
+                            // Round, might overflow to inf, this is OK
+                            ret = (hs | he | hm) + 1u; 
+                        else
+                            ret = (hs | he | hm);
                     }
-                    ret = (hs | hm);
-                } 
-                else {
-                    unsigned int32 he = (hes << 10); // Exponent
-                    hm = (xm >> 13); // Mantissa
-                    if (xm & 0x00001000u) // Check for rounding
-                        // Round, might overflow to inf, this is OK
-                        ret = (hs | he | hm) + 1u; 
-                    else
-                        ret = (hs | he | hm);
                 }
             }
         }
+        return (int16)ret;
     }
-    return (int16)ret;
 }
 
 
 static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
-    uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-    uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-    uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+    if (__have_native_half) {
+        return __half_to_float_uniform(h);
+    }
+    else {
+        uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+        uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+        uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
 
-    // sign
-    uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
-    // Exponent: unbias the halfp, then bias the single
-    uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-    // Exponent
-    uniform unsigned int32 xe = (unsigned int32) (xes << 23);
-    // Mantissa
-    uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
-    return floatbits(xs | xe | xm);
-
+        // sign
+        uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
+        // Exponent: unbias the halfp, then bias the single
+        uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+        // Exponent
+        uniform unsigned int32 xe = (unsigned int32) (xes << 23);
+        // Mantissa
+        uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
+        return floatbits(xs | xe | xm);
+    }
 }
 
 static inline float half_to_float_fast(unsigned int16 h) {
-    unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-    unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-    unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+    if (__have_native_half) {
+        return __half_to_float_varying(h);
+    }
+    else {
+        unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
+        unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
+        unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
 
-    // sign
-    unsigned int32 xs = ((unsigned int32) hs) << 16; 
-    // Exponent: unbias the halfp, then bias the single
-    int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-    // Exponent
-    unsigned int32 xe = (unsigned int32) (xes << 23);
-    // Mantissa
-    unsigned int32 xm = ((unsigned int32) hm) << 13; 
-    return floatbits(xs | xe | xm);
-
+        // sign
+        unsigned int32 xs = ((unsigned int32) hs) << 16; 
+        // Exponent: unbias the halfp, then bias the single
+        int32 xes = ((int32) (he >> 10)) - 15 + 127; 
+        // Exponent
+        unsigned int32 xe = (unsigned int32) (xes << 23);
+        // Mantissa
+        unsigned int32 xm = ((unsigned int32) hm) << 13; 
+        return floatbits(xs | xe | xm);
+    }
 }
 
 static inline uniform int16 float_to_half_fast(uniform float f) {
-    uniform int32 x = intbits(f);
-    uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-    uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-    uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+    if (__have_native_half) {
+        return __float_to_half_uniform(f);
+    }
+    else {
+        uniform int32 x = intbits(f);
+        uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+        uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+        uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
 
-    uniform unsigned int32 hs = (xs >> 16); // Sign bit
-    // Exponent unbias the single, then bias the halfp
-    uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-    uniform unsigned int32 he = (hes << 10); // Exponent
-    uniform int32 hm = (xm >> 13); // Mantissa
-    uniform int32 ret = (hs | he | hm);
+        uniform unsigned int32 hs = (xs >> 16); // Sign bit
+        // Exponent unbias the single, then bias the halfp
+        uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+        uniform unsigned int32 he = (hes << 10); // Exponent
+        uniform int32 hm = (xm >> 13); // Mantissa
+        uniform int32 ret = (hs | he | hm);
 
-    if (xm & 0x00001000u) // Check for rounding
-        // Round, might overflow to inf, this is OK
-        ret += 1u; 
+        if (xm & 0x00001000u) // Check for rounding
+            // Round, might overflow to inf, this is OK
+            ret += 1u; 
 
-    return (int16)ret;
+        return (int16)ret;
+    }
 }
 
 static inline int16 float_to_half_fast(float f) {
-    int32 x = intbits(f);
-    unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-    unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-    unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
+    if (__have_native_half) {
+        return __float_to_half_varying(f);
+    }
+    else {
+        int32 x = intbits(f);
+        unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
+        unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
+        unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
 
-    unsigned int32 hs = (xs >> 16); // Sign bit
-    // Exponent unbias the single, then bias the halfp
-    int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-    unsigned int32 he = (hes << 10); // Exponent
-    int32 hm = (xm >> 13); // Mantissa
-    int32 ret = (hs | he | hm);
+        unsigned int32 hs = (xs >> 16); // Sign bit
+        // Exponent unbias the single, then bias the halfp
+        int32 hes = ((int)(xe >> 23)) - 127 + 15; 
+        unsigned int32 he = (hes << 10); // Exponent
+        int32 hm = (xm >> 13); // Mantissa
+        int32 ret = (hs | he | hm);
 
-    if (xm & 0x00001000u) // Check for rounding
-        // Round, might overflow to inf, this is OK
-        ret += 1u; 
+        if (xm & 0x00001000u) // Check for rounding
+            // Round, might overflow to inf, this is OK
+            ret += 1u; 
 
-    return (int16)ret;
+        return (int16)ret;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3095,16 +3193,15 @@ static inline unsigned int random(RNGState * uniform state)
 {
     unsigned int b;
 
-    // FIXME: state->z1, etc..
-    b  = (((*state).z1 << 6) ^ (*state).z1) >> 13;
-    (*state).z1 = (((*state).z1 & 4294967294U) << 18) ^ b;
-    b  = (((*state).z2 << 2) ^ (*state).z2) >> 27; 
-    (*state).z2 = (((*state).z2 & 4294967288U) << 2) ^ b;
-    b  = (((*state).z3 << 13) ^ (*state).z3) >> 21;
-    (*state).z3 = (((*state).z3 & 4294967280U) << 7) ^ b;
-    b  = (((*state).z4 << 3) ^ (*state).z4) >> 12;
-    (*state).z4 = (((*state).z4 & 4294967168U) << 13) ^ b;
-    return ((*state).z1 ^ (*state).z2 ^ (*state).z3 ^ (*state).z4);
+    b  = ((state->z1 << 6) ^ state->z1) >> 13;
+    state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
+    b  = ((state->z2 << 2) ^ state->z2) >> 27; 
+    state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
+    b  = ((state->z3 << 13) ^ state->z3) >> 21;
+    state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
+    b  = ((state->z4 << 3) ^ state->z4) >> 12;
+    state->z4 = ((state->z4 & 4294967168U) << 13) ^ b;
+    return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
 }
 
 static inline float frandom(RNGState * uniform state)
@@ -3120,30 +3217,30 @@ static inline uniform unsigned int __seed4(RNGState * uniform state,
     uniform unsigned int c1 = 0xf0f0f0f0;
     uniform unsigned int c2 = 0x0f0f0f0f;
 
-    (*state).z1 = insert((*state).z1, start + 0, seed);
-    (*state).z1 = insert((*state).z1, start + 1, seed ^ c1);
-    (*state).z1 = insert((*state).z1, start + 2, (seed << 3) ^ c1);
-    (*state).z1 = insert((*state).z1, start + 3, (seed << 2) ^ c2);
+    state->z1 = insert(state->z1, start + 0, seed);
+    state->z1 = insert(state->z1, start + 1, seed ^ c1);
+    state->z1 = insert(state->z1, start + 2, (seed << 3) ^ c1);
+    state->z1 = insert(state->z1, start + 3, (seed << 2) ^ c2);
 
     seed += 131;
-    (*state).z2 = insert((*state).z2, start + 0, seed);
-    (*state).z2 = insert((*state).z2, start + 1, seed ^ c1);
-    (*state).z2 = insert((*state).z2, start + 2, (seed << 3) ^ c1);
-    (*state).z2 = insert((*state).z2, start + 3, (seed << 2) ^ c2);
+    state->z2 = insert(state->z2, start + 0, seed);
+    state->z2 = insert(state->z2, start + 1, seed ^ c1);
+    state->z2 = insert(state->z2, start + 2, (seed << 3) ^ c1);
+    state->z2 = insert(state->z2, start + 3, (seed << 2) ^ c2);
 
-    seed ^= extract((*state).z2, 2);
-    (*state).z3 = insert((*state).z3, start + 0, seed);
-    (*state).z3 = insert((*state).z3, start + 1, seed ^ c1);
-    (*state).z3 = insert((*state).z3, start + 2, (seed << 3) ^ c1);
-    (*state).z3 = insert((*state).z3, start + 3, (seed << 2) ^ c2);
+    seed ^= extract(state->z2, 2);
+    state->z3 = insert(state->z3, start + 0, seed);
+    state->z3 = insert(state->z3, start + 1, seed ^ c1);
+    state->z3 = insert(state->z3, start + 2, (seed << 3) ^ c1);
+    state->z3 = insert(state->z3, start + 3, (seed << 2) ^ c2);
 
     seed <<= 4;
     seed += 3;
-    seed ^= extract((*state).z1, 3);
-    (*state).z4 = insert((*state).z4, start + 0, seed);
-    (*state).z4 = insert((*state).z4, start + 1, seed ^ c1);
-    (*state).z4 = insert((*state).z4, start + 2, (seed << 3) ^ c1);
-    (*state).z4 = insert((*state).z4, start + 3, (seed << 2) ^ c2);
+    seed ^= extract(state->z1, 3);
+    state->z4 = insert(state->z4, start + 0, seed);
+    state->z4 = insert(state->z4, start + 1, seed ^ c1);
+    state->z4 = insert(state->z4, start + 2, (seed << 3) ^ c1);
+    state->z4 = insert(state->z4, start + 3, (seed << 2) ^ c2);
 
     return seed;
 }

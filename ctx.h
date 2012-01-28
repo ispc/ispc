@@ -161,10 +161,8 @@ public:
     void EndLoop();
 
     /** Indicates that code generation for a 'foreach' or 'foreach_tiled'
-        loop is about to start.  The provided basic block pointer indicates
-        where control flow should go if a 'continue' statement is executed
-        in the loop. */
-    void StartForeach(llvm::BasicBlock *continueTarget);
+        loop is about to start. */
+    void StartForeach();
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck
@@ -231,6 +229,8 @@ public:
     int VaryingCFDepth() const;
 
     bool InForeachLoop() const;
+
+    void SetContinueTarget(llvm::BasicBlock *bb) { continueTarget = bb; }
 
     /** Step through the code and find label statements; create a basic
         block for each one, so that subsequent calls to
@@ -580,6 +580,13 @@ private:
         if present), this map gives the basic block for the immediately
         following case/default label. */
     const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *nextBlocks;
+
+    /** Records whether the switch condition was uniform; this is a
+        distinct notion from whether the switch represents uniform or
+        varying control flow; we may have varying control flow from a
+        uniform switch condition if there is a 'break' inside the switch
+        that's under varying control flow. */
+    bool switchConditionWasUniform;
     /** @} */
 
     /** A pointer to memory that records which of the program instances
@@ -634,8 +641,7 @@ private:
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
     void addSwitchMaskCheck(llvm::Value *mask);
-    bool inUniformSwitch() const;
-    bool inVaryingSwitch() const;
+    bool inSwitchStatement() const;
     llvm::Value *getMaskAtSwitchEntry();
 
     CFInfo *popCFState();

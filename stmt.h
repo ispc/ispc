@@ -442,4 +442,21 @@ public:
     Expr *expr;
 };
 
+
+/** Representation of a delete statement in the program.
+*/
+class DeleteStmt : public Stmt {
+public:
+    DeleteStmt(Expr *e, SourcePos p);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    /** Expression that gives the pointer value to be deleted. */
+    Expr *expr;
+};
+
 #endif // ISPC_STMT_H

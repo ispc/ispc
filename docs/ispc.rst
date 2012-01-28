@@ -96,6 +96,9 @@ Contents:
 
   + `Declarations and Initializers`_
   + `Expressions`_
+
+    * `Dynamic Memory Allocation`_
+
   + `Control Flow`_
 
     * `Conditional Statements: "if"`_
@@ -1142,7 +1145,7 @@ in C:
 
 * Expression syntax and basic types
 * Syntax for variable declarations
-* Control flow structures: if, for, while, do
+* Control flow structures: ``if``, ``for``, ``while``, ``do``, and ``switch``.
 * Pointers, including function pointers, ``void *``, and C's array/pointer
   duality (arrays are converted to pointers when passed to functions, etc.)
 * Structs and arrays
@@ -1162,6 +1165,7 @@ in C:
 * The ``inline`` qualifier to indicate that a function should be inlined 
 * Function overloading by parameter type
 * Hexadecimal floating-point constants
+* Dynamic memory allocation with ``new`` and ``delete``.
 
 ``ispc`` also adds a number of new features that aren't in C89, C99, or
 C++:
@@ -1186,7 +1190,6 @@ but are likely to be supported in future releases:
   ``int64`` types
 * Character constants
 * String constants and arrays of characters as strings
-* ``switch`` statements
 * ``goto`` statements are partially supported (see `Unstructured Control Flow: "goto"`_)
 * ``union`` types
 * Bitfield members of ``struct`` types
@@ -1967,17 +1970,122 @@ operator also work as expected.
     fp->b = 1;
   
 
+Dynamic Memory Allocation
+-------------------------
+
+``ispc`` programs can dynamically allocate (and free) memory, using syntax
+based on C++'s ``new`` and ``delete`` operators:
+
+::
+
+   int count = ...;
+   int *ptr = new uniform int[count];
+   // use ptr...
+   delete[] ptr;
+
+In the above code, each program instance allocates its own ``count`-sized
+array of ``uniform int`` values, uses that memory, and then deallocates
+that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
+serviced by corresponding calls the system C library's ``malloc()`` and
+``free()`` functions.
+
+After a pointer has been deleted, it is illegal to access the memory it
+points to.  However, note that deletion happens on a per-program-instance
+basis.  In other words, consider the following code:
+
+::
+
+    int *ptr = new uniform int[count];
+    // use ptr
+    if (count > 1000)
+        delete[] ptr;
+    // ...
+
+Here, the program instances where ``count`` is greater than 1000 have
+deleted the dynamically allocated memory pointed to by ``ptr``, but the
+other program instances have not.  As such, it's illegal for the former set
+of program instances to access ``*ptr``, but it's perfectly fine for the
+latter set to continue to use the memory ``ptr`` points to.  Note that it
+is illegal to delete a pointer value returned by ``new`` more than one
+time.
+ 
+Sometimes, it's useful to be able to do a single allocation for the entire
+gang of program instances.  A ``new`` statement can be qualified with
+``uniform`` to indicate a single memory allocation:
+
+::
+
+    float * uniform ptr = uniform new float[10];
+
+While a regular call to ``new`` returns a ``varying`` pointer (i.e. a
+distinct pointer to separately-allocated memory for each program instance),
+a ``uniform new`` performs a single allocation and returns a ``uniform``
+pointer.
+
+When using ``uniform new``, it's important to be aware of a subtlety; if
+the returned pointer is stored in a varying pointer variable (as may be
+appropriate and useful for the particular program being written), then the
+varying pointer may inadvertently be passed to a subsequent ``delete``
+statement, which is an error: effectively
+
+::
+
+    float *ptr = uniform new float[10];
+    // use ptr...
+    delete ptr;  // ERROR: varying pointer is deleted
+
+In this case, ``ptr`` will be deleted multiple times, once for each
+executing program instance, which is an error (unless it happens that only
+a single program instance is active in the above code.)
+
+When using ``new`` statements, it's important to make an appropriate choice
+of ``uniform`` or ``varying`` (as always, the default), for both the
+``new`` operator itself as well as the type of data being allocated, based
+on the program's needs.  Consider the following four memory allocations:
+
+::
+
+    uniform float * uniform p1 = uniform new uniform float[10];
+    float * uniform p2 = uniform new float[10];
+    uniform float * p3 = new uniform float[10];
+    float * p4 = new float[10];
+
+Assuming that a ``float`` is 4 bytes in memory and if the gang size is 8
+program instances, then the first allocation represents a single allocation
+of 40 bytes, the second is a single allocation of 8*4*10 = 320 bytes, the
+third is 8 allocations of 40 bytes, and the last performs 8 allocations of
+80 bytes each.
+
+Note in particular that varying allocations of varying data types are rarely
+desirable in practice.  In that case, each program instance is performing a
+separate allocation of ``varying float`` memory.  In this case, it's likely
+that the program instances will only access a single element of each
+``varying float``, which is wasteful.
+
+Although ``ispc`` doesn't support constructors or destructors like C++, it
+is possible to provide initializer values with ``new`` statements:
+
+::
+
+    struct Point { float x, y, z; };
+    Point *pptr = new Point(10, 20, 30);
+
+Here for example, the "x" element of the returned ``Point`` is initialized
+to have the value 10 and so forth.  In general, the rules for how
+initializer values provided in ``new`` statements are used to initialize
+complex data types follow the same rules as initializers for variables
+described in `Declarations and Initializers`_.
+
 Control Flow
 ------------
 
 ``ispc`` supports most of C's control flow constructs, including ``if``,
-``for``, ``while``, ``do``.  It also supports variants of C's control flow
+``switch``, ``for``, ``while``, ``do``.  It has limited support for
+``goto``, detailed below.  It also supports variants of C's control flow
 constructs that provide hints about the expected runtime coherence of the
 control flow at that statement.  It also provides parallel looping
 constructs, ``foreach`` and ``foreach_tiled``, all of which will be
 detailed in this section.
-
-``ispc`` does not currently support ``switch`` statements or ``goto``.
 
 Conditional Statements: "if"
 ----------------------------
@@ -3445,12 +3553,27 @@ pointer types.
 System Information
 ------------------
 
-A routine is available to find the number of CPU cores available in the
-system:
+The value of a  high-precision hardware clock counter is returned by the
+``clock()`` routine; its value increments by one each processor cycle.
+Thus, taking the difference between the values returned by ``clock()`` and
+different points in program execution gives the number of cycles between
+those points in the program.
 
 ::
 
-    int num_cores()
+    uniform int64 clock()
+
+Note that ``clock()`` flushes the processor pipeline.  It has an overhead
+of a hundred or so cycles, so for very fine-grained measurements, it may be
+worthwhile to measure the cost of calling ``clock()`` and subtracting that
+value from reported results.
+    
+A routine is also available to find the number of CPU cores available in
+the system:
+
+::
+
+    uniform int num_cores()
 
 This value can be useful for adapting the granularity of parallel task
 decomposition depending on the number of processors in the system.

@@ -24,6 +24,8 @@
 #define PRIx64 "llx"
 #endif
 
+#include "llvmutil.h"
+
 #include "llvm/CallingConv.h"
 #include "llvm/Constants.h"
 #include "llvm/DerivedTypes.h"
@@ -232,6 +234,7 @@ namespace {
     unsigned NextAnonValueNumber;
     
     std::string includeName;
+    int vectorWidth;
 
     /// UnnamedStructIDs - This contains a unique ID for each struct that is
     /// either anonymous or has no name.
@@ -240,11 +243,13 @@ namespace {
 
   public:
     static char ID;
-    explicit CWriter(formatted_raw_ostream &o, const char *incname)
+      explicit CWriter(formatted_raw_ostream &o, const char *incname,
+                       int vecwidth)
       : FunctionPass(ID), Out(o), IL(0), Mang(0), LI(0),
         TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
         OpaqueCounter(0), NextAnonValueNumber(0), 
-        includeName(incname ? incname : "generic_defs.h") {
+        includeName(incname ? incname : "generic_defs.h"),
+        vectorWidth(vecwidth) {
       initializeLoopInfoPass(*PassRegistry::getPassRegistry());
       FPCounter = 0;
     }
@@ -773,6 +778,16 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     Out << "    return ret;\n";
     Out << "  }\n  ";
 
+    // if it's an array of i8s, also provide a version that takes a const
+    // char *
+    if (ATy->getElementType() == LLVMTypes::Int8Type) {
+        Out << "  static " << NameSoFar << " init(const char *p) {\n";
+        Out << "    " << NameSoFar << " ret;\n";
+        Out << "    strncpy((char *)ret.array, p, " << NumElements << ");\n";
+        Out << "    return ret;\n";
+        Out << "  }\n";
+    }
+
     printType(Out, ATy->getElementType(), false,
               "array[" + utostr(NumElements) + "]");
     return Out << ";\n} ";
@@ -842,7 +857,8 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     }
     Out << '\"';
   } else {
-    Out << '{';
+    if (Static)
+      Out << '{';
     if (CPA->getNumOperands()) {
       Out << ' ';
       printConstant(cast<Constant>(CPA->getOperand(0)), Static);
@@ -851,7 +867,8 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
         printConstant(cast<Constant>(CPA->getOperand(i)), Static);
       }
     }
-    Out << " }";
+    if (Static)
+      Out << " }";
   }
 }
 
@@ -1321,7 +1338,8 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     break;
   }
 
-  case Type::ArrayTyID:
+  case Type::ArrayTyID: {
+    ArrayType *AT = cast<ArrayType>(CPV->getType());
     if (Static)
       // arrays are wrapped in structs...
       Out << "{ ";
@@ -1334,7 +1352,6 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       printConstantArray(CA, Static);
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
-      ArrayType *AT = cast<ArrayType>(CPV->getType());
       if (AT->getNumElements()) {
         Out << ' ';
         Constant *CZ = Constant::getNullValue(AT->getElementType());
@@ -1350,7 +1367,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     else
         Out << ")";
     break;
-
+  }
   case Type::VectorTyID:
     printType(Out, CPV->getType());
     Out << "(";
@@ -2097,7 +2114,8 @@ bool CWriter::doInitialization(Module &M) {
         I->getName() == "memset" || I->getName() == "memset_pattern16" ||
         I->getName() == "puts" ||
         I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush")
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
       continue;
 
     // Don't redeclare ispc's own intrinsics
@@ -2203,7 +2221,7 @@ bool CWriter::doInitialization(Module &M) {
         // FIXME common linkage should avoid this problem.
         if (!I->getInitializer()->isNullValue()) {
           Out << " = " ;
-          writeOperand(I->getInitializer(), true);
+          writeOperand(I->getInitializer(), false);
         } else if (I->hasWeakLinkage()) {
           // We have to specify an initializer, but it doesn't have to be
           // complete.  If the value is an aggregate, print out { 0 }, and let
@@ -2218,7 +2236,7 @@ bool CWriter::doInitialization(Module &M) {
             Out << "{ { 0 } }";
           } else {
             // Just print it out normally.
-            writeOperand(I->getInitializer(), true);
+            writeOperand(I->getInitializer(), false);
           }
         }
         Out << ";\n";
@@ -2892,7 +2910,21 @@ void CWriter::visitBinaryOperator(Instruction &I) {
       Out << "(";
       writeOperand(I.getOperand(0));
       Out << ", ";
-      writeOperand(I.getOperand(1));
+      if ((I.getOpcode() == Instruction::Shl ||
+           I.getOpcode() == Instruction::LShr ||
+           I.getOpcode() == Instruction::AShr)) {
+          std::vector<PHINode *> phis;
+          if (LLVMVectorValuesAllEqual(I.getOperand(1),
+                                       vectorWidth, phis)) {
+              Out << "__extract_element(";
+              writeOperand(I.getOperand(1));
+              Out << ", 0) ";
+          }
+          else
+              writeOperand(I.getOperand(1));
+      }
+      else
+          writeOperand(I.getOperand(1));
       Out << ")";
       return;
   }
@@ -3406,6 +3438,9 @@ void CWriter::visitCallInst(CallInst &I) {
           Callee = RF;
         }
 
+    if (Callee->getName() == "malloc")
+        Out << "(uint8_t *)";
+
     if (NeedsCast) {
       // Ok, just cast the pointer type.
       Out << "((";
@@ -3633,7 +3668,7 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
 #endif
 
   std::string E;
-  if (const Target *Match = TargetRegistry::lookupTarget(Triple, E))
+  if (const llvm::Target *Match = TargetRegistry::lookupTarget(Triple, E))
     TargetAsm = Match->createMCAsmInfo(Triple);
   else
     return c.Codes[0];
@@ -4335,7 +4370,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(new BitcastCleanupPass);
     pm.add(createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(createPrintModulePass(&fos));
-    pm.add(new CWriter(fos, includeName));
+    pm.add(new CWriter(fos, includeName, vectorWidth));
     pm.add(createGCInfoDeleter());
 //CO    pm.add(createVerifierPass());
 

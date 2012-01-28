@@ -504,6 +504,153 @@ TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
 }
 
 
+bool
+PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
+    FunctionSymbolExpr *fse = NULL;
+    const FunctionType *funcType = NULL;
+    if (dynamic_cast<const PointerType *>(type) != NULL &&
+        (funcType = dynamic_cast<const FunctionType *>(type->GetBaseType())) &&
+        (fse = dynamic_cast<FunctionSymbolExpr *>(expr)) != NULL) {
+        // We're initializing a function pointer with a function symbol,
+        // which in turn may represent an overloaded function.  So we need
+        // to try to resolve the overload based on the type of the symbol
+        // we're initializing here.
+        std::vector<const Type *> paramTypes;
+        for (int i = 0; i < funcType->GetNumParameters(); ++i)
+            paramTypes.push_back(funcType->GetParameterType(i));
+
+        if (fse->ResolveOverloads(expr->pos, paramTypes) == false)
+            return false;
+    }
+    return true;
+}
+
+
+
+/** Utility routine that emits code to initialize a symbol given an
+    initializer expression.
+
+    @param lvalue    Memory location of storage for the symbol's data
+    @param symName   Name of symbol (used in error messages)
+    @param symType   Type of variable being initialized
+    @param initExpr  Expression for the initializer
+    @param ctx       FunctionEmitContext to use for generating instructions
+    @param pos       Source file position of the variable being initialized
+*/
+void
+InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr, 
+           FunctionEmitContext *ctx, SourcePos pos) {
+    if (initExpr == NULL)
+        // leave it uninitialized
+        return;
+
+    // If the initializer is a straight up expression that isn't an
+    // ExprList, then we'll see if we can type convert it to the type of
+    // the variable.
+    if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+        if (PossiblyResolveFunctionOverloads(initExpr, symType) == false)
+            return;
+        initExpr = TypeConvertExpr(initExpr, symType, "initializer");
+
+        if (initExpr != NULL) {
+            llvm::Value *initializerValue = initExpr->GetValue(ctx);
+            if (initializerValue != NULL)
+                // Bingo; store the value in the variable's storage
+                ctx->StoreInst(initializerValue, lvalue);
+            return;
+        }
+    }
+
+    // Atomic types and enums can't be initialized with { ... } initializer
+    // expressions, so print an error and return if that's what we've got
+    // here..
+    if (dynamic_cast<const AtomicType *>(symType) != NULL ||
+        dynamic_cast<const EnumType *>(symType) != NULL ||
+        dynamic_cast<const PointerType *>(symType) != NULL) {
+        ExprList *elist = dynamic_cast<ExprList *>(initExpr);
+        if (elist != NULL) {
+            if (elist->exprs.size() == 1)
+                InitSymbol(lvalue, symType, elist->exprs[0], ctx, pos);
+            else
+                Error(initExpr->pos, "Expression list initializers can't be used "
+                      "with type \"%s\".", symType->GetString().c_str());
+        }
+        return;
+    }
+
+    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(symType);
+    if (rt) {
+        if (!Type::Equal(initExpr->GetType(), rt)) {
+            Error(initExpr->pos, "Initializer for reference type \"%s\" must have same "
+                  "reference type itself. \"%s\" is incompatible.", 
+                  rt->GetString().c_str(), initExpr->GetType()->GetString().c_str());
+            return;
+        }
+
+        llvm::Value *initializerValue = initExpr->GetValue(ctx);
+        if (initializerValue)
+            ctx->StoreInst(initializerValue, lvalue);
+        return;
+    }
+
+    // There are two cases for initializing structs, arrays and vectors;
+    // either a single initializer may be provided (float foo[3] = 0;), in
+    // which case all of the elements are initialized to the given value,
+    // or an initializer list may be provided (float foo[3] = { 1,2,3 }),
+    // in which case the elements are initialized with the corresponding
+    // values.
+    const CollectionType *collectionType = 
+        dynamic_cast<const CollectionType *>(symType);
+    if (collectionType != NULL) {
+        std::string name;
+        if (dynamic_cast<const StructType *>(symType) != NULL)
+            name = "struct";
+        else if (dynamic_cast<const ArrayType *>(symType) != NULL) 
+            name = "array";
+        else if (dynamic_cast<const VectorType *>(symType) != NULL) 
+            name = "vector";
+        else 
+            FATAL("Unexpected CollectionType in InitSymbol()");
+
+        ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
+        if (exprList != NULL) {
+            // The { ... } case; make sure we have the same number of
+            // expressions in the ExprList as we have struct members
+            int nInits = exprList->exprs.size();
+            if (nInits != collectionType->GetElementCount()) {
+                Error(initExpr->pos, "Initializer for %s type \"%s\" requires "
+                      "%d values; %d provided.", name.c_str(), 
+                      symType->GetString().c_str(),
+                      collectionType->GetElementCount(), nInits);
+                return;
+            }
+
+            // Initialize each element with the corresponding value from
+            // the ExprList
+            for (int i = 0; i < nInits; ++i) {
+                llvm::Value *ep;
+                if (dynamic_cast<const StructType *>(symType) != NULL)
+                    ep = ctx->AddElementOffset(lvalue, i, NULL, "element");
+                else
+                    ep = ctx->GetElementPtrInst(lvalue, LLVMInt32(0), LLVMInt32(i), 
+                                                PointerType::GetUniform(collectionType->GetElementType(i)), 
+                                                "gep");
+
+                InitSymbol(ep, collectionType->GetElementType(i), 
+                            exprList->exprs[i], ctx, pos);
+            }
+        }
+        else
+            Error(initExpr->pos, "Can't assign type \"%s\" to \"%s\".",
+                  initExpr->GetType()->GetString().c_str(),
+                  collectionType->GetString().c_str());
+        return;
+    }
+
+    FATAL("Unexpected Type in InitSymbol()");
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 
 /** Given an atomic or vector type, this returns a boolean type with the
@@ -2678,12 +2825,12 @@ FunctionCallExpr::TypeCheck() {
         const Type *fptrType = func->GetType();
         if (fptrType == NULL)
             return NULL;
-           
-        Assert(dynamic_cast<const PointerType *>(fptrType) != NULL);
-        const FunctionType *funcType = 
-            dynamic_cast<const FunctionType *>(fptrType->GetBaseType());
-        if (funcType == NULL) {
-            Error(pos, "Must provide function name or function pointer for "
+
+        // Make sure we do in fact have a function to call
+        const FunctionType *funcType;
+        if (dynamic_cast<const PointerType *>(fptrType) == NULL ||
+            (funcType = dynamic_cast<const FunctionType *>(fptrType->GetBaseType())) == NULL) {
+            Error(func->pos, "Must provide function name or function pointer for "
                   "function call expression.");
             return NULL;
         }
@@ -3065,8 +3212,10 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         if (baseValue == NULL || indexValue == NULL)
             return NULL;
         ctx->SetDebugPos(pos);
-        return ctx->GetElementPtrInst(baseValue, indexValue,
-                                      baseExprType, "ptr_offset");
+        llvm::Value *ptr = ctx->GetElementPtrInst(baseValue, indexValue,
+                                                  baseExprType, "ptr_offset");
+        ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
+        return ptr;
     }
 
     // Otherwise it's an array or vector
@@ -6525,3 +6674,211 @@ NullPointerExpr::EstimateCost() const {
     return 0;
 }
 
+
+///////////////////////////////////////////////////////////////////////////
+// NewExpr
+
+NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count, 
+                 SourcePos tqPos, SourcePos p)
+    : Expr(p) {
+    allocType = t;
+    if (allocType != NULL && allocType->HasUnboundVariability())
+        allocType = allocType->ResolveUnboundVariability(Type::Varying);
+
+    initExpr = init;
+    countExpr = count;
+
+    /* (The below cases actually should be impossible, since the parser
+       doesn't allow more than a single type qualifier before a "new".) */
+    if ((typeQual & ~(TYPEQUAL_UNIFORM | TYPEQUAL_VARYING)) != 0) {
+        Error(tqPos, "Illegal type qualifiers in \"new\" expression (only "
+              "\"uniform\" and \"varying\" are allowed.");
+        isVarying = false;
+    }
+    else if ((typeQual & TYPEQUAL_UNIFORM) != 0 &&
+             (typeQual & TYPEQUAL_VARYING) != 0) {
+        Error(tqPos, "Illegal to provide both \"uniform\" and \"varying\" "
+              "qualifiers to \"new\" expression.");
+        isVarying = false;
+    }
+    else
+        // If no type qualifier is given before the 'new', treat it as a
+        // varying new.
+        isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
+}
+
+
+llvm::Value *
+NewExpr::GetValue(FunctionEmitContext *ctx) const {
+    bool do32Bit = (g->target.is32Bit || g->opt.force32BitAddressing);
+
+    // Determine how many elements we need to allocate.  Note that this
+    // will be a varying value if this is a varying new.
+    llvm::Value *countValue;
+    if (countExpr != NULL) {
+        countValue = countExpr->GetValue(ctx);
+        if (countValue == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+    }
+    else {
+        if (isVarying) {
+            if (do32Bit) countValue = LLVMInt32Vector(1);
+            else         countValue = LLVMInt64Vector(1);
+        }
+        else {
+            if (do32Bit) countValue = LLVMInt32(1);
+            else         countValue = LLVMInt64(1);
+        }
+    }
+
+    // Compute the total amount of memory to allocate, allocSize, as the
+    // product of the number of elements to allocate and the size of a
+    // single element.
+    llvm::Value *eltSize = g->target.SizeOf(allocType->LLVMType(g->ctx), 
+                                            ctx->GetCurrentBasicBlock());
+    if (isVarying)
+        eltSize = ctx->SmearUniform(eltSize, "smear_size");
+    llvm::Value *allocSize = ctx->BinaryOperator(llvm::Instruction::Mul, countValue,
+                                                 eltSize, "alloc_size");
+
+    // Determine which allocation builtin function to call: uniform or
+    // varying, and taking 32-bit or 64-bit allocation counts.
+    llvm::Function *func;
+    if (isVarying) {
+        if (do32Bit)
+            func = m->module->getFunction("__new_varying32");
+        else
+            func = m->module->getFunction("__new_varying64");
+    }
+    else {
+        if (allocSize->getType() != LLVMTypes::Int64Type)
+            allocSize = ctx->SExtInst(allocSize, LLVMTypes::Int64Type,
+                                      "alloc_size64");
+        func = m->module->getFunction("__new_uniform");
+    }
+    Assert(func != NULL);
+
+    // Make the call for the the actual allocation.
+    llvm::Value *ptrValue = ctx->CallInst(func, NULL, allocSize, "new");
+
+    // Now handle initializers and returning the right type for the result.
+    const Type *retType = GetType();
+    if (retType == NULL)
+        return NULL;
+    if (isVarying) {
+        if (g->target.is32Bit)
+            // Convert i64 vector values to i32 if we are compiling to a
+            // 32-bit target.
+            ptrValue = ctx->TruncInst(ptrValue, LLVMTypes::VoidPointerVectorType,
+                                      "ptr_to_32bit");
+
+        if (initExpr != NULL) {
+            // If we have an initializer expression, emit code that checks
+            // to see if each lane is active and if so, runs the code to do
+            // the initialization.  Note that we're we're taking advantage
+            // of the fact that the __new_varying*() functions are
+            // implemented to return NULL for program instances that aren't
+            // executing; more generally, we should be using the current
+            // execution mask for this...
+            for (int i = 0; i < g->target.vectorWidth; ++i) {
+                llvm::BasicBlock *bbInit = ctx->CreateBasicBlock("init_ptr");
+                llvm::BasicBlock *bbSkip = ctx->CreateBasicBlock("skip_init");
+                llvm::Value *p = ctx->ExtractInst(ptrValue, i);
+                llvm::Value *nullValue = g->target.is32Bit ? LLVMInt32(0) :
+                    LLVMInt64(0);
+                // Is the pointer for the current lane non-zero?
+                llvm::Value *nonNull = ctx->CmpInst(llvm::Instruction::ICmp,
+                                                    llvm::CmpInst::ICMP_NE,
+                                                    p, nullValue, "non_null");
+                ctx->BranchInst(bbInit, bbSkip, nonNull);
+
+                // Initialize the memory pointed to by the pointer for the
+                // current lane.
+                ctx->SetCurrentBasicBlock(bbInit);
+                LLVM_TYPE_CONST llvm::Type *ptrType = 
+                    retType->GetAsUniformType()->LLVMType(g->ctx);
+                llvm::Value *ptr = ctx->IntToPtrInst(p, ptrType);
+                InitSymbol(ptr, allocType, initExpr, ctx, pos);
+                ctx->BranchInst(bbSkip);
+
+                ctx->SetCurrentBasicBlock(bbSkip);
+            }
+        }
+
+        return ptrValue;
+    }
+    else {
+        // For uniform news, we just need to cast the void * to be a
+        // pointer of the return type and to run the code for initializers,
+        // if present.
+        LLVM_TYPE_CONST llvm::Type *ptrType = retType->LLVMType(g->ctx);
+        ptrValue = ctx->BitCastInst(ptrValue, ptrType, "cast_new_ptr");
+
+        if (initExpr != NULL)
+            InitSymbol(ptrValue, allocType, initExpr, ctx, pos);
+
+        return ptrValue;
+    }
+}
+
+
+const Type *
+NewExpr::GetType() const {
+    if (allocType == NULL)
+        return NULL;
+
+    return isVarying ? PointerType::GetVarying(allocType) :
+        PointerType::GetUniform(allocType);
+}
+
+
+Expr *
+NewExpr::TypeCheck() {
+    // Here we only need to make sure that if we have an expression giving
+    // a number of elements to allocate that it can be converted to an
+    // integer of the appropriate variability.
+    if (countExpr == NULL)
+        return this;
+
+    const Type *countType;
+    if ((countType = countExpr->GetType()) == NULL)
+        return NULL;
+
+    if (isVarying == false && countType->IsVaryingType()) {
+        Error(pos, "Illegal to provide \"varying\" allocation count with "
+              "\"uniform new\" expression.");
+        return NULL;
+    }
+
+    // Figure out the type that the allocation count should be
+    const Type *t = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+        AtomicType::UniformUInt32 : AtomicType::UniformUInt64;
+    if (isVarying)
+        t = t->GetAsVaryingType();
+
+    countExpr = TypeConvertExpr(countExpr, t, "item count");
+    if (countExpr == NULL)
+        return NULL;
+
+    return this;
+}
+
+
+Expr *
+NewExpr::Optimize() {
+    return this;
+}
+
+
+void
+NewExpr::Print() const {
+    printf("new (%s)", allocType ? allocType->GetString().c_str() : "NULL");
+}
+
+
+int
+NewExpr::EstimateCost() const {
+    return COST_NEW;
+}

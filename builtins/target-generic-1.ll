@@ -41,89 +41,18 @@ gen_gather(1, i16)
 gen_gather(1, i32)
 gen_gather(1, i64)
 
-define  void @__scatter_elt_i8(i8 * %base, <1 x i32> %offsets, <1 x i8> %values,
-                                       i32 %lane) nounwind alwaysinline {
-  %offset32 = extractelement <1 x i32> %offsets, i32 %lane
-;  %offset64 = zext i32 %offset32 to i64
-;  %ptrdelta = add i64 %ptr64, %offset64
-;  %ptr = inttoptr i64 %ptrdelta to i8 *
-  %ptroffset = getelementptr i8 *%base, i32 %offset32
-  %ptr = bitcast i8 * %ptroffset to i8 *
-  %storeval = extractelement <1 x i8> %values, i32 %lane
-  store i8 %storeval, i8 * %ptr
-  ret void
-}
+gen_scatter(1, i8)
+gen_scatter(1, i16)
+gen_scatter(1, i32)
+gen_scatter(1, i64)
 
-define void @__scatter_base_offsets_i8(i8* %base, <1 x i32> %offsets, <1 x i8> %values,
-                                       <1 x i32> %mask) nounwind alwaysinline {
-  ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
-  ;%ptr64 = ptrtoint i8 * %base to i64
-  call void @__scatter_elt_i8(i8 *%base, <1 x i32> %offsets, <1 x i8> %values, i32 0)
-  ret void
-}
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; half conversion routines
 
-define  void @__scatter_elt_i16(i8 * %base, <1 x i32> %offsets, <1 x i16> %values,
-                                       i32 %lane) nounwind alwaysinline {
-  %offset32 = extractelement <1 x i32> %offsets, i32 %lane
-;  %offset64 = zext i32 %offset32 to i64
-;  %ptrdelta = add i64 %ptr64, %offset64
-;  %ptr = inttoptr i64 %ptrdelta to i16 *
-  %ptroffset = getelementptr i8 *%base, i32 %offset32
-  %ptr = bitcast i8 * %ptroffset to i16 *
-  %storeval = extractelement <1 x i16> %values, i32 %lane
-  store i16 %storeval, i16 * %ptr
-  ret void
-}
-
-define void @__scatter_base_offsets_i16(i8* %base, <1 x i32> %offsets, <1 x i16> %values,
-                                       <1 x i32> %mask) nounwind alwaysinline {
-  ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
-  ;%ptr64 = ptrtoint i8 * %base to i64
-  call void @__scatter_elt_i16(i8 *%base, <1 x i32> %offsets, <1 x i16> %values, i32 0)
-  ret void
-}
-
-define  void @__scatter_elt_i32(i8 * %base, <1 x i32> %offsets, <1 x i32> %values,
-                                       i32 %lane) nounwind alwaysinline {
-  %offset32 = extractelement <1 x i32> %offsets, i32 %lane
-;  %offset64 = zext i32 %offset32 to i64
-;  %ptrdelta = add i64 %ptr64, %offset64
-;  %ptr = inttoptr i64 %ptrdelta to i32 *
-  %ptroffset = getelementptr i8 *%base, i32 %offset32
-  %ptr = bitcast i8 * %ptroffset to i32 *
-  %storeval = extractelement <1 x i32> %values, i32 %lane
-  store i32 %storeval, i32 * %ptr
-  ret void
-}
-
-define void @__scatter_base_offsets_i32(i8* %base, <1 x i32> %offsets, <1 x i32> %values,
-                                       <1 x i32> %mask) nounwind alwaysinline {
-  ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
-  ;%ptr64 = ptrtoint i8 * %base to i64
-  call void @__scatter_elt_i32(i8 *%base, <1 x i32> %offsets, <1 x i32> %values, i32 0)
-  ret void
-}
-
-define  void @__scatter_elt_i64(i8 * %base, <1 x i32> %offsets, <1 x i64> %values,
-                                       i32 %lane) nounwind alwaysinline {
-  %offset32 = extractelement <1 x i32> %offsets, i32 %lane
-;  %offset64 = zext i32 %offset32 to i64
-;  %ptrdelta = add i64 %ptr64, %offset64
-;  %ptr = inttoptr i64 %ptrdelta to i64 *
-  %ptroffset = getelementptr i8 *%base, i32 %offset32
-  %ptr = bitcast i8 * %ptroffset to i64 *
-  %storeval = extractelement <1 x i64> %values, i32 %lane
-  store i64 %storeval, i64 * %ptr
-  ret void
-}
-
-define void @__scatter_base_offsets_i64(i8* %base, <1 x i32> %offsets, <1 x i64> %values,
-                                       <1 x i32> %mask) nounwind alwaysinline {
-  ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
-  ;%ptr64 = ptrtoint i8 * %base to i64
-  call void @__scatter_elt_i64(i8 *%base, <1 x i32> %offsets, <1 x i64> %values, i32 0)
-  ret void
-}
+declare float @__half_to_float_uniform(i16 %v) nounwind readnone
+declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
+declare i16 @__float_to_half_uniform(float %v) nounwind readnone
+declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
 
 
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,

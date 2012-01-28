@@ -60,10 +60,27 @@
 #define BUILD_VERSION ""
 #endif // ISPC_IS_WINDOWS
 
-static void usage(int ret) {
-    printf("This is the Intel(r) SPMD Program Compiler (ispc), build %s (%s)\n\n", 
-           BUILD_DATE, BUILD_VERSION);
-    printf("usage: ispc\n");
+static void
+lPrintVersion() {
+    printf("Intel(r) SPMD Program Compiler (ispc), build %s (%s, LLVM %s)\n", 
+           BUILD_DATE, BUILD_VERSION,
+#ifdef LLVM_2_9
+           "2.9"
+#elif defined(LLVM_3_0) || defined(LLVM_3_0svn)
+           "3.0"
+#elif defined(LLVM_3_1) || defined(LLVM_3_1svn)
+           "3.1"
+#else
+#error "Unhandled LLVM version"
+#endif 
+           );
+}
+
+
+static void
+usage(int ret) {
+    lPrintVersion();
+    printf("\nusage: ispc\n");
     printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
     printf("                          \t\taddressing calculations are done by default, even\n");
     printf("                          \t\ton 64-bit target architectures.)\n");
@@ -367,8 +384,7 @@ int main(int Argc, char *Argv[]) {
             generatePIC = true;
 #endif // !ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
-            printf("Intel(r) SPMD Program Compiler (ispc) build %s (%s)\n", 
-                   BUILD_DATE, BUILD_VERSION);
+            lPrintVersion();
             return 0;
         }
         else if (argv[i][0] == '-') {

@@ -93,6 +93,8 @@ continue { return TOKEN_CONTINUE; }
 creturn { return TOKEN_CRETURN; }
 default { return TOKEN_DEFAULT; }
 do { return TOKEN_DO; }
+delete { return TOKEN_DELETE; }
+delete\[\] { return TOKEN_DELETE; }
 double { return TOKEN_DOUBLE; }
 else { return TOKEN_ELSE; }
 enum { return TOKEN_ENUM; }
@@ -112,6 +114,7 @@ int16 { return TOKEN_INT16; }
 int32 { return TOKEN_INT; }
 int64 { return TOKEN_INT64; }
 launch { return TOKEN_LAUNCH; }
+new { return TOKEN_NEW; }
 NULL { return TOKEN_NULL; }
 print { return TOKEN_PRINT; }
 reference { Error(*yylloc, "\"reference\" qualifier is no longer supported; "
@@ -156,7 +159,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         yylval->intVal = lParseBinary(yytext+2, *yylloc, &endPtr);
     else {
 #if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
-        yylval->intVal = _strtoi64(yytext, &endPtr, 0);
+        yylval->intVal = _strtoui64(yytext, &endPtr, 0);
 #else
         // FIXME: should use strtouq and then issue an error if we can't
         // fit into 64 bits...

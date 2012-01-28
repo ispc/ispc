@@ -251,6 +251,14 @@ static FORCEINLINE TYPE __select(bool cond, TYPE a, TYPE b) {       \
     return cond ? a : b;                                            \
 }
 
+#define SHIFT_UNIFORM(TYPE, CAST, NAME, OP)                         \
+static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
+   TYPE ret;                                                        \
+   for (int i = 0; i < 16; ++i)                                     \
+       ret.v[i] = (CAST)(a.v[i]) OP b;                              \
+   return ret;                                                      \
+}
+
 #define SMEAR(VTYPE, NAME, STYPE)               \
 static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {        \
     VTYPE ret;                                  \
@@ -386,6 +394,10 @@ BINARY_OP_CAST(__vec16_i8, int8_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i8, uint8_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i8, int8_t,  __ashr, >>)
 
+SHIFT_UNIFORM(__vec16_i8, uint8_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i8, int8_t, __shl, <<)
+
 CMP_OP(__vec16_i8, int8_t,  __equal, ==)
 CMP_OP(__vec16_i8, int8_t,  __not_equal, !=)
 CMP_OP(__vec16_i8, uint8_t, __unsigned_less_equal, <=)
@@ -424,6 +436,10 @@ BINARY_OP_CAST(__vec16_i16, uint16_t, __urem, %)
 BINARY_OP_CAST(__vec16_i16, int16_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i16, uint16_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i16, int16_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i16, uint16_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i16, int16_t, __shl, <<)
 
 CMP_OP(__vec16_i16, int16_t,  __equal, ==)
 CMP_OP(__vec16_i16, int16_t,  __not_equal, !=)
@@ -464,6 +480,10 @@ BINARY_OP_CAST(__vec16_i32, int32_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i32, uint32_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i32, int32_t,  __ashr, >>)
 
+SHIFT_UNIFORM(__vec16_i32, uint32_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i32, int32_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i32, int32_t, __shl, <<)
+
 CMP_OP(__vec16_i32, int32_t,  __equal, ==)
 CMP_OP(__vec16_i32, int32_t,  __not_equal, !=)
 CMP_OP(__vec16_i32, uint32_t, __unsigned_less_equal, <=)
@@ -502,6 +522,10 @@ BINARY_OP_CAST(__vec16_i64, uint64_t, __urem, %)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __srem, %)
 BINARY_OP_CAST(__vec16_i64, uint64_t, __lshr, >>)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __ashr, >>)
+
+SHIFT_UNIFORM(__vec16_i64, uint64_t, __lshr, >>)
+SHIFT_UNIFORM(__vec16_i64, int64_t, __ashr, >>)
+SHIFT_UNIFORM(__vec16_i64, int64_t, __shl, <<)
 
 CMP_OP(__vec16_i64, int64_t,  __equal, ==)
 CMP_OP(__vec16_i64, int64_t,  __not_equal, !=)
@@ -938,7 +962,7 @@ REDUCE_MINMAX(uint64_t, __vec16_i64, __reduce_max_uint64, >)
 ///////////////////////////////////////////////////////////////////////////
 // masked load/store
 
-static FORCEINLINE __vec16_i8 __masked_load_8(unsigned char *p,
+static FORCEINLINE __vec16_i8 __masked_load_8(void *p,
                                               __vec16_i1 mask) {
     __vec16_i8 ret;
     int8_t *ptr = (int8_t *)p;
@@ -948,7 +972,7 @@ static FORCEINLINE __vec16_i8 __masked_load_8(unsigned char *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i16 __masked_load_16(unsigned char *p,
+static FORCEINLINE __vec16_i16 __masked_load_16(void *p,
                                                 __vec16_i1 mask) {
     __vec16_i16 ret;
     int16_t *ptr = (int16_t *)p;
@@ -958,7 +982,7 @@ static FORCEINLINE __vec16_i16 __masked_load_16(unsigned char *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i32 __masked_load_32(unsigned char *p,
+static FORCEINLINE __vec16_i32 __masked_load_32(void *p,
                                                 __vec16_i1 mask) {
     __vec16_i32 ret;
     int32_t *ptr = (int32_t *)p;
@@ -968,7 +992,7 @@ static FORCEINLINE __vec16_i32 __masked_load_32(unsigned char *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i64 __masked_load_64(unsigned char *p,
+static FORCEINLINE __vec16_i64 __masked_load_64(void *p,
                                                 __vec16_i1 mask) {
     __vec16_i64 ret;
     int64_t *ptr = (int64_t *)p;
@@ -978,7 +1002,7 @@ static FORCEINLINE __vec16_i64 __masked_load_64(unsigned char *p,
     return ret;
 }
 
-static FORCEINLINE void __masked_store_8(unsigned char *p, __vec16_i8 val,
+static FORCEINLINE void __masked_store_8(void *p, __vec16_i8 val,
                                          __vec16_i1 mask) {
     int8_t *ptr = (int8_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -986,7 +1010,7 @@ static FORCEINLINE void __masked_store_8(unsigned char *p, __vec16_i8 val,
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_16(unsigned char *p, __vec16_i16 val,
+static FORCEINLINE void __masked_store_16(void *p, __vec16_i16 val,
                                           __vec16_i1 mask) {
     int16_t *ptr = (int16_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -994,7 +1018,7 @@ static FORCEINLINE void __masked_store_16(unsigned char *p, __vec16_i16 val,
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_32(unsigned char *p, __vec16_i32 val,
+static FORCEINLINE void __masked_store_32(void *p, __vec16_i32 val,
                                           __vec16_i1 mask) {
     int32_t *ptr = (int32_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1002,12 +1026,32 @@ static FORCEINLINE void __masked_store_32(unsigned char *p, __vec16_i32 val,
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_64(unsigned char *p, __vec16_i64 val,
+static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
                                           __vec16_i1 mask) {
     int64_t *ptr = (int64_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
+}
+
+static FORCEINLINE void __masked_store_blend_8(void *p, __vec16_i8 val,
+                                               __vec16_i1 mask) {
+    __masked_store_8(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_16(void *p, __vec16_i16 val,
+                                                __vec16_i1 mask) {
+    __masked_store_16(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_32(void *p, __vec16_i32 val,
+                                                __vec16_i1 mask) {
+    __masked_store_32(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_64(void *p, __vec16_i64 val,
+                                                __vec16_i1 mask) {
+    __masked_store_64(p, val, mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1016,13 +1060,15 @@ static FORCEINLINE void __masked_store_64(unsigned char *p, __vec16_i64 val,
 // offsets * offsetScale is in bytes (for all of these)
 
 #define GATHER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                  \
-static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE offsets, uint32_t scale,\
-                         __vec16_i1 mask) {                             \
+static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
+                              uint32_t scale, OTYPE constOffset, \
+                              __vec16_i1 mask) {                        \
     VTYPE ret;                                                          \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * offsets.v[i]);        \
+            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
+                                   constOffset.v[i]);                   \
             ret.v[i] = *ptr;                                            \
         }                                                               \
     return ret;                                                         \
@@ -1061,12 +1107,14 @@ GATHER_GENERAL(__vec16_i64, int64_t, __vec16_i64, __gather64_i64)
 // scatter
 
 #define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                 \
-static FORCEINLINE void FUNC(unsigned char *b, OTYPE offsets, uint32_t scale,\
+static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
+                             uint32_t scale, OTYPE constOffset,         \
                              VTYPE val, __vec16_i1 mask) {              \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * offsets.v[i]);        \
+            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
+                                   constOffset.v[i]);                   \
             *ptr = val.v[i];                                            \
         }                                                               \
 }

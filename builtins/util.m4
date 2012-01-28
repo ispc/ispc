@@ -760,14 +760,12 @@ define(`global_atomic_uniform', `
 ifelse(LLVM_VERSION, `LLVM_2_9',`
 declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
 
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
-                                         <$1 x MASK> %mask) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
   %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
   ret $3 %r
 }
 ', `
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val,
-                                         <$1 x MASK> %mask) nounwind alwaysinline {
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
   %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
   ret $3 %r
 }
@@ -786,26 +784,7 @@ declare i32 @llvm.atomic.swap.i32.p0i32(i32 * %ptr, i32 %val)
 declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)')
 
 define(`global_swap', `
-
-define <$1 x $2> @__atomic_swap_$3_global($2* %ptr, <$1 x $2> %val,
-                                          <$1 x MASK> %mask) nounwind alwaysinline {
-  %rptr = alloca <$1 x $2>
-  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
-
-  per_lane($1, <$1 x MASK> %mask, `
-   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-   %r_LANE_ID = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val_LANE_ID)', `
-   %r_LANE_ID = atomicrmw xchg $2 * %ptr, $2 %val_LANE_ID seq_cst')
-   %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
-   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
-
-  %r = load <$1 x $2> * %rptr
-  ret <$1 x $2> %r
-}
-
-define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val,
-                                           <$1 x MASK> %mask) nounwind alwaysinline {
+define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
 ifelse(LLVM_VERSION, `LLVM_2_9',`
  %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)', `
  %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst')
@@ -845,7 +824,7 @@ ifelse(LLVM_VERSION, `LLVM_2_9',`
 }
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                               $2 %val, <$1 x MASK> %mask) nounwind alwaysinline {
+                                                       $2 %val) nounwind alwaysinline {
 ifelse(LLVM_VERSION, `LLVM_2_9',`
   %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)', `
   %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst')
@@ -1586,17 +1565,15 @@ declare void @__pseudo_masked_store_64(<WIDTH x i64> * nocapture, <WIDTH x i64>,
 ; these represent gathers from a common base pointer with offsets.  The
 ; offset_scale factor scales the offsets before they are added to the base
 ; pointer--it should have the value 1, 2, 4, or 8.  (It can always just be 1.)
-; The 2, 4, 8 cases are used to match LLVM patterns that use the free 2/4/8 scaling
-; available in x86 addressing calculations... 
+; Then, the offset delta_value (guaranteed to be a compile-time constant value),
+; is added to the final address. The 2, 4, 8 scales are used to match LLVM patterns
+; that use the free 2/4/8 scaling available in x86 addressing calculations, and
+; offset_delta feeds into the free offset calculation. 
 ;
-; varying int8  __pseudo_gather_base_offsets{32,64}_8(uniform int8 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int16 __pseudo_gather_base_offsets{32,64}_16(uniform int16 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int32 __pseudo_gather_base_offsets{32,64}_32(uniform int32 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
-; varying int64 __pseudo_gather_base_offsets{32,64}_64(uniform int64 *base, 
-;                                    int{32,64} offsets, int32 offset_scale, mask)
+; varying int{8,16,32,64}
+; __pseudo_gather_base_offsets{32,64}_{8,16,32,64}(uniform int8 *base,
+;                                    int{32,64} offsets, uniform int32 offset_scale, 
+;                                    int{32,64} offset_delta, mask)
 ;
 ; Then, the GSImprovementsPass optimizations finds these and either
 ; converts them to native gather functions or converts them to vector
@@ -1612,22 +1589,22 @@ declare <WIDTH x i16> @__pseudo_gather64_16(<WIDTH x i64>, <WIDTH x MASK>) nounw
 declare <WIDTH x i32> @__pseudo_gather64_32(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i64> @__pseudo_gather64_64(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 
-declare <WIDTH x i8>  @__pseudo_gather_base_offsets32_8(i8 *, <WIDTH x i32>, i32,
-                                                     <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather_base_offsets32_16(i8 *, <WIDTH x i32>, i32,
+declare <WIDTH x i8>  @__pseudo_gather_base_offsets32_8(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
+                                                        <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x i16> @__pseudo_gather_base_offsets32_16(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                       <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather_base_offsets32_32(i8 *, <WIDTH x i32>, i32,
+declare <WIDTH x i32> @__pseudo_gather_base_offsets32_32(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                       <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather_base_offsets32_64(i8 *, <WIDTH x i32>, i32,
+declare <WIDTH x i64> @__pseudo_gather_base_offsets32_64(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                       <WIDTH x MASK>) nounwind readonly
 
-declare <WIDTH x i8>  @__pseudo_gather_base_offsets64_8(i8 *, <WIDTH x i64>, i32,
+declare <WIDTH x i8>  @__pseudo_gather_base_offsets64_8(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                      <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i16> @__pseudo_gather_base_offsets64_16(i8 *, <WIDTH x i64>, i32,
+declare <WIDTH x i16> @__pseudo_gather_base_offsets64_16(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                       <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i32> @__pseudo_gather_base_offsets64_32(i8 *, <WIDTH x i64>, i32,
+declare <WIDTH x i32> @__pseudo_gather_base_offsets64_32(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                       <WIDTH x MASK>) nounwind readonly
-declare <WIDTH x i64> @__pseudo_gather_base_offsets64_64(i8 *, <WIDTH x i64>, i32,
+declare <WIDTH x i64> @__pseudo_gather_base_offsets64_64(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                       <WIDTH x MASK>) nounwind readonly
 
 ; Similarly to the pseudo-gathers defined above, we also declare undefined
@@ -1642,13 +1619,9 @@ declare <WIDTH x i64> @__pseudo_gather_base_offsets64_64(i8 *, <WIDTH x i64>, i3
 ; transforms them to scatters like:
 ;
 ; void __pseudo_scatter_base_offsets{32,64}_8(uniform int8 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int8 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_16(uniform int16 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int16 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_32(uniform int32 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int32 values, mask)
-; void __pseudo_scatter_base_offsets{32,64}_64(uniform int64 *base, 
-;             varying int32 offsets, int32 offset_scale, varying int64 values, mask)
+;             varying int32 offsets, uniform int32 offset_scale, 
+;             varying int{32,64} offset_delta, varying int8 values, mask)
+; (and similarly for 16/32/64 bit values)
 ;
 ; And the GSImprovementsPass in turn converts these to actual native
 ; scatters or masked stores.  
@@ -1663,22 +1636,22 @@ declare void @__pseudo_scatter64_16(<WIDTH x i64>, <WIDTH x i16>, <WIDTH x MASK>
 declare void @__pseudo_scatter64_32(<WIDTH x i64>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter64_64(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
 
-declare void @__pseudo_scatter_base_offsets32_8(i8 * nocapture, <WIDTH x i32>, i32,
+declare void @__pseudo_scatter_base_offsets32_8(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                 <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_16(i8 * nocapture, <WIDTH x i32>, i32,
+declare void @__pseudo_scatter_base_offsets32_16(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                  <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_32(i8 * nocapture, <WIDTH x i32>, i32,
+declare void @__pseudo_scatter_base_offsets32_32(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                  <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets32_64(i8 * nocapture, <WIDTH x i32>, i32,
+declare void @__pseudo_scatter_base_offsets32_64(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                  <WIDTH x i64>, <WIDTH x MASK>) nounwind
 
-declare void @__pseudo_scatter_base_offsets64_8(i8 * nocapture, <WIDTH x i64>, i32,
+declare void @__pseudo_scatter_base_offsets64_8(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                 <WIDTH x i8>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_16(i8 * nocapture, <WIDTH x i64>, i32,
+declare void @__pseudo_scatter_base_offsets64_16(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i16>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, i32,
+declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i32>, <WIDTH x MASK>) nounwind
-declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32,
+declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i64>, <WIDTH x MASK>) nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1830,6 +1803,81 @@ fail:
 
 ok:
   ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; new/delete
+
+declare i8 * @malloc(i64)
+declare void @free(i8 *)
+
+define i8 * @__new_uniform(i64 %size) {
+  %a = call i8 * @malloc(i64 %size)
+  ret i8 * %a
+}
+
+define <WIDTH x i64> @__new_varying32(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
+    %ptr_LANE_ID = call i8 * @malloc(i64 %sz64_LANE_ID)
+    %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define <WIDTH x i64> @__new_varying64(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %ptr_LANE_ID = call i8 * @malloc(i64 %sz_LANE_ID)
+    %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define void @__delete_uniform(i8 * %ptr) {
+  call void @free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; read hw clock
+
+define i64 @__clock() nounwind uwtable ssp {
+entry:
+  tail call void asm sideeffect "xorl %eax,%eax \0A    cpuid", "~{rax},~{rbx},~{rcx},~{rdx},~{dirflag},~{fpsr},~{flags}"() nounwind
+  %0 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() nounwind
+  %asmresult = extractvalue { i32, i32 } %0, 0
+  %asmresult1 = extractvalue { i32, i32 } %0, 1
+  %conv = zext i32 %asmresult1 to i64
+  %shl = shl nuw i64 %conv, 32
+  %conv2 = zext i32 %asmresult to i64
+  %or = or i64 %shl, %conv2
+  ret i64 %or
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1997,38 +2045,18 @@ global_atomic_uniform(WIDTH, umax, i64, uint64)
 global_swap(WIDTH, i32, int32)
 global_swap(WIDTH, i64, int64)
 
-define <WIDTH x float> @__atomic_swap_float_global(float * %ptr, <WIDTH x float> %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
-  %iret = call <WIDTH x i32> @__atomic_swap_int32_global(i32 * %iptr, <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
-  ret <WIDTH x float> %ret
-}
-
-define <WIDTH x double> @__atomic_swap_double_global(double * %ptr, <WIDTH x double> %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
-  %iret = call <WIDTH x i64> @__atomic_swap_int64_global(i64 * %iptr, <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
-  ret <WIDTH x double> %ret
-}
-
-define float @__atomic_swap_uniform_float_global(float * %ptr, float %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival, <WIDTH x MASK> %mask)
+  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
-define double @__atomic_swap_uniform_double_global(double * %ptr, double %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival, <WIDTH x MASK> %mask)
+  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
@@ -2058,24 +2086,23 @@ define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
   ret <WIDTH x double> %ret
 }
 
-define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp, float %val,
-                                                   <WIDTH x MASK> %mask) nounwind alwaysinline {
+define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+                                                             float %val) nounwind alwaysinline {
   %iptr = bitcast float * %ptr to i32 *
   %icmp = bitcast float %cmp to i32
   %ival = bitcast float %val to i32
   %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
-                                                                   i32 %ival, <WIDTH x MASK> %mask)
+                                                                   i32 %ival)
   %ret = bitcast i32 %iret to float
   ret float %ret
 }
 
 define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                            double %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
+                                                               double %val) nounwind alwaysinline {
   %iptr = bitcast double * %ptr to i64 *
   %icmp = bitcast double %cmp to i64
   %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp,
-                                                                   i64 %ival, <WIDTH x MASK> %mask)
+  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
   %ret = bitcast i64 %iret to double
   ret double %ret
 }
@@ -2219,9 +2246,9 @@ return:
 define(`gen_masked_store', `
 define void @__masked_store_$3(<$1 x $2>* nocapture, <$1 x $2>, <$1 x i32>) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %2, `
-      %ptr_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
-      %storeval_ID = extractelement <$1 x $2> %1, i32 LANE
-      store $2 %storeval_ID, $2 * %ptr_ID')
+      %ptr_LANE_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
+      %storeval_LANE_ID = extractelement <$1 x $2> %1, i32 LANE
+      store $2 %storeval_LANE_ID, $2 * %ptr_LANE_ID')
   ret void
 }
 ')
@@ -2676,7 +2703,7 @@ pl_known_mask:
 pl_all_on:
   ;; the mask is all on--just expand the code for each lane sequentially
   forloop(i, 0, eval($1-1), 
-          `patsubst(`$3', `ID\|LANE', i)')
+          `patsubst(`$3', `LANE', i)')
   br label %pl_done
 
 pl_unknown_mask:
@@ -2727,7 +2754,8 @@ define(`gen_gather', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
 define <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %offsets, i32 %offset_scale,
-                                    <$1 x $2> %ret, i32 %lane) nounwind readonly alwaysinline {
+                                    <$1 x i32> %offset_delta, <$1 x $2> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
   ; the order and details of the next 4 lines are important--they match LLVMs 
@@ -2737,15 +2765,20 @@ define <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %offsets, i32 %offset_
   %offset = mul i64 %offset64, %scale64
   %ptroffset = getelementptr i8 * %ptr, i64 %offset
 
+  %delta = extractelement <$1 x i32> %offset_delta, i32 %lane
+  %delta64 = sext i32 %delta to i64
+  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+
   ; load value and insert into returned value
-  %ptrcast = bitcast i8 * %ptroffset to $2 *
+  %ptrcast = bitcast i8 * %finalptr to $2 *
   %val = load $2 *%ptrcast
   %updatedret = insertelement <$1 x $2> %ret, $2 %val, i32 %lane
   ret <$1 x $2> %updatedret
 }
 
 define <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %offsets, i32 %offset_scale,
-                                    <$1 x $2> %ret, i32 %lane) nounwind readonly alwaysinline {
+                                    <$1 x i64> %offset_delta, <$1 x $2> %ret,
+                                    i32 %lane) nounwind readonly alwaysinline {
   ; compute address for this one from the base
   %offset64 = extractelement <$1 x i64> %offsets, i32 %lane
   ; the order and details of the next 4 lines are important--they match LLVMs 
@@ -2754,8 +2787,11 @@ define <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %offsets, i32 %offset_
   %offset = mul i64 %offset64, %offset_scale64
   %ptroffset = getelementptr i8 * %ptr, i64 %offset
 
+  %delta64 = extractelement <$1 x i64> %offset_delta, i32 %lane
+  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+
   ; load value and insert into returned value
-  %ptrcast = bitcast i8 * %ptroffset to $2 *
+  %ptrcast = bitcast i8 * %finalptr to $2 *
   %val = load $2 *%ptrcast
   %updatedret = insertelement <$1 x $2> %ret, $2 %val, i32 %lane
   ret <$1 x $2> %updatedret
@@ -2763,6 +2799,7 @@ define <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %offsets, i32 %offset_
 
 
 define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets, i32 %offset_scale,
+                                             <$1 x i32> %offset_delta,
                                              <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
@@ -2775,16 +2812,25 @@ define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets, i32
                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i32> * %offsetsPtr
 
+  %deltaPtr = alloca <$1 x i32>
+  store <$1 x i32> zeroinitializer, <$1 x i32> * %deltaPtr
+  call void @__masked_store_blend_32(<$1 x i32> * %deltaPtr, <$1 x i32> %offset_delta, 
+                                     <$1 x i32> %vecmask)
+  %newDelta = load <$1 x i32> * %deltaPtr
+
   %ret0 = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %newOffsets,
-                                            i32 %offset_scale, <$1 x $2> undef, i32 0)
+                                            i32 %offset_scale, <$1 x i32> %offset_delta,
+                                            <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
           `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, 
-                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x $2> %retPREV, i32 LANE)
+                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x i32> %offset_delta,
+                                <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)
 }
 
 define <$1 x $2> @__gather_base_offsets64_$2(i8 * %ptr, <$1 x i64> %offsets, i32 %offset_scale,
+                                             <$1 x i64> %offset_delta,
                                              <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   ; We can be clever and avoid the per-lane stuff for gathers if we are willing
   ; to require that the 0th element of the array being gathered from is always
@@ -2797,11 +2843,19 @@ define <$1 x $2> @__gather_base_offsets64_$2(i8 * %ptr, <$1 x i64> %offsets, i32
                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i64> * %offsetsPtr
 
+  %deltaPtr = alloca <$1 x i64>
+  store <$1 x i64> zeroinitializer, <$1 x i64> * %deltaPtr
+  call void @__masked_store_blend_64(<$1 x i64> * %deltaPtr, <$1 x i64> %offset_delta, 
+                                     <$1 x i32> %vecmask)
+  %newDelta = load <$1 x i64> * %deltaPtr
+
   %ret0 = call <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %newOffsets,
-                                            i32 %offset_scale, <$1 x $2> undef, i32 0)
+                                            i32 %offset_scale, <$1 x i64> %newDelta,
+                                            <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
           `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt64_$2(i8 * %ptr, 
-                                <$1 x i64> %newOffsets, i32 %offset_scale, <$1 x $2> %retPREV, i32 LANE)
+                                <$1 x i64> %newOffsets, i32 %offset_scale, <$1 x i64> %newDelta,
+                                <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)
 }
@@ -2811,11 +2865,11 @@ define <$1 x $2> @__gather32_$2(<$1 x i32> %ptrs,
                                 <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <$1 x $2>
   per_lane($1, <$1 x i32> %vecmask, `
-  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
-  %val_ID = load $2 * %ptr_ID
-  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
-  store $2 %val_ID, $2 * %store_ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = load $2 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_LANE_ID, $2 * %store_ptr_LANE_ID
  ')
 
   %ret = load <$1 x $2> * %ret_ptr
@@ -2827,11 +2881,11 @@ define <$1 x $2> @__gather64_$2(<$1 x i64> %ptrs,
                                 <$1 x i32> %vecmask) nounwind readonly alwaysinline {
   %ret_ptr = alloca <$1 x $2>
   per_lane($1, <$1 x i32> %vecmask, `
-  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
-  %val_ID = load $2 * %ptr_ID
-  %store_ptr_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
-  store $2 %val_ID, $2 * %store_ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = load $2 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <$1 x $2> * %ret_ptr, i32 0, i32 LANE
+  store $2 %val_LANE_ID, $2 * %store_ptr_LANE_ID
  ')
 
   %ret = load <$1 x $2> * %ret_ptr
@@ -2852,7 +2906,8 @@ define(`gen_scatter', `
 ;; Define the function that descripes the work to do to scatter a single
 ;; value
 define void @__scatter_elt32_$2(i8 * %ptr, <$1 x i32> %offsets, i32 %offset_scale,
-                                <$1 x $2> %values, i32 %lane) nounwind alwaysinline {
+                                <$1 x i32> %offset_delta, <$1 x $2> %values,
+                                i32 %lane) nounwind alwaysinline {
   %offset32 = extractelement <$1 x i32> %offsets, i32 %lane
   ; the order and details of the next 4 lines are important--they match LLVMs 
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
@@ -2861,42 +2916,52 @@ define void @__scatter_elt32_$2(i8 * %ptr, <$1 x i32> %offsets, i32 %offset_scal
   %offset = mul i64 %offset64, %scale64
   %ptroffset = getelementptr i8 * %ptr, i64 %offset
 
-  %ptrcast = bitcast i8 * %ptroffset to $2 *
+  %delta = extractelement <$1 x i32> %offset_delta, i32 %lane
+  %delta64 = sext i32 %delta to i64
+  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+
+  %ptrcast = bitcast i8 * %finalptr to $2 *
   %storeval = extractelement <$1 x $2> %values, i32 %lane
   store $2 %storeval, $2 * %ptrcast
   ret void
 }
 
 define void @__scatter_elt64_$2(i8 * %ptr, <$1 x i64> %offsets, i32 %offset_scale,
-                                <$1 x $2> %values, i32 %lane) nounwind alwaysinline {
+                                <$1 x i64> %offset_delta, <$1 x $2> %values,
+                                i32 %lane) nounwind alwaysinline {
   %offset64 = extractelement <$1 x i64> %offsets, i32 %lane
   ; the order and details of the next 4 lines are important--they match LLVMs 
   ; patterns that apply the free x86 2x/4x/8x scaling in addressing calculations
   %scale64 = sext i32 %offset_scale to i64
   %offset = mul i64 %offset64, %scale64
   %ptroffset = getelementptr i8 * %ptr, i64 %offset
-  %ptrcast = bitcast i8 * %ptroffset to $2 *
 
+  %delta64 = extractelement <$1 x i64> %offset_delta, i32 %lane
+  %finalptr = getelementptr i8 * %ptroffset, i64 %delta64
+
+  %ptrcast = bitcast i8 * %finalptr to $2 *
   %storeval = extractelement <$1 x $2> %values, i32 %lane
   store $2 %storeval, $2 * %ptrcast
   ret void
 }
 
 define void @__scatter_base_offsets32_$2(i8* %base, <$1 x i32> %offsets, i32 %offset_scale,
-                                         <$1 x $2> %values, <$1 x i32> %mask) nounwind alwaysinline {
+                                         <$1 x i32> %offset_delta, <$1 x $2> %values,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
   ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
   per_lane($1, <$1 x i32> %mask, `
       call void @__scatter_elt32_$2(i8 * %base, <$1 x i32> %offsets, i32 %offset_scale,
-                                    <$1 x $2> %values, i32 LANE)')
+                                    <$1 x i32> %offset_delta, <$1 x $2> %values, i32 LANE)')
   ret void
 }
 
 define void @__scatter_base_offsets64_$2(i8* %base, <$1 x i64> %offsets, i32 %offset_scale,
-                                         <$1 x $2> %values, <$1 x i32> %mask) nounwind alwaysinline {
+                                         <$1 x i64> %offset_delta, <$1 x $2> %values,
+                                         <$1 x i32> %mask) nounwind alwaysinline {
   ;; And use the `per_lane' macro to do all of the per-lane work for scatter...
   per_lane($1, <$1 x i32> %mask, `
       call void @__scatter_elt64_$2(i8 * %base, <$1 x i64> %offsets, i32 %offset_scale,
-                                    <$1 x $2> %values, i32 LANE)')
+                                    <$1 x i64> %offset_delta, <$1 x $2> %values, i32 LANE)')
   ret void
 }
 
@@ -2904,10 +2969,10 @@ define void @__scatter_base_offsets64_$2(i8* %base, <$1 x i64> %offsets, i32 %of
 define void @__scatter32_$2(<$1 x i32> %ptrs, <$1 x $2> %values,
                             <$1 x i32> %mask) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %mask, `
-  %iptr_ID = extractelement <$1 x i32> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i32 %iptr_ID to $2 *
-  %val_ID = extractelement <$1 x $2> %values, i32 LANE
-  store $2 %val_ID, $2 * %ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_LANE_ID, $2 * %ptr_LANE_ID
  ')
   ret void
 }
@@ -2916,10 +2981,10 @@ define void @__scatter32_$2(<$1 x i32> %ptrs, <$1 x $2> %values,
 define void @__scatter64_$2(<$1 x i64> %ptrs, <$1 x $2> %values,
                             <$1 x i32> %mask) nounwind alwaysinline {
   per_lane($1, <$1 x i32> %mask, `
-  %iptr_ID = extractelement <$1 x i64> %ptrs, i32 LANE
-  %ptr_ID = inttoptr i64 %iptr_ID to $2 *
-  %val_ID = extractelement <$1 x $2> %values, i32 LANE
-  store $2 %val_ID, $2 * %ptr_ID
+  %iptr_LANE_ID = extractelement <$1 x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $2 *
+  %val_LANE_ID = extractelement <$1 x $2> %values, i32 LANE
+  store $2 %val_LANE_ID, $2 * %ptr_LANE_ID
  ')
   ret void
 }

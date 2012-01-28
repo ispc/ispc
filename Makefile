@@ -71,7 +71,9 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=avx avx-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 generic-16 generic-1
+TARGETS=avx1 avx1-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 \
+	generic-16 generic-1
+
 BUILTINS_SRC=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS))) \
 	builtins/dispatch.ll
 BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC:.ll=.o))) \

@@ -38,23 +38,20 @@ parser.add_option("-c", "--compiler", dest="compiler_exe", help="Compiler binary
                   default=None)
 parser.add_option('-o', '--no-opt', dest='no_opt', help='Disable optimization',
                   default=False, action="store_true")
+parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs to run in parallel',
+                  default="1024", type="int")
 parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
-if not is_windows:
-    parser.add_option('--valgrind', dest='valgrind', help='Run tests with valgrind',
-                      default=False, action="store_true")
+parser.add_option('--wrap-exe', dest='wrapexe',
+                  help='Executable to wrap test runs with (e.g. "valgrind")',
+                  default="")
 
 (options, args) = parser.parse_args()
-
-if not is_windows and options.valgrind:
-    valgrind_exe = "valgrind "
-else:
-    valgrind_exe = ""
 
 if not is_windows:
     ispc_exe = "./ispc"
 else:
-    ispc_exe = "Release/ispc.exe"
+    ispc_exe = "../Release/ispc.exe"
 
 is_generic_target = options.target.find("generic-") != -1
 if is_generic_target and options.include_file == None:
@@ -74,16 +71,33 @@ if options.compiler_exe == None:
     else:
         options.compiler_exe = "g++"
 
-# if no specific test files are specified, run all of the tests in tests/
-# and failing_tests/
+def fix_windows_paths(files):
+    ret = [ ]
+    for fn in files:
+        ret += [ string.replace(fn, '\\', '/') ]
+    return ret
+
+    
+# if no specific test files are specified, run all of the tests in tests/,
+# failing_tests/, and tests_errors/
 if len(args) == 0:
     files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc") + \
         glob.glob("tests_errors/*ispc")
+    files = fix_windows_paths(files)
 else:
+    if is_windows:
+        argfiles = [ ]
+        for f in args:
+            # we have to glob ourselves if this is being run under a DOS
+            # shell..
+            argfiles += glob.glob(f)
+    else:
+        argfiles = args
+        
     files = [ ]
-    for f in args:
+    for f in argfiles:
         if os.path.splitext(string.lower(f))[1] != ".ispc":
-            print "Ignoring file %s, which doesn't have an .ispc extension." % f
+            sys.stdout.write("Ignoring file %s, which doesn't have an .ispc extension.\n" % f)
         else:
             files += [ f ]
 
@@ -101,6 +115,7 @@ finished_tests_counter_lock = multiprocessing.Lock()
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
 def update_progress(fn):
+    global total_tests
     finished_tests_counter.value = finished_tests_counter.value + 1
     progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests, fn)
     # spaces to clear out detrius from previous printing...
@@ -218,7 +233,7 @@ def run_test(filename):
                     obj_name = "%s%s.obj" % (input_prefix, filename)
                 exe_name = "%s%s.exe" % (input_prefix, filename)
 
-                cc_cmd = "%s /I. /Iwinstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
+                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
                          (options.compiler_exe, match, input_prefix, obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
@@ -246,9 +261,8 @@ def run_test(filename):
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % options.include_file
 
         # compile the ispc code, make the executable, and run it...
-        global valgrind_exe
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
-                                              valgrind_exe + " " + exe_name, \
+                                              options.wrapexe + " " + exe_name, \
                                               filename, should_fail)
 
         # clean up after running the test
@@ -256,8 +270,8 @@ def run_test(filename):
             if not run_error:
                 os.unlink(exe_name)
                 if is_windows:
-                    os.unlink(filename + ".pdb")
-                    os.unlink(filename + ".ilk")
+                    os.unlink("%s%s.pdb" % (input_prefix, filename))
+                    os.unlink("%s%s.ilk" % (input_prefix, filename))
             os.unlink(obj_name)
         except:
             None
@@ -314,12 +328,14 @@ if __name__ == '__main__':
     compile_error_files = [ ]
     run_error_files = [ ]
 
-    nthreads = multiprocessing.cpu_count()
-    print "Found %d CPUs. Running %d tests." % (nthreads, total_tests)
+    nthreads = min(multiprocessing.cpu_count(), options.num_jobs)
+    sys.stdout.write("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests))
 
     # put each of the test filenames into a queue
     q = multiprocessing.Queue()
     for fn in files:
+        if is_windows:
+            fn = fn.replace("\\",'/')
         q.put(fn)
     for x in range(nthreads):
         q.put('STOP')
@@ -339,7 +355,7 @@ if __name__ == '__main__':
     # (i.e. return 0 if all is ok)
     for t in task_threads:
         t.join()
-    print
+    sys.stdout.write("\n")
 
     while not qret.empty():
         (c, r) = qret.get()
