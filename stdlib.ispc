@@ -3246,14 +3246,23 @@ static inline uniform unsigned int __seed4(RNGState * uniform state,
 }
 
 static inline void seed_rng(uniform RNGState * uniform state, uniform unsigned int seed) {
-    seed = __seed4(state, 0, seed);
-    if (programCount == 8)
-        __seed4(state, 4, seed ^ 0xbeeff00d);
-    if (programCount == 16) {
-        __seed4(state, 4,  seed ^ 0xbeeff00d);
-        __seed4(state, 8,  ((seed & 0xffff) << 16) | (seed >> 16));
-        __seed4(state, 12, (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                            ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24));
+    if (programCount == 1) {
+        state->z1 = seed;
+        state->z2 = seed ^ 0xbeeff00d;
+        state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
+        state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                     ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
+    }
+    else {
+        seed = __seed4(state, 0, seed);
+        if (programCount == 8)
+            __seed4(state, 4, seed ^ 0xbeeff00d);
+        if (programCount == 16) {
+            __seed4(state, 4,  seed ^ 0xbeeff00d);
+            __seed4(state, 8,  ((seed & 0xffff) << 16) | (seed >> 16));
+            __seed4(state, 12, (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                                ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24));
+        }
     }
 }
 
