@@ -4191,6 +4191,53 @@ ConstExpr::ConstExpr(ConstExpr *old, double *v)
 }
 
 
+ConstExpr::ConstExpr(ConstExpr *old, SourcePos p)
+    : Expr(p) {
+    type = old->type;
+
+    AtomicType::BasicType basicType = getBasicType();
+
+    switch (basicType) {
+    case AtomicType::TYPE_BOOL:
+        memcpy(boolVal, old->boolVal, Count() * sizeof(bool));
+        break;
+    case AtomicType::TYPE_INT8:
+        memcpy(int8Val, old->int8Val, Count() * sizeof(int8_t));
+        break;
+    case AtomicType::TYPE_UINT8:
+        memcpy(uint8Val, old->uint8Val, Count() * sizeof(uint8_t));
+        break;
+    case AtomicType::TYPE_INT16:
+        memcpy(int16Val, old->int16Val, Count() * sizeof(int16_t));
+        break;
+    case AtomicType::TYPE_UINT16:
+        memcpy(uint16Val, old->uint16Val, Count() * sizeof(uint16_t));
+        break;
+    case AtomicType::TYPE_INT32:
+        memcpy(int32Val, old->int32Val, Count() * sizeof(int32_t));
+        break;
+    case AtomicType::TYPE_UINT32:
+        memcpy(uint32Val, old->uint32Val, Count() * sizeof(uint32_t));
+        break;
+    case AtomicType::TYPE_FLOAT:
+        memcpy(floatVal, old->floatVal, Count() * sizeof(float));
+        break;
+    case AtomicType::TYPE_DOUBLE:
+        memcpy(doubleVal, old->doubleVal, Count() * sizeof(double));
+        break;
+    case AtomicType::TYPE_INT64:
+        memcpy(int64Val, old->int64Val, Count() * sizeof(int64_t));
+        break;
+    case AtomicType::TYPE_UINT64:
+        memcpy(uint64Val, old->uint64Val, Count() * sizeof(uint64_t));
+        break;
+    default:
+        FATAL("unimplemented const type");
+    }
+    
+}
+
+
 AtomicType::BasicType
 ConstExpr::getBasicType() const {
     const AtomicType *at = dynamic_cast<const AtomicType *>(type);
@@ -6134,7 +6181,7 @@ SymbolExpr::Optimize() {
         return NULL;
     else if (symbol->constValue != NULL) {
         Assert(GetType()->IsConstType());
-        return symbol->constValue;
+        return new ConstExpr(symbol->constValue, pos);
     }
     else
         return this;

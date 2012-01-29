@@ -388,6 +388,10 @@ public:
         with values given by the "vales" parameter. */
     ConstExpr(ConstExpr *old, double *values);
 
+    /** Create ConstExpr with the same type and values as the given one,
+        but at the given position. */
+    ConstExpr(ConstExpr *old, SourcePos pos);
+
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     void Print() const;
