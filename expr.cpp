@@ -1594,7 +1594,8 @@ lConstFoldBinLogicalOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *c
 /** Constant fold binary arithmetic ops.
  */
 template <typename T> static ConstExpr *
-lConstFoldBinArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0) {
+lConstFoldBinArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0,
+                     SourcePos pos) {
     T result[ISPC_MAX_NVEC];
     int count = carg0->Count();
 
@@ -1602,7 +1603,16 @@ lConstFoldBinArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *car
         FOLD_OP(BinaryExpr::Add, +);
         FOLD_OP(BinaryExpr::Sub, -);
         FOLD_OP(BinaryExpr::Mul, *);
-        FOLD_OP(BinaryExpr::Div, /);
+    case BinaryExpr::Div:
+        for (int i = 0; i < count; ++i) {
+            if (v1[i] == 0) {
+                Error(pos, "Division by zero encountered in expression.");
+                result[i] = 0;
+            }
+            else
+                result[i] = (v0[i] / v1[i]);
+        }
+        break;
     default:
         return NULL;
     }
@@ -1718,7 +1728,7 @@ BinaryExpr::Optimize() {
         constArg0->AsFloat(v0);
         constArg1->AsFloat(v1);
         ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0)) != NULL)
+        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
             return ret;
         else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
             return ret;
@@ -1730,7 +1740,7 @@ BinaryExpr::Optimize() {
         constArg0->AsDouble(v0);
         constArg1->AsDouble(v1);
         ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0)) != NULL)
+        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
             return ret;
         else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
             return ret;
@@ -1742,7 +1752,7 @@ BinaryExpr::Optimize() {
         constArg0->AsInt32(v0);
         constArg1->AsInt32(v1);
         ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0)) != NULL)
+        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
             return ret;
         else if ((ret = lConstFoldBinIntOp(op, v0, v1, constArg0)) != NULL)
             return ret;
@@ -1757,7 +1767,7 @@ BinaryExpr::Optimize() {
         constArg0->AsUInt32(v0);
         constArg1->AsUInt32(v1);
         ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0)) != NULL)
+        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
             return ret;
         else if ((ret = lConstFoldBinIntOp(op, v0, v1, constArg0)) != NULL)
             return ret;
@@ -1943,7 +1953,8 @@ BinaryExpr::TypeCheck() {
             return NULL;
         }
 
-        const Type *promotedType = Type::MoreGeneralType(type0, type1, arg0->pos,
+        const Type *promotedType = Type::MoreGeneralType(type0, type1, 
+                                                         Union(arg0->pos, arg1->pos),
                                                          lOpString(op));
         if (promotedType == NULL)
             return NULL;
