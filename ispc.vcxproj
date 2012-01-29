@@ -25,6 +25,7 @@
     <ClCompile Include="gen-bitcode-c-32.cpp" />
     <ClCompile Include="gen-bitcode-c-64.cpp" />
     <ClCompile Include="gen-bitcode-dispatch.cpp" />
+    <ClCompile Include="gen-bitcode-generic-1.cpp" />
     <ClCompile Include="gen-bitcode-generic-4.cpp" />
     <ClCompile Include="gen-bitcode-generic-8.cpp" />
     <ClCompile Include="gen-bitcode-generic-16.cpp" />
@@ -209,6 +210,19 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\targets-avx-x2.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx2-x2.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx2-x2.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-generic-1.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-1.ll | python bitcode2cpp.py builtins\target-generic-1.ll &gt; gen-bitcode-generic-1.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-generic-1.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-1.ll | python bitcode2cpp.py builtins\target-generic-1.ll &gt; gen-bitcode-generic-1.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-generic-1.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-generic-1.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-generic-1.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
