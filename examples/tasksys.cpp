@@ -273,7 +273,7 @@ lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldValue) {
 #else
     void *result;
 #if (ISPC_POINTER_BYTES == 4)
-    __asm__ __volatile__("lock\ncmpxchgd %2,%1"
+    __asm__ __volatile__("lock\ncmpxchgl %2,%1"
                           : "=a"(result), "=m"(*v)
                           : "q"(newValue), "0"(oldValue)
                           : "memory");
