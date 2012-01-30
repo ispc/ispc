@@ -1184,7 +1184,6 @@ C++:
 There are a number of features of C89 that are not supported in ``ispc``
 but are likely to be supported in future releases:
 
-* Short circuiting of logical operations
 * There are no types named ``char``, ``short``, or ``long`` (or ``long
   double``).  However, there are built-in ``int8``, ``int16``, and
   ``int64`` types
@@ -1969,6 +1968,18 @@ operator also work as expected.
     (*fp).a = 0;
     fp->b = 1;
   
+As in C and C++, evaluation of the ``||`` and ``&&`` logical operators is
+"short-circuited"; the right hand side won't be evaluated if the value from
+the left-hand side determines the logical operator's value.  For example,
+in the following code, ``array[index]`` won't be evaluated for values of
+``index`` that are greater than or equal to ``NUM_ITEMS``.
+
+::
+
+    if (index < NUM_ITEMS && array[index] > 0) {
+        // ...
+    }
+
 
 Dynamic Memory Allocation
 -------------------------

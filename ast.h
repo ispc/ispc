@@ -144,4 +144,8 @@ extern Stmt *TypeCheck(Stmt *);
     the given root. */
 extern int EstimateCost(ASTNode *root);
 
+/** Returns true if it would be safe to run the given code with an "all
+    off" mask. */ 
+extern bool SafeToRunWithMaskAllOff(ASTNode *root);
+
 #endif // ISPC_AST_H
