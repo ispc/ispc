@@ -14,7 +14,7 @@ CPP_OBJS=$(addprefix objs/, $(CPP_SRC:.cpp=.o) $(TASK_OBJ))
 
 default: $(EXAMPLE)
 
-all: $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16
+all: $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16 $(EXAMPLE)-scalar
 
 .PHONY: dirs clean
 
@@ -56,4 +56,10 @@ objs/$(ISPC_SRC:.ispc=)_generic16.o: objs/$(ISPC_SRC:.ispc=)_generic16.cpp
 	$(CXX) -I../intrinsics $< $(CXXFLAGS) -c -o $@
 
 $(EXAMPLE)-generic16: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_generic16.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+objs/$(ISPC_SRC:.ispc=)_scalar.o: $(ISPC_SRC)
+	$(ISPC) $< -o $@ --target=generic-1
+
+$(EXAMPLE)-scalar: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_scalar.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)

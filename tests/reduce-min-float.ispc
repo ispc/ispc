@@ -11,4 +11,4 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = m;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = -2; }
+export void result(uniform float RET[]) { RET[programIndex] = (programCount == 1) ? -1 : -2; }

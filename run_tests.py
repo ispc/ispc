@@ -53,7 +53,8 @@ if not is_windows:
 else:
     ispc_exe = "../Release/ispc.exe"
 
-is_generic_target = options.target.find("generic-") != -1
+is_generic_target = (options.target.find("generic-") != -1 and
+                     options.target != "generic-1")
 if is_generic_target and options.include_file == None:
     if options.target == "generic-4":
         sys.stderr.write("No generics #include specified; using examples/intrinsics/sse4.h\n")
@@ -224,7 +225,7 @@ def run_test(filename):
                   "in test %s\n" % filename)
             return (1, 0)
         else:
-            is_generic_target = options.target.find("generic-") != -1
+            global is_generic_target
             if is_generic_target:
                 obj_name = "%s.cpp" % filename
 

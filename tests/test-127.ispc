@@ -9,5 +9,5 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 10;
+    RET[programIndex] = (programCount == 1) ? 4 : 10;
 }

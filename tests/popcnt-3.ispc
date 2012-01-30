@@ -8,4 +8,4 @@ export void f_f(uniform float RET[4], uniform float aFOO[]) {
     RET[programIndex] = popcnt(a < 3);
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 2; }
+export void result(uniform float RET[]) { RET[programIndex] = programCount == 1 ? 1 : 2; }

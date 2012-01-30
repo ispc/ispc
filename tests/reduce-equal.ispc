@@ -7,5 +7,5 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 0;
+    RET[programIndex] = (programCount == 1) ? 1 : 0;
 }
