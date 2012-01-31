@@ -2811,7 +2811,27 @@ Expr *
 SelectExpr::Optimize() {
     if (test == NULL || expr1 == NULL || expr2 == NULL)
         return NULL;
-    return this;
+
+    ConstExpr *constTest = dynamic_cast<ConstExpr *>(test);
+    if (constTest == NULL)
+        return this;
+
+    // The test is a constant; see if we can resolve to one of the
+    // expressions..
+    bool bv[ISPC_MAX_NVEC];
+    int count = constTest->AsBool(bv);
+    if (count == 1)
+        // Uniform test value; return the corresponding expression
+        return (bv[0] == true) ? expr1 : expr2;
+    else {
+        // Varying test: see if all of the values are the same; if so, then
+        // return the corresponding expression
+        bool first = bv[0];
+        for (int i = 0; i < count; ++i)
+            if (bv[i] != first)
+                return this;
+        return (bv[0] == true) ? expr1 : expr2;
+    }
 }
 
 
