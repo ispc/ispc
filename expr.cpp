@@ -6037,28 +6037,15 @@ llvm::Constant *
 TypeCastExpr::GetConstant(const Type *constType) const {
     // We don't need to worry about most the basic cases where the type
     // cast can resolve to a constant here, since the
-    // TypeCastExpr::Optimize() method ends up doing the type conversion
-    // and returning a ConstExpr, which in turn will have its GetConstant()
-    // method called.  Thus, the only case we do need to worry about here
-    // is converting a uniform function pointer to a varying function
-    // pointer of the same type.
+    // TypeCastExpr::Optimize() method generally ends up doing the type
+    // conversion and returning a ConstExpr, which in turn will have its
+    // GetConstant() method called.  However, because ConstExpr currently
+    // can't represent pointer values, we have to handle two cases here:
+    // 1. Null pointers (NULL, 0) valued initializers, and
+    // 2. Converting a uniform function pointer to a varying function
+    //    pointer of the same type.
     Assert(Type::Equal(constType, type));
-    const FunctionType *ft = NULL;
-    if (dynamic_cast<const PointerType *>(type) == NULL ||
-        (ft = dynamic_cast<const FunctionType *>(type->GetBaseType())) == NULL)
-        return NULL;
-
-    llvm::Constant *ec = expr->GetConstant(expr->GetType());
-    if (ec == NULL)
-        return NULL;
-
-    ec = llvm::ConstantExpr::getPtrToInt(ec, LLVMTypes::PointerIntType);
-
-    Assert(type->IsVaryingType());
-    std::vector<llvm::Constant *> smear;
-    for (int i = 0; i < g->target.vectorWidth; ++i)
-        smear.push_back(ec);
-    return llvm::ConstantVector::get(smear);
+    return expr->GetConstant(constType);
 }
 
 
@@ -6553,13 +6540,30 @@ FunctionSymbolExpr::Print() const {
 
 llvm::Constant *
 FunctionSymbolExpr::GetConstant(const Type *type) const {
-    Assert(type->IsUniformType());
-    Assert(GetType()->IsUniformType());
-
-    if (Type::EqualIgnoringConst(type, GetType()) == false)
+    if (matchingFunc == NULL || matchingFunc->function == NULL)
         return NULL;
 
-    return matchingFunc ? matchingFunc->function : NULL;
+    const FunctionType *ft;
+    if (dynamic_cast<const PointerType *>(type) == NULL ||
+        (ft = dynamic_cast<const FunctionType *>(type->GetBaseType())) == NULL)
+        return NULL;
+
+    LLVM_TYPE_CONST llvm::Type *llvmUnifType = 
+        type->GetAsUniformType()->LLVMType(g->ctx);
+    if (llvmUnifType != matchingFunc->function->getType())
+        return NULL;
+
+    if (type->IsUniformType())
+        return matchingFunc->function;
+    else {
+        llvm::Constant *intPtr = 
+            llvm::ConstantExpr::getPtrToInt(matchingFunc->function, 
+                                            LLVMTypes::PointerIntType);
+        std::vector<llvm::Constant *> smear;
+        for (int i = 0; i < g->target.vectorWidth; ++i)
+            smear.push_back(intPtr);
+        return llvm::ConstantVector::get(smear);
+    }
 }
 
 
@@ -6982,6 +6986,22 @@ NullPointerExpr::TypeCheck() {
 Expr *
 NullPointerExpr::Optimize() {
     return this;
+}
+
+
+llvm::Constant *
+NullPointerExpr::GetConstant(const Type *type) const {
+    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    if (pt == NULL)
+        return NULL;
+
+    LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+    if (llvmType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    return llvm::Constant::getNullValue(llvmType);
 }
 
 
