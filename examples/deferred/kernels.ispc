@@ -158,38 +158,22 @@ IntersectLightsWithTileMinMax(
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
     uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
         
-    // Parallize across frustum planes.
-    // We really only have four side planes here, but write the code to
-    // handle programCount > 4 robustly
-    uniform float frustumPlanes_xy[programCount];
-    uniform float frustumPlanes_z[programCount];
+    uniform float frustumPlanes_xy[4] = {
+        -(cameraProj_11 * gBufferScale_x),
+         (cameraProj_11 * gBufferScale_x),
+         (cameraProj_22 * gBufferScale_y),
+        -(cameraProj_22 * gBufferScale_y) };
+    uniform float frustumPlanes_z[4] = {
+         tileEndX - gBufferScale_x,
+        -tileStartX + gBufferScale_x,
+         tileEndY - gBufferScale_y,
+        -tileStartY + gBufferScale_y };
 
-    // TODO: If programIndex < 4 here? Don't care about masking off the
-    // rest but if interleaving ("x2" modes) the other lanes should ideally
-    // not be emitted...
-    {
-        // This one is totally constant over the whole screen... worth pulling it up at all?
-        float frustumPlanes_xy_v;
-        frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 0, -(cameraProj_11 * gBufferScale_x));
-        frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 1,  (cameraProj_11 * gBufferScale_x));
-        frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 2,  (cameraProj_22 * gBufferScale_y));
-        frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 3, -(cameraProj_22 * gBufferScale_y));
-    
-        float frustumPlanes_z_v;
-        frustumPlanes_z_v = insert(frustumPlanes_z_v, 0,  tileEndX - gBufferScale_x);
-        frustumPlanes_z_v = insert(frustumPlanes_z_v, 1, -tileStartX + gBufferScale_x);
-        frustumPlanes_z_v = insert(frustumPlanes_z_v, 2,  tileEndY - gBufferScale_y);
-        frustumPlanes_z_v = insert(frustumPlanes_z_v, 3, -tileStartY + gBufferScale_y);
-
-        // Normalize
-        float norm = rsqrt(frustumPlanes_xy_v * frustumPlanes_xy_v + 
-                           frustumPlanes_z_v * frustumPlanes_z_v);
-            frustumPlanes_xy_v *= norm;
-            frustumPlanes_z_v *= norm;
-
-        // Save out for uniform use later
-        frustumPlanes_xy[programIndex] = frustumPlanes_xy_v;
-        frustumPlanes_z[programIndex] = frustumPlanes_z_v;
+    for (uniform int i = 0; i < 4; ++i) {
+        uniform float norm = rsqrt(frustumPlanes_xy[i] * frustumPlanes_xy[i] + 
+                                   frustumPlanes_z[i] * frustumPlanes_z[i]);
+        frustumPlanes_xy[i] *= norm;
+        frustumPlanes_z[i] *= norm;
     }
 
     uniform int32 tileNumLights = 0;
@@ -601,30 +585,20 @@ SplitTileMinMax(
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
     uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
         
-    // Parallize across frustum planes
-    // Only have 2 frustum split planes here so may not be worth it, but
-    // we'll do it for now for consistency
-    uniform float frustumPlanes_xy[programCount];
-    uniform float frustumPlanes_z[programCount];
-
-    // This one is totally constant over the whole screen... worth pulling it up at all?
-    float frustumPlanes_xy_v;
-    frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 0, -(cameraProj_11 * gBufferScale_x));
-    frustumPlanes_xy_v = insert(frustumPlanes_xy_v, 1,  (cameraProj_22 * gBufferScale_y));
-    
-    float frustumPlanes_z_v;
-    frustumPlanes_z_v = insert(frustumPlanes_z_v, 0, tileMidX - gBufferScale_x);
-    frustumPlanes_z_v = insert(frustumPlanes_z_v, 1, tileMidY - gBufferScale_y);
+    uniform float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
+                                           (cameraProj_22 * gBufferScale_y) };
+    uniform float frustumPlanes_z[2] = { tileMidX - gBufferScale_x,
+                                         tileMidY - gBufferScale_y };
 
     // Normalize
-    float norm = rsqrt(frustumPlanes_xy_v * frustumPlanes_xy_v + 
-                       frustumPlanes_z_v * frustumPlanes_z_v);
-    frustumPlanes_xy_v *= norm;
-    frustumPlanes_z_v *= norm;
-
-    // Save out for uniform use later
-    frustumPlanes_xy[programIndex] = frustumPlanes_xy_v;
-    frustumPlanes_z[programIndex] = frustumPlanes_z_v;
+    uniform float norm[2] = { rsqrt(frustumPlanes_xy[0] * frustumPlanes_xy[0] + 
+                                    frustumPlanes_z[0] * frustumPlanes_z[0]),
+                              rsqrt(frustumPlanes_xy[1] * frustumPlanes_xy[1] + 
+                                    frustumPlanes_z[1] * frustumPlanes_z[1]) };
+    frustumPlanes_xy[0] *= norm[0];
+    frustumPlanes_xy[1] *= norm[1];
+    frustumPlanes_z[0] *= norm[0];
+    frustumPlanes_z[1] *= norm[1];
 
     // Initialize
     uniform int32 subtileLightOffset[4];
