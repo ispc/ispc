@@ -630,13 +630,17 @@ lGetMask(llvm::Value *factor) {
        "known and all bits on". */
     Assert(g->target.vectorWidth < 32);
 
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+#endif
     if (cv) {
         int mask = 0;
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
 #ifdef LLVM_3_1svn
-        for (int i = 0; i < (int)cv->getNumOperands(); ++i)
-            elements.push_back(cv->getOperand(i));
+        for (int i = 0; i < (int)cv->getNumElements(); ++i)
+            elements.push_back(cv->getElementAsConstant(i));
 #else
         cv->getVectorElements(elements);
 #endif
@@ -1133,8 +1137,13 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
 #ifdef LLVM_3_1svn
-        for (int i = 0; i < (int)cv->getNumOperands(); ++i)
-            elements.push_back(cv->getOperand(i));
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
+            llvm::Constant *c = 
+                llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
+            if (c == NULL)
+                return NULL;
+            elements.push_back(c);
+        }
 #else
         cv->getVectorElements(elements);
 #endif
@@ -1247,6 +1256,9 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                        llvm::Value **variableOffset, 
                        llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::ConstantVector>(vec) ||
+#ifdef LLVM_3_1svn
+        llvm::isa<llvm::ConstantDataVector>(vec) ||
+#endif
         llvm::isa<llvm::ConstantAggregateZero>(vec)) {
         *constOffset = vec;
         *variableOffset = NULL;
@@ -1365,7 +1377,12 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
    in *splat, if so). */
 static bool
 lIs248Splat(llvm::Value *v, int *splat) {
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cvec = 
+        llvm::dyn_cast<llvm::ConstantDataVector>(v);
+#else
     llvm::ConstantVector *cvec = llvm::dyn_cast<llvm::ConstantVector>(v);
+#endif
     if (cvec == NULL)
         return false;
 
@@ -1472,6 +1489,9 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     fprintf(stderr, "\n");
 
     if (llvm::isa<llvm::ConstantVector>(*vec) ||
+#ifdef LLVM_3_1svn
+        llvm::isa<llvm::ConstantDataVector>(*vec) ||
+#endif
         llvm::isa<llvm::ConstantAggregateZero>(*vec))
         return NULL;
 
@@ -2153,13 +2173,19 @@ char GSToLoadStorePass::ID = 0;
     elements.
  */
 static bool
-lVectorIsLinearConstantInts(llvm::ConstantVector *cv, int vectorLength, 
+lVectorIsLinearConstantInts(
+#ifdef LLVM_3_1svn
+                            llvm::ConstantDataVector *cv, 
+#else
+                            llvm::ConstantVector *cv, 
+#endif
+                            int vectorLength, 
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
 #ifdef LLVM_3_1svn
-    for (int i = 0; i < (int)cv->getNumOperands(); ++i)
-        elements.push_back(cv->getOperand(i));
+    for (int i = 0; i < (int)cv->getNumElements(); ++i)
+        elements.push_back(cv->getElementAsConstant(i));
 #else
     cv->getVectorElements(elements);
 #endif
@@ -2201,7 +2227,11 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
+#endif
     if (cv == NULL)
         return false;
 
@@ -2237,7 +2267,11 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 std::vector<llvm::PHINode *> &seenPhis) {
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
+#endif
     if (cv != NULL)
         return lVectorIsLinearConstantInts(cv, vectorLength, stride);
 

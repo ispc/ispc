@@ -607,6 +607,12 @@ LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     if (cv != NULL)
         return (cv->getSplatValue() != NULL);
 
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+    if (cdv != NULL)
+        return (cdv->getSplatValue() != NULL);
+#endif
+
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL)
         return (LLVMVectorValuesAllEqual(bop->getOperand(0), vectorLength, 
