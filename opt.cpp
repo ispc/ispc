@@ -2515,10 +2515,12 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             }
             else {
                 // A scatter with everyone going to the same location is
-                // undefined.  Issue a warning and arbitrarily let the
+                // undefined (if there's more than one program instance in
+                // the gang).  Issue a warning and arbitrarily let the
                 // first guy win.
-                Warning(pos, "Undefined behavior: all program instances are "
-                        "writing to the same location!");
+                if (g->target.vectorWidth > 1)
+                    Warning(pos, "Undefined behavior: all program instances are "
+                            "writing to the same location!");
 
                 llvm::Value *first = 
                     llvm::ExtractElementInst::Create(storeValue, LLVMInt32(0), "rvalue_first",
@@ -2694,10 +2696,12 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         Assert(ok);     
 
         callInst->setCalledFunction(info->actualFunc);
-        if (info->isGather)
-            PerformanceWarning(pos, "Gather required to compute value in expression.");
-        else
-            PerformanceWarning(pos, "Scatter required for storing value.");
+        if (g->target.vectorWidth > 1) {
+            if (info->isGather)
+                PerformanceWarning(pos, "Gather required to compute value in expression.");
+            else
+                PerformanceWarning(pos, "Scatter required for storing value.");
+        }
         modifiedAny = true;
         goto restart;
     }

@@ -597,6 +597,9 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 bool
 LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
                          std::vector<llvm::PHINode *> &seenPhis) {
+    if (vectorLength == 1)
+        return true;
+
     if (llvm::isa<llvm::ConstantAggregateZero>(v))
         return true;
 
