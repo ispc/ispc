@@ -368,8 +368,10 @@ Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
-        optPM.add(CreatePseudoMaskedStorePass());
-        if (!g->opt.disableGatherScatterOptimizations)
+        if (g->opt.disableHandlePseudoMemoryOps == false)
+            optPM.add(CreatePseudoMaskedStorePass());
+        if (g->opt.disableGatherScatterOptimizations == false &&
+            g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateGSToLoadStorePass());
         if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.add(CreatePseudoMaskedStorePass());
@@ -1865,6 +1867,7 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             goto restart;
         }
     }
+
     return modifiedAny;
 }
 
@@ -2102,6 +2105,7 @@ PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         modifiedAny = true;
         goto restart;
     }
+
     return modifiedAny;
 }
 
