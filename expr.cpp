@@ -1537,6 +1537,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
         // Otherwise, the first operand is varying...  Save the current
         // value of the mask so that we can restore it at the end.
         llvm::Value *oldMask = ctx->GetInternalMask();
+        llvm::Value *oldFullMask = ctx->GetFullMask();
 
         // Convert the second operand to be varying as well, so that we can
         // perform logical vector ops with its value.
@@ -1551,11 +1552,11 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             // lanes--i.e. if (value0 & mask) == mask.  If so, we don't
             // need to evaluate the second operand of the expression.
             llvm::Value *value0AndMask = 
-                ctx->BinaryOperator(llvm::Instruction::And, value0, oldMask, 
-                                    "op&mask");
+                ctx->BinaryOperator(llvm::Instruction::And, value0, 
+                                    oldFullMask, "op&mask");
             llvm::Value *equalsMask =
                 ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                             value0AndMask, oldMask, "value0&mask==mask");
+                             value0AndMask, oldFullMask, "value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
             llvm::Value *allMatch = ctx->All(equalsMask);
             ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
@@ -1602,11 +1603,11 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             // if (mask & ~value0) == mask.
             llvm::Value *notValue0 = ctx->NotOperator(value0, "not_value0");
             llvm::Value *notValue0AndMask = 
-                ctx->BinaryOperator(llvm::Instruction::And, notValue0, oldMask, 
-                                    "not_value0&mask");
+                ctx->BinaryOperator(llvm::Instruction::And, notValue0, 
+                                    oldFullMask, "not_value0&mask");
             llvm::Value *equalsMask =
                 ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                             notValue0AndMask, oldMask, "not_value0&mask==mask");
+                             notValue0AndMask, oldFullMask, "not_value0&mask==mask");
             equalsMask = ctx->I1VecToBoolVec(equalsMask);
             llvm::Value *allMatch = ctx->All(equalsMask);
             ctx->BranchInst(bbSkipEvalValue1, bbEvalValue1, allMatch);
@@ -1634,8 +1635,8 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             // masking off the valid lanes before we AND them together:
             // result = (value0 & old_mask) & (value1 & current_mask)
             llvm::Value *value0AndMask = 
-                ctx->BinaryOperator(llvm::Instruction::And, value0, oldMask,
-                                    "op&mask");
+                ctx->BinaryOperator(llvm::Instruction::And, value0, 
+                                    oldFullMask, "op&mask");
             llvm::Value *value1AndMask =
                 ctx->BinaryOperator(llvm::Instruction::And, value1,
                                     ctx->GetInternalMask(), "value1&mask");
