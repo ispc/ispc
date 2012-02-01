@@ -1151,6 +1151,7 @@ in C:
 * Structs and arrays
 * Support for recursive function calls
 * Support for separate compilation of source files
+* "Short-circuit" evaluation of ``||``, ``&&`` and ``? :`` operators
 * The preprocessor
 
 ``ispc`` adds a number of features from C++ and C99 to this base:
@@ -1968,11 +1969,12 @@ operator also work as expected.
     (*fp).a = 0;
     fp->b = 1;
   
-As in C and C++, evaluation of the ``||`` and ``&&`` logical operators is
-"short-circuited"; the right hand side won't be evaluated if the value from
-the left-hand side determines the logical operator's value.  For example,
-in the following code, ``array[index]`` won't be evaluated for values of
-``index`` that are greater than or equal to ``NUM_ITEMS``.
+As in C and C++, evaluation of the ``||`` and ``&&`` logical operators as
+well as the selection operator ``? :`` is "short-circuited"; the right hand
+side won't be evaluated if the value from the left-hand side determines the
+logical operator's value.  For example, in the following code,
+``array[index]`` won't be evaluated for values of ``index`` that are
+greater than or equal to ``NUM_ITEMS``.
 
 ::
 

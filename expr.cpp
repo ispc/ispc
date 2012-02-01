@@ -2686,6 +2686,34 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
 }
 
 
+static void
+lEmitSelectExprCode(FunctionEmitContext *ctx, llvm::Value *testVal, 
+                    llvm::Value *oldMask, llvm::Value *fullMask,
+                    Expr *expr, llvm::Value *exprPtr) {
+    llvm::BasicBlock *bbEval = ctx->CreateBasicBlock("select_eval_expr");
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("select_done");
+
+    // Check to see if the test was true for any of the currently executing
+    // program instances.
+    llvm::Value *testAndFullMask = 
+        ctx->BinaryOperator(llvm::Instruction::And, testVal, fullMask, 
+                            "test&mask");
+    llvm::Value *anyOn = ctx->Any(testAndFullMask);
+    ctx->BranchInst(bbEval, bbDone, anyOn);
+
+    ctx->SetCurrentBasicBlock(bbEval);
+    llvm::Value *testAndMask = 
+        ctx->BinaryOperator(llvm::Instruction::And, testVal, oldMask, 
+                            "test&mask");
+    ctx->SetInternalMask(testAndMask);
+    llvm::Value *exprVal = expr->GetValue(ctx);
+    ctx->StoreInst(exprVal, exprPtr);
+    ctx->BranchInst(bbDone);
+
+    ctx->SetCurrentBasicBlock(bbDone);
+}
+
+
 llvm::Value *
 SelectExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!expr1 || !expr2 || !test)
@@ -2733,18 +2761,58 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         return ret;
     }
     else if (dynamic_cast<const VectorType *>(testType) == NULL) {
-        // if the test is a varying bool type, then evaluate both of the
-        // value expressions with the mask set appropriately and then do an
-        // element-wise select to get the result
+        // the test is a varying bool type
         llvm::Value *testVal = test->GetValue(ctx);
         Assert(testVal->getType() == LLVMTypes::MaskType);
         llvm::Value *oldMask = ctx->GetInternalMask();
-        ctx->SetInternalMaskAnd(oldMask, testVal);
-        llvm::Value *expr1Val = expr1->GetValue(ctx);
-        ctx->SetInternalMaskAndNot(oldMask, testVal);
-        llvm::Value *expr2Val = expr2->GetValue(ctx);
-        ctx->SetInternalMask(oldMask);
+        llvm::Value *fullMask = ctx->GetFullMask();
 
+        // We don't want to incur the overhead for short-circuit evaluation
+        // for expressions that are both computationally simple and safe to
+        // run with an "all off" mask.
+        bool shortCircuit1 =
+            (::EstimateCost(expr1) > PREDICATE_SAFE_IF_STATEMENT_COST ||
+             SafeToRunWithMaskAllOff(expr1) == false);
+        bool shortCircuit2 =
+            (::EstimateCost(expr2) > PREDICATE_SAFE_IF_STATEMENT_COST ||
+             SafeToRunWithMaskAllOff(expr2) == false);
+
+        Debug(expr1->pos, "%sshort circuiting evaluation for select expr",
+              shortCircuit1 ? "" : "Not ");
+        Debug(expr2->pos, "%sshort circuiting evaluation for select expr",
+              shortCircuit2 ? "" : "Not ");
+
+        // Temporary storage to store the values computed for each
+        // expression, if any.  (These stay as uninitialized memory if we
+        // short circuit around the corresponding expression.)
+        LLVM_TYPE_CONST llvm::Type *exprType = 
+            expr1->GetType()->LLVMType(g->ctx);
+        llvm::Value *expr1Ptr = ctx->AllocaInst(exprType);
+        llvm::Value *expr2Ptr = ctx->AllocaInst(exprType);
+
+        if (shortCircuit1)
+            lEmitSelectExprCode(ctx, testVal, oldMask, fullMask, expr1, 
+                                expr1Ptr);
+        else {
+            ctx->SetInternalMaskAnd(oldMask, testVal);
+            llvm::Value *expr1Val = expr1->GetValue(ctx);
+            ctx->StoreInst(expr1Val, expr1Ptr);
+        }
+
+        if (shortCircuit2) {
+            llvm::Value *notTest = ctx->NotOperator(testVal);
+            lEmitSelectExprCode(ctx, notTest, oldMask, fullMask, expr2, 
+                                expr2Ptr);
+        }
+        else {
+            ctx->SetInternalMaskAndNot(oldMask, testVal);
+            llvm::Value *expr2Val = expr2->GetValue(ctx);
+            ctx->StoreInst(expr2Val, expr2Ptr);
+        }
+
+        ctx->SetInternalMask(oldMask);
+        llvm::Value *expr1Val = ctx->LoadInst(expr1Ptr);
+        llvm::Value *expr2Val = ctx->LoadInst(expr2Ptr);
         return lEmitVaryingSelect(ctx, testVal, expr1Val, expr2Val, type);
     }
     else {
