@@ -1363,6 +1363,14 @@ DEFINE_ATOMIC_SWAP(double,double)
 #undef DEFINE_ATOMIC_SWAP
 
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
+static inline uniform TA atomic_compare_exchange_global(               \
+         uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
+    memory_barrier();                                                      \
+    uniform TA ret =                                                    \
+        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
+    memory_barrier();                                                   \
+    return ret;                                                         \
+}                                                                       \
 static inline TA atomic_compare_exchange_global(                           \
          uniform TA * uniform ptr, TA oldval, TA newval) {                 \
     memory_barrier();                                                      \
@@ -1371,11 +1379,22 @@ static inline TA atomic_compare_exchange_global(                           \
     memory_barrier();                                                      \
     return ret;                                                            \
 } \
-static inline uniform TA atomic_compare_exchange_global(               \
-         uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
-    memory_barrier();                                                      \
-    uniform TA ret =                                                    \
-        __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
+static inline TA atomic_compare_exchange_global(               \
+         uniform TA * varying ptr, TA oldval, TA newval) { \
+    uniform TA * uniform ptrArray[programCount];                        \
+    ptrArray[programIndex] = ptr;                                       \
+    memory_barrier();                                                   \
+    TA ret;                                                             \
+    uniform int mask = lanemask();                                      \
+    for (uniform int i = 0; i < programCount; ++i) {                    \
+        if ((mask & (1 << i)) == 0)                                     \
+            continue;                                                   \
+        uniform TA r =                                                  \
+            __atomic_compare_exchange_uniform_##TB##_global(ptrArray[i], \
+                                                            extract(oldval, i), \
+                                                            extract(newval, i)); \
+        ret = insert(ret, i, r);                                        \
+    }                                                                   \
     memory_barrier();                                                   \
     return ret;                                                         \
 }
