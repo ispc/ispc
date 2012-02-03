@@ -3389,24 +3389,53 @@ Systems Programming Support
 Atomic Operations and Memory Fences
 -----------------------------------
 
-The usual range of atomic memory operations are provided in ``ispc``,
-including variants to handle both uniform and varying types.  As a first
-example, consider on variant of the 32-bit integer atomic add routine:
+The standard range of atomic memory operations are provided by the standard
+library``ispc``, including variants to handle both uniform and varying
+types as well as "local" and "global" atomics.
+
+Local atomics provide atomic behavior across the program instances in a
+gang, but not across multiple gangs or memory operations in different
+hardware threads.  To see why they are needed, consider a histogram
+calculation where each program instance in the gang computes which bucket a
+value lies in and then increments a corresponding counter.  If the code is
+written like this:
 
 ::
 
-  int32 atomic_add_global(uniform int32 * uniform ptr, int32 delta)
+    uniform int count[N_BUCKETS] = ...;
+    float value = ...;
+    int bucket = clamp(value / N_BUCKETS, 0, N_BUCKETS);
+    ++count[bucket];  // ERROR: undefined behavior if collisions
 
-The semantics are the expected ones for an atomic add function: the pointer
-points to a single location in memory (the same one for all program
-instances), and for each executing program instance, the value stored in
-the location that ``ptr`` points to has that program instance's value
-"delta" added to it atomically, and the old value at that location is
-returned from the function.  (Thus, if multiple processors simultaneously
-issue atomic adds to the same memory location, the adds will be serialized
-by the hardware so that the correct result is computed in the end.
-Furthermore, the atomic adds are serialized across the running program
-instances.)
+then the program's behavior is undefined: whenever multiple program
+instances have values that map to the same value of ``bucket``, then the
+effect of the increment is undefined.  (See the discussion in the `Data
+Races Within a Gang`_ section; in the case here, there isn't a sequence
+point between one program instance updating ``count[bucket]`` and the other
+program instance reading its value.)
+
+The ``atomic_add_local()`` function can be used in this case; as a local
+atomic it is atomic across the gang of program instances, such that the
+expected result is computed.
+
+::
+
+    ...
+    int bucket = clamp(value / N_BUCKETS, 0, N_BUCKETS);
+    atomic_add_local(&count[bucket], 1);
+
+It uses this variant of the 32-bit integer atomic add routine:
+
+::
+
+  int32 atomic_add_local(uniform int32 * uniform ptr, int32 delta)
+
+The semantics of this routine are typical for an atomic add function: the
+pointer here points to a single location in memory (the same one for all
+program instances), and for each executing program instance, the value
+stored in the location that ``ptr`` points to has that program instance's
+value "delta" added to it atomically, and the old value at that location is
+returned from the function.
 
 One thing to note is that that the type of the value being added to a
 ``uniform`` integer, while the increment amount and the return value are
@@ -3417,45 +3446,76 @@ atomics for the running program instances may be issued in arbitrary order;
 it's not guaranteed that they will be issued in ``programIndex`` order, for
 example.
 
-Here are the declarations of the ``int32`` variants of these functions.
-There are also ``int64`` equivalents as well as variants that take
-``unsigned`` ``int32`` and ``int64`` values.  (The ``atomic_swap_global()``
-function can be used with ``float`` and ``double`` types as well.)
+Global atomics are more powerful than local atomics; they are atomic across
+both the program instances in the gang as well as atomic across different
+gangs and different hardware threads.  For example, for the global variant
+of the atomic used above,
 
 ::
 
-  int32 atomic_add_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_subtract_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_min_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_max_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_and_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_or_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_xor_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_add_global(uniform int32 * uniform ptr, int32 delta)
 
-There are also variants of these functions that take ``uniform`` values for
-the operand and return a ``uniform`` result.  These correspond to a single
+if multiple processors simultaneously issue atomic adds to the same memory
+location, the adds will be serialized by the hardware so that the correct
+result is computed in the end.
+
+Here are the declarations of the ``int32`` variants of these functions.
+There are also ``int64`` equivalents as well as variants that take
+``unsigned`` ``int32`` and ``int64`` values.
+
+::
+
+  int32 atomic_add_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_subtract_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_min_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_max_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_and_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_or_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_xor_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_swap_{local,global}(uniform int32 * uniform ptr, int32 value)
+
+Support for ``float`` and ``double`` types is also available.  For local
+atomics, all but the logical operations are available.  (There are
+corresponding ``double`` variants of these, not listed here.)
+
+::
+
+  float atomic_add_local(uniform float * uniform ptr, float value)
+  float atomic_subtract_local(uniform float * uniform ptr, float value)
+  float atomic_min_local(uniform float * uniform ptr, float value)
+  float atomic_max_local(uniform float * uniform ptr, float value)
+  float atomic_swap_local(uniform float * uniform ptr, float value)
+
+For global atomics, only atomic swap is available for these types:
+
+::
+
+  float atomic_swap_global(uniform float * uniform ptr, float value)
+  double atomic_swap_global(uniform double * uniform ptr, double value)
+
+There are also variants of the atomic that take ``uniform`` values for the
+operand and return a ``uniform`` result.  These correspond to a single
 atomic operation being performed for the entire gang of program instances,
 rather than one per program instance.
 
 ::
 
-  uniform int32 atomic_add_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_subtract_global(uniform int32 * uniform ptr,
-                                       uniform int32 value)
-  uniform int32 atomic_min_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_max_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_and_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_or_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_xor_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
-                                   uniform int32 newval)
+  uniform int32 atomic_add_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_subtract_{local,global}(uniform int32 * uniform ptr,
+                                               uniform int32 value)
+  uniform int32 atomic_min_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_max_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_and_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_or_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_xor_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_swap_{local,global}(uniform int32 * uniform ptr,
+                                           uniform int32 newval)
 
 Be careful that you use the atomic function that you mean to; consider the
 following code:
@@ -3479,8 +3539,7 @@ will cause the desired atomic add function to be called.
 ::
 
     extern uniform int32 counter;
-    int32 one = 1;
-    int32 myCounter = atomic_add_global(&counter, one);
+    int32 myCounter = atomic_add_global(&counter, (varying int32)1);
 
 There is a third variant of each of these atomic functions that takes a
 ``varying`` pointer; this allows each program instance to issue an atomic
@@ -3490,30 +3549,27 @@ the same location in memory!)
 
 ::
 
-  int32 atomic_add_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_subtract_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_min_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_max_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_and_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_or_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_xor_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_swap_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_add_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_subtract_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_min_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_max_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_and_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_or_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_xor_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_swap_{local,global}(uniform int32 * varying ptr, int32 value)
 
-There are also atomic swap and "compare and exchange" functions.
-Compare and exchange atomically compares the value in "val" to
-"compare"--if they match, it assigns "newval" to "val".  In either case,
-the old value of "val" is returned.  (As with the other atomic operations,
-there are also ``unsigned`` and 64-bit variants of this function.
-Furthermore, there are ``float`` and ``double`` variants as well.)
+There are also atomic "compare and exchange" functions.  Compare and
+exchange atomically compares the value in "val" to "compare"--if they
+match, it assigns "newval" to "val".  In either case, the old value of
+"val" is returned.  (As with the other atomic operations, there are also
+``unsigned`` and 64-bit variants of this function.  Furthermore, there are
+``float`` and ``double`` variants as well.)
 
 ::
 
-  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 newvalue)
-  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
-                                   uniform int32 newvalue)
-  int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
-                                       int32 compare, int32 newval)
-  uniform int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
+  int32 atomic_compare_exchange_{local,global}(uniform int32 * uniform ptr,
+                                               int32 compare, int32 newval)
+  uniform int32 atomic_compare_exchange_{local,global}(uniform int32 * uniform ptr,
                                   uniform int32 compare, uniform int32 newval)
 
 ``ispc`` also has a standard library routine that inserts a memory barrier
