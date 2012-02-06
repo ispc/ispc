@@ -427,7 +427,7 @@ IfStmt::TypeCheck() {
 int
 IfStmt::EstimateCost() const {
     const Type *type;
-    if (test == NULL || (type = test->GetType()) != NULL)
+    if (test == NULL || (type = test->GetType()) == NULL)
         return 0;
 
     return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
