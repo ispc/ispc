@@ -149,6 +149,7 @@ devUsage(int ret) {
     printf("        disable-handle-pseudo-memory-ops\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
+    printf("    [--yydebug]\t\t\tPrint debugging information during parsing\n");
     exit(ret);
 }
 
@@ -404,6 +405,10 @@ int main(int Argc, char *Argv[]) {
 #endif // !ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--quiet"))
             g->quiet = true;
+        else if (!strcmp(argv[i], "--yydebug")) {
+            extern int yydebug;
+            yydebug = 1;
+        }
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             return 0;
