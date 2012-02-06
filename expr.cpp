@@ -2623,6 +2623,14 @@ AssignExpr::TypeCheck() {
     if (rvalue == NULL)
         return NULL;
 
+    if (lhsType->IsFloatType() == true &&
+        (op == ShlAssign || op == ShrAssign || op == AndAssign || 
+         op == XorAssign || op == OrAssign)) {
+            Error(pos, "Illegal to use %s operator with floating-point "
+                  "operands.", lOpString(op));
+            return NULL;
+    }
+
     // Make sure we're not assigning to a struct that has a constant member
     const StructType *st = dynamic_cast<const StructType *>(lhsType);
     if (st != NULL && lCheckForConstStructMember(pos, st, st))
