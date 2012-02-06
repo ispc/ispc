@@ -113,6 +113,12 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
 const Type *
 DeclSpecs::GetBaseType(SourcePos pos) const {
     const Type *bt = baseType;
+
+    if (bt == NULL) {
+        Warning(pos, "No type specified in declaration.  Assuming int32.");
+        bt = AtomicType::UnboundInt32;
+    }
+
     if (vectorSize > 0) {
         const AtomicType *atomicType = dynamic_cast<const AtomicType *>(bt);
         if (atomicType == NULL) {
