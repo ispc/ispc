@@ -1230,6 +1230,7 @@ direct_abstract_declarator
       {
           Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
           if ($2 != NULL) d->functionParams = *$2;
+          $$ = d;
       }
     | direct_abstract_declarator '(' ')'
       {
