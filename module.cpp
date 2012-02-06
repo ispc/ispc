@@ -227,13 +227,14 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
     }
 
     if (symbolTable->LookupFunction(sym->name.c_str())) {
-        Error(sym->pos, "Global variable \"%s\" shadows previously-declared function.",
-              sym->name.c_str());
+        Error(sym->pos, "Global variable \"%s\" shadows previously-declared "
+              "function.", sym->name.c_str());
         return;
     }
 
     if (sym->storageClass == SC_EXTERN_C) {
-        Error(sym->pos, "extern \"C\" qualifier can only be used for functions.");
+        Error(sym->pos, "extern \"C\" qualifier can only be used for "
+              "functions.");
         return;
     }
 
