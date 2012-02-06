@@ -447,6 +447,10 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             Error(pos, "No return type provided in function declaration.");
             return NULL;
         }
+        if (dynamic_cast<const FunctionType *>(returnType) != NULL) {
+            Error(pos, "Illegal to return function type from function.");
+            return NULL;
+        }
         
         bool isExported = ds && (ds->storageClass == SC_EXPORT);
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
