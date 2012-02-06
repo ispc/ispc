@@ -309,8 +309,10 @@ lParseBinary(const char *ptr, SourcePos pos, char **endPtr) {
 static void
 lCComment(SourcePos *pos) {
     char c, prev = 0;
-  
+
     while ((c = yyinput()) != 0) {
+        ++pos->last_column;
+
         if (c == '\n') {
             pos->last_line++;
             pos->last_column = 1;

@@ -1170,6 +1170,10 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     inst.createSourceManager(inst.getFileManager());
     inst.InitializeSourceManager(infilename);
 
+    // Don't remove comments in the preprocessor, so that we can accurately
+    // track the source file position by handling them ourselves.
+    inst.getPreprocessorOutputOpts().ShowComments = 1;
+
     clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
 
     // Add defs for ISPC and PI
