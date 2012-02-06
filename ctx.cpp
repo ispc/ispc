@@ -642,12 +642,12 @@ FunctionEmitContext::inSwitchStatement() const {
 
 void
 FunctionEmitContext::Break(bool doCoherenceCheck) {
-    Assert(controlFlowInfo.size() > 0);
     if (breakTarget == NULL) {
         Error(currentPos, "\"break\" statement is illegal outside of "
               "for/while/do loops and \"switch\" statements.");
         return;
     }
+    Assert(controlFlowInfo.size() > 0);
 
     if (bblock == NULL)
         return;
@@ -721,6 +721,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
               "for/while/do/foreach loops.");
         return;
     }
+    Assert(controlFlowInfo.size() > 0);
 
     if (ifsInCFAllUniform(CFInfo::Loop) || GetInternalMask() == LLVMMaskAllOn) {
         // Similarly to 'break' statements, we can immediately jump to the
