@@ -265,17 +265,20 @@ lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
 
 void
 Error(SourcePos p, const char *fmt, ...) {
+    if (m != NULL) ++m->errorCount;
+    if (g->quiet)
+        return;
+
     va_list args;
     va_start(args, fmt);
     lPrint("Error", p, fmt, args);
-    if (m != NULL) ++m->errorCount;
     va_end(args);
 }
 
 
 void
 Debug(SourcePos p, const char *fmt, ...) {
-    if (!g->debugPrint)
+    if (!g->debugPrint || g->quiet)
         return;
 
     va_list args;
@@ -287,21 +290,23 @@ Debug(SourcePos p, const char *fmt, ...) {
 
 void
 Warning(SourcePos p, const char *fmt, ...) {
-    if (g->disableWarnings)
+    if (g->warningsAsErrors && m != NULL)
+        ++m->errorCount;
+
+    if (g->disableWarnings || g->quiet)
         return;
 
     va_list args;
     va_start(args, fmt);
     lPrint(g->warningsAsErrors ? "Error" : "Warning", p, fmt, args);
-    if (g->warningsAsErrors && m != NULL)
-        ++m->errorCount;
     va_end(args);
 }
 
 
 void
 PerformanceWarning(SourcePos p, const char *fmt, ...) {
-    if (!g->emitPerfWarnings || strcmp(p.name, "stdlib.ispc") == 0)
+    if (!g->emitPerfWarnings || strcmp(p.name, "stdlib.ispc") == 0 ||
+        g->quiet)
         return;
 
     va_list args;

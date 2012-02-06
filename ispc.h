@@ -388,6 +388,9 @@ struct Globals {
         possible performance pitfalls. */
     bool emitPerfWarnings;
 
+    /** Indicates whether all printed output should be surpressed. */
+    bool quiet;
+
     /** Indicates whether calls should be emitted in the program to an
         externally-defined program instrumentation function. (See the
         "Instrumenting your ispc programs" section in the user's

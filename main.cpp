@@ -129,6 +129,7 @@ usage(int ret) {
 #ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
 #endif // !ISPC_IS_WINDOWS
+    printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -383,6 +384,8 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--pic"))
             generatePIC = true;
 #endif // !ISPC_IS_WINDOWS
+        else if (!strcmp(argv[i], "--quiet"))
+            g->quiet = true;
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             return 0;

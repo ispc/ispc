@@ -91,7 +91,12 @@ extern int yylex(YYSTYPE *, SourcePos *);
 
 extern char *yytext;
 
-void yyerror(const char *s) { fprintf(stderr, "Parse error: %s\n", s); }
+void yyerror(const char *s) { 
+    if (!g->quiet) {
+        ++m->errorCount;
+        fprintf(stderr, "Parse error: %s\n", s); 
+    }
+}
 
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);

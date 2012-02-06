@@ -510,6 +510,7 @@ Globals::Globals() {
     debugPrint = false;
     disableWarnings = false;
     warningsAsErrors = false;
+    quiet = false;
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;
