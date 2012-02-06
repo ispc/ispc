@@ -6305,8 +6305,17 @@ DereferenceExpr::GetType() const {
 
 Expr *
 DereferenceExpr::TypeCheck() {
-    if (expr == NULL)
+    if (expr == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+        
+    if (dynamic_cast<const PointerType *>(expr->GetType()) == NULL) {
+        Error(pos, "Illegal to dereference non-pointer type \"%s\".",
+              expr->GetType()->GetString().c_str());
+        return NULL;
+    }
+
     return this;
 }
 
