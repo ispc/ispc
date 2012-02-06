@@ -332,6 +332,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         break;
 
     case DK_ARRAY:
+        if (type == AtomicType::Void) {
+            Error(pos, "Arrays of \"void\" type are illegal.");
+            return NULL;
+        }
+
         type = new ArrayType(type, arraySize);
         if (child)
             return child->GetType(type, ds);
@@ -358,6 +363,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                       "function parameter declaration for parameter \"%s\".", 
                       lGetStorageClassName(d->declSpecs->storageClass),
                       sym->name.c_str());
+            if (sym->type == AtomicType::Void) {
+                Error(sym->pos, "Parameter with type \"void\" illegal in function "
+                      "parameter list.");
+                sym->type = NULL;
+            }
 
             const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
             if (at != NULL) {
@@ -544,7 +554,9 @@ Declaration::GetVariableDeclarations() const {
         Symbol *sym = decl->GetSymbol();
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 
-        if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
+        if (sym->type == AtomicType::Void)
+            Error(sym->pos, "\"void\" type variable illegal in declaration.");
+        else if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         }
@@ -610,6 +622,9 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             d->InitFromDeclSpecs(&ds);
 
             Symbol *sym = d->GetSymbol();
+
+            if (sym->type == AtomicType::Void)
+                Error(d->pos, "\"void\" type illegal for struct member.");
 
             const ArrayType *arrayType = 
                 dynamic_cast<const ArrayType *>(sym->type);

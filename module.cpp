@@ -237,6 +237,11 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
         return;
     }
 
+    if (sym->type == AtomicType::Void) {
+        Error(sym->pos, "\"void\" type global variable is illegal.");
+        return;
+    }
+
     sym->type = ArrayType::SizeUnsizedArrays(sym->type, initExpr);
     if (sym->type == NULL)
         return;

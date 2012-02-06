@@ -1165,6 +1165,7 @@ ArrayType::ArrayType(const Type *c, int a)
     : child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
+    Assert(c != AtomicType::Void);
 }
 
 
