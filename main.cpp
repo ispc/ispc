@@ -93,19 +93,15 @@ usage(int ret) {
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
-    printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
 #ifndef LLVM_2_9
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
 #endif // !LLVM_2_9
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
-#if 0
-    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
-    printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
-#endif
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
+    printf("    [--help-dev]\t\t\tPrint help for developer options\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
@@ -122,17 +118,6 @@ usage(int ret) {
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
-#if 0
-    printf("        disable-all-on-optimizations\n");
-    printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
-    printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
-    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
-    printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
-    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
-    printf("        disable-handle-pseudo-memory-ops\n");
-    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
-    printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
-#endif
 #ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
 #endif // !ISPC_IS_WINDOWS
@@ -146,6 +131,26 @@ usage(int ret) {
     exit(ret);
 }
 
+
+static void
+devUsage(int ret) {
+    lPrintVersion();
+    printf("\nusage (developer options): ispc\n");
+    printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
+    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
+    printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
+    printf("    [--opt=<option>]\t\t\tSet optimization option\n");
+    printf("        disable-all-on-optimizations\n");
+    printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
+    printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
+    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
+    printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
+    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
+    printf("        disable-handle-pseudo-memory-ops\n");
+    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
+    printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
+    exit(ret);
+}
 
 
 /** We take arguments from both the command line as well as from the
@@ -235,6 +240,8 @@ int main(int Argc, char *Argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
+        if (!strcmp(argv[i], "--help-dev"))
+            devUsage(0);
         else if (!strncmp(argv[i], "-D", 2))
             g->cppArgs.push_back(argv[i]);
         else if (!strncmp(argv[i], "--addressing=", 13)) {
