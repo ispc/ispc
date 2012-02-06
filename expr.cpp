@@ -2584,6 +2584,11 @@ AssignExpr::TypeCheck() {
     }
 
     const Type *lhsType = lvalue->GetType();
+    if (lhsType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
     if (lhsType->IsConstType()) {
         Error(lvalue->pos, "Can't assign to type \"%s\" on left-hand side of "
               "expression.", lhsType->GetString().c_str());

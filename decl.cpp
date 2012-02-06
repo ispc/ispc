@@ -171,6 +171,11 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p)
 void
 Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     const Type *t = GetType(ds);
+    if (t == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
     Symbol *sym = GetSymbol();
     if (sym != NULL) {
         sym->type = t;
@@ -248,8 +253,10 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
     // already have been added to the symbol table by AddGlobal() by the
     // time we get here.)
     Symbol *funSym = m->symbolTable->LookupFunction(declSym->name.c_str(), type);
-    if (funSym != NULL)
+    if (funSym == NULL)
         // May be NULL due to error earlier in compilation
+        Assert(m->errorCount > 0);
+    else
         funSym->pos = pos;
 
     // Walk down to the declarator for the function.  (We have to get past
@@ -262,7 +269,13 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
 
     for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
         Symbol *sym = d->GetSymbolForFunctionParameter(i);
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        if (sym->type == NULL) {
+            Assert(m->errorCount > 0);
+            continue;
+        }
+        else
+            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+
         funArgs->push_back(sym);
     }
 
@@ -379,8 +392,12 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                 // report this differently than it was originally declared
                 // in the function, but it's not clear that this is a
                 // significant problem.)
-                sym->type = PointerType::GetUniform(at->GetElementType());
+                if (at->GetElementType() == NULL) {
+                    Assert(m->errorCount > 0);
+                    return NULL;
+                }
 
+                sym->type = PointerType::GetUniform(at->GetElementType());
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
                 at = dynamic_cast<const ArrayType *>(at->GetElementType());
@@ -547,11 +564,18 @@ Declaration::GetVariableDeclarations() const {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL)
+        if (decl == NULL) {
             // Ignore earlier errors
+            Assert(m->errorCount > 0);
             continue;
+        }
 
         Symbol *sym = decl->GetSymbol();
+        if (sym == NULL || sym->type == NULL) {
+            // Ignore errors
+            Assert(m->errorCount > 0);
+            continue;
+        }
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 
         if (sym->type == AtomicType::Void)
@@ -571,11 +595,18 @@ Declaration::DeclareFunctions() {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL)
+        if (decl == NULL) {
             // Ignore earlier errors
+            Assert(m->errorCount > 0);
             continue;
+        }
 
         Symbol *sym = decl->GetSymbol();
+        if (sym == NULL || sym->type == NULL) {
+            // Ignore errors
+            Assert(m->errorCount > 0);
+            continue;
+        }
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 
         if (dynamic_cast<const FunctionType *>(sym->type) == NULL)

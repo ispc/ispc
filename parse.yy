@@ -521,9 +521,16 @@ constant_expression
 declaration_statement
     : declaration     
     {
-        if ($1->declSpecs->storageClass == SC_TYPEDEF) {
+        if ($1 == NULL) {
+            Assert(m->errorCount > 0);
+            $$ = NULL;
+        }
+        else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
-                m->AddTypeDef($1->declarators[i]->GetSymbol());
+                if ($1->declarators[i] == NULL)
+                    Assert(m->errorCount > 0);
+                else
+                    m->AddTypeDef($1->declarators[i]->GetSymbol());
             }
             $$ = NULL;
         }
@@ -658,7 +665,6 @@ type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
       { const Type *t = m->symbolTable->LookupType(yytext); 
-        Assert(t != NULL);
         $$ = t;
       }
     | struct_or_union_specifier { $$ = $1; }
@@ -1618,7 +1624,10 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             m->AddFunctionDeclaration(sym, isInline);
         }
         else {
-            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            if (sym->type == NULL)
+                Assert(m->errorCount > 0);
+            else
+                sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
             m->AddGlobalVariable(sym, decl->initExpr, isConst);
         }
@@ -1647,14 +1656,18 @@ lAddFunctionParams(Declarator *decl) {
             continue;
         Assert(pdecl->declarators.size() == 1);
         Symbol *sym = pdecl->declarators[0]->GetSymbol();
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
-#ifndef NDEBUG
-        bool ok = m->symbolTable->AddVariable(sym);
-        if (ok == false)
+        if (sym == NULL || sym->type == NULL)
             Assert(m->errorCount > 0);
+        else {
+            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+#ifndef NDEBUG
+            bool ok = m->symbolTable->AddVariable(sym);
+            if (ok == false)
+                Assert(m->errorCount > 0);
 #else
-        m->symbolTable->AddVariable(sym);
+            m->symbolTable->AddVariable(sym);
 #endif
+        }
     }
 
     // The corresponding pop scope happens in function_definition rules
