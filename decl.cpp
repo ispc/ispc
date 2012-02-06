@@ -355,6 +355,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             Error(pos, "Arrays of \"void\" type are illegal.");
             return NULL;
         }
+        if (dynamic_cast<const ReferenceType *>(type)) {
+            Error(pos, "Arrays of references (type \"%s\") are illegal.",
+                  type->GetString().c_str());
+            return NULL;
+        }
 
         type = new ArrayType(type, arraySize);
         if (child)
@@ -469,6 +474,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         if (isExternC && isExported) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
                   "qualifiers");
+            return NULL;
+        }
+
+        if (child == NULL) {
+            Assert(m->errorCount > 0);
             return NULL;
         }
 
