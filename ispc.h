@@ -405,6 +405,14 @@ struct Globals {
         vector width to them. */
     bool mangleFunctionsWithTarget;
 
+    /** If enabled, the lexer will randomly replace some tokens returned
+        with other tokens, in order to test error condition handling in the
+        compiler. */
+    bool enableFuzzTest;
+
+    /** Seed for random number generator used for fuzz testing. */
+    int fuzzTestSeed;
+
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;
 

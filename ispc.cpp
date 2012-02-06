@@ -515,8 +515,10 @@ Globals::Globals() {
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
+    enableFuzzTest = false;
+    fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
-
+    
     ctx = new llvm::LLVMContext;
 
 #ifdef ISPC_IS_WINDOWS

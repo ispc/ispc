@@ -41,6 +41,9 @@
 #include "type.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef ISPC_IS_WINDOWS
+  #include <time.h>
+#endif // ISPC_IS_WINDOWS
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
@@ -97,6 +100,10 @@ usage(int ret) {
 #endif // !LLVM_2_9
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
+#if 0
+    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
+    printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
+#endif
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
@@ -144,7 +151,7 @@ usage(int ret) {
 /** We take arguments from both the command line as well as from the
     ISPC_ARGS environment variable.  This function returns a new set of
     arguments representing the ones from those two sources merged together.
- */ 
+*/ 
 static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
@@ -272,6 +279,10 @@ int main(int Argc, char *Argv[]) {
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
+        else if (!strcmp(argv[i], "--fuzz-test"))
+            g->enableFuzzTest = true;
+        else if (!strncmp(argv[i], "--fuzz-seed=", 12))
+            g->fuzzTestSeed = atoi(argv[i] + 12);
         else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
             if (++i == argc) {
@@ -410,6 +421,24 @@ int main(int Argc, char *Argv[]) {
     // optimization).
     if (debugSet && !optSet)
         g->opt.level = 0;
+
+    if (g->enableFuzzTest) {
+        if (g->fuzzTestSeed == -1) {
+#ifdef ISPC_IS_WINDOWS
+            int seed = (unsigned)time(NULL);
+#else
+            int seed = getpid();
+#endif
+            g->fuzzTestSeed = seed;
+            Warning(SourcePos(), "Using seed %d for fuzz testing", 
+                    g->fuzzTestSeed);
+        }
+#ifdef ISPC_IS_WINDOWS
+        srand(g->fuzzTestSeed);
+#else
+        srand48(g->fuzzTestSeed);
+#endif
+    }
 
     if (outFileName == NULL && headerFileName == NULL)
         Warning(SourcePos(), "No output file or header file name specified. "
