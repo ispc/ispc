@@ -211,6 +211,21 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         return false;
     }
 
+    if (dynamic_cast<const FunctionType *>(fromType)) {
+        if (!failureOk)
+            Error(pos, "Can't convert function type \"%s\" to \"%s\" for %s.",
+                  fromType->GetString().c_str(),
+                  toType->GetString().c_str(), errorMsgBase);
+        return false;
+    }
+    if (dynamic_cast<const FunctionType *>(toType)) {
+        if (!failureOk)
+            Error(pos, "Can't convert from type \"%s\" to function type \"%s\" "
+                  "for %s.", fromType->GetString().c_str(),
+                  toType->GetString().c_str(), errorMsgBase);
+        return false;
+    }
+
     const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
     const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
     const VectorType *toVectorType = dynamic_cast<const VectorType *>(toType);
