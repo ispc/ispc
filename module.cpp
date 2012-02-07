@@ -161,6 +161,9 @@ Module::CompileFile() {
 
     bool runPreprocessor = g->runCPP;
 
+    extern void ParserInit();
+    ParserInit();
+
     if (runPreprocessor) {
         if (filename != NULL) {
             // Try to open the file first, since otherwise we crash in the

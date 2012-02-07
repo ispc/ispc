@@ -37,9 +37,12 @@
 /* one for 'if', one for 'cif' */
 %expect 2
 
-%pure-parser
+%error-verbose
 
 %code requires {
+
+#define yytnamerr lYYTNameErr
+
 
 #define YYLTYPE SourcePos
 
@@ -87,16 +90,16 @@ struct ForeachDimension;
         __FILE__, __LINE__);
 
 union YYSTYPE;
-extern int yylex(YYSTYPE *, SourcePos *);
+extern int yylex();
 
 extern char *yytext;
 
-void yyerror(const char *s) { 
-    if (!g->quiet) {
-        ++m->errorCount;
-        fprintf(stderr, "Parse error: %s\n", s); 
-    }
-}
+void yyerror(const char *s);
+
+static int lYYTNameErr(char *yyres, const char *yystr);
+
+static void lSuggestBuiltinAlternates();
+static void lSuggestParamListAlternates();
 
 static void lAddDeclaration(DeclSpecs *ds, Declarator *decl);
 static void lAddFunctionParams(Declarator *decl);
@@ -290,6 +293,7 @@ primary_expression
 /*    | TOKEN_STRING_LITERAL
        { UNIMPLEMENTED }*/
     | '(' expression ')' { $$ = $2; }
+    | '(' error ')' { $$ = NULL; }
     ;
 
 launch_expression
@@ -313,10 +317,14 @@ postfix_expression
     : primary_expression
     | postfix_expression '[' expression ']'
       { $$ = new IndexExpr($1, $3, Union(@1,@4)); }
+    | postfix_expression '[' error ']'
+      { $$ = NULL; }
     | postfix_expression '(' ')'
       { $$ = new FunctionCallExpr($1, new ExprList(Union(@1,@2)), Union(@1,@3)); }
     | postfix_expression '(' argument_expression_list ')'
       { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
+    | postfix_expression '(' error ')'
+      { $$ = NULL; }
     | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
       { $$ = MemberExpr::create($1, yytext, Union(@1,@3), @3, false); }
@@ -1048,6 +1056,10 @@ direct_declarator
         else
             $$ = NULL;
     }
+    | direct_declarator '[' error ']'
+    {
+         $$ = NULL;
+    }
     | direct_declarator '(' parameter_type_list ')'
       {
           if ($1 != NULL) {
@@ -1070,6 +1082,10 @@ direct_declarator
           else
               $$ = NULL;
       }
+    | direct_declarator '(' error ')'
+    {
+        $$ = NULL;
+    }
     ;
 
 
@@ -1129,21 +1145,9 @@ parameter_list
             dl->push_back($3);
         $$ = dl;
     }
-    | error
+    | error ','
     {
-        std::vector<std::string> builtinTokens;
-        const char **token = lParamListTokens;
-        while (*token) {
-            builtinTokens.push_back(*token);
-            ++token;
-        }
-        if (strlen(yytext) == 0)
-            Error(@1, "Syntax error--premature end of file.");
-        else {
-            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-            std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
-        }
+        lSuggestParamListAlternates();
         $$ = NULL;
     }
     ;
@@ -1348,21 +1352,9 @@ statement
     | assert_statement
     | sync_statement
     | delete_statement
-    | error
+    | error ';'
     {
-        std::vector<std::string> builtinTokens;
-        const char **token = lBuiltinTokens;
-        while (*token) {
-            builtinTokens.push_back(*token);
-            ++token;
-        }
-        if (strlen(yytext) == 0)
-            Error(@1, "Syntax error--premature end of file.");
-        else {
-            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-            std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
-        }
+        lSuggestBuiltinAlternates();
         $$ = NULL;
     }
     ;
@@ -1639,22 +1631,7 @@ assert_statement
 translation_unit
     : external_declaration
     | translation_unit external_declaration
-    | error
-    {
-        std::vector<std::string> builtinTokens;
-        const char **token = lBuiltinTokens;
-        while (*token) {
-            builtinTokens.push_back(*token);
-            ++token;
-        }
-        if (strlen(yytext) == 0)
-            Error(@1, "Syntax error--premature end of file.");
-        else {
-            std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
-            std::string alts = lGetAlternates(alternates);
-            Error(@1, "Syntax error--token \"%s\" unexpected.%s", yytext, alts.c_str());
-        }
-    }
+    | error ';'
     ;
 
 external_declaration
@@ -1698,6 +1675,93 @@ func(...)
     ;
 
 %%
+
+
+void yyerror(const char *s) {
+    if (strlen(yytext) == 0)
+        Error(yylloc, "Premature end of file: %s.", s);
+    else
+        Error(yylloc, "%s.", s);
+}
+
+
+static int
+lYYTNameErr (char *yyres, const char *yystr)
+{
+  extern std::map<std::string, std::string> tokenNameRemap;
+  Assert(tokenNameRemap.size() > 0);
+  if (tokenNameRemap.find(yystr) != tokenNameRemap.end()) {
+      std::string n = tokenNameRemap[yystr];
+      if (yyres == NULL)
+          return n.size();
+      else
+          return yystpcpy(yyres, n.c_str()) - yyres;
+  }
+  
+  if (*yystr == '"')
+    {
+      YYSIZE_T yyn = 0;
+      char const *yyp = yystr;
+
+      for (;;)
+	switch (*++yyp)
+	  {
+	  case '\'':
+	  case ',':
+	    goto do_not_strip_quotes;
+
+	  case '\\':
+	    if (*++yyp != '\\')
+	      goto do_not_strip_quotes;
+	    /* Fall through.  */
+	  default:
+	    if (yyres)
+	      yyres[yyn] = *yyp;
+	    yyn++;
+	    break;
+
+	  case '"':
+	    if (yyres)
+	      yyres[yyn] = '\0';
+	    return yyn;
+	  }
+    do_not_strip_quotes: ;
+    }
+
+  if (! yyres)
+    return yystrlen (yystr);
+
+  return yystpcpy (yyres, yystr) - yyres;
+}
+
+static void
+lSuggestBuiltinAlternates() {
+    std::vector<std::string> builtinTokens;
+    const char **token = lBuiltinTokens;
+    while (*token) {
+        builtinTokens.push_back(*token);
+        ++token;
+    }
+    std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+    std::string alts = lGetAlternates(alternates);
+    if (alts.size() > 0)
+         Error(yylloc, "%s", alts.c_str());
+}
+
+
+static void
+lSuggestParamListAlternates() {
+    std::vector<std::string> builtinTokens;
+    const char **token = lParamListTokens;
+    while (*token) {
+        builtinTokens.push_back(*token);
+        ++token;
+    }
+    std::vector<std::string> alternates = MatchStrings(yytext, builtinTokens);
+    std::string alts = lGetAlternates(alternates);
+    if (alts.size() > 0)
+        Error(yylloc, "%s", alts.c_str());
+}
 
 
 static void
