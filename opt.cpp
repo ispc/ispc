@@ -184,7 +184,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[2],
+    return llvm::CallInst::Create(func, &args[0], &args[2],
                                   name, insertBefore);
 #endif
 }
@@ -199,7 +199,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[3],
+    return llvm::CallInst::Create(func, &args[0], &args[3],
                                   name, insertBefore);
 #endif
 }
@@ -215,7 +215,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[4],
+    return llvm::CallInst::Create(func, &args[0], &args[4],
                                   name, insertBefore);
 #endif
 }
@@ -230,7 +230,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[5],
+    return llvm::CallInst::Create(func, &args[0], &args[5],
                                   name, insertBefore);
 #endif
 }
@@ -245,7 +245,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[6],
+    return llvm::CallInst::Create(func, &args[0], &args[6],
                                   name, insertBefore);
 #endif
 }

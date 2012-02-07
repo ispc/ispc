@@ -1867,7 +1867,7 @@ define void @__delete_varying(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
-define i64 @__clock() nounwind uwtable ssp {
+define i64 @__clock() nounwind {
 entry:
   tail call void asm sideeffect "xorl %eax,%eax \0A    cpuid", "~{rax},~{rbx},~{rcx},~{rdx},~{dirflag},~{fpsr},~{flags}"() nounwind
   %0 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() nounwind
