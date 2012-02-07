@@ -6325,9 +6325,10 @@ DereferenceExpr::TypeCheck() {
         return NULL;
     }
         
-    if (dynamic_cast<const PointerType *>(expr->GetType()) == NULL) {
-        Error(pos, "Illegal to dereference non-pointer type \"%s\".",
-              expr->GetType()->GetString().c_str());
+    if (dynamic_cast<const PointerType *>(expr->GetType()) == NULL &&
+        dynamic_cast<const ReferenceType *>(expr->GetType()) == NULL) {
+        Error(pos, "Illegal to dereference non-pointer or reference "
+              "type \"%s\".", expr->GetType()->GetString().c_str());
         return NULL;
     }
 
