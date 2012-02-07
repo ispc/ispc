@@ -1,3 +1,42 @@
+=== v1.1.4 === (4 February 2012)
+
+There are two major bugfixes for Windows in this release.  First, a number
+of failures in AVX code generation on Windows have been fixed; AVX on
+Windows now has no known issues.  Second, a longstanding bug in parsing 64-bit
+integer constants on Windows has been fixed.
+
+This release features a new experimental scalar target, contributed by Gabe
+Weisz <gweisz@cs.cmu.edu>.  This target ("--target=generic-1") compiles
+gangs of single program instances (i.e. programCount == 1); it can be
+useful for debugging ispc programs.
+
+The compiler now supports dynamic memory allocation in ispc programs (with
+"new" and "delete" operators based on C++).  See
+http://ispc.github.com/ispc.html#dynamic-memory-allocation in the
+documentation for more information.
+
+ispc now performs "short circuit" evaluation of the || and && logical
+operators and the ? : selection operator.  (This represents the correction
+of a major incompatibility with C.)  Code like "(index < arraySize &&
+array[index] == 1)" thus now executes as in C, where "array[index]" won't
+be evaluated unless "index" is less than "arraySize".
+
+The standard library now provides "local" atomic operations, which are
+atomic across the gang of program instances (but not across other gangs or
+other hardware threads.  See the updated documentation on atomics for more
+information:
+http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences.
+
+The standard library now offers a clock() function, which returns a uniform
+int64 value that counts processor cycles; it can be used for
+fine-resolution timing measurements.
+
+Finally (of limited interest now): ispc now supports the forthcoming AVX2
+instruction set, due with Haswell-generation CPUs.  All tests and examples
+compile and execute correctly with AVX2.  (Thanks specifically to Craig
+Topper and Nadav Rotem for work on AVX2 support in LLVM, which made this
+possible.)
+ 
 === v1.1.3 === (20 January 2012)
 
 With this release, the language now supports "switch" statements, with the

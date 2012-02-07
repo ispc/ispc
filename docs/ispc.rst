@@ -96,6 +96,9 @@ Contents:
 
   + `Declarations and Initializers`_
   + `Expressions`_
+
+    * `Dynamic Memory Allocation`_
+
   + `Control Flow`_
 
     * `Conditional Statements: "if"`_
@@ -1148,6 +1151,7 @@ in C:
 * Structs and arrays
 * Support for recursive function calls
 * Support for separate compilation of source files
+* "Short-circuit" evaluation of ``||``, ``&&`` and ``? :`` operators
 * The preprocessor
 
 ``ispc`` adds a number of features from C++ and C99 to this base:
@@ -1162,6 +1166,7 @@ in C:
 * The ``inline`` qualifier to indicate that a function should be inlined 
 * Function overloading by parameter type
 * Hexadecimal floating-point constants
+* Dynamic memory allocation with ``new`` and ``delete``.
 
 ``ispc`` also adds a number of new features that aren't in C89, C99, or
 C++:
@@ -1180,7 +1185,6 @@ C++:
 There are a number of features of C89 that are not supported in ``ispc``
 but are likely to be supported in future releases:
 
-* Short circuiting of logical operations
 * There are no types named ``char``, ``short``, or ``long`` (or ``long
   double``).  However, there are built-in ``int8``, ``int16``, and
   ``int64`` types
@@ -1965,18 +1969,136 @@ operator also work as expected.
     (*fp).a = 0;
     fp->b = 1;
   
+As in C and C++, evaluation of the ``||`` and ``&&`` logical operators as
+well as the selection operator ``? :`` is "short-circuited"; the right hand
+side won't be evaluated if the value from the left-hand side determines the
+logical operator's value.  For example, in the following code,
+``array[index]`` won't be evaluated for values of ``index`` that are
+greater than or equal to ``NUM_ITEMS``.
+
+::
+
+    if (index < NUM_ITEMS && array[index] > 0) {
+        // ...
+    }
+
+
+Dynamic Memory Allocation
+-------------------------
+
+``ispc`` programs can dynamically allocate (and free) memory, using syntax
+based on C++'s ``new`` and ``delete`` operators:
+
+::
+
+   int count = ...;
+   int *ptr = new uniform int[count];
+   // use ptr...
+   delete[] ptr;
+
+In the above code, each program instance allocates its own ``count`-sized
+array of ``uniform int`` values, uses that memory, and then deallocates
+that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
+serviced by corresponding calls the system C library's ``malloc()`` and
+``free()`` functions.
+
+After a pointer has been deleted, it is illegal to access the memory it
+points to.  However, note that deletion happens on a per-program-instance
+basis.  In other words, consider the following code:
+
+::
+
+    int *ptr = new uniform int[count];
+    // use ptr
+    if (count > 1000)
+        delete[] ptr;
+    // ...
+
+Here, the program instances where ``count`` is greater than 1000 have
+deleted the dynamically allocated memory pointed to by ``ptr``, but the
+other program instances have not.  As such, it's illegal for the former set
+of program instances to access ``*ptr``, but it's perfectly fine for the
+latter set to continue to use the memory ``ptr`` points to.  Note that it
+is illegal to delete a pointer value returned by ``new`` more than one
+time.
+ 
+Sometimes, it's useful to be able to do a single allocation for the entire
+gang of program instances.  A ``new`` statement can be qualified with
+``uniform`` to indicate a single memory allocation:
+
+::
+
+    float * uniform ptr = uniform new float[10];
+
+While a regular call to ``new`` returns a ``varying`` pointer (i.e. a
+distinct pointer to separately-allocated memory for each program instance),
+a ``uniform new`` performs a single allocation and returns a ``uniform``
+pointer.
+
+When using ``uniform new``, it's important to be aware of a subtlety; if
+the returned pointer is stored in a varying pointer variable (as may be
+appropriate and useful for the particular program being written), then the
+varying pointer may inadvertently be passed to a subsequent ``delete``
+statement, which is an error: effectively
+
+::
+
+    float *ptr = uniform new float[10];
+    // use ptr...
+    delete ptr;  // ERROR: varying pointer is deleted
+
+In this case, ``ptr`` will be deleted multiple times, once for each
+executing program instance, which is an error (unless it happens that only
+a single program instance is active in the above code.)
+
+When using ``new`` statements, it's important to make an appropriate choice
+of ``uniform`` or ``varying`` (as always, the default), for both the
+``new`` operator itself as well as the type of data being allocated, based
+on the program's needs.  Consider the following four memory allocations:
+
+::
+
+    uniform float * uniform p1 = uniform new uniform float[10];
+    float * uniform p2 = uniform new float[10];
+    uniform float * p3 = new uniform float[10];
+    float * p4 = new float[10];
+
+Assuming that a ``float`` is 4 bytes in memory and if the gang size is 8
+program instances, then the first allocation represents a single allocation
+of 40 bytes, the second is a single allocation of 8*4*10 = 320 bytes, the
+third is 8 allocations of 40 bytes, and the last performs 8 allocations of
+80 bytes each.
+
+Note in particular that varying allocations of varying data types are rarely
+desirable in practice.  In that case, each program instance is performing a
+separate allocation of ``varying float`` memory.  In this case, it's likely
+that the program instances will only access a single element of each
+``varying float``, which is wasteful.
+
+Although ``ispc`` doesn't support constructors or destructors like C++, it
+is possible to provide initializer values with ``new`` statements:
+
+::
+
+    struct Point { float x, y, z; };
+    Point *pptr = new Point(10, 20, 30);
+
+Here for example, the "x" element of the returned ``Point`` is initialized
+to have the value 10 and so forth.  In general, the rules for how
+initializer values provided in ``new`` statements are used to initialize
+complex data types follow the same rules as initializers for variables
+described in `Declarations and Initializers`_.
 
 Control Flow
 ------------
 
 ``ispc`` supports most of C's control flow constructs, including ``if``,
-``for``, ``while``, ``do``.  It also supports variants of C's control flow
+``switch``, ``for``, ``while``, ``do``.  It has limited support for
+``goto``, detailed below.  It also supports variants of C's control flow
 constructs that provide hints about the expected runtime coherence of the
 control flow at that statement.  It also provides parallel looping
 constructs, ``foreach`` and ``foreach_tiled``, all of which will be
 detailed in this section.
-
-``ispc`` does not currently support ``switch`` statements or ``goto``.
 
 Conditional Statements: "if"
 ----------------------------
@@ -3267,24 +3389,53 @@ Systems Programming Support
 Atomic Operations and Memory Fences
 -----------------------------------
 
-The usual range of atomic memory operations are provided in ``ispc``,
-including variants to handle both uniform and varying types.  As a first
-example, consider on variant of the 32-bit integer atomic add routine:
+The standard range of atomic memory operations are provided by the standard
+library``ispc``, including variants to handle both uniform and varying
+types as well as "local" and "global" atomics.
+
+Local atomics provide atomic behavior across the program instances in a
+gang, but not across multiple gangs or memory operations in different
+hardware threads.  To see why they are needed, consider a histogram
+calculation where each program instance in the gang computes which bucket a
+value lies in and then increments a corresponding counter.  If the code is
+written like this:
 
 ::
 
-  int32 atomic_add_global(uniform int32 * uniform ptr, int32 delta)
+    uniform int count[N_BUCKETS] = ...;
+    float value = ...;
+    int bucket = clamp(value / N_BUCKETS, 0, N_BUCKETS);
+    ++count[bucket];  // ERROR: undefined behavior if collisions
 
-The semantics are the expected ones for an atomic add function: the pointer
-points to a single location in memory (the same one for all program
-instances), and for each executing program instance, the value stored in
-the location that ``ptr`` points to has that program instance's value
-"delta" added to it atomically, and the old value at that location is
-returned from the function.  (Thus, if multiple processors simultaneously
-issue atomic adds to the same memory location, the adds will be serialized
-by the hardware so that the correct result is computed in the end.
-Furthermore, the atomic adds are serialized across the running program
-instances.)
+then the program's behavior is undefined: whenever multiple program
+instances have values that map to the same value of ``bucket``, then the
+effect of the increment is undefined.  (See the discussion in the `Data
+Races Within a Gang`_ section; in the case here, there isn't a sequence
+point between one program instance updating ``count[bucket]`` and the other
+program instance reading its value.)
+
+The ``atomic_add_local()`` function can be used in this case; as a local
+atomic it is atomic across the gang of program instances, such that the
+expected result is computed.
+
+::
+
+    ...
+    int bucket = clamp(value / N_BUCKETS, 0, N_BUCKETS);
+    atomic_add_local(&count[bucket], 1);
+
+It uses this variant of the 32-bit integer atomic add routine:
+
+::
+
+  int32 atomic_add_local(uniform int32 * uniform ptr, int32 delta)
+
+The semantics of this routine are typical for an atomic add function: the
+pointer here points to a single location in memory (the same one for all
+program instances), and for each executing program instance, the value
+stored in the location that ``ptr`` points to has that program instance's
+value "delta" added to it atomically, and the old value at that location is
+returned from the function.
 
 One thing to note is that that the type of the value being added to a
 ``uniform`` integer, while the increment amount and the return value are
@@ -3295,45 +3446,76 @@ atomics for the running program instances may be issued in arbitrary order;
 it's not guaranteed that they will be issued in ``programIndex`` order, for
 example.
 
-Here are the declarations of the ``int32`` variants of these functions.
-There are also ``int64`` equivalents as well as variants that take
-``unsigned`` ``int32`` and ``int64`` values.  (The ``atomic_swap_global()``
-function can be used with ``float`` and ``double`` types as well.)
+Global atomics are more powerful than local atomics; they are atomic across
+both the program instances in the gang as well as atomic across different
+gangs and different hardware threads.  For example, for the global variant
+of the atomic used above,
 
 ::
 
-  int32 atomic_add_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_subtract_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_min_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_max_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_and_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_or_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_xor_global(uniform int32 * uniform ptr, int32 value)
-  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_add_global(uniform int32 * uniform ptr, int32 delta)
 
-There are also variants of these functions that take ``uniform`` values for
-the operand and return a ``uniform`` result.  These correspond to a single
+if multiple processors simultaneously issue atomic adds to the same memory
+location, the adds will be serialized by the hardware so that the correct
+result is computed in the end.
+
+Here are the declarations of the ``int32`` variants of these functions.
+There are also ``int64`` equivalents as well as variants that take
+``unsigned`` ``int32`` and ``int64`` values.
+
+::
+
+  int32 atomic_add_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_subtract_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_min_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_max_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_and_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_or_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_xor_{local,global}(uniform int32 * uniform ptr, int32 value)
+  int32 atomic_swap_{local,global}(uniform int32 * uniform ptr, int32 value)
+
+Support for ``float`` and ``double`` types is also available.  For local
+atomics, all but the logical operations are available.  (There are
+corresponding ``double`` variants of these, not listed here.)
+
+::
+
+  float atomic_add_local(uniform float * uniform ptr, float value)
+  float atomic_subtract_local(uniform float * uniform ptr, float value)
+  float atomic_min_local(uniform float * uniform ptr, float value)
+  float atomic_max_local(uniform float * uniform ptr, float value)
+  float atomic_swap_local(uniform float * uniform ptr, float value)
+
+For global atomics, only atomic swap is available for these types:
+
+::
+
+  float atomic_swap_global(uniform float * uniform ptr, float value)
+  double atomic_swap_global(uniform double * uniform ptr, double value)
+
+There are also variants of the atomic that take ``uniform`` values for the
+operand and return a ``uniform`` result.  These correspond to a single
 atomic operation being performed for the entire gang of program instances,
 rather than one per program instance.
 
 ::
 
-  uniform int32 atomic_add_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_subtract_global(uniform int32 * uniform ptr,
-                                       uniform int32 value)
-  uniform int32 atomic_min_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_max_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_and_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_or_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_xor_global(uniform int32 * uniform ptr,
-                                  uniform int32 value)
-  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
-                                   uniform int32 newval)
+  uniform int32 atomic_add_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_subtract_{local,global}(uniform int32 * uniform ptr,
+                                               uniform int32 value)
+  uniform int32 atomic_min_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_max_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_and_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_or_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_xor_{local,global}(uniform int32 * uniform ptr,
+                                          uniform int32 value)
+  uniform int32 atomic_swap_{local,global}(uniform int32 * uniform ptr,
+                                           uniform int32 newval)
 
 Be careful that you use the atomic function that you mean to; consider the
 following code:
@@ -3357,8 +3539,7 @@ will cause the desired atomic add function to be called.
 ::
 
     extern uniform int32 counter;
-    int32 one = 1;
-    int32 myCounter = atomic_add_global(&counter, one);
+    int32 myCounter = atomic_add_global(&counter, (varying int32)1);
 
 There is a third variant of each of these atomic functions that takes a
 ``varying`` pointer; this allows each program instance to issue an atomic
@@ -3368,30 +3549,27 @@ the same location in memory!)
 
 ::
 
-  int32 atomic_add_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_subtract_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_min_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_max_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_and_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_or_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_xor_global(uniform int32 * varying ptr, int32 value)
-  int32 atomic_swap_global(uniform int32 * varying ptr, int32 value)
+  int32 atomic_add_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_subtract_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_min_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_max_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_and_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_or_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_xor_{local,global}(uniform int32 * varying ptr, int32 value)
+  int32 atomic_swap_{local,global}(uniform int32 * varying ptr, int32 value)
 
-There are also atomic swap and "compare and exchange" functions.
-Compare and exchange atomically compares the value in "val" to
-"compare"--if they match, it assigns "newval" to "val".  In either case,
-the old value of "val" is returned.  (As with the other atomic operations,
-there are also ``unsigned`` and 64-bit variants of this function.
-Furthermore, there are ``float`` and ``double`` variants as well.)
+There are also atomic "compare and exchange" functions.  Compare and
+exchange atomically compares the value in "val" to "compare"--if they
+match, it assigns "newval" to "val".  In either case, the old value of
+"val" is returned.  (As with the other atomic operations, there are also
+``unsigned`` and 64-bit variants of this function.  Furthermore, there are
+``float`` and ``double`` variants as well.)
 
 ::
 
-  int32 atomic_swap_global(uniform int32 * uniform ptr, int32 newvalue)
-  uniform int32 atomic_swap_global(uniform int32 * uniform ptr,
-                                   uniform int32 newvalue)
-  int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
-                                       int32 compare, int32 newval)
-  uniform int32 atomic_compare_exchange_global(uniform int32 * uniform ptr,
+  int32 atomic_compare_exchange_{local,global}(uniform int32 * uniform ptr,
+                                               int32 compare, int32 newval)
+  uniform int32 atomic_compare_exchange_{local,global}(uniform int32 * uniform ptr,
                                   uniform int32 compare, uniform int32 newval)
 
 ``ispc`` also has a standard library routine that inserts a memory barrier

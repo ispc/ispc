@@ -2114,7 +2114,8 @@ bool CWriter::doInitialization(Module &M) {
         I->getName() == "memset" || I->getName() == "memset_pattern16" ||
         I->getName() == "puts" ||
         I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush")
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
       continue;
 
     // Don't redeclare ispc's own intrinsics
@@ -3436,6 +3437,9 @@ void CWriter::visitCallInst(CallInst &I) {
           NeedsCast = true;
           Callee = RF;
         }
+
+    if (Callee->getName() == "malloc")
+        Out << "(uint8_t *)";
 
     if (NeedsCast) {
       // Ok, just cast the pointer type.

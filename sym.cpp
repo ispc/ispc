@@ -354,3 +354,42 @@ SymbolTable::Print() {
         depth += 4;
     }
 }
+
+
+inline int ispcRand() {
+#ifdef ISPC_IS_WINDOWS
+    return rand();
+#else
+    return lrand48();
+#endif
+}
+
+
+Symbol *
+SymbolTable::RandomSymbol() {
+    int v = ispcRand() % variables.size();
+    if (variables[v]->size() == 0)
+        return NULL;
+    int count = ispcRand() % variables[v]->size();
+    SymbolMapType::iterator iter = variables[v]->begin();
+    while (count-- > 0) {
+        ++iter;
+        Assert(iter != variables[v]->end());
+    }
+    return iter->second;
+}
+
+
+const Type *
+SymbolTable::RandomType() {
+    int v = ispcRand() % types.size();
+    if (types[v]->size() == 0)
+        return NULL;
+    int count = ispcRand() % types[v]->size();
+    TypeMapType::iterator iter = types[v]->begin();
+    while (count-- > 0) {
+        ++iter;
+        Assert(iter != types[v]->end());
+    }
+    return iter->second;
+}

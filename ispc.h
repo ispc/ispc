@@ -388,6 +388,9 @@ struct Globals {
         possible performance pitfalls. */
     bool emitPerfWarnings;
 
+    /** Indicates whether all printed output should be surpressed. */
+    bool quiet;
+
     /** Indicates whether calls should be emitted in the program to an
         externally-defined program instrumentation function. (See the
         "Instrumenting your ispc programs" section in the user's
@@ -402,6 +405,14 @@ struct Globals {
         vector width to them. */
     bool mangleFunctionsWithTarget;
 
+    /** If enabled, the lexer will randomly replace some tokens returned
+        with other tokens, in order to test error condition handling in the
+        compiler. */
+    bool enableFuzzTest;
+
+    /** Seed for random number generator used for fuzz testing. */
+    int fuzzTestSeed;
+
     /** Global LLVMContext object */
     llvm::LLVMContext *ctx;
 
@@ -412,12 +423,17 @@ struct Globals {
     /** Arguments to pass along to the C pre-processor, if it is run on the
         program before compilation. */
     std::vector<std::string> cppArgs;
+
+    /** Additional user-provided directories to search when processing
+        #include directives in the preprocessor. */
+    std::vector<std::string> includePath;
 };
 
 enum {
     COST_ASSIGN = 1,
     COST_COHERENT_BREAK_CONTINE = 4,
     COST_COMPLEX_ARITH_OP = 4,
+    COST_DELETE = 32,
     COST_DEREF = 4,
     COST_FUNCALL = 4,
     COST_FUNPTR_UNIFORM = 12,
@@ -425,6 +441,7 @@ enum {
     COST_GATHER = 8,
     COST_GOTO = 4,
     COST_LOAD = 2,
+    COST_NEW = 32,
     COST_REGULAR_BREAK_CONTINUE = 2,
     COST_RETURN = 4,
     COST_SELECT = 4,

@@ -982,6 +982,10 @@ PointerType::GetAsUnboundVariabilityType() const {
 
 const PointerType *
 PointerType::ResolveUnboundVariability(Variability v) const {
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     return new PointerType(baseType->ResolveUnboundVariability(v),
                            (variability == Unbound) ? v : variability,
                            isConst);
@@ -1015,8 +1019,10 @@ PointerType::GetAsNonConstType() const {
 
 std::string 
 PointerType::GetString() const {
-    if (baseType == NULL)
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
         return "";
+    }
 
     std::string ret = baseType->GetString();
 
@@ -1035,8 +1041,10 @@ PointerType::GetString() const {
 std::string
 PointerType::Mangle() const {
     Assert(variability != Unbound);
-    if (baseType == NULL)
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
         return "";
+    }
 
     return ((variability == Uniform) ? std::string("uptr<") : std::string("vptr<")) + 
         baseType->Mangle() + std::string(">");
@@ -1050,8 +1058,10 @@ PointerType::GetCDeclaration(const std::string &name) const {
         return "";
     }
 
-    if (baseType == NULL)
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
         return "";
+    }
 
     std::string ret = baseType->GetCDeclaration("");
     ret += std::string(" *");
@@ -1065,8 +1075,10 @@ PointerType::GetCDeclaration(const std::string &name) const {
 LLVM_TYPE_CONST llvm::Type *
 PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Unbound);
-    if (baseType == NULL)
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
 
     if (variability == Varying)
         // always the same, since we currently use int vectors for varying
@@ -1120,8 +1132,10 @@ lCreateDIArray(llvm::DIType eltType, int count) {
 llvm::DIType
 PointerType::GetDIType(llvm::DIDescriptor scope) const {
     Assert(variability != Unbound);
-    if (baseType == NULL)
+    if (baseType == NULL) {
+        Assert(m->errorCount > 0);
         return llvm::DIType();
+    }
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target.is32Bit ? 32 : 64;
@@ -1151,17 +1165,22 @@ ArrayType::ArrayType(const Type *c, int a)
     : child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
+    Assert(c != AtomicType::Void);
 }
 
 
 LLVM_TYPE_CONST llvm::ArrayType *
 ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (!child)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
 
     LLVM_TYPE_CONST llvm::Type *ct = child->LLVMType(ctx);
-    if (!ct)
+    if (ct == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return llvm::ArrayType::get(ct, numElements);
 }
 
@@ -1217,62 +1236,80 @@ ArrayType::GetBaseType() const {
 
 const ArrayType *
 ArrayType::GetAsVaryingType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsVaryingType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsUniformType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsUniformType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsUnboundVariabilityType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsUnboundVariabilityType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::ResolveUnboundVariability(Variability v) const {
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     return new ArrayType(child->ResolveUnboundVariability(v), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsUnsignedType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsUnsignedType(), numElements);
 }
 
 
 const Type *
 ArrayType::GetSOAType(int width) const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetSOAType(width), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsConstType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsConstType(), numElements);
 }
 
 
 const ArrayType *
 ArrayType::GetAsNonConstType() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
     return new ArrayType(child->GetAsNonConstType(), numElements);
 }
 
@@ -1291,7 +1328,12 @@ ArrayType::GetElementType() const {
 
 std::string
 ArrayType::GetString() const {
-    std::string s = GetBaseType()->GetString();
+    const Type *base = GetBaseType();
+    if (base == NULL) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+    std::string s = base->GetString();
 
     const ArrayType *at = this;
     // Walk through this and any children arrays and print all of their
@@ -1311,8 +1353,10 @@ ArrayType::GetString() const {
 
 std::string
 ArrayType::Mangle() const {
-    if (child == NULL)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return "(error)";
+    }
     std::string s = child->Mangle();
     char buf[16];
     if (numElements > 0)
@@ -1325,7 +1369,12 @@ ArrayType::Mangle() const {
 
 std::string
 ArrayType::GetCDeclaration(const std::string &name) const {
-    std::string s = GetBaseType()->GetCDeclaration(name);
+    const Type *base = GetBaseType();
+    if (base == NULL) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+    std::string s = base->GetCDeclaration(name);
 
     const ArrayType *at = this;
     while (at) {
@@ -1344,7 +1393,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
 int
 ArrayType::TotalElementCount() const {
     const ArrayType *ct = dynamic_cast<const ArrayType *>(child);
-    if (ct)
+    if (ct != NULL)
         return numElements * ct->TotalElementCount();
     else
         return numElements;
@@ -1353,8 +1402,10 @@ ArrayType::TotalElementCount() const {
 
 llvm::DIType
 ArrayType::GetDIType(llvm::DIDescriptor scope) const {
-    if (!child)
+    if (child == NULL) {
+        Assert(m->errorCount > 0);
         return llvm::DIType();
+    }
 
     llvm::DIType eltType = child->GetDIType(scope);
     return lCreateDIArray(eltType, numElements);
@@ -2083,36 +2134,60 @@ ReferenceType::ReferenceType(const Type *t)
 
 Type::Variability
 ReferenceType::GetVariability() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return Type::Unbound;
+    }
     return targetType->GetVariability(); 
 }
 
 
 bool
 ReferenceType::IsBoolType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
     return targetType->IsBoolType(); 
 }
 
 
 bool
 ReferenceType::IsFloatType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
     return targetType->IsFloatType(); 
 }
 
 
 bool
 ReferenceType::IsIntType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
     return targetType->IsIntType(); 
 }
 
 
 bool
 ReferenceType::IsUnsignedType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
     return targetType->IsUnsignedType(); 
 }
 
 
 bool
 ReferenceType::IsConstType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return false;
+    }
     return targetType->IsConstType();
 }
 
@@ -2125,12 +2200,20 @@ ReferenceType::GetReferenceTarget() const {
 
 const Type *
 ReferenceType::GetBaseType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     return targetType->GetBaseType();
 }
 
 
 const ReferenceType *
 ReferenceType::GetAsVaryingType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     if (IsVaryingType()) 
         return this;
     return new ReferenceType(targetType->GetAsVaryingType());
@@ -2139,6 +2222,10 @@ ReferenceType::GetAsVaryingType() const {
 
 const ReferenceType *
 ReferenceType::GetAsUniformType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     if (IsUniformType()) 
         return this;
     return new ReferenceType(targetType->GetAsUniformType());
@@ -2147,6 +2234,10 @@ ReferenceType::GetAsUniformType() const {
 
 const ReferenceType *
 ReferenceType::GetAsUnboundVariabilityType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     if (HasUnboundVariability()) 
         return this;
     return new ReferenceType(targetType->GetAsUnboundVariabilityType());
@@ -2155,18 +2246,30 @@ ReferenceType::GetAsUnboundVariabilityType() const {
 
 const ReferenceType *
 ReferenceType::ResolveUnboundVariability(Variability v) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     return new ReferenceType(targetType->ResolveUnboundVariability(v));
 }
     
 
 const Type *
 ReferenceType::GetSOAType(int width) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     return new ReferenceType(targetType->GetSOAType(width));
 }
 
 
 const ReferenceType *
 ReferenceType::GetAsConstType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     if (IsConstType())
         return this;
     return new ReferenceType(targetType->GetAsConstType());
@@ -2175,6 +2278,10 @@ ReferenceType::GetAsConstType() const {
 
 const ReferenceType *
 ReferenceType::GetAsNonConstType() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     if (!IsConstType())
         return this;
     return new ReferenceType(targetType->GetAsNonConstType());
@@ -2183,8 +2290,10 @@ ReferenceType::GetAsNonConstType() const {
 
 std::string
 ReferenceType::GetString() const {
-    if (targetType == NULL)
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
         return "";
+    }
 
     std::string ret = targetType->GetString();
 
@@ -2195,6 +2304,10 @@ ReferenceType::GetString() const {
 
 std::string
 ReferenceType::Mangle() const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
     std::string ret;
     ret += std::string("REF") + targetType->Mangle();
     return ret;
@@ -2203,6 +2316,11 @@ ReferenceType::Mangle() const {
 
 std::string
 ReferenceType::GetCDeclaration(const std::string &name) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return "";
+    }
+
     const ArrayType *at = dynamic_cast<const ArrayType *>(targetType);
     if (at != NULL) {
         if (at->GetElementCount() == 0) {
@@ -2231,17 +2349,28 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
 
 LLVM_TYPE_CONST llvm::Type *
 ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (!targetType)
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+
     LLVM_TYPE_CONST llvm::Type *t = targetType->LLVMType(ctx);
-    if (!t)
+    if (t == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+
     return llvm::PointerType::get(t, 0);
 }
 
 
 llvm::DIType
 ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
+    if (targetType == NULL) {
+        Assert(m->errorCount > 0);
+        return llvm::DIType();
+    }
+
     llvm::DIType diTargetType = targetType->GetDIType(scope);
     return m->diBuilder->createReferenceType(diTargetType);
 }
@@ -2340,11 +2469,21 @@ FunctionType::GetAsUnboundVariabilityType() const {
 
 const FunctionType *
 FunctionType::ResolveUnboundVariability(Variability v) const {
+    if (returnType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     const Type *rt = returnType->ResolveUnboundVariability(v);
+
     std::vector<const Type *> pt;
-    for (unsigned int i = 0; i < paramTypes.size(); ++i)
-        pt.push_back((paramTypes[i] == NULL) ? NULL :
-                     paramTypes[i]->ResolveUnboundVariability(v));
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        if (paramTypes[i] == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+        pt.push_back(paramTypes[i]->ResolveUnboundVariability(v));
+    }
+
     return new FunctionType(rt, pt, paramNames, paramDefaults,
                             paramPositions, isTask, isExported, isExternC);
 }
@@ -2375,10 +2514,17 @@ std::string
 FunctionType::GetString() const {
     std::string ret;
     if (isTask) ret += "task ";
-    ret += returnType->GetString();
+    if (returnType != NULL)
+        ret += returnType->GetString();
+    else
+        ret += "/* ERROR */";
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        ret += paramTypes[i]->GetString();
+        if (paramTypes[i] == NULL)
+            ret += "/* ERROR */";
+        else
+            ret += paramTypes[i]->GetString();
+
         if (i != paramTypes.size() - 1)
             ret += ", ";
     }
@@ -2391,7 +2537,11 @@ std::string
 FunctionType::Mangle() const {
     std::string ret = "___";
     for (unsigned int i = 0; i < paramTypes.size(); ++i)
-        ret += paramTypes[i]->Mangle();
+        if (paramTypes[i] == NULL)
+            Assert(m->errorCount > 0);
+        else
+            ret += paramTypes[i]->Mangle();
+
     return ret;
 }
 
@@ -2444,18 +2594,23 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 
 LLVM_TYPE_CONST llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
-    if (isTask == true) Assert(includeMask == true);
+    if (isTask == true) 
+        Assert(includeMask == true);
 
     // Get the LLVM Type *s for the function arguments
     std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
-        if (!paramTypes[i])
+        if (paramTypes[i] == NULL) {
+            Assert(m->errorCount > 0);
             return NULL;
+        }
         Assert(paramTypes[i] != AtomicType::Void);
 
         LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
-        if (t == NULL)
+        if (t == NULL) {
+            Assert(m->errorCount > 0);
             return NULL;
+        }
         llvmArgTypes.push_back(t);
     }
 
@@ -2480,6 +2635,11 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     else
         // Otherwise we already have the types of the arguments 
         callTypes = llvmArgTypes;
+
+    if (returnType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
 
     return llvm::FunctionType::get(returnType->LLVMType(g->ctx), callTypes, false);
 }

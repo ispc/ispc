@@ -597,12 +597,21 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 bool
 LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
                          std::vector<llvm::PHINode *> &seenPhis) {
+    if (vectorLength == 1)
+        return true;
+
     if (llvm::isa<llvm::ConstantAggregateZero>(v))
         return true;
 
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
     if (cv != NULL)
         return (cv->getSplatValue() != NULL);
+
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+    if (cdv != NULL)
+        return (cdv->getSplatValue() != NULL);
+#endif
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL)
@@ -668,6 +677,10 @@ LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
         seenPhis.pop_back();
         return true;
     }
+
+    if (llvm::isa<llvm::UndefValue>(v))
+        // ?
+        return false;
 
     Assert(!llvm::isa<llvm::Constant>(v));
 

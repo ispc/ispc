@@ -212,104 +212,44 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
     RNGState rngstate;
 
     seed_rng(&rngstate, y0);
+    float invSamples = 1.f / nsubsamples;
 
-    // Compute the mapping between the 'programCount'-wide program
-    // instances running in parallel and samples in the image.  
-    //
-    // For now, we'll always take four samples per pixel, so start by
-    // initializing du and dv with offsets into subpixel samples.  We'll
-    // take care of further updating du and dv for the case where we're
-    // doing more than 4 program instances in parallel shortly.
-    uniform float uSteps[4] = { 0, 1, 0, 1 };
-    uniform float vSteps[4] = { 0, 0, 1, 1 };
-    float du = uSteps[programIndex % 4] / nsubsamples;
-    float dv = vSteps[programIndex % 4] / nsubsamples;
+    foreach_tiled(y = y0 ... y1, x = 0 ... w, 
+                  u = 0 ... nsubsamples, v = 0 ... nsubsamples) {
+        float du = (float)u * invSamples, dv = (float)v * invSamples;
 
-    // Now handle the case where we are able to do more than one pixel's
-    // worth of work at once.  nx records the number of pixels in the x
-    // direction we do per iteration and ny the number in y.
-    uniform int nx = 1, ny = 1;
+        // Figure out x,y pixel in NDC
+        float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
+        float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
+        float ret = 0.f;
+        Ray ray;
+        Isect isect;
 
-    // FIXME: We actually need ny to be 1 regardless of the decomposition,
-    // since the task decomposition is one scanline high.
+        ray.org = 0.f;
 
-    if (programCount == 8) {
-        // Do two pixels at once in the x direction
-        nx = 2;
-        if (programIndex >= 4) 
-            // And shift the offsets for the second pixel's worth of work
-            ++du;
-    }
-    else if (programCount == 16) {
-        nx = 4;
-        ny = 1;
-        if (programIndex >= 4 && programIndex < 8)
-            ++du;
-        if (programIndex >= 8 && programIndex < 12)
-            du += 2;
-        if (programIndex >= 12)
-            du += 3;
-    }
+        // Poor man's perspective projection
+        ray.dir.x = px;
+        ray.dir.y = py;
+        ray.dir.z = -1.0;
+        vnormalize(ray.dir);
 
-    // Now loop over all of the pixels, stepping in x and y as calculated
-    // above.  (Assumes that ny divides y and nx divides x...)
-    for (uniform int y = y0; y < y1; y += ny) {
-        for (uniform int x = 0; x < w; x += nx)  {
-            // Figure out x,y pixel in NDC
-            float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
-            float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
-            float ret = 0.f;
-            Ray ray;
-            Isect isect;
+        isect.t   = 1.0e+17;
+        isect.hit = 0;
 
-            ray.org = 0.f;
+        for (uniform int snum = 0; snum < 3; ++snum)
+            ray_sphere_intersect(isect, ray, spheres[snum]);
+        ray_plane_intersect(isect, ray, plane);
 
-            // Poor man's perspective projection
-            ray.dir.x = px;
-            ray.dir.y = py;
-            ray.dir.z = -1.0;
-            vnormalize(ray.dir);
+        // Note use of 'coherent' if statement; the set of rays we
+        // trace will often all hit or all miss the scene
+        cif (isect.hit) {
+            ret = ambient_occlusion(isect, plane, spheres, rngstate);
+            ret *= invSamples * invSamples;
 
-            isect.t   = 1.0e+17;
-            isect.hit = 0;
-
-            for (uniform int snum = 0; snum < 3; ++snum)
-                ray_sphere_intersect(isect, ray, spheres[snum]);
-            ray_plane_intersect(isect, ray, plane);
-
-            // Note use of 'coherent' if statement; the set of rays we
-            // trace will often all hit or all miss the scene
-            cif (isect.hit)
-                ret = ambient_occlusion(isect, plane, spheres, rngstate);
-
-            // This is a little grungy; we have results for
-            // programCount-worth of values.  Because we're doing 2x2
-            // subsamples, we need to peel them off in groups of four,
-            // average the four values for each pixel, and update the
-            // output image.
-            //
-            // Store the varying value to a uniform array of the same size.
-            // See the discussion about communication among program
-            // instances in the ispc user's manual for more discussion on
-            // this idiom.
-            uniform float retArray[programCount];
-            retArray[programIndex] = ret;
-
-            // offset to the first pixel in the image
-            uniform int offset = 3 * (y * w + x);
-            for (uniform int p = 0; p < programCount; p += 4, offset += 3) {
-                // Get the four sample values for this pixel
-                uniform float sumret = retArray[p] + retArray[p+1] + retArray[p+2] +
-                    retArray[p+3];
-
-                // Normalize by number of samples taken
-                sumret /= nsubsamples * nsubsamples; 
-                
-                // Store result in the image
-                image[offset+0] = sumret;
-                image[offset+1] = sumret;
-                image[offset+2] = sumret;
-            }
+            int offset = 3 * (y * w + x);
+            atomic_add_local(&image[offset], ret);
+            atomic_add_local(&image[offset+1], ret);
+            atomic_add_local(&image[offset+2], ret);
         }
     }
 }

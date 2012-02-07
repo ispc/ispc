@@ -41,6 +41,9 @@
 #include "type.h"
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef ISPC_IS_WINDOWS
+  #include <time.h>
+#endif // ISPC_IS_WINDOWS
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
@@ -90,7 +93,6 @@ usage(int ret) {
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
-    printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
 #ifndef LLVM_2_9
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
@@ -99,7 +101,9 @@ usage(int ret) {
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
+    printf("    [--help-dev]\t\t\tPrint help for developer options\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
+    printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
@@ -115,20 +119,10 @@ usage(int ret) {
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
-#if 0
-    printf("        disable-all-on-optimizations\n");
-    printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
-    printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
-    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
-    printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
-    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
-    printf("        disable-handle-pseudo-memory-ops\n");
-    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
-    printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
-#endif
 #ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
 #endif // !ISPC_IS_WINDOWS
+    printf("    [--quiet]\t\t\t\tSuppress all output\n");
     printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
@@ -139,11 +133,32 @@ usage(int ret) {
 }
 
 
+static void
+devUsage(int ret) {
+    lPrintVersion();
+    printf("\nusage (developer options): ispc\n");
+    printf("    [--debug]\t\t\t\tPrint information useful for debugging ispc\n");
+    printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
+    printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
+    printf("    [--opt=<option>]\t\t\tSet optimization option\n");
+    printf("        disable-all-on-optimizations\n");
+    printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
+    printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
+    printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
+    printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
+    printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
+    printf("        disable-handle-pseudo-memory-ops\n");
+    printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
+    printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
+    printf("    [--yydebug]\t\t\tPrint debugging information during parsing\n");
+    exit(ret);
+}
+
 
 /** We take arguments from both the command line as well as from the
     ISPC_ARGS environment variable.  This function returns a new set of
     arguments representing the ones from those two sources merged together.
- */ 
+*/ 
 static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
@@ -227,6 +242,8 @@ int main(int Argc, char *Argv[]) {
     for (int i = 1; i < argc; ++i) {
         if (!strcmp(argv[i], "--help"))
             usage(0);
+        if (!strcmp(argv[i], "--help-dev"))
+            devUsage(0);
         else if (!strncmp(argv[i], "-D", 2))
             g->cppArgs.push_back(argv[i]);
         else if (!strncmp(argv[i], "--addressing=", 13)) {
@@ -271,6 +288,19 @@ int main(int Argc, char *Argv[]) {
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
+        else if (!strcmp(argv[i], "-I")) {
+            if (++i == argc) {
+                fprintf(stderr, "No path specified after -I option.\n");
+                usage(1);
+            }
+            g->includePath.push_back(argv[i]);
+        }
+        else if (!strncmp(argv[i], "-I", 2))
+            g->includePath.push_back(argv[i]+2);
+        else if (!strcmp(argv[i], "--fuzz-test"))
+            g->enableFuzzTest = true;
+        else if (!strncmp(argv[i], "--fuzz-seed=", 12))
+            g->fuzzTestSeed = atoi(argv[i] + 12);
         else if (!strcmp(argv[i], "--target")) {
             // FIXME: should remove this way of specifying the target...
             if (++i == argc) {
@@ -383,6 +413,12 @@ int main(int Argc, char *Argv[]) {
         else if (!strcmp(argv[i], "--pic"))
             generatePIC = true;
 #endif // !ISPC_IS_WINDOWS
+        else if (!strcmp(argv[i], "--quiet"))
+            g->quiet = true;
+        else if (!strcmp(argv[i], "--yydebug")) {
+            extern int yydebug;
+            yydebug = 1;
+        }
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
             return 0;
@@ -407,6 +443,24 @@ int main(int Argc, char *Argv[]) {
     // optimization).
     if (debugSet && !optSet)
         g->opt.level = 0;
+
+    if (g->enableFuzzTest) {
+        if (g->fuzzTestSeed == -1) {
+#ifdef ISPC_IS_WINDOWS
+            int seed = (unsigned)time(NULL);
+#else
+            int seed = getpid();
+#endif
+            g->fuzzTestSeed = seed;
+            Warning(SourcePos(), "Using seed %d for fuzz testing", 
+                    g->fuzzTestSeed);
+        }
+#ifdef ISPC_IS_WINDOWS
+        srand(g->fuzzTestSeed);
+#else
+        srand48(g->fuzzTestSeed);
+#endif
+    }
 
     if (outFileName == NULL && headerFileName == NULL)
         Warning(SourcePos(), "No output file or header file name specified. "

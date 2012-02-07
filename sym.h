@@ -244,6 +244,13 @@ public:
         (Debugging method). */
     void Print();
 
+    /** Returns a random symbol from the symbol table. (It is not
+        guaranteed that it is equally likely to return all symbols). */
+    Symbol *RandomSymbol();
+
+    /** Returns a random type from the symbol table. */
+    const Type *RandomType();
+
 private:
     std::vector<std::string> closestTypeMatch(const char *str, 
                                               bool structsVsEnums) const;

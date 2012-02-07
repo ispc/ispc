@@ -391,6 +391,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__count_trailing_zeros_i64",
         "__count_leading_zeros_i32",
         "__count_leading_zeros_i64",
+        "__delete_uniform",
+        "__delete_varying",
         "__do_assert_uniform",
         "__do_assert_varying",
         "__do_print", 
@@ -449,6 +451,9 @@ lSetInternalFunctions(llvm::Module *module) {
         "__min_varying_uint32",
         "__min_varying_uint64",
         "__movmsk",
+        "__new_uniform",
+        "__new_varying32",
+        "__new_varying64",
         "__num_cores",
         "__packed_load_active",
         "__packed_store_active",
@@ -794,6 +799,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                                builtins_bitcode_generic_16_length, 
                                module, symbolTable);
             break;
+	case 1:
+            extern unsigned char builtins_bitcode_generic_1[];
+            extern int builtins_bitcode_generic_1_length;
+            AddBitcodeToModule(builtins_bitcode_generic_1, 
+                               builtins_bitcode_generic_1_length, 
+                               module, symbolTable);
+            break;
         default:
             FATAL("logic error in DefineStdlib");
         }
@@ -829,7 +841,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
-        if (g->target.isa == Target::GENERIC) {
+      if (g->target.isa == Target::GENERIC&&g->target.vectorWidth!=1) { // 1 wide uses x86 stdlib
             extern char stdlib_generic_code[];
             yy_scan_string(stdlib_generic_code);
             yyparse();

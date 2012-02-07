@@ -120,153 +120,6 @@ DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p)
 
 
 static bool
-lPossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
-    FunctionSymbolExpr *fse = NULL;
-    const FunctionType *funcType = NULL;
-    if (dynamic_cast<const PointerType *>(type) != NULL &&
-        (funcType = dynamic_cast<const FunctionType *>(type->GetBaseType())) &&
-        (fse = dynamic_cast<FunctionSymbolExpr *>(expr)) != NULL) {
-        // We're initializing a function pointer with a function symbol,
-        // which in turn may represent an overloaded function.  So we need
-        // to try to resolve the overload based on the type of the symbol
-        // we're initializing here.
-        std::vector<const Type *> paramTypes;
-        for (int i = 0; i < funcType->GetNumParameters(); ++i)
-            paramTypes.push_back(funcType->GetParameterType(i));
-
-        if (fse->ResolveOverloads(expr->pos, paramTypes) == false)
-            return false;
-    }
-    return true;
-}
-
-
-/** Utility routine that emits code to initialize a symbol given an
-    initializer expression.
-
-    @param lvalue    Memory location of storage for the symbol's data
-    @param symName   Name of symbol (used in error messages)
-    @param symType   Type of variable being initialized
-    @param initExpr  Expression for the initializer
-    @param ctx       FunctionEmitContext to use for generating instructions
-    @param pos       Source file position of the variable being initialized
-*/
-static void
-lInitSymbol(llvm::Value *lvalue, const char *symName, const Type *symType,
-            Expr *initExpr, FunctionEmitContext *ctx, SourcePos pos) {
-    if (initExpr == NULL)
-        // leave it uninitialized
-        return;
-
-    // If the initializer is a straight up expression that isn't an
-    // ExprList, then we'll see if we can type convert it to the type of
-    // the variable.
-    if (dynamic_cast<ExprList *>(initExpr) == NULL) {
-        if (lPossiblyResolveFunctionOverloads(initExpr, symType) == false)
-            return;
-        initExpr = TypeConvertExpr(initExpr, symType, "initializer");
-
-        if (initExpr != NULL) {
-            llvm::Value *initializerValue = initExpr->GetValue(ctx);
-            if (initializerValue != NULL)
-                // Bingo; store the value in the variable's storage
-                ctx->StoreInst(initializerValue, lvalue);
-            return;
-        }
-    }
-
-    // Atomic types and enums can't be initialized with { ... } initializer
-    // expressions, so print an error and return if that's what we've got
-    // here..
-    if (dynamic_cast<const AtomicType *>(symType) != NULL ||
-        dynamic_cast<const EnumType *>(symType) != NULL ||
-        dynamic_cast<const PointerType *>(symType) != NULL) {
-        ExprList *elist = dynamic_cast<ExprList *>(initExpr);
-        if (elist != NULL) {
-            if (elist->exprs.size() == 1)
-                lInitSymbol(lvalue, symName, symType, elist->exprs[0], ctx,
-                            pos);
-            else
-                Error(initExpr->pos, "Expression list initializers can't be used for "
-                      "variable \"%s\' with type \"%s\".", symName,
-                      symType->GetString().c_str());
-        }
-        return;
-    }
-
-    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(symType);
-    if (rt) {
-        if (!Type::Equal(initExpr->GetType(), rt)) {
-            Error(initExpr->pos, "Initializer for reference type \"%s\" must have same "
-                  "reference type itself. \"%s\" is incompatible.", 
-                  rt->GetString().c_str(), initExpr->GetType()->GetString().c_str());
-            return;
-        }
-
-        llvm::Value *initializerValue = initExpr->GetValue(ctx);
-        if (initializerValue)
-            ctx->StoreInst(initializerValue, lvalue);
-        return;
-    }
-
-    // There are two cases for initializing structs, arrays and vectors;
-    // either a single initializer may be provided (float foo[3] = 0;), in
-    // which case all of the elements are initialized to the given value,
-    // or an initializer list may be provided (float foo[3] = { 1,2,3 }),
-    // in which case the elements are initialized with the corresponding
-    // values.
-    const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(symType);
-    if (collectionType != NULL) {
-        std::string name;
-        if (dynamic_cast<const StructType *>(symType) != NULL)
-            name = "struct";
-        else if (dynamic_cast<const ArrayType *>(symType) != NULL) 
-            name = "array";
-        else if (dynamic_cast<const VectorType *>(symType) != NULL) 
-            name = "vector";
-        else 
-            FATAL("Unexpected CollectionType in lInitSymbol()");
-
-        ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
-        if (exprList != NULL) {
-            // The { ... } case; make sure we have the same number of
-            // expressions in the ExprList as we have struct members
-            int nInits = exprList->exprs.size();
-            if (nInits != collectionType->GetElementCount()) {
-                Error(initExpr->pos, "Initializer for %s \"%s\" requires "
-                      "%d values; %d provided.", name.c_str(), symName, 
-                      collectionType->GetElementCount(), nInits);
-                return;
-            }
-
-            // Initialize each element with the corresponding value from
-            // the ExprList
-            for (int i = 0; i < nInits; ++i) {
-                llvm::Value *ep;
-                if (dynamic_cast<const StructType *>(symType) != NULL)
-                    ep = ctx->AddElementOffset(lvalue, i, NULL, "element");
-                else
-                    ep = ctx->GetElementPtrInst(lvalue, LLVMInt32(0), LLVMInt32(i), 
-                                                PointerType::GetUniform(collectionType->GetElementType(i)), 
-                                                "gep");
-
-                lInitSymbol(ep, symName, collectionType->GetElementType(i), 
-                            exprList->exprs[i], ctx, pos);
-            }
-        }
-        else
-            Error(initExpr->pos, "Can't assign type \"%s\" to \"%s\".",
-                  initExpr->GetType()->GetString().c_str(),
-                  collectionType->GetString().c_str());
-        return;
-    }
-
-    FATAL("Unexpected Type in lInitSymbol()");
-}
-
-
-static bool
 lHasUnsizedArrays(const Type *type) {
     const ArrayType *at = dynamic_cast<const ArrayType *>(type);
     if (at == NULL)
@@ -333,7 +186,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // zero value.
             llvm::Constant *cinit = NULL;
             if (initExpr != NULL) {
-                if (lPossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
+                if (PossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
                     continue;
                 // FIXME: we only need this for function pointers; it was
                 // already done for atomic types and enums in
@@ -377,8 +230,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
-            lInitSymbol(sym->storagePtr, sym->name.c_str(), sym->type, 
-                        initExpr, ctx, sym->pos);
+            InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
         }
     }
 }
@@ -575,7 +427,7 @@ IfStmt::TypeCheck() {
 int
 IfStmt::EstimateCost() const {
     const Type *type;
-    if (test == NULL || (type = test->GetType()) != NULL)
+    if (test == NULL || (type = test->GetType()) == NULL)
         return 0;
 
     return type->IsUniformType() ? COST_UNIFORM_IF : COST_VARYING_IF;
@@ -618,103 +470,6 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
         Assert(ctx->GetCurrentBasicBlock());
     }
-}
-
-
-/** Given an AST node, check to see if it's safe if we happen to run the
-    code for that node with the execution mask all off.
- */
-static bool
-lCheckAllOffSafety(ASTNode *node, void *data) {
-    bool *okPtr = (bool *)data;
-
-    if (dynamic_cast<FunctionCallExpr *>(node) != NULL) {
-        // FIXME: If we could somehow determine that the function being
-        // called was safe (and all of the args Exprs were safe, then it'd
-        // be nice to be able to return true here.  (Consider a call to
-        // e.g. floatbits() in the stdlib.)  Unfortunately for now we just
-        // have to be conservative.
-        *okPtr = false;
-        return false;
-    }
-
-    if (dynamic_cast<AssertStmt *>(node) != NULL) {
-        // While it's fine to run the assert for varying tests, it's not
-        // desirable to check an assert on a uniform variable if all of the
-        // lanes are off.
-        *okPtr = false;
-        return false;
-    }
-
-    if (g->target.allOffMaskIsSafe == true)
-        // Don't worry about memory accesses if we have a target that can
-        // safely run them with the mask all off
-        return true;
-
-    IndexExpr *ie;
-    if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {
-        const Type *type = ie->baseExpr->GetType();
-        if (type == NULL)
-            return true;
-        if (dynamic_cast<const ReferenceType *>(type) != NULL)
-            type = type->GetReferenceTarget();
-
-        ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
-        if (ce == NULL) {
-            // indexing with a variable... -> not safe
-            *okPtr = false;
-            return false;
-        }
-
-        const PointerType *pointerType = 
-            dynamic_cast<const PointerType *>(type);
-        if (pointerType != NULL) {
-            // pointer[index] -> can't be sure -> not safe
-            *okPtr = false;
-            return false;
-        }
-
-        const SequentialType *seqType = 
-            dynamic_cast<const SequentialType *>(type);
-        Assert(seqType != NULL);
-        int nElements = seqType->GetElementCount();
-        if (nElements == 0) {
-            // Unsized array, so we can't be sure -> not safe
-            *okPtr = false;
-            return false;
-        }
-
-        int32_t indices[ISPC_MAX_NVEC];
-        int count = ce->AsInt32(indices);
-        for (int i = 0; i < count; ++i) {
-            if (indices[i] < 0 || indices[i] >= nElements) {
-                // Index is out of bounds -> not safe
-                *okPtr = false;
-                return false;
-            }
-        }
-
-        // All indices are in-bounds
-        return true;
-    }
-
-    MemberExpr *me;
-    if ((me = dynamic_cast<MemberExpr *>(node)) != NULL &&
-        me->dereferenceExpr) {
-        *okPtr = false;
-        return false;
-    }
-
-    DereferenceExpr *de;
-    if ((de = dynamic_cast<DereferenceExpr *>(node)) != NULL) {
-        const Type *exprType = de->expr->GetType();
-        if (dynamic_cast<const PointerType *>(exprType) != NULL) {
-            *okPtr = false;
-            return false;
-        }
-    }
-
-    return true;
 }
 
 
@@ -771,7 +526,7 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         //
         // Where the overhead of checking if any of the program instances wants
         // to run one side or the other is more than the actual computation.
-        // The lSafeToRunWithAllLanesOff() checks to make sure that we don't do this
+        // SafeToRunWithMaskAllOff() checks to make sure that we don't do this
         // for potentially dangerous code like:
         //
         // if (index < count) array[index] = 0;
@@ -783,9 +538,8 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         bool costIsAcceptable = (trueFalseCost <
                                  PREDICATE_SAFE_IF_STATEMENT_COST);
 
-        bool safeToRunWithAllLanesOff = true;
-        WalkAST(trueStmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
-        WalkAST(falseStmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
+        bool safeToRunWithAllLanesOff = (SafeToRunWithMaskAllOff(trueStmts) &&
+                                         SafeToRunWithMaskAllOff(falseStmts));
 
         if (safeToRunWithAllLanesOff &&
             (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
@@ -2123,9 +1877,7 @@ lCheckMask(Stmt *stmts) {
         return false;
 
     int cost = EstimateCost(stmts);
-
-    bool safeToRunWithAllLanesOff = true;
-    WalkAST(stmts, lCheckAllOffSafety, NULL, &safeToRunWithAllLanesOff);
+    bool safeToRunWithAllLanesOff = SafeToRunWithMaskAllOff(stmts);
 
     // The mask should be checked if the code following the
     // 'case'/'default' is relatively complex, or if it would be unsafe to
@@ -2880,3 +2632,82 @@ AssertStmt::EstimateCost() const {
     return COST_ASSERT;
 }
 
+
+///////////////////////////////////////////////////////////////////////////
+// DeleteStmt
+
+DeleteStmt::DeleteStmt(Expr *e, SourcePos p)
+    : Stmt(p) {
+    expr = e;
+}
+
+
+void
+DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
+    const Type *exprType;
+    if (expr == NULL || ((exprType = expr->GetType()) == NULL)) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    llvm::Value *exprValue = expr->GetValue(ctx);
+    if (exprValue == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+
+    // Typechecking should catch this
+    Assert(dynamic_cast<const PointerType *>(exprType) != NULL);
+
+    if (exprType->IsUniformType()) {
+        // For deletion of a uniform pointer, we just need to cast the
+        // pointer type to a void pointer type, to match what
+        // __delete_uniform() from the builtins expects.
+        exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType,
+                                     "ptr_to_void");
+        llvm::Function *func = m->module->getFunction("__delete_uniform");
+        Assert(func != NULL);
+
+        ctx->CallInst(func, NULL, exprValue, "");
+    }
+    else {
+        // Varying pointers are arrays of ints, and __delete_varying()
+        // takes a vector of i64s (even for 32-bit targets).  Therefore, we
+        // only need to extend to 64-bit values on 32-bit targets before
+        // calling it.
+        llvm::Function *func = m->module->getFunction("__delete_varying");
+        Assert(func != NULL);
+        if (g->target.is32Bit)
+            exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType,
+                                      "ptr_to_64");
+        ctx->CallInst(func, NULL, exprValue, "");
+    }
+}
+
+
+void
+DeleteStmt::Print(int indent) const {
+    printf("%*cDelete Stmt", indent, ' ');
+}
+
+
+Stmt *
+DeleteStmt::TypeCheck() {
+    const Type *exprType;
+    if (expr == NULL || ((exprType = expr->GetType()) == NULL))
+        return NULL;
+
+    if (dynamic_cast<const PointerType *>(exprType) == NULL) {
+        Error(pos, "Illegal to delete non-pointer type \"%s\".",
+              exprType->GetString().c_str());
+        return NULL;
+    }
+
+    return this;
+}
+
+
+int
+DeleteStmt::EstimateCost() const {
+    return COST_DELETE;
+}

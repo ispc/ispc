@@ -1,4 +1,4 @@
-// Syntax error--token "&" unexpected
+// syntax error, unexpected '&'
 
 int foo(int & & bar) {
     bar = 0;

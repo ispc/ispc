@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int8 a = aFOO[programIndex]; 
-    int8 br = broadcast(a, (uniform int)b-2);
+    int8 br = (programCount == 1) ? 4 : broadcast(a, (uniform int)b-2);
     RET[programIndex] = br;
 }
 

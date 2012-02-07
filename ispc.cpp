@@ -185,6 +185,14 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
     }
+    else if (!strcasecmp(isa, "generic-1")) {
+        t->isa = Target::GENERIC;
+        t->nativeVectorWidth = 1;
+        t->vectorWidth = 1;
+        t->maskingIsFree = false;
+        t->allOffMaskIsSafe = false;
+        t->maskBitCount = 32;
+    }
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     else if (!strcasecmp(isa, "avx")) {
         t->isa = Target::AVX;
@@ -270,7 +278,7 @@ Target::SupportedTargetISAs() {
 #ifdef LLVM_3_1svn
         ", avx2, avx2-x2"
 #endif // LLVM_3_1svn
-        ", generic-4, generic-8, generic-16";
+        ", generic-4, generic-8, generic-16, generic-1";
 }
 
 
@@ -502,12 +510,15 @@ Globals::Globals() {
     debugPrint = false;
     disableWarnings = false;
     warningsAsErrors = false;
+    quiet = false;
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;
     generateDebuggingSymbols = false;
+    enableFuzzTest = false;
+    fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
-
+    
     ctx = new llvm::LLVMContext;
 
 #ifdef ISPC_IS_WINDOWS

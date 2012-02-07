@@ -184,7 +184,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[2],
+    return llvm::CallInst::Create(func, &args[0], &args[2],
                                   name, insertBefore);
 #endif
 }
@@ -199,7 +199,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[3],
+    return llvm::CallInst::Create(func, &args[0], &args[3],
                                   name, insertBefore);
 #endif
 }
@@ -215,7 +215,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[4],
+    return llvm::CallInst::Create(func, &args[0], &args[4],
                                   name, insertBefore);
 #endif
 }
@@ -230,7 +230,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[5],
+    return llvm::CallInst::Create(func, &args[0], &args[5],
                                   name, insertBefore);
 #endif
 }
@@ -245,7 +245,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
 #else
-    return llvm::CallInst::Create(func, &newArgs[0], &newArgs[6],
+    return llvm::CallInst::Create(func, &args[0], &args[6],
                                   name, insertBefore);
 #endif
 }
@@ -368,8 +368,10 @@ Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
-        optPM.add(CreatePseudoMaskedStorePass());
-        if (!g->opt.disableGatherScatterOptimizations)
+        if (g->opt.disableHandlePseudoMemoryOps == false)
+            optPM.add(CreatePseudoMaskedStorePass());
+        if (g->opt.disableGatherScatterOptimizations == false &&
+            g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateGSToLoadStorePass());
         if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.add(CreatePseudoMaskedStorePass());
@@ -628,11 +630,20 @@ lGetMask(llvm::Value *factor) {
        "known and all bits on". */
     Assert(g->target.vectorWidth < 32);
 
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+#endif
     if (cv) {
         int mask = 0;
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+#ifdef LLVM_3_1svn
+        for (int i = 0; i < (int)cv->getNumElements(); ++i)
+            elements.push_back(cv->getElementAsConstant(i));
+#else
         cv->getVectorElements(elements);
+#endif
 
         for (unsigned int i = 0; i < elements.size(); ++i) {
             llvm::APInt intMaskValue;
@@ -1125,7 +1136,17 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // Indexing into global arrays can lead to this form, with
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+#ifdef LLVM_3_1svn
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
+            llvm::Constant *c = 
+                llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
+            if (c == NULL)
+                return NULL;
+            elements.push_back(c);
+        }
+#else
         cv->getVectorElements(elements);
+#endif
 
         llvm::Constant *delta[ISPC_MAX_NVEC];
         for (unsigned int i = 0; i < elements.size(); ++i) {
@@ -1235,6 +1256,9 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                        llvm::Value **variableOffset, 
                        llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::ConstantVector>(vec) ||
+#ifdef LLVM_3_1svn
+        llvm::isa<llvm::ConstantDataVector>(vec) ||
+#endif
         llvm::isa<llvm::ConstantAggregateZero>(vec)) {
         *constOffset = vec;
         *variableOffset = NULL;
@@ -1353,7 +1377,12 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
    in *splat, if so). */
 static bool
 lIs248Splat(llvm::Value *v, int *splat) {
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cvec = 
+        llvm::dyn_cast<llvm::ConstantDataVector>(v);
+#else
     llvm::ConstantVector *cvec = llvm::dyn_cast<llvm::ConstantVector>(v);
+#endif
     if (cvec == NULL)
         return false;
 
@@ -1460,6 +1489,9 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     fprintf(stderr, "\n");
 
     if (llvm::isa<llvm::ConstantVector>(*vec) ||
+#ifdef LLVM_3_1svn
+        llvm::isa<llvm::ConstantDataVector>(*vec) ||
+#endif
         llvm::isa<llvm::ConstantAggregateZero>(*vec))
         return NULL;
 
@@ -1855,6 +1887,7 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             goto restart;
         }
     }
+
     return modifiedAny;
 }
 
@@ -2092,6 +2125,7 @@ PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         modifiedAny = true;
         goto restart;
     }
+
     return modifiedAny;
 }
 
@@ -2139,11 +2173,22 @@ char GSToLoadStorePass::ID = 0;
     elements.
  */
 static bool
-lVectorIsLinearConstantInts(llvm::ConstantVector *cv, int vectorLength, 
+lVectorIsLinearConstantInts(
+#ifdef LLVM_3_1svn
+                            llvm::ConstantDataVector *cv, 
+#else
+                            llvm::ConstantVector *cv, 
+#endif
+                            int vectorLength, 
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+#ifdef LLVM_3_1svn
+    for (int i = 0; i < (int)cv->getNumElements(); ++i)
+        elements.push_back(cv->getElementAsConstant(i));
+#else
     cv->getVectorElements(elements);
+#endif
     Assert((int)elements.size() == vectorLength);
 
     llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[0]);
@@ -2182,11 +2227,19 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
+#endif
     if (cv == NULL)
         return false;
-    llvm::ConstantInt *splat = 
-        llvm::dyn_cast<llvm::ConstantInt>(cv->getSplatValue());
+
+    llvm::Constant *csplat = cv->getSplatValue();
+    if (csplat == NULL)
+        return false;
+
+    llvm::ConstantInt *splat = llvm::dyn_cast<llvm::ConstantInt>(csplat);
     if (splat == NULL)
         return false;
 
@@ -2214,7 +2267,11 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 std::vector<llvm::PHINode *> &seenPhis) {
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+#else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
+#endif
     if (cv != NULL)
         return lVectorIsLinearConstantInts(cv, vectorLength, stride);
 
@@ -2471,7 +2528,6 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                          constOffsets, "varying+const_offsets",
                                          callInst);
 
-        {
         std::vector<llvm::PHINode *> seenPhis;
         if (LLVMVectorValuesAllEqual(fullOffsets, g->target.vectorWidth, seenPhis)) {
             // If all the offsets are equal, then compute the single
@@ -2493,66 +2549,61 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                               "load_braodcast");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
+
+                modifiedAny = true;
+                goto restart;
             }
             else {
                 // A scatter with everyone going to the same location is
-                // undefined.  Issue a warning and arbitrarily let the
-                // first guy win.
-                Warning(pos, "Undefined behavior: all program instances are "
-                        "writing to the same location!");
+                // undefined (if there's more than one program instance in
+                // the gang).  Issue a warning.
+                if (g->target.vectorWidth > 1)
+                    Warning(pos, "Undefined behavior: all program instances are "
+                            "writing to the same location!");
 
-                llvm::Value *first = 
-                    llvm::ExtractElementInst::Create(storeValue, LLVMInt32(0), "rvalue_first",
-                                                     callInst);
-                lCopyMetadata(first, callInst);
+                // We could do something similar to the gather case, where
+                // we arbitrarily write one of the values, but we need to
+                // a) check to be sure the mask isn't all off and b) pick
+                // the value from an executing program instance in that
+                // case.  We'll just let a bunch of the program instances
+                // do redundant writes, since this isn't important to make
+                // fast anyway...
+            }
+        }
+        else {
+            int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
 
-                ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(first->getType(), 0),
-                                            "ptr2rvalue_type", callInst);
+            std::vector<llvm::PHINode *> seenPhis;
+            if (step > 0 && lVectorIsLinear(fullOffsets, g->target.vectorWidth, 
+                                            step, seenPhis)) {
+                // We have a linear sequence of memory locations being accessed
+                // starting with the location given by the offset from
+                // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
+                // and 64 bit gather/scatters, respectively.)
+                llvm::Value *ptr = lComputeCommonPointer(base, fullOffsets, callInst);
                 lCopyMetadata(ptr, callInst);
 
-                llvm::Instruction *sinst = new llvm::StoreInst(first, ptr, false, 
-                                                               scatterInfo->align);
-                lCopyMetadata(sinst, callInst);
-                llvm::ReplaceInstWithInst(callInst, sinst);
+                if (gatherInfo != NULL) {
+                    Debug(pos, "Transformed gather to unaligned vector load!");
+                    llvm::Instruction *newCall = 
+                        lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, "masked_load");
+                    lCopyMetadata(newCall, callInst);
+                    llvm::ReplaceInstWithInst(callInst, newCall);
+                }
+                else {
+                    Debug(pos, "Transformed scatter to unaligned vector store!");
+                    ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", 
+                                                callInst);
+                    llvm::Instruction *newCall =
+                        lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, 
+                                  mask, "");
+                    lCopyMetadata(newCall, callInst);
+                    llvm::ReplaceInstWithInst(callInst, newCall);
+                }
+
+                modifiedAny = true;
+                goto restart;
             }
-
-            modifiedAny = true;
-            goto restart;
-        }
-        }
-
-        int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
-
-        std::vector<llvm::PHINode *> seenPhis;
-        if (step > 0 && lVectorIsLinear(fullOffsets, g->target.vectorWidth, 
-                                        step, seenPhis)) {
-            // We have a linear sequence of memory locations being accessed
-            // starting with the location given by the offset from
-            // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
-            // and 64 bit gather/scatters, respectively.)
-            llvm::Value *ptr = lComputeCommonPointer(base, fullOffsets, callInst);
-            lCopyMetadata(ptr, callInst);
-
-            if (gatherInfo != NULL) {
-                Debug(pos, "Transformed gather to unaligned vector load!");
-                llvm::Instruction *newCall = 
-                    lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, "masked_load");
-                lCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
-            }
-            else {
-                Debug(pos, "Transformed scatter to unaligned vector store!");
-                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", 
-                                            callInst);
-                llvm::Instruction *newCall =
-                    lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, 
-                              mask, "");
-                lCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
-            }
-
-            modifiedAny = true;
-            goto restart;
         }
     }
 
@@ -2675,10 +2726,12 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         Assert(ok);     
 
         callInst->setCalledFunction(info->actualFunc);
-        if (info->isGather)
-            PerformanceWarning(pos, "Gather required to compute value in expression.");
-        else
-            PerformanceWarning(pos, "Scatter required for storing value.");
+        if (g->target.vectorWidth > 1) {
+            if (info->isGather)
+                PerformanceWarning(pos, "Gather required to compute value in expression.");
+            else
+                PerformanceWarning(pos, "Scatter required for storing value.");
+        }
         modifiedAny = true;
         goto restart;
     }

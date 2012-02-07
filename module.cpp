@@ -161,6 +161,9 @@ Module::CompileFile() {
 
     bool runPreprocessor = g->runCPP;
 
+    extern void ParserInit();
+    ParserInit();
+
     if (runPreprocessor) {
         if (filename != NULL) {
             // Try to open the file first, since otherwise we crash in the
@@ -227,13 +230,19 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
     }
 
     if (symbolTable->LookupFunction(sym->name.c_str())) {
-        Error(sym->pos, "Global variable \"%s\" shadows previously-declared function.",
-              sym->name.c_str());
+        Error(sym->pos, "Global variable \"%s\" shadows previously-declared "
+              "function.", sym->name.c_str());
         return;
     }
 
     if (sym->storageClass == SC_EXTERN_C) {
-        Error(sym->pos, "extern \"C\" qualifier can only be used for functions.");
+        Error(sym->pos, "extern \"C\" qualifier can only be used for "
+              "functions.");
+        return;
+    }
+
+    if (sym->type == AtomicType::Void) {
+        Error(sym->pos, "\"void\" type global variable is illegal.");
         return;
     }
 
@@ -1164,6 +1173,24 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
     inst.InitializeSourceManager(infilename);
+
+    // Don't remove comments in the preprocessor, so that we can accurately
+    // track the source file position by handling them ourselves.
+    inst.getPreprocessorOutputOpts().ShowComments = 1;
+
+    clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
+    headerOpts.UseBuiltinIncludes = 0;
+#ifndef LLVM_2_9
+    headerOpts.UseStandardSystemIncludes = 0;
+#endif // !LLVM_2_9
+    headerOpts.UseStandardCXXIncludes = 0;
+    if (g->debugPrint)
+        headerOpts.Verbose = 1;
+    for (int i = 0; i < (int)g->includePath.size(); ++i)
+        headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
+                           true /* is user supplied */,
+                           false /* not a framework */,
+                           true /* ignore sys root */);
 
     clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
 

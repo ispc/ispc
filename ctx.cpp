@@ -642,12 +642,12 @@ FunctionEmitContext::inSwitchStatement() const {
 
 void
 FunctionEmitContext::Break(bool doCoherenceCheck) {
-    Assert(controlFlowInfo.size() > 0);
     if (breakTarget == NULL) {
         Error(currentPos, "\"break\" statement is illegal outside of "
               "for/while/do loops and \"switch\" statements.");
         return;
     }
+    Assert(controlFlowInfo.size() > 0);
 
     if (bblock == NULL)
         return;
@@ -721,6 +721,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
               "for/while/do/foreach loops.");
         return;
     }
+    Assert(controlFlowInfo.size() > 0);
 
     if (ifsInCFAllUniform(CFInfo::Loop) || GetInternalMask() == LLVMMaskAllOn) {
         // Similarly to 'break' statements, we can immediately jump to the
@@ -1279,7 +1280,11 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
+#ifdef LLVM_3_1svn
+    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
+#else
     llvm::Constant *lstr = llvm::ConstantArray::get(*g->ctx, str);
+#endif
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
                                                     true /*isConst*/, 
@@ -1329,7 +1334,11 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
+#ifdef LLVM_3_1svn
+    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
+#else
     llvm::Constant *sConstant = llvm::ConstantArray::get(*g->ctx, s);
+#endif
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), 
                                                  true /* const */,
                                                  llvm::GlobalValue::InternalLinkage,
@@ -2923,7 +2932,7 @@ FunctionEmitContext::SyncInst() {
 
 
 /** When we gathering from or scattering to a varying atomic type, we need
-    to add an appropraite offset to the final address for each lane right
+    to add an appropriate offset to the final address for each lane right
     before we use it.  Given a varying pointer we're about to use and its
     type, this function determines whether these offsets are needed and
     returns an updated pointer that incorporates these offsets if needed.

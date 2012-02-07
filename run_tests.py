@@ -42,23 +42,19 @@ parser.add_option('-j', '--jobs', dest='num_jobs', help='Maximum number of jobs 
                   default="1024", type="int")
 parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output',
                   default=False, action="store_true")
-if not is_windows:
-    parser.add_option('--valgrind', dest='valgrind', help='Run tests with valgrind',
-                      default=False, action="store_true")
+parser.add_option('--wrap-exe', dest='wrapexe',
+                  help='Executable to wrap test runs with (e.g. "valgrind")',
+                  default="")
 
 (options, args) = parser.parse_args()
-
-if not is_windows and options.valgrind:
-    valgrind_exe = "valgrind "
-else:
-    valgrind_exe = ""
 
 if not is_windows:
     ispc_exe = "./ispc"
 else:
     ispc_exe = "../Release/ispc.exe"
 
-is_generic_target = options.target.find("generic-") != -1
+is_generic_target = (options.target.find("generic-") != -1 and
+                     options.target != "generic-1")
 if is_generic_target and options.include_file == None:
     if options.target == "generic-4":
         sys.stderr.write("No generics #include specified; using examples/intrinsics/sse4.h\n")
@@ -76,14 +72,31 @@ if options.compiler_exe == None:
     else:
         options.compiler_exe = "g++"
 
-# if no specific test files are specified, run all of the tests in tests/
-# and failing_tests/
+def fix_windows_paths(files):
+    ret = [ ]
+    for fn in files:
+        ret += [ string.replace(fn, '\\', '/') ]
+    return ret
+
+    
+# if no specific test files are specified, run all of the tests in tests/,
+# failing_tests/, and tests_errors/
 if len(args) == 0:
     files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc") + \
         glob.glob("tests_errors/*ispc")
+    files = fix_windows_paths(files)
 else:
+    if is_windows:
+        argfiles = [ ]
+        for f in args:
+            # we have to glob ourselves if this is being run under a DOS
+            # shell..
+            argfiles += glob.glob(f)
+    else:
+        argfiles = args
+        
     files = [ ]
-    for f in args:
+    for f in argfiles:
         if os.path.splitext(string.lower(f))[1] != ".ispc":
             sys.stdout.write("Ignoring file %s, which doesn't have an .ispc extension.\n" % f)
         else:
@@ -103,6 +116,7 @@ finished_tests_counter_lock = multiprocessing.Lock()
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
 def update_progress(fn):
+    global total_tests
     finished_tests_counter.value = finished_tests_counter.value + 1
     progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests, fn)
     # spaces to clear out detrius from previous printing...
@@ -211,7 +225,7 @@ def run_test(filename):
                   "in test %s\n" % filename)
             return (1, 0)
         else:
-            is_generic_target = options.target.find("generic-") != -1
+            global is_generic_target
             if is_generic_target:
                 obj_name = "%s.cpp" % filename
 
@@ -248,9 +262,8 @@ def run_test(filename):
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % options.include_file
 
         # compile the ispc code, make the executable, and run it...
-        global valgrind_exe
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
-                                              valgrind_exe + " " + exe_name, \
+                                              options.wrapexe + " " + exe_name, \
                                               filename, should_fail)
 
         # clean up after running the test

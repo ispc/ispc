@@ -941,10 +941,8 @@ static FORCEINLINE __vec4_i1 __not_equal(__vec4_i32 a, __vec4_i32 b) {
 }
 
 static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i32 a, __vec4_i32 b) {
-    a.v = _mm_xor_si128(a.v, _mm_set1_epi32(0x80000000));
-    b.v = _mm_xor_si128(b.v, _mm_set1_epi32(0x80000000));
-    return _mm_or_si128(_mm_cmplt_epi32(a.v, b.v),
-                        _mm_cmpeq_epi32(a.v, b.v));
+    // a<=b == (min(a,b) == a)
+    return _mm_cmpeq_epi32(_mm_min_epu32(a.v, b.v), a.v);
 }
 
 static FORCEINLINE __vec4_i1 __signed_less_equal(__vec4_i32 a, __vec4_i32 b) {
@@ -953,10 +951,8 @@ static FORCEINLINE __vec4_i1 __signed_less_equal(__vec4_i32 a, __vec4_i32 b) {
 }
 
 static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i32 a, __vec4_i32 b) {
-    a.v = _mm_xor_si128(a.v, _mm_set1_epi32(0x80000000));
-    b.v = _mm_xor_si128(b.v, _mm_set1_epi32(0x80000000));
-    return _mm_or_si128(_mm_cmpgt_epi32(a.v, b.v),
-                        _mm_cmpeq_epi32(a.v, b.v));
+    // a>=b == (max(a,b) == a)
+    return _mm_cmpeq_epi32(_mm_max_epu32(a.v, b.v), a.v);
 }
 
 static FORCEINLINE __vec4_i1 __signed_greater_equal(__vec4_i32 a, __vec4_i32 b) {

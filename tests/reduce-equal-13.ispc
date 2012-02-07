@@ -4,8 +4,8 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     int a = aFOO[programIndex&1];
     RET[programIndex] = 1;
-    uniform bool re;
-    uniform int val;
+    uniform bool re = false;
+    uniform int val = 16;
     if (programIndex & 1) {
         re = reduce_equal(a, &val);
     }
@@ -13,5 +13,5 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 258;
+    RET[programIndex] = (programCount == 1) ? 16 : 258;
 }

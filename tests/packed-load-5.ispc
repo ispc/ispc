@@ -15,8 +15,12 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 export void result(uniform float RET[]) {
-    for (uniform int i = 0; i < programCount/2; ++i) {
-        RET[2*i+1] = 10+i;
-        RET[2*i] = 10+programCount/2+i;
+    if (programCount == 1)
+        RET[0] = 10;
+    else {
+        for (uniform int i = 0; i < programCount/2; ++i) {
+            RET[2*i+1] = 10+i;
+            RET[2*i] = 10+programCount/2+i;
+        }
     }
 }

@@ -12,4 +12,4 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RET[programIndex] = m;
 }
 
-export void result(uniform float RET[]) { RET[programIndex] = 10 * programCount/4; }
+export void result(uniform float RET[]) { RET[programIndex] = (programCount == 1) ? 1 : (10 * programCount/4); }

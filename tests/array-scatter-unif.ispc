@@ -14,7 +14,9 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     
 export void result(uniform float RET[]) { 
-    if (programCount == 4)
+    if (programCount == 1)
+        RET[programIndex] = 0;
+    else if (programCount == 4)
         RET[programIndex] = 2;
     else
         RET[programIndex] = 4;

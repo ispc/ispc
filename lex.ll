@@ -50,20 +50,275 @@ static void lStringConst(YYSTYPE *, SourcePos *);
 static double lParseHexFloat(const char *ptr);
 
 #define YY_USER_ACTION \
-    yylloc->first_line = yylloc->last_line; \
-    yylloc->first_column = yylloc->last_column; \
-    yylloc->last_column += yyleng;
+    yylloc.first_line = yylloc.last_line; \
+    yylloc.first_column = yylloc.last_column; \
+    yylloc.last_column += yyleng;
 
 #ifdef ISPC_IS_WINDOWS
 inline int isatty(int) { return 0; }
 #endif // ISPC_IS_WINDOWS
 
+static int allTokens[] = { 
+  TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE, TOKEN_CBREAK,
+  TOKEN_CCONTINUE, TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
+  TOKEN_CONST, TOKEN_CONTINUE, TOKEN_CRETURN, TOKEN_DEFAULT, TOKEN_DO,
+  TOKEN_DELETE, TOKEN_DOUBLE, TOKEN_ELSE, TOKEN_ENUM,
+  TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FOR,
+  TOKEN_FOREACH, TOKEN_FOREACH_TILED, TOKEN_GOTO, TOKEN_IF, TOKEN_INLINE,
+  TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
+  TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
+  TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
+  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNSIGNED,
+  TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE, TOKEN_STRING_C_LITERAL,
+  TOKEN_DOTDOTDOT, 
+  TOKEN_FLOAT_CONSTANT,
+  TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT, 
+  TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT, 
+  TOKEN_INC_OP, TOKEN_DEC_OP, TOKEN_LEFT_OP, TOKEN_RIGHT_OP, TOKEN_LE_OP,
+  TOKEN_GE_OP, TOKEN_EQ_OP, TOKEN_NE_OP, TOKEN_AND_OP, TOKEN_OR_OP,
+  TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
+  TOKEN_SUB_ASSIGN, TOKEN_LEFT_ASSIGN, TOKEN_RIGHT_ASSIGN, TOKEN_AND_ASSIGN,
+  TOKEN_XOR_ASSIGN, TOKEN_OR_ASSIGN, TOKEN_PTR_OP,
+  ';', '{', '}', ',', ':', '=', '(', ')', '[', ']', '.', '&', '!', '~', '-',
+  '+', '*', '/', '%', '<', '>', '^', '|', '?',
+};
+
+std::map<int, std::string> tokenToName;
+std::map<std::string, std::string> tokenNameRemap;
+
+void ParserInit() {
+    tokenToName[TOKEN_ASSERT] = "assert";
+    tokenToName[TOKEN_BOOL] = "bool";
+    tokenToName[TOKEN_BREAK] = "break";
+    tokenToName[TOKEN_CASE] = "case";
+    tokenToName[TOKEN_CBREAK] = "cbreak";
+    tokenToName[TOKEN_CCONTINUE] = "ccontinue";
+    tokenToName[TOKEN_CDO] = "cdo";
+    tokenToName[TOKEN_CFOR] = "cfor";
+    tokenToName[TOKEN_CIF] = "cif";
+    tokenToName[TOKEN_CWHILE] = "cwhile";
+    tokenToName[TOKEN_CONST] = "const";
+    tokenToName[TOKEN_CONTINUE] = "continue";
+    tokenToName[TOKEN_CRETURN] = "creturn";
+    tokenToName[TOKEN_DEFAULT] = "default";
+    tokenToName[TOKEN_DO] = "do";
+    tokenToName[TOKEN_DELETE] = "delete";
+    tokenToName[TOKEN_DOUBLE] = "double";
+    tokenToName[TOKEN_ELSE] = "else";
+    tokenToName[TOKEN_ENUM] = "enum";
+    tokenToName[TOKEN_EXPORT] = "export";
+    tokenToName[TOKEN_EXTERN] = "extern";
+    tokenToName[TOKEN_FALSE] = "false";
+    tokenToName[TOKEN_FLOAT] = "float";
+    tokenToName[TOKEN_FOR] = "for";
+    tokenToName[TOKEN_FOREACH] = "foreach";
+    tokenToName[TOKEN_FOREACH_TILED] = "foreach_tiled";
+    tokenToName[TOKEN_GOTO] = "goto";
+    tokenToName[TOKEN_IF] = "if";
+    tokenToName[TOKEN_INLINE] = "inline";
+    tokenToName[TOKEN_INT] = "int";
+    tokenToName[TOKEN_INT8] = "int8";
+    tokenToName[TOKEN_INT16] = "int16";
+    tokenToName[TOKEN_INT] = "int";
+    tokenToName[TOKEN_INT64] = "int64";
+    tokenToName[TOKEN_LAUNCH] = "launch";
+    tokenToName[TOKEN_NEW] = "new";
+    tokenToName[TOKEN_NULL] = "NULL";
+    tokenToName[TOKEN_PRINT] = "print";
+    tokenToName[TOKEN_RETURN] = "return";
+    tokenToName[TOKEN_SOA] = "soa";
+    tokenToName[TOKEN_SIGNED] = "signed";
+    tokenToName[TOKEN_SIZEOF] = "sizeof";
+    tokenToName[TOKEN_STATIC] = "static";
+    tokenToName[TOKEN_STRUCT] = "struct";
+    tokenToName[TOKEN_SWITCH] = "switch";
+    tokenToName[TOKEN_SYNC] = "sync";
+    tokenToName[TOKEN_TASK] = "task";
+    tokenToName[TOKEN_TRUE] = "true";
+    tokenToName[TOKEN_TYPEDEF] = "typedef";
+    tokenToName[TOKEN_UNIFORM] = "uniform";
+    tokenToName[TOKEN_UNSIGNED] = "unsigned";
+    tokenToName[TOKEN_VARYING] = "varying";
+    tokenToName[TOKEN_VOID] = "void";
+    tokenToName[TOKEN_WHILE] = "while";
+    tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
+    tokenToName[TOKEN_DOTDOTDOT] = "...";
+    tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
+    tokenToName[TOKEN_INT32_CONSTANT] = "TOKEN_INT32_CONSTANT";
+    tokenToName[TOKEN_UINT32_CONSTANT] = "TOKEN_UINT32_CONSTANT";
+    tokenToName[TOKEN_INT64_CONSTANT] = "TOKEN_INT64_CONSTANT";
+    tokenToName[TOKEN_UINT64_CONSTANT] = "TOKEN_UINT64_CONSTANT";
+    tokenToName[TOKEN_INC_OP] = "++";
+    tokenToName[TOKEN_DEC_OP] = "--";
+    tokenToName[TOKEN_LEFT_OP] = "<<";
+    tokenToName[TOKEN_RIGHT_OP] = ">>";
+    tokenToName[TOKEN_LE_OP] = "<=";
+    tokenToName[TOKEN_GE_OP] = ">=";
+    tokenToName[TOKEN_EQ_OP] = "==";
+    tokenToName[TOKEN_NE_OP] = "!=";
+    tokenToName[TOKEN_AND_OP] = "&&";
+    tokenToName[TOKEN_OR_OP] = "||";
+    tokenToName[TOKEN_MUL_ASSIGN] = "*=";
+    tokenToName[TOKEN_DIV_ASSIGN] = "/=";
+    tokenToName[TOKEN_MOD_ASSIGN] = "%=";
+    tokenToName[TOKEN_ADD_ASSIGN] = "+=";
+    tokenToName[TOKEN_SUB_ASSIGN] = "-=";
+    tokenToName[TOKEN_LEFT_ASSIGN] = "<<=";
+    tokenToName[TOKEN_RIGHT_ASSIGN] = ">>=";
+    tokenToName[TOKEN_AND_ASSIGN] = "&=";
+    tokenToName[TOKEN_XOR_ASSIGN] = "^=";
+    tokenToName[TOKEN_OR_ASSIGN] = "|=";
+    tokenToName[TOKEN_PTR_OP] = "->";
+    tokenToName[';'] = ";";
+    tokenToName['{'] = "{";
+    tokenToName['}'] = "}";
+    tokenToName[','] = ",";
+    tokenToName[':'] = ":";
+    tokenToName['='] = "=";
+    tokenToName['('] = "(";
+    tokenToName[')'] = ")";
+    tokenToName['['] = "[";
+    tokenToName[']'] = "]";
+    tokenToName['.'] = ".";
+    tokenToName['&'] = "&";
+    tokenToName['!'] = "!";
+    tokenToName['~'] = "~";
+    tokenToName['-'] = "-";
+    tokenToName['+'] = "+";
+    tokenToName['*'] = "*";
+    tokenToName['/'] = "/";
+    tokenToName['%'] = "%";
+    tokenToName['<'] = "<";
+    tokenToName['>'] = ">";
+    tokenToName['^'] = "^";
+    tokenToName['|'] = "|";
+    tokenToName['?'] = "?";
+    tokenToName[';'] = ";";
+
+    tokenNameRemap["TOKEN_ASSERT"] = "\'assert\'";
+    tokenNameRemap["TOKEN_BOOL"] = "\'bool\'";
+    tokenNameRemap["TOKEN_BREAK"] = "\'break\'";
+    tokenNameRemap["TOKEN_CASE"] = "\'case\'";
+    tokenNameRemap["TOKEN_CBREAK"] = "\'cbreak\'";
+    tokenNameRemap["TOKEN_CCONTINUE"] = "\'ccontinue\'";
+    tokenNameRemap["TOKEN_CDO"] = "\'cdo\'";
+    tokenNameRemap["TOKEN_CFOR"] = "\'cfor\'";
+    tokenNameRemap["TOKEN_CIF"] = "\'cif\'";
+    tokenNameRemap["TOKEN_CWHILE"] = "\'cwhile\'";
+    tokenNameRemap["TOKEN_CONST"] = "\'const\'";
+    tokenNameRemap["TOKEN_CONTINUE"] = "\'continue\'";
+    tokenNameRemap["TOKEN_CRETURN"] = "\'creturn\'";
+    tokenNameRemap["TOKEN_DEFAULT"] = "\'default\'";
+    tokenNameRemap["TOKEN_DO"] = "\'do\'";
+    tokenNameRemap["TOKEN_DELETE"] = "\'delete\'";
+    tokenNameRemap["TOKEN_DOUBLE"] = "\'double\'";
+    tokenNameRemap["TOKEN_ELSE"] = "\'else\'";
+    tokenNameRemap["TOKEN_ENUM"] = "\'enum\'";
+    tokenNameRemap["TOKEN_EXPORT"] = "\'export\'";
+    tokenNameRemap["TOKEN_EXTERN"] = "\'extern\'";
+    tokenNameRemap["TOKEN_FALSE"] = "\'false\'";
+    tokenNameRemap["TOKEN_FLOAT"] = "\'float\'";
+    tokenNameRemap["TOKEN_FOR"] = "\'for\'";
+    tokenNameRemap["TOKEN_FOREACH"] = "\'foreach\'";
+    tokenNameRemap["TOKEN_FOREACH_TILED"] = "\'foreach_tiled\'";
+    tokenNameRemap["TOKEN_GOTO"] = "\'goto\'";
+    tokenNameRemap["TOKEN_IDENTIFIER"] = "identifier";
+    tokenNameRemap["TOKEN_IF"] = "\'if\'";
+    tokenNameRemap["TOKEN_INLINE"] = "\'inline\'";
+    tokenNameRemap["TOKEN_INT"] = "\'int\'";
+    tokenNameRemap["TOKEN_INT8"] = "\'int8\'";
+    tokenNameRemap["TOKEN_INT16"] = "\'int16\'";
+    tokenNameRemap["TOKEN_INT"] = "\'int\'";
+    tokenNameRemap["TOKEN_INT64"] = "\'int64\'";
+    tokenNameRemap["TOKEN_LAUNCH"] = "\'launch\'";
+    tokenNameRemap["TOKEN_NEW"] = "\'new\'";
+    tokenNameRemap["TOKEN_NULL"] = "\'NULL\'";
+    tokenNameRemap["TOKEN_PRINT"] = "\'print\'";
+    tokenNameRemap["TOKEN_RETURN"] = "\'return\'";
+    tokenNameRemap["TOKEN_SOA"] = "\'soa\'";
+    tokenNameRemap["TOKEN_SIGNED"] = "\'signed\'";
+    tokenNameRemap["TOKEN_SIZEOF"] = "\'sizeof\'";
+    tokenNameRemap["TOKEN_STATIC"] = "\'static\'";
+    tokenNameRemap["TOKEN_STRUCT"] = "\'struct\'";
+    tokenNameRemap["TOKEN_SWITCH"] = "\'switch\'";
+    tokenNameRemap["TOKEN_SYNC"] = "\'sync\'";
+    tokenNameRemap["TOKEN_TASK"] = "\'task\'";
+    tokenNameRemap["TOKEN_TRUE"] = "\'true\'";
+    tokenNameRemap["TOKEN_TYPEDEF"] = "\'typedef\'";
+    tokenNameRemap["TOKEN_UNIFORM"] = "\'uniform\'";
+    tokenNameRemap["TOKEN_UNSIGNED"] = "\'unsigned\'";
+    tokenNameRemap["TOKEN_VARYING"] = "\'varying\'";
+    tokenNameRemap["TOKEN_VOID"] = "\'void\'";
+    tokenNameRemap["TOKEN_WHILE"] = "\'while\'";
+    tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
+    tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
+    tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
+    tokenNameRemap["TOKEN_INT32_CONSTANT"] = "int32 constant";
+    tokenNameRemap["TOKEN_UINT32_CONSTANT"] = "unsigned int32 constant";
+    tokenNameRemap["TOKEN_INT64_CONSTANT"] = "int64 constant";
+    tokenNameRemap["TOKEN_UINT64_CONSTANT"] = "unsigned int64 constant";
+    tokenNameRemap["TOKEN_INC_OP"] = "\'++\'";
+    tokenNameRemap["TOKEN_DEC_OP"] = "\'--\'";
+    tokenNameRemap["TOKEN_LEFT_OP"] = "\'<<\'";
+    tokenNameRemap["TOKEN_RIGHT_OP"] = "\'>>\'";
+    tokenNameRemap["TOKEN_LE_OP"] = "\'<=\'";
+    tokenNameRemap["TOKEN_GE_OP"] = "\'>=\'";
+    tokenNameRemap["TOKEN_EQ_OP"] = "\'==\'";
+    tokenNameRemap["TOKEN_NE_OP"] = "\'!=\'";
+    tokenNameRemap["TOKEN_AND_OP"] = "\'&&\'";
+    tokenNameRemap["TOKEN_OR_OP"] = "\'||\'";
+    tokenNameRemap["TOKEN_MUL_ASSIGN"] = "\'*=\'";
+    tokenNameRemap["TOKEN_DIV_ASSIGN"] = "\'/=\'";
+    tokenNameRemap["TOKEN_MOD_ASSIGN"] = "\'%=\'";
+    tokenNameRemap["TOKEN_ADD_ASSIGN"] = "\'+=\'";
+    tokenNameRemap["TOKEN_SUB_ASSIGN"] = "\'-=\'";
+    tokenNameRemap["TOKEN_LEFT_ASSIGN"] = "\'<<=\'";
+    tokenNameRemap["TOKEN_RIGHT_ASSIGN"] = "\'>>=\'";
+    tokenNameRemap["TOKEN_AND_ASSIGN"] = "\'&=\'";
+    tokenNameRemap["TOKEN_XOR_ASSIGN"] = "\'^=\'";
+    tokenNameRemap["TOKEN_OR_ASSIGN"] = "\'|=\'";
+    tokenNameRemap["TOKEN_PTR_OP"] = "\'->\'";
+    tokenNameRemap["$end"] = "end of file";
+}
+
+
+inline int ispcRand() {
+#ifdef ISPC_IS_WINDOWS
+    return rand();
+#else
+    return lrand48();
+#endif
+}
+
+#define RT \
+    if (g->enableFuzzTest) { \
+        int r = ispcRand() % 40; \
+        if (r == 0) { \
+            Warning(yylloc, "Fuzz test dropping token"); \
+        } \
+        else if (r == 1) { \
+            Assert (tokenToName.size() > 0); \
+            int nt = sizeof(allTokens) / sizeof(allTokens[0]); \
+            int tn = ispcRand() % nt; \
+            yylval.stringVal = new std::string(yytext); /* just in case */\
+            Warning(yylloc, "Fuzz test replaced token with \"%s\"", tokenToName[allTokens[tn]].c_str()); \
+            return allTokens[tn]; \
+        } \
+        else if (r == 2) { \
+            Symbol *sym = m->symbolTable->RandomSymbol(); \
+            if (sym != NULL) { \
+                yylval.stringVal = new std::string(sym->name); \
+                Warning(yylloc, "Fuzz test replaced with identifier \"%s\".", sym->name.c_str()); \
+                return TOKEN_IDENTIFIER; \
+            } \
+        } \
+        /*  TOKEN_TYPE_NAME */ \
+     } else /* swallow semicolon */
+
 %}
 
 %option nounput
 %option noyywrap
-%option bison-bridge
-%option bison-locations
 %option nounistd
 
 WHITESPACE [ \t\r]+
@@ -75,73 +330,77 @@ IDENT [a-zA-Z_][a-zA-Z_0-9]*
 ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
 
 %%
-"/*"            { lCComment(yylloc); }
-"//"            { lCppComment(yylloc); }
+"/*"            { lCComment(&yylloc); }
+"//"            { lCppComment(&yylloc); }
 
-__assert { return TOKEN_ASSERT; }
-bool { return TOKEN_BOOL; }
-break { return TOKEN_BREAK; }
-case { return TOKEN_CASE; }
-cbreak { return TOKEN_CBREAK; }
-ccontinue { return TOKEN_CCONTINUE; }
-cdo { return TOKEN_CDO; }
-cfor { return TOKEN_CFOR; }
-cif { return TOKEN_CIF; }
-cwhile { return TOKEN_CWHILE; }
-const { return TOKEN_CONST; }
-continue { return TOKEN_CONTINUE; }
-creturn { return TOKEN_CRETURN; }
-default { return TOKEN_DEFAULT; }
-do { return TOKEN_DO; }
-double { return TOKEN_DOUBLE; }
-else { return TOKEN_ELSE; }
-enum { return TOKEN_ENUM; }
-export { return TOKEN_EXPORT; }
-extern { return TOKEN_EXTERN; }
-false { return TOKEN_FALSE; }
-float { return TOKEN_FLOAT; }
-for { return TOKEN_FOR; }
-foreach { return TOKEN_FOREACH; }
-foreach_tiled { return TOKEN_FOREACH_TILED; }
-goto { return TOKEN_GOTO; }
-if { return TOKEN_IF; }
-inline { return TOKEN_INLINE; }
-int { return TOKEN_INT; }
-int8 { return TOKEN_INT8; }
-int16 { return TOKEN_INT16; }
-int32 { return TOKEN_INT; }
-int64 { return TOKEN_INT64; }
-launch { return TOKEN_LAUNCH; }
-NULL { return TOKEN_NULL; }
-print { return TOKEN_PRINT; }
-reference { Error(*yylloc, "\"reference\" qualifier is no longer supported; "
-                           "please use C++-style '&' syntax for references "
-                           "instead."); }
-return { return TOKEN_RETURN; }
-soa { return TOKEN_SOA; }
-signed { return TOKEN_SIGNED; }
-sizeof { return TOKEN_SIZEOF; }
-static { return TOKEN_STATIC; }
-struct { return TOKEN_STRUCT; }
-switch { return TOKEN_SWITCH; }
-sync { return TOKEN_SYNC; }
-task { return TOKEN_TASK; }
-true { return TOKEN_TRUE; }
-typedef { return TOKEN_TYPEDEF; }
-uniform { return TOKEN_UNIFORM; }
-unsigned { return TOKEN_UNSIGNED; }
-varying { return TOKEN_VARYING; }
-void { return TOKEN_VOID; }
-while { return TOKEN_WHILE; }
-\"C\" { return TOKEN_STRING_C_LITERAL; }
-\.\.\. { return TOKEN_DOTDOTDOT; }
+__assert { RT; return TOKEN_ASSERT; }
+bool { RT; return TOKEN_BOOL; }
+break { RT; return TOKEN_BREAK; }
+case { RT; return TOKEN_CASE; }
+cbreak { RT; return TOKEN_CBREAK; }
+ccontinue { RT; return TOKEN_CCONTINUE; }
+cdo { RT; return TOKEN_CDO; }
+cfor { RT; return TOKEN_CFOR; }
+cif { RT; return TOKEN_CIF; }
+cwhile { RT; return TOKEN_CWHILE; }
+const { RT; return TOKEN_CONST; }
+continue { RT; return TOKEN_CONTINUE; }
+creturn { RT; return TOKEN_CRETURN; }
+default { RT; return TOKEN_DEFAULT; }
+do { RT; return TOKEN_DO; }
+delete { RT; return TOKEN_DELETE; }
+delete\[\] { RT; return TOKEN_DELETE; }
+double { RT; return TOKEN_DOUBLE; }
+else { RT; return TOKEN_ELSE; }
+enum { RT; return TOKEN_ENUM; }
+export { RT; return TOKEN_EXPORT; }
+extern { RT; return TOKEN_EXTERN; }
+false { RT; return TOKEN_FALSE; }
+float { RT; return TOKEN_FLOAT; }
+for { RT; return TOKEN_FOR; }
+foreach { RT; return TOKEN_FOREACH; }
+foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
+goto { RT; return TOKEN_GOTO; }
+if { RT; return TOKEN_IF; }
+inline { RT; return TOKEN_INLINE; }
+int { RT; return TOKEN_INT; }
+int8 { RT; return TOKEN_INT8; }
+int16 { RT; return TOKEN_INT16; }
+int32 { RT; return TOKEN_INT; }
+int64 { RT; return TOKEN_INT64; }
+launch { RT; return TOKEN_LAUNCH; }
+new { RT; return TOKEN_NEW; }
+NULL { RT; return TOKEN_NULL; }
+print { RT; return TOKEN_PRINT; }
+reference { Error(yylloc, "\"reference\" qualifier is no longer supported; "
+                          "please use C++-style '&' syntax for references "
+                          "instead."); }
+return { RT; return TOKEN_RETURN; }
+soa { RT; return TOKEN_SOA; }
+signed { RT; return TOKEN_SIGNED; }
+sizeof { RT; return TOKEN_SIZEOF; }
+static { RT; return TOKEN_STATIC; }
+struct { RT; return TOKEN_STRUCT; }
+switch { RT; return TOKEN_SWITCH; }
+sync { RT; return TOKEN_SYNC; }
+task { RT; return TOKEN_TASK; }
+true { RT; return TOKEN_TRUE; }
+typedef { RT; return TOKEN_TYPEDEF; }
+uniform { RT; return TOKEN_UNIFORM; }
+unsigned { RT; return TOKEN_UNSIGNED; }
+varying { RT; return TOKEN_VARYING; }
+void { RT; return TOKEN_VOID; }
+while { RT; return TOKEN_WHILE; }
+\"C\" { RT; return TOKEN_STRING_C_LITERAL; }
+\.\.\. { RT; return TOKEN_DOTDOTDOT; }
 
-L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL; }
+L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
 {IDENT} { 
+    RT;
     /* We have an identifier--is it a type name or an identifier?
        The symbol table will straighten us out... */
-    yylval->stringVal = new std::string(yytext);
+    yylval.stringVal = new std::string(yytext);
     if (m->symbolTable->LookupType(yytext) != NULL)
         return TOKEN_TYPE_NAME;
     else
@@ -149,18 +408,19 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 }
 
 {INT_NUMBER}+(u|U|l|L)*? { 
+    RT;
     int ls = 0, us = 0;
 
     char *endPtr = NULL;
     if (yytext[0] == '0' && yytext[1] == 'b')
-        yylval->intVal = lParseBinary(yytext+2, *yylloc, &endPtr);
+        yylval.intVal = lParseBinary(yytext+2, yylloc, &endPtr);
     else {
 #if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
-        yylval->intVal = _strtoi64(yytext, &endPtr, 0);
+        yylval.intVal = _strtoui64(yytext, &endPtr, 0);
 #else
         // FIXME: should use strtouq and then issue an error if we can't
         // fit into 64 bits...
-        yylval->intVal = strtoull(yytext, &endPtr, 0);
+        yylval.intVal = strtoull(yytext, &endPtr, 0);
 #endif
     }
 
@@ -178,11 +438,11 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
             us++;
     }
     if (kilo)
-        yylval->intVal *= 1024;
+        yylval.intVal *= 1024;
     if (mega)
-        yylval->intVal *= 1024*1024;
+        yylval.intVal *= 1024*1024;
     if (giga)
-        yylval->intVal *= 1024*1024*1024;
+        yylval.intVal *= 1024*1024*1024;
 
     if (ls >= 2)
         return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
@@ -190,7 +450,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
         return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
 
     // See if we can fit this into a 32-bit integer...
-    if ((yylval->intVal & 0xffffffff) == yylval->intVal)
+    if ((yylval.intVal & 0xffffffff) == yylval.intVal)
         return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
     else
         return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
@@ -198,74 +458,76 @@ L?\"(\\.|[^\\"])*\" { lStringConst(yylval, yylloc); return TOKEN_STRING_LITERAL;
 
 
 {FLOAT_NUMBER} { 
-    yylval->floatVal = (float)atof(yytext); 
+    RT;
+    yylval.floatVal = (float)atof(yytext);
     return TOKEN_FLOAT_CONSTANT; 
 }
 
 {HEX_FLOAT_NUMBER} {
-    yylval->floatVal = (float)lParseHexFloat(yytext); 
+    RT;
+    yylval.floatVal = (float)lParseHexFloat(yytext); 
     return TOKEN_FLOAT_CONSTANT; 
 }
 
-"++" { return TOKEN_INC_OP; }
-"--" { return TOKEN_DEC_OP; }
-"<<" { return TOKEN_LEFT_OP; }
-">>" { return TOKEN_RIGHT_OP; }
-"<=" { return TOKEN_LE_OP; }
-">=" { return TOKEN_GE_OP; }
-"==" { return TOKEN_EQ_OP; }
-"!=" { return TOKEN_NE_OP; }
-"&&" { return TOKEN_AND_OP; }
-"||" { return TOKEN_OR_OP; }
-"*=" { return TOKEN_MUL_ASSIGN; }
-"/=" { return TOKEN_DIV_ASSIGN; }
-"%=" { return TOKEN_MOD_ASSIGN; }
-"+=" { return TOKEN_ADD_ASSIGN; }
-"-=" { return TOKEN_SUB_ASSIGN; }
-"<<=" { return TOKEN_LEFT_ASSIGN; }
-">>=" { return TOKEN_RIGHT_ASSIGN; }
-"&=" { return TOKEN_AND_ASSIGN; }
-"^=" { return TOKEN_XOR_ASSIGN; }
-"|=" { return TOKEN_OR_ASSIGN; }
-"->" { return TOKEN_PTR_OP; }
-";"             { return ';'; }
-("{"|"<%")      { return '{'; }
-("}"|"%>")      { return '}'; }
-","             { return ','; }
-":"             { return ':'; }
-"="             { return '='; }
-"("             { return '('; }
-")"             { return ')'; }
-("["|"<:")      { return '['; }
-("]"|":>")      { return ']'; }
-"."             { return '.'; }
-"&"             { return '&'; }
-"!"             { return '!'; }
-"~"             { return '~'; }
-"-"             { return '-'; }
-"+"             { return '+'; }
-"*"             { return '*'; }
-"/"             { return '/'; }
-"%"             { return '%'; }
-"<"             { return '<'; }
-">"             { return '>'; }
-"^"             { return '^'; }
-"|"             { return '|'; }
-"?"             { return '?'; }
+"++" { RT; return TOKEN_INC_OP; }
+"--" { RT; return TOKEN_DEC_OP; }
+"<<" { RT; return TOKEN_LEFT_OP; }
+">>" { RT; return TOKEN_RIGHT_OP; }
+"<=" { RT; return TOKEN_LE_OP; }
+">=" { RT; return TOKEN_GE_OP; }
+"==" { RT; return TOKEN_EQ_OP; }
+"!=" { RT; return TOKEN_NE_OP; }
+"&&" { RT; return TOKEN_AND_OP; }
+"||" { RT; return TOKEN_OR_OP; }
+"*=" { RT; return TOKEN_MUL_ASSIGN; }
+"/=" { RT; return TOKEN_DIV_ASSIGN; }
+"%=" { RT; return TOKEN_MOD_ASSIGN; }
+"+=" { RT; return TOKEN_ADD_ASSIGN; }
+"-=" { RT; return TOKEN_SUB_ASSIGN; }
+"<<=" { RT; return TOKEN_LEFT_ASSIGN; }
+">>=" { RT; return TOKEN_RIGHT_ASSIGN; }
+"&=" { RT; return TOKEN_AND_ASSIGN; }
+"^=" { RT; return TOKEN_XOR_ASSIGN; }
+"|=" { RT; return TOKEN_OR_ASSIGN; }
+"->" { RT; return TOKEN_PTR_OP; }
+";"             { RT; return ';'; }
+("{"|"<%")      { RT; return '{'; }
+("}"|"%>")      { RT; return '}'; }
+","             { RT; return ','; }
+":"             { RT; return ':'; }
+"="             { RT; return '='; }
+"("             { RT; return '('; }
+")"             { RT; return ')'; }
+("["|"<:")      { RT; return '['; }
+("]"|":>")      { RT; return ']'; }
+"."             { RT; return '.'; }
+"&"             { RT; return '&'; }
+"!"             { RT; return '!'; }
+"~"             { RT; return '~'; }
+"-"             { RT; return '-'; }
+"+"             { RT; return '+'; }
+"*"             { RT; return '*'; }
+"/"             { RT; return '/'; }
+"%"             { RT; return '%'; }
+"<"             { RT; return '<'; }
+">"             { RT; return '>'; }
+"^"             { RT; return '^'; }
+"|"             { RT; return '|'; }
+"?"             { RT; return '?'; }
 
 {WHITESPACE} { }
 
 \n {
-    yylloc->last_line++; 
-    yylloc->last_column = 1; 
+    yylloc.last_line++; 
+    yylloc.last_column = 1; 
 }
 
 #(line)?[ ][0-9]+[ ]\"(\\.|[^\\"])*\"[^\n]* { 
-    lHandleCppHash(yylloc); 
+    lHandleCppHash(&yylloc); 
 }
 
 . {
-    Error(*yylloc, "Illegal character: %c (0x%x)", yytext[0], int(yytext[0]));
+    Error(yylloc, "Illegal character: %c (0x%x)", yytext[0], int(yytext[0]));
     YY_USER_ACTION 
 }
 
@@ -306,8 +568,10 @@ lParseBinary(const char *ptr, SourcePos pos, char **endPtr) {
 static void
 lCComment(SourcePos *pos) {
     char c, prev = 0;
-  
+
     while ((c = yyinput()) != 0) {
+        ++pos->last_column;
+
         if (c == '\n') {
             pos->last_line++;
             pos->last_column = 1;
