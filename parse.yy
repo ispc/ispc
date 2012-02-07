@@ -333,7 +333,10 @@ argument_expression_list
     | argument_expression_list ',' assignment_expression
       {
           ExprList *argList = dynamic_cast<ExprList *>($1);
-          Assert(argList != NULL);
+          if (argList == NULL) {
+              Assert(m->errorCount > 0);
+              argList = new ExprList(@3);
+          }
           argList->exprs.push_back($3);
           argList->pos = Union(argList->pos, @3);
           $$ = argList;
@@ -462,8 +465,8 @@ rate_qualified_new
 
 rate_qualified_new_type
     : type_specifier { $$ = $1; }
-    | TOKEN_UNIFORM type_specifier { $$ = $2->GetAsUniformType(); }
-    | TOKEN_VARYING type_specifier { $$ = $2->GetAsVaryingType(); }
+    | TOKEN_UNIFORM type_specifier { $$ = $2 ? $2->GetAsUniformType() : NULL; }
+    | TOKEN_VARYING type_specifier { $$ = $2 ? $2->GetAsVaryingType() : NULL; }
     ;
 
 new_expression
@@ -631,15 +634,20 @@ init_declarator_list
     : init_declarator
       {
           std::vector<Declarator *> *dl = new std::vector<Declarator *>;
-          dl->push_back($1);
+          if ($1 != NULL)
+              dl->push_back($1);
           $$ = dl;
       }
     | init_declarator_list ',' init_declarator
       {
           std::vector<Declarator *> *dl = (std::vector<Declarator *> *)$1;
-          if (dl != NULL && $3 != NULL)
+          if (dl == NULL) {
+              Assert(m->errorCount > 0);
+              dl = new std::vector<Declarator *>;
+          }
+          if ($3 != NULL)
               dl->push_back($3);
-          $$ = $1;
+          $$ = dl;
       }
     ;
 
@@ -664,9 +672,10 @@ storage_class_specifier
 type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
-      { const Type *t = m->symbolTable->LookupType(yytext); 
+    {
+        const Type *t = m->symbolTable->LookupType(yytext); 
         $$ = t;
-      }
+    }
     | struct_or_union_specifier { $$ = $1; }
     | enum_specifier { $$ = $1; }
     ;
@@ -684,41 +693,47 @@ atomic_var_type_specifier
 
 short_vec_specifier
     : atomic_var_type_specifier '<' int_constant '>'
-      {
-        Type* vt = 
-          new VectorType($1, (int32_t)$3);
-        $$ = vt;
-      }
+    {
+        $$ = $1 ? new VectorType($1, (int32_t)$3) : NULL;
+    }
     ;
 
 struct_or_union_name
     : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
-    | TOKEN_TYPE_NAME { $$ = strdup(yytext); }
+    | TOKEN_TYPE_NAME  { $$ = strdup(yytext); }
     ;
 
 struct_or_union_specifier
     : struct_or_union struct_or_union_name '{' struct_declaration_list '}' 
-      { 
-          std::vector<const Type *> elementTypes;
-          std::vector<std::string> elementNames;
-          std::vector<SourcePos> elementPositions;
-          GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
-                                       &elementPositions);
-          StructType *st = new StructType($2, elementTypes, elementNames,
-                                          elementPositions, false, Type::Unbound, @2);
-          m->symbolTable->AddType($2, st, @2);
-          $$ = st;
+      {
+          if ($4 != NULL) {
+              std::vector<const Type *> elementTypes;
+              std::vector<std::string> elementNames;
+              std::vector<SourcePos> elementPositions;
+              GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
+                                           &elementPositions);
+              StructType *st = new StructType($2, elementTypes, elementNames,
+                                              elementPositions, false, Type::Unbound, @2);
+              m->symbolTable->AddType($2, st, @2);
+              $$ = st;
+          }
+          else
+              $$ = NULL;
       }
     | struct_or_union '{' struct_declaration_list '}' 
       {
-          std::vector<const Type *> elementTypes;
-          std::vector<std::string> elementNames;
-          std::vector<SourcePos> elementPositions;
-          GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
-                                       &elementPositions);
-          // FIXME: should be unbound
-          $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                              false, Type::Unbound, @1);
+          if ($3 != NULL) {
+              std::vector<const Type *> elementTypes;
+              std::vector<std::string> elementNames;
+              std::vector<SourcePos> elementPositions;
+              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
+                                           &elementPositions);
+              // FIXME: should be unbound
+              $$ = new StructType("", elementTypes, elementNames, elementPositions,
+                                  false, Type::Unbound, @1);
+          }
+          else
+              $$ = NULL;
       }
     | struct_or_union '{' '}' 
       {
@@ -729,16 +744,17 @@ struct_or_union_specifier
           Error(@1, "Empty struct definitions not allowed."); 
       }
     | struct_or_union struct_or_union_name
-      { const Type *st = m->symbolTable->LookupType($2); 
-        if (!st) {
-            std::vector<std::string> alternates = m->symbolTable->ClosestTypeMatch($2);
-            std::string alts = lGetAlternates(alternates);
-            Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
-        }
-        else if (dynamic_cast<const StructType *>(st) == NULL)
-            Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
-                  st->GetString().c_str());
-        $$ = st;
+      { 
+          const Type *st = m->symbolTable->LookupType($2); 
+          if (!st) {
+              std::vector<std::string> alternates = m->symbolTable->ClosestTypeMatch($2);
+              std::string alts = lGetAlternates(alternates);
+              Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
+          }
+          else if (dynamic_cast<const StructType *>(st) == NULL)
+              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
+                    st->GetString().c_str());
+          $$ = st;
       }
     ;
 
@@ -750,22 +766,26 @@ struct_declaration_list
     : struct_declaration 
       { 
           std::vector<StructDeclaration *> *sdl = new std::vector<StructDeclaration *>;
-          if (sdl != NULL && $1 != NULL)
+          if ($1 != NULL)
               sdl->push_back($1);
           $$ = sdl;
       }
     | struct_declaration_list struct_declaration 
       {
           std::vector<StructDeclaration *> *sdl = (std::vector<StructDeclaration *> *)$1;
-          if (sdl != NULL && $2 != NULL)
+          if (sdl == NULL) {
+              Assert(m->errorCount > 0);
+              sdl = new std::vector<StructDeclaration *>;
+          }
+          if ($2 != NULL)
               sdl->push_back($2);
-          $$ = $1;
+          $$ = sdl;
       }
     ;
 
 struct_declaration
     : specifier_qualifier_list struct_declarator_list ';' 
-      { $$ = new StructDeclaration($1, $2); }
+      { $$ = ($1 != NULL && $2 != NULL) ? new StructDeclaration($1, $2) : NULL; }
     ;
 
 specifier_qualifier_list
@@ -831,9 +851,13 @@ struct_declarator_list
     | struct_declarator_list ',' struct_declarator 
       {
           std::vector<Declarator *> *sdl = (std::vector<Declarator *> *)$1;
-          if (sdl != NULL && $3 != NULL)
+          if (sdl == NULL) {
+              Assert(m->errorCount > 0);
+              sdl = new std::vector<Declarator *>;
+          }
+          if ($3 != NULL)
               sdl->push_back($3);
-          $$ = $1;
+          $$ = sdl;
       }
     ;
 
@@ -900,9 +924,14 @@ enumerator_list
       }
     | enumerator_list ',' enumerator
       {
-          if ($1 != NULL && $3 != NULL)
-              $1->push_back($3);
-          $$ = $1;
+          std::vector<Symbol *> *symList = $1;
+          if (symList == NULL) {
+              Assert(m->errorCount > 0);
+              symList = new std::vector<Symbol *>;
+          }
+          if ($3 != NULL)
+              symList->push_back($3);
+          $$ = symList;
       }
     ;
 
@@ -950,19 +979,27 @@ type_qualifier_list
 declarator
     : pointer direct_declarator
     {
-        Declarator *tail = $1;
-        while (tail->child != NULL)
-           tail = tail->child;
-        tail->child = $2;
-        $$ = $1;
+        if ($1 != NULL) {
+            Declarator *tail = $1;
+            while (tail->child != NULL)
+               tail = tail->child;
+            tail->child = $2;
+            $$ = $1;
+        }
+        else
+            $$ = NULL;
     }
     | reference direct_declarator
     {
-        Declarator *tail = $1;
-        while (tail->child != NULL)
-           tail = tail->child;
-        tail->child = $2;
-        $$ = $1;
+        if ($1 != NULL) {
+            Declarator *tail = $1;
+            while (tail->child != NULL)
+               tail = tail->child;
+            tail->child = $2;
+            $$ = $1;
+        }
+        else
+            $$ = NULL;
     }
     | direct_declarator
     ;
@@ -1016,7 +1053,8 @@ direct_declarator
           if ($1 != NULL) {
               Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
               d->child = $1;
-              if ($3 != NULL) d->functionParams = *$3;
+              if ($3 != NULL)
+                  d->functionParams = *$3;
               $$ = d;
           }
           else
@@ -1086,7 +1124,6 @@ parameter_list
     {
         std::vector<Declaration *> *dl = (std::vector<Declaration *> *)$1;
         if (dl == NULL)
-            // dl may be NULL due to an earlier parse error...
             dl = new std::vector<Declaration *>;
         if ($3 != NULL)
             dl->push_back($3);
@@ -1118,18 +1155,26 @@ parameter_declaration
     }
     | declaration_specifiers declarator '=' initializer
     { 
-        if ($2 != NULL)
+        if ($1 != NULL && $2 != NULL) {
             $2->initExpr = $4;
-        $$ = new Declaration($1, $2); 
-
+            $$ = new Declaration($1, $2);
+        }
+        else
+            $$ = NULL;
     }
     | declaration_specifiers abstract_declarator
     {
-        $$ = new Declaration($1, $2);
+        if ($1 != NULL && $2 != NULL)
+            $$ = new Declaration($1, $2);
+        else
+            $$ = NULL;
     }
     | declaration_specifiers
     {
-        $$ = new Declaration($1); 
+        if ($1 == NULL)
+            $$ = NULL;
+        else
+            $$ = new Declaration($1); 
     }
     ;
 
@@ -1144,7 +1189,10 @@ type_name
     : specifier_qualifier_list
     | specifier_qualifier_list abstract_declarator
     {
-        $$ = $2->GetType($1, NULL);
+        if ($1 == NULL || $2 == NULL)
+            $$ = NULL;
+        else
+            $$ = $2->GetType($1, NULL);
     }
     ;
 
@@ -1156,20 +1204,27 @@ abstract_declarator
     | direct_abstract_declarator
     | pointer direct_abstract_declarator
       {
-          Declarator *d = new Declarator(DK_POINTER, Union(@1, @2));
-          d->child = $2;
-          $$ = d;
+          if ($2 == NULL)
+              $$ = NULL;
+          else {
+              Declarator *d = new Declarator(DK_POINTER, Union(@1, @2));
+              d->child = $2;
+              $$ = d;
+          }
       }
     | reference
       {
-          Declarator *d = new Declarator(DK_REFERENCE, @1);
-          $$ = d;
+          $$ = new Declarator(DK_REFERENCE, @1);
       }
     | reference direct_abstract_declarator
       {
-          Declarator *d = new Declarator(DK_REFERENCE, Union(@1, @2));
-          d->child = $2;
-          $$ = d;
+          if ($2 == NULL)
+              $$ = NULL;
+          else {
+              Declarator *d = new Declarator(DK_REFERENCE, Union(@1, @2));
+              d->child = $2;
+              $$ = d;
+          }
       }
     ;
 
@@ -1201,15 +1256,19 @@ direct_abstract_declarator
       }
     | direct_abstract_declarator '[' ']'
       {
-          Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
-          d->arraySize = 0;
-          d->child = $1;
-          $$ = d;
+          if ($1 == NULL)
+              $$ = NULL;
+          else {
+              Declarator *d = new Declarator(DK_ARRAY, Union(@1, @3));
+              d->arraySize = 0;
+              d->child = $1;
+              $$ = d;
+          }
       }
     | direct_abstract_declarator '[' constant_expression ']'
       {
           int size;
-          if ($3 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
+          if ($1 != NULL && $3 != NULL && lGetConstantInt($3, &size, @3, "Array dimension")) {
               if (size < 0) {
                   Error(@3, "Array dimension must be non-negative.");
                   $$ = NULL;
@@ -1234,16 +1293,24 @@ direct_abstract_declarator
       }
     | direct_abstract_declarator '(' ')'
       {
-          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
-          d->child = $1;
-          $$ = d;
+          if ($1 == NULL)
+              $$ = NULL;
+          else {
+              Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @3));
+              d->child = $1;
+              $$ = d;
+          }
       }
     | direct_abstract_declarator '(' parameter_type_list ')'
       {
-          Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
-          d->child = $1;
-          if ($3 != NULL) d->functionParams = *$3;
-          $$ = d;
+          if ($1 == NULL)
+              $$ = NULL;
+          else {
+              Declarator *d = new Declarator(DK_FUNCTION, Union(@1, @4));
+              d->child = $1;
+              if ($3 != NULL) d->functionParams = *$3;
+              $$ = d;
+          }
       }
     ;
 
@@ -1258,15 +1325,14 @@ initializer_list
       { $$ = new ExprList($1, @1); }
     | initializer_list ',' initializer
       {
-          if ($1 == NULL)
-              $$ = NULL;
-          else {
-              ExprList *exprList = dynamic_cast<ExprList *>($1);
-              Assert(exprList);
-              exprList->exprs.push_back($3);
-              exprList->pos = Union(exprList->pos, @3);
-              $$ = exprList;
+          ExprList *exprList = $1;
+          if (exprList == NULL) {
+              Assert(m->errorCount > 0);
+              exprList = new ExprList(@3);
           }
+          exprList->exprs.push_back($3);
+          exprList->pos = Union(exprList->pos, @3);
+          $$ = exprList;
       }
     ;
 
@@ -1342,15 +1408,19 @@ statement_list
       }
     | statement_list statement
       {
-          if ($1 != NULL)
-              ((StmtList *)$1)->Add($2);
-          $$ = $1;
+          StmtList *sl = (StmtList *)$1;
+          if (sl == NULL) {
+              Assert(m->errorCount > 0);
+              sl = new StmtList(@2);
+          }
+          sl->Add($2);
+          $$ = sl;
       }
     ;
 
 expression_statement
     : ';' { $$ = NULL; }
-    | expression ';' { $$ = new ExprStmt($1, @1); }
+    | expression ';' { $$ = $1 ? new ExprStmt($1, @1) : NULL; }
     ;
 
 selection_statement
@@ -1416,7 +1486,14 @@ foreach_dimension_list
     }
     | foreach_dimension_list ',' foreach_dimension_specifier
     {
-        $$->push_back($3);
+        std::vector<ForeachDimension *> *dv = $1;
+        if (dv == NULL) {
+            Assert(m->errorCount > 0);
+            dv = new std::vector<ForeachDimension *>;
+        }
+        if ($3 != NULL)
+            dv->push_back($3);
+        $$ = dv;
     }
     ;
 
@@ -1447,38 +1524,57 @@ iteration_statement
       }
     | foreach_scope '(' foreach_dimension_list ')'
      {
-         std::vector<ForeachDimension *> &dims = *$3;
-         for (unsigned int i = 0; i < dims.size(); ++i)
-             m->symbolTable->AddVariable(dims[i]->sym);
+         std::vector<ForeachDimension *> *dims = $3;
+         if (dims == NULL) {
+             Assert(m->errorCount > 0);
+             dims = new std::vector<ForeachDimension *>;
+         }
+         for (unsigned int i = 0; i < dims->size(); ++i)
+             m->symbolTable->AddVariable((*dims)[i]->sym);
      }
      statement
      {
-         std::vector<ForeachDimension *> &dims = *$3;
+         std::vector<ForeachDimension *> *dims = $3;
+         if (dims == NULL) {
+             Assert(m->errorCount > 0);
+             dims = new std::vector<ForeachDimension *>;
+         }
+
          std::vector<Symbol *> syms;
          std::vector<Expr *> begins, ends;
-         for (unsigned int i = 0; i < dims.size(); ++i) {
-             syms.push_back(dims[i]->sym);
-             begins.push_back(dims[i]->beginExpr);
-             ends.push_back(dims[i]->endExpr);
+         for (unsigned int i = 0; i < dims->size(); ++i) {
+             syms.push_back((*dims)[i]->sym);
+             begins.push_back((*dims)[i]->beginExpr);
+             ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, false, @1);
          m->symbolTable->PopScope();
      }
     | foreach_tiled_scope '(' foreach_dimension_list ')'
      {
-         std::vector<ForeachDimension *> &dims = *$3;
-         for (unsigned int i = 0; i < dims.size(); ++i)
-             m->symbolTable->AddVariable(dims[i]->sym);
+         std::vector<ForeachDimension *> *dims = $3;
+         if (dims == NULL) {
+             Assert(m->errorCount > 0);
+             dims = new std::vector<ForeachDimension *>;
+         }
+
+         for (unsigned int i = 0; i < dims->size(); ++i)
+             m->symbolTable->AddVariable((*dims)[i]->sym);
      }
      statement
      {
-         std::vector<ForeachDimension *> &dims = *$3;
+         std::vector<ForeachDimension *> *dims = $3;
+         if (dims == NULL) {
+             Assert(m->errorCount > 0);
+             dims = new std::vector<ForeachDimension *>;
+         }
+
          std::vector<Symbol *> syms;
          std::vector<Expr *> begins, ends;
-         for (unsigned int i = 0; i < dims.size(); ++i) {
-             syms.push_back(dims[i]->sym);
-             begins.push_back(dims[i]->beginExpr);
-             ends.push_back(dims[i]->endExpr);
+         for (unsigned int i = 0; i < dims->size(); ++i) {
+             syms.push_back((*dims)[i]->sym);
+             begins.push_back((*dims)[i]->beginExpr);
+             ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
          m->symbolTable->PopScope();
@@ -1584,9 +1680,11 @@ function_definition
     compound_statement
     {
         std::vector<Symbol *> args;
-        Symbol *sym = $2->GetFunctionInfo($1, &args);
-        if (sym != NULL)
-            m->AddFunctionDefinition(sym, args, $4);
+        if ($2 != NULL) {
+            Symbol *sym = $2->GetFunctionInfo($1, &args);
+            if (sym != NULL)
+                m->AddFunctionDefinition(sym, args, $4);
+        }
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 /* function with no declared return type??
@@ -1642,6 +1740,11 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 static void
 lAddFunctionParams(Declarator *decl) {
     m->symbolTable->PushScope();
+
+    if (decl == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
 
     // walk down to the declarator for the function itself 
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
