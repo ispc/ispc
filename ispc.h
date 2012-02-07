@@ -423,6 +423,10 @@ struct Globals {
     /** Arguments to pass along to the C pre-processor, if it is run on the
         program before compilation. */
     std::vector<std::string> cppArgs;
+
+    /** Additional user-provided directories to search when processing
+        #include directives in the preprocessor. */
+    std::vector<std::string> includePath;
 };
 
 enum {

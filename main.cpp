@@ -103,6 +103,7 @@ usage(int ret) {
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
+    printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
     printf("    [--math-lib=<option>]\t\tSelect math library\n");
     printf("        default\t\t\t\tUse ispc's built-in math functions\n");
@@ -287,6 +288,15 @@ int main(int Argc, char *Argv[]) {
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-obj"))
             ot = Module::Object;
+        else if (!strcmp(argv[i], "-I")) {
+            if (++i == argc) {
+                fprintf(stderr, "No path specified after -I option.\n");
+                usage(1);
+            }
+            g->includePath.push_back(argv[i]);
+        }
+        else if (!strncmp(argv[i], "-I", 2))
+            g->includePath.push_back(argv[i]+2);
         else if (!strcmp(argv[i], "--fuzz-test"))
             g->enableFuzzTest = true;
         else if (!strncmp(argv[i], "--fuzz-seed=", 12))
