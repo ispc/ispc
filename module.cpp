@@ -1625,6 +1625,9 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
                 if (!m->writeOutput(Module::Header, headerFileName))
                     return 1;
         }
+        else
+            ++m->errorCount;
+
         int errorCount = m->errorCount;
         delete m;
         m = NULL;
