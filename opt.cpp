@@ -250,6 +250,22 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
 #endif
 }
 
+
+static llvm::Instruction *
+lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
+         llvm::Instruction *insertBefore) {
+    llvm::Value *index[1] = { offset };
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
+    return llvm::GetElementPtrInst::Create(ptr, arrayRef, name,
+                                           insertBefore);
+#else
+    return llvm::GetElementPtrInst::Create(ptr, &index[0], &index[1],
+                                           name, insertBefore);
+#endif
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 
 void
@@ -1585,16 +1601,7 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
     if (uniformDelta == NULL)
         return;
 
-    llvm::Value *index[1] = { uniformDelta };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-    *basePtr = llvm::GetElementPtrInst::Create(*basePtr, arrayRef, "new_base",
-                                               insertBefore);
-#else
-    *basePtr = llvm::GetElementPtrInst::Create(*basePtr, &index[0], 
-                                               &index[1], "new_base",
-                                               insertBefore);
-#endif
+    *basePtr = lGEPInst(*basePtr, arrayRef, "new_base", insertBefore);
 
     // this should only happen if we have only uniforms, but that in turn
     // shouldn't be a gather/scatter!
@@ -2392,17 +2399,7 @@ lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
     llvm::Value *firstOffset = 
         llvm::ExtractElementInst::Create(offsets, LLVMInt32(0), "first_offset",
                                          insertBefore);
-
-    llvm::Value *offsetIndex[1] = { firstOffset };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-    llvm::ArrayRef<llvm::Value *> arrayRef(&offsetIndex[0], &offsetIndex[1]);
-    return
-        llvm::GetElementPtrInst::Create(base, arrayRef, "ptr", insertBefore);
-#else
-    return
-        llvm::GetElementPtrInst::Create(base, &offsetIndex[0], &offsetIndex[1],
-                                        "ptr", insertBefore);
-#endif
+    return lGEPInst(base, firstOffset, "ptr", insertBefore);
 }
 
 
