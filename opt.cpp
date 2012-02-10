@@ -1389,10 +1389,10 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
 
 
 /* Returns true if the given value is a constant vector of integers with
-   the value 2, 4, 8 in all of the elements.  (Returns the splatted value
-   in *splat, if so). */
+   the same value in all of the elements.  (Returns the splatted value in
+   *splat, if so). */
 static bool
-lIs248Splat(llvm::Value *v, int *splat) {
+lIsIntegerSplat(llvm::Value *v, int *splat) {
 #ifdef LLVM_3_1svn
     llvm::ConstantDataVector *cvec = 
         llvm::dyn_cast<llvm::ConstantDataVector>(v);
@@ -1412,13 +1412,45 @@ lIs248Splat(llvm::Value *v, int *splat) {
         return false;
 
     int64_t splatVal = ci->getSExtValue();
-    if (splatVal != 2 && splatVal != 4 && splatVal != 8)
-        return false;
-
     *splat = (int)splatVal;
     return true;
 }
         
+
+static llvm::Value *
+lExtract248Scale(llvm::Value *splatOperand, int splatValue, 
+                 llvm::Value *otherOperand, llvm::Value **result) {
+    if (splatValue == 2 || splatValue == 4 || splatValue == 8) {
+        *result = otherOperand;
+        return LLVMInt32(splatValue);
+    }
+    // Even if we don't have a common scale by exactly 2, 4, or 8, we'll
+    // see if we can pull out that much of the scale anyway; this may in
+    // turn allow other optimizations later.
+    for (int scale = 8; scale >= 2; scale /= 2) {
+        llvm::Instruction *insertBefore = 
+            llvm::dyn_cast<llvm::Instruction>(*result);
+        Assert(insertBefore != NULL);
+
+        if ((splatValue % scale) == 0) {
+            // *result = otherOperand + splatOperand / splatValue;
+            llvm::Value *splatScaleVec = 
+                (splatOperand->getType() == LLVMTypes::Int32VectorType) ?
+                LLVMInt32Vector(scale) : LLVMInt64Vector(scale);
+            llvm::Value *splatDiv = 
+                llvm::BinaryOperator::Create(llvm::Instruction::SDiv,
+                                             splatOperand, splatScaleVec,
+                                             "div", insertBefore);
+            *result = 
+                llvm::BinaryOperator::Create(llvm::Instruction::Add,
+                                             splatDiv, otherOperand,
+                                             "add", insertBefore);
+            return LLVMInt32(scale);
+        }
+    }
+    return LLVMInt32(1);
+}
+
 
 /** Given a vector of integer offsets to a base pointer being used for a
     gather or a scatter, see if its root operation is a multiply by a
@@ -1482,14 +1514,10 @@ lExtractOffsetVector248Scale(llvm::Value **vec) {
     else if (bop->getOpcode() == llvm::Instruction::Mul) {
         // Check each operand for being one of the scale factors we care about.
         int splat;
-        if (lIs248Splat(op0, &splat)) {
-            *vec = op1;
-            return LLVMInt32(splat);
-        }
-        else if (lIs248Splat(op1, &splat)) {
-            *vec = op0;
-            return LLVMInt32(splat);
-        }
+        if (lIsIntegerSplat(op0, &splat))
+            return lExtract248Scale(op0, splat, op1, vec);
+        else if (lIsIntegerSplat(op1, &splat))
+            return lExtract248Scale(op1, splat, op0, vec);
         else
             return LLVMInt32(1);
     }
