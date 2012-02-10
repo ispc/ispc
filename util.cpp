@@ -171,8 +171,8 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
             column = indent;
             outStr.push_back('\n');
             // Indent to the same column as the ":" at the start of the
-            // message
-            for (int i = 0; i < indent; ++i)
+            // message, unless doing so would be too far in.
+            for (int i = 0; i < std::min(16, indent); ++i)
                 outStr.push_back(' ');
         }
 
