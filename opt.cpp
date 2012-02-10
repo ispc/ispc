@@ -88,6 +88,7 @@ static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateVSelMovmskOptPass();
 static llvm::Pass *CreateDetectGSBaseOffsetsPass();
 static llvm::Pass *CreateGSToLoadStorePass();
+static llvm::Pass *CreateGatherCoalescePass();
 static llvm::Pass *CreatePseudoGSToGSPass();
 static llvm::Pass *CreatePseudoMaskedStorePass();
 static llvm::Pass *CreateMaskedStoreOptPass();
@@ -387,8 +388,17 @@ Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreatePseudoMaskedStorePass());
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->opt.disableHandlePseudoMemoryOps == false)
+            g->opt.disableHandlePseudoMemoryOps == false &&
+            g->target.vectorWidth > 1) {
             optPM.add(CreateGSToLoadStorePass());
+        
+            if (g->opt.disableCoalescing == false) {
+                // It is important to run this here to make it easier to
+                // finding matching gathers we can coalesce..
+                optPM.add(llvm::createEarlyCSEPass());
+                optPM.add(CreateGatherCoalescePass());
+            }
+        }
         if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.add(CreatePseudoMaskedStorePass());
             optPM.add(CreatePseudoGSToGSPass());
@@ -2639,6 +2649,1150 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 static llvm::Pass *
 CreateGSToLoadStorePass() {
     return new GSToLoadStorePass;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// GatherCoalescePass
+
+// This pass implements two optimizations to improve the performance of
+// gathers; currently only gathers of 32-bit values where it can be
+// determined at compile time that the mask is all on are supported, though
+// both of those limitations may be generalized in the future.
+//
+//  First, for any single gather, see if it's worthwhile to break it into
+//  any of scalar, 2-wide (i.e. 64-bit), 4-wide, or 8-wide loads.  Further,
+//  we generate code that shuffles these loads around.  Doing fewer, larger
+//  loads in this manner, when possible, can be more efficient.
+//    
+//  Second, this pass can coalesce memory accesses across multiple
+//  gathers. If we have a series of gathers without any memory writes in
+//  the middle, then we try to analyze their reads collectively and choose
+//  an efficient set of loads for them.  Not only does this help if
+//  different gathers reuse values from the same location in memory, but
+//  it's specifically helpful when data with AOS layout is being accessed;
+//  in this case, we're often able to generate wide vector loads and
+//  appropriate shuffles automatically.
+
+class GatherCoalescePass : public llvm::BasicBlockPass {
+public:
+    static char ID;
+    GatherCoalescePass() : BasicBlockPass(ID) { }
+
+    const char *getPassName() const { return "Gather Coalescing"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char GatherCoalescePass::ID = 0;
+
+
+/* Returns true if the mask is known at compile time to be "all on". */ 
+static bool
+lIsMaskAllOn(llvm::Value *mask) {
+    int m = lGetMask(mask);
+    if (m == -1)
+        return false;
+
+    int allOnMask = (1 << g->target.vectorWidth) - 1;
+    return (m == allOnMask);
+}
+
+
+/** Representation of a memory load that the gather coalescing code has
+    decided to generate.
+ */
+struct CoalescedLoadOp {
+    CoalescedLoadOp(int64_t s, int c) { 
+        start = s; 
+        count = c; 
+        load = element0 = element1 = NULL;
+    }
+
+    /** Starting offset of the load from the common base pointer (in terms
+        of numbers of items of the underlying element type--*not* in terms
+        of bytes). */
+    int64_t start;
+
+    /** Number of elements to load at this location */
+    int count;
+
+    /** Value loaded from memory for this load op */
+    llvm::Value *load;
+
+    /** For 2-wide loads (i.e. 64-bit loads), these store the lower and
+        upper 32 bits of the result, respectively. */
+    llvm::Value *element0, *element1;
+};
+
+
+/** This function determines whether it makes sense (and is safe) to
+    generate a vector load of width vectorWidth, starting at *iter.  It
+    returns true if so, setting *newIter to point to the next element in
+    the set that isn't taken care of by the generated load.  If a vector
+    load of the given width doesn't make sense, then false is returned.
+ */
+static bool
+lVectorLoadIsEfficient(std::set<int64_t>::iterator iter, 
+                       std::set<int64_t>::iterator end,
+                       std::set<int64_t>::iterator *newIter, int vectorWidth) {
+    // We're considering a vector load of width vectorWidth, starting at
+    // the offset "start".
+    int start = *iter;
+
+    // The basic idea is that we'll look at the subsequent elements in the
+    // load set after the initial one at start.  As long as subsequent
+    // elements:
+    //
+    // 1. Aren't so far separated that they no longer fit into the range
+    //    [start, start+vectorWidth)
+    //
+    // 2. And don't have too large a gap in between them (e.g., it's not
+    //    worth generating an 8-wide load for two elements with offsets 0
+    //    and 7, but no loads requested in between).  
+    //
+    // Then we continue moving forward through the elements until we either
+    // fill up the vector or run out of elements.
+
+    // lastAccepted holds the last offset we've processed and accepted as
+    // valid for the vector load underconsideration
+    int lastAccepted = start;
+
+    while (iter != end) {
+        // What is the separation in offset values from the last element we
+        // added to the set for this load?
+        int delta = *iter - lastAccepted;
+        if (delta > 3)
+            // If there's too big a gap, then we won't issue the load
+            return false;
+
+        int span = *iter - start + 1;
+
+        if (span == vectorWidth) {
+            // We've extended far enough that we have exactly filled up the
+            // entire vector width; we can't go any further, so return with
+            // success.  (Update *newIter to point at the next element
+            // after the last one accepted here.)
+            *newIter = ++iter;
+            return true;
+        }
+        else if (span > vectorWidth) {
+            // The current offset won't fit into a vectorWidth-wide load
+            // starting from start.  It's still generally worthwhile
+            // issuing the load we've been considering, though, since it
+            // will provide values for a number of previous offsets.  This
+            // load will have one or more elements at the end of its range
+            // that is not needed by any of the offsets under
+            // consideration.  As such, there are three cases where issuing
+            // this load is a bad idea:
+            //
+            // 1. 2-wide loads: we know that we haven't completely filled
+            //    the 2-wide vector, since otherwise the if() test above
+            //    would have succeeded previously.  Therefore, we must have
+            //    a situation with offsets like (4,6,...); it would be a
+            //    silly idea to issue a 2-wide load to get the value for
+            //    the 4 offset, versus failing here and issuing a scalar
+            //    load instead.
+            //
+            // 2. If there are too many unnecessary values at the end of
+            //    the load extent (defined as more than half of them)--in
+            //    this case, it'd be better to issue a vector load of
+            //    smaller width anyway.
+            //
+            // 3. If the gap between the last accepted offset and the
+            //    current one under consideration is more than the page
+            //    size.  In this case we can't be sure whether or not some
+            //    of the unused elements at the end of the load will
+            //    straddle a page boundary and thus lead to an undesirable
+            //    fault.  (It's hard to imagine this happening in practice,
+            //    except under contrived circumstances, but better safe
+            //    than sorry.)
+            const int pageSize = 4096;
+            if (vectorWidth != 2 && 
+                (lastAccepted - start) > (vectorWidth / 2) &&
+                (*iter - lastAccepted) < pageSize) {
+                *newIter = iter;
+                return true;
+            }
+            else
+                return false;
+        }
+
+        // Continue moving forward 
+        lastAccepted = *iter;
+        ++iter;
+    }
+
+    return false;
+}
+
+
+/** Given a set of offsets from a common base pointer that we need to get
+    loaded into memory, determine a reasonable set of load operations that
+    gets all of the corresponding values in memory (ideally, including as
+    many as possible wider vector loads rather than scalar loads).  Return
+    a CoalescedLoadOp for each one in the *loads array.
+ */
+static void
+lSelectLoads(const std::vector<int64_t> &loadOffsets,
+             std::vector<CoalescedLoadOp> *loads) {
+    // First, get a sorted set of unique offsets to load from.
+    std::set<int64_t> allOffsets;
+    for (unsigned int i = 0; i < loadOffsets.size(); ++i)
+        allOffsets.insert(loadOffsets[i]);
+
+    std::set<int64_t>::iterator iter = allOffsets.begin();
+    while (iter != allOffsets.end()) {
+        Debug(SourcePos(), "Load needed at %lld.", *iter);
+        ++iter;
+    }
+
+    // Now, iterate over the offsets from low to high.  Starting at the
+    // current offset, we see if a vector load starting from that offset
+    // will cover loads at subsequent offsets as well.
+    iter = allOffsets.begin();
+    while (iter != allOffsets.end()) {
+        // Consider vector loads of width of each of the elements of
+        // spanSizes[], in order.
+        int vectorWidths[] = { 8, 4, 2 };
+        int nVectorWidths = sizeof(vectorWidths) / sizeof(vectorWidths[0]);
+        bool gotOne = false;
+        for (int i = 0; i < nVectorWidths; ++i) {
+            // See if a load of vector with width vectorWidths[i] would be
+            // effective (i.e. would cover a reasonable number of the
+            // offsets that need to be loaded from).
+            std::set<int64_t>::iterator newIter;
+            if (lVectorLoadIsEfficient(iter, allOffsets.end(), &newIter, 
+                                       vectorWidths[i])) {
+                // Yes: create the corresponding coalesced load and update
+                // the iterator to the returned iterator; doing so skips
+                // over the additional offsets that are taken care of by
+                // this load.
+                loads->push_back(CoalescedLoadOp(*iter, vectorWidths[i]));
+                iter = newIter;
+                gotOne = true;
+                break;
+            }
+        }
+        
+        if (gotOne == false) {
+            // We couldn't find a vector load starting from this offset
+            // that made sense, so emit a scalar load and continue onward.
+            loads->push_back(CoalescedLoadOp(*iter, 1));
+            ++iter;
+        }
+    }
+}
+
+
+/** Print a performance message with the details of the result of
+    coalescing over a group of gathers. */
+static void
+lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
+                  const std::vector<CoalescedLoadOp> &loadOps) {
+    SourcePos pos;
+    bool ok = lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
+    Assert(ok);
+
+    // Create a string that indicates the line numbers of the subsequent
+    // gathers from the first one that were coalesced here.
+    char otherPositions[512];
+    otherPositions[0] = '\0';
+    if (coalesceGroup.size() > 1) {
+        const char *plural = (coalesceGroup.size() > 2) ? "s" : "";
+        char otherBuf[32];
+        sprintf(otherBuf, "(other%s at line%s ", plural, plural);
+        strcat(otherPositions, otherBuf);
+
+        for (int i = 1; i < (int)coalesceGroup.size(); ++i) {
+            SourcePos p;
+            bool ok = lGetSourcePosFromMetadata(coalesceGroup[i], &p);
+            Assert(ok);
+            char buf[32];
+            sprintf(buf, "%d", p.first_line);
+            strcat(otherPositions, buf);
+            if (i < (int)coalesceGroup.size() - 1)
+                strcat(otherPositions, ", ");
+        }
+        strcat(otherPositions, ") ");
+    }
+
+    // Count how many loads of each size there were.
+    std::map<int, int> loadOpsCount;
+    for (int i = 0; i < (int)loadOps.size(); ++i)
+        ++loadOpsCount[loadOps[i].count];
+
+    // Generate a string the describes the mix of load ops 
+    char loadOpsInfo[512];
+    loadOpsInfo[0] = '\0';
+    std::map<int, int>::const_iterator iter = loadOpsCount.begin();
+    while (iter != loadOpsCount.end()) {
+        char buf[32];
+        sprintf(buf, "%d x %d-wide", iter->second, iter->first);
+        strcat(loadOpsInfo, buf);
+        ++iter;
+        if (iter != loadOpsCount.end())
+            strcat(loadOpsInfo, ", ");
+    }
+
+    if (coalesceGroup.size() == 1)
+        PerformanceWarning(pos, "Coalesced gather into %d load%s (%s).",
+                           (int)loadOps.size(), 
+                           (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+    else
+        PerformanceWarning(pos, "Coalesced %d gathers starting here %sinto %d "
+                           "load%s (%s).", (int)coalesceGroup.size(), 
+                           otherPositions,(int)loadOps.size(), 
+                           (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
+}
+
+
+/** Utility routine that computes an offset from a base pointer and then
+    returns the result of a load of the given type from the resulting
+    location:
+
+    return *((type *)(basePtr + offset))
+ */
+llvm::Value *
+lGEPAndLoad(llvm::Value *basePtr, int offset, int align,
+            llvm::Instruction *insertBefore, LLVM_TYPE_CONST llvm::Type *type) {
+    llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base",
+                                insertBefore);
+    ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0),
+                                "ptr_cast", insertBefore);
+    return new llvm::LoadInst(ptr, "gather_load", false /* not volatile */,
+                              align, insertBefore);
+}
+
+
+/* Having decided that we're doing to emit a series of loads, as encoded in
+   the loadOps array, this function emits the corresponding load
+   instructions.
+ */
+static void
+lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps, 
+           int elementSize, llvm::Instruction *insertBefore) {
+    Debug(SourcePos(), "Coalesce doing %d loads.", (int)loadOps.size());
+    for (int i = 0; i < (int)loadOps.size(); ++i) {
+        Debug(SourcePos(), "Load #%d @ %lld, %d items", i, loadOps[i].start, 
+              loadOps[i].count);
+
+        // basePtr is an i8 *, so the offset from it should be in terms of
+        // bytes, not underlying i32 elements.
+        int start = loadOps[i].start * elementSize;
+
+        int align = 4;
+        switch (loadOps[i].count) {
+        case 1:
+            // Single 32-bit scalar load
+            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore,
+                                          LLVMTypes::Int32Type);
+            break;
+        case 2: {
+            // Emit 2 x i32 loads as i64 loads and then break the result
+            // into two 32-bit parts.
+            loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore,
+                                          LLVMTypes::Int64Type);
+            // element0 = (int32)value;
+            loadOps[i].element0 = 
+                new llvm::TruncInst(loadOps[i].load, LLVMTypes::Int32Type,
+                                    "load64_elt0", insertBefore);
+            // element1 = (int32)(value >> 32)
+            llvm::Value *shift =
+                llvm::BinaryOperator::Create(llvm::Instruction::LShr,
+                                             loadOps[i].load, LLVMInt64(32),
+                                             "load64_shift", insertBefore);
+            loadOps[i].element1 = 
+                new llvm::TruncInst(shift, LLVMTypes::Int32Type,
+                                    "load64_elt1", insertBefore);
+            break;
+        }
+        case 4: {
+            // 4-wide vector load
+            LLVM_TYPE_CONST llvm::VectorType *vt =
+                llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+            loadOps[i].load = lGEPAndLoad(basePtr, start, align,
+                                          insertBefore, vt);
+            break;
+        }
+        case 8: {
+            // 8-wide vector load
+            LLVM_TYPE_CONST llvm::VectorType *vt =
+                llvm::VectorType::get(LLVMTypes::Int32Type, 8);
+            loadOps[i].load = lGEPAndLoad(basePtr, start, align, 
+                                          insertBefore, vt);
+            break;
+        }
+        default:
+            FATAL("Unexpected load count in lEmitLoads()");
+        }
+    }
+}
+
+
+/** Shuffle two vectors together with a ShuffleVectorInst, returning a
+    vector with shufSize elements, where the shuf[] array offsets are used
+    to determine which element from the two given vectors is used for each
+    result element. */
+static llvm::Value *
+lShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
+                int shufSize, llvm::Instruction *insertBefore) {
+    std::vector<llvm::Constant *> shufVec;
+    for (int i = 0; i < shufSize; ++i) {
+        if (shuf[i] == -1)
+            shufVec.push_back(llvm::UndefValue::get(LLVMTypes::Int32Type));
+        else
+            shufVec.push_back(LLVMInt32(shuf[i]));
+    }
+
+#ifndef LLVM_2_9
+    llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
+    llvm::Value *vec = llvm::ConstantVector::get(aref);
+#else // LLVM_2_9
+    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
+#endif
+
+    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
+}
+
+
+/** Convert any loads of 8-wide vectors into two 4-wide vectors
+    (logically).  This allows the assembly code below to always operate on
+    4-wide vectors, which leads to better code.  Returns a new vector of
+    load operations.
+ */
+static std::vector<CoalescedLoadOp>
+lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps, 
+                 llvm::Instruction *insertBefore) {
+    std::vector<CoalescedLoadOp> ret;
+    for (unsigned int i = 0; i < loadOps.size(); ++i) {
+        if (loadOps[i].count == 8) {
+            // Create fake CoalescedLOadOps, where the load llvm::Value is
+            // actually a shuffle that pulls either the first 4 or the last
+            // 4 values out of the original 8-wide loaded value.
+            int32_t shuf[2][4] = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 } };
+
+            ret.push_back(CoalescedLoadOp(loadOps[i].start, 4));
+            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                              shuf[0], 4, insertBefore);
+
+            ret.push_back(CoalescedLoadOp(loadOps[i].start+4, 4));
+            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                              shuf[1], 4, insertBefore);
+        }
+        else
+            ret.push_back(loadOps[i]);
+    }
+
+    return ret;
+}
+
+
+/** Given a 1-wide load of a 32-bit value, merge its value into the result
+    vector for any and all elements for which it applies.
+ */
+static llvm::Value *
+lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load, 
+            const int64_t offsets[4], bool set[4],
+            llvm::Instruction *insertBefore) {
+    for (int elt = 0; elt < 4; ++elt) {
+        if (offsets[elt] >= load.start &&
+            offsets[elt] < load.start + load.count) {
+            Debug(SourcePos(), "Load 1 @ %lld matches for element #%d (value %lld)",
+                  load.start, elt, offsets[elt]);
+            // If this load gives one of the values that we need, then we
+            // can just insert it in directly
+            Assert(set[elt] == false);
+            result = 
+                llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt),
+                                                "insert_load", insertBefore);
+            set[elt] = true;
+        }
+    }
+
+    return result;
+}
+
+
+/** Similarly, incorporate the values from a 2-wide load into any vector
+    elements that they apply to. */
+static llvm::Value *
+lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
+            const int64_t offsets[4], bool set[4], 
+            llvm::Instruction *insertBefore) {
+    for (int elt = 0; elt < 4; ++elt) {
+        // First, try to do a 64-bit-wide insert into the result vector.
+        // We can do this when we're currently at an even element, when the
+        // current and next element have consecutive values, and where the
+        // original 64-bit load is at the offset needed by the current
+        // element.
+        if ((elt & 1) == 0 &&
+            offsets[elt] + 1 == offsets[elt+1] &&
+            offsets[elt] == load.start) {
+            Debug(SourcePos(), "Load 2 @ %lld matches for elements #%d,%d "
+                  "(values %lld,%lld)", load.start, elt, elt+1,
+                  offsets[elt], offsets[elt+1]);
+            Assert(set[elt] == false && set[elt+1] == false);
+
+            // In this case, we bitcast from a 4xi32 to a 2xi64 vector
+            LLVM_TYPE_CONST llvm::Type *vec2x64Type = 
+                llvm::VectorType::get(LLVMTypes::Int64Type, 2);
+            result = new llvm::BitCastInst(result, vec2x64Type, "to2x64",
+                                           insertBefore);
+
+            // And now we can insert the 64-bit wide value into the
+            // appropriate elment
+            result = llvm::InsertElementInst::Create(result, load.load,
+                                                     LLVMInt32(elt/2), 
+                                                     "insert64", insertBefore);
+            
+            // And back to 4xi32.
+            LLVM_TYPE_CONST llvm::Type *vec4x32Type = 
+                llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+            result = new llvm::BitCastInst(result, vec4x32Type, "to4x32",
+                                           insertBefore);
+
+            set[elt] = set[elt+1] = true;
+            // Advance elt one extra time, since we just took care of two
+            // elements
+            ++elt;
+        }
+        else if (offsets[elt] >= load.start && 
+                 offsets[elt] < load.start + load.count) {
+            Debug(SourcePos(), "Load 2 @ %lld matches for element #%d (value %lld)",
+                  load.start, elt, offsets[elt]);
+            // Otherwise, insert one of the 32-bit pieces into an element
+            // of the final vector
+            Assert(set[elt] == false);
+            llvm::Value *toInsert = (offsets[elt] == load.start) ?
+                load.element0 : load.element1;
+            result =                         
+                llvm::InsertElementInst::Create(result, toInsert, LLVMInt32(elt),
+                                                "insert_load", insertBefore);
+            set[elt] = true;
+        }
+    }
+
+    return result;
+}
+
+
+#if 1
+/* This approach works better with AVX, while the #else path generates
+   slightly better code with SSE.  Need to continue to dig into performance
+   details with this stuff in general... */
+
+/** And handle a 4-wide load */
+static llvm::Value *
+lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
+            const int64_t offsets[4], bool set[4], 
+            llvm::Instruction *insertBefore) {
+    // Conceptually, we're doing to consider doing a shuffle vector with
+    // the 4-wide load and the 4-wide result we have so far to generate a
+    // new 4-wide vector.  We'll start with shuffle indices that just
+    // select each element of the result so far for the result.
+    int32_t shuf[4] = { 4, 5, 6, 7 };
+
+    for (int elt = 0; elt < 4; ++elt) {
+        if (offsets[elt] >= load.start && 
+            offsets[elt] < load.start + load.count) {
+            Debug(SourcePos(), "Load 4 @ %lld matches for element #%d (value %lld)",
+                  load.start, elt, offsets[elt]);
+            
+            // If the current element falls within the range of locations
+            // that the 4-wide load covers, then compute the appropriate
+            // shuffle index that extracts the appropriate element from the
+            // load.
+            Assert(set[elt] == false);
+            shuf[elt] = offsets[elt] - load.start;
+            set[elt] = true;
+        }
+    }
+
+    // Now, issue a shufflevector instruction if any of the values from the
+    // load we just considered were applicable.
+    if (shuf[0] != 4 || shuf[1] != 5 || shuf[2] != 6 || shuf[3] != 7)
+        result = lShuffleVectors(load.load, result, shuf, 4, insertBefore);
+
+    return result;
+}
+
+
+/** We're need to fill in the values for a 4-wide result vector.  This
+    function looks at all of the generated loads and extracts the
+    appropriate elements from the appropriate loads to assemble the result.
+    Here the offsets[] parameter gives the 4 offsets from the base pointer
+    for the four elements of the result.
+*/
+static llvm::Value *
+lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
+                 const int64_t offsets[4], llvm::Instruction *insertBefore) {
+    LLVM_TYPE_CONST llvm::Type *returnType = 
+        llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+    llvm::Value *result = llvm::UndefValue::get(returnType);
+
+    Debug(SourcePos(), "Starting search for loads [%lld %lld %lld %lld].",
+          offsets[0], offsets[1], offsets[2], offsets[3]);
+
+    // Track whether we have found a valid value for each of the four
+    // elements of the result
+    bool set[4] = { false, false, false, false };
+
+    // Loop over all of the loads and check each one to see if it provides
+    // a value that's applicable to the result
+    for (int load = 0; load < (int)loadOps.size(); ++load) {
+        const CoalescedLoadOp &li = loadOps[load];
+
+        switch (li.count) {
+        case 1:
+            result = lApplyLoad1(result, li, offsets, set, insertBefore);
+            break;
+        case 2:
+            result = lApplyLoad2(result, li, offsets, set, insertBefore);
+            break;
+        case 4:
+            result = lApplyLoad4(result, li, offsets, set, insertBefore);
+            break;
+        default:
+            FATAL("Unexpected load count in lAssemble4Vector()");
+        }
+    }
+
+    Debug(SourcePos(), "Done with search for loads [%lld %lld %lld %lld].",
+          offsets[0], offsets[1], offsets[2], offsets[3]);
+
+    for (int i = 0; i < 4; ++i)
+        Assert(set[i] == true);
+
+    return result;
+}
+
+#else
+
+static llvm::Value *
+lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
+             const int64_t offsets[4], bool set[4], 
+             llvm::Instruction *insertBefore) {
+    int32_t firstMatchElements[4] = { -1, -1, -1, -1 };
+    const CoalescedLoadOp *firstMatch = NULL;
+
+    Assert(llvm::isa<llvm::UndefValue>(result));
+
+    for (int load = 0; load < (int)loadOps.size(); ++load) {
+        const CoalescedLoadOp &loadop = loadOps[load];
+        if (loadop.count != 4)
+            continue;
+
+        int32_t matchElements[4] = { -1, -1, -1, -1 };
+        bool anyMatched = false;
+        for (int elt = 0; elt < 4; ++elt) {
+            if (offsets[elt] >= loadop.start && 
+                offsets[elt] < loadop.start + loadop.count) {
+                Debug(SourcePos(), "Load 4 @ %lld matches for element #%d (value %lld)",
+                      loadop.start, elt, offsets[elt]);
+                anyMatched = true;
+                Assert(set[elt] == false);
+                matchElements[elt] = offsets[elt] - loadop.start;
+                set[elt] = true;
+            }
+        }
+
+        if (anyMatched) {
+            if (llvm::isa<llvm::UndefValue>(result)) {
+                if (firstMatch == NULL) {
+                    firstMatch = &loadop;
+                    for (int i = 0; i < 4; ++i)
+                        firstMatchElements[i] = matchElements[i];
+                }
+                else {
+                    int32_t shuffle[4] = { -1, -1, -1, -1 };
+                    for (int i = 0; i < 4; ++i) {
+                        if (firstMatchElements[i] != -1)
+                            shuffle[i] = firstMatchElements[i];
+                        else
+                            shuffle[i] = 4 + matchElements[i];
+                    }
+                    result = lShuffleVectors(firstMatch->load, loadop.load, shuffle,
+                                             4, insertBefore);
+                    firstMatch = NULL;
+                }
+            }
+            else {
+                int32_t shuffle[4] = { -1, -1, -1, -1 };
+                for (int i = 0; i < 4; ++i) {
+                    if (matchElements[i] != -1)
+                        shuffle[i] = 4 + matchElements[i];
+                    else
+                        shuffle[i] = i;
+                }
+                result = lShuffleVectors(result, loadop.load, shuffle, 4,
+                                         insertBefore);
+            }
+        }
+    }
+
+    if (firstMatch != NULL && llvm::isa<llvm::UndefValue>(result))
+        return lShuffleVectors(firstMatch->load, result, firstMatchElements,
+                               4, insertBefore);
+    else
+        return result;
+}
+
+
+static llvm::Value *
+lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps, 
+              const int64_t offsets[4], bool set[4], 
+              llvm::Instruction *insertBefore) {
+    // Loop over all of the loads and check each one to see if it provides
+    // a value that's applicable to the result
+    for (int load = 0; load < (int)loadOps.size(); ++load) {
+        const CoalescedLoadOp &loadop = loadOps[load];
+        Assert(loadop.count == 1 || loadop.count == 2 || loadop.count == 4);
+
+        if (loadop.count == 1)
+            result = lApplyLoad1(result, loadop, offsets, set, insertBefore);
+        else if (loadop.count == 2)
+            result = lApplyLoad2(result, loadop, offsets, set, insertBefore);
+    }
+    return result;
+}
+
+
+/** We're need to fill in the values for a 4-wide result vector.  This
+    function looks at all of the generated loads and extracts the
+    appropriate elements from the appropriate loads to assemble the result.
+    Here the offsets[] parameter gives the 4 offsets from the base pointer
+    for the four elements of the result.
+*/
+static llvm::Value *
+lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
+                 const int64_t offsets[4], llvm::Instruction *insertBefore) {
+    LLVM_TYPE_CONST llvm::Type *returnType = 
+        llvm::VectorType::get(LLVMTypes::Int32Type, 4);
+    llvm::Value *result = llvm::UndefValue::get(returnType);
+
+    Debug(SourcePos(), "Starting search for loads [%lld %lld %lld %lld].", 
+          offsets[0], offsets[1], offsets[2], offsets[3]);
+
+    // Track whether we have found a valid value for each of the four
+    // elements of the result
+    bool set[4] = { false, false, false, false };
+
+    result = lApplyLoad4s(result, loadOps, offsets, set, insertBefore);
+    result = lApplyLoad12s(result, loadOps, offsets, set, insertBefore);
+
+    Debug(SourcePos(), "Done with search for loads [%lld %lld %lld %lld].", 
+          offsets[0], offsets[1], offsets[2], offsets[3]);
+
+    for (int i = 0; i < 4; ++i)
+        Assert(set[i] == true);
+
+    return result;
+}
+#endif
+
+
+/** Given two vectors of the same type, concatenate them into a vector that
+    has twice as many elements, where the first half has the elements from
+    the first vector and the second half has the elements from the second
+    vector.
+ */
+static llvm::Value *
+lConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+               llvm::Instruction *insertBefore) {
+    Assert(v1->getType() == v2->getType());
+
+    LLVM_TYPE_CONST llvm::VectorType *vt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
+    Assert(vt != NULL);
+
+    int32_t identity[ISPC_MAX_NVEC];
+    int resultSize = 2*vt->getNumElements();
+    Assert(resultSize <= ISPC_MAX_NVEC);
+    for (int i = 0; i < resultSize; ++i)
+        identity[i] = i;
+
+    return lShuffleVectors(v1, v2, identity, resultSize, insertBefore);
+}
+
+
+/** Given the set of loads that we've done and the set of result values to
+    be computed, this function computes the final llvm::Value *s for each
+    result vector.
+ */
+static void
+lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps, 
+                       const std::vector<int64_t> &constOffsets,
+                       std::vector<llvm::Value *> &results,
+                       llvm::Instruction *insertBefore) {
+    // We work on 4-wide chunks of the final values, even when we're
+    // computing 8-wide or 16-wide vectors.  This gives better code from
+    // LLVM's SSE/AVX code generators.
+    Assert((constOffsets.size() % 4) == 0);
+    std::vector<llvm::Value *> vec4s;
+    for (int i = 0; i < (int)constOffsets.size(); i += 4)
+        vec4s.push_back(lAssemble4Vector(loadOps, &constOffsets[i],
+                                         insertBefore));
+
+    // And now concatenate 1, 2, or 4 of the 4-wide vectors computed above
+    // into 4, 8, or 16-wide final result vectors.
+    int numGathers = constOffsets.size() / g->target.vectorWidth;
+    for (int i = 0; i < numGathers; ++i) {
+        llvm::Value *result = NULL;
+        switch (g->target.vectorWidth) {
+        case 4:
+            result = vec4s[i];
+            break;
+        case 8:
+            result = lConcatVectors(vec4s[2*i], vec4s[2*i+1], insertBefore);
+            break;
+        case 16: {
+            llvm::Value *v1 = lConcatVectors(vec4s[4*i], vec4s[4*i+1],
+                                             insertBefore);
+            llvm::Value *v2 = lConcatVectors(vec4s[4*i+2], vec4s[4*i+3],
+                                             insertBefore);
+            result = lConcatVectors(v1, v2, insertBefore);
+            break;
+        }
+        default:
+            FATAL("Unhandled vector width in lAssembleResultVectors()");
+        }
+
+        results.push_back(result);
+    }
+}
+
+
+/** Given a call to a gather function, extract the base pointer, the 2/4/8
+    scale, and the first varying offsets value to use them to compute that
+    scalar base pointer that is shared by all of the gathers in the group.
+    (Thus, this base pointer plus the constant offsets term for each gather
+    gives the set of addresses to use for each gather.
+ */
+static llvm::Value *
+lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
+    llvm::Value *basePtr = gatherInst->getArgOperand(0);
+    llvm::Value *variableOffsets = gatherInst->getArgOperand(1);
+    llvm::Value *offsetScale = gatherInst->getArgOperand(2);
+    
+    // All of the variable offsets values should be the same, due to
+    // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
+    // extract the first value and use that as a scalar.
+    llvm::Value *variable = 
+        llvm::ExtractElementInst::Create(variableOffsets, LLVMInt32(0),
+                                         "variable0", insertBefore);
+    if (variable->getType() == LLVMTypes::Int64Type)
+        offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type,
+                                         "scale_to64", insertBefore);
+    llvm::Value *offset = 
+        llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, 
+                                     offsetScale, "offset", insertBefore);
+
+    return lGEPInst(basePtr, offset, "new_base", insertBefore);
+}
+
+
+/** Extract the constant offsets (from the common base pointer) from each
+    of the gathers in a set to be coalesced.  These come in as byte
+    offsets, but we'll transform them into offsets in terms of the size of
+    the base scalar type being gathered.  (e.g. for an i32 gather, we might
+    have offsets like <0,4,16,20>, which would be transformed to <0,1,4,5>
+    here.)
+ */
+static void
+lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGroup,
+                     int elementSize, std::vector<int64_t> *constOffsets) {
+    constOffsets->reserve(coalesceGroup.size() * g->target.vectorWidth);
+
+    for (int i = 0; i < (int)coalesceGroup.size(); ++i) {
+        llvm::Value *offsets = coalesceGroup[i]->getArgOperand(3);
+
+#ifdef LLVM_3_1svn
+        llvm::ConstantDataVector *cv = 
+            llvm::dyn_cast<llvm::ConstantDataVector>(offsets);
+        Assert(cv != NULL);
+
+        for (int j = 0; j < g->target.vectorWidth; ++j) {
+            Assert((cv->getElementAsInteger(j) % elementSize) == 0);
+            constOffsets->push_back((int64_t)cv->getElementAsInteger(j) / 
+                                    elementSize);
+        }
+#else
+        llvm::ConstantVector *cv =
+            llvm::dyn_cast<llvm::ConstantVector>(offsets);
+        Assert(cv != NULL);
+
+        for (int j = 0; j < g->target.vectorWidth; ++j) {
+            llvm::ConstantInt *ci = 
+                llvm::dyn_cast<llvm::ConstantInt>(cv->getOperand(j));
+            Assert(ci != NULL);
+            int64_t value = ci->getValue().getSExtValue();
+            Assert((value % elementSize) == 0);
+            constOffsets->push_back(value / elementSize);
+        }
+#endif
+    }
+}
+
+
+/** Actually do the coalescing.  We have a set of gathers all accessing
+    addresses of the form:
+
+    (ptr + {1,2,4,8} * varyingOffset) + constOffset, a.k.a.
+    basePtr + constOffset
+
+    where varyingOffset actually has the same value across all of the SIMD
+    lanes and where the part in parenthesis has the same value for all of
+    the gathers in the group.
+ */
+static bool
+lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
+    llvm::Instruction *insertBefore = coalesceGroup[0];
+
+    // First, compute the shared base pointer for all of the gathers
+    llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], insertBefore);
+
+    int elementSize;
+    if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType)
+        elementSize = 4;
+    else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType)
+        elementSize = 8;
+    else
+        FATAL("Unexpected gather type in lCoalesceGathers");
+
+    // Extract the constant offsets from the gathers into the constOffsets
+    // vector: the first vectorWidth elements will be those for the first
+    // gather, the next vectorWidth those for the next gather, and so
+    // forth.
+    std::vector<int64_t> constOffsets;
+    lExtractConstOffsets(coalesceGroup, elementSize, &constOffsets);
+
+    // Determine a set of loads to perform to get all of the values we need
+    // loaded.
+    std::vector<CoalescedLoadOp> loadOps;
+    lSelectLoads(constOffsets, &loadOps);
+
+    lCoalescePerfInfo(coalesceGroup, loadOps);
+
+    // Actually emit load instructions for them
+    lEmitLoads(basePtr, loadOps, elementSize, insertBefore);
+
+    // Now, for any loads that give us <8 x i32> vectors, split their
+    // values into two <4 x i32> vectors; it turns out that LLVM gives us
+    // better code on AVX when we assemble the pieces from 4-wide vectors.
+    loadOps = lSplit8WideLoads(loadOps, insertBefore);
+
+    // Given all of these chunks of values, shuffle together a vector that
+    // gives us each result value; the i'th element of results[] gives the
+    // result for the i'th gather in coalesceGroup.
+    std::vector<llvm::Value *> results;
+    lAssembleResultVectors(loadOps, constOffsets, results, insertBefore);
+
+    // Finally, replace each of the original gathers with the instruction
+    // that gives the value from the coalescing process.
+    Assert(results.size() == coalesceGroup.size());
+    for (int i = 0; i < (int)results.size(); ++i) {
+        // Previously, all of the instructions to compute the final result
+        // were into the basic block here; here we remove the very last one
+        // of them (that holds the final result) from the basic block.
+        // This way, the following ReplaceInstWithInst() call will operate
+        // successfully. (It expects that the second argument not be in any
+        // basic block.)
+        llvm::Instruction *ir = llvm::dyn_cast<llvm::Instruction>(results[i]);
+        Assert(ir != NULL);
+        ir->removeFromParent();
+
+        llvm::ReplaceInstWithInst(coalesceGroup[i], ir);
+    }
+
+    return true;
+}
+
+
+/** Given an instruction, returns true if the instructon may write to
+    memory.  This is a conservative test in that it may return true for
+    some instructions that don't actually end up writing to memory, but
+    should never return false for an instruction that does write to
+    memory. */
+static bool
+lInstructionMayWriteToMemory(llvm::Instruction *inst) {
+#ifdef LLVM_2_9
+    if (llvm::isa<llvm::StoreInst>(inst))
+#else
+    if (llvm::isa<llvm::StoreInst>(inst) ||
+        llvm::isa<llvm::AtomicRMWInst>(inst) ||
+        llvm::isa<llvm::AtomicCmpXchgInst>(inst))
+#endif // !LLVM_2_9
+        // FIXME: we could be less conservative and try to allow stores if
+        // we are sure that the pointers don't overlap..
+        return true;
+
+    // Otherwise, any call instruction that doesn't have an attribute
+    // indicating it won't write to memory has to be treated as a potential
+    // store.
+    llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst);
+    if (ci != NULL) {
+        llvm::Function *calledFunc = ci->getCalledFunction();
+        if (calledFunc == NULL)
+            return true;
+
+        if (calledFunc->onlyReadsMemory() || calledFunc->doesNotAccessMemory())
+            return false;
+        return true;
+    }
+
+    return false;
+}
+
+
+bool
+GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    llvm::Function *gatherFuncs[] = {
+        m->module->getFunction("__pseudo_gather_base_offsets32_32"),
+        m->module->getFunction("__pseudo_gather_base_offsets64_32"),
+    };
+    int nGatherFuncs = sizeof(gatherFuncs) / sizeof(gatherFuncs[0]);
+
+    bool modifiedAny = false;
+
+ restart:
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;
+         ++iter) {
+        // Iterate over all of the instructions and look for calls to
+        // __pseudo_*_base_offsets*_32 calls.
+        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
+        if (callInst == NULL)
+            continue;
+
+        llvm::Function *calledFunc = callInst->getCalledFunction();
+        if (calledFunc == NULL)
+            continue;
+
+        int i;
+        for (i = 0; i < nGatherFuncs; ++i)
+            if (gatherFuncs[i] != NULL && calledFunc == gatherFuncs[i])
+                break;
+        if (i == nGatherFuncs)
+            // Doesn't match any of the types of gathers we care about
+            continue;
+
+        SourcePos pos;
+        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
+        Assert(ok);     
+        Debug(pos, "Checking for coalescable gathers starting here...");
+
+        llvm::Value *base = callInst->getArgOperand(0);
+        llvm::Value *variableOffsets = callInst->getArgOperand(1);
+        llvm::Value *offsetScale = callInst->getArgOperand(2);
+        llvm::Value *mask = callInst->getArgOperand(4);
+
+        // To apply this optimization, we need a set of one or more gathers
+        // that fulfill the following conditions:
+        //
+        // - Mask all on
+        // - The variable offsets to all have the same value (i.e., to be
+        //   uniform).
+        // - Same base pointer, variable offsets, and offset scale (for
+        //   more than one gather)
+        //
+        // Then and only then do we have a common base pointer with all
+        // offsets from that constants (in which case we can potentially
+        // coalesce).
+        if (lIsMaskAllOn(mask) == false)
+            continue;
+
+        std::vector<llvm::PHINode *> seenPhis;
+        if (LLVMVectorValuesAllEqual(variableOffsets, g->target.vectorWidth,
+                                     seenPhis) == false)
+            continue;
+
+        // coalesceGroup stores the set of gathers that we're going to try to
+        // coalesce over
+        std::vector<llvm::CallInst *> coalesceGroup;
+        coalesceGroup.push_back(callInst);
+
+        // Start iterating at the instruction after the initial gather;
+        // look at the remainder of instructions in the basic block (up
+        // until we reach a write to memory) to try to find any other
+        // gathers that can coalesce with this one.
+        llvm::BasicBlock::iterator fwdIter = iter;
+        ++fwdIter;
+        for (; fwdIter != bb.end(); ++fwdIter) {
+            // Must stop once we come to an instruction that may write to
+            // memory; otherwise we could end up moving a read before this
+            // write.
+            if (lInstructionMayWriteToMemory(&*fwdIter))
+                break;
+
+            llvm::CallInst *fwdCall = llvm::dyn_cast<llvm::CallInst>(&*fwdIter);
+            if (fwdCall == NULL ||
+                fwdCall->getCalledFunction() != calledFunc)
+                continue;
+
+            SourcePos fwdPos;
+            bool ok = lGetSourcePosFromMetadata(fwdCall, &fwdPos);
+            Assert(ok);
+
+#if 1
+            if (base != fwdCall->getArgOperand(0)) {
+                Debug(fwdPos, "base pointers mismatch");
+                base->dump();
+                fwdCall->getArgOperand(0)->dump();
+            }
+            if (variableOffsets != fwdCall->getArgOperand(1)) {
+                Debug(fwdPos, "varying offsets mismatch");
+                variableOffsets->dump();
+                fwdCall->getArgOperand(1)->dump();
+            }
+            if (offsetScale != fwdCall->getArgOperand(2)) {
+                Debug(fwdPos, "offset scales mismatch");
+                offsetScale->dump();
+                fwdCall->getArgOperand(2)->dump();
+            }
+            if (mask != fwdCall->getArgOperand(4)) {
+                Debug(fwdPos, "masks mismatch");
+                mask->dump();
+                fwdCall->getArgOperand(4)->dump();
+            }
+#endif
+
+            if (base == fwdCall->getArgOperand(0) &&
+                variableOffsets == fwdCall->getArgOperand(1) &&
+                offsetScale == fwdCall->getArgOperand(2) &&
+                mask == fwdCall->getArgOperand(4)) {
+                Debug(fwdPos, "This gather can be coalesced.");
+                coalesceGroup.push_back(fwdCall);
+
+                if (coalesceGroup.size() == 4)
+                    // FIXME: untested heuristic: don't try to coalesce
+                    // over a window of more than 4 gathers, so that we
+                    // don't cause too much register pressure and end up
+                    // spilling to memory anyway.
+                    break;
+            }
+            else
+                Debug(fwdPos, "This gather doesn't match the initial one.");
+        }
+
+        Debug(pos, "Done with checking for matching gathers");
+
+        // Now that we have a group of gathers, see if we can coalesce them
+        // into something more efficient than the original set of gathers.
+        if (lCoalesceGathers(coalesceGroup)) {
+            modifiedAny = true;
+            goto restart;
+        }
+    }
+
+//CO    if (modifiedAny)
+//CO        bb.dump();
+
+    return modifiedAny;
+}
+
+
+static llvm::Pass *
+CreateGatherCoalescePass() {
+    return new GatherCoalescePass;
 }
 
 

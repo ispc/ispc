@@ -339,6 +339,10 @@ struct Opt {
         than gathers/scatters.  This is likely only useful for measuring
         the impact of this optimization. */
     bool disableUniformMemoryOptimizations;
+
+    /** Disables optimizations that coalesce incoherent scalar memory
+        access from gathers into wider vector operations, when possible. */
+    bool disableCoalescing;
 };
 
 /** @brief This structure collects together a number of global variables. 
