@@ -363,6 +363,9 @@ namespace {
     bool printConstExprCast(const ConstantExpr *CE, bool Static);
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
+#ifdef LLVM_3_1svn
+    void printConstantDataVector(ConstantDataVector *CV, bool Static);
+#endif
 
     /// isAddressExposed - Return true if the specified value's name needs to
     /// have its address taken in order to get a C value of the correct type.
@@ -885,6 +888,19 @@ void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
   }
 }
 
+#ifdef LLVM_3_1svn
+void CWriter::printConstantDataVector(ConstantDataVector *CP, bool Static) {
+  if (CP->getNumElements()) {
+    Out << ' ';
+    printConstant(cast<Constant>(CP->getElementAsConstant(0)), Static);
+    for (unsigned i = 1, e = CP->getNumElements(); i != e; ++i) {
+      Out << ", ";
+      printConstant(cast<Constant>(CP->getElementAsConstant(i)), Static);
+    }
+  }
+}
+#endif // LLVM_3_1svn        
+
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
 // variable). We decide this by converting CFP to a string and back into a
@@ -1376,7 +1392,13 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
 
     if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
       printConstantVector(CV, Static);
-    } else {
+    }
+#ifdef LLVM_3_1svn
+    else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(CPV)) {
+      printConstantDataVector(CDV, Static);
+    }
+#endif
+    else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       VectorType *VT = cast<VectorType>(CPV->getType());
       Constant *CZ = Constant::getNullValue(VT->getElementType());
