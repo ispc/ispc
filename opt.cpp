@@ -1443,7 +1443,7 @@ lExtract248Scale(llvm::Value *splatOperand, int splatValue,
         Assert(insertBefore != NULL);
 
         if ((splatValue % scale) == 0) {
-            // *result = otherOperand + splatOperand / splatValue;
+            // *result = otherOperand * splatOperand / scale;
             llvm::Value *splatScaleVec = 
                 (splatOperand->getType() == LLVMTypes::Int32VectorType) ?
                 LLVMInt32Vector(scale) : LLVMInt64Vector(scale);
@@ -1452,7 +1452,7 @@ lExtract248Scale(llvm::Value *splatOperand, int splatValue,
                                              splatOperand, splatScaleVec,
                                              "div", insertBefore);
             *result = 
-                llvm::BinaryOperator::Create(llvm::Instruction::Add,
+                llvm::BinaryOperator::Create(llvm::Instruction::Mul,
                                              splatDiv, otherOperand,
                                              "add", insertBefore);
             return LLVMInt32(scale);
