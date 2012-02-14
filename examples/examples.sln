@@ -23,6 +23,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "stencil", "stencil\stencil.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deferred_shading", "deferred\deferred_shading.vcxproj", "{87F53C53-957E-4E91-878A-BC27828FB9EB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "perfbench", "perfbench\perfbench.vcxproj", "{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -119,6 +121,14 @@ Global
 		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|Win32.Build.0 = Release|Win32
 		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|x64.ActiveCfg = Release|x64
 		{87F53C53-957E-4E91-878A-BC27828FB9EB}.Release|x64.Build.0 = Release|x64
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Debug|Win32.Build.0 = Debug|Win32
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Debug|x64.ActiveCfg = Debug|x64
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Debug|x64.Build.0 = Debug|x64
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|Win32.ActiveCfg = Release|Win32
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|Win32.Build.0 = Release|Win32
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|x64.ActiveCfg = Release|x64
+		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
