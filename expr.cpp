@@ -3508,11 +3508,24 @@ ExprList::GetConstant(const Type *type) const {
         LLVM_TYPE_CONST llvm::Type *lt = type->LLVMType(g->ctx);
         LLVM_TYPE_CONST llvm::ArrayType *lat = 
             llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lt);
-        // FIXME: should the assert below validly fail for uniform vectors
-        // now?  Need a test case to reproduce it and then to be sure we
-        // have the right fix; leave the assert until we can hit it...
-        Assert(lat != NULL);
-        return llvm::ConstantArray::get(lat, cv);
+        if (lat != NULL)
+            return llvm::ConstantArray::get(lat, cv);
+        else {
+            // uniform short vector type
+            Assert(type->IsUniformType() &&
+                   dynamic_cast<const VectorType *>(type) != NULL);
+            LLVM_TYPE_CONST llvm::VectorType *lvt = 
+                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(lt);
+            Assert(lvt != NULL);
+
+            // Uniform short vectors are stored as vectors of length
+            // rounded up to the native vector width.  So we add additional
+            // undef values here until we get the right size.
+            while ((cv.size() % g->target.nativeVectorWidth) != 0)
+                cv.push_back(llvm::UndefValue::get(lvt->getElementType()));
+
+            return llvm::ConstantVector::get(cv);
+        }
     }
     return NULL;
 }
