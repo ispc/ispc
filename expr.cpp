@@ -5199,6 +5199,23 @@ ConstExpr::GetConstant(const Type *type) const {
         else
             return LLVMDoubleVector(dv);
     }
+    else if (dynamic_cast<const PointerType *>(type) != NULL) {
+        // The only time we should get here is if we have an integer '0'
+        // constant that should be turned into a NULL pointer of the
+        // appropriate type.
+        LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+        if (llvmType == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+
+        int64_t iv[ISPC_MAX_NVEC];
+        AsInt64(iv, type->IsVaryingType());
+        for (int i = 0; i < Count(); ++i)
+            Assert(iv[i] == 0);
+
+        return llvm::Constant::getNullValue(llvmType);
+    }
     else {
         FATAL("unexpected type in ConstExpr::GetConstant()");
         return NULL;
@@ -6277,7 +6294,6 @@ TypeCastExpr::GetConstant(const Type *constType) const {
     // 1. Null pointers (NULL, 0) valued initializers, and
     // 2. Converting a uniform function pointer to a varying function
     //    pointer of the same type.
-    Assert(Type::Equal(constType, type));
     return expr->GetConstant(constType);
 }
 
