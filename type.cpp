@@ -1431,8 +1431,10 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
 
     // If the current dimension is unsized, then size it according to the
     // length of the expression list
-    if (at->GetElementCount() == 0)
+    if (at->GetElementCount() == 0) {
         type = at->GetSizedArray(exprList->exprs.size());
+        at = dynamic_cast<const ArrayType *>(type);
+    }
 
     // Is there another nested level of expression lists?  If not, bail out
     // now.  Otherwise we'll use the first one to size the next dimension
@@ -1443,8 +1445,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
         return type;
 
     const Type *nextType = at->GetElementType();
-    const ArrayType *nextArrayType = 
-        dynamic_cast<const ArrayType *>(nextType);
+    const ArrayType *nextArrayType = dynamic_cast<const ArrayType *>(nextType);
     if (nextArrayType != NULL && nextArrayType->GetElementCount() == 0) {
         // If the recursive call to SizeUnsizedArrays at the bottom of the
         // function is going to size an unsized dimension, make sure that
@@ -1472,7 +1473,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     // Recursively call SizeUnsizedArrays() to get the child type for the
     // array that we were able to size here.
     return new ArrayType(SizeUnsizedArrays(at->GetElementType(), nextList),
-                         exprList->exprs.size());
+                         at->GetElementCount());
 }
 
 
