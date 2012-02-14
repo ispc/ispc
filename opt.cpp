@@ -392,7 +392,8 @@ Optimize(llvm::Module *module, int optLevel) {
             g->target.vectorWidth > 1) {
             optPM.add(CreateGSToLoadStorePass());
         
-            if (g->opt.disableCoalescing == false) {
+            if (g->opt.disableCoalescing == false &&
+                g->target.isa != Target::GENERIC) {
                 // It is important to run this here to make it easier to
                 // finding matching gathers we can coalesce..
                 optPM.add(llvm::createEarlyCSEPass());
