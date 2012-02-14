@@ -5113,8 +5113,7 @@ ConstExpr::GetConstant(const Type *type) const {
         else
             return LLVMInt8Vector(iv);
     }
-    else if (type == AtomicType::UniformUInt8 || type == AtomicType::VaryingUInt8 ||
-             dynamic_cast<const EnumType *>(type) != NULL) {
+    else if (type == AtomicType::UniformUInt8 || type == AtomicType::VaryingUInt8) {
         uint8_t uiv[ISPC_MAX_NVEC];
         AsUInt8(uiv, type->IsVaryingType());
         if (type->IsUniformType())
@@ -5130,8 +5129,7 @@ ConstExpr::GetConstant(const Type *type) const {
         else
             return LLVMInt16Vector(iv);
     }
-    else if (type == AtomicType::UniformUInt16 || type == AtomicType::VaryingUInt16 ||
-             dynamic_cast<const EnumType *>(type) != NULL) {
+    else if (type == AtomicType::UniformUInt16 || type == AtomicType::VaryingUInt16) {
         uint16_t uiv[ISPC_MAX_NVEC];
         AsUInt16(uiv, type->IsVaryingType());
         if (type->IsUniformType())
