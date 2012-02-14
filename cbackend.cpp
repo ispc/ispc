@@ -364,7 +364,7 @@ namespace {
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
 #ifdef LLVM_3_1svn
-    void printConstantDataVector(ConstantDataVector *CV, bool Static);
+    void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
 #endif
 
     /// isAddressExposed - Return true if the specified value's name needs to
@@ -801,19 +801,13 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
   default:
     llvm_unreachable("Unhandled case in getTypeProps!");
   }
-
-  return Out;
 }
 
 void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
-
-  // As a special case, print the array as a string if it is an array of
-  // ubytes or an array of sbytes with positive values.
-  //
+#ifndef LLVM_3_1svn
   Type *ETy = CPA->getType()->getElementType();
   // MMP: this looks like a bug: both sides of the || are the same
-  bool isString = (ETy == Type::getInt8Ty(CPA->getContext()) ||
-                   ETy == Type::getInt8Ty(CPA->getContext()));
+  bool isString = ETy == Type::getInt8Ty(CPA->getContext());
 
   // Make sure the last character is a null char, as automatically added by C
   if (isString && (CPA->getNumOperands() == 0 ||
@@ -821,7 +815,7 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     isString = false;
 
   if (isString) {
-    Out << '\"';
+    Out << "\"";
     // Keep track of whether the last number was a hexadecimal escape.
     bool LastWasHex = false;
 
@@ -844,62 +838,100 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
       } else {
         LastWasHex = false;
         switch (C) {
-        case '\n': Out << "\\n"; break;
-        case '\t': Out << "\\t"; break;
-        case '\r': Out << "\\r"; break;
-        case '\v': Out << "\\v"; break;
-        case '\a': Out << "\\a"; break;
-        case '\"': Out << "\\\""; break;
-        case '\'': Out << "\\\'"; break;
-        default:
-          Out << "\\x";
-          Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
-          Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
-          LastWasHex = true;
-          break;
+          case '\n': Out << "\\n"; break;
+          case '\t': Out << "\\t"; break;
+          case '\r': Out << "\\r"; break;
+          case '\v': Out << "\\v"; break;
+          case '\a': Out << "\\a"; break;
+          case '\"': Out << "\\\""; break;
+          case '\'': Out << "\\\'"; break;
+          default:
+            Out << "\\x";
+            Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
+            Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
+            LastWasHex = true;
+            break;
+        }
+      }
+    }
+    Out << "\"";
+    return;
+  }
+#endif // !LLVM_3_1
+
+  printConstant(cast<Constant>(CPA->getOperand(0)), Static);
+  for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
+    Out << ", ";
+    printConstant(cast<Constant>(CPA->getOperand(i)), Static);
+  }
+}
+
+void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
+  printConstant(cast<Constant>(CP->getOperand(0)), Static);
+  for (unsigned i = 1, e = CP->getNumOperands(); i != e; ++i) {
+    Out << ", ";
+    printConstant(cast<Constant>(CP->getOperand(i)), Static);
+  }
+}
+
+#ifdef LLVM_3_1svn
+void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
+                                          bool Static) {
+  // As a special case, print the array as a string if it is an array of
+  // ubytes or an array of sbytes with positive values.
+  //
+  if (CDS->isCString()) {
+    Out << '\"';
+    // Keep track of whether the last number was a hexadecimal escape.
+    bool LastWasHex = false;
+    
+    StringRef Bytes = CDS->getAsCString();
+    
+    // Do not include the last character, which we know is null
+    for (unsigned i = 0, e = Bytes.size(); i != e; ++i) {
+      unsigned char C = Bytes[i];
+      
+      // Print it out literally if it is a printable character.  The only thing
+      // to be careful about is when the last letter output was a hex escape
+      // code, in which case we have to be careful not to print out hex digits
+      // explicitly (the C compiler thinks it is a continuation of the previous
+      // character, sheesh...)
+      //
+      if (isprint(C) && (!LastWasHex || !isxdigit(C))) {
+        LastWasHex = false;
+        if (C == '"' || C == '\\')
+          Out << "\\" << (char)C;
+        else
+          Out << (char)C;
+      } else {
+        LastWasHex = false;
+        switch (C) {
+          case '\n': Out << "\\n"; break;
+          case '\t': Out << "\\t"; break;
+          case '\r': Out << "\\r"; break;
+          case '\v': Out << "\\v"; break;
+          case '\a': Out << "\\a"; break;
+          case '\"': Out << "\\\""; break;
+          case '\'': Out << "\\\'"; break;
+          default:
+            Out << "\\x";
+            Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
+            Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
+            LastWasHex = true;
+            break;
         }
       }
     }
     Out << '\"';
   } else {
-    if (Static)
-      Out << '{';
-    if (CPA->getNumOperands()) {
-      Out << ' ';
-      printConstant(cast<Constant>(CPA->getOperand(0)), Static);
-      for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
-        Out << ", ";
-        printConstant(cast<Constant>(CPA->getOperand(i)), Static);
-      }
-    }
-    if (Static)
-      Out << " }";
-  }
-}
-
-void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
-  if (CP->getNumOperands()) {
-    Out << ' ';
-    printConstant(cast<Constant>(CP->getOperand(0)), Static);
-    for (unsigned i = 1, e = CP->getNumOperands(); i != e; ++i) {
+    printConstant(CDS->getElementAsConstant(0), Static);
+    for (unsigned i = 1, e = CDS->getNumElements(); i != e; ++i) {
       Out << ", ";
-      printConstant(cast<Constant>(CP->getOperand(i)), Static);
+      printConstant(CDS->getElementAsConstant(i), Static);
     }
   }
 }
-
-#ifdef LLVM_3_1svn
-void CWriter::printConstantDataVector(ConstantDataVector *CP, bool Static) {
-  if (CP->getNumElements()) {
-    Out << ' ';
-    printConstant(cast<Constant>(CP->getElementAsConstant(0)), Static);
-    for (unsigned i = 1, e = CP->getNumElements(); i != e; ++i) {
-      Out << ", ";
-      printConstant(cast<Constant>(CP->getElementAsConstant(i)), Static);
-    }
-  }
-}
-#endif // LLVM_3_1svn        
+#endif // LLVM_3_1svn
 
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
@@ -1368,6 +1400,11 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
+#ifdef LLVM_3_1svn
+    } else if (ConstantDataSequential *CDS = 
+               dyn_cast<ConstantDataSequential>(CPV)) {
+      printConstantDataSequential(CDS, Static);
+#endif // LLVM_3_1svn
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       if (AT->getNumElements()) {
@@ -1392,13 +1429,12 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
 
     if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
       printConstantVector(CV, Static);
-    }
 #ifdef LLVM_3_1svn
-    else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(CPV)) {
-      printConstantDataVector(CDV, Static);
-    }
+    } else if (ConstantDataSequential *CDS = 
+               dyn_cast<ConstantDataSequential>(CPV)) {
+      printConstantDataSequential(CDS, Static);
 #endif
-    else {
+    } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       VectorType *VT = cast<VectorType>(CPV->getType());
       Constant *CZ = Constant::getNullValue(VT->getElementType());
@@ -2789,9 +2825,17 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
 
   unsigned NumCases = SI.getNumCases();
   // Skip the first item since that's the default case.
+#ifdef LLVM_3_1svn
+  for (unsigned i = 0; i < NumCases; ++i) {
+#else
   for (unsigned i = 1; i < NumCases; ++i) {
+#endif // LLVM_3_1svn
     ConstantInt* CaseVal = SI.getCaseValue(i);
+#ifdef LLVM_3_1svn
+    BasicBlock* Succ = SI.getCaseSuccessor(i);
+#else
     BasicBlock* Succ = SI.getSuccessor(i);
+#endif // LLVM_3_1svn
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";
