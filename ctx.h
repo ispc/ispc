@@ -445,6 +445,12 @@ public:
     void StoreInst(llvm::Value *value, llvm::Value *ptr,
                    llvm::Value *storeMask, const Type *ptrType);
 
+    /** Copy count bytes of memory from the location pointed to by src to
+        the location pointed to by dest.  (src and dest must not be
+        overlapping.) */ 
+    void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count,
+                    llvm::Value *align = NULL);
+
     void BranchInst(llvm::BasicBlock *block);
     void BranchInst(llvm::BasicBlock *trueBlock, llvm::BasicBlock *falseBlock,
                     llvm::Value *test);

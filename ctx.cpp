@@ -2515,6 +2515,36 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
 
 
 void
+FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, 
+                                llvm::Value *count, llvm::Value *align) {
+    dest = BitCastInst(dest, LLVMTypes::VoidPointerType);
+    src = BitCastInst(src, LLVMTypes::VoidPointerType);
+    if (count->getType() != LLVMTypes::Int64Type) {
+        Assert(count->getType() == LLVMTypes::Int32Type);
+        count = ZExtInst(count, LLVMTypes::Int64Type, "count_to_64");
+    }
+    if (align == NULL)
+        align = LLVMInt32(1);
+
+    llvm::Constant *mcFunc = 
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", 
+                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+                                       LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
+    Assert(mcFunc != NULL);
+    Assert(llvm::isa<llvm::Function>(mcFunc));
+
+    std::vector<llvm::Value *> args;
+    args.push_back(dest);
+    args.push_back(src);
+    args.push_back(count);
+    args.push_back(align);
+    args.push_back(LLVMFalse); /* not volatile */
+    CallInst(mcFunc, NULL, args, "");
+}
+
+
+void
 FunctionEmitContext::BranchInst(llvm::BasicBlock *dest) {
     llvm::Instruction *b = llvm::BranchInst::Create(dest, bblock);
     AddDebugPos(b);
