@@ -545,7 +545,7 @@ PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
 /** Utility routine that emits code to initialize a symbol given an
     initializer expression.
 
-    @param lvalue    Memory location of storage for the symbol's data
+    @param ptr       Memory location of storage for the symbol's data
     @param symName   Name of symbol (used in error messages)
     @param symType   Type of variable being initialized
     @param initExpr  Expression for the initializer
@@ -553,7 +553,7 @@ PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     @param pos       Source file position of the variable being initialized
 */
 void
-InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr, 
+InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr, 
            FunctionEmitContext *ctx, SourcePos pos) {
     if (initExpr == NULL)
         // leave it uninitialized
@@ -571,7 +571,7 @@ InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
             llvm::Value *initializerValue = initExpr->GetValue(ctx);
             if (initializerValue != NULL)
                 // Bingo; store the value in the variable's storage
-                ctx->StoreInst(initializerValue, lvalue);
+                ctx->StoreInst(initializerValue, ptr);
             return;
         }
     }
@@ -585,7 +585,7 @@ InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
         ExprList *elist = dynamic_cast<ExprList *>(initExpr);
         if (elist != NULL) {
             if (elist->exprs.size() == 1)
-                InitSymbol(lvalue, symType, elist->exprs[0], ctx, pos);
+                InitSymbol(ptr, symType, elist->exprs[0], ctx, pos);
             else
                 Error(initExpr->pos, "Expression list initializers can't be used "
                       "with type \"%s\".", symType->GetString().c_str());
@@ -604,7 +604,7 @@ InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
 
         llvm::Value *initializerValue = initExpr->GetValue(ctx);
         if (initializerValue)
-            ctx->StoreInst(initializerValue, lvalue);
+            ctx->StoreInst(initializerValue, ptr);
         return;
     }
 
@@ -629,12 +629,12 @@ InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
 
         ExprList *exprList = dynamic_cast<ExprList *>(initExpr);
         if (exprList != NULL) {
-            // The { ... } case; make sure we have the same number of
-            // expressions in the ExprList as we have struct members
+            // The { ... } case; make sure we have the no more expressions
+            // in the ExprList as we have struct members
             int nInits = exprList->exprs.size();
-            if (nInits != collectionType->GetElementCount()) {
+            if (nInits > collectionType->GetElementCount()) {
                 Error(initExpr->pos, "Initializer for %s type \"%s\" requires "
-                      "%d values; %d provided.", name.c_str(), 
+                      "no more than %d values; %d provided.", name.c_str(), 
                       symType->GetString().c_str(),
                       collectionType->GetElementCount(), nInits);
                 return;
@@ -642,17 +642,36 @@ InitSymbol(llvm::Value *lvalue, const Type *symType, Expr *initExpr,
 
             // Initialize each element with the corresponding value from
             // the ExprList
-            for (int i = 0; i < nInits; ++i) {
+            for (int i = 0; i < collectionType->GetElementCount(); ++i) {
+                const Type *elementType = collectionType->GetElementType(i);
+                if (elementType == NULL) {
+                    Assert(m->errorCount > 0);
+                    return;
+                }
+
                 llvm::Value *ep;
                 if (dynamic_cast<const StructType *>(symType) != NULL)
-                    ep = ctx->AddElementOffset(lvalue, i, NULL, "element");
+                    ep = ctx->AddElementOffset(ptr, i, NULL, "element");
                 else
-                    ep = ctx->GetElementPtrInst(lvalue, LLVMInt32(0), LLVMInt32(i), 
-                                                PointerType::GetUniform(collectionType->GetElementType(i)), 
+                    ep = ctx->GetElementPtrInst(ptr, LLVMInt32(0), LLVMInt32(i), 
+                                                PointerType::GetUniform(elementType),
                                                 "gep");
 
-                InitSymbol(ep, collectionType->GetElementType(i), 
-                            exprList->exprs[i], ctx, pos);
+                if (i < nInits)
+                    InitSymbol(ep, collectionType->GetElementType(i), 
+                               exprList->exprs[i], ctx, pos);
+                else {
+                    // If we don't have enough initializer values, initialize the
+                    // rest as zero.
+                    LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+                    if (llvmType == NULL) {
+                        Assert(m->errorCount > 0);
+                        return;
+                    }
+
+                    llvm::Constant *zeroInit = llvm::ConstantAggregateZero::get(llvmType);
+                    ctx->StoreInst(zeroInit, ep);
+                }
             }
         }
         else
@@ -3436,9 +3455,10 @@ ExprList::GetConstant(const Type *type) const {
     else 
         FATAL("Unexpected CollectionType in ExprList::GetConstant()");
 
-    if ((int)exprs.size() != collectionType->GetElementCount()) {
-        Error(pos, "Initializer list for %s \"%s\" must have %d elements "
-              "(has %d).", name.c_str(), collectionType->GetString().c_str(),
+    if ((int)exprs.size() > collectionType->GetElementCount()) {
+        Error(pos, "Initializer list for %s \"%s\" must have no more than %d "
+              "elements (has %d).", name.c_str(), 
+              collectionType->GetString().c_str(),
               collectionType->GetElementCount(), (int)exprs.size());
         return NULL;
     }
@@ -3453,6 +3473,24 @@ ExprList::GetConstant(const Type *type) const {
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
             return NULL;
+        cv.push_back(c);
+    }
+
+    // If there are too few, then treat missing ones as if they were zero
+    for (int i = (int)exprs.size(); i < collectionType->GetElementCount(); ++i) {
+        const Type *elementType = collectionType->GetElementType(i);
+        if (elementType == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+
+        LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+        if (llvmType == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+
+        llvm::Constant *c = llvm::Constant::getNullValue(llvmType);
         cv.push_back(c);
     }
 
