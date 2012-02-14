@@ -559,6 +559,32 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         // leave it uninitialized
         return;
 
+    // See if we have a constant initializer a this point
+    llvm::Constant *constValue = initExpr->GetConstant(symType);
+    if (constValue != NULL) {
+        // It'd be nice if we could just do a StoreInst(constValue, ptr)
+        // at this point, but unfortunately that doesn't generate great
+        // code (e.g. a bunch of scalar moves for a constant array.)  So
+        // instead we'll make a constant static global that holds the
+        // constant value and emit a memcpy to put its value into the
+        // pointer we have.
+        LLVM_TYPE_CONST llvm::Type *llvmType = symType->LLVMType(g->ctx);
+        if (llvmType == NULL) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
+        llvm::Value *constPtr = 
+            new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
+                                     llvm::GlobalValue::InternalLinkage,
+                                     constValue, "const_initializer");
+        llvm::Value *size = g->target.SizeOf(llvmType, 
+                                             ctx->GetCurrentBasicBlock());
+        ctx->MemcpyInst(ptr, constPtr, size);
+
+        return;
+    }
+
     // If the initializer is a straight up expression that isn't an
     // ExprList, then we'll see if we can type convert it to the type of
     // the variable.
