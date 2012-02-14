@@ -2552,7 +2552,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (varyingOffsets->getType() == LLVMTypes::Int64VectorType)
                 scales.push_back(LLVMInt64(scaleValue));
             else
-                scales.push_back(LLVMInt32(scaleValue));
+                scales.push_back(LLVMInt32((int32_t)scaleValue));
         }
         llvm::Constant *offsetScaleVec = llvm::ConstantVector::get(scales);
 
@@ -2738,7 +2738,7 @@ lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
                        std::set<int64_t>::iterator *newIter, int vectorWidth) {
     // We're considering a vector load of width vectorWidth, starting at
     // the offset "start".
-    int start = *iter;
+    int64_t start = *iter;
 
     // The basic idea is that we'll look at the subsequent elements in the
     // load set after the initial one at start.  As long as subsequent
@@ -2756,17 +2756,17 @@ lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
 
     // lastAccepted holds the last offset we've processed and accepted as
     // valid for the vector load underconsideration
-    int lastAccepted = start;
+    int64_t lastAccepted = start;
 
     while (iter != end) {
         // What is the separation in offset values from the last element we
         // added to the set for this load?
-        int delta = *iter - lastAccepted;
+        int64_t delta = *iter - lastAccepted;
         if (delta > 3)
             // If there's too big a gap, then we won't issue the load
             return false;
 
-        int span = *iter - start + 1;
+        int64_t span = *iter - start + 1;
 
         if (span == vectorWidth) {
             // We've extended far enough that we have exactly filled up the
@@ -2954,7 +2954,7 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
     return *((type *)(basePtr + offset))
  */
 llvm::Value *
-lGEPAndLoad(llvm::Value *basePtr, int offset, int align,
+lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align,
             llvm::Instruction *insertBefore, LLVM_TYPE_CONST llvm::Type *type) {
     llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base",
                                 insertBefore);
@@ -2979,7 +2979,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
 
         // basePtr is an i8 *, so the offset from it should be in terms of
         // bytes, not underlying i32 elements.
-        int start = loadOps[i].start * elementSize;
+        int64_t start = loadOps[i].start * elementSize;
 
         int align = 4;
         switch (loadOps[i].count) {
@@ -3204,7 +3204,7 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
             // shuffle index that extracts the appropriate element from the
             // load.
             Assert(set[elt] == false);
-            shuf[elt] = offsets[elt] - load.start;
+            shuf[elt] = int32_t(offsets[elt] - load.start);
             set[elt] = true;
         }
     }
