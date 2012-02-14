@@ -481,15 +481,15 @@ new_expression
     : conditional_expression
     | rate_qualified_new rate_qualified_new_type
     {
-        $$ = new NewExpr($1, $2, NULL, NULL, @1, Union(@1, @2));
+        $$ = new NewExpr((int32_t)$1, $2, NULL, NULL, @1, Union(@1, @2));
     }
     | rate_qualified_new rate_qualified_new_type '(' initializer_list ')'
     {
-        $$ = new NewExpr($1, $2, $4, NULL, @1, Union(@1, @2));
+        $$ = new NewExpr((int32_t)$1, $2, $4, NULL, @1, Union(@1, @2));
     }
     | rate_qualified_new rate_qualified_new_type '[' expression ']'
     {
-        $$ = new NewExpr($1, $2, NULL, $4, @1, Union(@1, @4));
+        $$ = new NewExpr((int32_t)$1, $2, NULL, $4, @1, Union(@1, @4));
     }
     ;
 

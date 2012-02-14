@@ -585,7 +585,7 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
                 llvm::dyn_cast<llvm::ConstantVector>(insertBase);
             Assert(cv != NULL);
             Assert(iOffset < (int)cv->getNumOperands());
-            elements[iOffset] = cv->getOperand(iOffset);
+            elements[iOffset] = cv->getOperand((int32_t)iOffset);
         }
     }
 }
