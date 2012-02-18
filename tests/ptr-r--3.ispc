@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 
-void foo(float * uniform a) {
+void foo(varying float * uniform a) {
     *a = 0;
 }
 

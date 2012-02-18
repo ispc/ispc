@@ -427,7 +427,7 @@ AtomicType::GetString() const {
         if (isConst)   ret += "const ";
         switch (variability) {
         case Uniform: ret += "uniform ";     break;
-        case Varying: /*ret += "varying ";*/ break;
+        case Varying: ret += "varying ";     break;
         case Unbound: ret += "/*unbound*/ "; break;
         }
     }
@@ -986,9 +986,17 @@ PointerType::ResolveUnboundVariability(Variability v) const {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    return new PointerType(baseType->ResolveUnboundVariability(v),
-                           (variability == Unbound) ? v : variability,
-                           isConst);
+
+    Assert(v != Unbound);
+    Variability ptrVariability = (variability == Unbound) ? v : variability;
+    Variability childVariability = (ptrVariability == Varying) ? 
+        Uniform : Varying;
+    if (dynamic_cast<const StructType *>(baseType))
+        // struct members are varying by default.. (FIXME!!!)
+        childVariability = Varying;
+
+    return new PointerType(baseType->ResolveUnboundVariability(childVariability),
+                           ptrVariability, isConst);
 }
 
 
@@ -1030,7 +1038,7 @@ PointerType::GetString() const {
     if (isConst) ret += " const";
     switch (variability) {
     case Uniform: ret += " uniform";     break;
-    case Varying: /*ret += " varying";*/ break;
+    case Varying: ret += " varying";     break;
     case Unbound: ret += " /*unbound*/"; break;
     }
 
@@ -1964,7 +1972,7 @@ StructType::GetString() const {
 
     switch (variability) {
     case Uniform: ret += "uniform ";     break;
-    case Varying: /*ret += "varying ";*/ break;
+    case Varying: ret += "varying ";     break;
     case Unbound: ret += "/*unbound*/ "; break;
     }
 

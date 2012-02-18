@@ -408,7 +408,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                     return NULL;
                 }
 
-                sym->type = PointerType::GetUniform(at->GetElementType());
+                const Type *targetType = at->GetElementType();
+                targetType = 
+                    targetType->ResolveUnboundVariability(Type::Varying);
+                sym->type = PointerType::GetUniform(targetType);
+
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
                 at = dynamic_cast<const ArrayType *>(at->GetElementType());

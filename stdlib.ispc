@@ -484,7 +484,8 @@ static inline void
 aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
             int32 * uniform v2, int32 * uniform v3) {
     aos_to_soa4((uniform float * uniform)a, (float * uniform )v0, 
-                (float * uniform)v1, (float * uniform)v2, (float * uniform)v3);
+                (float * uniform)v1, (float * uniform)v2, 
+                (float * uniform)v3);
 }
 
 static inline void
@@ -763,24 +764,24 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 // packed load, store
 
 static inline uniform int 
-packed_load_active(uniform unsigned int * uniform a,
+packed_load_active(uniform unsigned int a[],
                    unsigned int * uniform vals) {
     return __packed_load_active(a, vals, (UIntMaskType)__mask);
 }
 
 static inline uniform int
-packed_store_active(uniform unsigned int * uniform a,
+packed_store_active(uniform unsigned int a[],
                     unsigned int vals) {
     return __packed_store_active(a, vals, (UIntMaskType)__mask);
 }
 
 static inline uniform int 
-packed_load_active(uniform int * uniform a, int * uniform vals) {
+packed_load_active(uniform int a[], int * uniform vals) {
     return __packed_load_active(a, vals, (IntMaskType)__mask);
 }
 
 static inline uniform int 
-packed_store_active(uniform int * uniform a, int vals) {
+packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
@@ -1630,7 +1631,7 @@ static inline uniform float ldexp(uniform float x, uniform int n) {
     return floatbits(ix);
 }
 
-static inline float frexp(float x, int * uniform pw2) {
+static inline float frexp(float x, varying int * uniform pw2) {
     unsigned int ex = 0x7F800000u;              // exponent mask
     unsigned int ix = intbits(x);
     ex &= ix;
@@ -1909,8 +1910,8 @@ static inline uniform float cos(uniform float x_full) {
 }
 
 
-static inline void sincos(float x_full, float * uniform sin_result, 
-                          float * uniform cos_result) {
+static inline void sincos(float x_full, varying float * uniform sin_result, 
+                          varying float * uniform cos_result) {
     if (__math_lib == __math_lib_svml) {
         __svml_sincos(x_full, sin_result, cos_result);
     }
@@ -2507,8 +2508,8 @@ static inline uniform float exp(uniform float x_full) {
 // Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
 // * log(2) + log(y) where y is the reduced range (usually in [1/2,
 // 1)).
-static inline void __range_reduce_log(float input, float * uniform reduced, 
-                                      int * uniform exponent) {
+static inline void __range_reduce_log(float input, varying float * uniform reduced, 
+                                      varying int * uniform exponent) {
     int int_version = intbits(input);
     // single precision = SEEE EEEE EMMM MMMM MMMM MMMM MMMM MMMM
     // exponent mask    = 0111 1111 1000 0000 0000 0000 0000 0000
@@ -2785,7 +2786,7 @@ static inline uniform double ldexp(uniform double x, uniform int n) {
     return doublebits(ix);
 }
 
-static inline double frexp(double x, int * uniform pw2) {
+static inline double frexp(double x, varying int * uniform pw2) {
     unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
     unsigned int64 ix = intbits(x);
     ex &= ix;
@@ -2851,8 +2852,8 @@ static inline uniform double cos(uniform double x) {
         return __stdlib_cos(x);
 }
 
-static inline void sincos(double x, double * uniform sin_result,
-                          double * uniform cos_result) {
+static inline void sincos(double x, varying double * uniform sin_result,
+                          varying double * uniform cos_result) {
     if (__math_lib == __math_lib_ispc_fast) {
         float sr, cr;
         sincos((float)x, &sr, &cr);
@@ -3391,7 +3392,7 @@ struct RNGState {
     unsigned int z1, z2, z3, z4;
 };
 
-static inline unsigned int random(RNGState * uniform state)
+static inline unsigned int random(varying RNGState * uniform state)
 {
     unsigned int b;
 
@@ -3406,14 +3407,14 @@ static inline unsigned int random(RNGState * uniform state)
     return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
 }
 
-static inline float frandom(RNGState * uniform state)
+static inline float frandom(varying RNGState * uniform state)
 {
     unsigned int irand = random(state);
     irand &= (1<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
-static inline uniform unsigned int __seed4(RNGState * uniform state, 
+static inline uniform unsigned int __seed4(varying RNGState * uniform state, 
                                            uniform int start,
                                            uniform unsigned int seed) {
     uniform unsigned int c1 = 0xf0f0f0f0;
@@ -3447,7 +3448,7 @@ static inline uniform unsigned int __seed4(RNGState * uniform state,
     return seed;
 }
 
-static inline void seed_rng(uniform RNGState * uniform state, uniform unsigned int seed) {
+static inline void seed_rng(varying RNGState * uniform state, uniform unsigned int seed) {
     if (programCount == 1) {
         state->z1 = seed;
         state->z2 = seed ^ 0xbeeff00d;

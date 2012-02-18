@@ -264,9 +264,9 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
     if (toType->IsUniformType() && fromType->IsVaryingType()) {
         if (!failureOk)
-            Error(pos, "Can't convert from varying type \"%s\" to uniform "
-                  "type \"%s\" for %s.", fromType->GetString().c_str(), 
-                  toType->GetString().c_str(), errorMsgBase);
+            Error(pos, "Can't convert from type \"%s\" to type \"%s\" for %s.",
+                  fromType->GetString().c_str(), toType->GetString().c_str(), 
+                  errorMsgBase);
         return false;
     }
 
@@ -5238,7 +5238,10 @@ ConstExpr::GetConstant(const Type *type) const {
         int64_t iv[ISPC_MAX_NVEC];
         AsInt64(iv, type->IsVaryingType());
         for (int i = 0; i < Count(); ++i)
-            Assert(iv[i] == 0);
+            if (iv[i] != 0)
+                // We'll issue an error about this later--trying to assign
+                // a constant int to a pointer, without a typecast.
+                return NULL;
 
         return llvm::Constant::getNullValue(llvmType);
     }
@@ -6152,9 +6155,8 @@ TypeCastExpr::TypeCheck() {
     toType = lDeconstifyType(toType);
 
     if (fromType->IsVaryingType() && toType->IsUniformType()) {
-        Error(pos, "Can't type cast from varying type \"%s\" to uniform "
-              "type \"%s\"", fromType->GetString().c_str(),
-              toType->GetString().c_str());
+        Error(pos, "Can't type cast from type \"%s\" to type \"%s\"",
+              fromType->GetString().c_str(), toType->GetString().c_str());
         return NULL;
     }
 
@@ -7310,8 +7312,6 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
                  SourcePos tqPos, SourcePos p)
     : Expr(p) {
     allocType = t;
-    if (allocType != NULL && allocType->HasUnboundVariability())
-        allocType = allocType->ResolveUnboundVariability(Type::Varying);
 
     initExpr = init;
     countExpr = count;
@@ -7333,6 +7333,18 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         // If no type qualifier is given before the 'new', treat it as a
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
+
+    if (allocType != NULL && allocType->HasUnboundVariability()) {
+        Type::Variability childVariability = isVarying ?
+            Type::Uniform : Type::Varying;
+        if (dynamic_cast<const StructType *>(allocType) != NULL)
+            // FIXME: yet another place where the "structs are varying"
+            // wart pops up..
+            childVariability = Type::Varying;
+
+        allocType = allocType->ResolveUnboundVariability(childVariability);
+    }
+
 }
 
 

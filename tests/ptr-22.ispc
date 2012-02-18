@@ -6,14 +6,14 @@ struct Foo {
     uniform float b;
 };
 
-void update(Foo * varying fp) {
+void update(uniform Foo * varying fp) {
     ++fp;
     fp->a -= 1;
     fp->b = 1;
 }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    Foo f[2] = { { 1234, 4321 }, { aFOO[programIndex], 5 } };
+    uniform Foo f[2] = { { 1234, 4321 }, { aFOO[programIndex], 5 } };
     update(f);
     RET[programIndex] = f[1].a;
 }

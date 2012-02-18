@@ -7,7 +7,7 @@ struct Point {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
-    Point * varying buf = new Point(0., b, a);
+    uniform Point * buf = new Point(0., b, a);
     RET[programIndex] = buf->z;
     delete buf;
 }

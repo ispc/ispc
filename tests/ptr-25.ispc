@@ -1,7 +1,7 @@
 
 export uniform int width() { return programCount; }
 
-void update(float<2> * varying vp) {
+void update(varying float<2> * vp) {
     vp->y = 0;
 }
 

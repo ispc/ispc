@@ -3,9 +3,9 @@ export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
-    float * uniform pa = &a;
-    int * uniform pb = (int *)pa;
-    float *uniform pc = (float *)pb;
+    varying float * uniform pa = &a;
+    varying int * uniform pb = (varying int *)pa;
+    varying float *uniform pc = (varying float *)pb;
     *pc = programIndex;
     RET[programIndex] = *pc;
 }

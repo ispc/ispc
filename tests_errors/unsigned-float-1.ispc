@@ -1,4 +1,4 @@
-// Can't apply "unsigned" qualifier to "float" type
+// Can't apply "unsigned" qualifier to "varying float" type
 
 struct Foo {
     unsigned float x;

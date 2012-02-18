@@ -1499,38 +1499,46 @@ Pointer Types
 
 It is possible to have pointers to data in memory; pointer arithmetic,
 changing values in memory with pointers, and so forth is supported as in C.
-
-::
-
-    float a = 0;
-    float *pa = &a;
-    *pa = 1;  // now a == 1
-
-Also as in C, arrays are silently converted into pointers:
-
-::
-
-    float a[10] = { ... };
-    float *pa = a;     // pointer to first element of a
-    float *pb = a + 5; // pointer to 5th element of a
-
 As with other basic types, pointers can be both ``uniform`` and
-``varying``.  By default, they are varying.  The placement of the
-``uniform`` qualifier to declare a ``uniform`` pointer may be initially
-surprising, but it matches the form of how for example a pointer that is
-itself ``const`` (as opposed to pointing to a ``const`` type) is declared
-in C.
+``varying``.  
+
+** Like other types in ``ispc``, pointers are ``varying`` by default, if an
+explicit ``uniform`` qualifier isn't provided.  However, the default
+variability of the pointed-to type (``uniform`` or ``varying``) is the
+opposite of the pointer variability. ** This rule will be illustrated and
+explained in examples below.
+
+For example, the ``ptr`` variable in the code below is a varying pointer to
+``uniform float`` values.  Each program instance has a separate pointer
+value and the assignment to ``*ptr`` generally represents a scatter to
+memory.
 
 ::
 
-    uniform float f = 0;
-    uniform float * uniform pf = &f;
+    uniform float a[] = ...;
+    int index = ...;
+    float * ptr = &a[index];
+    *ptr = 1;
+
+A ``uniform`` pointer can be declared with an appropriately-placed
+qualifier:
+
+::
+
+    float f = 0;
+    float * uniform pf = &f;  // uniform pointer to a varying float
     *pf = 1;
 
-A subtlety comes in when a uniform pointer points to a varying datatype.
-In this case, each program instance accesses a distinct location in memory
-(because the underlying varying datatype is itself laid out with a separate
-location in memory for each program instance.)
+The placement of the ``uniform`` qualifier to declare a ``uniform`` pointer
+may be initially surprising, but it matches the form of how, for example, a
+pointer that is itself ``const`` (as opposed to pointing to a ``const``
+type) is declared in C.  (Reading the declaration from right to left gives
+its meaning: a uniform pointer to a float that is varying.)
+
+A subtlety comes in in cases like the where a uniform pointer points to a
+varying datatype.  In this case, each program instance accesses a distinct
+location in memory (because the underlying varying datatype is itself laid
+out with a separate location in memory for each program instance.)
 
 ::
 
@@ -1538,16 +1546,25 @@ location in memory for each program instance.)
     float * uniform pa = &a;
     *pa = programIndex;  // same as (a = programIndex)
     
+Also as in C, arrays are silently converted into pointers:
+
+::
+
+    float a[10] = { ... };
+    float * uniform pa = a;     // pointer to first element of a
+    float * uniform pb = a + 5; // pointer to 5th element of a
 
 Any pointer type can be explicitly typecast to another pointer type, as
 long as the source type isn't a ``varying`` pointer when the destination
-type is a ``uniform`` pointer.  Like other types, ``uniform`` pointers can
-be typecast to be ``varying`` pointers, however.
+type is a ``uniform`` pointer.
 
 ::
 
     float *pa = ...;
     int *pb = (int *)pa;  // legal, but beware
+
+Like other types, ``uniform`` pointers can be typecast to be ``varying``
+pointers, however.
 
 Any pointer type can be assigned to a ``void`` pointer without a type cast:
 
@@ -1992,7 +2009,7 @@ based on C++'s ``new`` and ``delete`` operators:
 ::
 
    int count = ...;
-   int *ptr = new uniform int[count];
+   int *ptr = new int[count];
    // use ptr...
    delete[] ptr;
 
@@ -2002,13 +2019,22 @@ that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
 serviced by corresponding calls the system C library's ``malloc()`` and
 ``free()`` functions.
 
+Note that the rules for ``uniform`` and ``varying`` for ``new`` are
+analogous to the corresponding rules are for pointers (as described in
+`Pointer Types`_.)  Specifically, if a specific rate qualifier isn't
+provided with the ``new`` expression, then the default is that a "varying"
+``new`` is performed, where each program instance performs a unique
+allocation.  The allocated type, in turn, is by default ``uniform`` for
+``varying`` ``new`` expressions, and ``varying`` for ``uniform`` new
+expressions.
+ 
 After a pointer has been deleted, it is illegal to access the memory it
-points to.  However, note that deletion happens on a per-program-instance
-basis.  In other words, consider the following code:
+points to.  However, that deletion happens on a per-program-instance basis.
+In other words, consider the following code:
 
 ::
 
-    int *ptr = new uniform int[count];
+    int *ptr = new int[count];
     // use ptr
     if (count > 1000)
         delete[] ptr;
@@ -2033,7 +2059,9 @@ gang of program instances.  A ``new`` statement can be qualified with
 While a regular call to ``new`` returns a ``varying`` pointer (i.e. a
 distinct pointer to separately-allocated memory for each program instance),
 a ``uniform new`` performs a single allocation and returns a ``uniform``
-pointer.
+pointer.  Recall that with a ``uniform`` ``new``, the default variability
+of the allocated type is ``varying``, so the above code is allocating an
+array of ten ``varying float`` values.
 
 When using ``uniform new``, it's important to be aware of a subtlety; if
 the returned pointer is stored in a varying pointer variable (as may be
@@ -2043,7 +2071,7 @@ statement, which is an error: effectively
 
 ::
 
-    float *ptr = uniform new float[10];
+    varying float * ptr = uniform new float[10];
     // use ptr...
     delete ptr;  // ERROR: varying pointer is deleted
 
@@ -2052,28 +2080,31 @@ executing program instance, which is an error (unless it happens that only
 a single program instance is active in the above code.)
 
 When using ``new`` statements, it's important to make an appropriate choice
-of ``uniform`` or ``varying`` (as always, the default), for both the
-``new`` operator itself as well as the type of data being allocated, based
-on the program's needs.  Consider the following four memory allocations:
+of ``uniform`` or ``varying``, for both the ``new`` operator itself as well
+as the type of data being allocated, based on the program's needs.
+Consider the following four memory allocations:
 
 ::
 
     uniform float * uniform p1 = uniform new uniform float[10];
     float * uniform p2 = uniform new float[10];
-    uniform float * p3 = new uniform float[10];
-    float * p4 = new float[10];
+    float * p3 = new float[10];
+    varying float * p4 = new varying float[10];
 
 Assuming that a ``float`` is 4 bytes in memory and if the gang size is 8
 program instances, then the first allocation represents a single allocation
-of 40 bytes, the second is a single allocation of 8*4*10 = 320 bytes, the
-third is 8 allocations of 40 bytes, and the last performs 8 allocations of
-80 bytes each.
+of 10 ``uniform float`` values (40 bytes), the second is a single
+allocation of 10 ``varying float`` values (8*4*10 = 320 bytes), the third
+is 8 allocations of 10 ``uniform float`` values (8 allocations of 40 bytes
+each), and the last performs 8 allocations of 320 bytes each.
 
 Note in particular that varying allocations of varying data types are rarely
 desirable in practice.  In that case, each program instance is performing a
 separate allocation of ``varying float`` memory.  In this case, it's likely
 that the program instances will only access a single element of each
-``varying float``, which is wasteful.
+``varying float``, which is wasteful.  (This in turn is partially why the
+allocated type is uniform by default with both pointers and ``new``
+statements.)
 
 Although ``ispc`` doesn't support constructors or destructors like C++, it
 is possible to provide initializer values with ``new`` statements:

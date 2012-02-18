@@ -3,7 +3,7 @@ typedef int<4> int4;
 
 export uniform int width() { return programCount; }
 
-void inc(int4 * uniform v) {
+void inc(varying int4 * uniform v) {
     int4 delta = { 1, 1, 1, 1 };
     (*v) += delta;
 }
