@@ -330,21 +330,23 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
 
 
 
-/** Given an arbitrary type, see if it or any of the types contained in it
-    are varying.  Returns true if so, false otherwise. 
-*/
+/** Given an arbitrary type, see if it or any of the leaf types contained
+    in it are varying.  (Note that it's fine for the original struct or a
+    contained struct to be varying, so long as all of its members have
+    bound 'uniform' variability.) Returns true if so, false otherwise. */
 static bool
 lRecursiveCheckVarying(const Type *t) {
     t = t->GetBaseType();
-    if (t->IsVaryingType()) return true;
 
     const StructType *st = dynamic_cast<const StructType *>(t);
-    if (st) {
+    if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
             if (lRecursiveCheckVarying(st->GetElementType(i)))
                 return true;
+        return false;
     }
-    return false;
+    else
+        return t->IsVaryingType();
 }
 
 

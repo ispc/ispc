@@ -35,35 +35,35 @@
 
 struct InputDataArrays
 {
-    uniform float * uniform zBuffer;
-    uniform unsigned int16 * uniform normalEncoded_x; // half float
-    uniform unsigned int16 * uniform normalEncoded_y; // half float
-    uniform unsigned int16 * uniform specularAmount; // half float
-    uniform unsigned int16 * uniform specularPower; // half float
-    uniform unsigned int8 * uniform albedo_x; // unorm8
-    uniform unsigned int8 * uniform albedo_y; // unorm8
-    uniform unsigned int8 * uniform albedo_z; // unorm8
-    uniform float * uniform lightPositionView_x;
-    uniform float * uniform lightPositionView_y;
-    uniform float * uniform lightPositionView_z;
-    uniform float * uniform lightAttenuationBegin;
-    uniform float * uniform lightColor_x;
-    uniform float * uniform lightColor_y;
-    uniform float * uniform lightColor_z;
-    uniform float * uniform lightAttenuationEnd;
+    uniform float *zBuffer;
+    uniform unsigned int16 *normalEncoded_x; // half float
+    uniform unsigned int16 *normalEncoded_y; // half float
+    uniform unsigned int16 *specularAmount; // half float
+    uniform unsigned int16 *specularPower; // half float
+    uniform unsigned int8 *albedo_x; // unorm8
+    uniform unsigned int8 *albedo_y; // unorm8
+    uniform unsigned int8 *albedo_z; // unorm8
+    uniform float *lightPositionView_x;
+    uniform float *lightPositionView_y;
+    uniform float *lightPositionView_z;
+    uniform float *lightAttenuationBegin;
+    uniform float *lightColor_x;
+    uniform float *lightColor_y;
+    uniform float *lightColor_z;
+    uniform float *lightAttenuationEnd;
 };
 
 struct InputHeader
 {
-    uniform float cameraProj[4][4];
-    uniform float cameraNear;
-    uniform float cameraFar;
+    float cameraProj[4][4];
+    float cameraNear;
+    float cameraFar;
 
-    uniform int32 framebufferWidth;
-    uniform int32 framebufferHeight;
-    uniform int32 numLights;
-    uniform int32 inputDataChunkSize;
-    uniform int32 inputDataArrayOffsets[idaNum];
+    int32 framebufferWidth;
+    int32 framebufferHeight;
+    int32 numLights;
+    int32 inputDataChunkSize;
+    int32 inputDataArrayOffsets[idaNum];
 };
 
 
@@ -575,8 +575,6 @@ SplitTileMinMax(
     uniform float light_positionView_z_array[],
     uniform float light_attenuationEnd_array[],
     // Outputs
-    // TODO: ISPC doesn't currently like multidimensionsal arrays so we'll do the
-    // indexing math ourselves
     uniform int32 subtileIndices[],
     uniform int32 subtileIndicesPitch,
     uniform int32 subtileNumLights[]

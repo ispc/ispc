@@ -991,10 +991,6 @@ PointerType::ResolveUnboundVariability(Variability v) const {
     Variability ptrVariability = (variability == Unbound) ? v : variability;
     Variability childVariability = (ptrVariability == Varying) ? 
         Uniform : Varying;
-    if (dynamic_cast<const StructType *>(baseType))
-        // struct members are varying by default.. (FIXME!!!)
-        childVariability = Varying;
-
     return new PointerType(baseType->ResolveUnboundVariability(childVariability),
                            ptrVariability, isConst);
 }
@@ -1521,6 +1517,7 @@ SOAArrayType::GetAsUnboundVariabilityType() const {
 const SOAArrayType *
 SOAArrayType::ResolveUnboundVariability(Variability v) const {
     const StructType *sc = dynamic_cast<const StructType *>(child->ResolveUnboundVariability(v));
+    Assert(sc != NULL); // ???
     return new SOAArrayType(sc, numElements, soaWidth);
 }
 
@@ -1916,16 +1913,13 @@ StructType::GetAsUnboundVariabilityType() const {
 
 const StructType *
 StructType::ResolveUnboundVariability(Variability v) const {
-    std::vector<const Type *> et;
-    for (unsigned int i = 0; i < elementTypes.size(); ++i)
-        et.push_back((elementTypes[i] == NULL) ? NULL :
-                     elementTypes[i]->ResolveUnboundVariability(v));
+    Assert(v != Unbound);
+    // We don't resolve the members here but leave them unbound, so that if
+    // resolve to varying but later want to get the uniform version of this
+    // type, for example, then we still have the information around about
+    // which element types were originally unbound...
 
-    // FIXME
-    if (v == Varying) 
-        v = Uniform;
-
-    return new StructType(name, et, elementNames, elementPositions,
+    return new StructType(name, elementTypes, elementNames, elementPositions,
                           isConst, (variability != Unbound) ? variability : v,
                           pos);
 }
@@ -2009,7 +2003,7 @@ StructType::Mangle() const {
         ret += "_v_";
     ret += name + std::string("]<");
     for (unsigned int i = 0; i < elementTypes.size(); ++i)
-        ret += elementTypes[i]->Mangle();
+        ret += GetElementType(i)->Mangle();
     ret += ">";
     return ret;
 }
@@ -2017,11 +2011,6 @@ StructType::Mangle() const {
 
 std::string
 StructType::GetCDeclaration(const std::string &n) const {
-    if (variability != Uniform) {
-        Assert(m->errorCount > 0);
-        return "";
-    }
-
     std::string ret;
     if (isConst) ret += "const ";
     ret += std::string("struct ") + name;
@@ -2104,13 +2093,18 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
 const Type *
 StructType::GetElementType(int i) const {
+    Assert(variability != Unbound);
     Assert(i < (int)elementTypes.size());
-    // If the struct is uniform qualified, then each member comes out with
-    // the same type as in the original source file.  If it's varying, then
-    // all members are promoted to varying.
     const Type *ret = elementTypes[i];
-    if (variability == Varying)
-        ret = ret->GetAsVaryingType();
+
+    // If the element has unbound variability, resolve its variability to
+    // the struct type's variability
+    if (ret->HasUnboundVariability()) {
+        if (variability == Varying)
+            ret = ret->GetAsVaryingType();
+        else
+            ret = ret->GetAsUniformType();
+    }
     return isConst ? ret->GetAsConstType() : ret;
 }
 

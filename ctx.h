@@ -443,7 +443,8 @@ public:
         varying, the given storeMask is used to mask the stores so that
         they only execute for the active program instances. */
     void StoreInst(llvm::Value *value, llvm::Value *ptr,
-                   llvm::Value *storeMask, const Type *ptrType);
+                   llvm::Value *storeMask, const Type *valueType,
+                   const Type *ptrType);
 
     /** Copy count bytes of memory from the location pointed to by src to
         the location pointed to by dest.  (src and dest must not be
@@ -652,8 +653,8 @@ private:
 
     CFInfo *popCFState();
 
-    void scatter(llvm::Value *value, llvm::Value *ptr, const Type *ptrType, 
-                 llvm::Value *mask);
+    void scatter(llvm::Value *value, llvm::Value *ptr, const Type *valueType,
+                 const Type *ptrType, llvm::Value *mask);
     void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
                      llvm::Value *mask);
     llvm::Value *gather(llvm::Value *ptr, const Type *ptrType, llvm::Value *mask,

@@ -679,6 +679,8 @@ public:
     /** Returns the total number of elements in the structure. */
     int GetElementCount() const { return int(elementTypes.size()); }
 
+    SourcePos GetElementPosition(int i) const { return elementPositions[i]; }
+
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 

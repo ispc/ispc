@@ -1169,7 +1169,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
                     // values from other lanes that may have executed return
                     // statements previously.
                     StoreInst(retVal, returnValuePtr, GetInternalMask(), 
-                              PointerType::GetUniform(returnType));
+                              returnType, PointerType::GetUniform(returnType));
                 }
             }
         }
@@ -2303,9 +2303,9 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
             llvm::Value *eltPtr = 
                 AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
-            const Type *eltPtrType = 
-                PointerType::GetUniform(collectionType->GetElementType(i));
-            StoreInst(eltValue, eltPtr, mask, eltPtrType);
+            const Type *eltType = collectionType->GetElementType(i);
+            const Type *eltPtrType = PointerType::GetUniform(eltType);
+            StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }
         return;
     }
@@ -2391,25 +2391,61 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
 */
 void
 FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, 
-                             const Type *ptrType, llvm::Value *mask) {
+                             const Type *valueType, const Type *ptrType,
+                             llvm::Value *mask) {
     Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
     Assert(ptrType->IsVaryingType());
-
-    const Type *valueType = ptrType->GetBaseType();
 
     // I think this should be impossible
     Assert(dynamic_cast<const ArrayType *>(valueType) == NULL);
 
-    const CollectionType *collectionType = dynamic_cast<const CollectionType *>(valueType);
-    if (collectionType != NULL) {
+    const CollectionType *srcCollectionType = 
+        dynamic_cast<const CollectionType *>(valueType);
+    if (srcCollectionType != NULL) {
+        // We're scattering a collection type--we need to keep track of the
+        // source type (the type of the data values to be stored) and the
+        // destination type (the type of objects in memory that will be
+        // stored into) separately.  This is necessary so that we can get
+        // all of the addressing calculations right if we're scattering
+        // from a varying struct to an array of uniform instances of the
+        // same struct type, versus scattering into an array of varying
+        // instances of the struct type, etc.
+        const CollectionType *dstCollectionType =
+            dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+        Assert(dstCollectionType != NULL);
+            
         // Scatter the collection elements individually
-        for (int i = 0; i < collectionType->GetElementCount(); ++i) {
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
+        for (int i = 0; i < srcCollectionType->GetElementCount(); ++i) {
+            // First, get the values for the current element out of the
+            // source.
             llvm::Value *eltValue = ExtractInst(value, i);
-            const Type *eltPtrType = 
-                PointerType::GetVarying(collectionType->GetElementType(i));
-            eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
-            scatter(eltValue, eltPtr, eltPtrType, mask);
+            const Type *srcEltType = srcCollectionType->GetElementType(i);
+
+            // We may be scattering a uniform atomic element; in this case
+            // we'll smear it out to be varying before making the recursive
+            // scatter() call below.
+            if (srcEltType->IsUniformType() &&
+                dynamic_cast<const AtomicType *>(srcEltType) != NULL) {
+                eltValue = SmearUniform(eltValue, "to_varying");
+                srcEltType = srcEltType->GetAsVaryingType();
+            }
+
+            // Get the (varying) pointer to the i'th element of the target
+            // collection
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
+
+            // The destination element type may be uniform (e.g. if we're
+            // scattering to an array of uniform structs).  Thus, we need
+            // to be careful about passing the correct type to
+            // addVaryingOffsetsIfNeeded() here.
+            const Type *dstEltType = dstCollectionType->GetElementType(i);
+            const Type *dstEltPtrType = PointerType::GetVarying(dstEltType);
+            eltPtr = addVaryingOffsetsIfNeeded(eltPtr, dstEltPtrType);
+
+            // And recursively scatter() until we hit an atomic or pointer
+            // type, at which point the actual memory operations can be
+            // performed...
+            scatter(eltValue, eltPtr, srcEltType, dstEltPtrType, mask);
         }
         return;
     }
@@ -2483,7 +2519,8 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
 
 void
 FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
-                               llvm::Value *mask, const Type *ptrType) {
+                               llvm::Value *mask, const Type *valueType,
+                               const Type *ptrType) {
     if (value == NULL || ptr == NULL) {
         // may happen due to error elsewhere
         Assert(m->errorCount > 0);
@@ -2509,7 +2546,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
         Assert(ptrType->IsVaryingType());
         // We have a varying ptr (an array of pointers), so it's time to
         // scatter
-        scatter(value, ptr, ptrType, GetFullMask());
+        scatter(value, ptr, valueType, ptrType, GetFullMask());
     }
 }
 
@@ -2791,7 +2828,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // accumulate the result using the call mask.
             if (callResult != NULL) {
                 Assert(resultPtr != NULL);
-                StoreInst(callResult, resultPtr, callMask, 
+                StoreInst(callResult, resultPtr, callMask, returnType,
                           PointerType::GetUniform(returnType));
             }
             else

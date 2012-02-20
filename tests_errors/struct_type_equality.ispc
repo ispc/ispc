@@ -1,4 +1,4 @@
-// Can't convert between different struct types "uniform struct Foo" and "uniform struct Bar"
+// Can't convert between different struct types "varying struct Foo" and "varying struct Bar"
 
 struct Foo {
     int a; 

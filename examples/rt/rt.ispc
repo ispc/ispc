@@ -43,17 +43,17 @@ struct Ray {
 };
 
 struct Triangle {
-    uniform float p[3][4];
-    uniform int id;
-    uniform int pad[3];
+    float p[3][4];
+    int id;
+    int pad[3];
 };
 
 struct LinearBVHNode {
-    uniform float bounds[2][3];
-    uniform unsigned int offset;     // num primitives for leaf, second child for interior
-    uniform unsigned int8 nPrimitives;
-    uniform unsigned int8 splitAxis;
-    uniform unsigned int16 pad;
+    float bounds[2][3];
+    unsigned int offset;     // num primitives for leaf, second child for interior
+    unsigned int8 nPrimitives;
+    unsigned int8 splitAxis;
+    unsigned int16 pad;
 };
 
 static inline float3 Cross(const float3 v1, const float3 v2) {
@@ -88,9 +88,12 @@ static void generateRay(uniform const float raster2camera[4][4],
     camy /= camw;
     camz /= camw;
 
-    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy + camera2world[0][2] * camz;
-    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy + camera2world[1][2] * camz;
-    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy + camera2world[2][2] * camz;
+    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy + 
+        camera2world[0][2] * camz;
+    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy + 
+        camera2world[1][2] * camz;
+    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy + 
+        camera2world[2][2] * camz;
 
     ray.origin.x = camera2world[0][3] / camera2world[3][3];
     ray.origin.y = camera2world[1][3] / camera2world[3][3];
@@ -143,7 +146,7 @@ static bool BBoxIntersect(const uniform float bounds[2][3],
 
 
 
-static bool TriIntersect(const Triangle &tri, Ray &ray) {
+static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
     uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
@@ -183,8 +186,8 @@ static bool TriIntersect(const Triangle &tri, Ray &ray) {
 }
 
 
-bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[], 
-                  Ray &r) {
+bool BVHIntersect(const uniform LinearBVHNode nodes[], 
+                  const uniform Triangle tris[], Ray &r) {
     Ray ray = r;
     bool hit = false;
     // Follow ray through BVH nodes to find primitive intersections
@@ -193,7 +196,7 @@ bool BVHIntersect(const LinearBVHNode nodes[], const Triangle tris[],
 
     while (true) {
         // Check ray against BVH node
-        LinearBVHNode node = nodes[nodeNum];
+        uniform LinearBVHNode node = nodes[nodeNum];
         if (any(BBoxIntersect(node.bounds, ray))) {
             uniform unsigned int nPrimitives = node.nPrimitives;
             if (nPrimitives > 0) {
@@ -239,8 +242,8 @@ static void raytrace_tile(uniform int x0, uniform int x1,
                           const uniform float raster2camera[4][4], 
                           const uniform float camera2world[4][4],
                           uniform float image[], uniform int id[],
-                          const LinearBVHNode nodes[],
-                          const Triangle triangles[]) {
+                          const uniform LinearBVHNode nodes[],
+                          const uniform Triangle triangles[]) {
     uniform float widthScale = (float)(baseWidth) / (float)(width);
     uniform float heightScale = (float)(baseHeight) / (float)(height);
 
@@ -262,8 +265,8 @@ export void raytrace_ispc(uniform int width, uniform int height,
                           const uniform float raster2camera[4][4], 
                           const uniform float camera2world[4][4],
                           uniform float image[], uniform int id[],
-                          const LinearBVHNode nodes[],
-                          const Triangle triangles[]) {
+                          const uniform LinearBVHNode nodes[],
+                          const uniform Triangle triangles[]) {
     raytrace_tile(0, width, 0, height, width, height, baseWidth, baseHeight,
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
@@ -275,8 +278,8 @@ task void raytrace_tile_task(uniform int width, uniform int height,
                              const uniform float raster2camera[4][4], 
                              const uniform float camera2world[4][4],
                              uniform float image[], uniform int id[],
-                             const LinearBVHNode nodes[],
-                             const Triangle triangles[]) {
+                             const uniform LinearBVHNode nodes[],
+                             const uniform Triangle triangles[]) {
     uniform int dx = 16, dy = 16; // must match dx, dy below
     uniform int xBuckets = (width + (dx-1)) / dx;
     uniform int x0 = (taskIndex % xBuckets) * dx;
@@ -295,8 +298,8 @@ export void raytrace_ispc_tasks(uniform int width, uniform int height,
                                 const uniform float raster2camera[4][4], 
                                 const uniform float camera2world[4][4],
                                 uniform float image[], uniform int id[],
-                                const LinearBVHNode nodes[],
-                                const Triangle triangles[]) {
+                                const uniform LinearBVHNode nodes[],
+                                const uniform Triangle triangles[]) {
     uniform int dx = 16, dy = 16;
     uniform int xBuckets = (width + (dx-1)) / dx;
     uniform int yBuckets = (height + (dy-1)) / dy;

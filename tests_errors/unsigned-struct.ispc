@@ -1,4 +1,4 @@
-// "unsigned" qualifier is illegal with "uniform struct Foo" typ
+// "unsigned" qualifier is illegal with "varying struct Foo" typ
 
 struct Foo {
     float x;

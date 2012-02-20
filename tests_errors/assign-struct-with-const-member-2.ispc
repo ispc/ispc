@@ -1,4 +1,4 @@
-// Illegal to assign to type "uniform struct Bar" in type "uniform struct Foo" due to element "a" with type "const varying int32"
+// Illegal to assign to type "varying struct Bar" in type "varying struct Foo" due to element "a" with type "const varying int32"
 
 struct Bar {
     const int a;

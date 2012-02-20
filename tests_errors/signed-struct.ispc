@@ -1,4 +1,4 @@
-// "signed" qualifier is illegal with non-integer type "uniform struct Foo"
+// "signed" qualifier is illegal with non-integer type "varying struct Foo"
 
 struct Foo {
     float x;

@@ -6,9 +6,10 @@ struct Foo {
     float x;
     float f;
 };
+
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    uniform struct Foo myFoo = {a,a};
+    struct Foo myFoo = {a,a};
     RET[programIndex] = myFoo.x;
 }
 

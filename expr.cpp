@@ -509,6 +509,9 @@ TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
     if (expr == NULL)
         return NULL;
 
+    Debug(expr->pos, "type convert %s -> %s.", expr->GetType()->GetString().c_str(),
+          toType->GetString().c_str());
+
     const Type *fromType = expr->GetType();
     Expr *e = expr;
     if (lDoTypeConv(fromType, toType, &e, false, errorMsgBase, 
@@ -876,8 +879,9 @@ lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
 /** Store the result of an assignment to the given location. 
  */
 static void
-lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
-                   FunctionEmitContext *ctx, Symbol *baseSym) {
+lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *valueType,
+                   const Type *ptrType, FunctionEmitContext *ctx,
+                   Symbol *baseSym) {
     Assert(baseSym == NULL ||
            baseSym->varyingCFDepth <= ctx->VaryingCFDepth());
     if (!g->opt.disableMaskedStoreToStore &&
@@ -895,10 +899,10 @@ lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
         // never be accessed, since those lanes aren't executing, and won't
         // be executing at this scope or any other one before the variable
         // goes out of scope.
-        ctx->StoreInst(value, ptr, LLVMMaskAllOn, ptrType);
+        ctx->StoreInst(value, ptr, LLVMMaskAllOn, valueType, ptrType);
     }
     else {
-        ctx->StoreInst(value, ptr, lMaskForSymbol(baseSym, ctx), ptrType);
+        ctx->StoreInst(value, ptr, lMaskForSymbol(baseSym, ctx), valueType, ptrType);
     }
 }
 
@@ -964,7 +968,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
 
     // And store the result out to the lvalue
     Symbol *baseSym = expr->GetBaseSymbol();
-    lStoreAssignResult(binop, lvalue, lvalueType, ctx, baseSym);
+    lStoreAssignResult(binop, lvalue, type, lvalueType, ctx, baseSym);
 
     // And then if it's a pre increment/decrement, return the final
     // computed result; otherwise return the previously-grabbed expression
@@ -2439,7 +2443,8 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
         return NULL;
     }
     const Type *lvalueType = arg0->GetLValueType();
-    if (lvalueType == NULL)
+    const Type *resultType = arg0->GetType();
+    if (lvalueType == NULL || resultType == NULL)
         return NULL;
 
     // Get the value on the right-hand side of the assignment+operation
@@ -2492,7 +2497,7 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     }
 
     // And store the result back to the lvalue.
-    lStoreAssignResult(newValue, lv, lvalueType, ctx, baseSym);
+    lStoreAssignResult(newValue, lv, resultType, lvalueType, ctx, baseSym);
 
     return newValue;
 }
@@ -2517,29 +2522,30 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
 
     switch (op) {
     case Assign: {
-        llvm::Value *lv = lvalue->GetLValue(ctx);
-        if (lv == NULL) {
+        llvm::Value *ptr = lvalue->GetLValue(ctx);
+        if (ptr == NULL) {
             Error(lvalue->pos, "Left hand side of assignment expression can't "
                   "be assigned to.");
             return NULL;
         }
-        const Type *lvalueType = lvalue->GetLValueType();
-        if (lvalueType == NULL) {
+        const Type *ptrType = lvalue->GetLValueType();
+        const Type *valueType = rvalue->GetType();
+        if (ptrType == NULL || valueType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
         }
 
-        llvm::Value *rv = rvalue->GetValue(ctx);
-        if (rv == NULL) {
+        llvm::Value *value = rvalue->GetValue(ctx);
+        if (value == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
         }
 
         ctx->SetDebugPos(pos);
 
-        lStoreAssignResult(rv, lv, lvalueType, ctx, baseSym);
+        lStoreAssignResult(value, ptr, valueType, ptrType, ctx, baseSym);
 
-        return rv;
+        return value;
     }
     case MulAssign:
     case DivAssign:
@@ -2754,7 +2760,7 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
     // Use masking to conditionally store the expr1 values
     Assert(resultPtr->getType() ==
            PointerType::GetUniform(type)->LLVMType(g->ctx));
-    ctx->StoreInst(expr1, resultPtr, test, PointerType::GetUniform(type));
+    ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
     return ctx->LoadInst(resultPtr, "selectexpr_final");
 }
 
@@ -3643,11 +3649,81 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
 }
 
 
+/** Check to see if the given type is an array of or pointer to a varying
+    struct type that in turn has a member with bound 'uniform' variability.
+    Issue an error and return true if such a member is found.
+ */
+static bool
+lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
+    if (dynamic_cast<const VectorType *>(type) != NULL ||
+        dynamic_cast<const ReferenceType *>(type) != NULL)
+        return false;
+
+    const StructType *st = dynamic_cast<const StructType *>(type);
+    if (st == NULL) {
+        const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+        if (at != NULL)
+            st = dynamic_cast<const StructType *>(at->GetElementType());
+        else {
+            const PointerType *pt = dynamic_cast<const PointerType *>(type);
+            if (pt == NULL)
+                return false;
+
+            st = dynamic_cast<const StructType *>(pt->GetBaseType());
+        }
+
+        if (st == NULL)
+            return false;
+    }
+
+    if (st->IsVaryingType() == false)
+        return false;
+
+    for (int i = 0; i < st->GetElementCount(); ++i) {
+        const Type *eltType = st->GetElementType(i);
+        if (eltType == NULL) {
+            Assert(m->errorCount > 0);
+            continue;
+        }
+
+        if (dynamic_cast<const StructType *>(eltType) != NULL) {
+            // We know that the enclosing struct is varying at this point,
+            // so push that down to the enclosed struct before makign the
+            // recursive call.
+            eltType = eltType->GetAsVaryingType();
+            if (lVaryingStructHasUniformMember(eltType, pos))
+                return true;
+        }
+        else if (eltType->IsUniformType()) {
+            Error(pos, "Gather operation is impossible due to the presence of "
+                  "struct member \"%s\" with uniform type \"%s\" in the "
+                  "varying struct type \"%s\".",
+                  st->GetElementName(i).c_str(), eltType->GetString().c_str(),
+                  st->GetString().c_str());
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 llvm::Value *
 IndexExpr::GetValue(FunctionEmitContext *ctx) const {
-    const Type *baseExprType;
+    const Type *baseExprType, *indexType, *returnType;
     if (baseExpr == NULL || index == NULL || 
-        ((baseExprType = baseExpr->GetType()) == NULL))
+        ((baseExprType = baseExpr->GetType()) == NULL) ||
+        ((indexType = index->GetType()) == NULL) ||
+        ((returnType = GetType()) == NULL)) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    // If this is going to be a gather, make sure that the varying return
+    // type can represent the result (i.e. that we don't have a bound
+    // 'uniform' member in a varying struct...)
+    if (indexType->IsVaryingType() && 
+        lVaryingStructHasUniformMember(returnType, pos))
         return NULL;
 
     ctx->SetDebugPos(pos);
@@ -3942,6 +4018,7 @@ public:
                      SourcePos idpos, bool derefLValue);
 
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     int getElementNumber() const;
     const Type *getElementType() const;
 
@@ -3960,9 +4037,17 @@ const Type *
 StructMemberExpr::GetType() const {
     // It's a struct, and the result type is the element type, possibly
     // promoted to varying if the struct type / lvalue is varying.
-    const StructType *structType = getStructType();
-    if (structType == NULL)
+    const Type *exprType;
+    const StructType *structType;
+    if (expr == NULL ||
+        ((exprType = expr->GetType()) == NULL) ||
+        ((structType = getStructType()) == NULL)) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+
+    if (exprType->IsVaryingType())
+        structType = structType->GetAsVaryingType();
 
     const Type *elementType = structType->GetElementType(identifier);
     if (elementType == NULL) {
@@ -3973,12 +4058,34 @@ StructMemberExpr::GetType() const {
         return NULL;
     }
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(expr->GetType());
-    if (structType->IsVaryingType() ||
-        (pt != NULL && pt->IsVaryingType()))
-        return elementType->GetAsVaryingType();
-    else
-        return elementType;
+    // If the expression we're getting the member of has an lvalue that is
+    // a varying pointer type, then the result type must be the varying
+    // version of the element type.
+    if (GetLValueType()->IsVaryingType())
+        elementType = elementType->GetAsVaryingType();
+
+    return elementType;
+}
+
+
+const Type *
+StructMemberExpr::GetLValueType() const {
+    if (expr == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const Type *exprLValueType = dereferenceExpr ? expr->GetType() :
+        expr->GetLValueType();
+    if (exprLValueType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    return (exprLValueType->IsUniformType() ||
+            dynamic_cast<const ReferenceType *>(exprLValueType) != NULL) ?
+        PointerType::GetUniform(getElementType()) : 
+        PointerType::GetVarying(getElementType());
 }
 
 
@@ -3994,6 +4101,7 @@ StructMemberExpr::getElementNumber() const {
               "Element name \"%s\" not present in struct type \"%s\".%s",
               identifier.c_str(), structType->GetString().c_str(),
               getCandidateNearMatches().c_str());
+
     return elementNumber;
 }
 
@@ -4004,30 +4112,32 @@ StructMemberExpr::getElementType() const {
     if (structType == NULL)
         return NULL;
 
-    return structType->GetAsUniformType()->GetElementType(identifier);
+    return structType->GetElementType(identifier);
 }
 
 
+/** Returns the type of the underlying struct that we're returning a member
+    of. */
 const StructType *
 StructMemberExpr::getStructType() const {
-    const Type *exprType = expr->GetType();
-    if (exprType == NULL)
+    const Type *type = dereferenceExpr ? expr->GetType() :
+        expr->GetLValueType();
+    if (type == NULL)
         return NULL;
-    
-    const StructType *structType = dynamic_cast<const StructType *>(exprType);
-    if (structType == NULL) {
-        const PointerType *pt = dynamic_cast<const PointerType *>(exprType);
-        if (pt != NULL)
-            structType = dynamic_cast<const StructType *>(pt->GetBaseType());
-        else {
-            const ReferenceType *rt = 
-                dynamic_cast<const ReferenceType *>(exprType);
-            Assert(rt != NULL);
-            structType = dynamic_cast<const StructType *>(rt->GetReferenceTarget());
-        }
-        Assert(structType != NULL);
+
+    const Type *structType;
+    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(type);
+    if (rt != NULL)
+        structType = rt->GetReferenceTarget();
+    else {
+        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        Assert(pt != NULL);
+        structType = pt->GetBaseType();
     }
-    return structType;
+
+    const StructType *ret = dynamic_cast<const StructType *>(structType);
+    Assert(ret != NULL);
+    return ret;
 }
 
 
@@ -4367,22 +4477,6 @@ MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 
     return ptr;
-}
-
-
-const Type *
-MemberExpr::GetLValueType() const {
-    if (expr == NULL)
-        return NULL;
-
-    const Type *exprLValueType = dereferenceExpr ? expr->GetType() :
-        expr->GetLValueType();
-    if (exprLValueType == NULL)
-        return NULL;
-
-    return exprLValueType->IsUniformType() ?
-        PointerType::GetUniform(getElementType()) : 
-        PointerType::GetVarying(getElementType());
 }
 
 
@@ -6428,6 +6522,9 @@ DereferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     if (type == NULL)
         return NULL;
 
+    if (lVaryingStructHasUniformMember(type, pos))
+        return NULL;
+
     Symbol *baseSym = expr->GetBaseSymbol();
     llvm::Value *mask = baseSym ? lMaskForSymbol(baseSym, ctx) : 
         ctx->GetFullMask();
@@ -7337,14 +7434,8 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
     if (allocType != NULL && allocType->HasUnboundVariability()) {
         Type::Variability childVariability = isVarying ?
             Type::Uniform : Type::Varying;
-        if (dynamic_cast<const StructType *>(allocType) != NULL)
-            // FIXME: yet another place where the "structs are varying"
-            // wart pops up..
-            childVariability = Type::Varying;
-
         allocType = allocType->ResolveUnboundVariability(childVariability);
     }
-
 }
 
 

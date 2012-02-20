@@ -3,8 +3,8 @@ export uniform int width() { return programCount; }
 
 
 struct Foo {
-    int i;
-    float f;
+    varying int i;
+    varying float f;
 };
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex];
