@@ -69,12 +69,21 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if ((typeQualifiers & TYPEQUAL_CONST) != 0)
         type = type->GetAsConstType();
 
-    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
-        type = type->GetAsUniformType();
-    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
-        type = type->GetAsVaryingType();
+    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
+        if (type == AtomicType::Void)
+            Error(pos, "\"uniform\" qualifier is illegal with \"void\" type.");
+        else
+            type = type->GetAsUniformType();
+    }
+    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0) {
+        if (type == AtomicType::Void)
+            Error(pos, "\"varying\" qualifier is illegal with \"void\" type.");
+        else
+            type = type->GetAsVaryingType();
+    }
     else
-        type = type->GetAsUnboundVariabilityType();
+        if (type != AtomicType::Void)
+            type = type->GetAsUnboundVariabilityType();
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
         if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)

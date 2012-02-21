@@ -473,8 +473,28 @@ rate_qualified_new
 
 rate_qualified_new_type
     : type_specifier { $$ = $1; }
-    | TOKEN_UNIFORM type_specifier { $$ = $2 ? $2->GetAsUniformType() : NULL; }
-    | TOKEN_VARYING type_specifier { $$ = $2 ? $2->GetAsVaryingType() : NULL; }
+    | TOKEN_UNIFORM type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else if ($2 == AtomicType::Void) {
+            Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
+            $$ = NULL;
+        }
+        else
+            $$ = $2->GetAsUniformType();
+    }
+    | TOKEN_VARYING type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else if ($2 == AtomicType::Void) {
+            Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
+            $$ = NULL;
+        }
+        else
+            $$ = $2->GetAsVaryingType();
+    }
     ;
 
 new_expression
@@ -803,10 +823,22 @@ specifier_qualifier_list
     | type_qualifier specifier_qualifier_list 
     {
         if ($2 != NULL) {
-            if ($1 == TYPEQUAL_UNIFORM)
-                $$ = $2->GetAsUniformType();
-            else if ($1 == TYPEQUAL_VARYING)
-                $$ = $2->GetAsVaryingType();
+            if ($1 == TYPEQUAL_UNIFORM) {
+                if ($2 == AtomicType::Void) {
+                    Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
+                    $$ = NULL;
+                }
+                else
+                    $$ = $2->GetAsUniformType();
+            }
+            else if ($1 == TYPEQUAL_VARYING) {
+                if ($2 == AtomicType::Void) {
+                    Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
+                    $$ = NULL;
+                }
+                else
+                    $$ = $2->GetAsVaryingType();
+            }
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
             else if ($1 == TYPEQUAL_SIGNED) {

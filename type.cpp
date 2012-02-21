@@ -382,24 +382,21 @@ AtomicType::GetBaseType() const {
 
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
-    if (this == AtomicType::Void)
-        return this;
+    Assert(this != AtomicType::Void);
     return typeTable[basicType][Varying][isConst ? 1 : 0];
 }
 
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
-    if (this == AtomicType::Void)
-        return this;
+    Assert(this != AtomicType::Void);
     return typeTable[basicType][Uniform][isConst ? 1 : 0];
 }
 
 
 const AtomicType *
 AtomicType::GetAsUnboundVariabilityType() const {
-    if (this == AtomicType::Void)
-        return this;
+    Assert(this != AtomicType::Void);
     return typeTable[basicType][Unbound][isConst ? 1 : 0];
 }
 
