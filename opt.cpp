@@ -1325,18 +1325,18 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
             lExtractConstantOffset(op1, &c1, &v1, insertBefore);
 
-            if (c0 == NULL)
+            if (c0 == NULL || llvm::isa<llvm::ConstantAggregateZero>(c0))
                 *constOffset = c1;
-            else if (c1 == NULL)
+            else if (c1 == NULL || llvm::isa<llvm::ConstantAggregateZero>(c1))
                 *constOffset = c0;
             else
                 *constOffset = 
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, c0, c1,
                                                  "const_op", insertBefore);
 
-            if (v0 == NULL)
+            if (v0 == NULL || llvm::isa<llvm::ConstantAggregateZero>(v0))
                 *variableOffset = v1;
-            else if (v1 == NULL)
+            else if (v1 == NULL || llvm::isa<llvm::ConstantAggregateZero>(v1))
                 *variableOffset = v0;
             else
                 *variableOffset = 
@@ -1648,6 +1648,117 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
 }
 #endif
 
+
+static bool
+lExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
+    LLVM_TYPE_CONST llvm::VectorType *vt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    Assert(vt != NULL);
+    Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
+
+    *nElts = (int)vt->getNumElements();
+
+    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
+        for (int i = 0; i < (int)vt->getNumElements(); ++i)
+            ret[i] = 0;
+        return true;
+    }
+
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+    if (cv == NULL)
+        return false;
+
+    for (int i = 0; i < (int)cv->getNumElements(); ++i)
+        ret[i] = cv->getElementAsInteger(i);
+    return true;
+#else
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+    if (cv == NULL)
+        return false;
+
+     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+     cv->getVectorElements(elements);
+     for (int i = 0; i < (int)vt->getNumElements(); ++i) {
+         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
+         Assert(ci != NULL);
+         ret[i] = ci->getSExtValue();
+     }
+     return true;
+#endif // LLVM_3_1svn
+}
+
+
+static bool
+lVectorIs32BitInts(llvm::Value *v) {
+    int nElts;
+    int64_t elts[ISPC_MAX_NVEC];
+    if (!lExtractVectorInts(v, elts, &nElts))
+        return false;
+
+    for (int i = 0; i < nElts; ++i)
+        if ((int32_t)elts[i] != elts[i])
+            return false;
+
+    return true;
+}
+
+
+/** Check to see if the two offset vectors can safely be represented with
+    32-bit values.  If so, return true and update the pointed-to
+    llvm::Value *s to be the 32-bit equivalents. */
+static bool
+lOffsets32BitSafe(llvm::Value **variableOffsetPtr, 
+                  llvm::Value **constOffsetPtr, 
+                  llvm::Instruction *insertBefore) {
+    llvm::Value *variableOffset = *variableOffsetPtr;
+    llvm::Value *constOffset = *constOffsetPtr;
+
+    if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
+        llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
+        if (sext != NULL && 
+            sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
+            // sext of a 32-bit vector -> the 32-bit vector is good
+            variableOffset = sext->getOperand(0);
+        else if (lVectorIs32BitInts(variableOffset))
+            // The only constant vector we should have here is a vector of
+            // all zeros (i.e. a ConstantAggregateZero, but just in case,
+            // do the more general check with lVectorIs32BitInts().
+            variableOffset = 
+                new llvm::TruncInst(variableOffset, LLVMTypes::Int32VectorType,
+                                    "trunc_variable_offset", insertBefore);
+        else
+            return false;
+    }
+
+    if (constOffset->getType() != LLVMTypes::Int32VectorType) {
+        if (lVectorIs32BitInts(constOffset)) {
+            // Truncate them so we have a 32-bit vector type for them.
+            constOffset = 
+                new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
+                                    "trunc_const_offset", insertBefore);
+        }
+        else {
+            // FIXME: otherwise we just assume that all constant offsets
+            // can actually always fit into 32-bits...  (This could be
+            // wrong, but it should be only in pretty esoteric cases).  We
+            // make this assumption for now since we sometimes generate
+            // constants that need constant folding before we really have a
+            // constant vector out of them, and
+            // llvm::ConstantFoldInstruction() doesn't seem to be doing
+            // enough for us in some cases if we call it from here.
+            constOffset = 
+                new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
+                                    "trunc_const_offset", insertBefore);
+        }
+    }
+
+    *variableOffsetPtr = variableOffset;
+    *constOffsetPtr = constOffset;
+    return true;
+}
+
+
 struct GSInfo {
     GSInfo(const char *pgFuncName, const char *pgboFuncName, 
            const char *pgbo32FuncName, bool ig) 
@@ -1764,25 +1875,12 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
 
-        if (g->opt.force32BitAddressing) {
-            // If we're doing 32-bit addressing on a 64-bit target, here we
-            // will see if we can call one of the 32-bit variants of the
-            // pseudo gather/scatter functions.  Specifically, if the
-            // offset vector turns out to be an i32 value that was sext'ed
-            // to be i64 immediately before the scatter/gather, then we
-            // walk past the sext to get the i32 offset values and then
-            // call out to the corresponding 32-bit gather/scatter
-            // function.
-            llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
-            if (sext != NULL && 
-                sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
-                variableOffset = sext->getOperand(0);
-                gatherScatterFunc = info->baseOffsets32Func;
-                if (constOffset->getType() != LLVMTypes::Int32VectorType)
-                    constOffset = 
-                        new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
-                                            "trunc_const_offset", callInst);
-            }
+        // If we're doing 32-bit addressing on a 64-bit target, here we
+        // will see if we can call one of the 32-bit variants of the pseudo
+        // gather/scatter functions.
+        if (g->opt.force32BitAddressing && 
+            lOffsets32BitSafe(&variableOffset, &constOffset, callInst)) {
+            gatherScatterFunc = info->baseOffsets32Func;
         }
 
         if (info->isGather) {
