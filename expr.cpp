@@ -3794,7 +3794,7 @@ IndexExpr::GetType() const {
         elementType = sequentialType->GetElementType();
     }
 
-    if (indexType->IsUniformType())
+    if (indexType->IsUniformType() && baseExprType->IsUniformType())
         // If the index is uniform, the resulting type is just whatever the
         // element type is
         return elementType;
@@ -3904,7 +3904,8 @@ IndexExpr::GetLValueType() const {
     const PointerType *pt = 
         dynamic_cast<const PointerType *>(baseExprLValueType->GetBaseType());
     Assert(pt != NULL);
-    if (baseExprLValueType->IsUniformType() && indexType->IsUniformType())
+    if (baseExprLValueType->IsUniformType() && indexType->IsUniformType() &&
+        pt->IsVaryingType() == false)
         return PointerType::GetUniform(pt->GetBaseType());
     else
         return PointerType::GetVarying(pt->GetBaseType());
