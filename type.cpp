@@ -2094,12 +2094,8 @@ StructType::GetElementType(int i) const {
 
     // If the element has unbound variability, resolve its variability to
     // the struct type's variability
-    if (ret->HasUnboundVariability()) {
-        if (variability == Varying)
-            ret = ret->GetAsVaryingType();
-        else
-            ret = ret->GetAsUniformType();
-    }
+    ret = ret->ResolveUnboundVariability(variability);
+
     return isConst ? ret->GetAsConstType() : ret;
 }
 
