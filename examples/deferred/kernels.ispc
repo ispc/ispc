@@ -35,22 +35,22 @@
 
 struct InputDataArrays
 {
-    uniform float *zBuffer;
-    uniform unsigned int16 *normalEncoded_x; // half float
-    uniform unsigned int16 *normalEncoded_y; // half float
-    uniform unsigned int16 *specularAmount; // half float
-    uniform unsigned int16 *specularPower; // half float
-    uniform unsigned int8 *albedo_x; // unorm8
-    uniform unsigned int8 *albedo_y; // unorm8
-    uniform unsigned int8 *albedo_z; // unorm8
-    uniform float *lightPositionView_x;
-    uniform float *lightPositionView_y;
-    uniform float *lightPositionView_z;
-    uniform float *lightAttenuationBegin;
-    uniform float *lightColor_x;
-    uniform float *lightColor_y;
-    uniform float *lightColor_z;
-    uniform float *lightAttenuationEnd;
+    float *zBuffer;
+    unsigned int16 *normalEncoded_x; // half float
+    unsigned int16 *normalEncoded_y; // half float
+    unsigned int16 *specularAmount; // half float
+    unsigned int16 *specularPower; // half float
+    unsigned int8 *albedo_x; // unorm8
+    unsigned int8 *albedo_y; // unorm8
+    unsigned int8 *albedo_z; // unorm8
+    float *lightPositionView_x;
+    float *lightPositionView_y;
+    float *lightPositionView_z;
+    float *lightAttenuationBegin;
+    float *lightColor_x;
+    float *lightColor_y;
+    float *lightColor_z;
+    float *lightAttenuationEnd;
 };
 
 struct InputHeader
