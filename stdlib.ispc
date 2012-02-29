@@ -446,8 +446,8 @@ count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void
-aos_to_soa3(uniform float a[], float * uniform v0, float * uniform v1, 
-            float * uniform v2) {
+aos_to_soa3(uniform float a[], varying float * uniform v0, 
+            varying float * uniform v1, varying float * uniform v2) {
     __aos_to_soa3_float(a, v0, v1, v2);
 }
 
@@ -457,8 +457,9 @@ soa_to_aos3(float v0, float v1, float v2, uniform float a[]) {
 }
 
 static inline void
-aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1, 
-            float * uniform v2, float * uniform v3) {
+aos_to_soa4(uniform float a[], varying float * uniform v0,
+            varying float * uniform v1, varying float * uniform v2,
+            varying float * uniform v3) {
     __aos_to_soa4_float(a, v0, v1, v2, v3);
 }
 
@@ -468,10 +469,10 @@ soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
 }
 
 static inline void
-aos_to_soa3(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
-            int32 * uniform v2) {
-    aos_to_soa3((uniform float * uniform)a, (float * uniform)v0, 
-                (float * uniform)v1, (float * uniform)v2);
+aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
+            varying int32 * uniform v1, varying int32 * uniform v2) {
+    aos_to_soa3((uniform float * uniform)a, (varying float * uniform)v0, 
+                (varying float * uniform)v1, (varying float * uniform)v2);
 }
 
 static inline void
@@ -481,11 +482,12 @@ soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[]) {
 }
 
 static inline void
-aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
-            int32 * uniform v2, int32 * uniform v3) {
-    aos_to_soa4((uniform float * uniform)a, (float * uniform )v0, 
-                (float * uniform)v1, (float * uniform)v2, 
-                (float * uniform)v3);
+aos_to_soa4(uniform int32 a[], varying int32 * uniform v0, 
+            varying int32 * uniform v1, varying int32 * uniform v2, 
+            varying int32 * uniform v3) {
+    aos_to_soa4((uniform float * uniform)a, (varying float * uniform )v0, 
+                (varying float * uniform)v1, (varying float * uniform)v2, 
+                (varying float * uniform)v3);
 }
 
 static inline void
@@ -765,7 +767,7 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 
 static inline uniform int 
 packed_load_active(uniform unsigned int a[],
-                   unsigned int * uniform vals) {
+                   varying unsigned int * uniform vals) {
     return __packed_load_active(a, vals, (UIntMaskType)__mask);
 }
 
@@ -776,7 +778,7 @@ packed_store_active(uniform unsigned int a[],
 }
 
 static inline uniform int 
-packed_load_active(uniform int a[], int * uniform vals) {
+packed_load_active(uniform int a[], varying int * uniform vals) {
     return __packed_load_active(a, vals, (IntMaskType)__mask);
 }
 

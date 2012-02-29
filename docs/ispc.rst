@@ -1507,9 +1507,8 @@ As with other basic types, pointers can be both ``uniform`` and
 
 ** Like other types in ``ispc``, pointers are ``varying`` by default, if an
 explicit ``uniform`` qualifier isn't provided.  However, the default
-variability of the pointed-to type (``uniform`` or ``varying``) is the
-opposite of the pointer variability. ** This rule will be illustrated and
-explained in examples below.
+variability of the pointed-to type is uniform. ** This rule will be
+illustrated and explained in examples below.
 
 For example, the ``ptr`` variable in the code below is a varying pointer to
 ``uniform float`` values.  Each program instance has a separate pointer
@@ -1529,7 +1528,7 @@ qualifier:
 ::
 
     float f = 0;
-    float * uniform pf = &f;  // uniform pointer to a varying float
+    varying float * uniform pf = &f;  // uniform pointer to a varying float
     *pf = 1;
 
 The placement of the ``uniform`` qualifier to declare a ``uniform`` pointer
@@ -1546,7 +1545,7 @@ out with a separate location in memory for each program instance.)
 ::
 
     float a;
-    float * uniform pa = &a;
+    varying float * uniform pa = &a;
     *pa = programIndex;  // same as (a = programIndex)
     
 Also as in C, arrays are silently converted into pointers:
@@ -1554,8 +1553,8 @@ Also as in C, arrays are silently converted into pointers:
 ::
 
     float a[10] = { ... };
-    float * uniform pa = a;     // pointer to first element of a
-    float * uniform pb = a + 5; // pointer to 5th element of a
+    varying float * uniform pa = a;     // pointer to first element of a
+    varying float * uniform pb = a + 5; // pointer to 5th element of a
 
 Any pointer type can be explicitly typecast to another pointer type, as
 long as the source type isn't a ``varying`` pointer when the destination

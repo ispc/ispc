@@ -986,10 +986,8 @@ PointerType::ResolveUnboundVariability(Variability v) const {
 
     Assert(v != Unbound);
     Variability ptrVariability = (variability == Unbound) ? v : variability;
-    Variability childVariability = (ptrVariability == Varying) ? 
-        Uniform : Varying;
-    return new PointerType(baseType->ResolveUnboundVariability(childVariability),
-                           ptrVariability, isConst);
+    const Type *resolvedBaseType = baseType->ResolveUnboundVariability(Uniform);
+    return new PointerType(resolvedBaseType, ptrVariability, isConst);
 }
 
 

@@ -7432,11 +7432,8 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
 
-    if (allocType != NULL && allocType->HasUnboundVariability()) {
-        Type::Variability childVariability = isVarying ?
-            Type::Uniform : Type::Varying;
-        allocType = allocType->ResolveUnboundVariability(childVariability);
-    }
+    if (allocType != NULL && allocType->HasUnboundVariability())
+        allocType = allocType->ResolveUnboundVariability(Type::Uniform);
 }
 
 

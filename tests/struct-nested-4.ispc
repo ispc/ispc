@@ -17,7 +17,7 @@ void init(uniform Ray rays[], uniform int count, float v) {
     }
 }
 
-void zero_dx(Ray * uniform r) {
+void zero_dx(varying Ray * uniform r) {
     r->d.x = 0;
 }
 
