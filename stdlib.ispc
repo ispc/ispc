@@ -3409,9 +3409,31 @@ static inline unsigned int random(varying RNGState * uniform state)
     return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
 }
 
+static inline uniform unsigned int random(uniform RNGState * uniform state)
+{
+    uniform unsigned int b;
+
+    b  = ((state->z1 << 6) ^ state->z1) >> 13;
+    state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
+    b  = ((state->z2 << 2) ^ state->z2) >> 27; 
+    state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
+    b  = ((state->z3 << 13) ^ state->z3) >> 21;
+    state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
+    b  = ((state->z4 << 3) ^ state->z4) >> 12;
+    state->z4 = ((state->z4 & 4294967168U) << 13) ^ b;
+    return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
+}
+
 static inline float frandom(varying RNGState * uniform state)
 {
     unsigned int irand = random(state);
+    irand &= (1<<23)-1;
+    return floatbits(0x3F800000 | irand)-1.0f;
+}
+
+static inline uniform float frandom(uniform RNGState * uniform state)
+{
+    uniform unsigned int irand = random(state);
     irand &= (1<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
@@ -3450,7 +3472,8 @@ static inline uniform unsigned int __seed4(varying RNGState * uniform state,
     return seed;
 }
 
-static inline void seed_rng(varying RNGState * uniform state, uniform unsigned int seed) {
+static inline void seed_rng(varying RNGState * uniform state, 
+                            uniform unsigned int seed) {
     if (programCount == 1) {
         state->z1 = seed;
         state->z2 = seed ^ 0xbeeff00d;
@@ -3470,6 +3493,16 @@ static inline void seed_rng(varying RNGState * uniform state, uniform unsigned i
         }
     }
 }
+
+static inline void seed_rng(uniform RNGState * uniform state, 
+                            uniform unsigned int seed) {
+    state->z1 = seed;
+    state->z2 = seed ^ 0xbeeff00d;
+    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
+}
+
 
 static inline void fastmath() {
     __fastmath();
