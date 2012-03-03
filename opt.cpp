@@ -1673,7 +1673,7 @@ lExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
         ret[i] = cv->getElementAsInteger(i);
     return true;
 #else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
     if (cv == NULL)
         return false;
 
