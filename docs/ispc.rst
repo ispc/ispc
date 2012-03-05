@@ -3028,7 +3028,7 @@ functions:
 
 ::
 
-    void sincos(float x, float * uniform s, float * uniform c)
+    void sincos(float x, varying float * uniform s, varying float * uniform c)
     void sincos(uniform float x, uniform float * uniform s,
                 uniform float * uniform c)
 
@@ -3054,7 +3054,7 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 
     float ldexp(float x, int n)
     uniform float ldexp(uniform float x, uniform int n)
-    float frexp(float x, int * uniform pw2)
+    float frexp(float x, varying int * uniform pw2)
     uniform float frexp(uniform float x,
                         uniform int * uniform pw2)
 
@@ -3069,7 +3069,8 @@ library.  State for the RNG is maintained in an instance of the
 ::
 
     struct RNGState;
-    void seed_rng(RNGState * uniform state, uniform int seed)
+    void seed_rng(varying RNGState * uniform state, uniform int seed)
+    void seed_rng(uniform RNGState * uniform state, uniform int seed)
 
 After the RNG is seeded, the ``random()`` function can be used to get a
 pseudo-random ``unsigned int32`` value and the ``frandom()`` function can
@@ -3077,8 +3078,10 @@ be used to get a pseudo-random ``float`` value.
 
 ::
 
-    unsigned int32 random(RNGState * uniform state)
-    float frandom(RNGState * uniform state)
+    unsigned int32 random(varying RNGState * uniform state)
+    float frandom(varying RNGState * uniform state)
+    uniform unsigned int32 random(RNGState * uniform state)
+    uniform float frandom(uniform RNGState * uniform state)
 
 Output Functions
 ----------------
@@ -3396,9 +3399,9 @@ variable.  They return the total number of values loaded.
 ::
 
     uniform int packed_load_active(uniform int * uniform base,
-                                   int * uniform val)
+                                   varying int * uniform val)
     uniform int packed_load_active(uniform unsigned int * uniform base,
-                                   unsigned int * uniform val)
+                                   varying unsigned int * uniform val)
 
 Similarly, the ``packed_store_active()`` functions store the ``val`` values
 for each program instances that executed the ``packed_store_active()``
@@ -3488,10 +3491,10 @@ are both ``int32`` and ``float`` variants of this function:
 
 ::
 
-    void aos_to_soa3(uniform float a[], float * uniform v0, 
-                     float * uniform v1, float * uniform v2)
-    void aos_to_soa3(uniform int32 a[], int32 * uniform v0,
-                     int32 * uniform v1, int32 * uniform v2)
+    void aos_to_soa3(uniform float a[], varying float * uniform v0, 
+                     varying float * uniform v1, varying float * uniform v2)
+    void aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
+                     varying int32 * uniform v1, varying int32 * uniform v2)
 
 After computation is done, corresponding functions convert back from the
 SoA values in ``ispc`` ``varying`` variables and write the values back to
@@ -3520,10 +3523,12 @@ the given array, starting at the given offset.
 
 ::
 
-    void aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1,
-                     float * uniform v2, float * uniform v3)
-    void aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1,
-                     int32 * uniform v2, int32 * uniform v3)
+    void aos_to_soa4(uniform float a[], varying float * uniform v0,
+                     varying float * uniform v1, varying float * uniform v2,
+                     varying float * uniform v3)
+    void aos_to_soa4(uniform int32 a[], varying int32 * uniform v0,
+                     varying int32 * uniform v1, varying int32 * uniform v2,
+                     varying int32 * uniform v3)
     void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[])
     void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[])
 
