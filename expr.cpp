@@ -596,13 +596,14 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
             return;
         initExpr = TypeConvertExpr(initExpr, symType, "initializer");
 
-        if (initExpr != NULL) {
-            llvm::Value *initializerValue = initExpr->GetValue(ctx);
-            if (initializerValue != NULL)
-                // Bingo; store the value in the variable's storage
-                ctx->StoreInst(initializerValue, ptr);
+        if (initExpr == NULL)
             return;
-        }
+
+        llvm::Value *initializerValue = initExpr->GetValue(ctx);
+        if (initializerValue != NULL)
+            // Bingo; store the value in the variable's storage
+            ctx->StoreInst(initializerValue, ptr);
+        return;
     }
 
     // Atomic types and enums can't be initialized with { ... } initializer
