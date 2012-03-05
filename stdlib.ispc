@@ -1785,6 +1785,116 @@ static inline uniform float sin(uniform float x_full) {
 }
 
 
+static inline float asin(float x) {
+    bool isneg = x < 0;
+    x = abs(x);
+
+    bool isnan = (x > 1);
+
+    float v;
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_asinf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
+        //           [|single...|], [1e-20;.9999999999999999]);
+        // avg error: 8.5716801e-09, max error: 2.1373853e-07
+        v = 1.57079637050628662109375f + 
+            x * (-0.21460501849651336669921875f + 
+            x * (8.9116774499416351318359375e-2f + 
+            x * (-5.146093666553497314453125e-2f + 
+            x * (3.7269376218318939208984375e-2f + 
+            x * (-3.5882405936717987060546875e-2f + 
+            x * (4.14929799735546112060546875e-2f +
+            x * (-4.25077490508556365966796875e-2f +
+            x * (3.05023305118083953857421875e-2f + 
+            x * (-1.2897425331175327301025390625e-2f +
+            x * 2.38926825113594532012939453125e-3f)))))))));
+    else if (__math_lib == __math_lib_ispc_fast)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
+        //           [1e-20;.9999999999999999]);
+        // avg error: 1.1105439e-06, max error 1.3187528e-06
+        v = 1.57079517841339111328125f + 
+             x * (-0.21450997889041900634765625f + 
+             x * (8.78556668758392333984375e-2f + 
+             x * (-4.489909112453460693359375e-2f + 
+             x * (1.928029954433441162109375e-2f + 
+             x * (-4.3095736764371395111083984375e-3f)))));
+
+    v *= -sqrt(1.f - x);
+    v = v + 1.57079637050628662109375;
+    if (v < 0) v = 0;
+    // v = max(0, v);
+
+    if (isneg) v = -v;
+    if (isnan) v = floatbits(0x7fc00000);
+
+    return v;
+}
+
+
+static inline uniform float asin(uniform float x) {
+    uniform bool isneg = x < 0;
+    x = abs(x);
+
+    uniform bool isnan = (x > 1);
+
+    uniform float v;
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
+        return __stdlib_asinf(x);
+    }
+    else if (__math_lib == __math_lib_ispc)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
+        //           [|single...|], [1e-20;.9999999999999999]);
+        // avg error: 8.5716801e-09, max error: 2.1373853e-07
+        v = 1.57079637050628662109375f + 
+            x * (-0.21460501849651336669921875f + 
+            x * (8.9116774499416351318359375e-2f + 
+            x * (-5.146093666553497314453125e-2f + 
+            x * (3.7269376218318939208984375e-2f + 
+            x * (-3.5882405936717987060546875e-2f + 
+            x * (4.14929799735546112060546875e-2f +
+            x * (-4.25077490508556365966796875e-2f +
+            x * (3.05023305118083953857421875e-2f + 
+            x * (-1.2897425331175327301025390625e-2f +
+            x * 2.38926825113594532012939453125e-3f)))))))));
+    else if (__math_lib == __math_lib_ispc_fast)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
+        //           [1e-20;.9999999999999999]);
+        // avg error: 1.1105439e-06, max error 1.3187528e-06
+        v = 1.57079517841339111328125f + 
+             x * (-0.21450997889041900634765625f + 
+             x * (8.78556668758392333984375e-2f + 
+             x * (-4.489909112453460693359375e-2f + 
+             x * (1.928029954433441162109375e-2f + 
+             x * (-4.3095736764371395111083984375e-3f)))));
+
+    v *= -sqrt(1.f - x);
+    v = v + 1.57079637050628662109375;
+    if (v < 0) v = 0;
+    // v = max(0, v);
+
+    if (isneg) v = -v;
+    if (isnan) v = floatbits(0x7fc00000);
+
+    return v;
+}
+
+
 static inline float cos(float x_full) {
     if (__math_lib == __math_lib_svml) {
         return __svml_cos(x_full);
@@ -1909,6 +2019,16 @@ static inline uniform float cos(uniform float x_full) {
         formula = flip_sign ? -formula : formula;
         return formula;
     }
+}
+
+
+static inline float acos(float v) {
+    return 1.57079637050628662109375 - asin(v);
+}
+
+
+static inline uniform float acos(uniform float v) {
+    return 1.57079637050628662109375 - asin(v);
 }
 
 

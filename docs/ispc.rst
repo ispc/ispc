@@ -3013,13 +3013,17 @@ architectures.
     float tan(float x)
     uniform float tan(uniform float x)
 
-Arctangent functions are also available:
+The corresponding inverse functions are also available:
 
 ::
 
+   float asin(float x)
+   uniform float asin(uniformfloat x)
+   float acos(float x)
+   uniform float acos(uniform float x)
    float atan(float x)
-   float atan2(float x, float y)
    uniform float atan(uniform float x)
+   float atan2(float x, float y)
    uniform float atan2(uniform float x, uniform float y)
 
 If both sine and cosine are needed, then the ``sincos()`` call computes

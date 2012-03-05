@@ -1890,6 +1890,8 @@ entry:
 declare float @sinf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
 declare void @sincosf(float, float *, float *) nounwind readnone
+declare float @asinf(float) nounwind readnone
+declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
 declare float @atanf(float) nounwind readnone
 declare float @atan2f(float, float) nounwind readnone
@@ -1910,6 +1912,16 @@ define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
 define void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
+}
+
+define float @__stdlib_asinf(float) nounwind readnone alwaysinline {
+  %r = call float @asinf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_acosf(float) nounwind readnone alwaysinline {
+  %r = call float @acosf(float %0)
+  ret float %r
 }
 
 define float @__stdlib_tanf(float) nounwind readnone alwaysinline {
