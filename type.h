@@ -39,11 +39,38 @@
 #define ISPC_TYPE_H 1
 
 #include "ispc.h"
+#include "util.h"
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
 
 class ConstExpr;
 class StructType;
+
+/** Types may have uniform, varying, SOA, or unbound variability; this
+    struct is used by Type implementations to record their variability. 
+*/
+struct Variability {
+    enum VarType { Unbound, Uniform, Varying, SOA };
+
+    Variability(VarType t = Unbound, int w = 0) : type(t), soaWidth(w) { }
+
+    bool operator==(const Variability &v) const { 
+        return v.type == type && v.soaWidth == soaWidth; 
+    }
+    bool operator!=(const Variability &v) const { 
+        return v.type != type || v.soaWidth != soaWidth;
+    }
+
+    bool operator==(const VarType &t) const { return type == t; }
+    bool operator!=(const VarType &t) const { return type != t; }
+
+    std::string GetString() const;
+    std::string MangleString() const;
+    
+    VarType type;
+    int soaWidth;
+};
+
 
 /** @brief Interface class that defines the type abstraction.
 
@@ -78,27 +105,32 @@ public:
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
-    /** Types may have uniform, varying, or not-yet-determined variability;
-        this enumerant is used by Type implementations to record their
-        variability. */
-    enum Variability {
-        Uniform,
-        Varying,
-        Unbound
-    };
-
     /** Returns the variability of the type. */
     virtual Variability GetVariability() const = 0;
 
     /** Returns true if the underlying type is uniform */
-    bool IsUniformType() const { return GetVariability() == Uniform; }
+    bool IsUniformType() const { 
+        return GetVariability() == Variability::Uniform; 
+    }
 
     /** Returns true if the underlying type is varying */
-    bool IsVaryingType() const { return GetVariability() == Varying; }
+    bool IsVaryingType() const { 
+        return GetVariability() == Variability::Varying; 
+    }
+
+    /** Returns true if the type is laid out in "structure of arrays"
+        layout. */
+    bool IsSOAType() const { return GetVariability() == Variability::SOA; }
+
+    /** Returns the structure of arrays width for SOA types.  This method
+        returns zero for types with non-SOA variability. */
+    int GetSOAWidth() const { return GetVariability().soaWidth; }
 
     /** Returns true if the underlying type's uniform/varying-ness is
         unbound. */
-    bool HasUnboundVariability() const { return GetVariability() == Unbound; }
+    bool HasUnboundVariability() const { 
+        return GetVariability() == Variability::Unbound; 
+    }
 
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability

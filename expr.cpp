@@ -6250,7 +6250,7 @@ TypeCastExpr::TypeCheck() {
                                              expr, pos);
         return ::TypeCheck(tce);
     }
-    type = toType = type->ResolveUnboundVariability(Type::Varying);
+    type = toType = type->ResolveUnboundVariability(Variability::Varying);
 
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
@@ -6718,7 +6718,7 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
     if (type->HasUnboundVariability())
-        type = type->ResolveUnboundVariability(Type::Varying);
+        type = type->ResolveUnboundVariability(Variability::Varying);
 }
 
 
@@ -6884,7 +6884,7 @@ FunctionSymbolExpr::GetType() const {
     }
 
     return matchingFunc ? 
-        new PointerType(matchingFunc->type, Type::Uniform, true) : NULL;
+        new PointerType(matchingFunc->type, Variability::Uniform, true) : NULL;
 }
 
 
@@ -7439,7 +7439,7 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
 
     if (allocType != NULL && allocType->HasUnboundVariability())
-        allocType = allocType->ResolveUnboundVariability(Type::Uniform);
+        allocType = allocType->ResolveUnboundVariability(Variability::Uniform);
 }
 
 

@@ -746,7 +746,7 @@ struct_or_union_specifier
               GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
                                            &elementPositions);
               StructType *st = new StructType($2, elementTypes, elementNames,
-                                              elementPositions, false, Type::Unbound, @2);
+                                              elementPositions, false, Variability::Unbound, @2);
               m->symbolTable->AddType($2, st, @2);
               $$ = st;
           }
@@ -763,7 +763,7 @@ struct_or_union_specifier
                                            &elementPositions);
               // FIXME: should be unbound
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                                  false, Type::Unbound, @1);
+                                  false, Variability::Unbound, @1);
           }
           else
               $$ = NULL;
@@ -849,7 +849,7 @@ specifier_qualifier_list
             else if ($1 == TYPEQUAL_SIGNED) {
                 if ($2->IsIntType() == false) {
                     Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
-                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             }
@@ -859,7 +859,7 @@ specifier_qualifier_list
                     $$ = t;
                 else {
                     Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
-                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             } 
@@ -1827,7 +1827,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             if (sym->type == NULL)
                 Assert(m->errorCount > 0);
             else
-                sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+                sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
             m->AddGlobalVariable(sym, decl->initExpr, isConst);
         }
@@ -1864,7 +1864,7 @@ lAddFunctionParams(Declarator *decl) {
         if (sym == NULL || sym->type == NULL)
             Assert(m->errorCount > 0);
         else {
-            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)

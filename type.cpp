@@ -37,7 +37,6 @@
 
 #include "type.h"
 #include "expr.h"
-#include "util.h"
 #include "sym.h"
 #include "llvmutil.h"
 #include "module.h"
@@ -68,55 +67,95 @@ lShouldPrintName(const std::string &name) {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// Variability
+
+std::string
+Variability::GetString() const {
+    switch (type) {
+    case Uniform: return "uniform";
+    case Varying: return "varying";
+    case SOA: {
+        char buf[32];
+        sprintf(buf, "soa<%d>", soaWidth);
+        return buf;
+    }
+    case Unbound: return "/*unbound*/";
+    default:
+        FATAL("Unhandled variability");
+        return "";
+    }
+}
+
+
+std::string
+Variability::MangleString() const {
+    switch (type) {
+    case Uniform: 
+        return "un";
+    case Varying: 
+        return "vy";
+    case SOA: {
+        char buf[32];
+        sprintf(buf, "soa<%d>", soaWidth);
+        return buf;
+    }
+    case Unbound:
+        FATAL("Unbound unexpected in Variability::MangleString()");
+    default:
+        FATAL("Unhandled variability");
+        return "";
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
 // AtomicType
 
-
 const AtomicType *AtomicType::UniformBool =
-    new AtomicType(AtomicType::TYPE_BOOL, Uniform, false);
+    new AtomicType(AtomicType::TYPE_BOOL, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingBool =
-    new AtomicType(AtomicType::TYPE_BOOL, Varying, false);
+    new AtomicType(AtomicType::TYPE_BOOL, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt8 =
-    new AtomicType(AtomicType::TYPE_INT8, Uniform, false);
+    new AtomicType(AtomicType::TYPE_INT8, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt8 =
-    new AtomicType(AtomicType::TYPE_INT8, Varying, false);
+    new AtomicType(AtomicType::TYPE_INT8, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt8 =
-    new AtomicType(AtomicType::TYPE_UINT8, Uniform, false);
+    new AtomicType(AtomicType::TYPE_UINT8, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingUInt8 =
-    new AtomicType(AtomicType::TYPE_UINT8, Varying, false);
+    new AtomicType(AtomicType::TYPE_UINT8, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt16 =
-    new AtomicType(AtomicType::TYPE_INT16, Uniform, false);
+    new AtomicType(AtomicType::TYPE_INT16, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt16 =
-    new AtomicType(AtomicType::TYPE_INT16, Varying, false);
+    new AtomicType(AtomicType::TYPE_INT16, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt16 =
-    new AtomicType(AtomicType::TYPE_UINT16, Uniform, false);
+    new AtomicType(AtomicType::TYPE_UINT16, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingUInt16 =
-    new AtomicType(AtomicType::TYPE_UINT16, Varying, false);
+    new AtomicType(AtomicType::TYPE_UINT16, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt32 =
-    new AtomicType(AtomicType::TYPE_INT32, Uniform, false);
+    new AtomicType(AtomicType::TYPE_INT32, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt32 =
-    new AtomicType(AtomicType::TYPE_INT32, Varying, false);
+    new AtomicType(AtomicType::TYPE_INT32, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt32 =
-    new AtomicType(AtomicType::TYPE_UINT32, Uniform, false);
+    new AtomicType(AtomicType::TYPE_UINT32, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingUInt32 =
-    new AtomicType(AtomicType::TYPE_UINT32, Varying, false);
+    new AtomicType(AtomicType::TYPE_UINT32, Variability::Varying, false);
 const AtomicType *AtomicType::UniformFloat =
-    new AtomicType(AtomicType::TYPE_FLOAT, Uniform, false);
+    new AtomicType(AtomicType::TYPE_FLOAT, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingFloat =
-    new AtomicType(AtomicType::TYPE_FLOAT, Varying, false);
+    new AtomicType(AtomicType::TYPE_FLOAT, Variability::Varying, false);
 const AtomicType *AtomicType::UniformInt64 =
-    new AtomicType(AtomicType::TYPE_INT64, Uniform, false);
+    new AtomicType(AtomicType::TYPE_INT64, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingInt64 =
-    new AtomicType(AtomicType::TYPE_INT64, Varying, false);
+    new AtomicType(AtomicType::TYPE_INT64, Variability::Varying, false);
 const AtomicType *AtomicType::UniformUInt64 =
-    new AtomicType(AtomicType::TYPE_UINT64, Uniform, false);
+    new AtomicType(AtomicType::TYPE_UINT64, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingUInt64 =
-    new AtomicType(AtomicType::TYPE_UINT64, Varying, false);
+    new AtomicType(AtomicType::TYPE_UINT64, Variability::Varying, false);
 const AtomicType *AtomicType::UniformDouble =
-    new AtomicType(AtomicType::TYPE_DOUBLE, Uniform, false);
+    new AtomicType(AtomicType::TYPE_DOUBLE, Variability::Uniform, false);
 const AtomicType *AtomicType::VaryingDouble =
-    new AtomicType(AtomicType::TYPE_DOUBLE, Varying, false);
+    new AtomicType(AtomicType::TYPE_DOUBLE, Variability::Varying, false);
 const AtomicType *AtomicType::Void = 
-    new AtomicType(TYPE_VOID, Uniform, false);
+    new AtomicType(TYPE_VOID, Variability::Uniform, false);
 
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
@@ -124,7 +163,7 @@ AtomicType::AtomicType(BasicType bt, Variability v, bool ic)
 }
 
 
-Type::Variability
+Variability
 AtomicType::GetVariability() const {
     return variability;
 }
@@ -215,25 +254,27 @@ AtomicType::GetBaseType() const {
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
     Assert(Type::Equal(this, AtomicType::Void) == false);
-    if (variability == Varying)
+    if (variability == Variability::Varying)
         return this;
-    return new AtomicType(basicType, Varying, isConst);
+    return new AtomicType(basicType, Variability::Varying, isConst);
 }
 
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
     Assert(Type::Equal(this, AtomicType::Void) == false);
-    if (variability == Uniform)
+    if (variability == Variability::Uniform)
         return this;
-    return new AtomicType(basicType, Uniform, isConst);
+    return new AtomicType(basicType, Variability::Uniform, isConst);
 }
 
 
 const AtomicType *
 AtomicType::GetAsUnboundVariabilityType() const {
     Assert(Type::Equal(this, AtomicType::Void) == false);
-    if (variability == Unbound)
+    if (variability == Variability::Unbound)
+        return this;
+    return new AtomicType(basicType, Variability::Unbound, isConst);
         return this;
     return new AtomicType(basicType, Unbound, isConst);
 }
@@ -241,8 +282,8 @@ AtomicType::GetAsUnboundVariabilityType() const {
 
 const AtomicType *
 AtomicType::ResolveUnboundVariability(Variability v) const {
-    Assert(v != Unbound);
-    if (variability != Unbound)
+    Assert(v != Variability::Unbound);
+    if (variability != Variability::Unbound)
         return this;
     return new AtomicType(basicType, v, isConst);
 }
@@ -253,11 +294,8 @@ AtomicType::GetString() const {
     std::string ret;
     if (basicType != TYPE_VOID) {
         if (isConst)   ret += "const ";
-        switch (variability) {
-        case Uniform: ret += "uniform ";     break;
-        case Varying: ret += "varying ";     break;
-        case Unbound: ret += "/*unbound*/ "; break;
-        }
+        ret += variability.GetString();
+        ret += " ";
     }
 
     switch (basicType) {
@@ -283,12 +321,7 @@ std::string
 AtomicType::Mangle() const {
     std::string ret;
     if (isConst)   ret += "C";
-    switch (variability) {
-    case Uniform: ret += "uf";     break;
-    case Varying: ret += "vy";     break;
-    case Unbound: FATAL("Variability shoudln't be unbound in call to "
-                        "AtomicType::Mangle().");
-    }
+    ret += variability.MangleString();
 
     switch (basicType) {
     case TYPE_VOID:   ret += "v"; break;
@@ -312,7 +345,8 @@ AtomicType::Mangle() const {
 std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
-    if (variability != Uniform) {
+    if (variability != Variability::Uniform && 
+        variability != Variability::SOA) {
         Assert(m->errorCount > 0);
         return ret;
     }
@@ -344,8 +378,8 @@ AtomicType::GetCDeclaration(const std::string &name) const {
 
 LLVM_TYPE_CONST llvm::Type *
 AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
-    Assert(variability != Unbound);
-    bool isUniform = (variability == Uniform);
+    Assert(variability.type != Variability::Unbound);
+    bool isUniform = (variability == Variability::Uniform);
 
     switch (basicType) {
     case TYPE_VOID:
@@ -377,8 +411,9 @@ AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 AtomicType::GetDIType(llvm::DIDescriptor scope) const {
-    Assert(variability != Unbound);
-    if (variability == Uniform) {
+    Assert(variability.type != Variability::Unbound);
+
+    if (variability.type == Variability::Uniform) {
         switch (basicType) {
         case TYPE_VOID:
             return llvm::DIType();
@@ -454,18 +489,18 @@ EnumType::EnumType(SourcePos p)
     : pos(p) {
     //    name = "/* (anonymous) */";
     isConst = false;
-    variability = Unbound;
+    variability = Variability(Variability::Unbound);
 }
 
 
 EnumType::EnumType(const char *n, SourcePos p) 
     : pos(p), name(n) {
     isConst = false;
-    variability = Unbound;
+    variability = Variability(Variability::Unbound);
 }
 
 
-Type::Variability
+Variability
 EnumType::GetVariability() const {
     return variability;
 }
@@ -513,7 +548,7 @@ EnumType::GetAsUniformType() const {
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
-        enumType->variability = Uniform;
+        enumType->variability = Variability::Uniform;
         return enumType;
     }
 }
@@ -521,7 +556,7 @@ EnumType::GetAsUniformType() const {
 
 const EnumType *
 EnumType::ResolveUnboundVariability(Variability v) const {
-    if (variability == v || variability != Unbound)
+    if (variability != Variability::Unbound)
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
@@ -537,7 +572,7 @@ EnumType::GetAsVaryingType() const {
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
-        enumType->variability = Varying;
+        enumType->variability = Variability(Variability::Varying);
         return enumType;
     }
 }
@@ -549,7 +584,7 @@ EnumType::GetAsUnboundVariabilityType() const {
         return this;
     else {
         EnumType *enumType = new EnumType(*this);
-        enumType->variability = Unbound;
+        enumType->variability = Variability(Variability::Unbound);
         return enumType;
     }
 }
@@ -583,14 +618,9 @@ std::string
 EnumType::GetString() const {
     std::string ret;
     if (isConst) ret += "const ";
+    ret += variability.GetString();
 
-    switch (variability) {
-    case Uniform: ret += "uniform ";     break;
-    case Varying: /*ret += "varying ";*/ break;
-    case Unbound: ret += "/*unbound*/ "; break;
-    }
-
-    ret += "enum ";
+    ret += " enum ";
     if (name.size())
         ret += name;
     return ret;
@@ -599,21 +629,20 @@ EnumType::GetString() const {
 
 std::string 
 EnumType::Mangle() const {
+    Assert(variability != Variability::Unbound);
+
     std::string ret;
-
-    Assert(variability != Unbound);
-    if (variability == Uniform) ret += "uf";
-    else ret += "vy";
-
+    if (isConst) ret += "C";
+    ret += variability.MangleString();
     ret += std::string("enum[") + name + std::string("]");
-
     return ret;
 }
 
 
 std::string 
 EnumType::GetCDeclaration(const std::string &varName) const {
-    if (variability != Uniform) {
+    if (variability != Variability::Uniform &&
+        variability != Variability::SOA) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -623,6 +652,7 @@ EnumType::GetCDeclaration(const std::string &varName) const {
     ret += "enum";
     if (name.size())
         ret += std::string(" ") + name;
+
     if (lShouldPrintName(varName)) {
         ret += " ";
         ret += varName;
@@ -633,15 +663,22 @@ EnumType::GetCDeclaration(const std::string &varName) const {
 
 LLVM_TYPE_CONST llvm::Type *
 EnumType::LLVMType(llvm::LLVMContext *ctx) const {
-    Assert(variability != Unbound);
-    return (variability == Uniform) ? LLVMTypes::Int32Type : 
-                                      LLVMTypes::Int32VectorType;
+    Assert(variability != Variability::Unbound);
+
+    switch (variability.type) {
+    case Variability::Uniform:
+        return LLVMTypes::Int32Type;
+    case Variability::Varying:
+        return LLVMTypes::Int32VectorType;
+    default:
+        FATAL("Unexpected variability in EnumType::LLVMType()");
+        return NULL;
+    }
 }
 
 
 llvm::DIType 
 EnumType::GetDIType(llvm::DIDescriptor scope) const {
-    Assert(variability != Unbound);
     std::vector<llvm::Value *> enumeratorDescriptors;
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
@@ -705,7 +742,9 @@ EnumType::GetEnumerator(int i) const {
 ///////////////////////////////////////////////////////////////////////////
 // PointerType
 
-PointerType *PointerType::Void = new PointerType(AtomicType::Void, Uniform, false);
+PointerType *PointerType::Void = 
+    new PointerType(AtomicType::Void, Variability(Variability::Uniform), false);
+
 
 PointerType::PointerType(const Type *t, Variability v, bool ic) 
     : variability(v), isConst(ic) {
@@ -715,13 +754,13 @@ PointerType::PointerType(const Type *t, Variability v, bool ic)
 
 PointerType *
 PointerType::GetUniform(const Type *t) {
-    return new PointerType(t, Uniform, false);
+    return new PointerType(t, Variability(Variability::Uniform), false);
 }
 
 
 PointerType *
 PointerType::GetVarying(const Type *t) {
-    return new PointerType(t, Varying, false);
+    return new PointerType(t, Variability(Variability::Varying), false);
 }
 
 
@@ -732,7 +771,7 @@ PointerType::IsVoidPointer(const Type *t) {
 }
 
 
-Type::Variability
+Variability
 PointerType::GetVariability() const {
     return variability;
 }
@@ -776,28 +815,28 @@ PointerType::GetBaseType() const {
 
 const PointerType *
 PointerType::GetAsVaryingType() const {
-    if (variability == Varying)
+    if (variability == Variability::Varying)
         return this;
     else
-        return new PointerType(baseType, Varying, isConst);
+        return new PointerType(baseType, Variability(Variability::Varying),
 }
 
 
 const PointerType *
 PointerType::GetAsUniformType() const {
-    if (variability == Uniform)
+    if (variability == Variability::Uniform)
         return this;
     else
-        return new PointerType(baseType, Uniform, isConst);
+        return new PointerType(baseType, Variability(Variability::Uniform),
 }
 
 
 const PointerType *
 PointerType::GetAsUnboundVariabilityType() const {
-    if (variability == Unbound)
+    if (variability == Variability::Unbound)
         return this;
     else
-        return new PointerType(baseType, Unbound, isConst);
+        return new PointerType(baseType, Variability(Variability::Unbound),
 }
 
 
@@ -808,10 +847,12 @@ PointerType::ResolveUnboundVariability(Variability v) const {
         return NULL;
     }
 
-    Assert(v != Unbound);
-    Variability ptrVariability = (variability == Unbound) ? v : variability;
-    const Type *resolvedBaseType = baseType->ResolveUnboundVariability(Uniform);
-    return new PointerType(resolvedBaseType, ptrVariability, isConst);
+    Assert(v != Variability::Unbound);
+    Variability ptrVariability = (variability == Variability::Unbound) ? v :
+        variability;
+    const Type *resolvedBaseType = 
+        baseType->ResolveUnboundVariability(Variability::Uniform);
+    return new PointerType(resolvedBaseType, ptrVariability, isConst, isSlice,
 }
 
 
@@ -842,13 +883,9 @@ PointerType::GetString() const {
 
     std::string ret = baseType->GetString();
 
-    ret += std::string(" *");
-    if (isConst) ret += " const";
-    switch (variability) {
-    case Uniform: ret += " uniform";     break;
-    case Varying: ret += " varying";     break;
-    case Unbound: ret += " /*unbound*/"; break;
-    }
+    ret += std::string(" * ");
+    if (isConst) ret += "const ";
+    ret += variability.GetString();
 
     return ret;
 }
@@ -856,14 +893,14 @@ PointerType::GetString() const {
 
 std::string
 PointerType::Mangle() const {
-    Assert(variability != Unbound);
+    Assert(variability != Variability::Unbound);
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return "";
     }
 
-    return ((variability == Uniform) ? std::string("uptr<") : std::string("vptr<")) + 
-        baseType->Mangle() + std::string(">");
+    std::string ret = variability.MangleString() + std::string("<");
+    return ret + baseType->Mangle() + std::string(">");
 }
 
 
@@ -890,7 +927,6 @@ PointerType::GetCDeclaration(const std::string &name) const {
 
 LLVM_TYPE_CONST llvm::Type *
 PointerType::LLVMType(llvm::LLVMContext *ctx) const {
-    Assert(variability != Unbound);
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -947,7 +983,6 @@ lCreateDIArray(llvm::DIType eltType, int count) {
 
 llvm::DIType
 PointerType::GetDIType(llvm::DIDescriptor scope) const {
-    Assert(variability != Unbound);
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return llvm::DIType();
@@ -955,13 +990,18 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target.is32Bit ? 32 : 64;
-    if (variability == Uniform)
+    switch (variability.type) {
+    case Variability::Uniform:
         return m->diBuilder->createPointerType(diTargetType, bitsSize);
-    else {
+    case Variability::Varying: {
         // emit them as an array of pointers
         llvm::DIType eltType = m->diBuilder->createPointerType(diTargetType, 
                                                                bitsSize);
         return lCreateDIArray(eltType, g->target.vectorWidth);
+    }
+    default:
+        FATAL("Unexpected variability in PointerType::GetDIType()");
+        return llvm::DIType();
     }
 }
 
@@ -1001,9 +1041,9 @@ ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
 }
 
 
-Type::Variability
+Variability
 ArrayType::GetVariability() const {
-    return child ? child->GetVariability() : Uniform;
+    return child ? child->GetVariability() : Variability(Variability::Uniform);
 }
 
 
@@ -1293,7 +1333,7 @@ VectorType::VectorType(const AtomicType *b, int a)
 }
 
 
-Type::Variability
+Variability
 VectorType::GetVariability() const {
     return base->GetVariability(); 
 }
@@ -1487,7 +1527,7 @@ StructType::StructType(const std::string &n, const std::vector<const Type *> &el
 }
 
 
-Type::Variability
+Variability
 StructType::GetVariability() const  {
     return variability; 
 }
@@ -1535,7 +1575,7 @@ StructType::GetAsVaryingType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              isConst, Varying, pos);
+                              isConst, Variability(Variability::Varying), pos);
 }
 
 
@@ -1545,7 +1585,7 @@ StructType::GetAsUniformType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              isConst, Uniform, pos);
+                              isConst, Variability(Variability::Uniform), pos);
 }
 
 
@@ -1555,21 +1595,23 @@ StructType::GetAsUnboundVariabilityType() const {
         return this;
     else
         return new StructType(name, elementTypes, elementNames, elementPositions,
-                              isConst, Unbound, pos);
+                              isConst, Variability(Variability::Unbound), pos);
 }
 
 
 const StructType *
 StructType::ResolveUnboundVariability(Variability v) const {
-    Assert(v != Unbound);
+    Assert(v != Variability::Unbound);
+
+    if (variability != Variability::Unbound)
+        return this;
+
     // We don't resolve the members here but leave them unbound, so that if
     // resolve to varying but later want to get the uniform version of this
     // type, for example, then we still have the information around about
     // which element types were originally unbound...
-
     return new StructType(name, elementTypes, elementNames, elementPositions,
-                          isConst, (variability != Unbound) ? variability : v,
-                          pos);
+                          isConst, v, pos);
 }
 
 
@@ -1578,8 +1620,8 @@ StructType::GetAsConstType() const {
     if (IsConstType()) 
         return this;
     else
-        return new StructType(name, elementTypes, elementNames, 
-                              elementPositions, true, variability, pos);
+        return new StructType(name, elementTypes, elementNames, elementPositions,
+                              true, variability, pos);
 }
 
 
@@ -1597,12 +1639,8 @@ std::string
 StructType::GetString() const {
     std::string ret;
     if (isConst)   ret += "const ";
-
-    switch (variability) {
-    case Uniform: ret += "uniform ";     break;
-    case Varying: ret += "varying ";     break;
-    case Unbound: ret += "/*unbound*/ "; break;
-    }
+    ret += variability.GetString();
+    ret += " ";
 
     // Don't print the entire struct declaration, just print the struct's name.
     // @todo Do we need a separate method that prints the declaration?
@@ -1625,16 +1663,14 @@ StructType::GetString() const {
 
 std::string
 StructType::Mangle() const {
-    Assert(variability != Unbound);
+    Assert(variability != Variability::Unbound);
 
     std::string ret;
     ret += "s[";
     if (isConst)
         ret += "_c_";
-    if (variability == Uniform)
-        ret += "_u_";
-    else
-        ret += "_v_";
+    ret += variability.MangleString();
+
     ret += name + std::string("]<");
     for (unsigned int i = 0; i < elementTypes.size(); ++i)
         ret += GetElementType(i)->Mangle();
@@ -1727,7 +1763,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
 const Type *
 StructType::GetElementType(int i) const {
-    Assert(variability != Unbound);
+    Assert(variability != Variability::Unbound);
     Assert(i < (int)elementTypes.size());
     const Type *ret = elementTypes[i];
 
@@ -1765,11 +1801,11 @@ ReferenceType::ReferenceType(const Type *t)
 }
 
 
-Type::Variability
+Variability
 ReferenceType::GetVariability() const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
-        return Type::Unbound;
+        return Variability(Variability::Unbound);
     }
     return targetType->GetVariability(); 
 }
@@ -2026,9 +2062,9 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
 }
 
 
-Type::Variability
+Variability
 FunctionType::GetVariability() const {
-    return Uniform;
+    return Variability(Variability::Uniform);
 }
 
 

@@ -93,15 +93,20 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         const Type *unsignedType = type->GetAsUnsignedType();
         if (unsignedType != NULL)
             type = unsignedType;
-        else
+        else {
+            const Type *resolvedType = 
+                type->ResolveUnboundVariability(Variability::Varying);
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
-                  type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                  resolvedType->GetString().c_str());
+        }
     }
 
-    if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false)
+    if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false) {
+        const Type *resolvedType = 
+            type->ResolveUnboundVariability(Variability::Varying);
         Error(pos, "\"signed\" qualifier is illegal with non-integer type "
-              "\"%s\".", 
-              type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+              "\"%s\".", resolvedType->GetString().c_str());
+    }
 
     return type;
 }
@@ -290,13 +295,13 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
             continue;
         }
         else
-            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
         funArgs->push_back(sym);
     }
 
     if (funSym != NULL)
-        funSym->type = funSym->type->ResolveUnboundVariability(Type::Varying);
+        funSym->type = funSym->type->ResolveUnboundVariability(Variability::Varying);
 
     return funSym;
 }
@@ -316,11 +321,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     if (kind != DK_FUNCTION && isTask)
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
 
-    Type::Variability variability = Type::Unbound;
+    Variability variability(Variability::Unbound);
     if (hasUniformQual)
-        variability = Type::Uniform;
+        variability = Variability::Uniform;
     else if (hasVaryingQual)
-        variability = Type::Varying;
+        variability = Variability::Varying;
 
     const Type *type = base;
     switch (kind) {
@@ -420,7 +425,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
 
                 const Type *targetType = at->GetElementType();
                 targetType = 
-                    targetType->ResolveUnboundVariability(Type::Varying);
+                    targetType->ResolveUnboundVariability(Variability::Varying);
                 sym->type = PointerType::GetUniform(targetType);
 
                 // Make sure there are no unsized arrays (other than the
@@ -499,7 +504,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         const Type *functionType = 
             new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
-        functionType = functionType->ResolveUnboundVariability(Type::Varying);
+        functionType = functionType->ResolveUnboundVariability(Variability::Varying);
         return child->GetType(functionType, ds);
     }
     default:
@@ -587,7 +592,7 @@ Declaration::GetVariableDeclarations() const {
             Assert(m->errorCount > 0);
             continue;
         }
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
         if (Type::Equal(sym->type, AtomicType::Void))
             Error(sym->pos, "\"void\" type variable illegal in declaration.");
@@ -618,7 +623,7 @@ Declaration::DeclareFunctions() {
             Assert(m->errorCount > 0);
             continue;
         }
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
         if (dynamic_cast<const FunctionType *>(sym->type) == NULL)
             continue;
