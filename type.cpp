@@ -410,13 +410,6 @@ AtomicType::ResolveUnboundVariability(Variability v) const {
 }
 
 
-const Type *
-AtomicType::GetSOAType(int width) const {
-    Assert(width > 0);
-    return new ArrayType(this, width);
-}
-
-
 std::string
 AtomicType::GetString() const {
     std::string ret;
@@ -724,13 +717,6 @@ EnumType::GetAsUnboundVariabilityType() const {
 }
 
 
-const Type *
-EnumType::GetSOAType(int width) const {
-    Assert(width > 0);
-    return new ArrayType(this, width);
-}
-
-
 const EnumType *
 EnumType::GetAsConstType() const {
     if (isConst)
@@ -988,13 +974,6 @@ PointerType::ResolveUnboundVariability(Variability v) const {
     Variability ptrVariability = (variability == Unbound) ? v : variability;
     const Type *resolvedBaseType = baseType->ResolveUnboundVariability(Uniform);
     return new PointerType(resolvedBaseType, ptrVariability, isConst);
-}
-
-
-const Type *
-PointerType::GetSOAType(int width) const {
-    FATAL("Unimplemented.");
-    return NULL;
 }
 
 
@@ -1283,16 +1262,6 @@ ArrayType::GetAsUnsignedType() const {
 }
 
 
-const Type *
-ArrayType::GetSOAType(int width) const {
-    if (child == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
-    }
-    return new ArrayType(child->GetSOAType(width), numElements);
-}
-
-
 const ArrayType *
 ArrayType::GetAsConstType() const {
     if (child == NULL) {
@@ -1477,153 +1446,6 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// SOAArrayType
-
-SOAArrayType::SOAArrayType(const StructType *eltType, int nElem, int sw) 
-    : ArrayType(eltType, nElem), soaWidth(sw) {
-    Assert(soaWidth > 0);
-    if (numElements > 0)
-        Assert((numElements % soaWidth) == 0);
-}
-
-
-// FIXME: do we need to implement GetBaseType() here to return child->SOAType()?
-
-const SOAArrayType *
-SOAArrayType::GetAsVaryingType() const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsVaryingType()), 
-                            numElements, soaWidth);
-}
-
-
-const SOAArrayType *
-SOAArrayType::GetAsUniformType() const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsUniformType()), 
-                            numElements, soaWidth);
-}
-
-
-const SOAArrayType *
-SOAArrayType::GetAsUnboundVariabilityType() const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsUnboundVariabilityType()), 
-                            numElements, soaWidth);
-}
-
-const SOAArrayType *
-SOAArrayType::ResolveUnboundVariability(Variability v) const {
-    const StructType *sc = dynamic_cast<const StructType *>(child->ResolveUnboundVariability(v));
-    Assert(sc != NULL); // ???
-    return new SOAArrayType(sc, numElements, soaWidth);
-}
-
-
-const Type *
-SOAArrayType::GetSOAType(int width) const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetSOAType(width)), 
-                            numElements, soaWidth);
-}
-
-
-const SOAArrayType *
-SOAArrayType::GetAsConstType() const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsConstType()), 
-                            numElements, soaWidth);
-}
-
-
-const SOAArrayType *
-SOAArrayType::GetAsNonConstType() const {
-    return new SOAArrayType(dynamic_cast<const StructType *>(child->GetAsNonConstType()), 
-                            numElements, soaWidth);
-}
-
-
-std::string
-SOAArrayType::GetString() const {
-    std::string s;
-
-    char buf[32];
-    sprintf(buf, "soa<%d> ", soaWidth);
-    s += buf;
-    s += GetBaseType()->GetString();
-
-    const ArrayType *at = this;
-    while (at) {
-        char buf[16];
-        if (numElements > 0)
-            sprintf(buf, "%d", at->numElements);
-        else
-            buf[0] = '\0';
-        s += std::string("[") + std::string(buf) + std::string("]");
-        at = dynamic_cast<const ArrayType *>(at->child);
-    }
-    return s;
-}
-
-
-std::string
-SOAArrayType::Mangle() const {
-    const Type *t = soaType();
-    return t->Mangle();
-}
-
-
-std::string
-SOAArrayType::GetCDeclaration(const std::string &name) const {
-    const Type *t = soaType();
-    return t->GetCDeclaration(name);
-}
-
-
-int
-SOAArrayType::TotalElementCount() const {
-    int sz = numElements / soaWidth;
-    const ArrayType *ct = dynamic_cast<const ArrayType *>(child);
-    if (ct)
-        return sz * ct->TotalElementCount();
-    else
-        return sz;
-}
-
-
-LLVM_TYPE_CONST llvm::ArrayType *
-SOAArrayType::LLVMType(llvm::LLVMContext *ctx) const {
-    if (!child)
-        return NULL;
-
-    const ArrayType *a = soaType();
-    if (!a)
-        return NULL;
-    return a->LLVMType(ctx);
-}
-
-
-llvm::DIType
-SOAArrayType::GetDIType(llvm::DIDescriptor scope) const {
-    if (!child)
-        return llvm::DIType();
-
-    const Type *t = soaType();
-    return t->GetDIType(scope);
-}
-
-
-SOAArrayType *
-SOAArrayType::GetSizedArray(int size) const {
-    if ((size % soaWidth) != 0)
-        return NULL;
-    return new SOAArrayType(dynamic_cast<const StructType *>(child), size, soaWidth);
-}
-
-
-const ArrayType *
-SOAArrayType::soaType() const {
-    const Type *childSOA = child->GetSOAType(soaWidth);
-    return new ArrayType(childSOA, numElements / soaWidth);
-}
-
-
-///////////////////////////////////////////////////////////////////////////
 // VectorType
 
 VectorType::VectorType(const AtomicType *b, int a) 
@@ -1696,13 +1518,6 @@ VectorType::GetAsUnboundVariabilityType() const {
 const VectorType *
 VectorType::ResolveUnboundVariability(Variability v) const {
     return new VectorType(base->ResolveUnboundVariability(v), numElements);
-}
-
-
-const Type *
-VectorType::GetSOAType(int width) const {
-    // FIXME: is this right??
-    return new ArrayType(this, width);
 }
 
 
@@ -1917,20 +1732,6 @@ StructType::ResolveUnboundVariability(Variability v) const {
     return new StructType(name, elementTypes, elementNames, elementPositions,
                           isConst, (variability != Unbound) ? variability : v,
                           pos);
-}
-
-
-const Type *
-StructType::GetSOAType(int width) const {
-    std::vector<const Type *> et;
-    // The SOA version of a structure is just a structure that holds SOAed
-    // versions of its elements
-    for (int i = 0; i < GetElementCount(); ++i) {
-        const Type *t = GetElementType(i);
-        et.push_back(t->GetSOAType(width));
-    }
-    return new StructType(name, et, elementNames, elementPositions,
-                          isConst, variability, pos);
 }
 
 
@@ -2248,16 +2049,6 @@ ReferenceType::ResolveUnboundVariability(Variability v) const {
 }
     
 
-const Type *
-ReferenceType::GetSOAType(int width) const {
-    if (targetType == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
-    }
-    return new ReferenceType(targetType->GetSOAType(width));
-}
-
-
 const ReferenceType *
 ReferenceType::GetAsConstType() const {
     if (targetType == NULL) {
@@ -2480,13 +2271,6 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
 
     return new FunctionType(rt, pt, paramNames, paramDefaults,
                             paramPositions, isTask, isExported, isExternC);
-}
-
-
-const Type *
-FunctionType::GetSOAType(int width) const {
-    FATAL("FunctionType::GetSOAType shouldn't be called");
-    return NULL;
 }
 
 

@@ -505,29 +505,6 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         FATAL("Unexpected decl kind");
         return NULL;
     }
-
-#if 0
-            // Make sure we actually have an array of structs ..
-            const StructType *childStructType = 
-                dynamic_cast<const StructType *>(childType);
-            if (childStructType == NULL) {
-                Error(pos, "Illegal to provide soa<%d> qualifier with non-struct "
-                      "type \"%s\".", soaWidth, childType->GetString().c_str());
-                return new ArrayType(childType, arraySize == -1 ? 0 : arraySize);
-            }
-            else if ((soaWidth & (soaWidth - 1)) != 0) {
-                Error(pos, "soa<%d> width illegal.  Value must be power of two.",
-                      soaWidth);
-                return NULL;
-            }
-            else if (arraySize != -1 && (arraySize % soaWidth) != 0) {
-                Error(pos, "soa<%d> width must evenly divide array size %d.",
-                      soaWidth, arraySize);
-                return NULL;
-            }
-            return new SOAArrayType(childStructType, arraySize == -1 ? 0 : arraySize,
-                                    soaWidth);
-#endif
 }
 
 

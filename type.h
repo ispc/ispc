@@ -129,10 +129,6 @@ public:
         For all other types, just returns its own type. */
     virtual const Type *GetReferenceTarget() const;
 
-    /** Return a new type representing the current type laid out in
-        width-wide SOA (structure of arrays) format. */
-    virtual const Type *GetSOAType(int width) const = 0;
-
     /** Get a const version of this type.  If it's already const, then the old 
         Type pointer is returned. */
     virtual const Type *GetAsConstType() const = 0;
@@ -225,7 +221,6 @@ public:
     const AtomicType *GetAsUnboundVariabilityType() const;
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
-    const Type *GetSOAType(int width) const;
     const AtomicType *GetAsConstType() const;
     const AtomicType *GetAsNonConstType() const;
 
@@ -315,7 +310,6 @@ public:
     const EnumType *GetAsUniformType() const;
     const EnumType *GetAsUnboundVariabilityType() const;
     const EnumType *ResolveUnboundVariability(Variability v) const;
-    const Type *GetSOAType(int width) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
 
@@ -370,7 +364,6 @@ public:
     const PointerType *GetAsUniformType() const;
     const PointerType *GetAsUnboundVariabilityType() const;
     const PointerType *ResolveUnboundVariability(Variability v) const;
-    const Type *GetSOAType(int width) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
 
@@ -466,7 +459,6 @@ public:
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
-    const Type *GetSOAType(int width) const;
     const ArrayType *GetAsConstType() const;
     const ArrayType *GetAsNonConstType() const;
 
@@ -497,77 +489,10 @@ public:
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
 private:
-    friend class SOAArrayType;
     /** Type of the elements of the array. */
     const Type * const child;
     /** Number of elements in the array. */
     const int numElements;
-};
-
-
-/** @brief "Structure of arrays" array type.
-
-    This type represents an array with elements of a structure type,
-    "SOA-ized" to some width w.  This corresponds to replicating the struct
-    element types w times and then having an array of size/w of these
-    widened structs.  This memory layout often makes it possible to access
-    data with regular vector loads, rather than gathers that are needed
-    with "AOS" (array of structures) layout.
-
-    @todo Native support for SOA stuff is still a work in progres...
- */
-class SOAArrayType : public ArrayType {
-public:
-    /**
-       SOAType constructor.
-
-       @param elementType  Type of the array elements.  Must be a StructType.
-       @param numElements  Total number of elements in the array.  This
-                           parameter may be zero, in which case this is an
-                           "unsized" array type.  (Arrays of specific size
-                           can be converted to unsized arrays to be passed
-                           to functions that take array parameters, for
-                           example).
-       @param soaWidth     If non-zero, this gives the SOA width to use in
-                           laying out the array data in memory.  (This value
-                           must be a power of two).  For example, if the
-                           array's element type is: 
-                           <tt>struct { uniform float x, y, z; }</tt>,
-                           the SOA width is four, and the number of elements
-                           is 12, then the array will be laid out in memory
-                           as xxxxyyyyzzzzxxxxyyyyzzzzxxxxyyyyzzzz.
-    */
-    SOAArrayType(const StructType *elementType, int numElements, 
-                 int soaWidth);
-
-    const SOAArrayType *GetAsVaryingType() const;
-    const SOAArrayType *GetAsUniformType() const;
-    const SOAArrayType *GetAsUnboundVariabilityType() const;
-    const SOAArrayType *ResolveUnboundVariability(Variability v) const;
-
-    const Type *GetSOAType(int width) const;
-    const SOAArrayType *GetAsConstType() const;
-    const SOAArrayType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetCDeclaration(const std::string &name) const;
-
-    int TotalElementCount() const;
-
-    LLVM_TYPE_CONST llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
-    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-
-    SOAArrayType *GetSizedArray(int size) const;
-
-private:
-    /** This member variable records the rate at which the structure
-        elements are replicated. */
-    const int soaWidth;
-
-    /** Returns a regular ArrayType with the struct type's elements widened
-        out and with correspondingly fewer array elements. */
-    const ArrayType *soaType() const;
 };
 
 
@@ -600,7 +525,6 @@ public:
     const VectorType *GetAsUnboundVariabilityType() const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
 
@@ -650,7 +574,6 @@ public:
     const StructType *GetAsUnboundVariabilityType() const;
     const StructType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const StructType *GetAsConstType() const;
     const StructType *GetAsNonConstType() const;
 
@@ -728,7 +651,6 @@ public:
     const ReferenceType *GetAsUnboundVariabilityType() const;
     const ReferenceType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const ReferenceType *GetAsConstType() const;
     const ReferenceType *GetAsNonConstType() const;
 
@@ -780,7 +702,6 @@ public:
     const Type *GetAsUnboundVariabilityType() const;
     const FunctionType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const Type *GetAsConstType() const;
     const Type *GetAsNonConstType() const;
 
