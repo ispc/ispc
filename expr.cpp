@@ -2409,7 +2409,7 @@ BinaryExpr::Print() const {
 static const char *
 lOpString(AssignExpr::Op op) {
     switch (op) {
-    case AssignExpr::Assign:    return "=";
+    case AssignExpr::Assign:    return "assignment operator";
     case AssignExpr::MulAssign: return "*=";
     case AssignExpr::DivAssign: return "/=";
     case AssignExpr::ModAssign: return "%%=";
@@ -2629,7 +2629,7 @@ AssignExpr::TypeCheck() {
         const FunctionType *ftype;
         if (dynamic_cast<const PointerType *>(lvalueType) == NULL ||
             (ftype = dynamic_cast<const FunctionType *>(lvalueType->GetBaseType())) == NULL) {
-            Error(pos, "Can't assign function pointer to type \"%s\".",
+            Error(lvalue->pos, "Can't assign function pointer to type \"%s\".",
                   lvalue->GetType()->GetString().c_str());
             return NULL;
         }
@@ -2674,13 +2674,13 @@ AssignExpr::TypeCheck() {
         else if (op == Assign)
             rvalue = TypeConvertExpr(rvalue, lhsType, "assignment");
         else {
-            Error(pos, "Assignment operator \"%s\" is illegal with pointer types.",
+            Error(lvalue->pos, "Assignment operator \"%s\" is illegal with pointer types.",
                   lOpString(op));
             return NULL;
         }
     }
     else if (dynamic_cast<const ArrayType *>(lhsType) != NULL) {
-        Error(pos, "Illegal to assign to array type \"%s\".",
+        Error(lvalue->pos, "Illegal to assign to array type \"%s\".",
               lhsType->GetString().c_str());
         return NULL;
     }
@@ -3922,8 +3922,10 @@ IndexExpr::TypeCheck() {
         return NULL;
 
     const Type *baseExprType = baseExpr->GetType();
-    if (baseExprType == NULL)
+    if (baseExprType == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
 
     if (!dynamic_cast<const SequentialType *>(baseExprType->GetReferenceTarget()) &&
         !dynamic_cast<const PointerType *>(baseExprType)) {
@@ -4212,8 +4214,10 @@ VectorMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
 const Type *
 VectorMemberExpr::GetLValueType() const {
     if (identifier.length() == 1) {
-        if (expr == NULL)
+        if (expr == NULL) {
+            Assert(m->errorCount > 0);
             return NULL;
+        }
 
         const Type *exprLValueType = dereferenceExpr ? expr->GetType() :
             expr->GetLValueType();
@@ -4228,7 +4232,7 @@ VectorMemberExpr::GetLValueType() const {
         Assert(vt != NULL);
 
         // we don't want to report that it's e.g. a pointer to a float<1>,
-        // but ta pointer to a float, etc.
+        // but a pointer to a float, etc.
         const Type *elementType = vt->GetElementType();
         if (dynamic_cast<const ReferenceType *>(exprLValueType) != NULL)
             return new ReferenceType(elementType);
@@ -5348,7 +5352,8 @@ ConstExpr::GetConstant(const Type *type) const {
         return llvm::Constant::getNullValue(llvmType);
     }
     else {
-        FATAL("unexpected type in ConstExpr::GetConstant()");
+        Debug(pos, "Unable to handle type \"%s\" in ConstExpr::GetConstant().",
+              type->GetString().c_str());
         return NULL;
     }
 }
