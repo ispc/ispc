@@ -328,25 +328,39 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
 }
 
 
-
-
 /** Given an arbitrary type, see if it or any of the leaf types contained
-    in it are varying.  (Note that it's fine for the original struct or a
-    contained struct to be varying, so long as all of its members have
-    bound 'uniform' variability.) Returns true if so, false otherwise. */
+    in it has a type that's illegal to have exported to C/C++
+    code--specifically, that it has a varying value in memory, or a pointer
+    to SOA data (which has a different representation than a regular
+    pointer.
+
+    (Note that it's fine for the original struct or a contained struct to
+    be varying, so long as all of its members have bound 'uniform'
+    variability.) 
+
+    This functions returns true and issues an error if are any illegal
+    types are found and returns false otherwise.  
+*/
 static bool
-lRecursiveCheckVarying(const Type *t) {
+lRecursiveCheckValidParamType(const Type *t) {
     t = t->GetBaseType();
 
     const StructType *st = dynamic_cast<const StructType *>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
-            if (lRecursiveCheckVarying(st->GetElementType(i)))
+            if (lRecursiveCheckValidParamType(st->GetElementType(i)))
                 return true;
         return false;
     }
-    else
-        return t->IsVaryingType();
+    else {
+        if (t->IsVaryingType())
+            return true;
+        const PointerType *pt = dynamic_cast<const PointerType *>(t);
+        if (pt != NULL && pt->IsSlice())
+            return true;
+        else
+            return false;
+    }
 }
 
 
@@ -358,7 +372,7 @@ lRecursiveCheckVarying(const Type *t) {
 static void
 lCheckForVaryingParameter(const Type *type, const std::string &name, 
                           SourcePos pos) {
-    if (lRecursiveCheckVarying(type)) {
+    if (lRecursiveCheckValidParamType(type)) {
         const Type *t = type->GetBaseType();
         if (dynamic_cast<const StructType *>(t))
             Error(pos, "Struct parameter \"%s\" with varying member(s) is illegal "
@@ -371,10 +385,8 @@ lCheckForVaryingParameter(const Type *type, const std::string &name,
 
 
 /** Given a function type, loop through the function parameters and see if
-    any are StructTypes.  If so, issue an error (this seems to be broken
-    currently).
-
-    @todo Fix passing structs from C/C++ to ispc functions.
+    any are StructTypes.  If so, issue an error; this is currently broken
+    (https://github.com/ispc/ispc/issues/3).
  */
 static void
 lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
@@ -382,7 +394,7 @@ lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
         const Type *type = ftype->GetParameterType(i);
         if (dynamic_cast<const StructType *>(type) != NULL) {
             Error(pos, "Passing structs to/from application functions is "
-                  "currently broken. Use a pointer or const pointer to the "
+                  "currently broken.  Use a pointer or const pointer to the "
                   "struct instead for now.");
             return;
         }
@@ -511,7 +523,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     // Make sure that the return type isn't 'varying' if the function is
     // 'export'ed.
     if (funSym->storageClass == SC_EXPORT && 
-        lRecursiveCheckVarying(functionType->GetReturnType()))
+        lRecursiveCheckValidParamType(functionType->GetReturnType()))
         Error(funSym->pos, "Illegal to return a \"varying\" type from exported "
               "function \"%s\"", funSym->name.c_str());
 
@@ -826,7 +838,13 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
     // sorted ones in order.
     for (unsigned int i = 0; i < sortedTypes.size(); ++i) {
         const StructType *st = sortedTypes[i];
-        fprintf(file, "struct %s {\n", st->GetStructName().c_str());
+        fprintf(file, "struct %s", st->GetStructName().c_str());
+        if (st->GetSOAWidth() > 0)
+            // This has to match the naming scheme in
+            // StructType::GetCDeclaration().
+            fprintf(file, "_SOA%d", st->GetSOAWidth());
+        fprintf(file, " {\n");
+
         for (int j = 0; j < st->GetElementCount(); ++j) {
             const Type *type = st->GetElementType(j)->GetAsNonConstType();
             std::string d = type->GetCDeclaration(st->GetElementName(j));
@@ -1004,9 +1022,10 @@ static void
 lPrintExternGlobals(FILE *file, const std::vector<Symbol *> &externGlobals) {
     for (unsigned int i = 0; i < externGlobals.size(); ++i) {
         Symbol *sym = externGlobals[i];
-        if (lRecursiveCheckVarying(sym->type))
-            Warning(sym->pos, "Not emitting declaration for symbol \"%s\" into generated "
-                    "header file since it (or some of its members) are varying.",
+        if (lRecursiveCheckValidParamType(sym->type))
+            Warning(sym->pos, "Not emitting declaration for symbol \"%s\" into "
+                    "generated header file since it (or some of its members) "
+                    "has types that are illegal in exported symbols.",
                     sym->name.c_str());
         else
             fprintf(file, "extern %s;\n", sym->type->GetCDeclaration(sym->name).c_str());

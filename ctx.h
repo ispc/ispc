@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -392,6 +392,16 @@ public:
     llvm::Instruction *ZExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
                                 const char *name = NULL);
 
+    /** Given two integer-typed values (but possibly one vector and the
+        other not, and or of possibly-different bit-widths), update their
+        values as needed so that the two have the same (more general)
+        type. */ 
+    void MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1);
+
+    /** Create a new slice pointer out of the given pointer to an soa type
+        and an integer offset to a slice within that type. */
+    llvm::Value *MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset);
+
     /** These GEP methods are generalizations of the standard ones in LLVM;
         they support both uniform and varying basePtr values as well as
         uniform and varying index values (arrays of indices).  Varying base
@@ -412,7 +422,8 @@ public:
         the type of the pointer, though it may be NULL if the base pointer
         is uniform. */
     llvm::Value *AddElementOffset(llvm::Value *basePtr, int elementNum,
-                                  const Type *ptrType, const char *name = NULL);
+                                  const Type *ptrType, const char *name = NULL,
+                                  const PointerType **resultPtrType = NULL);
 
     /** Load from the memory location(s) given by lvalue, using the given
         mask.  The lvalue may be varying, in which case this corresponds to
@@ -657,8 +668,15 @@ private:
                  const Type *ptrType, llvm::Value *mask);
     void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
                      llvm::Value *mask);
-    llvm::Value *gather(llvm::Value *ptr, const Type *ptrType, llvm::Value *mask,
-                        const char *name);
+    void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr, 
+                           llvm::Value *mask, const Type *valueType,
+                           const PointerType *ptrType);
+    llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
+                                    const PointerType *ptrType, const char *name);
+
+    llvm::Value *gather(llvm::Value *ptr, const PointerType *ptrType,
+                        llvm::Value *mask, const char *name);
+
     llvm::Value *addVaryingOffsetsIfNeeded(llvm::Value *ptr, const Type *ptrType);
 };
 

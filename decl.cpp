@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -144,6 +144,35 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     }
 
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
+    
+    if (soaWidth > 0) {
+        const StructType *st = dynamic_cast<const StructType *>(retType);
+
+        if (st == NULL) {
+            Error(pos, "Illegal to provide soa<%d> qualifier with non-struct "
+                  "type \"%s\".", soaWidth, retType->GetString().c_str());
+            return NULL;
+        }
+        else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
+            Error(pos, "soa<%d> width illegal.  Value must be positive power "
+                  "of two.", soaWidth);
+            return NULL;
+        }
+
+        if (st->IsUniformType()) {
+            Error(pos, "\"uniform\" qualifier and \"soa<%d>\" qualifier can't "
+                  "both be used in a type declaration.", soaWidth);
+            return NULL;
+        }
+        else if (st->IsVaryingType()) {
+            Error(pos, "\"varying\" qualifier and \"soa<%d>\" qualifier can't "
+                  "both be used in a type declaration.", soaWidth);
+            return NULL;
+        }
+        else
+            retType = st->GetAsSOAType(soaWidth);
+    }
+    
     return retType;
 }
 
@@ -337,7 +366,10 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         return type;
 
     case DK_POINTER:
-        type = new PointerType(type, variability, isConst);
+        /* For now, any pointer to an SOA type gets the slice property; if
+           we add the capability to declare pointers as slices or not,
+           we'll want to set this based on a type qualifier here. */
+        type = new PointerType(type, variability, isConst, type->IsSOAType());
         if (child != NULL)
             return child->GetType(type, ds);
         else

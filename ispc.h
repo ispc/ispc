@@ -107,6 +107,7 @@ class ExprList;
 class Function;
 class FunctionType;
 class Module;
+class PointerType;
 class Stmt;
 class Symbol;
 class SymbolTable;

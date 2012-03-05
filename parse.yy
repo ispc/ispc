@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -224,7 +224,7 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
-%type <type> type_specifier type_name rate_qualified_new_type
+%type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <atomicType> atomic_var_type_specifier
 
@@ -476,7 +476,7 @@ rate_qualified_new
     | TOKEN_VARYING TOKEN_NEW { $$ = TYPEQUAL_VARYING; }
     ;
 
-rate_qualified_new_type
+rate_qualified_type_specifier
     : type_specifier { $$ = $1; }
     | TOKEN_UNIFORM type_specifier
     {
@@ -500,19 +500,40 @@ rate_qualified_new_type
         else
             $$ = $2->GetAsVaryingType();
     }
+    | soa_width_specifier type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else {
+            int soaWidth = $1;
+            const StructType *st = dynamic_cast<const StructType *>($2);
+            if (st == NULL) {
+                Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
+                      $2->GetString().c_str());
+                $$ = NULL;
+            }
+            else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
+                Error(@1, "soa<%d> width illegal.  Value must be positive power "
+                      "of two.", soaWidth);
+                $$ = NULL;
+            }
+            else
+                $$ = st->GetAsSOAType(soaWidth);
+        }
+    }
     ;
 
 new_expression
     : conditional_expression
-    | rate_qualified_new rate_qualified_new_type
+    | rate_qualified_new rate_qualified_type_specifier
     {
         $$ = new NewExpr((int32_t)$1, $2, NULL, NULL, @1, Union(@1, @2));
     }
-    | rate_qualified_new rate_qualified_new_type '(' initializer_list ')'
+    | rate_qualified_new rate_qualified_type_specifier '(' initializer_list ')'
     {
         $$ = new NewExpr((int32_t)$1, $2, $4, NULL, @1, Union(@1, @2));
     }
-    | rate_qualified_new rate_qualified_new_type '[' expression ']'
+    | rate_qualified_new rate_qualified_type_specifier '[' expression ']'
     {
         $$ = new NewExpr((int32_t)$1, $2, NULL, $4, @1, Union(@1, @4));
     }

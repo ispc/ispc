@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -148,6 +148,8 @@ public:
     /** Get an instance of the type with unbound variability. */
     virtual const Type *GetAsUnboundVariabilityType() const = 0;
 
+    virtual const Type *GetAsSOAType(int width) const = 0;
+
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
     virtual const Type *GetAsUnsignedType() const;
@@ -224,6 +226,11 @@ public:
     static const Type *MoreGeneralType(const Type *type0, const Type *type1,
                                        SourcePos pos, const char *reason,
                                        bool forceVarying = false, int vecSize = 0);
+
+    /** Returns true if the given type is an atomic, enum, or pointer type
+        (i.e. not an aggregation of multiple instances of a type or
+        types.) */
+    static bool IsBasicType(const Type *type);
 };
 
 
@@ -251,6 +258,8 @@ public:
     const AtomicType *GetAsUniformType() const;
     const AtomicType *GetAsVaryingType() const;
     const AtomicType *GetAsUnboundVariabilityType() const;
+    const AtomicType *GetAsSOAType(int width) const;
+
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
     const AtomicType *GetAsConstType() const;
@@ -324,6 +333,8 @@ public:
     const EnumType *GetAsVaryingType() const;
     const EnumType *GetAsUniformType() const;
     const EnumType *GetAsUnboundVariabilityType() const;
+    const EnumType *GetAsSOAType(int width) const;
+
     const EnumType *ResolveUnboundVariability(Variability v) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
@@ -353,10 +364,29 @@ private:
 
 
 /** @brief Type implementation for pointers to other types
+
+    Pointers can have two additional properties beyond their variability
+    and the type of object that they are pointing to.  Both of these
+    properties are used for internal bookkeeping and aren't directly
+    accessible from the language.
+
+    - Slice: pointers that point to data with SOA layout have this
+      property--it indicates that the pointer has two components, where the
+      first (major) component is a regular pointer that points to an
+      instance of the soa<> type being indexed, and where the second
+      (minor) component is an integer that indicates which of the soa
+      slices in that instance the pointer points to.
+
+    - Frozen: only slice pointers may have this property--it indicates that
+      any further indexing calculations should only be applied to the major
+      pointer, and the value of the minor offset should be left unchanged.
+      Pointers to lvalues from structure member access have the frozen
+      property; see discussion in comments in the StructMemberExpr class.
  */
 class PointerType : public Type {
 public:
-    PointerType(const Type *t, Variability v, bool isConst);
+    PointerType(const Type *t, Variability v, bool isConst, 
+                bool isSlice = false, bool frozen = false);
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t);
@@ -374,10 +404,19 @@ public:
     bool IsUnsignedType() const;
     bool IsConstType() const;
 
+    bool IsSlice() const { return isSlice; }
+    bool IsFrozenSlice() const { return isFrozen; }
+    const PointerType *GetAsSlice() const;
+    const PointerType *GetAsNonSlice() const;
+    const PointerType *GetAsFrozenSlice() const;
+    const StructType *GetSliceStructType() const;
+
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
     const PointerType *GetAsUniformType() const;
     const PointerType *GetAsUnboundVariabilityType() const;
+    const PointerType *GetAsSOAType(int width) const;
+
     const PointerType *ResolveUnboundVariability(Variability v) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
@@ -394,6 +433,7 @@ public:
 private:
     const Variability variability;
     const bool isConst;
+    const bool isSlice, isFrozen;
     const Type *baseType;
 };
 
@@ -471,6 +511,7 @@ public:
     const ArrayType *GetAsVaryingType() const;
     const ArrayType *GetAsUniformType() const;
     const ArrayType *GetAsUnboundVariabilityType() const;
+    const ArrayType *GetAsSOAType(int width) const;
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
@@ -538,6 +579,7 @@ public:
     const VectorType *GetAsVaryingType() const;
     const VectorType *GetAsUniformType() const;
     const VectorType *GetAsUnboundVariabilityType() const;
+    const VectorType *GetAsSOAType(int width) const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
     const VectorType *GetAsConstType() const;
@@ -587,6 +629,7 @@ public:
     const StructType *GetAsVaryingType() const;
     const StructType *GetAsUniformType() const;
     const StructType *GetAsUnboundVariabilityType() const;
+    const StructType *GetAsSOAType(int width) const;
     const StructType *ResolveUnboundVariability(Variability v) const;
 
     const StructType *GetAsConstType() const;
@@ -623,6 +666,8 @@ public:
     const std::string &GetStructName() const { return name; }
 
 private:
+    static bool checkIfCanBeSOA(const StructType *st);
+
     const std::string name;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
@@ -664,6 +709,7 @@ public:
     const ReferenceType *GetAsVaryingType() const;
     const ReferenceType *GetAsUniformType() const;
     const ReferenceType *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
     const ReferenceType *ResolveUnboundVariability(Variability v) const;
 
     const ReferenceType *GetAsConstType() const;
@@ -715,6 +761,7 @@ public:
     const Type *GetAsVaryingType() const;
     const Type *GetAsUniformType() const;
     const Type *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
     const FunctionType *ResolveUnboundVariability(Variability v) const;
 
     const Type *GetAsConstType() const;
