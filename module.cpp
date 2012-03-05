@@ -241,7 +241,7 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
         return;
     }
 
-    if (sym->type == AtomicType::Void) {
+    if (Type::Equal(sym->type, AtomicType::Void)) {
         Error(sym->pos, "\"void\" type global variable is illegal.");
         return;
     }
@@ -515,7 +515,8 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
         Error(funSym->pos, "Illegal to return a \"varying\" type from exported "
               "function \"%s\"", funSym->name.c_str());
 
-    if (functionType->isTask && (functionType->GetReturnType() != AtomicType::Void))
+    if (functionType->isTask && 
+        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false)
         Error(funSym->pos, "Task-qualified functions must have void return type.");
 
     if (functionType->isExported || functionType->isExternC)

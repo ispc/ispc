@@ -251,37 +251,20 @@ public:
 
     const BasicType basicType;
 
-    static const AtomicType *UniformBool, *VaryingBool, *UnboundBool;
-    static const AtomicType *UniformInt8, *VaryingInt8, *UnboundInt8;
-    static const AtomicType *UniformInt16, *VaryingInt16, *UnboundInt16;
-    static const AtomicType *UniformInt32, *VaryingInt32, *UnboundInt32;
-    static const AtomicType *UniformUInt8, *VaryingUInt8, *UnboundUInt8;
-    static const AtomicType *UniformUInt16, *VaryingUInt16, *UnboundUInt16;
-    static const AtomicType *UniformUInt32, *VaryingUInt32, *UnboundUInt32;
-    static const AtomicType *UniformFloat, *VaryingFloat, *UnboundFloat;
-    static const AtomicType *UniformInt64, *VaryingInt64, *UnboundInt64;
-    static const AtomicType *UniformUInt64, *VaryingUInt64, *UnboundUInt64;
-    static const AtomicType *UniformDouble, *VaryingDouble, *UnboundDouble;
-    static const AtomicType *UniformConstBool, *VaryingConstBool, *UnboundConstBool;
-    static const AtomicType *UniformConstInt8, *VaryingConstInt8, *UnboundConstInt8;
-    static const AtomicType *UniformConstInt16, *VaryingConstInt16, *UnboundConstInt16;
-    static const AtomicType *UniformConstInt32, *VaryingConstInt32, *UnboundConstInt32;
-    static const AtomicType *UniformConstUInt8, *VaryingConstUInt8, *UnboundConstUInt8;
-    static const AtomicType *UniformConstUInt16, *VaryingConstUInt16, *UnboundConstUInt16;
-    static const AtomicType *UniformConstUInt32, *VaryingConstUInt32, *UnboundConstUInt32;
-    static const AtomicType *UniformConstFloat, *VaryingConstFloat, *UnboundConstFloat;
-    static const AtomicType *UniformConstInt64, *VaryingConstInt64, *UnboundConstInt64;
-    static const AtomicType *UniformConstUInt64, *VaryingConstUInt64, *UnboundConstUInt64;
-    static const AtomicType *UniformConstDouble, *VaryingConstDouble, *UnboundConstDouble;
+    static const AtomicType *UniformBool, *VaryingBool;
+    static const AtomicType *UniformInt8, *VaryingInt8;
+    static const AtomicType *UniformInt16, *VaryingInt16;
+    static const AtomicType *UniformInt32, *VaryingInt32;
+    static const AtomicType *UniformUInt8, *VaryingUInt8;
+    static const AtomicType *UniformUInt16, *VaryingUInt16;
+    static const AtomicType *UniformUInt32, *VaryingUInt32;
+    static const AtomicType *UniformFloat, *VaryingFloat;
+    static const AtomicType *UniformInt64, *VaryingInt64;
+    static const AtomicType *UniformUInt64, *VaryingUInt64;
+    static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *Void;
 
-    /** This function must be called before any of the above static const
-        AtomicType values is used; in practice, we do it early in
-        main(). */
-    static void Init();
-
 private:
-    static const AtomicType *typeTable[NUM_BASIC_TYPES][3][2];
     const Variability variability;
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);

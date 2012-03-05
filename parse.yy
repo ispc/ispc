@@ -267,25 +267,30 @@ primary_expression
         }
     }
     | TOKEN_INT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt32, (int32_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt32, (uint32_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1); 
     }
     | TOKEN_INT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt64, (int64_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt64, (uint64_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1); 
     }
     | TOKEN_FLOAT_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstFloat, (float)yylval.floatVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
+                           (float)yylval.floatVal, @1); 
     }
     | TOKEN_TRUE {
-        $$ = new ConstExpr(AtomicType::UniformConstBool, true, @1);
+        $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
     }
     | TOKEN_FALSE {
-        $$ = new ConstExpr(AtomicType::UniformConstBool, false, @1);
+        $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), false, @1);
     }
     | TOKEN_NULL {
         $$ = new NullPointerExpr(@1);
@@ -477,7 +482,7 @@ rate_qualified_new_type
     {
         if ($2 == NULL)
             $$ = NULL;
-        else if ($2 == AtomicType::Void) {
+        else if (Type::Equal($2, AtomicType::Void)) {
             Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
             $$ = NULL;
         }
@@ -488,7 +493,7 @@ rate_qualified_new_type
     {
         if ($2 == NULL)
             $$ = NULL;
-        else if ($2 == AtomicType::Void) {
+        else if (Type::Equal($2, AtomicType::Void)) {
             Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
             $$ = NULL;
         }
@@ -710,13 +715,13 @@ type_specifier
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::UnboundBool; }
-    | TOKEN_INT8 { $$ = AtomicType::UnboundInt8; }
-    | TOKEN_INT16 { $$ = AtomicType::UnboundInt16; }
-    | TOKEN_INT { $$ = AtomicType::UnboundInt32; }
-    | TOKEN_FLOAT { $$ = AtomicType::UnboundFloat; }
-    | TOKEN_DOUBLE { $$ = AtomicType::UnboundDouble; }
-    | TOKEN_INT64 { $$ = AtomicType::UnboundInt64; }
+    | TOKEN_BOOL { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT8 { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
+    | TOKEN_DOUBLE { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
     ;
 
 short_vec_specifier
@@ -824,7 +829,7 @@ specifier_qualifier_list
     {
         if ($2 != NULL) {
             if ($1 == TYPEQUAL_UNIFORM) {
-                if ($2 == AtomicType::Void) {
+                if (Type::Equal($2, AtomicType::Void)) {
                     Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
                     $$ = NULL;
                 }
@@ -832,7 +837,7 @@ specifier_qualifier_list
                     $$ = $2->GetAsUniformType();
             }
             else if ($1 == TYPEQUAL_VARYING) {
-                if ($2 == AtomicType::Void) {
+                if (Type::Equal($2, AtomicType::Void)) {
                     Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
                     $$ = NULL;
                 }
@@ -986,7 +991,7 @@ enumerator
           if ($1 != NULL && $3 != NULL &&
               lGetConstantInt($3, &value, @3, "Enumerator value")) {
               Symbol *sym = new Symbol($1, @1);
-              sym->constValue = new ConstExpr(AtomicType::UniformConstUInt32,
+              sym->constValue = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
                                               (uint32_t)value, @3);
               $$ = sym;
           }
@@ -1491,7 +1496,7 @@ foreach_tiled_scope
 foreach_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::VaryingConstInt32);
+        $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
     }
     ;
 
@@ -1878,7 +1883,8 @@ lAddFunctionParams(Declarator *decl) {
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
     const Type *t = g->target.maskBitCount == 1 ?
-        AtomicType::VaryingConstBool : AtomicType::VaryingConstUInt32;
+        AtomicType::VaryingBool : AtomicType::VaryingUInt32;
+    t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
     m->symbolTable->AddVariable(maskSymbol);
 }
@@ -1887,16 +1893,18 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
 /** Add the thread index and thread count variables to the symbol table
     (this should only be done for 'task'-qualified functions. */
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
-    Symbol *threadIndexSym = new Symbol("threadIndex", pos, AtomicType::UniformConstUInt32);
+    const Type *type = AtomicType::UniformUInt32->GetAsConstType();
+
+    Symbol *threadIndexSym = new Symbol("threadIndex", pos, type);
     m->symbolTable->AddVariable(threadIndexSym);
 
-    Symbol *threadCountSym = new Symbol("threadCount", pos, AtomicType::UniformConstUInt32);
+    Symbol *threadCountSym = new Symbol("threadCount", pos, type);
     m->symbolTable->AddVariable(threadCountSym);
 
-    Symbol *taskIndexSym = new Symbol("taskIndex", pos, AtomicType::UniformConstUInt32);
+    Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
     m->symbolTable->AddVariable(taskIndexSym);
 
-    Symbol *taskCountSym = new Symbol("taskCount", pos, AtomicType::UniformConstUInt32);
+    Symbol *taskCountSym = new Symbol("taskCount", pos, type);
     m->symbolTable->AddVariable(taskCountSym);
 }
 

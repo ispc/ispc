@@ -224,8 +224,6 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeX86TargetMC();
 #endif
 
-    AtomicType::Init();
-
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;

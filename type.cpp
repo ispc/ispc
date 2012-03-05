@@ -70,233 +70,53 @@ lShouldPrintName(const std::string &name) {
 ///////////////////////////////////////////////////////////////////////////
 // AtomicType
 
-// All of the details of the layout of this array are used implicitly in
-// the AtomicType implementation below; reoder it with care!  For example,
-// the fact that for signed integer types, the unsigned equivalent integer
-// type follows in the next major array element is used in the routine to
-// get unsigned types.
 
-const AtomicType *AtomicType::typeTable[AtomicType::NUM_BASIC_TYPES][3][2] = {
-    { { NULL, NULL }, {NULL, NULL}, {NULL,NULL} }, /* NULL type */
-    { { new AtomicType(AtomicType::TYPE_BOOL, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_BOOL, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_BOOL, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_BOOL, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_BOOL, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_BOOL, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_INT8, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_INT8, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_INT8, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_INT8, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_INT8, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_INT8, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_UINT8, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_UINT8, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_UINT8, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_UINT8, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_UINT8, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_UINT8, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_INT16, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_INT16, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_INT16, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_INT16, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_INT16, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_INT16, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_UINT16, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_UINT16, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_UINT16, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_UINT16, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_UINT16, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_UINT16, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_INT32, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_INT32, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_INT32, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_INT32, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_INT32, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_INT32, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_UINT32, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_UINT32, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_UINT32, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_UINT32, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_UINT32, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_UINT32, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_FLOAT, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_FLOAT, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_FLOAT, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_FLOAT, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_FLOAT, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_FLOAT, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_INT64, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_INT64, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_INT64, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_INT64, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_INT64, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_INT64, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_UINT64, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_UINT64, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_UINT64, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_UINT64, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_UINT64, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_UINT64, Type::Unbound, true), } },
-    { { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Uniform, false), 
-        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Uniform, true), },
-      { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Varying, false), 
-        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Varying, true), },
-      { new AtomicType(AtomicType::TYPE_DOUBLE, Type::Unbound, false), 
-        new AtomicType(AtomicType::TYPE_DOUBLE, Type::Unbound, true), } } 
-};
-
-const AtomicType *AtomicType::UniformBool;
-const AtomicType *AtomicType::VaryingBool;
-const AtomicType *AtomicType::UnboundBool;
-
-const AtomicType *AtomicType::UniformInt8;
-const AtomicType *AtomicType::VaryingInt8;
-const AtomicType *AtomicType::UnboundInt8;
-
-const AtomicType *AtomicType::UniformUInt8;
-const AtomicType *AtomicType::VaryingUInt8;
-const AtomicType *AtomicType::UnboundUInt8;
-
-const AtomicType *AtomicType::UniformInt16;
-const AtomicType *AtomicType::VaryingInt16;
-const AtomicType *AtomicType::UnboundInt16;
-
-const AtomicType *AtomicType::UniformUInt16;
-const AtomicType *AtomicType::VaryingUInt16;
-const AtomicType *AtomicType::UnboundUInt16;
-
-const AtomicType *AtomicType::UniformInt32;
-const AtomicType *AtomicType::VaryingInt32;
-const AtomicType *AtomicType::UnboundInt32;
-
-const AtomicType *AtomicType::UniformUInt32;
-const AtomicType *AtomicType::VaryingUInt32;
-const AtomicType *AtomicType::UnboundUInt32;
-
-const AtomicType *AtomicType::UniformFloat;
-const AtomicType *AtomicType::VaryingFloat;
-const AtomicType *AtomicType::UnboundFloat;
-
-const AtomicType *AtomicType::UniformInt64;
-const AtomicType *AtomicType::VaryingInt64;
-const AtomicType *AtomicType::UnboundInt64;
-
-const AtomicType *AtomicType::UniformUInt64;
-const AtomicType *AtomicType::VaryingUInt64;
-const AtomicType *AtomicType::UnboundUInt64;
-
-const AtomicType *AtomicType::UniformDouble;
-const AtomicType *AtomicType::VaryingDouble;
-const AtomicType *AtomicType::UnboundDouble;
-
-
-const AtomicType *AtomicType::UniformConstBool;
-const AtomicType *AtomicType::VaryingConstBool;
-const AtomicType *AtomicType::UnboundConstBool;
-const AtomicType *AtomicType::UniformConstInt8;
-const AtomicType *AtomicType::VaryingConstInt8;
-const AtomicType *AtomicType::UnboundConstInt8;
-const AtomicType *AtomicType::UniformConstUInt8;
-const AtomicType *AtomicType::VaryingConstUInt8;
-const AtomicType *AtomicType::UnboundConstUInt8;
-const AtomicType *AtomicType::UniformConstInt16;
-const AtomicType *AtomicType::VaryingConstInt16;
-const AtomicType *AtomicType::UnboundConstInt16;
-const AtomicType *AtomicType::UniformConstUInt16;
-const AtomicType *AtomicType::VaryingConstUInt16;
-const AtomicType *AtomicType::UnboundConstUInt16;
-const AtomicType *AtomicType::UniformConstInt32;
-const AtomicType *AtomicType::VaryingConstInt32;
-const AtomicType *AtomicType::UnboundConstInt32;
-const AtomicType *AtomicType::UniformConstUInt32;
-const AtomicType *AtomicType::VaryingConstUInt32;
-const AtomicType *AtomicType::UnboundConstUInt32;
-const AtomicType *AtomicType::UniformConstFloat;
-const AtomicType *AtomicType::VaryingConstFloat;
-const AtomicType *AtomicType::UnboundConstFloat;
-const AtomicType *AtomicType::UniformConstInt64;
-const AtomicType *AtomicType::VaryingConstInt64;
-const AtomicType *AtomicType::UnboundConstInt64;
-const AtomicType *AtomicType::UniformConstUInt64;
-const AtomicType *AtomicType::VaryingConstUInt64;
-const AtomicType *AtomicType::UnboundConstUInt64;
-const AtomicType *AtomicType::UniformConstDouble;
-const AtomicType *AtomicType::VaryingConstDouble;
-const AtomicType *AtomicType::UnboundConstDouble;
-
-const AtomicType *AtomicType::Void = new AtomicType(TYPE_VOID, Type::Uniform, false);
-
-
-void AtomicType::Init() {
-    UniformBool = typeTable[TYPE_BOOL][Type::Uniform][0];
-    VaryingBool = typeTable[TYPE_BOOL][Type::Varying][0];
-    UnboundBool = typeTable[TYPE_BOOL][Type::Unbound][0];
-    UniformInt8 = typeTable[TYPE_INT8][Type::Uniform][0];
-    VaryingInt8 = typeTable[TYPE_INT8][Type::Varying][0];
-    UnboundInt8 = typeTable[TYPE_INT8][Type::Unbound][0];
-    UniformUInt8 = typeTable[TYPE_UINT8][Type::Uniform][0];
-    VaryingUInt8 = typeTable[TYPE_UINT8][Type::Varying][0];
-    UnboundUInt8 = typeTable[TYPE_UINT8][Type::Unbound][0];
-    UniformInt16 = typeTable[TYPE_INT16][Type::Uniform][0];
-    VaryingInt16 = typeTable[TYPE_INT16][Type::Varying][0];
-    UnboundInt16 = typeTable[TYPE_INT16][Type::Unbound][0];
-    UniformUInt16 = typeTable[TYPE_UINT16][Type::Uniform][0];
-    VaryingUInt16 = typeTable[TYPE_UINT16][Type::Varying][0];
-    UnboundUInt16 = typeTable[TYPE_UINT16][Type::Unbound][0];
-    UniformInt32 = typeTable[TYPE_INT32][Type::Uniform][0];
-    VaryingInt32 = typeTable[TYPE_INT32][Type::Varying][0];
-    UnboundInt32 = typeTable[TYPE_INT32][Type::Unbound][0];
-    UniformUInt32 = typeTable[TYPE_UINT32][Type::Uniform][0];
-    VaryingUInt32 = typeTable[TYPE_UINT32][Type::Varying][0];
-    UnboundUInt32 = typeTable[TYPE_UINT32][Type::Unbound][0];
-    UniformFloat = typeTable[TYPE_FLOAT][Type::Uniform][0];
-    VaryingFloat = typeTable[TYPE_FLOAT][Type::Varying][0];
-    UnboundFloat = typeTable[TYPE_FLOAT][Type::Unbound][0];
-    UniformInt64 = typeTable[TYPE_INT64][Type::Uniform][0];
-    VaryingInt64 = typeTable[TYPE_INT64][Type::Varying][0];
-    UnboundInt64 = typeTable[TYPE_INT64][Type::Unbound][0];
-    UniformUInt64 = typeTable[TYPE_UINT64][Type::Uniform][0];
-    VaryingUInt64 = typeTable[TYPE_UINT64][Type::Varying][0];
-    UnboundUInt64 = typeTable[TYPE_UINT64][Type::Unbound][0];
-    UniformDouble = typeTable[TYPE_DOUBLE][Type::Uniform][0];
-    VaryingDouble = typeTable[TYPE_DOUBLE][Type::Varying][0];
-    UnboundDouble = typeTable[TYPE_DOUBLE][Type::Unbound][0];
-
-    UniformConstBool = typeTable[TYPE_BOOL][Type::Uniform][1];
-    VaryingConstBool = typeTable[TYPE_BOOL][Type::Varying][1];
-    UnboundConstBool = typeTable[TYPE_BOOL][Type::Unbound][1];
-    UniformConstInt8 = typeTable[TYPE_INT8][Type::Uniform][1];
-    VaryingConstInt8 = typeTable[TYPE_INT8][Type::Varying][1];
-    UnboundConstInt8 = typeTable[TYPE_INT8][Type::Unbound][1];
-    UniformConstUInt8 = typeTable[TYPE_UINT8][Type::Uniform][1];
-    VaryingConstUInt8 = typeTable[TYPE_UINT8][Type::Varying][1];
-    UnboundConstUInt8 = typeTable[TYPE_UINT8][Type::Unbound][1];
-    UniformConstInt16 = typeTable[TYPE_INT16][Type::Uniform][1];
-    VaryingConstInt16 = typeTable[TYPE_INT16][Type::Varying][1];
-    UnboundConstInt16 = typeTable[TYPE_INT16][Type::Unbound][1];
-    UniformConstUInt16 = typeTable[TYPE_UINT16][Type::Uniform][1];
-    VaryingConstUInt16 = typeTable[TYPE_UINT16][Type::Varying][1];
-    UnboundConstUInt16 = typeTable[TYPE_UINT16][Type::Unbound][1];
-    UniformConstInt32 = typeTable[TYPE_INT32][Type::Uniform][1];
-    VaryingConstInt32 = typeTable[TYPE_INT32][Type::Varying][1];
-    UnboundConstInt32 = typeTable[TYPE_INT32][Type::Unbound][1];
-    UniformConstUInt32 = typeTable[TYPE_UINT32][Type::Uniform][1];
-    VaryingConstUInt32 = typeTable[TYPE_UINT32][Type::Varying][1];
-    UnboundConstUInt32 = typeTable[TYPE_UINT32][Type::Unbound][1];
-    UniformConstFloat = typeTable[TYPE_FLOAT][Type::Uniform][1];
-    VaryingConstFloat = typeTable[TYPE_FLOAT][Type::Varying][1];
-    UnboundConstFloat = typeTable[TYPE_FLOAT][Type::Unbound][1];
-    UniformConstInt64 = typeTable[TYPE_INT64][Type::Uniform][1];
-    VaryingConstInt64 = typeTable[TYPE_INT64][Type::Varying][1];
-    UnboundConstInt64 = typeTable[TYPE_INT64][Type::Unbound][1];
-    UniformConstUInt64 = typeTable[TYPE_UINT64][Type::Uniform][1];
-    VaryingConstUInt64 = typeTable[TYPE_UINT64][Type::Varying][1];
-    UnboundConstUInt64 = typeTable[TYPE_UINT64][Type::Unbound][1];
-    UniformConstDouble = typeTable[TYPE_DOUBLE][Type::Uniform][1];
-    VaryingConstDouble = typeTable[TYPE_DOUBLE][Type::Varying][1];
-    UnboundConstDouble = typeTable[TYPE_DOUBLE][Type::Unbound][1];
-}
+const AtomicType *AtomicType::UniformBool =
+    new AtomicType(AtomicType::TYPE_BOOL, Uniform, false);
+const AtomicType *AtomicType::VaryingBool =
+    new AtomicType(AtomicType::TYPE_BOOL, Varying, false);
+const AtomicType *AtomicType::UniformInt8 =
+    new AtomicType(AtomicType::TYPE_INT8, Uniform, false);
+const AtomicType *AtomicType::VaryingInt8 =
+    new AtomicType(AtomicType::TYPE_INT8, Varying, false);
+const AtomicType *AtomicType::UniformUInt8 =
+    new AtomicType(AtomicType::TYPE_UINT8, Uniform, false);
+const AtomicType *AtomicType::VaryingUInt8 =
+    new AtomicType(AtomicType::TYPE_UINT8, Varying, false);
+const AtomicType *AtomicType::UniformInt16 =
+    new AtomicType(AtomicType::TYPE_INT16, Uniform, false);
+const AtomicType *AtomicType::VaryingInt16 =
+    new AtomicType(AtomicType::TYPE_INT16, Varying, false);
+const AtomicType *AtomicType::UniformUInt16 =
+    new AtomicType(AtomicType::TYPE_UINT16, Uniform, false);
+const AtomicType *AtomicType::VaryingUInt16 =
+    new AtomicType(AtomicType::TYPE_UINT16, Varying, false);
+const AtomicType *AtomicType::UniformInt32 =
+    new AtomicType(AtomicType::TYPE_INT32, Uniform, false);
+const AtomicType *AtomicType::VaryingInt32 =
+    new AtomicType(AtomicType::TYPE_INT32, Varying, false);
+const AtomicType *AtomicType::UniformUInt32 =
+    new AtomicType(AtomicType::TYPE_UINT32, Uniform, false);
+const AtomicType *AtomicType::VaryingUInt32 =
+    new AtomicType(AtomicType::TYPE_UINT32, Varying, false);
+const AtomicType *AtomicType::UniformFloat =
+    new AtomicType(AtomicType::TYPE_FLOAT, Uniform, false);
+const AtomicType *AtomicType::VaryingFloat =
+    new AtomicType(AtomicType::TYPE_FLOAT, Varying, false);
+const AtomicType *AtomicType::UniformInt64 =
+    new AtomicType(AtomicType::TYPE_INT64, Uniform, false);
+const AtomicType *AtomicType::VaryingInt64 =
+    new AtomicType(AtomicType::TYPE_INT64, Varying, false);
+const AtomicType *AtomicType::UniformUInt64 =
+    new AtomicType(AtomicType::TYPE_UINT64, Uniform, false);
+const AtomicType *AtomicType::VaryingUInt64 =
+    new AtomicType(AtomicType::TYPE_UINT64, Varying, false);
+const AtomicType *AtomicType::UniformDouble =
+    new AtomicType(AtomicType::TYPE_DOUBLE, Uniform, false);
+const AtomicType *AtomicType::VaryingDouble =
+    new AtomicType(AtomicType::TYPE_DOUBLE, Varying, false);
+const AtomicType *AtomicType::Void = 
+    new AtomicType(TYPE_VOID, Uniform, false);
 
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
@@ -352,25 +172,37 @@ AtomicType::GetAsUnsignedType() const {
     if (IsIntType() == false)
         return NULL;
 
-    return typeTable[basicType + 1][variability][isConst ? 1 : 0];
+    switch (basicType) {
+    case TYPE_INT8:
+        return new AtomicType(TYPE_UINT8, variability, isConst);
+    case TYPE_INT16:
+        return new AtomicType(TYPE_UINT16, variability, isConst);
+    case TYPE_INT32:
+        return new AtomicType(TYPE_UINT32, variability, isConst);
+    case TYPE_INT64:
+        return new AtomicType(TYPE_UINT64, variability, isConst);
+    default:
+        FATAL("Unexpected basicType in GetAsUnsignedType()");
+        return NULL;
+    }
 }
 
 
 const AtomicType *
 AtomicType::GetAsConstType() const {
-    if (this == AtomicType::Void) 
+    if (Type::Equal(this, AtomicType::Void) || isConst == true) 
         return this;
     
-    return typeTable[basicType][variability][1];
+    return new AtomicType(basicType, variability, true);
 }
 
 
 const AtomicType *
 AtomicType::GetAsNonConstType() const {
-    if (this == AtomicType::Void) 
+    if (Type::Equal(this, AtomicType::Void) || isConst == false) 
         return this;
 
-    return typeTable[basicType][variability][0];
+    return new AtomicType(basicType, variability, false);
 }
 
 
@@ -382,22 +214,28 @@ AtomicType::GetBaseType() const {
 
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
-    Assert(this != AtomicType::Void);
-    return typeTable[basicType][Varying][isConst ? 1 : 0];
+    Assert(Type::Equal(this, AtomicType::Void) == false);
+    if (variability == Varying)
+        return this;
+    return new AtomicType(basicType, Varying, isConst);
 }
 
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
-    Assert(this != AtomicType::Void);
-    return typeTable[basicType][Uniform][isConst ? 1 : 0];
+    Assert(Type::Equal(this, AtomicType::Void) == false);
+    if (variability == Uniform)
+        return this;
+    return new AtomicType(basicType, Uniform, isConst);
 }
 
 
 const AtomicType *
 AtomicType::GetAsUnboundVariabilityType() const {
-    Assert(this != AtomicType::Void);
-    return typeTable[basicType][Unbound][isConst ? 1 : 0];
+    Assert(Type::Equal(this, AtomicType::Void) == false);
+    if (variability == Unbound)
+        return this;
+    return new AtomicType(basicType, Unbound, isConst);
 }
 
 
@@ -406,7 +244,7 @@ AtomicType::ResolveUnboundVariability(Variability v) const {
     Assert(v != Unbound);
     if (variability != Unbound)
         return this;
-    return typeTable[basicType][v][isConst ? 1 : 0];
+    return new AtomicType(basicType, v, isConst);
 }
 
 
@@ -1071,7 +909,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         // exported functions.
         ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx, true), 0);
     else {
-        if (baseType == AtomicType::Void)
+        if (Type::Equal(baseType, AtomicType::Void))
             ptype = LLVMTypes::VoidPointerType;
         else
             ptype = llvm::PointerType::get(baseType->LLVMType(ctx), 0);
@@ -1143,7 +981,7 @@ ArrayType::ArrayType(const Type *c, int a)
     : child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
-    Assert(c != AtomicType::Void);
+    Assert(Type::Equal(c, AtomicType::Void) == false);
 }
 
 
@@ -1623,9 +1461,9 @@ VectorType::getVectorMemoryCount() const {
         return numElements;
     else {
         int nativeWidth = g->target.nativeVectorWidth;
-        if (base->GetAsUniformType() == AtomicType::UniformInt64 ||
-            base->GetAsUniformType() == AtomicType::UniformUInt64 ||
-            base->GetAsUniformType() == AtomicType::UniformDouble)
+        if (Type::Equal(base->GetAsUniformType(), AtomicType::UniformInt64) ||
+            Type::Equal(base->GetAsUniformType(), AtomicType::UniformUInt64) ||
+            Type::Equal(base->GetAsUniformType(), AtomicType::UniformDouble))
             // target.nativeVectorWidth should be in terms of 32-bit
             // values, so for the 64-bit guys, it takes half as many of
             // them to fill the native width
@@ -2382,7 +2220,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
             Assert(m->errorCount > 0);
             return NULL;
         }
-        Assert(paramTypes[i] != AtomicType::Void);
+        Assert(Type::Equal(paramTypes[i], AtomicType::Void) == false);
 
         LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL) {
@@ -2664,14 +2502,15 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
         if (dynamic_cast<const FunctionType *>(b) == NULL)
             b = b->GetAsNonConstType();
     }
+    else if (a->IsConstType() != b->IsConstType())
+        return false;
 
-    // We can compare AtomicTypes with pointer equality, since the
-    // AtomicType constructor is private so that there isonly the single
-    // canonical instance of the AtomicTypes (AtomicType::UniformInt32,
-    // etc.)
-    if (dynamic_cast<const AtomicType *>(a) != NULL &&
-        dynamic_cast<const AtomicType *>(b) != NULL)
-        return a == b;
+    const AtomicType *ata = dynamic_cast<const AtomicType *>(a);
+    const AtomicType *atb = dynamic_cast<const AtomicType *>(b);
+    if (ata != NULL && atb != NULL) {
+        return ((ata->basicType == atb->basicType) && 
+                (ata->GetVariability() == atb->GetVariability()));
+    }
 
     // For all of the other types, we need to see if we have the same two
     // general types.  If so, then we dig into the details of the type and
@@ -2681,14 +2520,13 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     if (eta != NULL && etb != NULL)
         // Kind of goofy, but this sufficies to check
         return (eta->pos == etb->pos &&
-                eta->IsUniformType() == etb->IsUniformType() &&
-                eta->IsConstType() == etb->IsConstType());
+                eta->GetVariability() == etb->GetVariability());
 
-    const ArrayType *ata = dynamic_cast<const ArrayType *>(a);
-    const ArrayType *atb = dynamic_cast<const ArrayType *>(b);
-    if (ata != NULL && atb != NULL)
-        return (ata->GetElementCount() == atb->GetElementCount() && 
-                lCheckTypeEquality(ata->GetElementType(), atb->GetElementType(), 
+    const ArrayType *arta = dynamic_cast<const ArrayType *>(a);
+    const ArrayType *artb = dynamic_cast<const ArrayType *>(b);
+    if (arta != NULL && artb != NULL)
+        return (arta->GetElementCount() == artb->GetElementCount() && 
+                lCheckTypeEquality(arta->GetElementType(), artb->GetElementType(), 
                                    ignoreConst));
 
     const VectorType *vta = dynamic_cast<const VectorType *>(a);

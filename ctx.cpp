@@ -246,7 +246,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
               launchGroupHandlePtr);
 
     const Type *returnType = function->GetReturnType();
-    if (!returnType || returnType == AtomicType::Void)
+    if (!returnType || Type::Equal(returnType, AtomicType::Void))
         returnValuePtr = NULL;
     else {
         LLVM_TYPE_CONST llvm::Type *ftype = returnType->LLVMType(g->ctx);
@@ -1144,7 +1144,7 @@ FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
-    if (returnType == AtomicType::Void) {
+    if (Type::Equal(returnType, AtomicType::Void)) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
                   expr->GetType()->GetString().c_str());
@@ -2325,7 +2325,7 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         else
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
     }
-    else if (valueType == AtomicType::VaryingBool &&
+    else if (Type::Equal(valueType, AtomicType::VaryingBool) &&
              g->target.maskBitCount == 1) {
         llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask,
                                               LLVMMaskAllOn, "~mask");
@@ -2339,35 +2339,35 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         StoreInst(final, ptr);
         return;
     }
-    else if (valueType == AtomicType::VaryingDouble || 
-             valueType == AtomicType::VaryingInt64 ||
-             valueType == AtomicType::VaryingUInt64) {
+    else if (Type::Equal(valueType, AtomicType::VaryingDouble) || 
+             Type::Equal(valueType, AtomicType::VaryingInt64) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt64)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
         ptr = BitCastInst(ptr, LLVMTypes::Int64VectorPointerType, 
                              "ptr_to_int64vecptr");
         value = BitCastInst(value, LLVMTypes::Int64VectorType, 
                              "value_to_int64");
     }
-    else if (valueType == AtomicType::VaryingFloat ||
-             valueType == AtomicType::VaryingBool ||
-             valueType == AtomicType::VaryingInt32 ||
-             valueType == AtomicType::VaryingUInt32 ||
+    else if (Type::Equal(valueType, AtomicType::VaryingFloat) ||
+             Type::Equal(valueType, AtomicType::VaryingBool) ||
+             Type::Equal(valueType, AtomicType::VaryingInt32) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt32) ||
              dynamic_cast<const EnumType *>(valueType) != NULL) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
                              "ptr_to_int32vecptr");
-        if (valueType == AtomicType::VaryingFloat)
+        if (Type::Equal(valueType, AtomicType::VaryingFloat))
             value = BitCastInst(value, LLVMTypes::Int32VectorType, 
                                  "value_to_int32");
     }
-    else if (valueType == AtomicType::VaryingInt16 ||
-             valueType == AtomicType::VaryingUInt16) {
+    else if (Type::Equal(valueType, AtomicType::VaryingInt16) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt16)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_16");
         ptr = BitCastInst(ptr, LLVMTypes::Int16VectorPointerType, 
                              "ptr_to_int16vecptr");
     }
-    else if (valueType == AtomicType::VaryingInt8 ||
-             valueType == AtomicType::VaryingUInt8) {
+    else if (Type::Equal(valueType, AtomicType::VaryingInt8) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt8)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_8");
         ptr = BitCastInst(ptr, LLVMTypes::Int8VectorPointerType, 
                              "ptr_to_int8vecptr");
@@ -2892,7 +2892,7 @@ FunctionEmitContext::ReturnInst() {
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     }
     else {
-        Assert(function->GetReturnType() == AtomicType::Void);
+        Assert(Type::Equal(function->GetReturnType(), AtomicType::Void));
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 

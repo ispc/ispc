@@ -70,19 +70,19 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         type = type->GetAsConstType();
 
     if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
-        if (type == AtomicType::Void)
+        if (Type::Equal(type, AtomicType::Void))
             Error(pos, "\"uniform\" qualifier is illegal with \"void\" type.");
         else
             type = type->GetAsUniformType();
     }
     else if ((typeQualifiers & TYPEQUAL_VARYING) != 0) {
-        if (type == AtomicType::Void)
+        if (Type::Equal(type, AtomicType::Void))
             Error(pos, "\"varying\" qualifier is illegal with \"void\" type.");
         else
             type = type->GetAsVaryingType();
     }
     else
-        if (type != AtomicType::Void)
+        if (Type::Equal(type, AtomicType::Void) == false)
             type = type->GetAsUnboundVariabilityType();
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
@@ -121,24 +121,25 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
 
 const Type *
 DeclSpecs::GetBaseType(SourcePos pos) const {
-    const Type *bt = baseType;
+    const Type *retType = baseType;
 
-    if (bt == NULL) {
+    if (retType == NULL) {
         Warning(pos, "No type specified in declaration.  Assuming int32.");
-        bt = AtomicType::UnboundInt32;
+        retType = AtomicType::UniformInt32->GetAsUnboundVariabilityType();
     }
 
     if (vectorSize > 0) {
-        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(bt);
+        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(retType);
         if (atomicType == NULL) {
             Error(pos, "Only atomic types (int, float, ...) are legal for vector "
                   "types.");
             return NULL;
         }
-        bt = new VectorType(atomicType, vectorSize);
+        retType = new VectorType(atomicType, vectorSize);
     }
 
-    return lApplyTypeQualifiers(typeQualifiers, bt, pos);
+    retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
+    return retType;
 }
 
 
@@ -360,7 +361,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         break;
 
     case DK_ARRAY:
-        if (type == AtomicType::Void) {
+        if (Type::Equal(type, AtomicType::Void)) {
             Error(pos, "Arrays of \"void\" type are illegal.");
             return NULL;
         }
@@ -396,7 +397,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                       "function parameter declaration for parameter \"%s\".", 
                       lGetStorageClassName(d->declSpecs->storageClass),
                       sym->name.c_str());
-            if (sym->type == AtomicType::Void) {
+            if (Type::Equal(sym->type, AtomicType::Void)) {
                 Error(sym->pos, "Parameter with type \"void\" illegal in function "
                       "parameter list.");
                 sym->type = NULL;
@@ -588,7 +589,7 @@ Declaration::GetVariableDeclarations() const {
         }
         sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
 
-        if (sym->type == AtomicType::Void)
+        if (Type::Equal(sym->type, AtomicType::Void))
             Error(sym->pos, "\"void\" type variable illegal in declaration.");
         else if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
             m->symbolTable->AddVariable(sym);
@@ -664,7 +665,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
 
             Symbol *sym = d->GetSymbol();
 
-            if (sym->type == AtomicType::Void)
+            if (Type::Equal(sym->type, AtomicType::Void))
                 Error(d->pos, "\"void\" type illegal for struct member.");
 
             const ArrayType *arrayType = 
