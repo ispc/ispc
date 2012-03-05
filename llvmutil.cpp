@@ -469,6 +469,42 @@ LLVMBoolVector(const bool *bvec) {
 }
 
 
+llvm::Constant *
+LLVMIntAsType(int64_t val, LLVM_TYPE_CONST llvm::Type *type) {
+    LLVM_TYPE_CONST llvm::VectorType *vecType =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+
+    if (vecType != NULL) {
+        llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
+                                                   val, true /* signed */);
+        std::vector<llvm::Constant *> vals;
+        for (int i = 0; i < (int)vecType->getNumElements(); ++i)
+            vals.push_back(v);
+        return llvm::ConstantVector::get(vals);
+    }
+    else
+        return llvm::ConstantInt::get(type, val, true /* signed */);
+}
+
+
+llvm::Constant *
+LLVMUIntAsType(uint64_t val, LLVM_TYPE_CONST llvm::Type *type) {
+    LLVM_TYPE_CONST llvm::VectorType *vecType =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+
+    if (vecType != NULL) {
+        llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
+                                                   val, false /* unsigned */);
+        std::vector<llvm::Constant *> vals;
+        for (int i = 0; i < (int)vecType->getNumElements(); ++i)
+            vals.push_back(v);
+        return llvm::ConstantVector::get(vals);
+    }
+    else
+        return llvm::ConstantInt::get(type, val, false /* unsigned */);
+}
+
+
 /** Conservative test to see if two llvm::Values are equal.  There are
     (potentially many) cases where the two values actually are equal but
     this will return false.  However, if it does return true, the two
