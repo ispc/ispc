@@ -1117,6 +1117,20 @@ lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1,
 }
 
 
+static llvm::Value *
+lExtractFromInserts(llvm::Value *v, unsigned int index) {
+    llvm::InsertValueInst *iv = llvm::dyn_cast<llvm::InsertValueInst>(v);
+    if (iv == NULL)
+        return NULL;
+
+    Assert(iv->hasIndices() && iv->getNumIndices() == 1);
+    if (iv->getIndices()[0] == index)
+        return iv->getInsertedValueOperand();
+    else
+        return lExtractFromInserts(iv->getAggregateOperand(), index);
+}
+
+
 /** Given a varying pointer in ptrs, this function checks to see if it can
     be determined to be indexing from a common uniform base pointer.  If
     so, the function returns the base pointer llvm::Value and initializes
@@ -1230,6 +1244,15 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         *offsets = llvm::ConstantVector::get(deltas);
 #endif
         return base;
+    }
+
+    llvm::ExtractValueInst *ev = llvm::dyn_cast<llvm::ExtractValueInst>(ptrs);
+    if (ev != NULL) {
+        Assert(ev->getNumIndices() == 1);
+        int index = ev->getIndices()[0];
+        ptrs = lExtractFromInserts(ev->getAggregateOperand(), index);
+        if (ptrs != NULL)
+            return lGetBasePtrAndOffsets(ptrs, offsets, insertBefore);
     }
 
     return NULL;
