@@ -94,6 +94,7 @@ Contents:
     * `Short Vector Types`_
     * `Array Types`_
     * `Struct Types`_
+    * `Structure of Array Types`_
 
   + `Declarations and Initializers`_
   + `Expressions`_
@@ -151,7 +152,6 @@ Contents:
   + `Data Layout`_
   + `Data Alignment and Aliasing`_
   + `Restructuring Existing Programs to Use ISPC`_
-  + `Understanding How to Interoperate With the Application's Data`_
 
 * `Disclaimer and Legal Information`_
 
@@ -1950,6 +1950,77 @@ still has only a single ``a`` member, since ``a`` was declared with
 indexing operation in the last line results in an error.  
 
 
+Structure of Array Types
+------------------------
+
+If data can be laid out in memory so that the executing program instances
+access it via loads and stores of contiguous sections of memory, overall
+performance can be improved noticably.  One way to improve this memory
+access coherence is to lay out structures in "structure of arrays" (SOA)
+format in memory; the benefits from SOA layout are discussed in more detail
+in the `Use "Structure of Arrays" Layout When Possible`_ section in the
+ispc Performance Guide.
+
+.. _Use "Structure of Arrays" Layout When Possible: perf.html#use-structure-of-arrays-layout-when-possible
+
+``ispc`` provides two key language-level capabilities for laying out and
+accessing data in SOA format:
+
+* An ``soa`` keyword that transforms a regular ``struct`` into an SOA version
+  of the struct.
+* Array indexing syntax for SOA arrays that transparently handles SOA
+  indexing.
+
+As an example, consider a simple struct declaration:
+
+::
+
+    struct Point { float x, y, z; };
+
+With the ``soa`` rate qualifier, an array of SOA variants of this structure
+can be declared:
+
+::
+
+    soa<8> Point pts[...];
+
+The in-memory layout of the ``Point``s has had the SOA transformation
+applied, such that there are 8 ``x`` values in memory followed by 8 ``y``
+values, and so forth.  Here is the effective declaration of ``soa<8>
+Point``:
+
+::
+
+    struct { uniform float x[8], y[8], z[8]; };
+
+Given an array of SOA data, array indexing (and pointer arithmetic) is done
+so that the appropriate values from the SOA array are accessed.  For
+example, given:
+
+::
+
+    soa<8> Point pts[...];
+    uniform float x = pts[10].x;
+
+The generated code effectively accesses the second 8-wide SOA structure and
+then loads the third ``x`` value from it.  In general, one can write the
+same code to access arrays of SOA elements as one would write to access
+them in AOS layout.
+
+Note that it directly follows from SOA layout that the layout of a single
+element of the array isn't contiguous in memory--``pts[1].x`` and
+``pts[1].y`` are separated by 7 ``float`` values in the above example.
+
+There are a few limitations to the current implementation of SOA types in
+``ispc``; these may be relaxed in future releases:
+
+* It's illegal to typecast to ``soa`` data to ``void`` pointers.
+* Reference types are illegal in SOA structures
+* All members of SOA structures must have no rate qualifiers--specifically,
+  it's illegal to have an explicitly-qualified ``uniform`` or ``varying``
+  member of a structure that has ``soa`` applied to it.
+
+
 Declarations and Initializers
 -----------------------------
 
@@ -3375,8 +3446,9 @@ Converting Between Array-of-Structures and Structure-of-Arrays Layout
 Applications often lay data out in memory in "array of structures" form.
 Though convenient in C/C++ code, this layout can make ``ispc`` programs
 less efficient than they would be if the data was laid out in "structure of
-arrays" form.  (See the section `Understanding How to Interoperate With the
-Application's Data`_ for extended discussion of this topic.)
+arrays" form.  (See the section `Use "Structure of Arrays" Layout When
+Possible`_ in the performance guide for extended discussion of this topic.)
+
 
 The standard library does provide a few functions that efficiently convert
 between these two formats, for cases where it's not possible to change the
@@ -3921,9 +3993,9 @@ program instances, ``ispc`` prohibits any varying types from being used in
 parameters to functions with the ``export`` qualifier.  (``ispc`` also
 prohibits passing structures that themselves have varying types as members,
 etc.)  Thus, all datatypes that is shared with the application must have
-the ``uniform`` qualifier applied to them.  (See `Understanding How to
-Interoperate With the Application's Data`_ for more discussion of how to
-load vectors of SoA or AoSoA data from the application.)
+the ``uniform`` or ``soa`` rate qualifier applied to them.  (See `Use
+"Structure of Arrays" Layout When Possible`_ in the Performance Guide for
+more discussion of how to load vectors of SOA data from the application.)
 
 Similarly, ``struct`` types shared with the application can also have
 embedded pointers.
@@ -3941,7 +4013,7 @@ On the ``ispc`` side, the corresponding ``struct`` declaration is:
 
   // ispc
   struct Foo {
-      uniform float * uniform foo, * uniform bar;
+      float * uniform foo, * uniform bar;
   };
 
 There is one subtlety related to data layout to be aware of: ``ispc``
@@ -4017,156 +4089,6 @@ groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
 .. _ispc Performance Tuning Guide: http://ispc.github.com/perf.html
-
-Understanding How to Interoperate With the Application's Data
--------------------------------------------------------------
-
-One of ``ispc``'s key goals is to be able to interoperate with the
-application's data, in whatever layout it is stored in.  You don't need to
-worry about reformatting of data or the overhead of a driver model that
-abstracts the data layout.  This section illustrates some of the
-alternatives with a simple example of computing the length of a large
-number of vectors.
-
-Consider for starters a ``Vector`` data-type, defined in C as:
-
-::
-
-   struct Vector { float x, y, z; };
-
-We might have (still in C) an array of ``Vector`` s defined like this:
-
-::
-
-   Vector vectors[1024];
-
-This is called an "array of structures" (AoS) layout.  To compute the
-lengths of these vectors in parallel, you can write ``ispc`` code like
-this:
-
-::
-
-  export void length(uniform Vector vectors[1024], uniform float len[]) {
-      foreach (index = 0 ... 1024) {
-          float x = vectors[index].x;
-          float y = vectors[index].y;
-          float z = vectors[index].z;
-          float l = sqrt(x*x + y*y + z*z);
-          len[index] = l;
-      }
-  }
-
-The problem with this implementation is that the indexing into the array of
-structures, ``vectors[index].x`` is relatively expensive.  On a target
-machine that supports four-wide Intel® SSE, this turns into four loads of
-single ``float`` values from non-contiguous memory locations, which are
-then packed into a four-wide register corresponding to ``float x``.  Once the
-values are loaded into the local ``x``, ``y``, and ``z`` variables,
-SIMD-efficient computation can proceed; getting to that point is
-relatively inefficient.
-
-(As described previously in `Converting Between Array-of-Structures and
-Structure-of-Arrays Layout`_, this computation could be written more
-efficiently using standard library routines to convert from the AoS layout,
-if we were given a flat array of ``float`` values.) 
-
-An alternative data layout would be the "structure of arrays" (SoA).  In C,
-the data would be declared as:
-
-::
-
-    float x[1024], y[1024], z[1024];
-
-The ``ispc`` code might be:
-
-::
-
-  export void length(uniform float x[1024], uniform float y[1024],
-                     uniform float z[1024], uniform float len[]) {
-      foreach (index = 0 ... 1024) {
-          float xx = x[index];
-          float yy = y[index];
-          float zz = z[index];
-          float l = sqrt(xx*xx + yy*yy + zz*zz);
-          len[index] = l;
-      }
-  }
-
-In this example, the loads into ``xx``, ``yy``, and ``zz`` are single
-vector loads of an entire gang's worth of values into the corresponding
-registers.  This processing is more efficient than the multiple scalar
-loads that are required with the AoS layout above.
-
-A final alternative is "array of structures of arrays" (AoSoA), a hybrid
-between these two.  A structure is declared that stores a small number of
-``x``, ``y``, and ``z`` values in contiguous memory locations:
-
-::
-
-  struct Vector16 {
-      float x[16], y[16], z[16];
-  };
-
-
-The ``ispc`` code has an outer loop over ``Vector16`` elements and
-then an inner loop that peels off values from the element members:
-
-::
-
-  #define N_VEC (1024/16)
-  export void length(uniform Vector16 v[N_VEC], uniform float len[]) {
-      foreach (i = 0 ... N_VEC, j = 0 ... 16) {
-          float x = v[i].x[j];
-          float y = v[i].y[j];
-          float z = v[i].z[j];
-          float l = sqrt(x*x + y*y + z*z);
-          len[16*i+j] = l;
-          }
-      }
-  }
-
-One advantage of the AoSoA layout is that the memory accesses to load
-values are to nearby memory locations, where as with SoA, each of the three
-loads above is to locations separated by a few thousand bytes.  Thus, AoSoA
-can be more cache friendly.  For structures with many members, this
-difference can lead to a substantial improvement.
-
-With some additional complexity, ``ispc`` can also generate code that
-efficiently processes data in AoSoA layout where the inner array length is
-less than the machine vector width.  For example, consider doing
-computation with this AoSoA structure definition on a machine with an
-8-wide vector unit (for example, an Intel® AVX target):
-
-::
-
-  struct Vector4 {
-      float x[4], y[4], z[4];
-  };
-
-
-The ``ispc`` code to process this loads elements four at a time from
-``Vector4`` instances until it has a full ``programCount`` number of
-elements to work with and then proceeds with the computation.
-
-::
-
-  #define N_VEC (1024/4)
-  export void length(uniform Vector4 v[N_VEC], uniform float len[]) {
-      for (uniform int i = 0; i < N_VEC; i += programCount / 4) {
-          float x, y, z;
-          for (uniform int j = 0; j < programCount / 4; ++j) {
-              if (programIndex >= 4 * j &&
-                  programIndex <  4 * (j+1)) {
-                  int index = (programIndex & 0x3);
-                  x = v[i+j].x[index];
-                  y = v[i+j].y[index];
-                  z = v[i+j].z[index];
-              }
-          }
-          float l = sqrt(x*x + y*y + z*z);
-          len[4*i + programIndex] = l;
-      }
-  }
 
 
 Disclaimer and Legal Information

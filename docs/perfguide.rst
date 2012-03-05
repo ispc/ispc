@@ -13,6 +13,7 @@ the most out of ``ispc`` in practice.
   + `Improving Control Flow Coherence With "foreach_tiled"`_
   + `Using Coherent Control Flow Constructs`_
   + `Use "uniform" Whenever Appropriate`_
+  + `Use "Structure of Arrays" Layout When Possible`_
 
 * `Tips and Techniques`_
 
@@ -247,6 +248,76 @@ but it's always best to provide the compiler with as much help as possible
 to understand the actual form of your computation.
 
 
+Use "Structure of Arrays" Layout When Possible
+----------------------------------------------
+
+In general, memory access performance (for both reads and writes) is best
+when the running program instances access a contiguous region of memory; in
+this case efficient vector load and store instructions can often be used
+rather than gathers and scatters.  As an example of this issue, consider an
+array of a simple point datatype laid out and accessed in conventional
+"array of structures" (AOS) layout:
+
+::
+
+    struct Point { float x, y, z; };
+    uniform Point pts[...];
+    float v = pts[programIndex].x;
+
+In the above code, the access to ``pts[programIndex].x`` accesses
+non-sequential memory locations, due to the ``y`` and ``z`` values between
+the desired ``x`` values in memory.  A "gather" is required to get the
+value of ``v``, with a corresponding decrease in performance.
+
+If ``Point`` was defined as a "structure of arrays" (SOA) type, the access
+can be much more efficient:
+
+::
+
+    struct Point8 { float x[8], y[8], z[8]; };
+    uniform Point8 pts8[...];
+    int majorIndex = programIndex / 8;
+    int minorIndex = programIndex % 8;
+    float v = pts8[majorIndex].x[minorIndex];
+
+In this case, each ``Point8`` has 8 ``x`` values contiguous in memory
+before 8 ``y`` values and then 8 ``z`` values.  If the gang size is 8 or
+less, the access for ``v`` will have the same value of ``majorIndex`` for
+all program instances and will access consecutive elements of the ``x[8]``
+array with a vector load.  (For larger gang sizes, two 8-wide vector loads
+would be issues, which is also quite efficient.)
+
+However, the syntax in the above code is messy; accessing SOA data in this
+fashion is much less elegant than the corresponding code for accessing the
+data with AOS layout.  The ``soa`` qualifier in ``ispc`` can be used to
+cause the corresponding transformation to be made to the ``Point`` type,
+while preserving the clean syntax for data access that comes with AOS
+layout:
+
+::
+
+    soa<8> Point pts[...]; 
+    float v = pts[programIndex].x;
+
+Thanks to having SOA layout a first-class concept in the language's type
+system, it's easy to write functions that convert data between the
+layouts.  For example, the ``aos_to_soa`` function below converts ``count``
+elements of the given ``Point`` type from AOS to 8-wide SOA layout.  (It
+assumes that the caller has pre-allocated sufficient space in the
+``pts_soa`` output array.
+
+::
+
+    void aos_to_soa(uniform Point pts_aos[], uniform int count,
+                    soa<8> pts_soa[]) {
+         foreach (i = 0 ... count)
+             pts_soa[i] = pts_aos[i];
+    }
+
+Analogously, a function could be written to convert back from SOA to AOS if
+needed.
+
+
 Tips and Techniques
 ===================
 
@@ -338,6 +409,12 @@ doing a gather.  In more complex cases, where a number of accesses are done
 based on the index, it can be worth doing.  See the example
 ``examples/volume_rendering`` in the ``ispc`` distribution for the use of
 this technique in an instance where it is beneficial to performance.
+
+Understanding Memory Read Coalescing
+------------------------------------
+
+XXXX todo
+
 
 Avoid 64-bit Addressing Calculations When Possible
 --------------------------------------------------
