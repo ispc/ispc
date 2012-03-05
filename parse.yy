@@ -1811,11 +1811,17 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         m->AddTypeDef(decl->GetSymbol());
     else {
         const Type *t = decl->GetType(ds);
-        if (t == NULL)
+        if (t == NULL) {
+            Assert(m->errorCount > 0);
             return;
+        }
 
         Symbol *sym = decl->GetSymbol();
-        Assert(sym != NULL);
+        if (sym == NULL) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
         if (ft != NULL) {
             sym->type = ft;
@@ -1850,7 +1856,10 @@ lAddFunctionParams(Declarator *decl) {
     // walk down to the declarator for the function itself 
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
-    Assert(decl->kind == DK_FUNCTION);
+    if (decl->kind != DK_FUNCTION) {
+        Assert(m->errorCount > 0);
+        return;
+    }
 
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
