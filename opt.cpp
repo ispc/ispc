@@ -3854,7 +3854,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             bool ok = lGetSourcePosFromMetadata(fwdCall, &fwdPos);
             Assert(ok);
 
-#if 1
+#if 0
             if (base != fwdCall->getArgOperand(0)) {
                 Debug(fwdPos, "base pointers mismatch");
                 base->dump();
