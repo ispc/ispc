@@ -336,6 +336,131 @@ static inline uniform int lanemask() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// memcpy/memmove/memset
+
+static inline void memcpy(void * uniform dst, void * uniform src, 
+                          uniform int32 count) {
+    __memcpy32((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memcpy64(void * uniform dst, void * uniform src, 
+                          uniform int64 count) {
+    __memcpy64((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memcpy(void * varying dst, void * varying src, 
+                          int32 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memcpy32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memcpy64(void * varying dst, void * varying src, 
+                            int64 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memcpy64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memmove(void * uniform dst, void * uniform src, 
+                          uniform int32 count) {
+    __memmove32((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memmove64(void * uniform dst, void * uniform src, 
+                             uniform int64 count) {
+    __memmove64((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memmove(void * varying dst, void * varying src, 
+                          int32 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memmove32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memmove64(void * varying dst, void * varying src, 
+                             int64 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memmove64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memset(void * uniform ptr, uniform int8 val, 
+                          uniform int32 count) {
+    __memset32((int8 * uniform)ptr, val, count);
+}
+
+static inline void memset64(void * uniform ptr, uniform int8 val, 
+                          uniform int64 count) {
+    __memset64((int8 * uniform)ptr, val, count);
+}
+
+static inline void memset(void * varying ptr, int8 val, int32 count) {
+    void * uniform pa[programCount];
+    pa[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        __memset32((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+    }
+}
+
+static inline void memset64(void * varying ptr, int8 val, int64 count) {
+    void * uniform pa[programCount];
+    pa[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        __memset64((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
 // count leading/trailing zeros
 
 static inline uniform unsigned int32

@@ -134,9 +134,13 @@ Contents:
 
     * `Reductions`_
 
-  + `Data Conversions And Storage`_
+  + `Data Movement`_
 
+    * `Setting and Copying Values In Memory`_
     * `Packed Load and Store Operations`_
+
+  + `Data Conversions`_
+
     * `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
     * `Conversions To and From Half-Precision Floats`_
 
@@ -3387,8 +3391,52 @@ program instances into a compact output buffer is `discussed in the FAQ`_.
 .. _discussed in the FAQ: faq.html#how-can-a-gang-of-program-instances-generate-variable-amounts-of-output-efficiently
 
 
-Data Conversions And Storage
-----------------------------
+Data Movement
+-------------
+
+Setting and Copying Values In Memory
+------------------------------------
+
+There are a few functions for copying blocks of memory and initializing
+values in memory.  Along the lines of the equivalently-named routines in
+the C Standard libary, ``memcpy`` copies a given number of bytes starting
+from a source location in memory to a destination locaiton, where the two
+regions of memory are guaranteed by the caller to be non-overlapping.
+Alternatively, ``memmove`` can be used to copy data if the buffers may
+overlap.
+
+::
+
+    void memcpy(void * uniform dst, void * uniform src, uniform int32 count)
+    void memmove(void * uniform dst, void * uniform src, uniform int32 count)
+    void memcpy(void * varying dst, void * varying src, int32 count)
+    void memmove(void * varying dst, void * varying src, int32 count)
+
+Note that there are variants of these functions that take both ``uniform``
+and ``varying`` pointers.
+
+To initialize values in memory, the ``memset`` routine can be used.  (It
+also behaves like the function of the same name in the C Standard Library.)
+It sets the given number of bytes of memory starting at the given location
+to the value provided.
+
+::
+
+    void memset(void * uniform ptr, uniform int8 val, uniform int32 count)
+    void memset(void * varying ptr, int8 val, int32 count)
+
+There are also variants of all of these functions that take 64-bit values
+for the number of bytes of memory to operate on:
+
+::
+
+    void memcpy64(void * uniform dst, void * uniform src, uniform int64 count)
+    void memcpy64(void * varying dst, void * varying src, int64 count)
+    void memmove64(void * uniform dst, void * uniform src, uniform int64 count)
+    void memmove64(void * varying dst, void * varying src, int64 count)
+    void memset64(void * uniform ptr, uniform int8 val, uniform int64 count)
+    void memset64(void * varying ptr, int8 val, int64 count)
+
 
 Packed Load and Store Operations
 --------------------------------
@@ -3446,6 +3494,9 @@ of four negative values, and initializes the first four elements of
 ``indices[]`` to the values ``{ 1, 3, 4, 5 }`` corresponding to the array
 indices where ``a[i]`` was less than zero.
 
+
+Data Conversions
+----------------
 
 Converting Between Array-of-Structures and Structure-of-Arrays Layout
 ---------------------------------------------------------------------
