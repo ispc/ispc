@@ -204,6 +204,7 @@ void WriteFrame(const char *filename, const InputData *input,
     fprintf(out, "P6 %d %d 255\n", input->header.framebufferWidth, 
             input->header.framebufferHeight);
     fwrite(framebufferAOS, imageBytes, 1, out);
+    fclose(out);
 
     lAlignedFree(framebufferAOS);
 }
