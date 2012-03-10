@@ -788,7 +788,7 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     if (ATy->getElementType() == LLVMTypes::Int8Type) {
         Out << "  static " << NameSoFar << " init(const char *p) {\n";
         Out << "    " << NameSoFar << " ret;\n";
-        Out << "    strncpy((char *)ret.array, p, " << NumElements << ");\n";
+        Out << "    memcpy((uint8_t *)ret.array, (uint8_t *)p, " << NumElements << ");\n";
         Out << "    return ret;\n";
         Out << "  }\n";
     }
@@ -2055,7 +2055,6 @@ bool CWriter::doInitialization(Module &M) {
   Out << "#include <setjmp.h>\n";      // Unwind support
   Out << "#include <limits.h>\n";      // With overflow intrinsics support.
   Out << "#include <stdlib.h>\n";
-  Out << "#include <string.h>\n";
   Out << "#ifdef _MSC_VER\n";
   Out << "  #define NOMINMAX\n";
   Out << "  #include <windows.h>\n";
@@ -2073,6 +2072,68 @@ bool CWriter::doInitialization(Module &M) {
   Out << "#include \"" << includeName << "\"\n";
 
   generateCompilerSpecificCode(Out, TD);
+
+  // Function declarations
+  Out << "\n/* Function Declarations */\n";
+  Out << "extern \"C\" {\n";
+  Out << "int puts(unsigned char *);\n";
+  Out << "unsigned int putchar(unsigned int);\n";
+  Out << "int fflush(void *);\n";
+  Out << "int printf(const unsigned char *, ...);\n";
+  Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+
+  // Store the intrinsics which will be declared/defined below.
+  SmallVector<const Function*, 8> intrinsicsToDefine;
+
+  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+    // Don't print declarations for intrinsic functions.
+    // Store the used intrinsics, which need to be explicitly defined.
+    if (I->isIntrinsic()) {
+      switch (I->getIntrinsicID()) {
+        default:
+          break;
+        case Intrinsic::uadd_with_overflow:
+        case Intrinsic::sadd_with_overflow:
+          intrinsicsToDefine.push_back(I);
+          break;
+      }
+      continue;
+    }
+
+    if (I->getName() == "setjmp" || I->getName() == "abort" ||
+        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
+        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
+        I->getName() == "puts" ||
+        I->getName() == "printf" || I->getName() == "putchar" ||
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
+      continue;
+
+    // Don't redeclare ispc's own intrinsics
+    std::string name = I->getName();
+    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
+        continue;
+
+    if (I->hasExternalWeakLinkage())
+      Out << "extern ";
+    printFunctionSignature(I, true);
+    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
+      Out << " __ATTRIBUTE_WEAK__";
+    if (I->hasExternalWeakLinkage())
+      Out << " __EXTERNAL_WEAK__";
+    if (StaticCtors.count(I))
+      Out << " __ATTRIBUTE_CTOR__";
+    if (StaticDtors.count(I))
+      Out << " __ATTRIBUTE_DTOR__";
+    if (I->hasHiddenVisibility())
+      Out << " __HIDDEN__";
+
+    if (I->hasName() && I->getName()[0] == 1)
+      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
+
+    Out << ";\n";
+  }
+  Out << "}\n";
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
   Out << "\n"
@@ -2142,67 +2203,6 @@ bool CWriter::doInitialization(Module &M) {
       Out << ";\n";
     }
   }
-
-  // Function declarations
-  Out << "\n/* Function Declarations */\n";
-  Out << "extern \"C\" {\n";
-  Out << "int puts(unsigned char *);\n";
-  Out << "unsigned int putchar(unsigned int);\n";
-  Out << "int fflush(void *);\n";
-  Out << "int printf(const unsigned char *, ...);\n";
-
-  // Store the intrinsics which will be declared/defined below.
-  SmallVector<const Function*, 8> intrinsicsToDefine;
-
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    // Don't print declarations for intrinsic functions.
-    // Store the used intrinsics, which need to be explicitly defined.
-    if (I->isIntrinsic()) {
-      switch (I->getIntrinsicID()) {
-        default:
-          break;
-        case Intrinsic::uadd_with_overflow:
-        case Intrinsic::sadd_with_overflow:
-          intrinsicsToDefine.push_back(I);
-          break;
-      }
-      continue;
-    }
-
-    if (I->getName() == "setjmp" || I->getName() == "abort" ||
-        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
-        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
-        I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" || I->getName() == "malloc" ||
-        I->getName() == "free")
-      continue;
-
-    // Don't redeclare ispc's own intrinsics
-    std::string name = I->getName();
-    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
-        continue;
-
-    if (I->hasExternalWeakLinkage())
-      Out << "extern ";
-    printFunctionSignature(I, true);
-    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
-      Out << " __ATTRIBUTE_WEAK__";
-    if (I->hasExternalWeakLinkage())
-      Out << " __EXTERNAL_WEAK__";
-    if (StaticCtors.count(I))
-      Out << " __ATTRIBUTE_CTOR__";
-    if (StaticDtors.count(I))
-      Out << " __ATTRIBUTE_DTOR__";
-    if (I->hasHiddenVisibility())
-      Out << " __HIDDEN__";
-
-    if (I->hasName() && I->getName()[0] == 1)
-      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
-
-    Out << ";\n";
-  }
-  Out << "}\n";
 
   // Output the global variable declarations
   if (!M.global_empty()) {
@@ -2823,17 +2823,15 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
   printBranchToBlock(SI.getParent(), SI.getDefaultDest(), 2);
   Out << ";\n";
 
-  unsigned NumCases = SI.getNumCases();
+#ifdef LLVM_3_1svn
+  for (SwitchInst::CaseIt i = SI.caseBegin(), e = SI.caseEnd(); i != e; ++i) {
+    ConstantInt* CaseVal = i.getCaseValue();
+    BasicBlock* Succ = i.getCaseSuccessor();
+#else
   // Skip the first item since that's the default case.
-#ifdef LLVM_3_1svn
-  for (unsigned i = 0; i < NumCases; ++i) {
-#else
+  unsigned NumCases = SI.getNumCases();
   for (unsigned i = 1; i < NumCases; ++i) {
-#endif // LLVM_3_1svn
     ConstantInt* CaseVal = SI.getCaseValue(i);
-#ifdef LLVM_3_1svn
-    BasicBlock* Succ = SI.getCaseSuccessor(i);
-#else
     BasicBlock* Succ = SI.getSuccessor(i);
 #endif // LLVM_3_1svn
     Out << "  case ";
