@@ -2824,7 +2824,7 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
   Out << ";\n";
 
 #ifdef LLVM_3_1svn
-  for (SwitchInst::CaseIt i = SI.caseBegin(), e = SI.caseEnd(); i != e; ++i) {
+  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
     ConstantInt* CaseVal = i.getCaseValue();
     BasicBlock* Succ = i.getCaseSuccessor();
 #else
