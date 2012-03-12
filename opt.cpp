@@ -2964,7 +2964,7 @@ lSelectLoads(const std::vector<int64_t> &loadOffsets,
 
     std::set<int64_t>::iterator iter = allOffsets.begin();
     while (iter != allOffsets.end()) {
-        Debug(SourcePos(), "Load needed at %lld.", *iter);
+        Debug(SourcePos(), "Load needed at %" PRId64 ".", *iter);
         ++iter;
     }
 
@@ -3095,7 +3095,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
            int elementSize, llvm::Instruction *insertBefore) {
     Debug(SourcePos(), "Coalesce doing %d loads.", (int)loadOps.size());
     for (int i = 0; i < (int)loadOps.size(); ++i) {
-        Debug(SourcePos(), "Load #%d @ %lld, %d items", i, loadOps[i].start, 
+        Debug(SourcePos(), "Load #%d @ %" PRId64 ", %d items", i, loadOps[i].start, 
               loadOps[i].count);
 
         // basePtr is an i8 *, so the offset from it should be in terms of
@@ -3219,8 +3219,8 @@ lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load,
     for (int elt = 0; elt < 4; ++elt) {
         if (offsets[elt] >= load.start &&
             offsets[elt] < load.start + load.count) {
-            Debug(SourcePos(), "Load 1 @ %lld matches for element #%d (value %lld)",
-                  load.start, elt, offsets[elt]);
+            Debug(SourcePos(), "Load 1 @ %" PRId64 " matches for element #%d "
+                  "(value %" PRId64 ")", load.start, elt, offsets[elt]);
             // If this load gives one of the values that we need, then we
             // can just insert it in directly
             Assert(set[elt] == false);
@@ -3250,8 +3250,8 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
         if ((elt & 1) == 0 &&
             offsets[elt] + 1 == offsets[elt+1] &&
             offsets[elt] == load.start) {
-            Debug(SourcePos(), "Load 2 @ %lld matches for elements #%d,%d "
-                  "(values %lld,%lld)", load.start, elt, elt+1,
+            Debug(SourcePos(), "Load 2 @ %" PRId64 " matches for elements #%d,%d "
+                  "(values %" PRId64 ",%" PRId64 ")", load.start, elt, elt+1,
                   offsets[elt], offsets[elt+1]);
             Assert(set[elt] == false && set[elt+1] == false);
 
@@ -3280,8 +3280,8 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
         }
         else if (offsets[elt] >= load.start && 
                  offsets[elt] < load.start + load.count) {
-            Debug(SourcePos(), "Load 2 @ %lld matches for element #%d (value %lld)",
-                  load.start, elt, offsets[elt]);
+            Debug(SourcePos(), "Load 2 @ %" PRId64 " matches for element #%d "
+                  "(value %" PRId64 ")", load.start, elt, offsets[elt]);
             // Otherwise, insert one of the 32-bit pieces into an element
             // of the final vector
             Assert(set[elt] == false);
@@ -3317,8 +3317,8 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
     for (int elt = 0; elt < 4; ++elt) {
         if (offsets[elt] >= load.start && 
             offsets[elt] < load.start + load.count) {
-            Debug(SourcePos(), "Load 4 @ %lld matches for element #%d (value %lld)",
-                  load.start, elt, offsets[elt]);
+            Debug(SourcePos(), "Load 4 @ %" PRId64 " matches for element #%d "
+                  "(value %" PRId64 ")", load.start, elt, offsets[elt]);
             
             // If the current element falls within the range of locations
             // that the 4-wide load covers, then compute the appropriate
@@ -3352,8 +3352,8 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
-    Debug(SourcePos(), "Starting search for loads [%lld %lld %lld %lld].",
-          offsets[0], offsets[1], offsets[2], offsets[3]);
+    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" 
+          PRId64 " %" PRId64 "].", offsets[0], offsets[1], offsets[2], offsets[3]);
 
     // Track whether we have found a valid value for each of the four
     // elements of the result
@@ -3379,8 +3379,8 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
         }
     }
 
-    Debug(SourcePos(), "Done with search for loads [%lld %lld %lld %lld].",
-          offsets[0], offsets[1], offsets[2], offsets[3]);
+    Debug(SourcePos(), "Done with search for loads [%" PRId64 " %" PRId64 " %"
+          PRId64 " %" PRId64 "].", offsets[0], offsets[1], offsets[2], offsets[3]);
 
     for (int i = 0; i < 4; ++i)
         Assert(set[i] == true);
@@ -3409,8 +3409,8 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
         for (int elt = 0; elt < 4; ++elt) {
             if (offsets[elt] >= loadop.start && 
                 offsets[elt] < loadop.start + loadop.count) {
-                Debug(SourcePos(), "Load 4 @ %lld matches for element #%d (value %lld)",
-                      loadop.start, elt, offsets[elt]);
+                Debug(SourcePos(), "Load 4 @ %" PRId64 " matches for element #%d "
+                      "(value %" PRId64 ")", loadop.start, elt, offsets[elt]);
                 anyMatched = true;
                 Assert(set[elt] == false);
                 matchElements[elt] = offsets[elt] - loadop.start;
@@ -3492,8 +3492,8 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
-    Debug(SourcePos(), "Starting search for loads [%lld %lld %lld %lld].", 
-          offsets[0], offsets[1], offsets[2], offsets[3]);
+    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" 
+          PRId64 " %" PRId64 "].",  offsets[0], offsets[1], offsets[2], offsets[3]);
 
     // Track whether we have found a valid value for each of the four
     // elements of the result
@@ -3502,8 +3502,8 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
     result = lApplyLoad4s(result, loadOps, offsets, set, insertBefore);
     result = lApplyLoad12s(result, loadOps, offsets, set, insertBefore);
 
-    Debug(SourcePos(), "Done with search for loads [%lld %lld %lld %lld].", 
-          offsets[0], offsets[1], offsets[2], offsets[3]);
+    Debug(SourcePos(), "Done with search for loads [%" PRId64 " %" PRId64 " %"
+          PRId64 " %" PRId64 "].", offsets[0], offsets[1], offsets[2], offsets[3]);
 
     for (int i = 0; i < 4; ++i)
         Assert(set[i] == true);

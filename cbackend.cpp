@@ -1355,7 +1355,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         char Buffer[100];
 
         uint64_t ll = DoubleToBits(V);
-        sprintf(Buffer, "0x%"PRIx64, static_cast<long long>(ll));
+        sprintf(Buffer, "0x%"PRIx64, ll);
 
         std::string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);
