@@ -336,6 +336,131 @@ static inline uniform int lanemask() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// memcpy/memmove/memset
+
+static inline void memcpy(void * uniform dst, void * uniform src, 
+                          uniform int32 count) {
+    __memcpy32((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memcpy64(void * uniform dst, void * uniform src, 
+                          uniform int64 count) {
+    __memcpy64((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memcpy(void * varying dst, void * varying src, 
+                          int32 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memcpy32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memcpy64(void * varying dst, void * varying src, 
+                            int64 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memcpy64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memmove(void * uniform dst, void * uniform src, 
+                          uniform int32 count) {
+    __memmove32((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memmove64(void * uniform dst, void * uniform src, 
+                             uniform int64 count) {
+    __memmove64((int8 * uniform)dst, (int8 * uniform)src, count);
+}
+
+static inline void memmove(void * varying dst, void * varying src, 
+                          int32 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memmove32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memmove64(void * varying dst, void * varying src, 
+                             int64 count) {
+    void * uniform da[programCount];
+    void * uniform sa[programCount];
+
+    da[programIndex] = dst;
+    sa[programIndex] = src;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        void * uniform d = da[i], * uniform s = sa[i];
+        __memmove64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
+    }
+}
+
+static inline void memset(void * uniform ptr, uniform int8 val, 
+                          uniform int32 count) {
+    __memset32((int8 * uniform)ptr, val, count);
+}
+
+static inline void memset64(void * uniform ptr, uniform int8 val, 
+                          uniform int64 count) {
+    __memset64((int8 * uniform)ptr, val, count);
+}
+
+static inline void memset(void * varying ptr, int8 val, int32 count) {
+    void * uniform pa[programCount];
+    pa[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        __memset32((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+    }
+}
+
+static inline void memset64(void * varying ptr, int8 val, int64 count) {
+    void * uniform pa[programCount];
+    pa[programIndex] = ptr;
+
+    uniform int mask = lanemask();
+    for (uniform int i = 0; i < programCount; ++i) {
+        if ((mask & (1 << i)) == 0)
+            continue;
+        __memset64((int8 * uniform)pa[i], extract(val, i), extract(count, i));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
 // count leading/trailing zeros
 
 static inline uniform unsigned int32
@@ -446,8 +571,8 @@ count_trailing_zeros(int64 v) {
 // AOS/SOA conversion
 
 static inline void
-aos_to_soa3(uniform float a[], float * uniform v0, float * uniform v1, 
-            float * uniform v2) {
+aos_to_soa3(uniform float a[], varying float * uniform v0, 
+            varying float * uniform v1, varying float * uniform v2) {
     __aos_to_soa3_float(a, v0, v1, v2);
 }
 
@@ -457,8 +582,9 @@ soa_to_aos3(float v0, float v1, float v2, uniform float a[]) {
 }
 
 static inline void
-aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1, 
-            float * uniform v2, float * uniform v3) {
+aos_to_soa4(uniform float a[], varying float * uniform v0,
+            varying float * uniform v1, varying float * uniform v2,
+            varying float * uniform v3) {
     __aos_to_soa4_float(a, v0, v1, v2, v3);
 }
 
@@ -468,10 +594,10 @@ soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[]) {
 }
 
 static inline void
-aos_to_soa3(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
-            int32 * uniform v2) {
-    aos_to_soa3((uniform float * uniform)a, (float * uniform)v0, 
-                (float * uniform)v1, (float * uniform)v2);
+aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
+            varying int32 * uniform v1, varying int32 * uniform v2) {
+    aos_to_soa3((uniform float * uniform)a, (varying float * uniform)v0, 
+                (varying float * uniform)v1, (varying float * uniform)v2);
 }
 
 static inline void
@@ -481,10 +607,12 @@ soa_to_aos3(int32 v0, int32 v1, int32 v2, uniform int32 a[]) {
 }
 
 static inline void
-aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1, 
-            int32 * uniform v2, int32 * uniform v3) {
-    aos_to_soa4((uniform float * uniform)a, (float * uniform )v0, 
-                (float * uniform)v1, (float * uniform)v2, (float * uniform)v3);
+aos_to_soa4(uniform int32 a[], varying int32 * uniform v0, 
+            varying int32 * uniform v1, varying int32 * uniform v2, 
+            varying int32 * uniform v3) {
+    aos_to_soa4((uniform float * uniform)a, (varying float * uniform )v0, 
+                (varying float * uniform)v1, (varying float * uniform)v2, 
+                (varying float * uniform)v3);
 }
 
 static inline void
@@ -763,24 +891,24 @@ static unsigned int64 exclusive_scan_or(unsigned int64 v) {
 // packed load, store
 
 static inline uniform int 
-packed_load_active(uniform unsigned int * uniform a,
-                   unsigned int * uniform vals) {
+packed_load_active(uniform unsigned int a[],
+                   varying unsigned int * uniform vals) {
     return __packed_load_active(a, vals, (UIntMaskType)__mask);
 }
 
 static inline uniform int
-packed_store_active(uniform unsigned int * uniform a,
+packed_store_active(uniform unsigned int a[],
                     unsigned int vals) {
     return __packed_store_active(a, vals, (UIntMaskType)__mask);
 }
 
 static inline uniform int 
-packed_load_active(uniform int * uniform a, int * uniform vals) {
+packed_load_active(uniform int a[], varying int * uniform vals) {
     return __packed_load_active(a, vals, (IntMaskType)__mask);
 }
 
 static inline uniform int 
-packed_store_active(uniform int * uniform a, int vals) {
+packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
@@ -1630,7 +1758,7 @@ static inline uniform float ldexp(uniform float x, uniform int n) {
     return floatbits(ix);
 }
 
-static inline float frexp(float x, int * uniform pw2) {
+static inline float frexp(float x, varying int * uniform pw2) {
     unsigned int ex = 0x7F800000u;              // exponent mask
     unsigned int ix = intbits(x);
     ex &= ix;
@@ -1782,6 +1910,116 @@ static inline uniform float sin(uniform float x_full) {
 }
 
 
+static inline float asin(float x) {
+    bool isneg = x < 0;
+    x = abs(x);
+
+    bool isnan = (x > 1);
+
+    float v;
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
+        float ret;
+        uniform int mask = lanemask();
+        for (uniform int i = 0; i < programCount; ++i) {
+            if ((mask & (1 << i)) == 0)
+                continue;
+            uniform float r = __stdlib_asinf(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+    else if (__math_lib == __math_lib_ispc)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
+        //           [|single...|], [1e-20;.9999999999999999]);
+        // avg error: 8.5716801e-09, max error: 2.1373853e-07
+        v = 1.57079637050628662109375f + 
+            x * (-0.21460501849651336669921875f + 
+            x * (8.9116774499416351318359375e-2f + 
+            x * (-5.146093666553497314453125e-2f + 
+            x * (3.7269376218318939208984375e-2f + 
+            x * (-3.5882405936717987060546875e-2f + 
+            x * (4.14929799735546112060546875e-2f +
+            x * (-4.25077490508556365966796875e-2f +
+            x * (3.05023305118083953857421875e-2f + 
+            x * (-1.2897425331175327301025390625e-2f +
+            x * 2.38926825113594532012939453125e-3f)))))))));
+    else if (__math_lib == __math_lib_ispc_fast)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
+        //           [1e-20;.9999999999999999]);
+        // avg error: 1.1105439e-06, max error 1.3187528e-06
+        v = 1.57079517841339111328125f + 
+             x * (-0.21450997889041900634765625f + 
+             x * (8.78556668758392333984375e-2f + 
+             x * (-4.489909112453460693359375e-2f + 
+             x * (1.928029954433441162109375e-2f + 
+             x * (-4.3095736764371395111083984375e-3f)))));
+
+    v *= -sqrt(1.f - x);
+    v = v + 1.57079637050628662109375;
+    if (v < 0) v = 0;
+    // v = max(0, v);
+
+    if (isneg) v = -v;
+    if (isnan) v = floatbits(0x7fc00000);
+
+    return v;
+}
+
+
+static inline uniform float asin(uniform float x) {
+    uniform bool isneg = x < 0;
+    x = abs(x);
+
+    uniform bool isnan = (x > 1);
+
+    uniform float v;
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
+        return __stdlib_asinf(x);
+    }
+    else if (__math_lib == __math_lib_ispc)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5,6,7,8,9,10|],
+        //           [|single...|], [1e-20;.9999999999999999]);
+        // avg error: 8.5716801e-09, max error: 2.1373853e-07
+        v = 1.57079637050628662109375f + 
+            x * (-0.21460501849651336669921875f + 
+            x * (8.9116774499416351318359375e-2f + 
+            x * (-5.146093666553497314453125e-2f + 
+            x * (3.7269376218318939208984375e-2f + 
+            x * (-3.5882405936717987060546875e-2f + 
+            x * (4.14929799735546112060546875e-2f +
+            x * (-4.25077490508556365966796875e-2f +
+            x * (3.05023305118083953857421875e-2f + 
+            x * (-1.2897425331175327301025390625e-2f +
+            x * 2.38926825113594532012939453125e-3f)))))))));
+    else if (__math_lib == __math_lib_ispc_fast)
+        // sollya
+        // fpminimax(((asin(x)-pi/2)/-sqrt(1-x)), [|0,1,2,3,4,5|],[|single...|],
+        //           [1e-20;.9999999999999999]);
+        // avg error: 1.1105439e-06, max error 1.3187528e-06
+        v = 1.57079517841339111328125f + 
+             x * (-0.21450997889041900634765625f + 
+             x * (8.78556668758392333984375e-2f + 
+             x * (-4.489909112453460693359375e-2f + 
+             x * (1.928029954433441162109375e-2f + 
+             x * (-4.3095736764371395111083984375e-3f)))));
+
+    v *= -sqrt(1.f - x);
+    v = v + 1.57079637050628662109375;
+    if (v < 0) v = 0;
+    // v = max(0, v);
+
+    if (isneg) v = -v;
+    if (isnan) v = floatbits(0x7fc00000);
+
+    return v;
+}
+
+
 static inline float cos(float x_full) {
     if (__math_lib == __math_lib_svml) {
         return __svml_cos(x_full);
@@ -1909,8 +2147,18 @@ static inline uniform float cos(uniform float x_full) {
 }
 
 
-static inline void sincos(float x_full, float * uniform sin_result, 
-                          float * uniform cos_result) {
+static inline float acos(float v) {
+    return 1.57079637050628662109375 - asin(v);
+}
+
+
+static inline uniform float acos(uniform float v) {
+    return 1.57079637050628662109375 - asin(v);
+}
+
+
+static inline void sincos(float x_full, varying float * uniform sin_result, 
+                          varying float * uniform cos_result) {
     if (__math_lib == __math_lib_svml) {
         __svml_sincos(x_full, sin_result, cos_result);
     }
@@ -2507,8 +2755,8 @@ static inline uniform float exp(uniform float x_full) {
 // Range reduction for logarithms takes log(x) -> log(2^n * y) -> n
 // * log(2) + log(y) where y is the reduced range (usually in [1/2,
 // 1)).
-static inline void __range_reduce_log(float input, float * uniform reduced, 
-                                      int * uniform exponent) {
+static inline void __range_reduce_log(float input, varying float * uniform reduced, 
+                                      varying int * uniform exponent) {
     int int_version = intbits(input);
     // single precision = SEEE EEEE EMMM MMMM MMMM MMMM MMMM MMMM
     // exponent mask    = 0111 1111 1000 0000 0000 0000 0000 0000
@@ -2785,7 +3033,7 @@ static inline uniform double ldexp(uniform double x, uniform int n) {
     return doublebits(ix);
 }
 
-static inline double frexp(double x, int * uniform pw2) {
+static inline double frexp(double x, varying int * uniform pw2) {
     unsigned int64 ex = 0x7ff0000000000000;              // exponent mask
     unsigned int64 ix = intbits(x);
     ex &= ix;
@@ -2851,8 +3099,8 @@ static inline uniform double cos(uniform double x) {
         return __stdlib_cos(x);
 }
 
-static inline void sincos(double x, double * uniform sin_result,
-                          double * uniform cos_result) {
+static inline void sincos(double x, varying double * uniform sin_result,
+                          varying double * uniform cos_result) {
     if (__math_lib == __math_lib_ispc_fast) {
         float sr, cr;
         sincos((float)x, &sr, &cr);
@@ -3391,7 +3639,7 @@ struct RNGState {
     unsigned int z1, z2, z3, z4;
 };
 
-static inline unsigned int random(RNGState * uniform state)
+static inline unsigned int random(varying RNGState * uniform state)
 {
     unsigned int b;
 
@@ -3406,14 +3654,36 @@ static inline unsigned int random(RNGState * uniform state)
     return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
 }
 
-static inline float frandom(RNGState * uniform state)
+static inline uniform unsigned int random(uniform RNGState * uniform state)
+{
+    uniform unsigned int b;
+
+    b  = ((state->z1 << 6) ^ state->z1) >> 13;
+    state->z1 = ((state->z1 & 4294967294U) << 18) ^ b;
+    b  = ((state->z2 << 2) ^ state->z2) >> 27; 
+    state->z2 = ((state->z2 & 4294967288U) << 2) ^ b;
+    b  = ((state->z3 << 13) ^ state->z3) >> 21;
+    state->z3 = ((state->z3 & 4294967280U) << 7) ^ b;
+    b  = ((state->z4 << 3) ^ state->z4) >> 12;
+    state->z4 = ((state->z4 & 4294967168U) << 13) ^ b;
+    return (state->z1 ^ state->z2 ^ state->z3 ^ state->z4);
+}
+
+static inline float frandom(varying RNGState * uniform state)
 {
     unsigned int irand = random(state);
     irand &= (1<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
-static inline uniform unsigned int __seed4(RNGState * uniform state, 
+static inline uniform float frandom(uniform RNGState * uniform state)
+{
+    uniform unsigned int irand = random(state);
+    irand &= (1<<23)-1;
+    return floatbits(0x3F800000 | irand)-1.0f;
+}
+
+static inline uniform unsigned int __seed4(varying RNGState * uniform state, 
                                            uniform int start,
                                            uniform unsigned int seed) {
     uniform unsigned int c1 = 0xf0f0f0f0;
@@ -3447,7 +3717,8 @@ static inline uniform unsigned int __seed4(RNGState * uniform state,
     return seed;
 }
 
-static inline void seed_rng(uniform RNGState * uniform state, uniform unsigned int seed) {
+static inline void seed_rng(varying RNGState * uniform state, 
+                            uniform unsigned int seed) {
     if (programCount == 1) {
         state->z1 = seed;
         state->z2 = seed ^ 0xbeeff00d;
@@ -3467,6 +3738,16 @@ static inline void seed_rng(uniform RNGState * uniform state, uniform unsigned i
         }
     }
 }
+
+static inline void seed_rng(uniform RNGState * uniform state, 
+                            uniform unsigned int seed) {
+    state->z1 = seed;
+    state->z2 = seed ^ 0xbeeff00d;
+    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
+}
+
 
 static inline void fastmath() {
     __fastmath();

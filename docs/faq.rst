@@ -19,6 +19,7 @@ distribution.
   + `How can I supply an initial execution mask in the call from the application?`_
   + `How can I generate a single binary executable with support for multiple instruction sets?`_
   + `How can I determine at run-time which vector instruction set's instructions were selected to execute?`_
+  + `Is it possible to inline ispc functions in C/C++ code?`_
 
 * Programming Techniques
 
@@ -345,6 +346,50 @@ In a similar fashion, it's possible to find out at run-time the value of
 
     export uniform int width() { return programCount; }
 
+
+Is it possible to inline ispc functions in C/C++ code?
+------------------------------------------------------
+
+If you're willing to use the ``clang`` C/C++ compiler that's part of the
+LLVM tool suite, then it is possible to inline ``ispc`` code with C/C++
+(and conversely, to inline C/C++ calls in ``ispc``).  Doing so can provide
+performance advantages when calling out to short functions written in the
+"other" language.  Note that you don't need to use ``clang`` to compile all
+of your C/C++ code, but only for the files where you want to be able to
+inline.  In order to do this, you must have a full installation of LLVM
+version 3.0 or later, including the ``clang`` compiler.
+
+The basic approach is to have the various compilers emit LLVM intermediate
+representation (IR) code and to then use tools from LLVM to link together
+the IR from the compilers and then re-optimize it, which gives the LLVM
+optimizer the opportunity to do additional inlining and cross-function
+optimizations.  If you have source files ``foo.ispc`` and ``foo.cpp``,
+first emit LLVM IR:
+
+::
+
+   ispc --emit-llvm -o foo_ispc.bc foo.ispc
+   clang -O2 -c -emit-llvm -o foo_cpp.bc foo.cpp
+
+Next, link the two IR files into a single file and run the LLVM optimizer
+on the result:
+
+::
+  
+    llvm-link foo_ispc.bc foo_cpp.bc -o - | opt -O3 -o foo_opt.bc
+
+And finally, generate a native object file:
+
+::
+
+   llc -filetype=obj foo_opt.bc -o foo.o
+
+This file can in turn be linked in with the rest of your object files when
+linking your applicaiton.
+
+(Note that if you're using the AVX instruction set, you must provide the
+``-mattr=+avx`` flag to ``llc``.)
+    
 
 Programming Techniques
 ======================

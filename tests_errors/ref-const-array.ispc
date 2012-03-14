@@ -1,4 +1,4 @@
-// Can't assign to type "const int32" on left-hand side of expression
+// Can't assign to type "const varying int32" on left-hand side of expression
 
 const int x[20];
 

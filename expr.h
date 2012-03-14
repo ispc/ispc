@@ -299,7 +299,6 @@ public:
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
-    const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
     void Print() const;
     Expr *Optimize();

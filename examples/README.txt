@@ -39,9 +39,6 @@ example implementation of this function that counts the number of times the
 callback is made and records some statistics about control flow coherence
 is provided in the instrument.cpp file.
 
-*** Note: on Linux, this example currently hits an assertion in LLVM during
-*** compilation
-
 
 Deferred
 ========
@@ -108,6 +105,13 @@ Options
 
 This program implements both the Black-Scholes and Binomial options pricing
 models in both ispc and regular serial C++ code.
+
+
+Perfbench
+=========
+
+This runs a number of microbenchmarks to measure system performance and
+code generation quality.
 
 
 RT

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -141,16 +141,17 @@ devUsage(int ret) {
     printf("    [--fuzz-test]\t\t\tRandomly perturb program input to test error conditions\n");
     printf("    [--fuzz-seed=<value>]\t\tSeed value for RNG for fuzz testing\n");
     printf("    [--opt=<option>]\t\t\tSet optimization option\n");
-    printf("        disable-all-on-optimizations\n");
+    printf("        disable-all-on-optimizations\t\tDisable optimizations that take advantage of \"all on\" mask\n");
     printf("        disable-blended-masked-stores\t\tScalarize masked stores on SSE (vs. using vblendps)\n");
     printf("        disable-blending-removal\t\tDisable eliminating blend at same scope\n");
+    printf("        disable-coalescing\t\t\tDisable gather coalescing\n");
     printf("        disable-coherent-control-flow\t\tDisable coherent control flow optimizations\n");
     printf("        disable-gather-scatter-flattening\tDisable flattening when all lanes are on\n");
     printf("        disable-gather-scatter-optimizations\tDisable improvements to gather/scatter\n");
-    printf("        disable-handle-pseudo-memory-ops\n");
+    printf("        disable-handle-pseudo-memory-ops\tLeave __pseudo_* calls for gather/scatter/etc. in final IR\n");
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
-    printf("    [--yydebug]\t\t\tPrint debugging information during parsing\n");
+    printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
     exit(ret);
 }
 
@@ -222,8 +223,6 @@ int main(int Argc, char *Argv[]) {
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     LLVMInitializeX86TargetMC();
 #endif
-
-    AtomicType::Init();
 
     char *file = NULL;
     const char *headerFileName = NULL;
@@ -341,6 +340,8 @@ int main(int Argc, char *Argv[]) {
             // optimizations
             else if (!strcmp(opt, "disable-all-on-optimizations"))
                 g->opt.disableMaskAllOnOptimizations = true;
+            else if (!strcmp(opt, "disable-coalescing"))
+                g->opt.disableCoalescing = true;
             else if (!strcmp(opt, "disable-handle-pseudo-memory-ops"))
                 g->opt.disableHandlePseudoMemoryOps = true;
             else if (!strcmp(opt, "disable-blended-masked-stores"))

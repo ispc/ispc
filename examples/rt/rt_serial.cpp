@@ -123,9 +123,12 @@ static void generateRay(const float raster2camera[4][4],
     camy /= camw;
     camz /= camw;
 
-    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy + camera2world[0][2] * camz;
-    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy + camera2world[1][2] * camz;
-    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy + camera2world[2][2] * camz;
+    ray.dir.x = camera2world[0][0] * camx + camera2world[0][1] * camy +
+        camera2world[0][2] * camz;
+    ray.dir.y = camera2world[1][0] * camx + camera2world[1][1] * camy +
+        camera2world[1][2] * camz;
+    ray.dir.z = camera2world[2][0] * camx + camera2world[2][1] * camy +
+        camera2world[2][2] * camz;
 
     ray.origin.x = camera2world[0][3] / camera2world[3][3];
     ray.origin.y = camera2world[1][3] / camera2world[3][3];

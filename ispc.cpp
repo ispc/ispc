@@ -497,6 +497,7 @@ Opt::Opt() {
     disableMaskedStoreToStore = false;
     disableGatherScatterFlattening = false;
     disableUniformMemoryOptimizations = false;
+    disableCoalescing = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////

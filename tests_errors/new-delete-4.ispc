@@ -1,4 +1,4 @@
-// Type conversion only possible from atomic types
+// Type conversion from "varying struct P" to "varying unsigned int32" for item count is not possible
 
 struct P { int x; };
 

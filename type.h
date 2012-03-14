@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,11 +39,38 @@
 #define ISPC_TYPE_H 1
 
 #include "ispc.h"
+#include "util.h"
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
 
 class ConstExpr;
 class StructType;
+
+/** Types may have uniform, varying, SOA, or unbound variability; this
+    struct is used by Type implementations to record their variability. 
+*/
+struct Variability {
+    enum VarType { Unbound, Uniform, Varying, SOA };
+
+    Variability(VarType t = Unbound, int w = 0) : type(t), soaWidth(w) { }
+
+    bool operator==(const Variability &v) const { 
+        return v.type == type && v.soaWidth == soaWidth; 
+    }
+    bool operator!=(const Variability &v) const { 
+        return v.type != type || v.soaWidth != soaWidth;
+    }
+
+    bool operator==(const VarType &t) const { return type == t; }
+    bool operator!=(const VarType &t) const { return type != t; }
+
+    std::string GetString() const;
+    std::string MangleString() const;
+    
+    VarType type;
+    int soaWidth;
+};
+
 
 /** @brief Interface class that defines the type abstraction.
 
@@ -78,27 +105,32 @@ public:
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
-    /** Types may have uniform, varying, or not-yet-determined variability;
-        this enumerant is used by Type implementations to record their
-        variability. */
-    enum Variability {
-        Uniform,
-        Varying,
-        Unbound
-    };
-
     /** Returns the variability of the type. */
     virtual Variability GetVariability() const = 0;
 
     /** Returns true if the underlying type is uniform */
-    bool IsUniformType() const { return GetVariability() == Uniform; }
+    bool IsUniformType() const { 
+        return GetVariability() == Variability::Uniform; 
+    }
 
     /** Returns true if the underlying type is varying */
-    bool IsVaryingType() const { return GetVariability() == Varying; }
+    bool IsVaryingType() const { 
+        return GetVariability() == Variability::Varying; 
+    }
+
+    /** Returns true if the type is laid out in "structure of arrays"
+        layout. */
+    bool IsSOAType() const { return GetVariability() == Variability::SOA; }
+
+    /** Returns the structure of arrays width for SOA types.  This method
+        returns zero for types with non-SOA variability. */
+    int GetSOAWidth() const { return GetVariability().soaWidth; }
 
     /** Returns true if the underlying type's uniform/varying-ness is
         unbound. */
-    bool HasUnboundVariability() const { return GetVariability() == Unbound; }
+    bool HasUnboundVariability() const { 
+        return GetVariability() == Variability::Unbound; 
+    }
 
     /* Returns a type wherein any elements of the original type and
        contained types that have unbound variability have their variability
@@ -116,6 +148,8 @@ public:
     /** Get an instance of the type with unbound variability. */
     virtual const Type *GetAsUnboundVariabilityType() const = 0;
 
+    virtual const Type *GetAsSOAType(int width) const = 0;
+
     /** If this is a signed integer type, return the unsigned version of
         the type.  Otherwise, return the original type. */
     virtual const Type *GetAsUnsignedType() const;
@@ -128,10 +162,6 @@ public:
     /** If this is a reference type, returns the type it is referring to.
         For all other types, just returns its own type. */
     virtual const Type *GetReferenceTarget() const;
-
-    /** Return a new type representing the current type laid out in
-        width-wide SOA (structure of arrays) format. */
-    virtual const Type *GetSOAType(int width) const = 0;
 
     /** Get a const version of this type.  If it's already const, then the old 
         Type pointer is returned. */
@@ -196,6 +226,11 @@ public:
     static const Type *MoreGeneralType(const Type *type0, const Type *type1,
                                        SourcePos pos, const char *reason,
                                        bool forceVarying = false, int vecSize = 0);
+
+    /** Returns true if the given type is an atomic, enum, or pointer type
+        (i.e. not an aggregation of multiple instances of a type or
+        types.) */
+    static bool IsBasicType(const Type *type);
 };
 
 
@@ -223,9 +258,10 @@ public:
     const AtomicType *GetAsUniformType() const;
     const AtomicType *GetAsVaryingType() const;
     const AtomicType *GetAsUnboundVariabilityType() const;
+    const AtomicType *GetAsSOAType(int width) const;
+
     const AtomicType *ResolveUnboundVariability(Variability v) const;
     const AtomicType *GetAsUnsignedType() const;
-    const Type *GetSOAType(int width) const;
     const AtomicType *GetAsConstType() const;
     const AtomicType *GetAsNonConstType() const;
 
@@ -256,37 +292,20 @@ public:
 
     const BasicType basicType;
 
-    static const AtomicType *UniformBool, *VaryingBool, *UnboundBool;
-    static const AtomicType *UniformInt8, *VaryingInt8, *UnboundInt8;
-    static const AtomicType *UniformInt16, *VaryingInt16, *UnboundInt16;
-    static const AtomicType *UniformInt32, *VaryingInt32, *UnboundInt32;
-    static const AtomicType *UniformUInt8, *VaryingUInt8, *UnboundUInt8;
-    static const AtomicType *UniformUInt16, *VaryingUInt16, *UnboundUInt16;
-    static const AtomicType *UniformUInt32, *VaryingUInt32, *UnboundUInt32;
-    static const AtomicType *UniformFloat, *VaryingFloat, *UnboundFloat;
-    static const AtomicType *UniformInt64, *VaryingInt64, *UnboundInt64;
-    static const AtomicType *UniformUInt64, *VaryingUInt64, *UnboundUInt64;
-    static const AtomicType *UniformDouble, *VaryingDouble, *UnboundDouble;
-    static const AtomicType *UniformConstBool, *VaryingConstBool, *UnboundConstBool;
-    static const AtomicType *UniformConstInt8, *VaryingConstInt8, *UnboundConstInt8;
-    static const AtomicType *UniformConstInt16, *VaryingConstInt16, *UnboundConstInt16;
-    static const AtomicType *UniformConstInt32, *VaryingConstInt32, *UnboundConstInt32;
-    static const AtomicType *UniformConstUInt8, *VaryingConstUInt8, *UnboundConstUInt8;
-    static const AtomicType *UniformConstUInt16, *VaryingConstUInt16, *UnboundConstUInt16;
-    static const AtomicType *UniformConstUInt32, *VaryingConstUInt32, *UnboundConstUInt32;
-    static const AtomicType *UniformConstFloat, *VaryingConstFloat, *UnboundConstFloat;
-    static const AtomicType *UniformConstInt64, *VaryingConstInt64, *UnboundConstInt64;
-    static const AtomicType *UniformConstUInt64, *VaryingConstUInt64, *UnboundConstUInt64;
-    static const AtomicType *UniformConstDouble, *VaryingConstDouble, *UnboundConstDouble;
+    static const AtomicType *UniformBool, *VaryingBool;
+    static const AtomicType *UniformInt8, *VaryingInt8;
+    static const AtomicType *UniformInt16, *VaryingInt16;
+    static const AtomicType *UniformInt32, *VaryingInt32;
+    static const AtomicType *UniformUInt8, *VaryingUInt8;
+    static const AtomicType *UniformUInt16, *VaryingUInt16;
+    static const AtomicType *UniformUInt32, *VaryingUInt32;
+    static const AtomicType *UniformFloat, *VaryingFloat;
+    static const AtomicType *UniformInt64, *VaryingInt64;
+    static const AtomicType *UniformUInt64, *VaryingUInt64;
+    static const AtomicType *UniformDouble, *VaryingDouble;
     static const AtomicType *Void;
 
-    /** This function must be called before any of the above static const
-        AtomicType values is used; in practice, we do it early in
-        main(). */
-    static void Init();
-
 private:
-    static const AtomicType *typeTable[NUM_BASIC_TYPES][3][2];
     const Variability variability;
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
@@ -314,8 +333,9 @@ public:
     const EnumType *GetAsVaryingType() const;
     const EnumType *GetAsUniformType() const;
     const EnumType *GetAsUnboundVariabilityType() const;
+    const EnumType *GetAsSOAType(int width) const;
+
     const EnumType *ResolveUnboundVariability(Variability v) const;
-    const Type *GetSOAType(int width) const;
     const EnumType *GetAsConstType() const;
     const EnumType *GetAsNonConstType() const;
 
@@ -344,10 +364,29 @@ private:
 
 
 /** @brief Type implementation for pointers to other types
+
+    Pointers can have two additional properties beyond their variability
+    and the type of object that they are pointing to.  Both of these
+    properties are used for internal bookkeeping and aren't directly
+    accessible from the language.
+
+    - Slice: pointers that point to data with SOA layout have this
+      property--it indicates that the pointer has two components, where the
+      first (major) component is a regular pointer that points to an
+      instance of the soa<> type being indexed, and where the second
+      (minor) component is an integer that indicates which of the soa
+      slices in that instance the pointer points to.
+
+    - Frozen: only slice pointers may have this property--it indicates that
+      any further indexing calculations should only be applied to the major
+      pointer, and the value of the minor offset should be left unchanged.
+      Pointers to lvalues from structure member access have the frozen
+      property; see discussion in comments in the StructMemberExpr class.
  */
 class PointerType : public Type {
 public:
-    PointerType(const Type *t, Variability v, bool isConst);
+    PointerType(const Type *t, Variability v, bool isConst, 
+                bool isSlice = false, bool frozen = false);
 
     /** Helper method to return a uniform pointer to the given type. */
     static PointerType *GetUniform(const Type *t);
@@ -365,12 +404,20 @@ public:
     bool IsUnsignedType() const;
     bool IsConstType() const;
 
+    bool IsSlice() const { return isSlice; }
+    bool IsFrozenSlice() const { return isFrozen; }
+    const PointerType *GetAsSlice() const;
+    const PointerType *GetAsNonSlice() const;
+    const PointerType *GetAsFrozenSlice() const;
+    const StructType *GetSliceStructType() const;
+
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
     const PointerType *GetAsUniformType() const;
     const PointerType *GetAsUnboundVariabilityType() const;
+    const PointerType *GetAsSOAType(int width) const;
+
     const PointerType *ResolveUnboundVariability(Variability v) const;
-    const Type *GetSOAType(int width) const;
     const PointerType *GetAsConstType() const;
     const PointerType *GetAsNonConstType() const;
 
@@ -386,6 +433,7 @@ public:
 private:
     const Variability variability;
     const bool isConst;
+    const bool isSlice, isFrozen;
     const Type *baseType;
 };
 
@@ -463,10 +511,10 @@ public:
     const ArrayType *GetAsVaryingType() const;
     const ArrayType *GetAsUniformType() const;
     const ArrayType *GetAsUnboundVariabilityType() const;
+    const ArrayType *GetAsSOAType(int width) const;
     const ArrayType *ResolveUnboundVariability(Variability v) const;
 
     const ArrayType *GetAsUnsignedType() const;
-    const Type *GetSOAType(int width) const;
     const ArrayType *GetAsConstType() const;
     const ArrayType *GetAsNonConstType() const;
 
@@ -497,77 +545,10 @@ public:
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
 private:
-    friend class SOAArrayType;
     /** Type of the elements of the array. */
     const Type * const child;
     /** Number of elements in the array. */
     const int numElements;
-};
-
-
-/** @brief "Structure of arrays" array type.
-
-    This type represents an array with elements of a structure type,
-    "SOA-ized" to some width w.  This corresponds to replicating the struct
-    element types w times and then having an array of size/w of these
-    widened structs.  This memory layout often makes it possible to access
-    data with regular vector loads, rather than gathers that are needed
-    with "AOS" (array of structures) layout.
-
-    @todo Native support for SOA stuff is still a work in progres...
- */
-class SOAArrayType : public ArrayType {
-public:
-    /**
-       SOAType constructor.
-
-       @param elementType  Type of the array elements.  Must be a StructType.
-       @param numElements  Total number of elements in the array.  This
-                           parameter may be zero, in which case this is an
-                           "unsized" array type.  (Arrays of specific size
-                           can be converted to unsized arrays to be passed
-                           to functions that take array parameters, for
-                           example).
-       @param soaWidth     If non-zero, this gives the SOA width to use in
-                           laying out the array data in memory.  (This value
-                           must be a power of two).  For example, if the
-                           array's element type is: 
-                           <tt>struct { uniform float x, y, z; }</tt>,
-                           the SOA width is four, and the number of elements
-                           is 12, then the array will be laid out in memory
-                           as xxxxyyyyzzzzxxxxyyyyzzzzxxxxyyyyzzzz.
-    */
-    SOAArrayType(const StructType *elementType, int numElements, 
-                 int soaWidth);
-
-    const SOAArrayType *GetAsVaryingType() const;
-    const SOAArrayType *GetAsUniformType() const;
-    const SOAArrayType *GetAsUnboundVariabilityType() const;
-    const SOAArrayType *ResolveUnboundVariability(Variability v) const;
-
-    const Type *GetSOAType(int width) const;
-    const SOAArrayType *GetAsConstType() const;
-    const SOAArrayType *GetAsNonConstType() const;
-
-    std::string GetString() const;
-    std::string Mangle() const;
-    std::string GetCDeclaration(const std::string &name) const;
-
-    int TotalElementCount() const;
-
-    LLVM_TYPE_CONST llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
-    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-
-    SOAArrayType *GetSizedArray(int size) const;
-
-private:
-    /** This member variable records the rate at which the structure
-        elements are replicated. */
-    const int soaWidth;
-
-    /** Returns a regular ArrayType with the struct type's elements widened
-        out and with correspondingly fewer array elements. */
-    const ArrayType *soaType() const;
 };
 
 
@@ -598,9 +579,9 @@ public:
     const VectorType *GetAsVaryingType() const;
     const VectorType *GetAsUniformType() const;
     const VectorType *GetAsUnboundVariabilityType() const;
+    const VectorType *GetAsSOAType(int width) const;
     const VectorType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const VectorType *GetAsConstType() const;
     const VectorType *GetAsNonConstType() const;
 
@@ -648,9 +629,9 @@ public:
     const StructType *GetAsVaryingType() const;
     const StructType *GetAsUniformType() const;
     const StructType *GetAsUnboundVariabilityType() const;
+    const StructType *GetAsSOAType(int width) const;
     const StructType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const StructType *GetAsConstType() const;
     const StructType *GetAsNonConstType() const;
 
@@ -679,10 +660,14 @@ public:
     /** Returns the total number of elements in the structure. */
     int GetElementCount() const { return int(elementTypes.size()); }
 
+    SourcePos GetElementPosition(int i) const { return elementPositions[i]; }
+
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
 
 private:
+    static bool checkIfCanBeSOA(const StructType *st);
+
     const std::string name;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
@@ -724,9 +709,9 @@ public:
     const ReferenceType *GetAsVaryingType() const;
     const ReferenceType *GetAsUniformType() const;
     const ReferenceType *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
     const ReferenceType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const ReferenceType *GetAsConstType() const;
     const ReferenceType *GetAsNonConstType() const;
 
@@ -776,9 +761,9 @@ public:
     const Type *GetAsVaryingType() const;
     const Type *GetAsUniformType() const;
     const Type *GetAsUnboundVariabilityType() const;
+    const Type *GetAsSOAType(int width) const;
     const FunctionType *ResolveUnboundVariability(Variability v) const;
 
-    const Type *GetSOAType(int width) const;
     const Type *GetAsConstType() const;
     const Type *GetAsNonConstType() const;
 

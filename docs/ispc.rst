@@ -92,7 +92,9 @@ Contents:
     * `Reference Types`_
     * `Enumeration Types`_
     * `Short Vector Types`_
-    * `Struct and Array Types`_
+    * `Array Types`_
+    * `Struct Types`_
+    * `Structure of Array Types`_
 
   + `Declarations and Initializers`_
   + `Expressions`_
@@ -132,9 +134,13 @@ Contents:
 
     * `Reductions`_
 
-  + `Data Conversions And Storage`_
+  + `Data Movement`_
 
+    * `Setting and Copying Values In Memory`_
     * `Packed Load and Store Operations`_
+
+  + `Data Conversions`_
+
     * `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
     * `Conversions To and From Half-Precision Floats`_
 
@@ -150,7 +156,6 @@ Contents:
   + `Data Layout`_
   + `Data Alignment and Aliasing`_
   + `Restructuring Existing Programs to Use ISPC`_
-  + `Understanding How to Interoperate With the Application's Data`_
 
 * `Disclaimer and Legal Information`_
 
@@ -859,7 +864,9 @@ A variable that is declared with the ``uniform`` qualifier represents a
 single value that is shared across the entire gang.  (In contrast, the
 default variability qualifier for variables in ``ispc``, ``varying``,
 represents a variable that has a distinct storage location for each program
-instance in the gang.)
+instance in the gang.)  (Though see the discussion in `Struct Types`_ for
+some subtleties related to ``uniform`` and ``varying`` when used with
+structures.)
 
 It is an error to try to assign a ``varying`` value to a ``uniform``
 variable, though ``uniform`` values can be assigned to ``uniform``
@@ -1499,55 +1506,71 @@ Pointer Types
 
 It is possible to have pointers to data in memory; pointer arithmetic,
 changing values in memory with pointers, and so forth is supported as in C.
+As with other basic types, pointers can be both ``uniform`` and
+``varying``.  
+
+** Like other types in ``ispc``, pointers are ``varying`` by default, if an
+explicit ``uniform`` qualifier isn't provided.  However, the default
+variability of the pointed-to type is uniform. ** This rule will be
+illustrated and explained in examples below.
+
+For example, the ``ptr`` variable in the code below is a varying pointer to
+``uniform float`` values.  Each program instance has a separate pointer
+value and the assignment to ``*ptr`` generally represents a scatter to
+memory.
 
 ::
 
-    float a = 0;
-    float *pa = &a;
-    *pa = 1;  // now a == 1
+    uniform float a[] = ...;
+    int index = ...;
+    float * ptr = &a[index];
+    *ptr = 1;
 
+A ``uniform`` pointer can be declared with an appropriately-placed
+qualifier:
+
+::
+
+    float f = 0;
+    varying float * uniform pf = &f;  // uniform pointer to a varying float
+    *pf = 1;
+
+The placement of the ``uniform`` qualifier to declare a ``uniform`` pointer
+may be initially surprising, but it matches the form of how, for example, a
+pointer that is itself ``const`` (as opposed to pointing to a ``const``
+type) is declared in C.  (Reading the declaration from right to left gives
+its meaning: a uniform pointer to a float that is varying.)
+
+A subtlety comes in in cases like the where a uniform pointer points to a
+varying datatype.  In this case, each program instance accesses a distinct
+location in memory (because the underlying varying datatype is itself laid
+out with a separate location in memory for each program instance.)
+
+::
+
+    float a;
+    varying float * uniform pa = &a;
+    *pa = programIndex;  // same as (a = programIndex)
+    
 Also as in C, arrays are silently converted into pointers:
 
 ::
 
     float a[10] = { ... };
-    float *pa = a;     // pointer to first element of a
-    float *pb = a + 5; // pointer to 5th element of a
-
-As with other basic types, pointers can be both ``uniform`` and
-``varying``.  By default, they are varying.  The placement of the
-``uniform`` qualifier to declare a ``uniform`` pointer may be initially
-surprising, but it matches the form of how for example a pointer that is
-itself ``const`` (as opposed to pointing to a ``const`` type) is declared
-in C.
-
-::
-
-    uniform float f = 0;
-    uniform float * uniform pf = &f;
-    *pf = 1;
-
-A subtlety comes in when a uniform pointer points to a varying datatype.
-In this case, each program instance accesses a distinct location in memory
-(because the underlying varying datatype is itself laid out with a separate
-location in memory for each program instance.)
-
-::
-
-    float a;
-    float * uniform pa = &a;
-    *pa = programIndex;  // same as (a = programIndex)
-    
+    varying float * uniform pa = a;     // pointer to first element of a
+    varying float * uniform pb = a + 5; // pointer to 5th element of a
 
 Any pointer type can be explicitly typecast to another pointer type, as
 long as the source type isn't a ``varying`` pointer when the destination
-type is a ``uniform`` pointer.  Like other types, ``uniform`` pointers can
-be typecast to be ``varying`` pointers, however.
+type is a ``uniform`` pointer.
 
 ::
 
     float *pa = ...;
     int *pb = (int *)pa;  // legal, but beware
+
+Like other types, ``uniform`` pointers can be typecast to be ``varying``
+pointers, however.
 
 Any pointer type can be assigned to a ``void`` pointer without a type cast:
 
@@ -1815,20 +1838,19 @@ expressions:
     int8<2> bar = ...;
     foo.yz = bar;   // Error: can't assign to left-hand side of expression
 
-Struct and Array Types
-----------------------
 
-More complex data structures can be built using ``struct`` and arrays.
+Array Types
+-----------
+
+Arrays of any type can be declared just as in C and C++:
 
 ::
 
-    struct Foo {
-        float time;
-        int flags[10];
-    };
+    float a[10];
+    uniform int * varying b[20];
 
-Like in C, multidimensional arrays can be specified; the following declares
-an array of 5 arrays of 15 floats.
+Multidimensional arrays can be specified as arrays of arrays; the following
+declares an array of 5 arrays of 15 floats.
 
 ::
 
@@ -1843,6 +1865,27 @@ that functions can be declared to take "unsized arrays" as parameters:
 
     void foo(float array[], int length);
 
+Finally, the name of an array will be automatically implicitly converted to
+a uniform pointer to the array type if needed:
+
+::
+
+    int a[10];
+    int * uniform ap = a;
+ 
+
+Struct Types
+------------
+
+Aggregate data structures can be built using ``struct``.
+
+::
+
+    struct Foo {
+        float time;
+        int flags[10];
+    };
+
 As in C++, after a ``struct`` is declared, an instance can be created using
 the ``struct``'s name:
 
@@ -1855,6 +1898,131 @@ Alternatively, ``struct`` can be used before the structure name:
 ::
 
     struct Foo f;
+
+Members in a structure declaration may each have ``uniform`` or ``varying``
+qualifiers, or may have no rate qualifier, in which case their variability
+is initially "unbound".
+
+::
+
+    struct Bar {
+        uniform int a;
+        varying int b;
+        int c;
+    };
+
+
+In the declaration above, the variability of ``c`` is unbound.  The
+variability of struct members that are unbound is resolved when a struct is
+defined; if the ``struct`` is ``uniform``, then unbound members are
+``uniform``, and if the ``struct`` is ``varying``, then unbound members are
+varying.
+
+::
+
+    Bar vb;
+    uniform Bar ub;
+
+Here, ``b`` is a ``varying Bar`` (since ``varying`` is the default
+variability).  If ``Bar`` is defined as above, then ``vb.a`` is still a
+``uniform int``, since its varaibility was bound in the original
+declaration of the ``Bar`` type.  Similarly, ``vb.b`` is ``varying``.  The
+variability fo ``vb.c`` is ``varying``, since ``vb`` is ``varying``.
+
+(Similarly, ``ub.a`` is ``uniform``, ``ub.b`` is ``varying``, and ``ub.c``
+is ``uniform``.)
+
+In most cases, it's worthwhile to declare ``struct`` members with unbound
+variability so that all have the same variability for both ``uniform`` and
+``varying`` structs.  In particular, if a ``struct`` has a member with
+bound ``uniform`` type, it's not possible to index into an array of the
+struct type with a ``varying`` index.  Consider the following example:
+
+::
+
+    struct Foo { uniform int a; };
+    uniform Foo f[...] = ...;
+    int index = ...;
+    Foo fv = f[index];  // ERROR
+
+Here, the ``Foo`` type has a member with bound ``uniform`` variability.
+Because ``index`` has a different value for each program instance in the
+above code, the value of ``f[index]`` needs to be able to store a different
+value of ``Foo::a`` for each program instance.  However, a ``varying Foo``
+still has only a single ``a`` member, since ``a`` was declared with
+``uniform`` variability in the declaration of ``Foo``.  Therefore, the
+indexing operation in the last line results in an error.  
+
+
+Structure of Array Types
+------------------------
+
+If data can be laid out in memory so that the executing program instances
+access it via loads and stores of contiguous sections of memory, overall
+performance can be improved noticably.  One way to improve this memory
+access coherence is to lay out structures in "structure of arrays" (SOA)
+format in memory; the benefits from SOA layout are discussed in more detail
+in the `Use "Structure of Arrays" Layout When Possible`_ section in the
+ispc Performance Guide.
+
+.. _Use "Structure of Arrays" Layout When Possible: perf.html#use-structure-of-arrays-layout-when-possible
+
+``ispc`` provides two key language-level capabilities for laying out and
+accessing data in SOA format:
+
+* An ``soa`` keyword that transforms a regular ``struct`` into an SOA version
+  of the struct.
+* Array indexing syntax for SOA arrays that transparently handles SOA
+  indexing.
+
+As an example, consider a simple struct declaration:
+
+::
+
+    struct Point { float x, y, z; };
+
+With the ``soa`` rate qualifier, an array of SOA variants of this structure
+can be declared:
+
+::
+
+    soa<8> Point pts[...];
+
+The in-memory layout of the ``Point``s has had the SOA transformation
+applied, such that there are 8 ``x`` values in memory followed by 8 ``y``
+values, and so forth.  Here is the effective declaration of ``soa<8>
+Point``:
+
+::
+
+    struct { uniform float x[8], y[8], z[8]; };
+
+Given an array of SOA data, array indexing (and pointer arithmetic) is done
+so that the appropriate values from the SOA array are accessed.  For
+example, given:
+
+::
+
+    soa<8> Point pts[...];
+    uniform float x = pts[10].x;
+
+The generated code effectively accesses the second 8-wide SOA structure and
+then loads the third ``x`` value from it.  In general, one can write the
+same code to access arrays of SOA elements as one would write to access
+them in AOS layout.
+
+Note that it directly follows from SOA layout that the layout of a single
+element of the array isn't contiguous in memory--``pts[1].x`` and
+``pts[1].y`` are separated by 7 ``float`` values in the above example.
+
+There are a few limitations to the current implementation of SOA types in
+``ispc``; these may be relaxed in future releases:
+
+* It's illegal to typecast to ``soa`` data to ``void`` pointers.
+* Reference types are illegal in SOA structures
+* All members of SOA structures must have no rate qualifiers--specifically,
+  it's illegal to have an explicitly-qualified ``uniform`` or ``varying``
+  member of a structure that has ``soa`` applied to it.
 
 
 Declarations and Initializers
@@ -1992,7 +2160,7 @@ based on C++'s ``new`` and ``delete`` operators:
 ::
 
    int count = ...;
-   int *ptr = new uniform int[count];
+   int *ptr = new int[count];
    // use ptr...
    delete[] ptr;
 
@@ -2002,13 +2170,22 @@ that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
 serviced by corresponding calls the system C library's ``malloc()`` and
 ``free()`` functions.
 
+Note that the rules for ``uniform`` and ``varying`` for ``new`` are
+analogous to the corresponding rules are for pointers (as described in
+`Pointer Types`_.)  Specifically, if a specific rate qualifier isn't
+provided with the ``new`` expression, then the default is that a "varying"
+``new`` is performed, where each program instance performs a unique
+allocation.  The allocated type, in turn, is by default ``uniform`` for
+``varying`` ``new`` expressions, and ``varying`` for ``uniform`` new
+expressions.
+ 
 After a pointer has been deleted, it is illegal to access the memory it
-points to.  However, note that deletion happens on a per-program-instance
-basis.  In other words, consider the following code:
+points to.  However, that deletion happens on a per-program-instance basis.
+In other words, consider the following code:
 
 ::
 
-    int *ptr = new uniform int[count];
+    int *ptr = new int[count];
     // use ptr
     if (count > 1000)
         delete[] ptr;
@@ -2033,7 +2210,9 @@ gang of program instances.  A ``new`` statement can be qualified with
 While a regular call to ``new`` returns a ``varying`` pointer (i.e. a
 distinct pointer to separately-allocated memory for each program instance),
 a ``uniform new`` performs a single allocation and returns a ``uniform``
-pointer.
+pointer.  Recall that with a ``uniform`` ``new``, the default variability
+of the allocated type is ``varying``, so the above code is allocating an
+array of ten ``varying float`` values.
 
 When using ``uniform new``, it's important to be aware of a subtlety; if
 the returned pointer is stored in a varying pointer variable (as may be
@@ -2043,7 +2222,7 @@ statement, which is an error: effectively
 
 ::
 
-    float *ptr = uniform new float[10];
+    varying float * ptr = uniform new float[10];
     // use ptr...
     delete ptr;  // ERROR: varying pointer is deleted
 
@@ -2052,28 +2231,31 @@ executing program instance, which is an error (unless it happens that only
 a single program instance is active in the above code.)
 
 When using ``new`` statements, it's important to make an appropriate choice
-of ``uniform`` or ``varying`` (as always, the default), for both the
-``new`` operator itself as well as the type of data being allocated, based
-on the program's needs.  Consider the following four memory allocations:
+of ``uniform`` or ``varying``, for both the ``new`` operator itself as well
+as the type of data being allocated, based on the program's needs.
+Consider the following four memory allocations:
 
 ::
 
     uniform float * uniform p1 = uniform new uniform float[10];
     float * uniform p2 = uniform new float[10];
-    uniform float * p3 = new uniform float[10];
-    float * p4 = new float[10];
+    float * p3 = new float[10];
+    varying float * p4 = new varying float[10];
 
 Assuming that a ``float`` is 4 bytes in memory and if the gang size is 8
 program instances, then the first allocation represents a single allocation
-of 40 bytes, the second is a single allocation of 8*4*10 = 320 bytes, the
-third is 8 allocations of 40 bytes, and the last performs 8 allocations of
-80 bytes each.
+of 10 ``uniform float`` values (40 bytes), the second is a single
+allocation of 10 ``varying float`` values (8*4*10 = 320 bytes), the third
+is 8 allocations of 10 ``uniform float`` values (8 allocations of 40 bytes
+each), and the last performs 8 allocations of 320 bytes each.
 
 Note in particular that varying allocations of varying data types are rarely
 desirable in practice.  In that case, each program instance is performing a
 separate allocation of ``varying float`` memory.  In this case, it's likely
 that the program instances will only access a single element of each
-``varying float``, which is wasteful.
+``varying float``, which is wasteful.  (This in turn is partially why the
+allocated type is uniform by default with both pointers and ``new``
+statements.)
 
 Although ``ispc`` doesn't support constructors or destructors like C++, it
 is possible to provide initializer values with ``new`` statements:
@@ -2835,13 +3017,17 @@ architectures.
     float tan(float x)
     uniform float tan(uniform float x)
 
-Arctangent functions are also available:
+The corresponding inverse functions are also available:
 
 ::
 
+   float asin(float x)
+   uniform float asin(uniformfloat x)
+   float acos(float x)
+   uniform float acos(uniform float x)
    float atan(float x)
-   float atan2(float x, float y)
    uniform float atan(uniform float x)
+   float atan2(float x, float y)
    uniform float atan2(uniform float x, uniform float y)
 
 If both sine and cosine are needed, then the ``sincos()`` call computes
@@ -2850,7 +3036,7 @@ functions:
 
 ::
 
-    void sincos(float x, float * uniform s, float * uniform c)
+    void sincos(float x, varying float * uniform s, varying float * uniform c)
     void sincos(uniform float x, uniform float * uniform s,
                 uniform float * uniform c)
 
@@ -2876,7 +3062,7 @@ normalized exponent as a power of two in the ``pw2`` parameter.
 
     float ldexp(float x, int n)
     uniform float ldexp(uniform float x, uniform int n)
-    float frexp(float x, int * uniform pw2)
+    float frexp(float x, varying int * uniform pw2)
     uniform float frexp(uniform float x,
                         uniform int * uniform pw2)
 
@@ -2891,7 +3077,8 @@ library.  State for the RNG is maintained in an instance of the
 ::
 
     struct RNGState;
-    void seed_rng(RNGState * uniform state, uniform int seed)
+    void seed_rng(varying RNGState * uniform state, uniform int seed)
+    void seed_rng(uniform RNGState * uniform state, uniform int seed)
 
 After the RNG is seeded, the ``random()`` function can be used to get a
 pseudo-random ``unsigned int32`` value and the ``frandom()`` function can
@@ -2899,8 +3086,10 @@ be used to get a pseudo-random ``float`` value.
 
 ::
 
-    unsigned int32 random(RNGState * uniform state)
-    float frandom(RNGState * uniform state)
+    unsigned int32 random(varying RNGState * uniform state)
+    float frandom(varying RNGState * uniform state)
+    uniform unsigned int32 random(RNGState * uniform state)
+    uniform float frandom(uniform RNGState * uniform state)
 
 Output Functions
 ----------------
@@ -3202,8 +3391,52 @@ program instances into a compact output buffer is `discussed in the FAQ`_.
 .. _discussed in the FAQ: faq.html#how-can-a-gang-of-program-instances-generate-variable-amounts-of-output-efficiently
 
 
-Data Conversions And Storage
-----------------------------
+Data Movement
+-------------
+
+Setting and Copying Values In Memory
+------------------------------------
+
+There are a few functions for copying blocks of memory and initializing
+values in memory.  Along the lines of the equivalently-named routines in
+the C Standard libary, ``memcpy`` copies a given number of bytes starting
+from a source location in memory to a destination locaiton, where the two
+regions of memory are guaranteed by the caller to be non-overlapping.
+Alternatively, ``memmove`` can be used to copy data if the buffers may
+overlap.
+
+::
+
+    void memcpy(void * uniform dst, void * uniform src, uniform int32 count)
+    void memmove(void * uniform dst, void * uniform src, uniform int32 count)
+    void memcpy(void * varying dst, void * varying src, int32 count)
+    void memmove(void * varying dst, void * varying src, int32 count)
+
+Note that there are variants of these functions that take both ``uniform``
+and ``varying`` pointers.
+
+To initialize values in memory, the ``memset`` routine can be used.  (It
+also behaves like the function of the same name in the C Standard Library.)
+It sets the given number of bytes of memory starting at the given location
+to the value provided.
+
+::
+
+    void memset(void * uniform ptr, uniform int8 val, uniform int32 count)
+    void memset(void * varying ptr, int8 val, int32 count)
+
+There are also variants of all of these functions that take 64-bit values
+for the number of bytes of memory to operate on:
+
+::
+
+    void memcpy64(void * uniform dst, void * uniform src, uniform int64 count)
+    void memcpy64(void * varying dst, void * varying src, int64 count)
+    void memmove64(void * uniform dst, void * uniform src, uniform int64 count)
+    void memmove64(void * varying dst, void * varying src, int64 count)
+    void memset64(void * uniform ptr, uniform int8 val, uniform int64 count)
+    void memset64(void * varying ptr, int8 val, int64 count)
+
 
 Packed Load and Store Operations
 --------------------------------
@@ -3218,9 +3451,9 @@ variable.  They return the total number of values loaded.
 ::
 
     uniform int packed_load_active(uniform int * uniform base,
-                                   int * uniform val)
+                                   varying int * uniform val)
     uniform int packed_load_active(uniform unsigned int * uniform base,
-                                   unsigned int * uniform val)
+                                   varying unsigned int * uniform val)
 
 Similarly, the ``packed_store_active()`` functions store the ``val`` values
 for each program instances that executed the ``packed_store_active()``
@@ -3262,14 +3495,18 @@ of four negative values, and initializes the first four elements of
 indices where ``a[i]`` was less than zero.
 
 
+Data Conversions
+----------------
+
 Converting Between Array-of-Structures and Structure-of-Arrays Layout
 ---------------------------------------------------------------------
 
 Applications often lay data out in memory in "array of structures" form.
 Though convenient in C/C++ code, this layout can make ``ispc`` programs
 less efficient than they would be if the data was laid out in "structure of
-arrays" form.  (See the section `Understanding How to Interoperate With the
-Application's Data`_ for extended discussion of this topic.)
+arrays" form.  (See the section `Use "Structure of Arrays" Layout When
+Possible`_ in the performance guide for extended discussion of this topic.)
+
 
 The standard library does provide a few functions that efficiently convert
 between these two formats, for cases where it's not possible to change the
@@ -3309,10 +3546,10 @@ are both ``int32`` and ``float`` variants of this function:
 
 ::
 
-    void aos_to_soa3(uniform float a[], float * uniform v0, 
-                     float * uniform v1, float * uniform v2)
-    void aos_to_soa3(uniform int32 a[], int32 * uniform v0,
-                     int32 * uniform v1, int32 * uniform v2)
+    void aos_to_soa3(uniform float a[], varying float * uniform v0, 
+                     varying float * uniform v1, varying float * uniform v2)
+    void aos_to_soa3(uniform int32 a[], varying int32 * uniform v0,
+                     varying int32 * uniform v1, varying int32 * uniform v2)
 
 After computation is done, corresponding functions convert back from the
 SoA values in ``ispc`` ``varying`` variables and write the values back to
@@ -3341,10 +3578,12 @@ the given array, starting at the given offset.
 
 ::
 
-    void aos_to_soa4(uniform float a[], float * uniform v0, float * uniform v1,
-                     float * uniform v2, float * uniform v3)
-    void aos_to_soa4(uniform int32 a[], int32 * uniform v0, int32 * uniform v1,
-                     int32 * uniform v2, int32 * uniform v3)
+    void aos_to_soa4(uniform float a[], varying float * uniform v0,
+                     varying float * uniform v1, varying float * uniform v2,
+                     varying float * uniform v3)
+    void aos_to_soa4(uniform int32 a[], varying int32 * uniform v0,
+                     varying int32 * uniform v1, varying int32 * uniform v2,
+                     varying int32 * uniform v3)
     void soa_to_aos4(float v0, float v1, float v2, float v3, uniform float a[])
     void soa_to_aos4(int32 v0, int32 v1, int32 v2, int32 v3, uniform int32 a[])
 
@@ -3793,12 +4032,12 @@ equivalents of them.)  For example, given a structure in ``ispc``:
 
   // ispc code
   struct Node {
-     uniform int count;
-     uniform float pos[3];
+     int count;
+     float pos[3];
   };
 
-If the ``Node`` structure is used in the parameters to an ``export`` ed
-function, then the header file generated by the ``ispc`` compiler will
+If a ``uniform Node`` structure is used in the parameters to an ``export``
+ed function, then the header file generated by the ``ispc`` compiler will
 have a declaration like:
 
 ::
@@ -3814,9 +4053,9 @@ program instances, ``ispc`` prohibits any varying types from being used in
 parameters to functions with the ``export`` qualifier.  (``ispc`` also
 prohibits passing structures that themselves have varying types as members,
 etc.)  Thus, all datatypes that is shared with the application must have
-the ``uniform`` qualifier applied to them.  (See `Understanding How to
-Interoperate With the Application's Data`_ for more discussion of how to
-load vectors of SoA or AoSoA data from the application.)
+the ``uniform`` or ``soa`` rate qualifier applied to them.  (See `Use
+"Structure of Arrays" Layout When Possible`_ in the Performance Guide for
+more discussion of how to load vectors of SOA data from the application.)
 
 Similarly, ``struct`` types shared with the application can also have
 embedded pointers.
@@ -3834,7 +4073,7 @@ On the ``ispc`` side, the corresponding ``struct`` declaration is:
 
   // ispc
   struct Foo {
-      uniform float * uniform foo, * uniform bar;
+      float * uniform foo, * uniform bar;
   };
 
 There is one subtlety related to data layout to be aware of: ``ispc``
@@ -3910,156 +4149,6 @@ groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
 .. _ispc Performance Tuning Guide: http://ispc.github.com/perf.html
-
-Understanding How to Interoperate With the Application's Data
--------------------------------------------------------------
-
-One of ``ispc``'s key goals is to be able to interoperate with the
-application's data, in whatever layout it is stored in.  You don't need to
-worry about reformatting of data or the overhead of a driver model that
-abstracts the data layout.  This section illustrates some of the
-alternatives with a simple example of computing the length of a large
-number of vectors.
-
-Consider for starters a ``Vector`` data-type, defined in C as:
-
-::
-
-   struct Vector { float x, y, z; };
-
-We might have (still in C) an array of ``Vector`` s defined like this:
-
-::
-
-   Vector vectors[1024];
-
-This is called an "array of structures" (AoS) layout.  To compute the
-lengths of these vectors in parallel, you can write ``ispc`` code like
-this:
-
-::
-
-  export void length(Vector vectors[1024], uniform float len[]) {
-      foreach (index = 0 ... 1024) {
-          float x = vectors[index].x;
-          float y = vectors[index].y;
-          float z = vectors[index].z;
-          float l = sqrt(x*x + y*y + z*z);
-          len[index] = l;
-      }
-  }
-
-The problem with this implementation is that the indexing into the array of
-structures, ``vectors[index].x`` is relatively expensive.  On a target
-machine that supports four-wide Intel® SSE, this turns into four loads of
-single ``float`` values from non-contiguous memory locations, which are
-then packed into a four-wide register corresponding to ``float x``.  Once the
-values are loaded into the local ``x``, ``y``, and ``z`` variables,
-SIMD-efficient computation can proceed; getting to that point is
-relatively inefficient.
-
-(As described previously in `Converting Between Array-of-Structures and
-Structure-of-Arrays Layout`_, this computation could be written more
-efficiently using standard library routines to convert from the AoS layout,
-if we were given a flat array of ``float`` values.) 
-
-An alternative data layout would be the "structure of arrays" (SoA).  In C,
-the data would be declared as:
-
-::
-
-    float x[1024], y[1024], z[1024];
-
-The ``ispc`` code might be:
-
-::
-
-  export void length(uniform float x[1024], uniform float y[1024],
-                     uniform float z[1024], uniform float len[]) {
-      foreach (index = 0 ... 1024) {
-          float xx = x[index];
-          float yy = y[index];
-          float zz = z[index];
-          float l = sqrt(xx*xx + yy*yy + zz*zz);
-          len[index] = l;
-      }
-  }
-
-In this example, the loads into ``xx``, ``yy``, and ``zz`` are single
-vector loads of an entire gang's worth of values into the corresponding
-registers.  This processing is more efficient than the multiple scalar
-loads that are required with the AoS layout above.
-
-A final alternative is "array of structures of arrays" (AoSoA), a hybrid
-between these two.  A structure is declared that stores a small number of
-``x``, ``y``, and ``z`` values in contiguous memory locations:
-
-::
-
-  struct Vector16 {
-      float x[16], y[16], z[16];
-  };
-
-
-The ``ispc`` code has an outer loop over ``Vector16`` elements and
-then an inner loop that peels off values from the element members:
-
-::
-
-  #define N_VEC (1024/16)
-  export void length(Vector16 v[N_VEC], uniform float len[]) {
-      foreach (i = 0 ... N_VEC, j = 0 ... 16) {
-          float x = v[i].x[j];
-          float y = v[i].y[j];
-          float z = v[i].z[j];
-          float l = sqrt(x*x + y*y + z*z);
-          len[16*i+j] = l;
-          }
-      }
-  }
-
-One advantage of the AoSoA layout is that the memory accesses to load
-values are to nearby memory locations, where as with SoA, each of the three
-loads above is to locations separated by a few thousand bytes.  Thus, AoSoA
-can be more cache friendly.  For structures with many members, this
-difference can lead to a substantial improvement.
-
-With some additional complexity, ``ispc`` can also generate code that
-efficiently processes data in AoSoA layout where the inner array length is
-less than the machine vector width.  For example, consider doing
-computation with this AoSoA structure definition on a machine with an
-8-wide vector unit (for example, an Intel® AVX target):
-
-::
-
-  struct Vector4 {
-      float x[4], y[4], z[4];
-  };
-
-
-The ``ispc`` code to process this loads elements four at a time from
-``Vector4`` instances until it has a full ``programCount`` number of
-elements to work with and then proceeds with the computation.
-
-::
-
-  #define N_VEC (1024/4)
-  export void length(Vector4 v[N_VEC], uniform float len[]) {
-      for (uniform int i = 0; i < N_VEC; i += programCount / 4) {
-          float x, y, z;
-          for (uniform int j = 0; j < programCount / 4; ++j) {
-              if (programIndex >= 4 * j &&
-                  programIndex <  4 * (j+1)) {
-                  int index = (programIndex & 0x3);
-                  x = v[i+j].x[index];
-                  y = v[i+j].y[index];
-                  z = v[i+j].z[index];
-              }
-          }
-          float l = sqrt(x*x + y*y + z*z);
-          len[4*i + programIndex] = l;
-      }
-  }
 
 
 Disclaimer and Legal Information

@@ -1,13 +1,15 @@
 
 export uniform int width() { return programCount; }
 
-struct Foo { uniform float x; float y; };
+struct Foo { float x; float y; };
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
-    Foo foo[32];
-    for (uniform int i = 0; i < 32; ++i)
+    uniform Foo foo[32];
+    for (uniform int i = 0; i < 32; ++i) {
         foo[i].x = i;
+        foo[i].y = -1234 + i;
+    }
     varying Foo fv = foo[a];
     fv.x += 1000;
 //CO    print("fv.x = %\n", fv.x);

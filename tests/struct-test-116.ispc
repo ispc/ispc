@@ -3,8 +3,8 @@ export uniform int width() { return programCount; }
 
 
 struct Foo {
-    uniform float x;
-    uniform float f;
+    float x;
+    float f;
 };
 
 export void f_fi(uniform float RET[], uniform float aFOO[], uniform int bFOO[]) {

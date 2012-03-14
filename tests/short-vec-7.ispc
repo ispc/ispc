@@ -3,7 +3,7 @@ typedef int<4> int4;
 
 export uniform int width() { return programCount; }
 
-void incXY(int4 * uniform v) {
+void incXY(varying int4 * uniform v) {
     ++(*v).x;
     ++(*v).y;
 }

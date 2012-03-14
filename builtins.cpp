@@ -438,6 +438,12 @@ lSetInternalFunctions(llvm::Module *module) {
         "__max_varying_uint32",
         "__max_varying_uint64",
         "__memory_barrier",
+        "__memcpy32",
+        "__memcpy64",
+        "__memmove32",
+        "__memmove64",
+        "__memset32",
+        "__memset64",
         "__min_uniform_double",
         "__min_uniform_float",
         "__min_uniform_int32",
@@ -527,6 +533,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__sqrt_uniform_float",
         "__sqrt_varying_double",
         "__sqrt_varying_float",
+        "__stdlib_acosf",
+        "__stdlib_asinf",
         "__stdlib_atan",
         "__stdlib_atan2",
         "__stdlib_atan2f",
@@ -627,8 +635,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
                    SymbolTable *symbolTable) {
-    Symbol *pw = new Symbol(name, SourcePos(), AtomicType::UniformConstInt32,
-                            SC_STATIC);
+    Symbol *pw = 
+        new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
+                   SC_STATIC);
     pw->constValue = new ConstExpr(pw->type, val, SourcePos());
     LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
@@ -661,8 +670,9 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
-    Symbol *pidx = new Symbol("programIndex", SourcePos(), 
-                              AtomicType::VaryingConstInt32, SC_STATIC);
+    Symbol *pidx = 
+        new Symbol("programIndex", SourcePos(), 
+                   AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target.vectorWidth; ++i)

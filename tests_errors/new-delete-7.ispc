@@ -1,4 +1,4 @@
-// Can't convert from varying type "float" to uniform type "uniform float" for initializer
+// Can't convert from type "varying float" to type "uniform float" for initializer
 
 struct Point {
     uniform float x, y, z;

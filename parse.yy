@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -224,7 +224,7 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
-%type <type> type_specifier type_name rate_qualified_new_type
+%type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <atomicType> atomic_var_type_specifier
 
@@ -267,25 +267,30 @@ primary_expression
         }
     }
     | TOKEN_INT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt32, (int32_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT32_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt32, (uint32_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1); 
     }
     | TOKEN_INT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstInt64, (int64_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1); 
     }
     | TOKEN_UINT64_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstUInt64, (uint64_t)yylval.intVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1); 
     }
     | TOKEN_FLOAT_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformConstFloat, (float)yylval.floatVal, @1); 
+        $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
+                           (float)yylval.floatVal, @1); 
     }
     | TOKEN_TRUE {
-        $$ = new ConstExpr(AtomicType::UniformConstBool, true, @1);
+        $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
     }
     | TOKEN_FALSE {
-        $$ = new ConstExpr(AtomicType::UniformConstBool, false, @1);
+        $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), false, @1);
     }
     | TOKEN_NULL {
         $$ = new NullPointerExpr(@1);
@@ -471,25 +476,66 @@ rate_qualified_new
     | TOKEN_VARYING TOKEN_NEW { $$ = TYPEQUAL_VARYING; }
     ;
 
-rate_qualified_new_type
+rate_qualified_type_specifier
     : type_specifier { $$ = $1; }
-    | TOKEN_UNIFORM type_specifier { $$ = $2 ? $2->GetAsUniformType() : NULL; }
-    | TOKEN_VARYING type_specifier { $$ = $2 ? $2->GetAsVaryingType() : NULL; }
+    | TOKEN_UNIFORM type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else if (Type::Equal($2, AtomicType::Void)) {
+            Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
+            $$ = NULL;
+        }
+        else
+            $$ = $2->GetAsUniformType();
+    }
+    | TOKEN_VARYING type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else if (Type::Equal($2, AtomicType::Void)) {
+            Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
+            $$ = NULL;
+        }
+        else
+            $$ = $2->GetAsVaryingType();
+    }
+    | soa_width_specifier type_specifier
+    {
+        if ($2 == NULL)
+            $$ = NULL;
+        else {
+            int soaWidth = $1;
+            const StructType *st = dynamic_cast<const StructType *>($2);
+            if (st == NULL) {
+                Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
+                      $2->GetString().c_str());
+                $$ = NULL;
+            }
+            else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
+                Error(@1, "soa<%d> width illegal.  Value must be positive power "
+                      "of two.", soaWidth);
+                $$ = NULL;
+            }
+            else
+                $$ = st->GetAsSOAType(soaWidth);
+        }
+    }
     ;
 
 new_expression
     : conditional_expression
-    | rate_qualified_new rate_qualified_new_type
+    | rate_qualified_new rate_qualified_type_specifier
     {
-        $$ = new NewExpr($1, $2, NULL, NULL, @1, Union(@1, @2));
+        $$ = new NewExpr((int32_t)$1, $2, NULL, NULL, @1, Union(@1, @2));
     }
-    | rate_qualified_new rate_qualified_new_type '(' initializer_list ')'
+    | rate_qualified_new rate_qualified_type_specifier '(' initializer_list ')'
     {
-        $$ = new NewExpr($1, $2, $4, NULL, @1, Union(@1, @2));
+        $$ = new NewExpr((int32_t)$1, $2, $4, NULL, @1, Union(@1, @2));
     }
-    | rate_qualified_new rate_qualified_new_type '[' expression ']'
+    | rate_qualified_new rate_qualified_type_specifier '[' expression ']'
     {
-        $$ = new NewExpr($1, $2, NULL, $4, @1, Union(@1, @4));
+        $$ = new NewExpr((int32_t)$1, $2, NULL, $4, @1, Union(@1, @4));
     }
     ;
 
@@ -690,13 +736,13 @@ type_specifier
 
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
-    | TOKEN_BOOL { $$ = AtomicType::UnboundBool; }
-    | TOKEN_INT8 { $$ = AtomicType::UnboundInt8; }
-    | TOKEN_INT16 { $$ = AtomicType::UnboundInt16; }
-    | TOKEN_INT { $$ = AtomicType::UnboundInt32; }
-    | TOKEN_FLOAT { $$ = AtomicType::UnboundFloat; }
-    | TOKEN_DOUBLE { $$ = AtomicType::UnboundDouble; }
-    | TOKEN_INT64 { $$ = AtomicType::UnboundInt64; }
+    | TOKEN_BOOL { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT8 { $$ = AtomicType::UniformInt8->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT16 { $$ = AtomicType::UniformInt16->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT { $$ = AtomicType::UniformInt32->GetAsUnboundVariabilityType(); }
+    | TOKEN_FLOAT { $$ = AtomicType::UniformFloat->GetAsUnboundVariabilityType(); }
+    | TOKEN_DOUBLE { $$ = AtomicType::UniformDouble->GetAsUnboundVariabilityType(); }
+    | TOKEN_INT64 { $$ = AtomicType::UniformInt64->GetAsUnboundVariabilityType(); }
     ;
 
 short_vec_specifier
@@ -721,7 +767,7 @@ struct_or_union_specifier
               GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
                                            &elementPositions);
               StructType *st = new StructType($2, elementTypes, elementNames,
-                                              elementPositions, false, Type::Unbound, @2);
+                                              elementPositions, false, Variability::Unbound, @2);
               m->symbolTable->AddType($2, st, @2);
               $$ = st;
           }
@@ -738,7 +784,7 @@ struct_or_union_specifier
                                            &elementPositions);
               // FIXME: should be unbound
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
-                                  false, Type::Unbound, @1);
+                                  false, Variability::Unbound, @1);
           }
           else
               $$ = NULL;
@@ -803,16 +849,28 @@ specifier_qualifier_list
     | type_qualifier specifier_qualifier_list 
     {
         if ($2 != NULL) {
-            if ($1 == TYPEQUAL_UNIFORM)
-                $$ = $2->GetAsUniformType();
-            else if ($1 == TYPEQUAL_VARYING)
-                $$ = $2->GetAsVaryingType();
+            if ($1 == TYPEQUAL_UNIFORM) {
+                if (Type::Equal($2, AtomicType::Void)) {
+                    Error(@1, "\"uniform\" qualifier is illegal with \"void\" type.");
+                    $$ = NULL;
+                }
+                else
+                    $$ = $2->GetAsUniformType();
+            }
+            else if ($1 == TYPEQUAL_VARYING) {
+                if (Type::Equal($2, AtomicType::Void)) {
+                    Error(@1, "\"varying\" qualifier is illegal with \"void\" type.");
+                    $$ = NULL;
+                }
+                else
+                    $$ = $2->GetAsVaryingType();
+            }
             else if ($1 == TYPEQUAL_CONST)
                 $$ = $2->GetAsConstType();
             else if ($1 == TYPEQUAL_SIGNED) {
                 if ($2->IsIntType() == false) {
                     Error(@1, "Can't apply \"signed\" qualifier to \"%s\" type.",
-                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             }
@@ -822,7 +880,7 @@ specifier_qualifier_list
                     $$ = t;
                 else {
                     Error(@1, "Can't apply \"unsigned\" qualifier to \"%s\" type. Ignoring.",
-                          $2->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                          $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
                 }
             } 
@@ -954,7 +1012,7 @@ enumerator
           if ($1 != NULL && $3 != NULL &&
               lGetConstantInt($3, &value, @3, "Enumerator value")) {
               Symbol *sym = new Symbol($1, @1);
-              sym->constValue = new ConstExpr(AtomicType::UniformConstUInt32,
+              sym->constValue = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
                                               (uint32_t)value, @3);
               $$ = sym;
           }
@@ -1459,7 +1517,7 @@ foreach_tiled_scope
 foreach_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::VaryingConstInt32);
+        $$ = new Symbol(yytext, @1, AtomicType::VaryingInt32->GetAsConstType());
     }
     ;
 
@@ -1774,11 +1832,17 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         m->AddTypeDef(decl->GetSymbol());
     else {
         const Type *t = decl->GetType(ds);
-        if (t == NULL)
+        if (t == NULL) {
+            Assert(m->errorCount > 0);
             return;
+        }
 
         Symbol *sym = decl->GetSymbol();
-        Assert(sym != NULL);
+        if (sym == NULL) {
+            Assert(m->errorCount > 0);
+            return;
+        }
+
         const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
         if (ft != NULL) {
             sym->type = ft;
@@ -1790,7 +1854,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
             if (sym->type == NULL)
                 Assert(m->errorCount > 0);
             else
-                sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+                sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
             m->AddGlobalVariable(sym, decl->initExpr, isConst);
         }
@@ -1813,7 +1877,10 @@ lAddFunctionParams(Declarator *decl) {
     // walk down to the declarator for the function itself 
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
-    Assert(decl->kind == DK_FUNCTION);
+    if (decl->kind != DK_FUNCTION) {
+        Assert(m->errorCount > 0);
+        return;
+    }
 
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
@@ -1827,7 +1894,7 @@ lAddFunctionParams(Declarator *decl) {
         if (sym == NULL || sym->type == NULL)
             Assert(m->errorCount > 0);
         else {
-            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)
@@ -1846,7 +1913,8 @@ lAddFunctionParams(Declarator *decl) {
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
     const Type *t = g->target.maskBitCount == 1 ?
-        AtomicType::VaryingConstBool : AtomicType::VaryingConstUInt32;
+        AtomicType::VaryingBool : AtomicType::VaryingUInt32;
+    t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
     m->symbolTable->AddVariable(maskSymbol);
 }
@@ -1855,16 +1923,18 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
 /** Add the thread index and thread count variables to the symbol table
     (this should only be done for 'task'-qualified functions. */
 static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
-    Symbol *threadIndexSym = new Symbol("threadIndex", pos, AtomicType::UniformConstUInt32);
+    const Type *type = AtomicType::UniformUInt32->GetAsConstType();
+
+    Symbol *threadIndexSym = new Symbol("threadIndex", pos, type);
     m->symbolTable->AddVariable(threadIndexSym);
 
-    Symbol *threadCountSym = new Symbol("threadCount", pos, AtomicType::UniformConstUInt32);
+    Symbol *threadCountSym = new Symbol("threadCount", pos, type);
     m->symbolTable->AddVariable(threadCountSym);
 
-    Symbol *taskIndexSym = new Symbol("taskIndex", pos, AtomicType::UniformConstUInt32);
+    Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
     m->symbolTable->AddVariable(taskIndexSym);
 
-    Symbol *taskCountSym = new Symbol("taskCount", pos, AtomicType::UniformConstUInt32);
+    Symbol *taskCountSym = new Symbol("taskCount", pos, type);
     m->symbolTable->AddVariable(taskCountSym);
 }
 

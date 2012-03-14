@@ -6,7 +6,7 @@ struct Foo {
     uniform float b;
 };
 
-void update(float<3> * uniform vp) {
+void update(varying float<3> * uniform vp) {
     vp->x = 0;
 }
 

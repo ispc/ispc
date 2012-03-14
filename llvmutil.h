@@ -173,6 +173,14 @@ extern llvm::Constant *LLVMFloatVector(float f);
     across all elements */
 extern llvm::Constant *LLVMDoubleVector(double f);
 
+/** Returns a constant integer or vector (according to the given type) of
+    the given signed integer value. */
+extern llvm::Constant *LLVMIntAsType(int64_t, LLVM_TYPE_CONST llvm::Type *t);
+
+/** Returns a constant integer or vector (according to the given type) of
+    the given unsigned integer value. */
+extern llvm::Constant *LLVMUIntAsType(uint64_t, LLVM_TYPE_CONST llvm::Type *t);
+
 /** Returns an LLVM boolean vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
 extern llvm::Constant *LLVMBoolVector(const bool *v);

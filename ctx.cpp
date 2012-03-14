@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -246,7 +246,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
               launchGroupHandlePtr);
 
     const Type *returnType = function->GetReturnType();
-    if (!returnType || returnType == AtomicType::Void)
+    if (!returnType || Type::Equal(returnType, AtomicType::Void))
         returnValuePtr = NULL;
     else {
         LLVM_TYPE_CONST llvm::Type *ftype = returnType->LLVMType(g->ctx);
@@ -1144,7 +1144,7 @@ FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
     const Type *returnType = function->GetReturnType();
-    if (returnType == AtomicType::Void) {
+    if (Type::Equal(returnType, AtomicType::Void)) {
         if (expr != NULL)
             Error(expr->pos, "Can't return non-void type \"%s\" from void function.",
                   expr->GetType()->GetString().c_str());
@@ -1169,7 +1169,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
                     // values from other lanes that may have executed return
                     // statements previously.
                     StoreInst(retVal, returnValuePtr, GetInternalMask(), 
-                              PointerType::GetUniform(returnType));
+                              returnType, PointerType::GetUniform(returnType));
                 }
             }
         }
@@ -1904,17 +1904,146 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
 }
 
 
+void
+FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) {
+    LLVM_TYPE_CONST llvm::Type *type0 = (*v0)->getType();
+    LLVM_TYPE_CONST llvm::Type *type1 = (*v1)->getType();
+
+    // First, promote to a vector type if one of the two values is a vector
+    // type
+    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type0) &&
+        !llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type1)) {
+        *v1 = SmearUniform(*v1, "smear_v1");
+        type1 = (*v1)->getType();
+    }
+    if (!llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type0) &&
+        llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type1)) {
+        *v0 = SmearUniform(*v0, "smear_v0");
+        type0 = (*v0)->getType();
+    }
+
+    // And then update to match bit widths
+    if (type0 == LLVMTypes::Int32VectorType &&
+        type1 == LLVMTypes::Int64VectorType)
+        *v0 = SExtInst(*v0, LLVMTypes::Int64VectorType);
+    else if (type1 == LLVMTypes::Int32VectorType &&
+             type0 == LLVMTypes::Int64VectorType)
+        *v1 = SExtInst(*v1, LLVMTypes::Int64VectorType);
+}
+
+
+/** Given an integer index in indexValue that's indexing into an array of
+    soa<> structures with given soaWidth, compute the two sub-indices we
+    need to do the actual indexing calculation:
+
+    subIndices[0] = (indexValue >> log(soaWidth))
+    subIndices[1] = (indexValue & (soaWidth-1))
+ */
+static llvm::Value *
+lComputeSliceIndex(FunctionEmitContext *ctx, int soaWidth,
+                   llvm::Value *indexValue, llvm::Value *ptrSliceOffset, 
+                   llvm::Value **newSliceOffset) {
+    // Compute the log2 of the soaWidth.
+    Assert(soaWidth > 0);
+    int logWidth = 0, sw = soaWidth;
+    while (sw > 1) {
+        ++logWidth;
+        sw >>= 1;
+    }
+    Assert((1 << logWidth) == soaWidth);
+
+    ctx->MatchIntegerTypes(&indexValue, &ptrSliceOffset);
+
+    LLVM_TYPE_CONST llvm::Type *indexType = indexValue->getType();
+    llvm::Value *shift = LLVMIntAsType(logWidth, indexType);
+    llvm::Value *mask = LLVMIntAsType(soaWidth-1, indexType);
+
+    llvm::Value *indexSum = 
+        ctx->BinaryOperator(llvm::Instruction::Add, indexValue, ptrSliceOffset,
+                            "index_sum");
+
+    // minor index = (index & (soaWidth - 1))
+    *newSliceOffset = ctx->BinaryOperator(llvm::Instruction::And, indexSum,
+                                          mask, "slice_index_minor");
+    // slice offsets are always 32 bits...
+    if ((*newSliceOffset)->getType() == LLVMTypes::Int64Type)
+        *newSliceOffset = ctx->TruncInst(*newSliceOffset, LLVMTypes::Int32Type);
+    else if ((*newSliceOffset)->getType() == LLVMTypes::Int64VectorType)
+        *newSliceOffset = ctx->TruncInst(*newSliceOffset, LLVMTypes::Int32VectorType);
+
+    // major index = (index >> logWidth)
+    return ctx->BinaryOperator(llvm::Instruction::AShr, indexSum,
+                               shift, "slice_index_major");
+}
+
+
+llvm::Value *
+FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
+    // Create a small struct where the first element is the type of the
+    // given pointer and the second element is the type of the offset
+    // value.
+    std::vector<LLVM_TYPE_CONST llvm::Type *> eltTypes;
+    eltTypes.push_back(ptr->getType());
+    eltTypes.push_back(offset->getType());
+    LLVM_TYPE_CONST llvm::StructType *st = 
+        llvm::StructType::get(*g->ctx, eltTypes);
+
+    llvm::Value *ret = llvm::UndefValue::get(st);
+    ret = InsertInst(ret, ptr, 0);
+    ret = InsertInst(ret, offset, 1);
+    return ret;
+}
+
+
 llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index, 
-                                       const Type *ptrType, const char *name) {
+                                       const Type *ptrRefType, const char *name) {
     if (basePtr == NULL || index == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    if (dynamic_cast<const ReferenceType *>(ptrType) != NULL)
-        ptrType = PointerType::GetUniform(ptrType->GetReferenceTarget());
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
+    // Regularize to a standard pointer type for basePtr's type
+    const PointerType *ptrType;
+    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+    else {
+        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        Assert(ptrType != NULL);
+    }
+
+    if (ptrType->IsSlice()) {
+        Assert(llvm::isa<LLVM_TYPE_CONST llvm::StructType>(basePtr->getType()));
+
+        llvm::Value *ptrSliceOffset = ExtractInst(basePtr, 1);
+        if (ptrType->IsFrozenSlice() == false) {
+            // For slice pointers that aren't frozen, we compute a new
+            // index based on the given index plus the offset in the slice
+            // pointer.  This gives us an updated integer slice index for
+            // the resulting slice pointer and then an index to index into
+            // the soa<> structs with.
+            llvm::Value *newSliceOffset;
+            int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
+            index = lComputeSliceIndex(this, soaWidth, index, 
+                                       ptrSliceOffset, &newSliceOffset);
+            ptrSliceOffset = newSliceOffset;
+        }
+
+        // Handle the indexing into the soa<> structs with the major
+        // component of the index through a recursive call
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index,
+                                           ptrType->GetAsNonSlice(), name);
+
+        // And mash the results together for the return value
+        return MakeSlicePointer(p, ptrSliceOffset);
+    }
+
+    // Double-check consistency between the given pointer type and its LLVM
+    // type.
+    if (ptrType->IsUniformType())
+        Assert(llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(basePtr->getType()));
+    else if (ptrType->IsVaryingType())
+        Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(basePtr->getType()));
 
     bool indexIsVaryingType = 
         llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index->getType());
@@ -1943,16 +2072,41 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
 
 llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0, 
-                                       llvm::Value *index1, const Type *ptrType,
+                                       llvm::Value *index1, const Type *ptrRefType,
                                        const char *name) {
     if (basePtr == NULL || index0 == NULL || index1 == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    if (dynamic_cast<const ReferenceType *>(ptrType) != NULL)
-        ptrType = PointerType::GetUniform(ptrType->GetReferenceTarget());
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
+    // Regaularize the pointer type for basePtr
+    const PointerType *ptrType = NULL;
+    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+    else {
+        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        Assert(ptrType != NULL);
+    }
+
+    if (ptrType->IsSlice()) {
+        // Similar to the 1D GEP implementation above, for non-frozen slice
+        // pointers we do the two-step indexing calculation and then pass
+        // the new major index on to a recursive GEP call.
+        Assert(llvm::isa<LLVM_TYPE_CONST llvm::StructType>(basePtr->getType()));
+        llvm::Value *ptrSliceOffset = ExtractInst(basePtr, 1);
+        if (ptrType->IsFrozenSlice() == false) {
+            llvm::Value *newSliceOffset;
+            int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
+            index1 = lComputeSliceIndex(this, soaWidth, index1,
+                                        ptrSliceOffset, &newSliceOffset);
+            ptrSliceOffset = newSliceOffset;
+        }
+
+        llvm::Value *p = GetElementPtrInst(ExtractInst(basePtr, 0), index0,
+                                           index1, ptrType->GetAsNonSlice(), 
+                                           name);
+        return MakeSlicePointer(p, ptrSliceOffset);
+    }
 
     bool index0IsVaryingType = 
         llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(index0->getType());
@@ -2000,62 +2154,113 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
 
 
 llvm::Value *
-FunctionEmitContext::AddElementOffset(llvm::Value *basePtr, int elementNum,
-                                      const Type *ptrType, const char *name) {
-    if (ptrType == NULL || ptrType->IsUniformType() ||
-        dynamic_cast<const ReferenceType *>(ptrType) != NULL) {
-        // If the pointer is uniform or we have a reference (which is a
-        // uniform pointer in the end), we can use the regular LLVM GEP.
+FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
+                                      const Type *ptrRefType, const char *name,
+                                      const PointerType **resultPtrType) {
+    if (resultPtrType != NULL)
+        Assert(ptrRefType != NULL);
+
+    // (Unfortunately) it's not required to pass a non-NULL ptrRefType, but
+    // if we have one, regularize into a pointer type.
+    const PointerType *ptrType = NULL;
+    if (ptrRefType != NULL) {
+        // Normalize references to uniform pointers
+        if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+            ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+        else
+            ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        Assert(ptrType != NULL);
+    }
+
+    // Similarly, we have to see if the pointer type is a struct to see if
+    // we have a slice pointer instead of looking at ptrType; this is also
+    // unfortunate...
+    llvm::Value *basePtr = fullBasePtr;
+    bool baseIsSlicePtr = 
+        llvm::isa<LLVM_TYPE_CONST llvm::StructType>(fullBasePtr->getType());
+    const PointerType *rpt;
+    if (baseIsSlicePtr) {
+        Assert(ptrType != NULL);
+        // Update basePtr to just be the part that actually points to the
+        // start of an soa<> struct for now; the element offset computation
+        // doesn't change the slice offset, so we'll incorporate that into
+        // the final value right before this method returns.
+        basePtr = ExtractInst(fullBasePtr, 0);
+        if (resultPtrType == NULL)
+            resultPtrType = &rpt;
+    }
+
+    // Return the pointer type of the result of this call, for callers that
+    // want it.
+    if (resultPtrType != NULL) {
+        Assert(ptrType != NULL);
+        const CollectionType *ct = 
+            dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+        Assert(ct != NULL);
+        *resultPtrType = new PointerType(ct->GetElementType(elementNum),
+                                         ptrType->GetVariability(),
+                                         ptrType->IsConstType(),
+                                         ptrType->IsSlice());
+    }
+
+    llvm::Value *resultPtr = NULL;
+    if (ptrType == NULL || ptrType->IsUniformType()) {
+        // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = { LLVMInt32(0), LLVMInt32(elementNum) };
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
-        return llvm::GetElementPtrInst::Create(basePtr, arrayRef,
-                                               name ? name : "struct_offset", bblock);
+        resultPtr = 
+            llvm::GetElementPtrInst::Create(basePtr, arrayRef,
+                                            name ? name : "struct_offset", bblock);
 #else
-        return llvm::GetElementPtrInst::Create(basePtr, &offsets[0], &offsets[2],
-                                               name ? name : "struct_offset", bblock);
+        resultPtr =
+            llvm::GetElementPtrInst::Create(basePtr, &offsets[0], &offsets[2],
+                                            name ? name : "struct_offset", bblock);
 #endif
-
     }
-
-    if (dynamic_cast<const ReferenceType *>(ptrType) != NULL)
-        ptrType = PointerType::GetUniform(ptrType->GetReferenceTarget());
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
-
-    // Otherwise do the math to find the offset and add it to the given
-    // varying pointers
-    const StructType *st = 
-        dynamic_cast<const StructType *>(ptrType->GetBaseType());
-    llvm::Value *offset = NULL;
-    if (st != NULL)
-        // If the pointer is to a structure, Target::StructOffset() gives
-        // us the offset in bytes to the given element of the structure
-        offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum,
-                                        bblock);
     else {
-        // Otherwise we should have a vector or array here and the offset
-        // is given by the element number times the size of the element
-        // type of the vector.
-        const SequentialType *st = 
-            dynamic_cast<const SequentialType *>(ptrType->GetBaseType());
-        Assert(st != NULL);
-        llvm::Value *size = 
-            g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
-        llvm::Value *scale = (g->target.is32Bit || g->opt.force32BitAddressing) ?
-            LLVMInt32(elementNum) : LLVMInt64(elementNum);
-        offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
+        // Otherwise do the math to find the offset and add it to the given
+        // varying pointers
+        const StructType *st = 
+            dynamic_cast<const StructType *>(ptrType->GetBaseType());
+        llvm::Value *offset = NULL;
+        if (st != NULL)
+            // If the pointer is to a structure, Target::StructOffset() gives
+            // us the offset in bytes to the given element of the structure
+            offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum,
+                                            bblock);
+        else {
+            // Otherwise we should have a vector or array here and the offset
+            // is given by the element number times the size of the element
+            // type of the vector.
+            const SequentialType *st = 
+                dynamic_cast<const SequentialType *>(ptrType->GetBaseType());
+            Assert(st != NULL);
+            llvm::Value *size = 
+                g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
+            llvm::Value *scale = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+                LLVMInt32(elementNum) : LLVMInt64(elementNum);
+            offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
+        }
+
+        offset = SmearUniform(offset, "offset_smear");
+
+        if (g->target.is32Bit == false && g->opt.force32BitAddressing == true)
+            // If we're doing 32 bit addressing with a 64 bit target, although
+            // we did the math above in 32 bit, we need to go to 64 bit before
+            // we add the offset to the varying pointers.
+            offset = SExtInst(offset, LLVMTypes::Int64VectorType, "offset_to_64");
+
+        resultPtr = BinaryOperator(llvm::Instruction::Add, basePtr, offset, 
+                                   "struct_ptr_offset");
     }
 
-    offset = SmearUniform(offset, "offset_smear");
-
-    if (g->target.is32Bit == false && g->opt.force32BitAddressing == true)
-        // If we're doing 32 bit addressing with a 64 bit target, although
-        // we did the math above in 32 bit, we need to go to 64 bit before
-        // we add the offset to the varying pointers.
-        offset = SExtInst(offset, LLVMTypes::Int64VectorType, "offset_to_64");
-
-    return BinaryOperator(llvm::Instruction::Add, basePtr, offset, 
-                          "struct_ptr_offset");
+    // Finally, if had a slice pointer going in, mash back together with
+    // the original (unchanged) slice offset.
+    if (baseIsSlicePtr)
+        return MakeSlicePointer(resultPtr, ExtractInst(fullBasePtr, 1));
+    else
+        return resultPtr;
 }
     
 
@@ -2085,43 +2290,124 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
 }
 
 
+/** Given a slice pointer to soa'd data that is a basic type (atomic,
+    pointer, or enum type), use the slice offset to compute pointer(s) to
+    the appropriate individual data element(s).
+ */
+static llvm::Value *
+lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr,
+                  const PointerType **ptrType) {
+    Assert(dynamic_cast<const PointerType *>(*ptrType) != NULL);
+
+    llvm::Value *slicePtr = ctx->ExtractInst(ptr, 0, "slice_ptr");
+    llvm::Value *sliceOffset = ctx->ExtractInst(ptr, 1, "slice_offset");
+
+    // slicePtr should be a pointer to an soa-width wide array of the
+    // final atomic/enum/pointer type
+    const Type *unifBaseType = (*ptrType)->GetBaseType()->GetAsUniformType();
+    Assert(Type::IsBasicType(unifBaseType));
+
+    // The final pointer type is a uniform or varying pointer to the
+    // underlying uniform type, depending on whether the given pointer is
+    // uniform or varying.
+    *ptrType = (*ptrType)->IsUniformType() ? 
+        PointerType::GetUniform(unifBaseType) : 
+        PointerType::GetVarying(unifBaseType);
+
+    // For uniform pointers, bitcast to a pointer to the uniform element
+    // type, so that the GEP below does the desired indexing
+    if ((*ptrType)->IsUniformType())
+        slicePtr = ctx->BitCastInst(slicePtr, (*ptrType)->LLVMType(g->ctx));
+
+    // And finally index based on the slice offset
+    return ctx->GetElementPtrInst(slicePtr, sliceOffset, *ptrType,
+                                  "final_slice_gep");
+}
+
+
+/** Utility routine that loads from a uniform pointer to soa<> data,
+    returning a regular uniform (non-SOA result).
+ */
+llvm::Value *
+FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
+                                        const PointerType *ptrType,
+                                        const char *name) {
+    const Type *unifType = ptrType->GetBaseType()->GetAsUniformType();
+
+    const CollectionType *ct = 
+        dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+    if (ct != NULL) {
+        // If we have a struct/array, we need to decompose it into
+        // individual element loads to fill in the result structure since
+        // the SOA slice of values we need isn't contiguous in memory...
+        LLVM_TYPE_CONST llvm::Type *llvmReturnType = unifType->LLVMType(g->ctx);
+        llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
+
+        for (int i = 0; i < ct->GetElementCount(); ++i) {
+            const PointerType *eltPtrType;
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType, 
+                                                   "elt_offset", &eltPtrType);
+            llvm::Value *eltValue = LoadInst(eltPtr, mask, eltPtrType, name);
+            retValue = InsertInst(retValue, eltValue, i, "set_value");
+        }
+
+        return retValue;
+    }
+    else {
+        // Otherwise we've made our way to a slice pointer to a basic type;
+        // we need to apply the slice offset into this terminal SOA array
+        // and then perform the final load
+        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        return LoadInst(ptr, mask, ptrType, name);
+    }
+}
+
+
 llvm::Value *
 FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
-                              const Type *ptrType, const char *name) {
+                              const Type *ptrRefType, const char *name) {
     if (ptr == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    Assert(ptrType != NULL && mask != NULL);
+    Assert(ptrRefType != NULL && mask != NULL);
 
-    if (dynamic_cast<const ReferenceType *>(ptrType) != NULL)
-        ptrType = PointerType::GetUniform(ptrType->GetReferenceTarget());
-
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
+    const PointerType *ptrType;
+    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+    else {
+        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        Assert(ptrType != NULL);
+    }
 
     if (ptrType->IsUniformType()) {
-        // FIXME: same issue as above load inst regarding alignment...
-        //
-        // If the ptr is a straight up regular pointer, then just issue
-        // a regular load.  First figure out the alignment; in general we
-        // can just assume the natural alignment (0 here), but for varying
-        // atomic types, we need to make sure that the compiler emits
-        // unaligned vector loads, so we specify a reduced alignment here.
-        int align = 0;
-        const AtomicType *atomicType = 
-            dynamic_cast<const AtomicType *>(ptrType->GetBaseType());
-        if (atomicType != NULL && atomicType->IsVaryingType())
-            // We actually just want to align to the vector element
-            // alignment, but can't easily get that here, so just tell LLVM
-            // it's totally unaligned.  (This shouldn't make any difference
-            // vs the proper alignment in practice.)
-            align = 1;
-        llvm::Instruction *inst = new llvm::LoadInst(ptr, name ? name : "load",
-                                                     false /* not volatile */,
-                                                     align, bblock);
-        AddDebugPos(inst);
-        return inst;
+        if (ptrType->IsSlice()) {
+            return loadUniformFromSOA(ptr, mask, ptrType, name);
+        }
+        else {
+            // FIXME: same issue as above load inst regarding alignment...
+            //
+            // If the ptr is a straight up regular pointer, then just issue
+            // a regular load.  First figure out the alignment; in general we
+            // can just assume the natural alignment (0 here), but for varying
+            // atomic types, we need to make sure that the compiler emits
+            // unaligned vector loads, so we specify a reduced alignment here.
+            int align = 0;
+            const AtomicType *atomicType = 
+                dynamic_cast<const AtomicType *>(ptrType->GetBaseType());
+            if (atomicType != NULL && atomicType->IsVaryingType())
+                // We actually just want to align to the vector element
+                // alignment, but can't easily get that here, so just tell LLVM
+                // it's totally unaligned.  (This shouldn't make any difference
+                // vs the proper alignment in practice.)
+                align = 1;
+            llvm::Instruction *inst = new llvm::LoadInst(ptr, name ? name : "load",
+                                                         false /* not volatile */,
+                                                         align, bblock);
+            AddDebugPos(inst);
+            return inst;
+        }
     }
     else {
         // Otherwise we should have a varying ptr and it's time for a
@@ -2132,11 +2418,10 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
 
 
 llvm::Value *
-FunctionEmitContext::gather(llvm::Value *ptr, const Type *ptrType, 
+FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType, 
                             llvm::Value *mask, const char *name) {
-    // We should have a varying lvalue if we get here...
-    Assert(ptrType->IsVaryingType() &&
-           ptr->getType() == LLVMTypes::VoidPointerVectorType);
+    // We should have a varying pointer if we get here...
+    Assert(ptrType->IsVaryingType());
 
     const Type *returnType = ptrType->GetBaseType()->GetAsVaryingType();
     LLVM_TYPE_CONST llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
@@ -2147,10 +2432,12 @@ FunctionEmitContext::gather(llvm::Value *ptr, const Type *ptrType,
         // For collections, recursively gather element wise to find the
         // result.
         llvm::Value *retValue = llvm::UndefValue::get(llvmReturnType);
+
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
-            const Type *eltPtrType = 
-                PointerType::GetVarying(collectionType->GetElementType(i));
+            const PointerType *eltPtrType;
+            llvm::Value *eltPtr = 
+                AddElementOffset(ptr, i, ptrType, "gather_elt_ptr", &eltPtrType);
+
             eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
 
             // This in turn will be another gather
@@ -2160,7 +2447,15 @@ FunctionEmitContext::gather(llvm::Value *ptr, const Type *ptrType,
         }
         return retValue;
     }
-    
+    else if (ptrType->IsSlice()) {
+        // If we have a slice pointer, we need to add the final slice
+        // offset here right before issuing the actual gather
+        //
+        // FIXME: would it be better to do the corresponding same thing for
+        // all of the varying offsets stuff here (and in scatter)?
+        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+    }
+
     // Otherwise we should just have a basic scalar or pointer type and we
     // can go and do the actual gather
     AddInstrumentationPoint("gather");
@@ -2303,29 +2598,41 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
             llvm::Value *eltPtr = 
                 AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
-            const Type *eltPtrType = 
-                PointerType::GetUniform(collectionType->GetElementType(i));
-            StoreInst(eltValue, eltPtr, mask, eltPtrType);
+            const Type *eltType = collectionType->GetElementType(i);
+            const Type *eltPtrType = PointerType::GetUniform(eltType);
+            StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }
         return;
     }
 
     // We must have a regular atomic, enumerator, or pointer type at this
     // point.
-    Assert(dynamic_cast<const AtomicType *>(valueType) != NULL ||
-           dynamic_cast<const EnumType *>(valueType) != NULL ||
-           dynamic_cast<const PointerType *>(valueType) != NULL);
+    Assert(Type::IsBasicType(valueType));
     valueType = valueType->GetAsNonConstType();
 
-    llvm::Function *maskedStoreFunc = NULL;
     // Figure out if we need a 8, 16, 32 or 64-bit masked store.
-    if (dynamic_cast<const PointerType *>(valueType) != NULL) {
+    llvm::Function *maskedStoreFunc = NULL;
+
+    const PointerType *pt = dynamic_cast<const PointerType *>(valueType);
+    if (pt != NULL) {
+        if (pt->IsSlice()) {
+            // For masked stores of (varying) slice pointers to memory, we
+            // grab the equivalent StructType and make a recursive call to
+            // maskedStore, giving it that type for the pointer type; that
+            // in turn will lead to the base pointer and offset index being
+            // mask stored to memory..
+            const StructType *sliceStructType = pt->GetSliceStructType();
+            ptrType = PointerType::GetUniform(sliceStructType);
+            maskedStore(value, ptr, ptrType, mask);
+            return;
+        }
+
         if (g->target.is32Bit)
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         else
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
     }
-    else if (valueType == AtomicType::VaryingBool &&
+    else if (Type::Equal(valueType, AtomicType::VaryingBool) &&
              g->target.maskBitCount == 1) {
         llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask,
                                               LLVMMaskAllOn, "~mask");
@@ -2339,35 +2646,35 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         StoreInst(final, ptr);
         return;
     }
-    else if (valueType == AtomicType::VaryingDouble || 
-             valueType == AtomicType::VaryingInt64 ||
-             valueType == AtomicType::VaryingUInt64) {
+    else if (Type::Equal(valueType, AtomicType::VaryingDouble) || 
+             Type::Equal(valueType, AtomicType::VaryingInt64) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt64)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
         ptr = BitCastInst(ptr, LLVMTypes::Int64VectorPointerType, 
                              "ptr_to_int64vecptr");
         value = BitCastInst(value, LLVMTypes::Int64VectorType, 
                              "value_to_int64");
     }
-    else if (valueType == AtomicType::VaryingFloat ||
-             valueType == AtomicType::VaryingBool ||
-             valueType == AtomicType::VaryingInt32 ||
-             valueType == AtomicType::VaryingUInt32 ||
+    else if (Type::Equal(valueType, AtomicType::VaryingFloat) ||
+             Type::Equal(valueType, AtomicType::VaryingBool) ||
+             Type::Equal(valueType, AtomicType::VaryingInt32) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt32) ||
              dynamic_cast<const EnumType *>(valueType) != NULL) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
                              "ptr_to_int32vecptr");
-        if (valueType == AtomicType::VaryingFloat)
+        if (Type::Equal(valueType, AtomicType::VaryingFloat))
             value = BitCastInst(value, LLVMTypes::Int32VectorType, 
                                  "value_to_int32");
     }
-    else if (valueType == AtomicType::VaryingInt16 ||
-             valueType == AtomicType::VaryingUInt16) {
+    else if (Type::Equal(valueType, AtomicType::VaryingInt16) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt16)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_16");
         ptr = BitCastInst(ptr, LLVMTypes::Int16VectorPointerType, 
                              "ptr_to_int16vecptr");
     }
-    else if (valueType == AtomicType::VaryingInt8 ||
-             valueType == AtomicType::VaryingUInt8) {
+    else if (Type::Equal(valueType, AtomicType::VaryingInt8) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt8)) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_8");
         ptr = BitCastInst(ptr, LLVMTypes::Int8VectorPointerType, 
                              "ptr_to_int8vecptr");
@@ -2391,27 +2698,67 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
 */
 void
 FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, 
-                             const Type *ptrType, llvm::Value *mask) {
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
+                             const Type *valueType, const Type *origPt,
+                             llvm::Value *mask) {
+    const PointerType *ptrType = dynamic_cast<const PointerType *>(origPt);
+    Assert(ptrType != NULL);
     Assert(ptrType->IsVaryingType());
 
-    const Type *valueType = ptrType->GetBaseType();
-
-    // I think this should be impossible
-    Assert(dynamic_cast<const ArrayType *>(valueType) == NULL);
-
-    const CollectionType *collectionType = dynamic_cast<const CollectionType *>(valueType);
-    if (collectionType != NULL) {
+    const CollectionType *srcCollectionType = 
+        dynamic_cast<const CollectionType *>(valueType);
+    if (srcCollectionType != NULL) {
+        // We're scattering a collection type--we need to keep track of the
+        // source type (the type of the data values to be stored) and the
+        // destination type (the type of objects in memory that will be
+        // stored into) separately.  This is necessary so that we can get
+        // all of the addressing calculations right if we're scattering
+        // from a varying struct to an array of uniform instances of the
+        // same struct type, versus scattering into an array of varying
+        // instances of the struct type, etc.
+        const CollectionType *dstCollectionType =
+            dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+        Assert(dstCollectionType != NULL);
+            
         // Scatter the collection elements individually
-        for (int i = 0; i < collectionType->GetElementCount(); ++i) {
-            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
+        for (int i = 0; i < srcCollectionType->GetElementCount(); ++i) {
+            // First, get the values for the current element out of the
+            // source.
             llvm::Value *eltValue = ExtractInst(value, i);
-            const Type *eltPtrType = 
-                PointerType::GetVarying(collectionType->GetElementType(i));
-            eltPtr = addVaryingOffsetsIfNeeded(eltPtr, eltPtrType);
-            scatter(eltValue, eltPtr, eltPtrType, mask);
+            const Type *srcEltType = srcCollectionType->GetElementType(i);
+
+            // We may be scattering a uniform atomic element; in this case
+            // we'll smear it out to be varying before making the recursive
+            // scatter() call below.
+            if (srcEltType->IsUniformType() && Type::IsBasicType(srcEltType)) {
+                eltValue = SmearUniform(eltValue, "to_varying");
+                srcEltType = srcEltType->GetAsVaryingType();
+            }
+
+            // Get the (varying) pointer to the i'th element of the target
+            // collection
+            llvm::Value *eltPtr = AddElementOffset(ptr, i, ptrType);
+
+            // The destination element type may be uniform (e.g. if we're
+            // scattering to an array of uniform structs).  Thus, we need
+            // to be careful about passing the correct type to
+            // addVaryingOffsetsIfNeeded() here.
+            const Type *dstEltType = dstCollectionType->GetElementType(i);
+            const PointerType *dstEltPtrType = PointerType::GetVarying(dstEltType);
+            if (ptrType->IsSlice())
+                dstEltPtrType = dstEltPtrType->GetAsSlice();
+
+            eltPtr = addVaryingOffsetsIfNeeded(eltPtr, dstEltPtrType);
+
+            // And recursively scatter() until we hit a basic type, at
+            // which point the actual memory operations can be performed...
+            scatter(eltValue, eltPtr, srcEltType, dstEltPtrType, mask);
         }
         return;
+    }
+    else if (ptrType->IsSlice()) {
+        // As with gather, we need to add the final slice offset finally
+        // once we get to a terminal SOA array of basic types..
+        ptr = lFinalSliceOffset(this, ptr, &ptrType);
     }
 
     const PointerType *pt = dynamic_cast<const PointerType *>(valueType);
@@ -2483,19 +2830,28 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
 
 void
 FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
-                               llvm::Value *mask, const Type *ptrType) {
+                               llvm::Value *mask, const Type *valueType,
+                               const Type *ptrRefType) {
     if (value == NULL || ptr == NULL) {
         // may happen due to error elsewhere
         Assert(m->errorCount > 0);
         return;
     }
 
-    if (dynamic_cast<const ReferenceType *>(ptrType) != NULL)
-        ptrType = PointerType::GetUniform(ptrType->GetReferenceTarget());
+    const PointerType *ptrType;
+    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+        ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
+    else {
+        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        Assert(ptrType != NULL);
+    }
 
     // Figure out what kind of store we're doing here
     if (ptrType->IsUniformType()) {
-        if (ptrType->GetBaseType()->IsUniformType())
+        if (ptrType->IsSlice())
+            // storing a uniform value to a single slice of a SOA type
+            storeUniformToSOA(value, ptr, mask, valueType, ptrType);
+        else if (ptrType->GetBaseType()->IsUniformType())
             // the easy case
             StoreInst(value, ptr);
         else if (mask == LLVMMaskAllOn && !g->opt.disableMaskAllOnOptimizations)
@@ -2509,8 +2865,69 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
         Assert(ptrType->IsVaryingType());
         // We have a varying ptr (an array of pointers), so it's time to
         // scatter
-        scatter(value, ptr, ptrType, GetFullMask());
+        scatter(value, ptr, valueType, ptrType, GetFullMask());
     }
+}
+
+
+/** Store a uniform type to SOA-laid-out memory.
+ */
+void
+FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
+                                       llvm::Value *mask, const Type *valueType,
+                                       const PointerType *ptrType) {
+    Assert(Type::Equal(ptrType->GetBaseType()->GetAsUniformType(), valueType));
+
+    const CollectionType *ct = dynamic_cast<const CollectionType *>(valueType);
+    if (ct != NULL) {
+        // Handle collections element wise...
+        for (int i = 0; i < ct->GetElementCount(); ++i) {
+            llvm::Value *eltValue = ExtractInst(value, i);
+            const Type *eltType = ct->GetElementType(i);
+            const PointerType *dstEltPtrType;
+            llvm::Value *dstEltPtr = 
+                AddElementOffset(ptr, i, ptrType, "slice_offset",
+                                 &dstEltPtrType);
+            StoreInst(eltValue, dstEltPtr, mask, eltType, dstEltPtrType);
+        }
+    }
+    else {
+        // We're finally at a leaf SOA array; apply the slice offset and
+        // then we can do a final regular store
+        Assert(Type::IsBasicType(valueType));
+        ptr = lFinalSliceOffset(this, ptr, &ptrType);
+        StoreInst(value, ptr);
+    }
+}
+
+
+void
+FunctionEmitContext::MemcpyInst(llvm::Value *dest, llvm::Value *src, 
+                                llvm::Value *count, llvm::Value *align) {
+    dest = BitCastInst(dest, LLVMTypes::VoidPointerType);
+    src = BitCastInst(src, LLVMTypes::VoidPointerType);
+    if (count->getType() != LLVMTypes::Int64Type) {
+        Assert(count->getType() == LLVMTypes::Int32Type);
+        count = ZExtInst(count, LLVMTypes::Int64Type, "count_to_64");
+    }
+    if (align == NULL)
+        align = LLVMInt32(1);
+
+    llvm::Constant *mcFunc = 
+        m->module->getOrInsertFunction("llvm.memcpy.p0i8.p0i8.i64", 
+                                       LLVMTypes::VoidType, LLVMTypes::VoidPointerType,
+                                       LLVMTypes::VoidPointerType, LLVMTypes::Int64Type,
+                                       LLVMTypes::Int32Type, LLVMTypes::BoolType, NULL);
+    Assert(mcFunc != NULL);
+    Assert(llvm::isa<llvm::Function>(mcFunc));
+
+    std::vector<llvm::Value *> args;
+    args.push_back(dest);
+    args.push_back(src);
+    args.push_back(count);
+    args.push_back(align);
+    args.push_back(LLVMFalse); /* not volatile */
+    CallInst(mcFunc, NULL, args, "");
 }
 
 
@@ -2761,7 +3178,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // accumulate the result using the call mask.
             if (callResult != NULL) {
                 Assert(resultPtr != NULL);
-                StoreInst(callResult, resultPtr, callMask, 
+                StoreInst(callResult, resultPtr, callMask, returnType,
                           PointerType::GetUniform(returnType));
             }
             else
@@ -2825,7 +3242,7 @@ FunctionEmitContext::ReturnInst() {
         rinst = llvm::ReturnInst::Create(*g->ctx, retVal, bblock);
     }
     else {
-        Assert(function->GetReturnType() == AtomicType::Void);
+        Assert(Type::Equal(function->GetReturnType(), AtomicType::Void));
         rinst = llvm::ReturnInst::Create(*g->ctx, bblock);
     }
 
@@ -2945,11 +3362,10 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     Assert(pt && pt->IsVaryingType());
 
     const Type *baseType = ptrType->GetBaseType();
-    if (dynamic_cast<const AtomicType *>(baseType) == NULL &&
-        dynamic_cast<const EnumType *>(baseType) == NULL &&
-        dynamic_cast<const PointerType *>(baseType) == NULL)
+    if (Type::IsBasicType(baseType) == false)
         return ptr;
-    if (baseType->IsUniformType())
+
+    if (baseType->IsVaryingType() == false)
         return ptr;
     
     // Find the size of a uniform element of the varying type

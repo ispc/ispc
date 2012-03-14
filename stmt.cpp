@@ -2124,10 +2124,10 @@ SwitchStmt::TypeCheck() {
 
     const Type *toType = NULL;
     exprType = exprType->GetAsConstType();
-    bool is64bit = (exprType->GetAsUniformType() == 
-                    AtomicType::UniformConstUInt64 ||
-                    exprType->GetAsUniformType() == 
-                    AtomicType::UniformConstInt64);
+    bool is64bit = (Type::EqualIgnoringConst(exprType->GetAsUniformType(),
+                                             AtomicType::UniformUInt64) ||
+                    Type::EqualIgnoringConst(exprType->GetAsUniformType(),
+                                             AtomicType::UniformInt64));
 
     if (exprType->IsUniformType()) {
         if (is64bit) toType = AtomicType::UniformInt64;
@@ -2381,20 +2381,20 @@ PrintStmt::PrintStmt(const std::string &f, Expr *v, SourcePos p)
  */
 static char
 lEncodeType(const Type *t) {
-    if (t == AtomicType::UniformBool)   return 'b';
-    if (t == AtomicType::VaryingBool)   return 'B';
-    if (t == AtomicType::UniformInt32)  return 'i';
-    if (t == AtomicType::VaryingInt32)  return 'I';
-    if (t == AtomicType::UniformUInt32) return 'u';
-    if (t == AtomicType::VaryingUInt32) return 'U';
-    if (t == AtomicType::UniformFloat)  return 'f';
-    if (t == AtomicType::VaryingFloat)  return 'F';
-    if (t == AtomicType::UniformInt64)  return 'l';
-    if (t == AtomicType::VaryingInt64)  return 'L';
-    if (t == AtomicType::UniformUInt64) return 'v';
-    if (t == AtomicType::VaryingUInt64) return 'V';
-    if (t == AtomicType::UniformDouble) return 'd';
-    if (t == AtomicType::VaryingDouble) return 'D';
+    if (Type::Equal(t, AtomicType::UniformBool))   return 'b';
+    if (Type::Equal(t, AtomicType::VaryingBool))   return 'B';
+    if (Type::Equal(t, AtomicType::UniformInt32))  return 'i';
+    if (Type::Equal(t, AtomicType::VaryingInt32))  return 'I';
+    if (Type::Equal(t, AtomicType::UniformUInt32)) return 'u';
+    if (Type::Equal(t, AtomicType::VaryingUInt32)) return 'U';
+    if (Type::Equal(t, AtomicType::UniformFloat))  return 'f';
+    if (Type::Equal(t, AtomicType::VaryingFloat))  return 'F';
+    if (Type::Equal(t, AtomicType::UniformInt64))  return 'l';
+    if (Type::Equal(t, AtomicType::VaryingInt64))  return 'L';
+    if (Type::Equal(t, AtomicType::UniformUInt64)) return 'v';
+    if (Type::Equal(t, AtomicType::VaryingUInt64)) return 'V';
+    if (Type::Equal(t, AtomicType::UniformDouble)) return 'd';
+    if (Type::Equal(t, AtomicType::VaryingDouble)) return 'D';
     if (dynamic_cast<const PointerType *>(t) != NULL) {
         if (t->IsUniformType())
             return 'p';
@@ -2424,10 +2424,10 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
 
     // Just int8 and int16 types to int32s...
     const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
-    if (baseType == AtomicType::UniformInt8 ||
-        baseType == AtomicType::UniformUInt8 ||
-        baseType == AtomicType::UniformInt16 ||
-        baseType == AtomicType::UniformUInt16) {
+    if (Type::Equal(baseType, AtomicType::UniformInt8) ||
+        Type::Equal(baseType, AtomicType::UniformUInt8) ||
+        Type::Equal(baseType, AtomicType::UniformInt16) ||
+        Type::Equal(baseType, AtomicType::UniformUInt16)) {
         expr = new TypeCastExpr(type->IsUniformType() ? AtomicType::UniformInt32 :
                                                         AtomicType::VaryingInt32, 
                                 expr, expr->pos);

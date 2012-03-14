@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -69,12 +69,21 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if ((typeQualifiers & TYPEQUAL_CONST) != 0)
         type = type->GetAsConstType();
 
-    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
-        type = type->GetAsUniformType();
-    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0)
-        type = type->GetAsVaryingType();
+    if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
+        if (Type::Equal(type, AtomicType::Void))
+            Error(pos, "\"uniform\" qualifier is illegal with \"void\" type.");
+        else
+            type = type->GetAsUniformType();
+    }
+    else if ((typeQualifiers & TYPEQUAL_VARYING) != 0) {
+        if (Type::Equal(type, AtomicType::Void))
+            Error(pos, "\"varying\" qualifier is illegal with \"void\" type.");
+        else
+            type = type->GetAsVaryingType();
+    }
     else
-        type = type->GetAsUnboundVariabilityType();
+        if (Type::Equal(type, AtomicType::Void) == false)
+            type = type->GetAsUnboundVariabilityType();
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
         if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)
@@ -84,15 +93,20 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         const Type *unsignedType = type->GetAsUnsignedType();
         if (unsignedType != NULL)
             type = unsignedType;
-        else
+        else {
+            const Type *resolvedType = 
+                type->ResolveUnboundVariability(Variability::Varying);
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
-                  type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+                  resolvedType->GetString().c_str());
+        }
     }
 
-    if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false)
+    if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false) {
+        const Type *resolvedType = 
+            type->ResolveUnboundVariability(Variability::Varying);
         Error(pos, "\"signed\" qualifier is illegal with non-integer type "
-              "\"%s\".", 
-              type->ResolveUnboundVariability(Type::Varying)->GetString().c_str());
+              "\"%s\".", resolvedType->GetString().c_str());
+    }
 
     return type;
 }
@@ -112,24 +126,54 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
 
 const Type *
 DeclSpecs::GetBaseType(SourcePos pos) const {
-    const Type *bt = baseType;
+    const Type *retType = baseType;
 
-    if (bt == NULL) {
+    if (retType == NULL) {
         Warning(pos, "No type specified in declaration.  Assuming int32.");
-        bt = AtomicType::UnboundInt32;
+        retType = AtomicType::UniformInt32->GetAsUnboundVariabilityType();
     }
 
     if (vectorSize > 0) {
-        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(bt);
+        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(retType);
         if (atomicType == NULL) {
             Error(pos, "Only atomic types (int, float, ...) are legal for vector "
                   "types.");
             return NULL;
         }
-        bt = new VectorType(atomicType, vectorSize);
+        retType = new VectorType(atomicType, vectorSize);
     }
 
-    return lApplyTypeQualifiers(typeQualifiers, bt, pos);
+    retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
+    
+    if (soaWidth > 0) {
+        const StructType *st = dynamic_cast<const StructType *>(retType);
+
+        if (st == NULL) {
+            Error(pos, "Illegal to provide soa<%d> qualifier with non-struct "
+                  "type \"%s\".", soaWidth, retType->GetString().c_str());
+            return NULL;
+        }
+        else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
+            Error(pos, "soa<%d> width illegal.  Value must be positive power "
+                  "of two.", soaWidth);
+            return NULL;
+        }
+
+        if (st->IsUniformType()) {
+            Error(pos, "\"uniform\" qualifier and \"soa<%d>\" qualifier can't "
+                  "both be used in a type declaration.", soaWidth);
+            return NULL;
+        }
+        else if (st->IsVaryingType()) {
+            Error(pos, "\"varying\" qualifier and \"soa<%d>\" qualifier can't "
+                  "both be used in a type declaration.", soaWidth);
+            return NULL;
+        }
+        else
+            retType = st->GetAsSOAType(soaWidth);
+    }
+    
+    return retType;
 }
 
 
@@ -280,13 +324,13 @@ Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
             continue;
         }
         else
-            sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
         funArgs->push_back(sym);
     }
 
     if (funSym != NULL)
-        funSym->type = funSym->type->ResolveUnboundVariability(Type::Varying);
+        funSym->type = funSym->type->ResolveUnboundVariability(Variability::Varying);
 
     return funSym;
 }
@@ -306,11 +350,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     if (kind != DK_FUNCTION && isTask)
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
 
-    Type::Variability variability = Type::Unbound;
+    Variability variability(Variability::Unbound);
     if (hasUniformQual)
-        variability = Type::Uniform;
+        variability = Variability::Uniform;
     else if (hasVaryingQual)
-        variability = Type::Varying;
+        variability = Variability::Varying;
 
     const Type *type = base;
     switch (kind) {
@@ -322,7 +366,10 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         return type;
 
     case DK_POINTER:
-        type = new PointerType(type, variability, isConst);
+        /* For now, any pointer to an SOA type gets the slice property; if
+           we add the capability to declare pointers as slices or not,
+           we'll want to set this based on a type qualifier here. */
+        type = new PointerType(type, variability, isConst, type->IsSOAType());
         if (child != NULL)
             return child->GetType(type, ds);
         else
@@ -351,7 +398,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         break;
 
     case DK_ARRAY:
-        if (type == AtomicType::Void) {
+        if (Type::Equal(type, AtomicType::Void)) {
             Error(pos, "Arrays of \"void\" type are illegal.");
             return NULL;
         }
@@ -387,7 +434,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                       "function parameter declaration for parameter \"%s\".", 
                       lGetStorageClassName(d->declSpecs->storageClass),
                       sym->name.c_str());
-            if (sym->type == AtomicType::Void) {
+            if (Type::Equal(sym->type, AtomicType::Void)) {
                 Error(sym->pos, "Parameter with type \"void\" illegal in function "
                       "parameter list.");
                 sym->type = NULL;
@@ -408,7 +455,11 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                     return NULL;
                 }
 
-                sym->type = PointerType::GetUniform(at->GetElementType());
+                const Type *targetType = at->GetElementType();
+                targetType = 
+                    targetType->ResolveUnboundVariability(Variability::Varying);
+                sym->type = PointerType::GetUniform(targetType);
+
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
                 at = dynamic_cast<const ArrayType *>(at->GetElementType());
@@ -485,36 +536,13 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         const Type *functionType = 
             new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
-        functionType = functionType->ResolveUnboundVariability(Type::Varying);
+        functionType = functionType->ResolveUnboundVariability(Variability::Varying);
         return child->GetType(functionType, ds);
     }
     default:
         FATAL("Unexpected decl kind");
         return NULL;
     }
-
-#if 0
-            // Make sure we actually have an array of structs ..
-            const StructType *childStructType = 
-                dynamic_cast<const StructType *>(childType);
-            if (childStructType == NULL) {
-                Error(pos, "Illegal to provide soa<%d> qualifier with non-struct "
-                      "type \"%s\".", soaWidth, childType->GetString().c_str());
-                return new ArrayType(childType, arraySize == -1 ? 0 : arraySize);
-            }
-            else if ((soaWidth & (soaWidth - 1)) != 0) {
-                Error(pos, "soa<%d> width illegal.  Value must be power of two.",
-                      soaWidth);
-                return NULL;
-            }
-            else if (arraySize != -1 && (arraySize % soaWidth) != 0) {
-                Error(pos, "soa<%d> width must evenly divide array size %d.",
-                      soaWidth, arraySize);
-                return NULL;
-            }
-            return new SOAArrayType(childStructType, arraySize == -1 ? 0 : arraySize,
-                                    soaWidth);
-#endif
 }
 
 
@@ -596,9 +624,9 @@ Declaration::GetVariableDeclarations() const {
             Assert(m->errorCount > 0);
             continue;
         }
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
-        if (sym->type == AtomicType::Void)
+        if (Type::Equal(sym->type, AtomicType::Void))
             Error(sym->pos, "\"void\" type variable illegal in declaration.");
         else if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
             m->symbolTable->AddVariable(sym);
@@ -627,7 +655,7 @@ Declaration::DeclareFunctions() {
             Assert(m->errorCount > 0);
             continue;
         }
-        sym->type = sym->type->ResolveUnboundVariability(Type::Varying);
+        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
 
         if (dynamic_cast<const FunctionType *>(sym->type) == NULL)
             continue;
@@ -674,7 +702,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
 
             Symbol *sym = d->GetSymbol();
 
-            if (sym->type == AtomicType::Void)
+            if (Type::Equal(sym->type, AtomicType::Void))
                 Error(d->pos, "\"void\" type illegal for struct member.");
 
             const ArrayType *arrayType = 

@@ -1,0 +1,35 @@
+
+struct Vector { float x, y, z; };
+
+struct Ray { Vector o; float t; Vector d; };
+
+export uniform int width() { return programCount; }
+
+void init(uniform Ray rays[], uniform int count, float v) {
+    for (uniform int i = 0; i < count; ++i) {
+        rays[i].o.x = i;
+        rays[i].o.y = 2*i;
+        rays[i].o.z = 3*i;
+        rays[i].t = 4*i;
+        rays[i].d.x = 5*i;
+        rays[i].d.y = 6*i;
+        rays[i].d.z = 7*i;
+    }
+}
+
+void zero_dx(varying Ray * uniform r) {
+    r->d.x = 0;
+}
+
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    float v = aFOO[programIndex];
+    uniform Ray rays[programCount+1];
+    init(rays, programCount+1, v);
+    Ray rg = rays[v];
+    zero_dx(&rg);
+    RET[programIndex] = rg.o.z + rg.d.x;
+}
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = 3 + 3*programIndex;
+}

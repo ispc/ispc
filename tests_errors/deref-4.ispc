@@ -1,4 +1,4 @@
-// Illegal to dereference non-pointer or reference type "float"
+// Illegal to dereference non-pointer or reference type "varying float"
 
 float func(float a) {
     *a = 0;

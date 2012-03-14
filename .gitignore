@@ -5,4 +5,11 @@ ispc
 ispc_test
 objs
 docs/doxygen
-docs/ispc.html
+docs/*.html
+tests*/*cpp
+tests*/*run
+examples/*/*.png
+examples/*/*.ppm
+examples/*/objs/*
+
+

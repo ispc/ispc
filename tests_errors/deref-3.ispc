@@ -1,4 +1,4 @@
-// Dereference operator "->" can't be applied to non-pointer type "uniform struct Foo"
+// Dereference operator "->" can't be applied to non-pointer type "varying struct Foo"
 
 struct Foo { int x; };
 

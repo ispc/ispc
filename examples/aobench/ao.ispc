@@ -50,7 +50,6 @@ struct Isect {
 struct Sphere {
     vec        center;
     float      radius;
-
 };
 
 struct Plane {
@@ -83,7 +82,7 @@ static inline void vnormalize(vec &v) {
 
 
 static void
-ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
+ray_plane_intersect(Isect &isect, Ray &ray, uniform Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
@@ -103,7 +102,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, Plane &plane) {
 
 
 static inline void
-ray_sphere_intersect(Isect &isect, Ray &ray, Sphere &sphere) {
+ray_sphere_intersect(Isect &isect, Ray &ray, uniform Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
     float B = dot(rs, ray.dir);
@@ -148,7 +147,7 @@ orthoBasis(vec basis[3], vec n) {
 
 
 static float
-ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3], 
+ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
                   RNGState &rngstate) {
     float eps = 0.0001f;
     vec p, n;
@@ -204,8 +203,8 @@ ambient_occlusion(Isect &isect, Plane &plane, Sphere spheres[3],
 static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
                          uniform int h,  uniform int nsubsamples, 
                          uniform float image[]) {
-    static Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-    static Sphere spheres[3] = {
+    static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+    static uniform Sphere spheres[3] = {
         { { -2.0f, 0.0f, -3.5f }, 0.5f },
         { { -0.5f, 0.0f, -3.0f }, 0.5f },
         { { 1.0f, 0.0f, -2.2f }, 0.5f } };

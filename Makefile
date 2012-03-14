@@ -29,6 +29,9 @@ CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
+ifeq ($(shell llvm-config --version), 3.1svn)
+  CLANG_LIBS += -lclangEdit
+endif
 
 ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread

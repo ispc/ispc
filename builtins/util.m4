@@ -1769,6 +1769,55 @@ define <WIDTH x i32> @__sext_varying_bool(<WIDTH x MASK>) nounwind readnone alwa
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; memcpy/memmove/memset
+
+declare void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src,
+                                        i32 %len, i32 %align, i1 %isvolatile)
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src,
+                                        i64 %len, i32 %align, i1 %isvolatile)
+
+define void @__memcpy32(i8 * %dst, i8 * %src, i32 %len) alwaysinline {
+    call void @llvm.memcpy.p0i8.p0i8.i32(i8 * %dst, i8 * %src, i32 %len, i32 0, i1 0)
+    ret void
+}
+
+define void @__memcpy64(i8 * %dst, i8 * %src, i64 %len) alwaysinline {
+    call void @llvm.memcpy.p0i8.p0i8.i64(i8 * %dst, i8 * %src, i64 %len, i32 0, i1 0)
+    ret void
+}
+
+declare void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src,
+                                         i32 %len, i32 %align, i1 %isvolatile)
+declare void @llvm.memmove.p0i8.p0i8.i64(i8* %dest, i8* %src,
+                                         i64 %len, i32 %align, i1 %isvolatile)
+
+define void @__memmove32(i8 * %dst, i8 * %src, i32 %len) alwaysinline {
+    call void @llvm.memmove.p0i8.p0i8.i32(i8 * %dst, i8 * %src, i32 %len, i32 0, i1 0)
+    ret void
+}
+
+define void @__memmove64(i8 * %dst, i8 * %src, i64 %len) alwaysinline {
+    call void @llvm.memmove.p0i8.p0i8.i64(i8 * %dst, i8 * %src, i64 %len, i32 0, i1 0)
+    ret void
+}
+
+
+declare void @llvm.memset.p0i8.i32(i8* %dest, i8 %val, i32 %len, i32 %align,
+                                   i1 %isvolatile)
+declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i32 %align,
+                                   i1 %isvolatile)
+
+define void @__memset32(i8 * %dst, i8 %val, i32 %len) alwaysinline {
+    call void @llvm.memset.p0i8.i32(i8 * %dst, i8 %val, i32 %len, i32 0, i1 0)
+    ret void
+}
+
+define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
+    call void @llvm.memset.p0i8.i64(i8 * %dst, i8 %val, i64 %len, i32 0, i1 0)
+    ret void
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
 declare i32 @printf(i8*, ...)
@@ -1890,6 +1939,8 @@ entry:
 declare float @sinf(float) nounwind readnone
 declare float @cosf(float) nounwind readnone
 declare void @sincosf(float, float *, float *) nounwind readnone
+declare float @asinf(float) nounwind readnone
+declare float @acosf(float) nounwind readnone
 declare float @tanf(float) nounwind readnone
 declare float @atanf(float) nounwind readnone
 declare float @atan2f(float, float) nounwind readnone
@@ -1910,6 +1961,16 @@ define float @__stdlib_cosf(float) nounwind readnone alwaysinline {
 define void @__stdlib_sincosf(float, float *, float *) nounwind readnone alwaysinline {
   call void @sincosf(float %0, float *%1, float *%2)
   ret void
+}
+
+define float @__stdlib_asinf(float) nounwind readnone alwaysinline {
+  %r = call float @asinf(float %0)
+  ret float %r
+}
+
+define float @__stdlib_acosf(float) nounwind readnone alwaysinline {
+  %r = call float @acosf(float %0)
+  ret float %r
 }
 
 define float @__stdlib_tanf(float) nounwind readnone alwaysinline {

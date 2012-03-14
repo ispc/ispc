@@ -363,6 +363,9 @@ namespace {
     bool printConstExprCast(const ConstantExpr *CE, bool Static);
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
+#ifdef LLVM_3_1svn
+    void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
+#endif
 
     /// isAddressExposed - Return true if the specified value's name needs to
     /// have its address taken in order to get a C value of the correct type.
@@ -437,9 +440,11 @@ namespace {
     void visitInvokeInst(InvokeInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
+#if !defined(LLVM_3_1) && !defined(LLVM_3_1svn)
     void visitUnwindInst(UnwindInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
+#endif // !LLVM_3_1svn
     void visitResumeInst(ResumeInst &I) {
       llvm_unreachable("DwarfEHPrepare pass didn't work!");
     }
@@ -783,7 +788,7 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
     if (ATy->getElementType() == LLVMTypes::Int8Type) {
         Out << "  static " << NameSoFar << " init(const char *p) {\n";
         Out << "    " << NameSoFar << " ret;\n";
-        Out << "    strncpy((char *)ret.array, p, " << NumElements << ");\n";
+        Out << "    memcpy((uint8_t *)ret.array, (uint8_t *)p, " << NumElements << ");\n";
         Out << "    return ret;\n";
         Out << "  }\n";
     }
@@ -796,19 +801,13 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
   default:
     llvm_unreachable("Unhandled case in getTypeProps!");
   }
-
-  return Out;
 }
 
 void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
-
-  // As a special case, print the array as a string if it is an array of
-  // ubytes or an array of sbytes with positive values.
-  //
+#ifndef LLVM_3_1svn
   Type *ETy = CPA->getType()->getElementType();
   // MMP: this looks like a bug: both sides of the || are the same
-  bool isString = (ETy == Type::getInt8Ty(CPA->getContext()) ||
-                   ETy == Type::getInt8Ty(CPA->getContext()));
+  bool isString = ETy == Type::getInt8Ty(CPA->getContext());
 
   // Make sure the last character is a null char, as automatically added by C
   if (isString && (CPA->getNumOperands() == 0 ||
@@ -816,7 +815,7 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     isString = false;
 
   if (isString) {
-    Out << '\"';
+    Out << "\"";
     // Keep track of whether the last number was a hexadecimal escape.
     bool LastWasHex = false;
 
@@ -839,49 +838,100 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
       } else {
         LastWasHex = false;
         switch (C) {
-        case '\n': Out << "\\n"; break;
-        case '\t': Out << "\\t"; break;
-        case '\r': Out << "\\r"; break;
-        case '\v': Out << "\\v"; break;
-        case '\a': Out << "\\a"; break;
-        case '\"': Out << "\\\""; break;
-        case '\'': Out << "\\\'"; break;
-        default:
-          Out << "\\x";
-          Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
-          Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
-          LastWasHex = true;
-          break;
+          case '\n': Out << "\\n"; break;
+          case '\t': Out << "\\t"; break;
+          case '\r': Out << "\\r"; break;
+          case '\v': Out << "\\v"; break;
+          case '\a': Out << "\\a"; break;
+          case '\"': Out << "\\\""; break;
+          case '\'': Out << "\\\'"; break;
+          default:
+            Out << "\\x";
+            Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
+            Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
+            LastWasHex = true;
+            break;
+        }
+      }
+    }
+    Out << "\"";
+    return;
+  }
+#endif // !LLVM_3_1
+
+  printConstant(cast<Constant>(CPA->getOperand(0)), Static);
+  for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
+    Out << ", ";
+    printConstant(cast<Constant>(CPA->getOperand(i)), Static);
+  }
+}
+
+void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
+  printConstant(cast<Constant>(CP->getOperand(0)), Static);
+  for (unsigned i = 1, e = CP->getNumOperands(); i != e; ++i) {
+    Out << ", ";
+    printConstant(cast<Constant>(CP->getOperand(i)), Static);
+  }
+}
+
+#ifdef LLVM_3_1svn
+void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
+                                          bool Static) {
+  // As a special case, print the array as a string if it is an array of
+  // ubytes or an array of sbytes with positive values.
+  //
+  if (CDS->isCString()) {
+    Out << '\"';
+    // Keep track of whether the last number was a hexadecimal escape.
+    bool LastWasHex = false;
+    
+    StringRef Bytes = CDS->getAsCString();
+    
+    // Do not include the last character, which we know is null
+    for (unsigned i = 0, e = Bytes.size(); i != e; ++i) {
+      unsigned char C = Bytes[i];
+      
+      // Print it out literally if it is a printable character.  The only thing
+      // to be careful about is when the last letter output was a hex escape
+      // code, in which case we have to be careful not to print out hex digits
+      // explicitly (the C compiler thinks it is a continuation of the previous
+      // character, sheesh...)
+      //
+      if (isprint(C) && (!LastWasHex || !isxdigit(C))) {
+        LastWasHex = false;
+        if (C == '"' || C == '\\')
+          Out << "\\" << (char)C;
+        else
+          Out << (char)C;
+      } else {
+        LastWasHex = false;
+        switch (C) {
+          case '\n': Out << "\\n"; break;
+          case '\t': Out << "\\t"; break;
+          case '\r': Out << "\\r"; break;
+          case '\v': Out << "\\v"; break;
+          case '\a': Out << "\\a"; break;
+          case '\"': Out << "\\\""; break;
+          case '\'': Out << "\\\'"; break;
+          default:
+            Out << "\\x";
+            Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
+            Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
+            LastWasHex = true;
+            break;
         }
       }
     }
     Out << '\"';
   } else {
-    if (Static)
-      Out << '{';
-    if (CPA->getNumOperands()) {
-      Out << ' ';
-      printConstant(cast<Constant>(CPA->getOperand(0)), Static);
-      for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
-        Out << ", ";
-        printConstant(cast<Constant>(CPA->getOperand(i)), Static);
-      }
-    }
-    if (Static)
-      Out << " }";
-  }
-}
-
-void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
-  if (CP->getNumOperands()) {
-    Out << ' ';
-    printConstant(cast<Constant>(CP->getOperand(0)), Static);
-    for (unsigned i = 1, e = CP->getNumOperands(); i != e; ++i) {
+    printConstant(CDS->getElementAsConstant(0), Static);
+    for (unsigned i = 1, e = CDS->getNumElements(); i != e; ++i) {
       Out << ", ";
-      printConstant(cast<Constant>(CP->getOperand(i)), Static);
+      printConstant(CDS->getElementAsConstant(i), Static);
     }
   }
 }
+#endif // LLVM_3_1svn
 
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
@@ -1305,7 +1355,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         char Buffer[100];
 
         uint64_t ll = DoubleToBits(V);
-        sprintf(Buffer, "0x%"PRIx64, static_cast<long long>(ll));
+        sprintf(Buffer, "0x%"PRIx64, ll);
 
         std::string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);
@@ -1350,6 +1400,11 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
+#ifdef LLVM_3_1svn
+    } else if (ConstantDataSequential *CDS = 
+               dyn_cast<ConstantDataSequential>(CPV)) {
+      printConstantDataSequential(CDS, Static);
+#endif // LLVM_3_1svn
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       if (AT->getNumElements()) {
@@ -1374,6 +1429,11 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
 
     if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
       printConstantVector(CV, Static);
+#ifdef LLVM_3_1svn
+    } else if (ConstantDataSequential *CDS = 
+               dyn_cast<ConstantDataSequential>(CPV)) {
+      printConstantDataSequential(CDS, Static);
+#endif
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       VectorType *VT = cast<VectorType>(CPV->getType());
@@ -1995,7 +2055,6 @@ bool CWriter::doInitialization(Module &M) {
   Out << "#include <setjmp.h>\n";      // Unwind support
   Out << "#include <limits.h>\n";      // With overflow intrinsics support.
   Out << "#include <stdlib.h>\n";
-  Out << "#include <string.h>\n";
   Out << "#ifdef _MSC_VER\n";
   Out << "  #define NOMINMAX\n";
   Out << "  #include <windows.h>\n";
@@ -2013,6 +2072,68 @@ bool CWriter::doInitialization(Module &M) {
   Out << "#include \"" << includeName << "\"\n";
 
   generateCompilerSpecificCode(Out, TD);
+
+  // Function declarations
+  Out << "\n/* Function Declarations */\n";
+  Out << "extern \"C\" {\n";
+  Out << "int puts(unsigned char *);\n";
+  Out << "unsigned int putchar(unsigned int);\n";
+  Out << "int fflush(void *);\n";
+  Out << "int printf(const unsigned char *, ...);\n";
+  Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+
+  // Store the intrinsics which will be declared/defined below.
+  SmallVector<const Function*, 8> intrinsicsToDefine;
+
+  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+    // Don't print declarations for intrinsic functions.
+    // Store the used intrinsics, which need to be explicitly defined.
+    if (I->isIntrinsic()) {
+      switch (I->getIntrinsicID()) {
+        default:
+          break;
+        case Intrinsic::uadd_with_overflow:
+        case Intrinsic::sadd_with_overflow:
+          intrinsicsToDefine.push_back(I);
+          break;
+      }
+      continue;
+    }
+
+    if (I->getName() == "setjmp" || I->getName() == "abort" ||
+        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
+        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
+        I->getName() == "puts" ||
+        I->getName() == "printf" || I->getName() == "putchar" ||
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
+      continue;
+
+    // Don't redeclare ispc's own intrinsics
+    std::string name = I->getName();
+    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
+        continue;
+
+    if (I->hasExternalWeakLinkage())
+      Out << "extern ";
+    printFunctionSignature(I, true);
+    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
+      Out << " __ATTRIBUTE_WEAK__";
+    if (I->hasExternalWeakLinkage())
+      Out << " __EXTERNAL_WEAK__";
+    if (StaticCtors.count(I))
+      Out << " __ATTRIBUTE_CTOR__";
+    if (StaticDtors.count(I))
+      Out << " __ATTRIBUTE_DTOR__";
+    if (I->hasHiddenVisibility())
+      Out << " __HIDDEN__";
+
+    if (I->hasName() && I->getName()[0] == 1)
+      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
+
+    Out << ";\n";
+  }
+  Out << "}\n";
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
   Out << "\n"
@@ -2082,67 +2203,6 @@ bool CWriter::doInitialization(Module &M) {
       Out << ";\n";
     }
   }
-
-  // Function declarations
-  Out << "\n/* Function Declarations */\n";
-  Out << "extern \"C\" {\n";
-  Out << "int puts(unsigned char *);\n";
-  Out << "unsigned int putchar(unsigned int);\n";
-  Out << "int fflush(void *);\n";
-  Out << "int printf(const unsigned char *, ...);\n";
-
-  // Store the intrinsics which will be declared/defined below.
-  SmallVector<const Function*, 8> intrinsicsToDefine;
-
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    // Don't print declarations for intrinsic functions.
-    // Store the used intrinsics, which need to be explicitly defined.
-    if (I->isIntrinsic()) {
-      switch (I->getIntrinsicID()) {
-        default:
-          break;
-        case Intrinsic::uadd_with_overflow:
-        case Intrinsic::sadd_with_overflow:
-          intrinsicsToDefine.push_back(I);
-          break;
-      }
-      continue;
-    }
-
-    if (I->getName() == "setjmp" || I->getName() == "abort" ||
-        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
-        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
-        I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" || I->getName() == "malloc" ||
-        I->getName() == "free")
-      continue;
-
-    // Don't redeclare ispc's own intrinsics
-    std::string name = I->getName();
-    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
-        continue;
-
-    if (I->hasExternalWeakLinkage())
-      Out << "extern ";
-    printFunctionSignature(I, true);
-    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
-      Out << " __ATTRIBUTE_WEAK__";
-    if (I->hasExternalWeakLinkage())
-      Out << " __EXTERNAL_WEAK__";
-    if (StaticCtors.count(I))
-      Out << " __ATTRIBUTE_CTOR__";
-    if (StaticDtors.count(I))
-      Out << " __ATTRIBUTE_DTOR__";
-    if (I->hasHiddenVisibility())
-      Out << " __HIDDEN__";
-
-    if (I->hasName() && I->getName()[0] == 1)
-      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
-
-    Out << ";\n";
-  }
-  Out << "}\n";
 
   // Output the global variable declarations
   if (!M.global_empty()) {
@@ -2763,11 +2823,17 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
   printBranchToBlock(SI.getParent(), SI.getDefaultDest(), 2);
   Out << ";\n";
 
-  unsigned NumCases = SI.getNumCases();
+#ifdef LLVM_3_1svn
+  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
+    ConstantInt* CaseVal = i.getCaseValue();
+    BasicBlock* Succ = i.getCaseSuccessor();
+#else
   // Skip the first item since that's the default case.
+  unsigned NumCases = SI.getNumCases();
   for (unsigned i = 1; i < NumCases; ++i) {
     ConstantInt* CaseVal = SI.getCaseValue(i);
     BasicBlock* Succ = SI.getSuccessor(i);
+#endif // LLVM_3_1svn
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";

@@ -14,7 +14,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
         r[i].v.z = 300*i + 3*programIndex;
     }
 
-    Ray *rp = &r[programIndex/2];
+    varying Ray *rp = &r[programIndex/2];
     RET[programIndex] = rp->v.z; 
 }
 

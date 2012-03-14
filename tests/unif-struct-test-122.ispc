@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 struct Foo {
-    float x;
+    varying float x;
 };
 float bar(uniform struct Foo * uniform f) { ++((*f).x); return (*f).x; }
 
