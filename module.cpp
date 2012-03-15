@@ -343,8 +343,6 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
 */
 static bool
 lRecursiveCheckValidParamType(const Type *t) {
-    t = t->GetBaseType();
-
     const StructType *st = dynamic_cast<const StructType *>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
@@ -352,15 +350,16 @@ lRecursiveCheckValidParamType(const Type *t) {
                 return true;
         return false;
     }
-    else {
-        if (t->IsVaryingType())
-            return true;
-        const PointerType *pt = dynamic_cast<const PointerType *>(t);
-        if (pt != NULL && pt->IsSlice())
-            return true;
-        else
-            return false;
-    }
+
+    const SequentialType *seqt = dynamic_cast<const SequentialType *>(t);
+    if (seqt != NULL)
+        return lRecursiveCheckValidParamType(seqt->GetElementType());
+
+    const PointerType *pt = dynamic_cast<const PointerType *>(t);
+    if (pt != NULL)
+        return (pt->IsSlice() || pt->IsVaryingType());
+
+    return t->IsVaryingType();
 }
 
 
