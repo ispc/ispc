@@ -782,3 +782,53 @@ LLVMDumpValue(llvm::Value *v) {
     lDumpValue(v, done);
     fprintf(stderr, "----\n");
 }
+
+
+/** Given two vectors of the same type, concatenate them into a vector that
+    has twice as many elements, where the first half has the elements from
+    the first vector and the second half has the elements from the second
+    vector.
+ */
+llvm::Value *
+LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+                  llvm::Instruction *insertBefore) {
+    Assert(v1->getType() == v2->getType());
+
+    LLVM_TYPE_CONST llvm::VectorType *vt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
+    Assert(vt != NULL);
+
+    int32_t identity[ISPC_MAX_NVEC];
+    int resultSize = 2*vt->getNumElements();
+    Assert(resultSize <= ISPC_MAX_NVEC);
+    for (int i = 0; i < resultSize; ++i)
+        identity[i] = i;
+
+    return LLVMShuffleVectors(v1, v2, identity, resultSize, insertBefore);
+}
+
+
+/** Shuffle two vectors together with a ShuffleVectorInst, returning a
+    vector with shufSize elements, where the shuf[] array offsets are used
+    to determine which element from the two given vectors is used for each
+    result element. */
+llvm::Value *
+LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
+                   int shufSize, llvm::Instruction *insertBefore) {
+    std::vector<llvm::Constant *> shufVec;
+    for (int i = 0; i < shufSize; ++i) {
+        if (shuf[i] == -1)
+            shufVec.push_back(llvm::UndefValue::get(LLVMTypes::Int32Type));
+        else
+            shufVec.push_back(LLVMInt32(shuf[i]));
+    }
+
+#ifndef LLVM_2_9
+    llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
+    llvm::Value *vec = llvm::ConstantVector::get(aref);
+#else // LLVM_2_9
+    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
+#endif
+
+    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
+}

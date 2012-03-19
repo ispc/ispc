@@ -3156,32 +3156,6 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
 }
 
 
-/** Shuffle two vectors together with a ShuffleVectorInst, returning a
-    vector with shufSize elements, where the shuf[] array offsets are used
-    to determine which element from the two given vectors is used for each
-    result element. */
-static llvm::Value *
-lShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
-                int shufSize, llvm::Instruction *insertBefore) {
-    std::vector<llvm::Constant *> shufVec;
-    for (int i = 0; i < shufSize; ++i) {
-        if (shuf[i] == -1)
-            shufVec.push_back(llvm::UndefValue::get(LLVMTypes::Int32Type));
-        else
-            shufVec.push_back(LLVMInt32(shuf[i]));
-    }
-
-#ifndef LLVM_2_9
-    llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
-    llvm::Value *vec = llvm::ConstantVector::get(aref);
-#else // LLVM_2_9
-    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
-#endif
-
-    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
-}
-
-
 /** Convert any loads of 8-wide vectors into two 4-wide vectors
     (logically).  This allows the assembly code below to always operate on
     4-wide vectors, which leads to better code.  Returns a new vector of
@@ -3199,12 +3173,12 @@ lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps,
             int32_t shuf[2][4] = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 } };
 
             ret.push_back(CoalescedLoadOp(loadOps[i].start, 4));
-            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
-                                              shuf[0], 4, insertBefore);
+            ret.back().load = LLVMShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                                 shuf[0], 4, insertBefore);
 
             ret.push_back(CoalescedLoadOp(loadOps[i].start+4, 4));
-            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
-                                              shuf[1], 4, insertBefore);
+            ret.back().load = LLVMShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                                 shuf[1], 4, insertBefore);
         }
         else
             ret.push_back(loadOps[i]);
@@ -3338,7 +3312,7 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
     // Now, issue a shufflevector instruction if any of the values from the
     // load we just considered were applicable.
     if (shuf[0] != 4 || shuf[1] != 5 || shuf[2] != 6 || shuf[3] != 7)
-        result = lShuffleVectors(load.load, result, shuf, 4, insertBefore);
+        result = LLVMShuffleVectors(load.load, result, shuf, 4, insertBefore);
 
     return result;
 }
@@ -3438,8 +3412,8 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
                         else
                             shuffle[i] = 4 + matchElements[i];
                     }
-                    result = lShuffleVectors(firstMatch->load, loadop.load, shuffle,
-                                             4, insertBefore);
+                    result = LLVMShuffleVectors(firstMatch->load, loadop.load, shuffle,
+                                                4, insertBefore);
                     firstMatch = NULL;
                 }
             }
@@ -3451,15 +3425,15 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
                     else
                         shuffle[i] = i;
                 }
-                result = lShuffleVectors(result, loadop.load, shuffle, 4,
-                                         insertBefore);
+                result = LLVMShuffleVectors(result, loadop.load, shuffle, 4,
+                                            insertBefore);
             }
         }
     }
 
     if (firstMatch != NULL && llvm::isa<llvm::UndefValue>(result))
-        return lShuffleVectors(firstMatch->load, result, firstMatchElements,
-                               4, insertBefore);
+        return LLVMShuffleVectors(firstMatch->load, result, firstMatchElements,
+                                  4, insertBefore);
     else
         return result;
 }
@@ -3518,30 +3492,6 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
 #endif
 
 
-/** Given two vectors of the same type, concatenate them into a vector that
-    has twice as many elements, where the first half has the elements from
-    the first vector and the second half has the elements from the second
-    vector.
- */
-static llvm::Value *
-lConcatVectors(llvm::Value *v1, llvm::Value *v2, 
-               llvm::Instruction *insertBefore) {
-    Assert(v1->getType() == v2->getType());
-
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
-    Assert(vt != NULL);
-
-    int32_t identity[ISPC_MAX_NVEC];
-    int resultSize = 2*vt->getNumElements();
-    Assert(resultSize <= ISPC_MAX_NVEC);
-    for (int i = 0; i < resultSize; ++i)
-        identity[i] = i;
-
-    return lShuffleVectors(v1, v2, identity, resultSize, insertBefore);
-}
-
-
 /** Given the set of loads that we've done and the set of result values to
     be computed, this function computes the final llvm::Value *s for each
     result vector.
@@ -3570,14 +3520,14 @@ lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
             result = vec4s[i];
             break;
         case 8:
-            result = lConcatVectors(vec4s[2*i], vec4s[2*i+1], insertBefore);
+            result = LLVMConcatVectors(vec4s[2*i], vec4s[2*i+1], insertBefore);
             break;
         case 16: {
-            llvm::Value *v1 = lConcatVectors(vec4s[4*i], vec4s[4*i+1],
-                                             insertBefore);
-            llvm::Value *v2 = lConcatVectors(vec4s[4*i+2], vec4s[4*i+3],
-                                             insertBefore);
-            result = lConcatVectors(v1, v2, insertBefore);
+            llvm::Value *v1 = LLVMConcatVectors(vec4s[4*i], vec4s[4*i+1],
+                                                insertBefore);
+            llvm::Value *v2 = LLVMConcatVectors(vec4s[4*i+2], vec4s[4*i+3],
+                                                insertBefore);
+            result = LLVMConcatVectors(v1, v2, insertBefore);
             break;
         }
         default:

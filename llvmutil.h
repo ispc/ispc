@@ -239,4 +239,18 @@ void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
     on. */
 extern void LLVMDumpValue(llvm::Value *v);
 
+/** This function takes two vectors, expected to be the same length, and
+    returns a new vector of twice the length that represents concatenating
+    the two of them. */
+extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+                                      llvm::Instruction *insertBefore);
+
+/** This is a utility function for vector shuffling; it takes two vectors
+    v1 and v2, and a compile-time constant set of integer permutations in
+    shuf[] and returns a new vector of length shufSize that represents the
+    corresponding shufflevector operation. */
+extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2,
+                                       int32_t shuf[], int shufSize,
+                                       llvm::Instruction *insertBefore);
+
 #endif // ISPC_LLVMUTIL_H
