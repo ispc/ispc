@@ -228,8 +228,7 @@ extern llvm::Constant *LLVMMaskAllOff;
 /** Tests to see if all of the elements of the vector in the 'v' parameter
     are equal.  Like lValuesAreEqual(), this is a conservative test and may
     return false for arrays where the values are actually all equal.  */
-extern bool LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                                     std::vector<llvm::PHINode *> &seenPhis);
+extern bool LLVMVectorValuesAllEqual(llvm::Value *v);
 
 /** Given a vector-typed value v, if the vector is a vector with constant
     element values, this function extracts those element values into the

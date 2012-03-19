@@ -1562,8 +1562,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
         return unif;
     }
 
-    std::vector<llvm::PHINode *> phis;
-    if (LLVMVectorValuesAllEqual(*vec, g->target.vectorWidth, phis)) {
+    if (LLVMVectorValuesAllEqual(*vec)) {
         // FIXME: we may want to redo all of the expression here, in scalar
         // form (if at all possible), for code quality...
         llvm::Value *unif = 
@@ -2619,8 +2618,10 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                          constOffsets, "varying+const_offsets",
                                          callInst);
 
-        std::vector<llvm::PHINode *> seenPhis;
-        if (LLVMVectorValuesAllEqual(fullOffsets, g->target.vectorWidth, seenPhis)) {
+        Debug(SourcePos(), "GSToLoadStore: %s.", 
+              fullOffsets->getName().str().c_str());
+
+        if (LLVMVectorValuesAllEqual(fullOffsets)) {
             // If all the offsets are equal, then compute the single
             // pointer they all represent based on the first one of them
             // (arbitrarily).
@@ -3688,9 +3689,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (lIsMaskAllOn(mask) == false)
             continue;
 
-        std::vector<llvm::PHINode *> seenPhis;
-        if (LLVMVectorValuesAllEqual(variableOffsets, g->target.vectorWidth,
-                                     seenPhis) == false)
+        if (!LLVMVectorValuesAllEqual(variableOffsets))
             continue;
 
         // coalesceGroup stores the set of gathers that we're going to try to

@@ -2979,9 +2979,7 @@ void CWriter::visitBinaryOperator(Instruction &I) {
       if ((I.getOpcode() == Instruction::Shl ||
            I.getOpcode() == Instruction::LShr ||
            I.getOpcode() == Instruction::AShr)) {
-          std::vector<PHINode *> phis;
-          if (LLVMVectorValuesAllEqual(I.getOperand(1),
-                                       vectorWidth, phis)) {
+          if (LLVMVectorValuesAllEqual(I.getOperand(1))) {
               Out << "__extract_element(";
               writeOperand(I.getOperand(1));
               Out << ", 0) ";
