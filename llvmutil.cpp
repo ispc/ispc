@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,7 @@
 #include "ispc.h"
 #include "type.h"
 #include <llvm/Instructions.h>
+#include <set>
 
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::VoidType = NULL;
 LLVM_TYPE_CONST llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
@@ -752,3 +753,32 @@ LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 }
 
 
+
+
+static void
+lDumpValue(llvm::Value *v, std::set<llvm::Value *> &done) {
+    if (done.find(v) != done.end())
+        return;
+
+    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
+    if (done.size() > 0 && inst == NULL)
+        return;
+
+    fprintf(stderr, "  ");
+    v->dump();
+    done.insert(v);
+
+    if (inst == NULL)
+        return;
+
+    for (unsigned i = 0; i < inst->getNumOperands(); ++i)
+        lDumpValue(inst->getOperand(i), done);
+}
+
+
+void
+LLVMDumpValue(llvm::Value *v) {
+    std::set<llvm::Value *> done;
+    lDumpValue(v, done);
+    fprintf(stderr, "----\n");
+}

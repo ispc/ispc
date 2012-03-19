@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -233,5 +233,10 @@ extern bool LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 
 void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
                             llvm::Value **elements);
+
+/** This is a utility routine for debugging that dumps out the given LLVM
+    value as well as (recursively) all of the other values that it depends
+    on. */
+extern void LLVMDumpValue(llvm::Value *v);
 
 #endif // ISPC_LLVMUTIL_H
