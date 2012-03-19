@@ -2382,8 +2382,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        lGetSourcePosFromMetadata(callInst, &pos);
 
         llvm::Value *base = callInst->getArgOperand(0);
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
@@ -2742,8 +2741,7 @@ static void
 lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
                   const std::vector<CoalescedLoadOp> &loadOps) {
     SourcePos pos;
-    bool ok = lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
-    Assert(ok);
+    lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
 
     // Create a string that indicates the line numbers of the subsequent
     // gathers from the first one that were coalesced here.
@@ -2758,12 +2756,13 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
         for (int i = 1; i < (int)coalesceGroup.size(); ++i) {
             SourcePos p;
             bool ok = lGetSourcePosFromMetadata(coalesceGroup[i], &p);
-            Assert(ok);
-            char buf[32];
-            sprintf(buf, "%d", p.first_line);
-            strcat(otherPositions, buf);
-            if (i < (int)coalesceGroup.size() - 1)
-                strcat(otherPositions, ", ");
+            if (ok) {
+                char buf[32];
+                sprintf(buf, "%d", p.first_line);
+                strcat(otherPositions, buf);
+                if (i < (int)coalesceGroup.size() - 1)
+                    strcat(otherPositions, ", ");
+            }
         }
         strcat(otherPositions, ") ");
     }
@@ -3460,8 +3459,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        lGetSourcePosFromMetadata(callInst, &pos);
         Debug(pos, "Checking for coalescable gathers starting here...");
 
         llvm::Value *base = callInst->getArgOperand(0);
@@ -3680,11 +3678,10 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // Get the source position from the metadata attached to the call
         // instruction so that we can issue PerformanceWarning()s below.
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
 
         callInst->setCalledFunction(info->actualFunc);
-        if (g->target.vectorWidth > 1) {
+        if (gotPosition && g->target.vectorWidth > 1) {
             if (info->isGather)
                 PerformanceWarning(pos, "Gather required to compute value in expression.");
             else

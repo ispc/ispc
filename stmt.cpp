@@ -1745,7 +1745,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbMaskedBody); {
         ctx->AddInstrumentationPoint("foreach loop body (masked)");
         ctx->SetContinueTarget(bbMaskedBodyContinue);
+        ctx->DisableGatherScatterWarnings();
         stmts->EmitCode(ctx);
+        ctx->EnableGatherScatterWarnings();
         ctx->BranchInst(bbMaskedBodyContinue);
     }
     ctx->SetCurrentBasicBlock(bbMaskedBodyContinue); {
