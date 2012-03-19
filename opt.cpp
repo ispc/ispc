@@ -1139,6 +1139,11 @@ lExtractFromInserts(llvm::Value *v, unsigned int index) {
 static llvm::Value *
 lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                       llvm::Instruction *insertBefore) {
+    if (g->debugPrint) {
+        fprintf(stderr, "lGetBasePtrAndOffsets\n");
+        LLVMDumpValue(ptrs);
+    }
+
     llvm::Value *base = lGetBasePointer(ptrs);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
@@ -3854,28 +3859,28 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             bool ok = lGetSourcePosFromMetadata(fwdCall, &fwdPos);
             Assert(ok);
 
-#if 0
-            if (base != fwdCall->getArgOperand(0)) {
-                Debug(fwdPos, "base pointers mismatch");
-                base->dump();
-                fwdCall->getArgOperand(0)->dump();
+            if (g->debugPrint) {
+                if (base != fwdCall->getArgOperand(0)) {
+                    Debug(fwdPos, "base pointers mismatch");
+                    LLVMDumpValue(base);
+                    LLVMDumpValue(fwdCall->getArgOperand(0));
+                }
+                if (variableOffsets != fwdCall->getArgOperand(1)) {
+                    Debug(fwdPos, "varying offsets mismatch");
+                    LLVMDumpValue(variableOffsets);
+                    LLVMDumpValue(fwdCall->getArgOperand(1));
+                }
+                if (offsetScale != fwdCall->getArgOperand(2)) {
+                    Debug(fwdPos, "offset scales mismatch");
+                    LLVMDumpValue(offsetScale);
+                    LLVMDumpValue(fwdCall->getArgOperand(2));
+                }
+                if (mask != fwdCall->getArgOperand(4)) {
+                    Debug(fwdPos, "masks mismatch");
+                    LLVMDumpValue(mask);
+                    LLVMDumpValue(fwdCall->getArgOperand(4));
+                }
             }
-            if (variableOffsets != fwdCall->getArgOperand(1)) {
-                Debug(fwdPos, "varying offsets mismatch");
-                variableOffsets->dump();
-                fwdCall->getArgOperand(1)->dump();
-            }
-            if (offsetScale != fwdCall->getArgOperand(2)) {
-                Debug(fwdPos, "offset scales mismatch");
-                offsetScale->dump();
-                fwdCall->getArgOperand(2)->dump();
-            }
-            if (mask != fwdCall->getArgOperand(4)) {
-                Debug(fwdPos, "masks mismatch");
-                mask->dump();
-                fwdCall->getArgOperand(4)->dump();
-            }
-#endif
 
             if (base == fwdCall->getArgOperand(0) &&
                 variableOffsets == fwdCall->getArgOperand(1) &&
@@ -3904,9 +3909,6 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             goto restart;
         }
     }
-
-//CO    if (modifiedAny)
-//CO        bb.dump();
 
     return modifiedAny;
 }
