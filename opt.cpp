@@ -1264,36 +1264,6 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
 }
 
 
-static llvm::Value *
-lGetZeroOffsetVector(llvm::Value *origVec) {
-    if (origVec->getType() == LLVMTypes::Int32VectorType)
-        return LLVMInt32Vector((int32_t)0);
-    else
-        return LLVMInt64Vector((int64_t)0);
-}
-
-
-#if 0
-static void
-lPrint(llvm::Value *v, int indent = 0) {
-    if (llvm::isa<llvm::PHINode>(v))
-        return;
-
-    fprintf(stderr, "%*c", indent, ' ');
-    v->dump();
-
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst != NULL) {
-        for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
-            llvm::Value *op = inst->getOperand(i);
-            if (llvm::isa<llvm::Constant>(op) == false)
-                lPrint(op, indent+4);
-        }
-    }
-}
-#endif
-
-
 /** Given a vector expression in vec, separate it into a compile-time
     constant component and a variable component, returning the two parts in
     *constOffset and *variableOffset.  (It should be the case that the sum
@@ -1885,9 +1855,9 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, 
                                callInst);
         if (constOffset == NULL)
-            constOffset = lGetZeroOffsetVector(offsetVector);
+            constOffset = LLVMIntAsType(0, offsetVector->getType());
         if (variableOffset == NULL)
-            variableOffset = lGetZeroOffsetVector(offsetVector);
+            variableOffset = LLVMIntAsType(0, offsetVector->getType());
 
         // See if the varying component is scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite variableOffset to remove
