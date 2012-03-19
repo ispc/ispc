@@ -372,9 +372,6 @@ launch { RT; return TOKEN_LAUNCH; }
 new { RT; return TOKEN_NEW; }
 NULL { RT; return TOKEN_NULL; }
 print { RT; return TOKEN_PRINT; }
-reference { Error(yylloc, "\"reference\" qualifier is no longer supported; "
-                          "please use C++-style '&' syntax for references "
-                          "instead."); }
 return { RT; return TOKEN_RETURN; }
 soa { RT; return TOKEN_SOA; }
 signed { RT; return TOKEN_SIGNED; }
