@@ -171,6 +171,11 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
         }
         else
             retType = st->GetAsSOAType(soaWidth);
+
+        if (soaWidth < g->target.vectorWidth)
+            PerformanceWarning(pos, "soa<%d> width smaller than gang size %d "
+                               "currently leads to inefficient code to access "
+                               "soa types.", soaWidth, g->target.vectorWidth);
     }
     
     return retType;
