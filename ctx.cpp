@@ -2876,7 +2876,8 @@ void
 FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
                                        llvm::Value *mask, const Type *valueType,
                                        const PointerType *ptrType) {
-    Assert(Type::Equal(ptrType->GetBaseType()->GetAsUniformType(), valueType));
+    Assert(Type::EqualIgnoringConst(ptrType->GetBaseType()->GetAsUniformType(), 
+                                    valueType));
 
     const CollectionType *ct = dynamic_cast<const CollectionType *>(valueType);
     if (ct != NULL) {
