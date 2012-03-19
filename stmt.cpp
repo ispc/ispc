@@ -1336,9 +1336,13 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
 
     llvm::Value *oldMask = ctx->GetInternalMask();
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
 
     ctx->SetDebugPos(pos);
     ctx->StartScope();
+
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    ctx->SetFunctionMask(LLVMMaskAllOn);
 
     // This should be caught during typechecking
     Assert(startExprs.size() == dimVariables.size() && 
@@ -1765,7 +1769,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done.  Restore the old mask and clean up
     ctx->SetCurrentBasicBlock(bbExit);
+
     ctx->SetInternalMask(oldMask);
+    ctx->SetFunctionMask(oldFunctionMask);
 
     ctx->EndForeach();
     ctx->EndScope();
