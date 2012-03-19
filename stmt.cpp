@@ -776,7 +776,8 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool uniformTest = testExpr->GetType()->IsUniformType();
     if (uniformTest && doCoherentCheck)
-        Warning(pos, "Uniform condition supplied to \"cdo\" statement.");
+        Warning(testExpr->pos, "Uniform condition supplied to \"cdo\" "
+                "statement.");
 
     llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop");
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
@@ -993,7 +994,8 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // any of the mask values are true.
     if (uniformTest) {
         if (doCoherentCheck)
-            Warning(pos, "Uniform condition supplied to cfor/cwhile statement.");
+            Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
+                    "statement.");
         Assert(ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     }
