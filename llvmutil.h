@@ -230,6 +230,16 @@ extern llvm::Constant *LLVMMaskAllOff;
     return false for arrays where the values are actually all equal.  */
 extern bool LLVMVectorValuesAllEqual(llvm::Value *v);
 
+/** Given vector of integer-typed values, this function returns true if it
+    can determine that the elements of the vector have a step of 'stride'
+    between their values and false otherwise.  This function tries to
+    handle as many possibilities as possible, including things like all
+    elements equal to some non-constant value plus an integer offset, etc.
+    Needless to say (the halting problem and all that), it may return false
+    for some vectors that are in fact linear.
+    */
+extern bool LLVMVectorIsLinear(llvm::Value *v, int stride);
+
 /** Given a vector-typed value v, if the vector is a vector with constant
     element values, this function extracts those element values into the
     ret[] array and returns the number of elements (i.e. the vector type's
