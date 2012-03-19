@@ -304,8 +304,8 @@ export void raytrace_ispc_tasks(uniform int width, uniform int height,
     uniform int xBuckets = (width + (dx-1)) / dx;
     uniform int yBuckets = (height + (dy-1)) / dy;
     uniform int nTasks = xBuckets * yBuckets;
-    launch[nTasks] < raytrace_tile_task(width, height, baseWidth, baseHeight, 
-                                        raster2camera, camera2world, 
-                                        image, id, nodes, triangles) >;
+    launch[nTasks] raytrace_tile_task(width, height, baseWidth, baseHeight, 
+                                      raster2camera, camera2world, 
+                                      image, id, nodes, triangles);
 }
 

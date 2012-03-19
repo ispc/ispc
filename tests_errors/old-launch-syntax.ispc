@@ -1,10 +1,13 @@
+// "launch" expressions no longer take '<' '>' around function call expression. 
 
 export uniform int width() { return programCount; }
 
 
 static uniform float array[10000];
-task void x(uniform int i, float f) {
+
+task void x(float f) {
     uniform int j;
+    uniform int i = taskIndex;
     array[i] = i / 10000.;
     cfor (j = 0; j < 10000; ++j)
         array[i] = sin(array[i]);
@@ -13,9 +16,7 @@ task void x(uniform int i, float f) {
 }
 export void f_f(uniform float RET[], uniform float fFOO[]) { 
     float f = fFOO[programIndex];
-    uniform int i;
-    cfor (i = 0; i < 10000; ++i)
-        launch x(i, f);
+    launch[10000] < x(f) >;
     sync;
     RET[programIndex] = array[9999];
 }

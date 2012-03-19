@@ -15,7 +15,7 @@ task void x(float f) {
 }
 export void f_f(uniform float RET[], uniform float fFOO[]) { 
     float f = fFOO[programIndex];
-    launch[10000] < x(f) >;
+    launch[10000] x(f);
     sync;
     RET[programIndex] = array[9999];
 }

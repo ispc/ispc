@@ -8,7 +8,7 @@ task void x(uniform int i, float f) {
 }
 export void f_fu(uniform float RET[], uniform float fFOO[], uniform float fu) { 
     float f = fFOO[programIndex];
-    launch[1] < x(fu, f) >;
+    launch[1] x(fu, f);
     sync;
     RET[programIndex] = array[5];
 }
