@@ -39,7 +39,9 @@
 #include "ispc.h"
 #include "type.h"
 #include <llvm/Instructions.h>
+#include <llvm/BasicBlock.h>
 #include <set>
+#include <map>
 
 LLVM_TYPE_CONST llvm::Type *LLVMTypes::VoidType = NULL;
 LLVM_TYPE_CONST llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
@@ -781,6 +783,96 @@ LLVMDumpValue(llvm::Value *v) {
     std::set<llvm::Value *> done;
     lDumpValue(v, done);
     fprintf(stderr, "----\n");
+}
+
+
+static llvm::Value *
+lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
+                           std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
+    // If it's not an instruction (i.e. is a constant), then we can just
+    // emit an extractelement instruction and let the regular optimizer do
+    // the rest.
+    if (llvm::isa<llvm::Instruction>(v) == false)
+        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
+                                                insertBefore);
+
+    LLVM_TYPE_CONST llvm::VectorType *vt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    Assert(vt != NULL);
+
+    llvm::Twine newName = v->getName() + llvm::Twine(".elt0");
+
+    // Rewrite regular binary operators and casts to the scalarized
+    // equivalent.
+    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
+    if (bop != NULL) {
+        llvm::Value *v0 = lExtractFirstVectorElement(bop->getOperand(0),
+                                                     insertBefore, phiMap);
+        llvm::Value *v1 = lExtractFirstVectorElement(bop->getOperand(1),
+                                                     insertBefore, phiMap);
+        return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1,
+                                            newName, insertBefore);
+    }
+
+    llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(v);
+    if (cast != NULL) {
+        llvm::Value *v = lExtractFirstVectorElement(cast->getOperand(0),
+                                                    insertBefore, phiMap);
+        return llvm::CastInst::Create(cast->getOpcode(), v,
+                                      vt->getElementType(), newName,
+                                      insertBefore);
+    }
+
+    llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
+    if (phi != NULL) {
+        // For PHI notes, recursively scalarize them.
+        if (phiMap.find(phi) != phiMap.end())
+            return phiMap[phi];
+
+        // We need to create the new scalar PHI node immediately, though,
+        // and put it in the map<>, so that if we come back to this node
+        // via a recursive lExtractFirstVectorElement() call, then we can
+        // return the pointer and not get stuck in an infinite loop.
+        //
+        // The insertion point for the new phi node also has to be the
+        // start of the bblock of the original phi node, which isn't
+        // necessarily the same bblock as insertBefore is in!
+        llvm::Instruction *phiInsertPos = phi->getParent()->begin();
+        llvm::PHINode *scalarPhi = 
+            llvm::PHINode::Create(vt->getElementType(), 
+                                  phi->getNumIncomingValues(), newName,
+                                  phiInsertPos);
+        phiMap[phi] = scalarPhi;
+
+        for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
+            llvm::Value *v = lExtractFirstVectorElement(phi->getIncomingValue(i),
+                                                        insertBefore, phiMap);
+            scalarPhi->addIncoming(v, phi->getIncomingBlock(i));
+        }
+
+        return scalarPhi;
+    }
+
+    // If we have a chain of insertelement instructions, then we can just
+    // flatten them out and grab the value for the first one.
+    llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
+    if (ie != NULL) {
+        llvm::Value *elements[ISPC_MAX_NVEC];
+        LLVMFlattenInsertChain(ie, vt->getNumElements(), elements);
+        return elements[0];
+    }
+
+    // Worst case, for everything else, just do a regular extract element
+    return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
+                                            insertBefore);
+}
+
+
+llvm::Value *
+LLVMExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore) {
+    std::map<llvm::PHINode *, llvm::PHINode *> phiMap;
+    llvm::Value *ret = lExtractFirstVectorElement(v, insertBefore, phiMap);
+    return ret;
 }
 
 

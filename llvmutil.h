@@ -239,6 +239,17 @@ void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
     on. */
 extern void LLVMDumpValue(llvm::Value *v);
 
+/** Given a vector-typed value, this function returns the value of its
+    first element.  Rather than just doing the straightforward thing of
+    using a single extractelement instruction to do this, this function
+    tries to rewrite the computation for the first element in scalar form;
+    this is generally more efficient than computing the entire vector's
+    worth of values just to extract the first element, in cases where only
+    the first element's value is needed.
+  */
+extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v, 
+                                              llvm::Instruction *insertBefore);
+
 /** This function takes two vectors, expected to be the same length, and
     returns a new vector of twice the length that represents concatenating
     the two of them. */
