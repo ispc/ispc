@@ -1648,50 +1648,10 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
 
 
 static bool
-lExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
-    Assert(vt != NULL);
-    Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
-
-    *nElts = (int)vt->getNumElements();
-
-    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
-        for (int i = 0; i < (int)vt->getNumElements(); ++i)
-            ret[i] = 0;
-        return true;
-    }
-
-#ifdef LLVM_3_1svn
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-    if (cv == NULL)
-        return false;
-
-    for (int i = 0; i < (int)cv->getNumElements(); ++i)
-        ret[i] = cv->getElementAsInteger(i);
-    return true;
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv == NULL)
-        return false;
-
-     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-     cv->getVectorElements(elements);
-     for (int i = 0; i < (int)vt->getNumElements(); ++i) {
-         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-         Assert(ci != NULL);
-         ret[i] = ci->getSExtValue();
-     }
-     return true;
-#endif // LLVM_3_1svn
-}
-
-
-static bool
 lVectorIs32BitInts(llvm::Value *v) {
     int nElts;
     int64_t elts[ISPC_MAX_NVEC];
-    if (!lExtractVectorInts(v, elts, &nElts))
+    if (!LLVMExtractVectorInts(v, elts, &nElts))
         return false;
 
     for (int i = 0; i < nElts; ++i)
@@ -3546,36 +3506,19 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
 static void
 lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGroup,
                      int elementSize, std::vector<int64_t> *constOffsets) {
-    constOffsets->reserve(coalesceGroup.size() * g->target.vectorWidth);
+    int width = g->target.vectorWidth;
+    *constOffsets = std::vector<int64_t>(coalesceGroup.size() * width, 0);
 
-    for (int i = 0; i < (int)coalesceGroup.size(); ++i) {
+    int64_t *endPtr = &((*constOffsets)[0]);
+    for (int i = 0; i < (int)coalesceGroup.size(); ++i, endPtr += width) {
         llvm::Value *offsets = coalesceGroup[i]->getArgOperand(3);
-
-#ifdef LLVM_3_1svn
-        llvm::ConstantDataVector *cv = 
-            llvm::dyn_cast<llvm::ConstantDataVector>(offsets);
-        Assert(cv != NULL);
-
-        for (int j = 0; j < g->target.vectorWidth; ++j) {
-            Assert((cv->getElementAsInteger(j) % elementSize) == 0);
-            constOffsets->push_back((int64_t)cv->getElementAsInteger(j) / 
-                                    elementSize);
-        }
-#else
-        llvm::ConstantVector *cv =
-            llvm::dyn_cast<llvm::ConstantVector>(offsets);
-        Assert(cv != NULL);
-
-        for (int j = 0; j < g->target.vectorWidth; ++j) {
-            llvm::ConstantInt *ci = 
-                llvm::dyn_cast<llvm::ConstantInt>(cv->getOperand(j));
-            Assert(ci != NULL);
-            int64_t value = ci->getValue().getSExtValue();
-            Assert((value % elementSize) == 0);
-            constOffsets->push_back(value / elementSize);
-        }
-#endif
+        int nElts;
+        bool ok = LLVMExtractVectorInts(offsets, endPtr, &nElts);
+        Assert(ok && nElts == width);
     }
+
+    for (int i = 0; i < (int)constOffsets->size(); ++i)
+        (*constOffsets)[i] /= elementSize;
 }
 
 

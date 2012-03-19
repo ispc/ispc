@@ -589,18 +589,6 @@ lGetIntValue(llvm::Value *offset) {
 }
 
 
-/** This function takes chains of InsertElement instructions along the
-    lines of:
-
-    %v0 = insertelement undef, value_0, i32 index_0
-    %v1 = insertelement %v1,   value_1, i32 index_1
-    ...
-    %vn = insertelement %vn-1, value_n-1, i32 index_n-1
-
-    and initializes the provided elements array such that the i'th
-    llvm::Value * in the array is the element that was inserted into the
-    i'th element of the vector.
-*/
 void
 LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
                        llvm::Value **elements) {
@@ -612,21 +600,79 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
         Assert(iOffset >= 0 && iOffset < vectorWidth);
         Assert(elements[iOffset] == NULL);
 
+        // Get the scalar value from this insert 
         elements[iOffset] = ie->getOperand(1);
 
+        // Do we have another insert?
         llvm::Value *insertBase = ie->getOperand(0);
         ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
         if (ie == NULL) {
             if (llvm::isa<llvm::UndefValue>(insertBase))
                 return;
 
+            // Get the value out of a constant vector if that's what we
+            // have
             llvm::ConstantVector *cv = 
                 llvm::dyn_cast<llvm::ConstantVector>(insertBase);
+
+            // FIXME: this assert is a little questionable; we probably
+            // shouldn't fail in this case but should just return an
+            // incomplete result.  But there aren't currently any known
+            // cases where we have anything other than an undef value or a
+            // constant vector at the base, so if that ever does happen,
+            // it'd be nice to know what happend so that perhaps we can
+            // handle it.
+            // FIXME: Also, should we handle ConstantDataVectors with
+            // LLVM3.1?  What about ConstantAggregateZero values??
             Assert(cv != NULL);
+
             Assert(iOffset < (int)cv->getNumOperands());
             elements[iOffset] = cv->getOperand((int32_t)iOffset);
         }
     }
+}
+
+
+bool
+LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
+    // Make sure we do in fact have a vector of integer values here
+    LLVM_TYPE_CONST llvm::VectorType *vt =
+        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    Assert(vt != NULL);
+    Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
+
+    *nElts = (int)vt->getNumElements();
+
+    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
+        for (int i = 0; i < (int)vt->getNumElements(); ++i)
+            ret[i] = 0;
+        return true;
+    }
+
+    // Deal with the fact that LLVM3.1 and previous versions have different
+    // representations for vectors of constant ints...
+#ifdef LLVM_3_1svn
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
+    if (cv == NULL)
+        return false;
+
+    for (int i = 0; i < (int)cv->getNumElements(); ++i)
+        ret[i] = cv->getElementAsInteger(i);
+    return true;
+#else
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
+    if (cv == NULL)
+        return false;
+
+     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+     cv->getVectorElements(elements);
+     for (int i = 0; i < (int)vt->getNumElements(); ++i) {
+         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
+         Assert(ci != NULL);
+         ret[i] = ci->getSExtValue();
+     }
+     return true;
+#endif // LLVM_3_1svn
 }
 
 

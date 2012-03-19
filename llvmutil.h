@@ -231,8 +231,33 @@ extern llvm::Constant *LLVMMaskAllOff;
 extern bool LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
                                      std::vector<llvm::PHINode *> &seenPhis);
 
-void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
-                            llvm::Value **elements);
+/** Given a vector-typed value v, if the vector is a vector with constant
+    element values, this function extracts those element values into the
+    ret[] array and returns the number of elements (i.e. the vector type's
+    width) in *nElts.  It returns true if successful and false if the given
+    vector is not in fact a vector of constants. */
+extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
+
+/** This function takes chains of InsertElement instructions along the
+    lines of:
+
+    %v0 = insertelement undef, value_0, i32 index_0
+    %v1 = insertelement %v1,   value_1, i32 index_1
+    ...
+    %vn = insertelement %vn-1, value_n-1, i32 index_n-1
+
+    and initializes the provided elements array such that the i'th
+    llvm::Value * in the array is the element that was inserted into the
+    i'th element of the vector.  
+
+    When the chain of insertelement instruction comes to an end, the only
+    base case that this function handles is the initial value being a
+    constant vector.  For anything more complex (e.g. some other arbitrary
+    value, it doesn't try to extract element values into the returned
+    array.
+ */
+extern void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
+                                   llvm::Value **elements);
 
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends
