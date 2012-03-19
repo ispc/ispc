@@ -388,7 +388,6 @@ Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreatePseudoMaskedStorePass());
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->opt.disableHandlePseudoMemoryOps == false &&
             g->target.vectorWidth > 1) {
             optPM.add(CreateGSToLoadStorePass());
         
