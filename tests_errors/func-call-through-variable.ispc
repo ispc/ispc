@@ -43,5 +43,5 @@ uniform float result[])
 
 uniform int span = N / 8;  // 8 tasks
 
-launch[N/span] < saxpy_ispc_task(N, span, scale, X, Y, result) >;
+launch[N/span] saxpy_ispc_task(N, span, scale, X, Y, result);
 }

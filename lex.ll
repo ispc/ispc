@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -358,6 +358,7 @@ extern { RT; return TOKEN_EXTERN; }
 false { RT; return TOKEN_FALSE; }
 float { RT; return TOKEN_FLOAT; }
 for { RT; return TOKEN_FOR; }
+__foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
 foreach { RT; return TOKEN_FOREACH; }
 foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
 goto { RT; return TOKEN_GOTO; }
@@ -372,9 +373,6 @@ launch { RT; return TOKEN_LAUNCH; }
 new { RT; return TOKEN_NEW; }
 NULL { RT; return TOKEN_NULL; }
 print { RT; return TOKEN_PRINT; }
-reference { Error(yylloc, "\"reference\" qualifier is no longer supported; "
-                          "please use C++-style '&' syntax for references "
-                          "instead."); }
 return { RT; return TOKEN_RETURN; }
 soa { RT; return TOKEN_SOA; }
 signed { RT; return TOKEN_SIGNED; }

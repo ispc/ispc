@@ -1,3 +1,60 @@
+=== v1.2.0 === (20 March 2012)
+
+This is a major new release of ispc, with a number of significant
+improvements to functionality, performance, and compiler robustness.  It
+does, however, include three small changes to language syntax and semantics
+that may require changes to existing programs:
+
+* Syntax for the "launch" keyword has been cleaned up; it's now no longer
+  necessary to bracket the launched function call with angle brackets.
+  (In other words, now use "launch foo();", rather than "launch < foo() >;".
+
+* When using pointers, the pointed-to data type is now "uniform" by
+  default.  Use the varying keyword to specify varying pointed-to types when
+  needed.  (i.e. "float *ptr" is a varying pointer to uniform float data,
+  whereas previously it was a varying pointer to varying float values.)
+  Use "varying float *" to specify a varying pointer to varying float data,
+  and so forth.
+
+* The details of "uniform" and "varying" and how they interact with struct
+  types have been cleaned up.  Now, when a struct type is declared, if the
+  struct elements don't have explicit "uniform" or "varying" qualifiers,
+  they are said to have "unbound" variability.  When a struct type is
+  instantiated, any unbound variability elements inherit the variability of
+  the parent struct type. See http://ispc.github.com/ispc.html#struct-types
+  for more details.
+
+ispc has a new language feature that makes it much easier to use the
+efficient "(array of) structure of arrays" (AoSoA, or SoA) memory layout of
+data.  A new "soa<n>" qualifier can be applied to structure types to
+specify an n-wide SoA version of the corresponding type.  Array indexing
+and pointer operations with arrays SoA types automatically handles the
+two-stage indexing calculation to access the data.  See
+http://ispc.github.com/ispc.html#structure-of-array-types for more details.
+
+For more efficient access of data that is still in "array of structures"
+(AoS) format, ispc has a new "memory coalescing" optimization that
+automatically detects series of strided loads and/or gathers that can be
+transformed into a more efficient set of vector loads and shuffles.  A
+diagnostic is emitted when this optimization is successfully applied. 
+
+Smaller changes in this release:
+
+* The standard library now provides memcpy(), memmove() and memset()
+  functions, as well as single-precision asin() and acos() functions.
+
+* -I can now be specified on the command-line to specify a search path for
+  #include files.
+
+* A number of improvements have been made to error reporting from the
+  parser, and a number of cases where malformed programs could cause the
+  compiler to crash have been fixed.
+
+* A number of small improvements to the quality and performance of generated
+  code have been made, including finding more cases where 32-bit addressing
+  calculations can be safely done on 64-bit systems and generating better
+  code for initializer expressions.
+
 === v1.1.4 === (4 February 2012)
 
 There are two major bugfixes for Windows in this release.  First, a number

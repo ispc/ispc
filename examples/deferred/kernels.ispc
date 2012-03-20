@@ -514,9 +514,9 @@ RenderStatic(uniform InputHeader &inputHeader,
 
     // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
     // by MIN_TILE_HEIGHT pixels.
-    launch[num_groups] < RenderTile(num_groups_x, num_groups_y,
-                                    inputHeader, inputData, visualizeLightCount,
-                                    framebuffer_r, framebuffer_g, framebuffer_b) >;
+    launch[num_groups] RenderTile(num_groups_x, num_groups_y,
+                                  inputHeader, inputData, visualizeLightCount,
+                                  framebuffer_r, framebuffer_g, framebuffer_b);
 }
 
 

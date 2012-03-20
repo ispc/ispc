@@ -336,6 +336,6 @@ volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
     // Launch tasks to work on (dx,dy)-sized tiles of the image
     uniform int dx = 8, dy = 8;
     uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
-    launch[nTasks] < volume_task(density, nVoxels, raster2camera, camera2world, 
-                                 width, height, image) >;
+    launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
+                               width, height, image);
 }

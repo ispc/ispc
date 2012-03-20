@@ -77,7 +77,7 @@ black_scholes_ispc_tasks(uniform float Sa[], uniform float Xa[], uniform float T
                          uniform float ra[], uniform float va[], 
                          uniform float result[], uniform int count) {
     uniform int nTasks = max((int)64, (int)count/16384);
-    launch[nTasks] < bs_task(Sa, Xa, Ta, ra, va, result, count) >;
+    launch[nTasks] bs_task(Sa, Xa, Ta, ra, va, result, count);
 }
 
 
@@ -150,5 +150,5 @@ binomial_put_ispc_tasks(uniform float Sa[], uniform float Xa[],
                         uniform float va[], uniform float result[], 
                         uniform int count) {
     uniform int nTasks = max((int)64, (int)count/16384);
-    launch[nTasks] < binomial_task(Sa, Xa, Ta, ra, va, result, count) >;
+    launch[nTasks] binomial_task(Sa, Xa, Ta, ra, va, result, count);
 }

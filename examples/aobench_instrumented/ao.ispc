@@ -329,5 +329,5 @@ static void task ao_task(uniform int width, uniform int height,
 
 export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
                           uniform float image[]) {
-    launch[h] < ao_task(w, h, nsubsamples, image) >;
+    launch[h] ao_task(w, h, nsubsamples, image);
 }

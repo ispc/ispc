@@ -65,8 +65,8 @@
 
 static void
 lPrintVersion() {
-    printf("Intel(r) SPMD Program Compiler (ispc), build %s (%s, LLVM %s)\n", 
-           BUILD_DATE, BUILD_VERSION,
+    printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", 
+           ISPC_VERSION, BUILD_VERSION, BUILD_DATE, 
 #ifdef LLVM_2_9
            "2.9"
 #elif defined(LLVM_3_0) || defined(LLVM_3_0svn)
@@ -380,7 +380,7 @@ int main(int Argc, char *Argv[]) {
             }
             outFileName = argv[i];
         }
-        else if (!strcmp(argv[i], "--outfile="))
+        else if (!strncmp(argv[i], "--outfile=", 10))
             outFileName = argv[i] + strlen("--outfile=");
         else if (!strcmp(argv[i], "-h")) {
             if (++i == argc) {

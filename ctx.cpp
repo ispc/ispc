@@ -245,6 +245,8 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     StoreInst(llvm::Constant::getNullValue(LLVMTypes::VoidPointerType), 
               launchGroupHandlePtr);
 
+    disableGSWarningCount = 0;
+
     const Type *returnType = function->GetReturnType();
     if (!returnType || Type::Equal(returnType, AtomicType::Void))
         returnValuePtr = NULL;
@@ -1104,6 +1106,19 @@ FunctionEmitContext::InForeachLoop() const {
             return true;
     return false;
 }
+
+
+void
+FunctionEmitContext::DisableGatherScatterWarnings() {
+    ++disableGSWarningCount;
+}
+
+
+void
+FunctionEmitContext::EnableGatherScatterWarnings() {
+    --disableGSWarningCount;
+}
+
 
 
 bool
@@ -2492,7 +2507,8 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     // Add metadata about the source file location so that the
     // optimization passes can print useful performance warnings if we
     // can't optimize out this gather
-    addGSMetadata(call, currentPos);
+    if (disableGSWarningCount == 0)
+        addGSMetadata(call, currentPos);
 
     return BitCastInst(call, llvmReturnType, "gather_bitcast");
 }
@@ -2801,7 +2817,9 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
     args.push_back(value);
     args.push_back(mask);
     llvm::Value *inst = CallInst(scatterFunc, NULL, args);
-    addGSMetadata(inst, currentPos);
+
+    if (disableGSWarningCount == 0)
+        addGSMetadata(inst, currentPos);
 }
 
 
@@ -2876,7 +2894,8 @@ void
 FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
                                        llvm::Value *mask, const Type *valueType,
                                        const PointerType *ptrType) {
-    Assert(Type::Equal(ptrType->GetBaseType()->GetAsUniformType(), valueType));
+    Assert(Type::EqualIgnoringConst(ptrType->GetBaseType()->GetAsUniformType(), 
+                                    valueType));
 
     const CollectionType *ct = dynamic_cast<const CollectionType *>(valueType);
     if (ct != NULL) {

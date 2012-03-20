@@ -188,13 +188,14 @@ struct ForeachDimension {
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
-%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED TOKEN_DOTDOTDOT
+%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
+%token TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
 %type <expr> primary_expression postfix_expression
-%type <expr> unary_expression cast_expression launch_expression
+%type <expr> unary_expression cast_expression funcall_expression launch_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
 %type <expr> exclusive_or_expression inclusive_or_expression
@@ -220,7 +221,7 @@ struct ForeachDimension {
 %type <structDeclarationList> struct_declaration_list
 
 %type <symbolList> enumerator_list
-%type <symbol> enumerator foreach_identifier
+%type <symbol> enumerator foreach_identifier foreach_active_identifier
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -302,20 +303,45 @@ primary_expression
     ;
 
 launch_expression
-    : TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
+    : TOKEN_LAUNCH postfix_expression '(' argument_expression_list ')'
       { 
-          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
-          $$ = new FunctionCallExpr($3, $5, Union(@3, @6), true, oneExpr);
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
+          $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, oneExpr);
       }
-    | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
+    | TOKEN_LAUNCH postfix_expression '(' ')'
       {
-          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @3);
-          $$ = new FunctionCallExpr($3, new ExprList(Union(@4,@5)), Union(@3, @5), true, oneExpr);
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
+          $$ = new FunctionCallExpr($2, new ExprList(Union(@3,@4)), Union(@2, @4), true, oneExpr);
+       }
+    | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' argument_expression_list ')'
+      { $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, $3); }
+    | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' ')'
+      { $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, $3); }
+
+    | TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
+       { 
+          Error(Union(@2, @7), "\"launch\" expressions no longer take '<' '>' "
+                "around function call expression.");
+          $$ = NULL;
+       }
+    | TOKEN_LAUNCH '<' postfix_expression '(' ')' '>'
+       {
+          Error(Union(@2, @6), "\"launch\" expressions no longer take '<' '>' "
+                "around function call expression.");
+          $$ = NULL;
        }
     | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' argument_expression_list ')' '>'
-      { $$ = new FunctionCallExpr($6, $8, Union(@6,@9), true, $3); }
+       {
+          Error(Union(@5, @10), "\"launch\" expressions no longer take '<' '>' "
+                "around function call expression.");
+          $$ = NULL;
+       }
     | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' ')' '>'
-      { $$ = new FunctionCallExpr($6, new ExprList(Union(@6,@7)), Union(@6,@8), true, $3); }
+       {
+          Error(Union(@5, @9), "\"launch\" expressions no longer take '<' '>' "
+                "around function call expression.");
+          $$ = NULL;
+       }
     ;
 
 postfix_expression
@@ -323,12 +349,6 @@ postfix_expression
     | postfix_expression '[' expression ']'
       { $$ = new IndexExpr($1, $3, Union(@1,@4)); }
     | postfix_expression '[' error ']'
-      { $$ = NULL; }
-    | postfix_expression '(' ')'
-      { $$ = new FunctionCallExpr($1, new ExprList(Union(@1,@2)), Union(@1,@3)); }
-    | postfix_expression '(' argument_expression_list ')'
-      { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
-    | postfix_expression '(' error ')'
       { $$ = NULL; }
     | launch_expression
     | postfix_expression '.' TOKEN_IDENTIFIER
@@ -339,6 +359,16 @@ postfix_expression
       { $$ = new UnaryExpr(UnaryExpr::PostInc, $1, Union(@1,@2)); }
     | postfix_expression TOKEN_DEC_OP
       { $$ = new UnaryExpr(UnaryExpr::PostDec, $1, Union(@1,@2)); }
+    ;
+
+funcall_expression
+    : postfix_expression
+    | postfix_expression '(' ')'
+      { $$ = new FunctionCallExpr($1, new ExprList(Union(@1,@2)), Union(@1,@3)); }
+    | postfix_expression '(' argument_expression_list ')'
+      { $$ = new FunctionCallExpr($1, $3, Union(@1,@4)); }
+    | postfix_expression '(' error ')'
+      { $$ = NULL; }
     ;
 
 argument_expression_list
@@ -357,7 +387,7 @@ argument_expression_list
     ;
 
 unary_expression
-    : postfix_expression
+    : funcall_expression
     | TOKEN_INC_OP unary_expression   
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
     | TOKEN_DEC_OP unary_expression   
@@ -1521,6 +1551,17 @@ foreach_identifier
     }
     ;
 
+foreach_active_scope
+    : TOKEN_FOREACH_ACTIVE { m->symbolTable->PushScope(); }
+    ;
+
+foreach_active_identifier
+    : TOKEN_IDENTIFIER
+    {
+        $$ = new Symbol(yytext, @1, AtomicType::UniformInt32);
+    }
+    ;
+
 foreach_dimension_specifier
     : foreach_identifier '=' assignment_expression TOKEN_DOTDOTDOT assignment_expression
     {
@@ -1627,6 +1668,16 @@ iteration_statement
              ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
+         m->symbolTable->PopScope();
+     }
+    | foreach_active_scope '(' foreach_active_identifier ')'
+     {
+         if ($3 != NULL)
+             m->symbolTable->AddVariable($3);
+     }
+     statement
+     {
+         $$ = CreateForeachActiveStmt($3, $6, Union(@1, @4));
          m->symbolTable->PopScope();
      }
     ;

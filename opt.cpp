@@ -388,7 +388,6 @@ Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreatePseudoMaskedStorePass());
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->opt.disableHandlePseudoMemoryOps == false &&
             g->target.vectorWidth > 1) {
             optPM.add(CreateGSToLoadStorePass());
         
@@ -1139,6 +1138,11 @@ lExtractFromInserts(llvm::Value *v, unsigned int index) {
 static llvm::Value *
 lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                       llvm::Instruction *insertBefore) {
+    if (g->debugPrint) {
+        fprintf(stderr, "lGetBasePtrAndOffsets\n");
+        LLVMDumpValue(ptrs);
+    }
+
     llvm::Value *base = lGetBasePointer(ptrs);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
@@ -1257,36 +1261,6 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
 
     return NULL;
 }
-
-
-static llvm::Value *
-lGetZeroOffsetVector(llvm::Value *origVec) {
-    if (origVec->getType() == LLVMTypes::Int32VectorType)
-        return LLVMInt32Vector((int32_t)0);
-    else
-        return LLVMInt64Vector((int64_t)0);
-}
-
-
-#if 0
-static void
-lPrint(llvm::Value *v, int indent = 0) {
-    if (llvm::isa<llvm::PHINode>(v))
-        return;
-
-    fprintf(stderr, "%*c", indent, ' ');
-    v->dump();
-
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst != NULL) {
-        for (int i = 0; i < (int)inst->getNumOperands(); ++i) {
-            llvm::Value *op = inst->getOperand(i);
-            if (llvm::isa<llvm::Constant>(op) == false)
-                lPrint(op, indent+4);
-        }
-    }
-}
-#endif
 
 
 /** Given a vector expression in vec, separate it into a compile-time
@@ -1587,8 +1561,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
         return unif;
     }
 
-    std::vector<llvm::PHINode *> phis;
-    if (LLVMVectorValuesAllEqual(*vec, g->target.vectorWidth, phis)) {
+    if (LLVMVectorValuesAllEqual(*vec)) {
         // FIXME: we may want to redo all of the expression here, in scalar
         // form (if at all possible), for code quality...
         llvm::Value *unif = 
@@ -1673,50 +1646,10 @@ lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
 
 
 static bool
-lExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
-    Assert(vt != NULL);
-    Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
-
-    *nElts = (int)vt->getNumElements();
-
-    if (llvm::isa<llvm::ConstantAggregateZero>(v)) {
-        for (int i = 0; i < (int)vt->getNumElements(); ++i)
-            ret[i] = 0;
-        return true;
-    }
-
-#ifdef LLVM_3_1svn
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-    if (cv == NULL)
-        return false;
-
-    for (int i = 0; i < (int)cv->getNumElements(); ++i)
-        ret[i] = cv->getElementAsInteger(i);
-    return true;
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv == NULL)
-        return false;
-
-     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-     cv->getVectorElements(elements);
-     for (int i = 0; i < (int)vt->getNumElements(); ++i) {
-         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-         Assert(ci != NULL);
-         ret[i] = ci->getSExtValue();
-     }
-     return true;
-#endif // LLVM_3_1svn
-}
-
-
-static bool
 lVectorIs32BitInts(llvm::Value *v) {
     int nElts;
     int64_t elts[ISPC_MAX_NVEC];
-    if (!lExtractVectorInts(v, elts, &nElts))
+    if (!LLVMExtractVectorInts(v, elts, &nElts))
         return false;
 
     for (int i = 0; i < nElts; ++i)
@@ -1880,9 +1813,9 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, 
                                callInst);
         if (constOffset == NULL)
-            constOffset = lGetZeroOffsetVector(offsetVector);
+            constOffset = LLVMIntAsType(0, offsetVector->getType());
         if (variableOffset == NULL)
-            variableOffset = lGetZeroOffsetVector(offsetVector);
+            variableOffset = LLVMIntAsType(0, offsetVector->getType());
 
         // See if the varying component is scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite variableOffset to remove
@@ -2333,208 +2266,6 @@ public:
 char GSToLoadStorePass::ID = 0;
 
 
-
-/** Given a vector of compile-time constant integer values, test to see if
-    they are a linear sequence of constant integers starting from an
-    arbirary value but then having a step of value "stride" between
-    elements.
- */
-static bool
-lVectorIsLinearConstantInts(
-#ifdef LLVM_3_1svn
-                            llvm::ConstantDataVector *cv, 
-#else
-                            llvm::ConstantVector *cv, 
-#endif
-                            int vectorLength, 
-                            int stride) {
-    // Flatten the vector out into the elements array
-    llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifdef LLVM_3_1svn
-    for (int i = 0; i < (int)cv->getNumElements(); ++i)
-        elements.push_back(cv->getElementAsConstant(i));
-#else
-    cv->getVectorElements(elements);
-#endif
-    Assert((int)elements.size() == vectorLength);
-
-    llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[0]);
-    if (ci == NULL)
-        // Not a vector of integers
-        return false;
-
-    int64_t prevVal = ci->getSExtValue();
-
-    // For each element in the array, see if it is both a ConstantInt and
-    // if the difference between it and the value of the previous element
-    // is stride.  If not, fail.
-    for (int i = 1; i < vectorLength; ++i) {
-        ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-        if (ci == NULL) 
-            return false;
-
-        int64_t nextVal = ci->getSExtValue();
-        if (prevVal + stride != nextVal)
-            return false;
-
-        prevVal = nextVal;
-    }
-    return true;
-}
-
-
-static bool lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
-                            std::vector<llvm::PHINode *> &seenPhis);
-
-/** Checks to see if (op0 * op1) is a linear vector where the result is a
-    vector with values that increase by stride.
- */
-static bool
-lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength, 
-                   int stride, std::vector<llvm::PHINode *> &seenPhis) {
-    // Is the first operand a constant integer value splatted across all of
-    // the lanes?
-#ifdef LLVM_3_1svn
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
-#endif
-    if (cv == NULL)
-        return false;
-
-    llvm::Constant *csplat = cv->getSplatValue();
-    if (csplat == NULL)
-        return false;
-
-    llvm::ConstantInt *splat = llvm::dyn_cast<llvm::ConstantInt>(csplat);
-    if (splat == NULL)
-        return false;
-
-    // If the splat value doesn't evenly divide the stride we're looking
-    // for, there's no way that we can get the linear sequence we're
-    // looking or.
-    int64_t splatVal = splat->getSExtValue();
-    if (splatVal == 0 || splatVal > stride || (stride % splatVal) != 0)
-        return false;
-
-    // Check to see if the other operand is a linear vector with stride
-    // given by stride/splatVal.
-    return lVectorIsLinear(op1, vectorLength, (int)(stride / splatVal), 
-                           seenPhis);
-}
-
-
-/** Given vector of integer-typed values, see if the elements of the array
-    have a step of 'stride' between their values.  This function tries to
-    handle as many possibilities as possible, including things like all
-    elements equal to some non-constant value plus an integer offset, etc.
-*/
-static bool
-lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
-                std::vector<llvm::PHINode *> &seenPhis) {
-    // First try the easy case: if the values are all just constant
-    // integers and have the expected stride between them, then we're done.
-#ifdef LLVM_3_1svn
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-#endif
-    if (cv != NULL)
-        return lVectorIsLinearConstantInts(cv, vectorLength, stride);
-
-    llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
-    if (bop != NULL) {
-        // FIXME: is it right to pass the seenPhis to the all equal check as well??
-        llvm::Value *op0 = bop->getOperand(0), *op1 = bop->getOperand(1);
-
-        if (bop->getOpcode() == llvm::Instruction::Add)
-            // There are two cases to check if we have an add:
-            //
-            // programIndex + unif -> ascending linear seqeuence
-            // unif + programIndex -> ascending linear sequence
-            return ((lVectorIsLinear(op0, vectorLength, stride, seenPhis) &&
-                     LLVMVectorValuesAllEqual(op1, vectorLength, seenPhis)) ||
-                    (lVectorIsLinear(op1, vectorLength, stride, seenPhis) &&
-                     LLVMVectorValuesAllEqual(op0, vectorLength, seenPhis)));
-        else if (bop->getOpcode() == llvm::Instruction::Sub)
-            // For subtraction, we only match:
-            //
-            // programIndex - unif -> ascending linear seqeuence
-            //
-            // In the future, we could also look for:
-            // unif - programIndex -> *descending* linear seqeuence
-            // And generate code for that as a vector load + shuffle.
-            return (lVectorIsLinear(bop->getOperand(0), vectorLength,
-                                    stride, seenPhis) &&
-                    LLVMVectorValuesAllEqual(bop->getOperand(1), vectorLength,
-                                          seenPhis));
-        else if (bop->getOpcode() == llvm::Instruction::Mul)
-            // Multiplies are a bit trickier, so are handled in a separate
-            // function.
-            return (lCheckMulForLinear(op0, op1, vectorLength, stride, seenPhis) ||
-                    lCheckMulForLinear(op1, op0, vectorLength, stride, seenPhis));
-        else
-            return false;
-    }
-
-    llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v);
-    if (ci != NULL)
-        return lVectorIsLinear(ci->getOperand(0), vectorLength,
-                               stride, seenPhis);
-
-    if (llvm::isa<llvm::CallInst>(v) || llvm::isa<llvm::LoadInst>(v))
-        return false;
-
-    llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
-    if (phi != NULL) {
-        for (unsigned int i = 0; i < seenPhis.size(); ++i)
-            if (seenPhis[i] == phi)
-                return true;
-
-        seenPhis.push_back(phi);
-
-        unsigned int numIncoming = phi->getNumIncomingValues();
-        // Check all of the incoming values: if all of them are all equal,
-        // then we're good.
-        for (unsigned int i = 0; i < numIncoming; ++i) {
-            if (!lVectorIsLinear(phi->getIncomingValue(i), vectorLength, stride,
-                                 seenPhis)) {
-                seenPhis.pop_back();
-                return false;
-            }
-        }
-
-        seenPhis.pop_back();
-        return true;
-    }
-
-    // TODO: is any reason to worry about these?
-    if (llvm::isa<llvm::InsertElementInst>(v))
-        return false;
-
-    // TODO: we could also handle shuffles, but we haven't yet seen any
-    // cases where doing so would detect cases where actually have a linear
-    // vector.
-    llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(v);
-    if (shuffle != NULL)
-        return false;
-
-#if 0
-    fprintf(stderr, "linear check: ");
-    v->dump();
-    fprintf(stderr, "\n");
-    llvm::Instruction *inst = llvm::dyn_cast<llvm::Instruction>(v);
-    if (inst) {
-        inst->getParent()->dump();
-        fprintf(stderr, "\n");
-        fprintf(stderr, "\n");
-    }
-#endif
-
-    return false;
-}
-
-
 struct GatherImpInfo {
     GatherImpInfo(const char *pName, const char *lbName, const char *lmName,
                   int a) 
@@ -2556,9 +2287,8 @@ struct GatherImpInfo {
 static llvm::Value *
 lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
                       llvm::Instruction *insertBefore) {
-    llvm::Value *firstOffset = 
-        llvm::ExtractElementInst::Create(offsets, LLVMInt32(0), "first_offset",
-                                         insertBefore);
+    llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets,
+                                                             insertBefore);
     return lGEPInst(base, firstOffset, "ptr", insertBefore);
 }
 
@@ -2652,8 +2382,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        lGetSourcePosFromMetadata(callInst, &pos);
 
         llvm::Value *base = callInst->getArgOperand(0);
         llvm::Value *varyingOffsets = callInst->getArgOperand(1);
@@ -2685,8 +2414,10 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                          constOffsets, "varying+const_offsets",
                                          callInst);
 
-        std::vector<llvm::PHINode *> seenPhis;
-        if (LLVMVectorValuesAllEqual(fullOffsets, g->target.vectorWidth, seenPhis)) {
+        Debug(SourcePos(), "GSToLoadStore: %s.", 
+              fullOffsets->getName().str().c_str());
+
+        if (LLVMVectorValuesAllEqual(fullOffsets)) {
             // If all the offsets are equal, then compute the single
             // pointer they all represent based on the first one of them
             // (arbitrarily).
@@ -2730,9 +2461,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         else {
             int step = gatherInfo ? gatherInfo->align : scatterInfo->align;
 
-            std::vector<llvm::PHINode *> seenPhis;
-            if (step > 0 && lVectorIsLinear(fullOffsets, g->target.vectorWidth, 
-                                            step, seenPhis)) {
+            if (step > 0 && LLVMVectorIsLinear(fullOffsets, step)) {
                 // We have a linear sequence of memory locations being accessed
                 // starting with the location given by the offset from
                 // offsetElements[0], with stride of 4 or 8 bytes (for 32 bit
@@ -3012,8 +2741,7 @@ static void
 lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
                   const std::vector<CoalescedLoadOp> &loadOps) {
     SourcePos pos;
-    bool ok = lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
-    Assert(ok);
+    lGetSourcePosFromMetadata(coalesceGroup[0], &pos);
 
     // Create a string that indicates the line numbers of the subsequent
     // gathers from the first one that were coalesced here.
@@ -3028,12 +2756,13 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
         for (int i = 1; i < (int)coalesceGroup.size(); ++i) {
             SourcePos p;
             bool ok = lGetSourcePosFromMetadata(coalesceGroup[i], &p);
-            Assert(ok);
-            char buf[32];
-            sprintf(buf, "%d", p.first_line);
-            strcat(otherPositions, buf);
-            if (i < (int)coalesceGroup.size() - 1)
-                strcat(otherPositions, ", ");
+            if (ok) {
+                char buf[32];
+                sprintf(buf, "%d", p.first_line);
+                strcat(otherPositions, buf);
+                if (i < (int)coalesceGroup.size() - 1)
+                    strcat(otherPositions, ", ");
+            }
         }
         strcat(otherPositions, ") ");
     }
@@ -3151,32 +2880,6 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
 }
 
 
-/** Shuffle two vectors together with a ShuffleVectorInst, returning a
-    vector with shufSize elements, where the shuf[] array offsets are used
-    to determine which element from the two given vectors is used for each
-    result element. */
-static llvm::Value *
-lShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
-                int shufSize, llvm::Instruction *insertBefore) {
-    std::vector<llvm::Constant *> shufVec;
-    for (int i = 0; i < shufSize; ++i) {
-        if (shuf[i] == -1)
-            shufVec.push_back(llvm::UndefValue::get(LLVMTypes::Int32Type));
-        else
-            shufVec.push_back(LLVMInt32(shuf[i]));
-    }
-
-#ifndef LLVM_2_9
-    llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
-    llvm::Value *vec = llvm::ConstantVector::get(aref);
-#else // LLVM_2_9
-    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
-#endif
-
-    return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
-}
-
-
 /** Convert any loads of 8-wide vectors into two 4-wide vectors
     (logically).  This allows the assembly code below to always operate on
     4-wide vectors, which leads to better code.  Returns a new vector of
@@ -3194,12 +2897,12 @@ lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps,
             int32_t shuf[2][4] = { { 0, 1, 2, 3 }, { 4, 5, 6, 7 } };
 
             ret.push_back(CoalescedLoadOp(loadOps[i].start, 4));
-            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
-                                              shuf[0], 4, insertBefore);
+            ret.back().load = LLVMShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                                 shuf[0], 4, insertBefore);
 
             ret.push_back(CoalescedLoadOp(loadOps[i].start+4, 4));
-            ret.back().load = lShuffleVectors(loadOps[i].load, loadOps[i].load,
-                                              shuf[1], 4, insertBefore);
+            ret.back().load = LLVMShuffleVectors(loadOps[i].load, loadOps[i].load,
+                                                 shuf[1], 4, insertBefore);
         }
         else
             ret.push_back(loadOps[i]);
@@ -3333,7 +3036,7 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
     // Now, issue a shufflevector instruction if any of the values from the
     // load we just considered were applicable.
     if (shuf[0] != 4 || shuf[1] != 5 || shuf[2] != 6 || shuf[3] != 7)
-        result = lShuffleVectors(load.load, result, shuf, 4, insertBefore);
+        result = LLVMShuffleVectors(load.load, result, shuf, 4, insertBefore);
 
     return result;
 }
@@ -3433,8 +3136,8 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
                         else
                             shuffle[i] = 4 + matchElements[i];
                     }
-                    result = lShuffleVectors(firstMatch->load, loadop.load, shuffle,
-                                             4, insertBefore);
+                    result = LLVMShuffleVectors(firstMatch->load, loadop.load, shuffle,
+                                                4, insertBefore);
                     firstMatch = NULL;
                 }
             }
@@ -3446,15 +3149,15 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
                     else
                         shuffle[i] = i;
                 }
-                result = lShuffleVectors(result, loadop.load, shuffle, 4,
-                                         insertBefore);
+                result = LLVMShuffleVectors(result, loadop.load, shuffle, 4,
+                                            insertBefore);
             }
         }
     }
 
     if (firstMatch != NULL && llvm::isa<llvm::UndefValue>(result))
-        return lShuffleVectors(firstMatch->load, result, firstMatchElements,
-                               4, insertBefore);
+        return LLVMShuffleVectors(firstMatch->load, result, firstMatchElements,
+                                  4, insertBefore);
     else
         return result;
 }
@@ -3513,30 +3216,6 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
 #endif
 
 
-/** Given two vectors of the same type, concatenate them into a vector that
-    has twice as many elements, where the first half has the elements from
-    the first vector and the second half has the elements from the second
-    vector.
- */
-static llvm::Value *
-lConcatVectors(llvm::Value *v1, llvm::Value *v2, 
-               llvm::Instruction *insertBefore) {
-    Assert(v1->getType() == v2->getType());
-
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
-    Assert(vt != NULL);
-
-    int32_t identity[ISPC_MAX_NVEC];
-    int resultSize = 2*vt->getNumElements();
-    Assert(resultSize <= ISPC_MAX_NVEC);
-    for (int i = 0; i < resultSize; ++i)
-        identity[i] = i;
-
-    return lShuffleVectors(v1, v2, identity, resultSize, insertBefore);
-}
-
-
 /** Given the set of loads that we've done and the set of result values to
     be computed, this function computes the final llvm::Value *s for each
     result vector.
@@ -3565,14 +3244,14 @@ lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
             result = vec4s[i];
             break;
         case 8:
-            result = lConcatVectors(vec4s[2*i], vec4s[2*i+1], insertBefore);
+            result = LLVMConcatVectors(vec4s[2*i], vec4s[2*i+1], insertBefore);
             break;
         case 16: {
-            llvm::Value *v1 = lConcatVectors(vec4s[4*i], vec4s[4*i+1],
-                                             insertBefore);
-            llvm::Value *v2 = lConcatVectors(vec4s[4*i+2], vec4s[4*i+3],
-                                             insertBefore);
-            result = lConcatVectors(v1, v2, insertBefore);
+            llvm::Value *v1 = LLVMConcatVectors(vec4s[4*i], vec4s[4*i+1],
+                                                insertBefore);
+            llvm::Value *v2 = LLVMConcatVectors(vec4s[4*i+2], vec4s[4*i+3],
+                                                insertBefore);
+            result = LLVMConcatVectors(v1, v2, insertBefore);
             break;
         }
         default:
@@ -3599,9 +3278,8 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
     // All of the variable offsets values should be the same, due to
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
-    llvm::Value *variable = 
-        llvm::ExtractElementInst::Create(variableOffsets, LLVMInt32(0),
-                                         "variable0", insertBefore);
+    llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets,
+                                                          insertBefore);
     if (variable->getType() == LLVMTypes::Int64Type)
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type,
                                          "scale_to64", insertBefore);
@@ -3623,36 +3301,19 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
 static void
 lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGroup,
                      int elementSize, std::vector<int64_t> *constOffsets) {
-    constOffsets->reserve(coalesceGroup.size() * g->target.vectorWidth);
+    int width = g->target.vectorWidth;
+    *constOffsets = std::vector<int64_t>(coalesceGroup.size() * width, 0);
 
-    for (int i = 0; i < (int)coalesceGroup.size(); ++i) {
+    int64_t *endPtr = &((*constOffsets)[0]);
+    for (int i = 0; i < (int)coalesceGroup.size(); ++i, endPtr += width) {
         llvm::Value *offsets = coalesceGroup[i]->getArgOperand(3);
-
-#ifdef LLVM_3_1svn
-        llvm::ConstantDataVector *cv = 
-            llvm::dyn_cast<llvm::ConstantDataVector>(offsets);
-        Assert(cv != NULL);
-
-        for (int j = 0; j < g->target.vectorWidth; ++j) {
-            Assert((cv->getElementAsInteger(j) % elementSize) == 0);
-            constOffsets->push_back((int64_t)cv->getElementAsInteger(j) / 
-                                    elementSize);
-        }
-#else
-        llvm::ConstantVector *cv =
-            llvm::dyn_cast<llvm::ConstantVector>(offsets);
-        Assert(cv != NULL);
-
-        for (int j = 0; j < g->target.vectorWidth; ++j) {
-            llvm::ConstantInt *ci = 
-                llvm::dyn_cast<llvm::ConstantInt>(cv->getOperand(j));
-            Assert(ci != NULL);
-            int64_t value = ci->getValue().getSExtValue();
-            Assert((value % elementSize) == 0);
-            constOffsets->push_back(value / elementSize);
-        }
-#endif
+        int nElts;
+        bool ok = LLVMExtractVectorInts(offsets, endPtr, &nElts);
+        Assert(ok && nElts == width);
     }
+
+    for (int i = 0; i < (int)constOffsets->size(); ++i)
+        (*constOffsets)[i] /= elementSize;
 }
 
 
@@ -3798,8 +3459,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        lGetSourcePosFromMetadata(callInst, &pos);
         Debug(pos, "Checking for coalescable gathers starting here...");
 
         llvm::Value *base = callInst->getArgOperand(0);
@@ -3822,9 +3482,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (lIsMaskAllOn(mask) == false)
             continue;
 
-        std::vector<llvm::PHINode *> seenPhis;
-        if (LLVMVectorValuesAllEqual(variableOffsets, g->target.vectorWidth,
-                                     seenPhis) == false)
+        if (!LLVMVectorValuesAllEqual(variableOffsets))
             continue;
 
         // coalesceGroup stores the set of gathers that we're going to try to
@@ -3854,28 +3512,28 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             bool ok = lGetSourcePosFromMetadata(fwdCall, &fwdPos);
             Assert(ok);
 
-#if 0
-            if (base != fwdCall->getArgOperand(0)) {
-                Debug(fwdPos, "base pointers mismatch");
-                base->dump();
-                fwdCall->getArgOperand(0)->dump();
+            if (g->debugPrint) {
+                if (base != fwdCall->getArgOperand(0)) {
+                    Debug(fwdPos, "base pointers mismatch");
+                    LLVMDumpValue(base);
+                    LLVMDumpValue(fwdCall->getArgOperand(0));
+                }
+                if (variableOffsets != fwdCall->getArgOperand(1)) {
+                    Debug(fwdPos, "varying offsets mismatch");
+                    LLVMDumpValue(variableOffsets);
+                    LLVMDumpValue(fwdCall->getArgOperand(1));
+                }
+                if (offsetScale != fwdCall->getArgOperand(2)) {
+                    Debug(fwdPos, "offset scales mismatch");
+                    LLVMDumpValue(offsetScale);
+                    LLVMDumpValue(fwdCall->getArgOperand(2));
+                }
+                if (mask != fwdCall->getArgOperand(4)) {
+                    Debug(fwdPos, "masks mismatch");
+                    LLVMDumpValue(mask);
+                    LLVMDumpValue(fwdCall->getArgOperand(4));
+                }
             }
-            if (variableOffsets != fwdCall->getArgOperand(1)) {
-                Debug(fwdPos, "varying offsets mismatch");
-                variableOffsets->dump();
-                fwdCall->getArgOperand(1)->dump();
-            }
-            if (offsetScale != fwdCall->getArgOperand(2)) {
-                Debug(fwdPos, "offset scales mismatch");
-                offsetScale->dump();
-                fwdCall->getArgOperand(2)->dump();
-            }
-            if (mask != fwdCall->getArgOperand(4)) {
-                Debug(fwdPos, "masks mismatch");
-                mask->dump();
-                fwdCall->getArgOperand(4)->dump();
-            }
-#endif
 
             if (base == fwdCall->getArgOperand(0) &&
                 variableOffsets == fwdCall->getArgOperand(1) &&
@@ -3904,9 +3562,6 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             goto restart;
         }
     }
-
-//CO    if (modifiedAny)
-//CO        bb.dump();
 
     return modifiedAny;
 }
@@ -4023,11 +3678,10 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // Get the source position from the metadata attached to the call
         // instruction so that we can issue PerformanceWarning()s below.
         SourcePos pos;
-        bool ok = lGetSourcePosFromMetadata(callInst, &pos);
-        Assert(ok);     
+        bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
 
         callInst->setCalledFunction(info->actualFunc);
-        if (g->target.vectorWidth > 1) {
+        if (gotPosition && g->target.vectorWidth > 1) {
             if (info->isGather)
                 PerformanceWarning(pos, "Gather required to compute value in expression.");
             else

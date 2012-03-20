@@ -2,6 +2,24 @@
 ispc News
 =========
 
+Paper on ispc To Appear in InPar 2012
+-------------------------------------
+
+A technical paper on ``ispc``, `ispc: A SPMD Compiler for High-Performance
+CPU Programming`_, by Matt Pharr and William R. Mark, has been accepted to
+the `InPar 2012`_ conference. This paper describes a number of the design
+features and key characteristics of the ``ispc`` implementation.
+
+(© 2012 IEEE. Personal use of this material is permitted. Permission from
+IEEE must be obtained for all other uses, in any current or future media,
+including reprinting/republishing this material for advertising or
+promotional purposes, creating new collective works, for resale or
+redistribution to servers or lists, or reuse of any copyrighted component
+of this work in other works.).
+
+.. _ispc\: A SPMD Compiler for High-Performance CPU Programming: https://github.com/downloads/ispc/ispc/ispc_inpar_2012.pdf
+.. _InPar 2012: http://innovativeparallel.org/
+
 ispc 1.1.4 is Released
 ----------------------
 

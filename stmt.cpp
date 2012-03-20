@@ -776,7 +776,8 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     bool uniformTest = testExpr->GetType()->IsUniformType();
     if (uniformTest && doCoherentCheck)
-        Warning(pos, "Uniform condition supplied to \"cdo\" statement.");
+        Warning(testExpr->pos, "Uniform condition supplied to \"cdo\" "
+                "statement.");
 
     llvm::BasicBlock *bloop = ctx->CreateBasicBlock("do_loop");
     llvm::BasicBlock *bexit = ctx->CreateBasicBlock("do_exit");
@@ -993,7 +994,8 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // any of the mask values are true.
     if (uniformTest) {
         if (doCoherentCheck)
-            Warning(pos, "Uniform condition supplied to cfor/cwhile statement.");
+            Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
+                    "statement.");
         Assert(ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     }
@@ -1334,9 +1336,13 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bbExit = ctx->CreateBasicBlock("foreach_exit");
 
     llvm::Value *oldMask = ctx->GetInternalMask();
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
 
     ctx->SetDebugPos(pos);
     ctx->StartScope();
+
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    ctx->SetFunctionMask(LLVMMaskAllOn);
 
     // This should be caught during typechecking
     Assert(startExprs.size() == dimVariables.size() && 
@@ -1739,7 +1745,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbMaskedBody); {
         ctx->AddInstrumentationPoint("foreach loop body (masked)");
         ctx->SetContinueTarget(bbMaskedBodyContinue);
+        ctx->DisableGatherScatterWarnings();
         stmts->EmitCode(ctx);
+        ctx->EnableGatherScatterWarnings();
         ctx->BranchInst(bbMaskedBodyContinue);
     }
     ctx->SetCurrentBasicBlock(bbMaskedBodyContinue); {
@@ -1763,7 +1771,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ///////////////////////////////////////////////////////////////////////////
     // foreach_exit: All done.  Restore the old mask and clean up
     ctx->SetCurrentBasicBlock(bbExit);
+
     ctx->SetInternalMask(oldMask);
+    ctx->SetFunctionMask(oldFunctionMask);
 
     ctx->EndForeach();
     ctx->EndScope();
@@ -2711,3 +2721,81 @@ int
 DeleteStmt::EstimateCost() const {
     return COST_DELETE;
 }
+
+///////////////////////////////////////////////////////////////////////////
+
+/** This generates AST nodes for an __foreach_active statement.  This
+    construct can be synthesized ouf of the existing ForStmt (and other AST
+    nodes), so here we just build up the AST that we need rather than
+    having a new Stmt implementation for __foreach_active.
+
+    @param iterSym  Symbol for the iteration variable (e.g. "i" in
+                    __foreach_active (i) { .. .}
+    @param stmts    Statements to execute each time through the loop, for
+                    each active program instance.
+    @param pos      Position of the __foreach_active statement in the source 
+                    file.
+ */
+Stmt *
+CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
+    if (iterSym == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    // loop initializer: set iter = 0
+    std::vector<VariableDeclaration> var;
+    ConstExpr *zeroExpr = new ConstExpr(AtomicType::UniformInt32, 0,
+                                        iterSym->pos);
+    var.push_back(VariableDeclaration(iterSym, zeroExpr));
+    Stmt *initStmt = new DeclStmt(var, iterSym->pos);
+
+    // loop test: (iter < programCount)
+    ConstExpr *progCountExpr = 
+        new ConstExpr(AtomicType::UniformInt32, g->target.vectorWidth,
+                      pos);
+    SymbolExpr *symExpr = new SymbolExpr(iterSym, iterSym->pos);
+    Expr *testExpr = new BinaryExpr(BinaryExpr::Lt, symExpr, progCountExpr,
+                                    pos);
+    
+    // loop step: ++iterSym
+    UnaryExpr *incExpr = new UnaryExpr(UnaryExpr::PreInc, symExpr, pos);
+    Stmt *stepStmt = new ExprStmt(incExpr, pos);
+
+    // loop body
+    // First, call __movmsk(__mask)) to get the mask as a set of bits.
+    // This should be hoisted out of the loop
+    Symbol *maskSym = m->symbolTable->LookupVariable("__mask");
+    Assert(maskSym != NULL);
+    Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
+    std::vector<Symbol *> mmFuns;
+    m->symbolTable->LookupFunction("__movmsk", &mmFuns);
+    Assert(mmFuns.size() == 2);
+    FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
+                                                            pos);
+    ExprList *movmskArgs = new ExprList(maskVecExpr, pos);
+    FunctionCallExpr *movmskExpr = new FunctionCallExpr(movmskFunc, movmskArgs,
+                                                        pos);
+
+    // Compute the per lane mask to test the mask bits against: (1 << iter)
+    ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, 1,
+                                       iterSym->pos);
+    Expr *shiftLaneExpr = new BinaryExpr(BinaryExpr::Shl, oneExpr, symExpr, 
+                                         pos);
+
+    // Compute the AND: movmsk & (1 << iter)
+    Expr *maskAndLaneExpr = new BinaryExpr(BinaryExpr::BitAnd, movmskExpr,
+                                           shiftLaneExpr, pos);
+    // Test to see if it's non-zero: (mask & (1 << iter)) != 0
+    Expr *ifTestExpr = new BinaryExpr(BinaryExpr::NotEqual, maskAndLaneExpr,
+                                      zeroExpr, pos);
+
+    // Now, enclose the provided statements in an if test such that they
+    // only run if the mask is non-zero for the lane we're currently
+    // handling in the loop.
+    IfStmt *laneCheckIf = new IfStmt(ifTestExpr, stmts, NULL, false, pos);
+
+    // And return a for loop that wires it all together.
+    return new ForStmt(initStmt, testExpr, stepStmt, laneCheckIf, false, pos);
+}
+

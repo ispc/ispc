@@ -552,8 +552,10 @@ TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase) {
     if (expr == NULL)
         return NULL;
 
+#if 0
     Debug(expr->pos, "type convert %s -> %s.", expr->GetType()->GetString().c_str(),
           toType->GetString().c_str());
+#endif
 
     const Type *fromType = expr->GetType();
     Expr *e = expr;

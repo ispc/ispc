@@ -79,6 +79,6 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
     uniform float dy = (y1 - y0) / height;
     uniform int span = 4;
 
-    launch[height/span] < mandelbrot_scanline(x0, dx, y0, dy, width, height, span,
-                                              maxIterations, output) >;
+    launch[height/span] mandelbrot_scanline(x0, dx, y0, dy, width, height, span,
+                                            maxIterations, output);
 }

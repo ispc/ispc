@@ -15,7 +15,7 @@ export void f_f(uniform float RET[], uniform float fFOO[]) {
     float f = fFOO[programIndex];
     uniform int i;
     for (i = 0; i < 10000; ++i)
-        launch < x(i, f) >;
+        launch x(i, f);
     sync;
     RET[programIndex] = array[9999];
 }

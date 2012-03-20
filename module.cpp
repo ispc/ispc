@@ -501,10 +501,14 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     llvm::GlobalValue::LinkageTypes linkage = (funSym->storageClass == SC_STATIC ||
                                                isInline) ?
         llvm::GlobalValue::InternalLinkage : llvm::GlobalValue::ExternalLinkage;
-    std::string functionName = ((funSym->storageClass == SC_EXTERN_C) ?
-                                funSym->name : funSym->MangledName());
-    if (g->mangleFunctionsWithTarget)
-        functionName += g->target.GetISAString();
+    std::string functionName;
+    if (funSym->storageClass == SC_EXTERN_C)
+        functionName = funSym->name;
+    else {
+        functionName = funSym->MangledName();
+        if (g->mangleFunctionsWithTarget)
+            functionName += g->target.GetISAString();
+    }
     llvm::Function *function = 
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(), 
                                module);

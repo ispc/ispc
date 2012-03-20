@@ -1,0 +1,25 @@
+
+export uniform int width() { return programCount; }
+
+
+// make sure we reset the func mask in the foreach loop...
+
+void update(uniform float val[], const uniform float a[]) {
+    foreach (i = 0 ... programCount+3)
+        val[i] += a[i] - 1;
+}
+
+export void f_f(uniform float RET[], uniform float aFOO[]) {
+    uniform float val[programCount+3];
+    for (uniform int i = 0; i < programCount+3; ++i)
+        val[i] = 0;
+
+    if ((int)aFOO[programIndex] & 1)
+        update(val, aFOO);
+
+    RET[programIndex] = val[3+programIndex]; 
+}
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = programIndex+3;
+}

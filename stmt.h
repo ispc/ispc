@@ -459,4 +459,7 @@ public:
     Expr *expr;
 };
 
+extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, 
+                                     SourcePos pos);
+
 #endif // ISPC_STMT_H

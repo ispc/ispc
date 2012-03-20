@@ -230,6 +230,13 @@ public:
 
     bool InForeachLoop() const;
 
+    /** Temporarily disables emission of performance warnings from gathers
+        and scatters from subsequent code. */
+    void DisableGatherScatterWarnings();
+
+    /** Reenables emission of gather/scatter performance warnings. */
+    void EnableGatherScatterWarnings();
+
     void SetContinueTarget(llvm::BasicBlock *bb) { continueTarget = bb; }
 
     /** Step through the code and find label statements; create a basic
@@ -643,6 +650,10 @@ private:
         ISPCAlloc(), and ISPCSync() routines as a handle to the group ot
         tasks launched from the current function. */
     llvm::Value *launchGroupHandlePtr;
+
+    /** Nesting count of the number of times calling code has disabled (and
+        not yet reenabled) gather/scatter performance warnings. */
+    int disableGSWarningCount;
 
     std::map<std::string, llvm::BasicBlock *> labelMap;
 

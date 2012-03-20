@@ -88,11 +88,11 @@ loop_stencil_ispc_tasks(uniform int t0, uniform int t1,
         // Parallelize across cores as well: each task will work on a slice
         // of 1 in the z extent of the volume.
         if ((t & 1) == 0)
-            launch[z1-z0] < stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
-                                              coef, vsq, Aeven, Aodd) >;
+            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
+                                            coef, vsq, Aeven, Aodd);
         else
-            launch[z1-z0] < stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
-                                              coef, vsq, Aodd, Aeven) >;
+            launch[z1-z0] stencil_step_task(x0, x1, y0, y1, z0, Nx, Ny, Nz, 
+                                            coef, vsq, Aodd, Aeven);
 
         // We need to wait for all of the launched tasks to finish before
         // starting the next iteration.

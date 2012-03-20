@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -228,10 +228,74 @@ extern llvm::Constant *LLVMMaskAllOff;
 /** Tests to see if all of the elements of the vector in the 'v' parameter
     are equal.  Like lValuesAreEqual(), this is a conservative test and may
     return false for arrays where the values are actually all equal.  */
-extern bool LLVMVectorValuesAllEqual(llvm::Value *v, int vectorLength,
-                                     std::vector<llvm::PHINode *> &seenPhis);
+extern bool LLVMVectorValuesAllEqual(llvm::Value *v);
 
-void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
-                            llvm::Value **elements);
+/** Given vector of integer-typed values, this function returns true if it
+    can determine that the elements of the vector have a step of 'stride'
+    between their values and false otherwise.  This function tries to
+    handle as many possibilities as possible, including things like all
+    elements equal to some non-constant value plus an integer offset, etc.
+    Needless to say (the halting problem and all that), it may return false
+    for some vectors that are in fact linear.
+    */
+extern bool LLVMVectorIsLinear(llvm::Value *v, int stride);
+
+/** Given a vector-typed value v, if the vector is a vector with constant
+    element values, this function extracts those element values into the
+    ret[] array and returns the number of elements (i.e. the vector type's
+    width) in *nElts.  It returns true if successful and false if the given
+    vector is not in fact a vector of constants. */
+extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
+
+/** This function takes chains of InsertElement instructions along the
+    lines of:
+
+    %v0 = insertelement undef, value_0, i32 index_0
+    %v1 = insertelement %v1,   value_1, i32 index_1
+    ...
+    %vn = insertelement %vn-1, value_n-1, i32 index_n-1
+
+    and initializes the provided elements array such that the i'th
+    llvm::Value * in the array is the element that was inserted into the
+    i'th element of the vector.  
+
+    When the chain of insertelement instruction comes to an end, the only
+    base case that this function handles is the initial value being a
+    constant vector.  For anything more complex (e.g. some other arbitrary
+    value, it doesn't try to extract element values into the returned
+    array.
+ */
+extern void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
+                                   llvm::Value **elements);
+
+/** This is a utility routine for debugging that dumps out the given LLVM
+    value as well as (recursively) all of the other values that it depends
+    on. */
+extern void LLVMDumpValue(llvm::Value *v);
+
+/** Given a vector-typed value, this function returns the value of its
+    first element.  Rather than just doing the straightforward thing of
+    using a single extractelement instruction to do this, this function
+    tries to rewrite the computation for the first element in scalar form;
+    this is generally more efficient than computing the entire vector's
+    worth of values just to extract the first element, in cases where only
+    the first element's value is needed.
+  */
+extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v, 
+                                              llvm::Instruction *insertBefore);
+
+/** This function takes two vectors, expected to be the same length, and
+    returns a new vector of twice the length that represents concatenating
+    the two of them. */
+extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+                                      llvm::Instruction *insertBefore);
+
+/** This is a utility function for vector shuffling; it takes two vectors
+    v1 and v2, and a compile-time constant set of integer permutations in
+    shuf[] and returns a new vector of length shufSize that represents the
+    corresponding shufflevector operation. */
+extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2,
+                                       int32_t shuf[], int shufSize,
+                                       llvm::Instruction *insertBefore);
 
 #endif // ISPC_LLVMUTIL_H

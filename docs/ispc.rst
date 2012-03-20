@@ -2666,9 +2666,9 @@ of the overall computation it's responsible for:
 ::
 
     for (uniform int i = 0; i < 100; ++i)
-        launch < func(a, i) >;
+        launch func(a, i);
 
-Note the ``launch`` keyword and the brackets around the function call.
+Note the ``launch`` keyword before the function call expression.
 This code launches 100 tasks, each of which presumably does some
 computation that is keyed off of given the value ``i``.  In general, one
 should launch many more tasks than there are processors in the system to
@@ -2681,7 +2681,7 @@ statement.  We might instead write the above example with a single
 
 ::
 
-    launch[100] < func2(a) >;
+    launch[100] func2(a);
 
 Where an integer value (not necessarily a compile-time constant) is
 provided to the ``launch`` keyword in square brackets; this number of tasks
@@ -2707,7 +2707,7 @@ statement to wait for all launched tasks to finish:
 
 ::
 
-    launch[100] < func2(a) >;
+    launch[100] func2(a);
     sync;
     // now safe to use computed values in a[]...
 
