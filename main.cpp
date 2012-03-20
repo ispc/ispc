@@ -380,7 +380,7 @@ int main(int Argc, char *Argv[]) {
             }
             outFileName = argv[i];
         }
-        else if (!strcmp(argv[i], "--outfile="))
+        else if (!strncmp(argv[i], "--outfile=", 10))
             outFileName = argv[i] + strlen("--outfile=");
         else if (!strcmp(argv[i], "-h")) {
             if (++i == argc) {
