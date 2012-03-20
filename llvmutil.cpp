@@ -777,7 +777,7 @@ lRoundUpPow2(int v) {
     as being a multiple if it isn't!)
  */
 static bool
-lAllDivBaseEqual(llvm::Value *val, int baseValue, int vectorLength,
+lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
                  std::vector<llvm::PHINode *> &seenPhis,
                  bool &canAdd) {
     Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()));
@@ -1403,7 +1403,7 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
     Assert(vt != NULL);
 
-    llvm::Twine newName = v->getName() + llvm::Twine(".elt0");
+    std::string newName = v->getName().str() + std::string(".elt0");
 
     // Rewrite regular binary operators and casts to the scalarized
     // equivalent.
