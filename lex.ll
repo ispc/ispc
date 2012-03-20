@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -358,6 +358,7 @@ extern { RT; return TOKEN_EXTERN; }
 false { RT; return TOKEN_FALSE; }
 float { RT; return TOKEN_FLOAT; }
 for { RT; return TOKEN_FOR; }
+__foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
 foreach { RT; return TOKEN_FOREACH; }
 foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
 goto { RT; return TOKEN_GOTO; }

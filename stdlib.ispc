@@ -356,10 +356,7 @@ static inline void memcpy(void * varying dst, void * varying src,
     da[programIndex] = dst;
     sa[programIndex] = src;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         __memcpy32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
     }
@@ -373,10 +370,7 @@ static inline void memcpy64(void * varying dst, void * varying src,
     da[programIndex] = dst;
     sa[programIndex] = src;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         __memcpy64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
     }
@@ -400,10 +394,7 @@ static inline void memmove(void * varying dst, void * varying src,
     da[programIndex] = dst;
     sa[programIndex] = src;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         __memmove32((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
     }
@@ -417,10 +408,7 @@ static inline void memmove64(void * varying dst, void * varying src,
     da[programIndex] = dst;
     sa[programIndex] = src;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         void * uniform d = da[i], * uniform s = sa[i];
         __memmove64((int8 * uniform)d, (int8 * uniform)s, extract(count, i));
     }
@@ -440,10 +428,7 @@ static inline void memset(void * varying ptr, int8 val, int32 count) {
     void * uniform pa[programCount];
     pa[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         __memset32((int8 * uniform)pa[i], extract(val, i), extract(count, i));
     }
 }
@@ -452,10 +437,7 @@ static inline void memset64(void * varying ptr, int8 val, int64 count) {
     void * uniform pa[programCount];
     pa[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         __memset64((int8 * uniform)pa[i], extract(val, i), extract(count, i));
     }
 }
@@ -644,10 +626,7 @@ static inline void prefetch_l1(const void * varying ptr) {
     const void * uniform ptrArray[programCount];
     ptrArray[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         const void * uniform p = ptrArray[i];
         prefetch_l1(p);
     }
@@ -657,10 +636,7 @@ static inline void prefetch_l2(const void * varying ptr) {
     const void * uniform ptrArray[programCount];
     ptrArray[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         const void * uniform p = ptrArray[i];
         prefetch_l2(p);
     }
@@ -670,10 +646,7 @@ static inline void prefetch_l3(const void * varying ptr) {
     const void * uniform ptrArray[programCount];
     ptrArray[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         const void * uniform p = ptrArray[i];
         prefetch_l3(p);
     }
@@ -683,10 +656,7 @@ static inline void prefetch_nt(const void * varying ptr) {
     const void * uniform ptrArray[programCount];
     ptrArray[programIndex] = ptr;
 
-    uniform int mask = lanemask();
-    for (uniform int i = 0; i < programCount; ++i) {
-        if ((mask & (1 << i)) == 0)
-            continue;
+    __foreach_active (i) {
         const void * uniform p = ptrArray[i];
         prefetch_nt(p);
     }
@@ -1332,10 +1302,7 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
     ptrArray[programIndex] = ptr;                                       \
     memory_barrier();                                                   \
     TA ret;                                                             \
-    uniform int mask = lanemask();                                      \
-    for (uniform int i = 0; i < programCount; ++i) {                    \
-        if ((mask & (1 << i)) == 0)                                     \
-            continue;                                                   \
+    __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
@@ -1392,10 +1359,7 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
     ptrArray[programIndex] = ptr;                                       \
     memory_barrier();                                                   \
     TA ret;                                                             \
-    uniform int mask = lanemask();                                      \
-    for (uniform int i = 0; i < programCount; ++i) {                    \
-        if ((mask & (1 << i)) == 0)                                     \
-            continue;                                                   \
+    __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
         uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);       \
@@ -1429,10 +1393,7 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
     ptrArray[programIndex] = ptr;                                       \
     memory_barrier();                                                   \
     TA ret;                                                             \
-    uniform int mask = lanemask();                                      \
-    for (uniform int i = 0; i < programCount; ++i) {                    \
-        if ((mask & (1 << i)) == 0)                                     \
-            continue;                                                   \
+    __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
         uniform TA v = extract(value, i);                               \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
@@ -1513,10 +1474,7 @@ static inline TA atomic_compare_exchange_global(               \
     ptrArray[programIndex] = ptr;                                       \
     memory_barrier();                                                   \
     TA ret;                                                             \
-    uniform int mask = lanemask();                                      \
-    for (uniform int i = 0; i < programCount; ++i) {                    \
-        if ((mask & (1 << i)) == 0)                                     \
-            continue;                                                   \
+    __foreach_active (i) {                                              \
         uniform TA r =                                                  \
             __atomic_compare_exchange_uniform_##TB##_global(ptrArray[i], \
                                                             extract(oldval, i), \
@@ -1548,10 +1506,7 @@ static inline uniform TYPE atomic_##NAME##_local(uniform TYPE * uniform ptr, \
 }                                                                      \
 static inline TYPE atomic_##NAME##_local(uniform TYPE * uniform ptr, TYPE value) { \
     TYPE ret;                                                          \
-    uniform int mask = lanemask();                                     \
-    for (uniform int i = 0; i < programCount; ++i) {                   \
-        if ((mask & (1 << i)) == 0)                                    \
-            continue;                                                  \
+    __foreach_active (i) {                                             \
         ret = insert(ret, i, *ptr);                                    \
         *ptr = OPFUNC(*ptr, extract(value, i));                        \
     }                                                                  \
@@ -1561,10 +1516,7 @@ static inline TYPE atomic_##NAME##_local(uniform TYPE * p, TYPE value) {    \
     TYPE ret;                                                          \
     uniform TYPE * uniform ptrs[programCount];                         \
     ptrs[programIndex] = p;                                            \
-    uniform int mask = lanemask();                                     \
-    for (uniform int i = 0; i < programCount; ++i) {                   \
-        if ((mask & (1 << i)) == 0)                                    \
-            continue;                                                  \
+    __foreach_active (i) {                                             \
         ret = insert(ret, i, *ptrs[i]);                                \
         *ptrs[i] = OPFUNC(*ptrs[i], extract(value, i));                \
     }                                                                  \
@@ -1681,10 +1633,7 @@ static inline uniform TYPE atomic_compare_exchange_local(uniform TYPE * uniform 
 static inline TYPE atomic_compare_exchange_local(uniform TYPE * uniform ptr, \
                                                  TYPE cmp, TYPE update) { \
     TYPE ret;                                                          \
-    uniform int mask = lanemask();                                     \
-    for (uniform int i = 0; i < programCount; ++i) {                   \
-        if ((mask & (1 << i)) == 0)                                    \
-            continue;                                                  \
+    __foreach_active (i) {                                             \
         uniform TYPE old = *ptr;                                       \
         if (old == extract(cmp, i))                                    \
             *ptr = extract(update, i);                                 \
@@ -1697,10 +1646,7 @@ static inline TYPE atomic_compare_exchange_local(uniform TYPE * varying p, \
     uniform TYPE * uniform ptrs[programCount];                          \
     ptrs[programIndex] = p;                                            \
     TYPE ret;                                                          \
-    uniform int mask = lanemask();                                     \
-    for (uniform int i = 0; i < programCount; ++i) {                   \
-        if ((mask & (1 << i)) == 0)                                    \
-            continue;                                                  \
+    __foreach_active (i) {                                             \
         uniform TYPE old = *ptrs[i];                                   \
         if (old == extract(cmp, i))                                    \
             *ptrs[i] = extract(update, i);                             \
@@ -1787,10 +1733,7 @@ static inline float sin(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_sinf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -1920,10 +1863,7 @@ static inline float asin(float x) {
     if (__math_lib == __math_lib_svml ||
         __math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_asinf(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -2026,10 +1966,7 @@ static inline float cos(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_cosf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -2163,10 +2100,7 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
         __svml_sincos(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_system) {
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float s, c;
             __stdlib_sincosf(extract(x_full, i), &s, &c);
             *sin_result = insert(*sin_result, i, s);
@@ -2297,10 +2231,7 @@ static inline float tan(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_tanf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -2449,10 +2380,7 @@ static inline float atan(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_atanf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -2545,10 +2473,7 @@ static inline float atan2(float y, float x) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_atan2f(extract(y, i), extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -2606,10 +2531,7 @@ static inline float exp(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_expf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -2806,10 +2728,7 @@ static inline float log(float x_full) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_logf(extract(x_full, i));
             ret = insert(ret, i, r);
         }
@@ -2976,10 +2895,7 @@ static inline float pow(float a, float b) {
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform float r = __stdlib_powf(extract(a, i), extract(b, i));
             ret = insert(ret, i, r);
         }
@@ -3058,10 +2974,7 @@ static inline double sin(double x) {
         return sin((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_sin(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3081,10 +2994,7 @@ static inline double cos(double x) {
         return cos((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_cos(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3108,11 +3018,8 @@ static inline void sincos(double x, varying double * uniform sin_result,
         *cos_result = cr;
     }
     else {
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
+        __foreach_active (i) {
             uniform double sr, cr;
-            if ((mask & (1 << i)) == 0)
-                continue;
             __stdlib_sincos(extract(x, i), &sr, &cr);
             *sin_result = insert(*sin_result, i, sr);
             *cos_result = insert(*cos_result, i, cr);
@@ -3137,10 +3044,7 @@ static inline double tan(double x) {
         return tan((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_tan(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3160,10 +3064,7 @@ static inline double atan(double x) {
         return atan((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_atan(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3183,10 +3084,7 @@ static inline double atan2(double y, double x) {
         return atan2((float)y, (float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_atan2(extract(y, i), extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3206,10 +3104,7 @@ static inline double exp(double x) {
         return exp((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_exp(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3229,10 +3124,7 @@ static inline double log(double x) {
         return log((float)x);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_log(extract(x, i));
             ret = insert(ret, i, r);
         }
@@ -3252,10 +3144,7 @@ static inline double pow(double a, double b) {
         return pow((float)a, (float)b);
     else {
         double ret;
-        uniform int mask = lanemask();
-        for (uniform int i = 0; i < programCount; ++i) {
-            if ((mask & (1 << i)) == 0)
-                continue;
+        __foreach_active (i) {
             uniform double r = __stdlib_pow(extract(a, i), extract(b, i));
             ret = insert(ret, i, r);
         }

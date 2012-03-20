@@ -188,7 +188,8 @@ struct ForeachDimension {
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
-%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED TOKEN_DOTDOTDOT
+%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
+%token TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
@@ -220,7 +221,7 @@ struct ForeachDimension {
 %type <structDeclarationList> struct_declaration_list
 
 %type <symbolList> enumerator_list
-%type <symbol> enumerator foreach_identifier
+%type <symbol> enumerator foreach_identifier foreach_active_identifier
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
@@ -1550,6 +1551,17 @@ foreach_identifier
     }
     ;
 
+foreach_active_scope
+    : TOKEN_FOREACH_ACTIVE { m->symbolTable->PushScope(); }
+    ;
+
+foreach_active_identifier
+    : TOKEN_IDENTIFIER
+    {
+        $$ = new Symbol(yytext, @1, AtomicType::UniformInt32);
+    }
+    ;
+
 foreach_dimension_specifier
     : foreach_identifier '=' assignment_expression TOKEN_DOTDOTDOT assignment_expression
     {
@@ -1656,6 +1668,16 @@ iteration_statement
              ends.push_back((*dims)[i]->endExpr);
          }
          $$ = new ForeachStmt(syms, begins, ends, $6, true, @1);
+         m->symbolTable->PopScope();
+     }
+    | foreach_active_scope '(' foreach_active_identifier ')'
+     {
+         if ($3 != NULL)
+             m->symbolTable->AddVariable($3);
+     }
+     statement
+     {
+         $$ = CreateForeachActiveStmt($3, $6, Union(@1, @4));
          m->symbolTable->PopScope();
      }
     ;
