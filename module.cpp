@@ -356,8 +356,11 @@ lRecursiveCheckValidParamType(const Type *t) {
         return lRecursiveCheckValidParamType(seqt->GetElementType());
 
     const PointerType *pt = dynamic_cast<const PointerType *>(t);
-    if (pt != NULL)
-        return (pt->IsSlice() || pt->IsVaryingType());
+    if (pt != NULL) {
+        if (pt->IsSlice() || pt->IsVaryingType())
+            return true;
+        return lRecursiveCheckValidParamType(pt->GetBaseType());
+    }
 
     return t->IsVaryingType();
 }
