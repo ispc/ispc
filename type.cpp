@@ -2329,6 +2329,8 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
       paramDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
       paramPositions(std::vector<SourcePos>(a.size(), p)) {
     Assert(returnType != NULL);
+    isSafe = false;
+    costOverride = -1;
 }
 
 
@@ -2343,6 +2345,8 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
            paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
     Assert(returnType != NULL);
+    isSafe = false;
+    costOverride = -1;
 }
 
 
@@ -2434,8 +2438,13 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
         pt.push_back(paramTypes[i]->ResolveUnboundVariability(v));
     }
 
-    return new FunctionType(rt, pt, paramNames, paramDefaults,
-                            paramPositions, isTask, isExported, isExternC);
+    FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults,
+                                         paramPositions, isTask, isExported,
+                                         isExternC);
+    ret->isSafe = isSafe;
+    ret->costOverride = costOverride;
+
+    return ret;
 }
 
 
@@ -2457,6 +2466,12 @@ std::string
 FunctionType::GetString() const {
     std::string ret;
     if (isTask) ret += "task ";
+    if (isSafe) ret += "/*safe*/ ";
+    if (costOverride > 0) {
+        char buf[32];
+        sprintf(buf, "/*cost=%d*/ ", costOverride);
+        ret += buf;
+    }
     if (returnType != NULL)
         ret += returnType->GetString();
     else

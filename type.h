@@ -801,6 +801,14 @@ public:
         function in the source program. */
     const bool isExternC;
 
+    /** Indicates whether this function has been declared to be safe to run
+        with an all-off mask. */
+    bool isSafe;
+
+    /** If non-negative, this provides a user-supplied override to the cost
+        function estimate for the function. */ 
+    int costOverride;
+
 private:
     const Type * const returnType;
 
