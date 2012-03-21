@@ -1269,6 +1269,9 @@ UnaryExpr::TypeCheck() {
 
 int
 UnaryExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+        return 0;
+
     return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
@@ -2501,6 +2504,10 @@ BinaryExpr::TypeCheck() {
 
 int
 BinaryExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(arg0) != NULL &&
+        dynamic_cast<ConstExpr *>(arg1) != NULL)
+        return 0;
+
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
                                       COST_SIMPLE_ARITH_LOGIC_OP;
 }
@@ -6719,6 +6726,9 @@ TypeCastExpr::Optimize() {
 
 int
 TypeCastExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+        return 0;
+
     // FIXME: return COST_TYPECAST_COMPLEX when appropriate
     return COST_TYPECAST_SIMPLE;
 }
