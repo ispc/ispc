@@ -90,7 +90,8 @@ enum StorageClass {
  */
 class DeclSpecs {
 public:
-    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE, int tq = TYPEQUAL_NONE);
+    DeclSpecs(const Type *t = NULL, StorageClass sc = SC_NONE,
+              int tq = TYPEQUAL_NONE);
 
     void Print() const;
 
@@ -117,6 +118,8 @@ public:
         SOA width specified.  Otherwise this is zero.
      */
     int soaWidth;
+
+    std::vector<std::pair<std::string, SourcePos> > declSpecList;
 };
 
 

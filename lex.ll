@@ -346,6 +346,7 @@ cwhile { RT; return TOKEN_CWHILE; }
 const { RT; return TOKEN_CONST; }
 continue { RT; return TOKEN_CONTINUE; }
 creturn { RT; return TOKEN_CRETURN; }
+__declspec { RT; return TOKEN_DECLSPEC; }
 default { RT; return TOKEN_DEFAULT; }
 do { RT; return TOKEN_DO; }
 delete { RT; return TOKEN_DELETE; }

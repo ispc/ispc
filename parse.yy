@@ -168,6 +168,8 @@ struct ForeachDimension {
     std::vector<Symbol *> *symbolList;
     ForeachDimension *foreachDimension;
     std::vector<ForeachDimension *> *foreachDimensionList;
+    std::pair<std::string, SourcePos> *declspecPair;
+    std::vector<std::pair<std::string, SourcePos> > *declspecList;
 }
 
 
@@ -181,7 +183,7 @@ struct ForeachDimension {
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE
 
-%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK 
+%token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
@@ -233,12 +235,15 @@ struct ForeachDimension {
 %type <storageClass> storage_class_specifier
 %type <declSpecs> declaration_specifiers 
 
-%type <stringVal> string_constant
+%type <stringVal> string_constant 
 %type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
 
 %type <foreachDimension> foreach_dimension_specifier
 %type <foreachDimensionList> foreach_dimension_list
+
+%type <declspecPair> declspec_item
+%type <declspecList> declspec_specifier declspec_list
 
 %start translation_unit
 %%
@@ -645,6 +650,37 @@ soa_width_specifier
       { $$ = $3; }
     ;
 
+declspec_item
+    : TOKEN_IDENTIFIER
+    {
+        std::pair<std::string, SourcePos> *p = new std::pair<std::string, SourcePos>;
+        p->first = *(yylval.stringVal);
+        p->second = @1;
+        $$ = p;
+    }
+    ;
+
+declspec_list
+    : declspec_item
+    {
+        $$ = new std::vector<std::pair<std::string, SourcePos> >;
+        $$->push_back(*$1);
+    }
+    | declspec_list ',' declspec_item
+    {
+        if ($1 != NULL)
+            $1->push_back(*$3);
+        $$ = $1;
+    }
+    ;
+
+declspec_specifier
+    : TOKEN_DECLSPEC '(' declspec_list ')'
+    {
+        $$ = $3;
+    }
+    ;
+
 declaration_specifiers
     : storage_class_specifier
       {
@@ -661,6 +697,22 @@ declaration_specifiers
                         lGetStorageClassString($1));
               else
                   ds->storageClass = $1;
+          }
+          $$ = ds;
+      }
+    | declspec_specifier
+      {
+          $$ = new DeclSpecs;
+          if ($1 != NULL)
+              $$->declSpecList = *$1;
+      }
+    | declspec_specifier declaration_specifiers
+      {
+          DeclSpecs *ds = (DeclSpecs *)$2;
+          std::vector<std::pair<std::string, SourcePos> > *declSpecList = $1;
+          if (ds != NULL && declSpecList != NULL) {
+              for (int i = 0; i < (int)declSpecList->size(); ++i)
+                  ds->declSpecList.push_back((*declSpecList)[i]);
           }
           $$ = ds;
       }
