@@ -3408,123 +3408,48 @@ static inline uniform float half_to_float(uniform unsigned int16 h) {
         return __half_to_float_uniform(h);
     }
     else {
-        if ((h & 0x7FFFu) == 0) 
-            // Signed zero
-            return floatbits(((unsigned int32) h) << 16);
-        else {
-            // Though these are int16 quantities, we get much better code 
-            // with them stored as int32s...
-            uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-            uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-            uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
-            if (he == 0) {  
-                // Denormal will convert to normalized
-                uniform int e = -1;
-                // The following loop figures out how much extra to adjust the exponent
-                // Shift until leading bit overflows into exponent bit
-                do {
-                    e++;
-                    hm <<= 1;
-                } while((hm & 0x0400u) == 0);
+        // https://gist.github.com/2144712
+        // Fabian "ryg" Giesen.
+        static const uniform unsigned int32 shifted_exp = 0x7c00 << 13; // exponent mask after shift
 
-                // Sign bit
-                uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
-                // Exponent: unbias the halfp, then bias the single
-                uniform int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
-                // Exponent
-                uniform unsigned int32 xe = (unsigned int32) (xes << 23); 
-                // Mantissa
-                uniform unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
-                return floatbits(xs | xe | xm);
-            } 
-            else {
-                if (he == 0x7C00u) {  
-                    // Inf or NaN (all the exponent bits are set)
-                    if (hm == 0)
-                        // Zero mantissa -> signed inf
-                        return floatbits((((unsigned int32) hs) << 16) | 
-                                         ((unsigned int32) 0x7F800000u));
-                    else
-                        // NaN
-                        return floatbits(0xFFC00000u);
-                }
-                else { 
-                    // Normalized number
-                    // sign
-                    uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
-                    // Exponent: unbias the halfp, then bias the single
-                    uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-                    // Exponent
-                    uniform unsigned int32 xe = (unsigned int32) (xes << 23);
-                    // Mantissa
-                    uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
-                    return floatbits(xs | xe | xm);
-                }
-            }
+        uniform int32 o = ((int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+        uniform unsigned int32 exp = shifted_exp & o;   // just the exponent
+        o += (127 - 15) << 23;        // exponent adjust
+
+        // handle exponent special cases
+        if (exp == shifted_exp) // Inf/NaN?
+            o += (128 - 16) << 23;    // extra exp adjust
+        else if (exp == 0) { // Zero/Denormal?
+            o += 1 << 23;             // extra exp adjust
+            o = intbits(floatbits(o) - floatbits(113 << 23)); // renormalize
         }
+
+        o |= ((int32)(h & 0x8000)) << 16;    // sign bit
+        return floatbits(o);
     }
 }
 
 __declspec(safe)
 static inline float half_to_float(unsigned int16 h) {
     if (__have_native_half) {
-        return __half_to_float_varying(h);
+        return __half_to_float_varying((unsigned int16)h);
     }
     else {
-        if ((h & 0x7FFFu) == 0) 
-            // Signed zero
-            return floatbits(((unsigned int32) h) << 16);
-        else {
-            // Though these are int16 quantities, we get much better code 
-            // with them stored as int32s...
-            unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-            unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-            unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
-            cif (he == 0) {  
-                // Denormal will convert to normalized
-                int e = -1;
-                // The following loop figures out how much extra to adjust the exponent
-                // Shift until leading bit overflows into exponent bit
-                do {
-                    e++;
-                    hm <<= 1;
-                } while((hm & 0x0400u) == 0);
+        // https://gist.github.com/2144712
+        // Fabian "ryg" Giesen.
 
-                // Sign bit
-                unsigned int32 xs = ((unsigned int32) hs) << 16; 
-                // Exponent: unbias the halfp, then bias the single
-                int32 xes = ((int32)(he >> 10)) - 15 + 127 - e;
-                // Exponent
-                unsigned int32 xe = (unsigned int32) (xes << 23); 
-                // Mantissa
-                unsigned int32 xm = ((unsigned int32) (hm & 0x03FFu)) << 13; 
-                return floatbits(xs | xe | xm);
-            } 
-            else {
-                if (he == 0x7C00u) {  
-                    // Inf or NaN (all the exponent bits are set)
-                    if (hm == 0)
-                        // Zero mantissa -> signed inf
-                        return floatbits((((unsigned int32) hs) << 16) | 
-                                         ((unsigned int32) 0x7F800000u));
-                    else
-                        // NaN
-                        return floatbits(0xFFC00000u);
-                }
-                else { 
-                    // Normalized number
-                    // sign
-                    unsigned int32 xs = ((unsigned int32) hs) << 16; 
-                    // Exponent: unbias the halfp, then bias the single
-                    int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-                    // Exponent
-                    unsigned int32 xe = (unsigned int32) (xes << 23);
-                    // Mantissa
-                    unsigned int32 xm = ((unsigned int32) hm) << 13; 
-                    return floatbits(xs | xe | xm);
-                }
-            }
-        }
+        const unsigned int32 shifted_exp = 0x7c00 << 13; // exponent mask after shift
+
+        int32 o = ((int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+        unsigned int32 exp = shifted_exp & o;   // just the exponent
+        o += (127 - 15) << 23;        // exponent adjust
+
+        int32 infnan_val = o + ((128 - 16) << 23);
+        int32 zerodenorm_val = intbits(floatbits(o + (1<<23)) - floatbits(113 << 23));
+        int32 reg_val = (exp == 0) ? zerodenorm_val : o;
+
+        int32 sign_bit = ((int32)(h & 0x8000)) << 16;
+        return floatbits(((exp == shifted_exp) ? infnan_val : reg_val) | sign_bit);
     }
 }
 
