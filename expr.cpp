@@ -401,7 +401,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         else {
             // convert from a reference T -> T
             if (expr != NULL) {
-                Expr *drExpr = new DereferenceExpr(*expr, pos);
+                Expr *drExpr = new RefDerefExpr(*expr, pos);
                 if (lDoTypeConv(drExpr->GetType(), toType, &drExpr, failureOk, 
                                 errorMsgBase, pos) == true) {
                     *expr = drExpr;
@@ -979,7 +979,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
         type = type->GetReferenceTarget();
         lvalue = expr->GetValue(ctx);
 
-        Expr *deref = new DereferenceExpr(expr, expr->pos);
+        Expr *deref = new RefDerefExpr(expr, expr->pos);
         rvalue = deref->GetValue(ctx);
     }
     else {
@@ -1239,7 +1239,7 @@ UnaryExpr::TypeCheck() {
 
     // don't do this for pre/post increment/decrement
     if (dynamic_cast<const ReferenceType *>(type)) {
-        expr = new DereferenceExpr(expr, pos);
+        expr = new RefDerefExpr(expr, pos);
         type = expr->GetType();
     }
 
@@ -2225,12 +2225,12 @@ BinaryExpr::TypeCheck() {
     // If either operand is a reference, dereference it before we move
     // forward
     if (dynamic_cast<const ReferenceType *>(type0) != NULL) {
-        arg0 = new DereferenceExpr(arg0, arg0->pos);
+        arg0 = new RefDerefExpr(arg0, arg0->pos);
         type0 = arg0->GetType();
         Assert(type0 != NULL);
     }
     if (dynamic_cast<const ReferenceType *>(type1) != NULL) {
-        arg1 = new DereferenceExpr(arg1, arg1->pos);
+        arg1 = new RefDerefExpr(arg1, arg1->pos);
         type1 = arg1->GetType();
         Assert(type1 != NULL);
     }
@@ -2742,7 +2742,7 @@ AssignExpr::TypeCheck() {
     bool lvalueIsReference = 
         dynamic_cast<const ReferenceType *>(lvalue->GetType()) != NULL;
     if (lvalueIsReference)
-        lvalue = new DereferenceExpr(lvalue, lvalue->pos);
+        lvalue = new RefDerefExpr(lvalue, lvalue->pos);
 
     FunctionSymbolExpr *fse;
     if ((fse = dynamic_cast<FunctionSymbolExpr *>(rvalue)) != NULL) {
@@ -4637,7 +4637,7 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
     const ReferenceType *referenceType =
         dynamic_cast<const ReferenceType *>(exprType);
     if (referenceType != NULL) {
-        e = new DereferenceExpr(e, e->pos);
+        e = new RefDerefExpr(e, e->pos);
         exprType = e->GetType();
         Assert(exprType != NULL);
     }
@@ -6847,16 +6847,16 @@ ReferenceExpr::Print() const {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// DereferenceExpr
+// DerefExpr
 
-DereferenceExpr::DereferenceExpr(Expr *e, SourcePos p)
+DerefExpr::DerefExpr(Expr *e, SourcePos p)
     : Expr(p) {
     expr = e;
 }
 
 
 llvm::Value *
-DereferenceExpr::GetValue(FunctionEmitContext *ctx) const {
+DerefExpr::GetValue(FunctionEmitContext *ctx) const {
     if (expr == NULL) 
         return NULL;
     llvm::Value *ptr = expr->GetValue(ctx);
@@ -6879,7 +6879,7 @@ DereferenceExpr::GetValue(FunctionEmitContext *ctx) const {
 
 
 llvm::Value *
-DereferenceExpr::GetLValue(FunctionEmitContext *ctx) const {
+DerefExpr::GetLValue(FunctionEmitContext *ctx) const {
     if (expr == NULL) 
         return NULL;
     return expr->GetValue(ctx);
@@ -6887,7 +6887,7 @@ DereferenceExpr::GetLValue(FunctionEmitContext *ctx) const {
 
 
 const Type *
-DereferenceExpr::GetLValueType() const {
+DerefExpr::GetLValueType() const {
     if (expr == NULL)
         return NULL;
     return expr->GetType();
@@ -6895,64 +6895,70 @@ DereferenceExpr::GetLValueType() const {
 
 
 Symbol *
-DereferenceExpr::GetBaseSymbol() const {
+DerefExpr::GetBaseSymbol() const {
     return expr ? expr->GetBaseSymbol() : NULL;
 }
 
 
-const Type *
-DereferenceExpr::GetType() const {
+Expr *
+DerefExpr::Optimize() {
     if (expr == NULL)
         return NULL;
-    const Type *exprType = expr->GetType();
-    if (exprType == NULL)
-        return NULL;
-    if (dynamic_cast<const ReferenceType *>(exprType) != NULL)
-        return exprType->GetReferenceTarget();
-    else {
-        Assert(dynamic_cast<const PointerType *>(exprType) != NULL);
-        if (exprType->IsUniformType())
-            return exprType->GetBaseType();
-        else
-            return exprType->GetBaseType()->GetAsVaryingType();
-    }
-}
-
-
-Expr *
-DereferenceExpr::TypeCheck() {
-    if (expr == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
-    }
-        
-    if (dynamic_cast<const PointerType *>(expr->GetType()) == NULL &&
-        dynamic_cast<const ReferenceType *>(expr->GetType()) == NULL) {
-        Error(pos, "Illegal to dereference non-pointer or reference "
-              "type \"%s\".", expr->GetType()->GetString().c_str());
-        return NULL;
-    }
-
     return this;
 }
 
 
-Expr *
-DereferenceExpr::Optimize() {
-    if (expr == NULL)
+///////////////////////////////////////////////////////////////////////////
+// PtrDerefExpr
+
+PtrDerefExpr::PtrDerefExpr(Expr *e, SourcePos p)
+    : DerefExpr(e, p) {
+}
+
+
+const Type *
+PtrDerefExpr::GetType() const {
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+    Assert(dynamic_cast<const PointerType *>(type) != NULL);
+
+    if (type->IsUniformType())
+        return type->GetBaseType();
+    else
+        return type->GetBaseType()->GetAsVaryingType();
+}
+
+
+Expr *
+PtrDerefExpr::TypeCheck() {
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    if (dynamic_cast<const PointerType *>(type) == NULL) {
+        Error(pos, "Illegal to dereference non-pointer type \"%s\".", 
+              type->GetString().c_str());
+        return NULL;
+    }
+
     return this;
 }
 
 
 int
-DereferenceExpr::EstimateCost() const {
-    if (expr == NULL)
+PtrDerefExpr::EstimateCost() const {
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
         return 0;
+    }
 
-    const Type *exprType = expr->GetType();
-    if (dynamic_cast<const PointerType *>(exprType) &&
-        exprType->IsVaryingType())
+    if (type->IsVaryingType())
         // Be pessimistic; some of these will later be optimized into
         // vector loads/stores..
         return COST_GATHER + COST_DEREF;
@@ -6962,11 +6968,70 @@ DereferenceExpr::EstimateCost() const {
 
 
 void
-DereferenceExpr::Print() const {
+PtrDerefExpr::Print() const {
     if (expr == NULL || GetType() == NULL)
         return;
 
     printf("[%s] *(", GetType()->GetString().c_str());
+    expr->Print();
+    printf(")");
+    pos.Print();
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// RefDerefExpr
+
+RefDerefExpr::RefDerefExpr(Expr *e, SourcePos p)
+    : DerefExpr(e, p) {
+}
+
+
+const Type *
+RefDerefExpr::GetType() const {
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+        
+    Assert(dynamic_cast<const ReferenceType *>(type) != NULL);
+    return type->GetReferenceTarget();
+}
+
+
+Expr *
+RefDerefExpr::TypeCheck() {
+    const Type *type;
+    if (expr == NULL || (type = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    // We only create RefDerefExprs internally for references in
+    // expressions, so we should never create one with a non-reference
+    // expression...
+    Assert(dynamic_cast<const ReferenceType *>(type) != NULL);
+
+    return this;
+}
+
+
+int
+RefDerefExpr::EstimateCost() const {
+    if (expr == NULL)
+        return 0;
+
+    return COST_DEREF;
+}
+
+
+void
+RefDerefExpr::Print() const {
+    if (expr == NULL || GetType() == NULL)
+        return;
+
+    printf("[%s] deref-reference (", GetType()->GetString().c_str());
     expr->Print();
     printf(")");
     pos.Print();

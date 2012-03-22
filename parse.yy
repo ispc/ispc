@@ -400,7 +400,7 @@ unary_expression
     | '&' unary_expression
       { $$ = new AddressOfExpr($2, Union(@1, @2)); }
     | '*' unary_expression
-      { $$ = new DereferenceExpr($2, Union(@1, @2)); }
+      { $$ = new PtrDerefExpr($2, Union(@1, @2)); }
     | '+' cast_expression 
       { $$ = $2; }
     | '-' cast_expression 
