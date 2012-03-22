@@ -3460,68 +3460,42 @@ static inline uniform int16 float_to_half(uniform float f) {
         return __float_to_half_uniform(f);
     }
     else {
-        uniform int32 x = intbits(f);
-        // Store the return value in an int32 until the very end; this ends up
-        // generating better code...
-        uniform int32 ret;
-        if ((x & 0x7FFFFFFFu) == 0)
-            // Signed zero
-            ret = (x >> 16); 
-        else {
-            uniform unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-            uniform unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-            uniform unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
-            if (xe == 0) {  
-                // Denormal will underflow, return a signed zero
-                ret = (xs >> 16);
-            } 
-            else {
-                if (xe == 0x7F800000u) {  
-                    // Inf or NaN (all the exponent bits are set)
-                    if (xm == 0)
-                        // Zero mantissa -> signed infinity
-                        ret = ((xs >> 16) | 0x7C00u);
-                    else
-                        // NaN, only 1st mantissa bit set
-                        ret = 0xFE00u;
-                }
-                else { 
-                    // Normalized number
-                    uniform unsigned int32 hs = (xs >> 16); // Sign bit
-                    uniform unsigned int32 hm;
-                    // Exponent unbias the single, then bias the halfp
-                    uniform int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-                    if (hes >= 0x1F)  
-                        // Overflow: return signed infinity
-                        ret = ((xs >> 16) | 0x7C00u);
-                    else if (hes <= 0) {
-                        // Underflow
-                        if ((14 - hes) > 24) {  
-                            // Mantissa shifted all the way off & no rounding possibility
-                            hm = 0u;  // Set mantissa to zero
-                        } 
-                        else {
-                            xm |= 0x00800000u;  // Add the hidden leading bit
-                            hm = (xm >> (14 - hes)); // Mantissa
-                            if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
-                                // Round, might overflow into exp bit, but this is OK
-                                hm += 1u; 
-                        }
-                        ret = (hs | hm);
-                    } 
-                    else {
-                        uniform unsigned int32 he = (hes << 10); // Exponent
-                        hm = (xm >> 13); // Mantissa
-                        if (xm & 0x00001000u) // Check for rounding
-                            // Round, might overflow to inf, this is OK
-                            ret = (hs | he | hm) + 1u; 
-                        else
-                            ret = (hs | he | hm);
-                    }
-                }
-            }
-        }
-        return (int16)ret;
+        // via Fabian "ryg" Giesen.
+        // https://gist.github.com/2156668
+        uniform unsigned int32 sign_mask = 0x80000000u;
+        uniform int32 o;
+
+        uniform int32 fint = intbits(f);
+        uniform int32 sign = fint & sign_mask;
+        fint ^= sign;
+
+        // NOTE all the integer compares in this function can be safely
+        // compiled into signed compares since all operands are below
+        // 0x80000000. Important if you want fast straight SSE2 code (since
+        // there's no unsigned PCMPGTD).
+
+        // Inf or NaN (all exponent bits set)
+        // NaN->qNaN and Inf->Inf
+        // unconditional assignment here, will override with right value for
+        // the regular case below.
+        uniform int32 f32infty = 255 << 23;
+        o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+
+        // (De)normalized number or zero
+        // update fint unconditionally to save the blending; we don't need it
+        // anymore for the Inf/NaN case anyway.
+
+        const uniform unsigned int32 round_mask = ~0xfffu; 
+        const uniform int32 magic = 15 << 23;
+        const uniform int32 f16infty = 31 << 23;
+
+        uniform int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
+        fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+
+        if (fint < f32infty)
+            o = fint2 >> 13; // Take the bits!
+
+        return (o | (sign >> 16));
     }
 }
 
@@ -3532,68 +3506,58 @@ static inline int16 float_to_half(float f) {
         return __float_to_half_varying(f);
     }
     else {
-        int32 x = intbits(f);
-        // Store the return value in an int32 until the very end; this ends up
-        // generating better code...
-        int32 ret;
-        if ((x & 0x7FFFFFFFu) == 0)
-            // Signed zero
-            ret = (x >> 16); 
-        else {
-            unsigned int32 xs = x & 0x80000000u;  // Pick off sign bit
-            unsigned int32 xe = x & 0x7F800000u;  // Pick off exponent bits
-            unsigned int32 xm = x & 0x007FFFFFu;  // Pick off mantissa bits
-            if (xe == 0) {  
-                // Denormal will underflow, return a signed zero
-                ret = (xs >> 16);
-            } 
-            else {
-                cif (xe == 0x7F800000u) {  
-                    // Inf or NaN (all the exponent bits are set)
-                    if (xm == 0)
-                        // Zero mantissa -> signed infinity
-                        ret = ((xs >> 16) | 0x7C00u);
-                    else
-                        // NaN, only 1st mantissa bit set
-                        ret = 0xFE00u;
-                }
-                else { 
-                    // Normalized number
-                    unsigned int32 hs = (xs >> 16); // Sign bit
-                    unsigned int32 hm;
-                    // Exponent unbias the single, then bias the halfp
-                    int32 hes = ((int)(xe >> 23)) - 127 + 15; 
-                    if (hes >= 0x1F)  
-                        // Overflow: return signed infinity
-                        ret = ((xs >> 16) | 0x7C00u);
-                    else if (hes <= 0) {
-                        // Underflow
-                        if ((14 - hes) > 24) {  
-                            // Mantissa shifted all the way off & no rounding possibility
-                            hm = 0u;  // Set mantissa to zero
-                        } 
-                        else {
-                            xm |= 0x00800000u;  // Add the hidden leading bit
-                            hm = (xm >> (14 - hes)); // Mantissa
-                            if ((xm >> (13 - hes)) & 0x00000001u) // Check for rounding
-                                // Round, might overflow into exp bit, but this is OK
-                                hm += 1u; 
-                        }
-                        ret = (hs | hm);
-                    } 
-                    else {
-                        unsigned int32 he = (hes << 10); // Exponent
-                        hm = (xm >> 13); // Mantissa
-                        if (xm & 0x00001000u) // Check for rounding
-                            // Round, might overflow to inf, this is OK
-                            ret = (hs | he | hm) + 1u; 
-                        else
-                            ret = (hs | he | hm);
-                    }
-                }
-            }
-        }
-        return (int16)ret;
+        // via Fabian "ryg" Giesen.
+        // https://gist.github.com/2156668
+        unsigned int32 sign_mask = 0x80000000u;
+        int32 o;
+
+        int32 fint = intbits(f);
+        int32 sign = fint & sign_mask;
+        fint ^= sign;
+
+        // NOTE all the integer compares in this function can be safely
+        // compiled into signed compares since all operands are below
+        // 0x80000000. Important if you want fast straight SSE2 code (since
+        // there's no unsigned PCMPGTD).
+
+        // Inf or NaN (all exponent bits set)
+        // NaN->qNaN and Inf->Inf
+        // unconditional assignment here, will override with right value for
+        // the regular case below.
+        int32 f32infty = 255 << 23;
+        o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+
+        // (De)normalized number or zero
+        // update fint unconditionally to save the blending; we don't need it
+        // anymore for the Inf/NaN case anyway.
+
+        const unsigned int32 round_mask = ~0xfffu; 
+        const int32 magic = 15 << 23;
+        const int32 f16infty = 31 << 23;
+
+        // Shift exponent down, denormalize if necessary.
+        // NOTE This represents half-float denormals using single precision denormals.
+        // The main reason to do this is that there's no shift with per-lane variable
+        // shifts in SSE*, which we'd otherwise need. It has some funky side effects
+        // though:
+        // - This conversion will actually respect the FTZ (Flush To Zero) flag in
+        //   MXCSR - if it's set, no half-float denormals will be generated. I'm
+        //   honestly not sure whether this is good or bad. It's definitely interesting.
+        // - If the underlying HW doesn't support denormals (not an issue with Intel
+        //   CPUs, but might be a problem on GPUs or PS3 SPUs), you will always get
+        //   flush-to-zero behavior. This is bad, unless you're on a CPU where you don't
+        //   care.
+        // - Denormals tend to be slow. FP32 denormals are rare in practice outside of things
+        //   like recursive filters in DSP - not a typical half-float application. Whether
+        //   FP16 denormals are rare in practice, I don't know. Whatever slow path your HW
+        //   may or may not have for denormals, this may well hit it.
+        int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
+        fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+
+        if (fint < f32infty)
+            o = fint2 >> 13; // Take the bits!
+
+        return (o | (sign >> 16));
     }
 }
 
@@ -3604,19 +3568,15 @@ static inline uniform float half_to_float_fast(uniform unsigned int16 h) {
         return __half_to_float_uniform(h);
     }
     else {
-        uniform unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-        uniform unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-        uniform unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+        uniform unsigned int32 hs = h & (int32)0x8000u;     // Pick off sign bit
+        uniform unsigned int32 hem = h & (int32)0x7fffu;    // Pick off exponent-mantissa bits
 
-        // sign
-        uniform unsigned int32 xs = ((unsigned int32) hs) << 16; 
-        // Exponent: unbias the halfp, then bias the single
-        uniform int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-        // Exponent
-        uniform unsigned int32 xe = (unsigned int32) (xes << 23);
-        // Mantissa
-        uniform unsigned int32 xm = ((unsigned int32) hm) << 13; 
-        return floatbits(xs | xe | xm);
+        uniform unsigned int32 xs = ((unsigned int32) hs) << 16;
+        uniform unsigned int32 xem = ((unsigned int32) hem) << 13;
+
+        xem += 0x38000000;      // (127 - 15) << 23
+
+        return floatbits(xs | xem);
     }
 }
 
@@ -3626,19 +3586,13 @@ static inline float half_to_float_fast(unsigned int16 h) {
         return __half_to_float_varying(h);
     }
     else {
-        unsigned int32 hs = h & (int32)0x8000u;  // Pick off sign bit
-        unsigned int32 he = h & (int32)0x7C00u;  // Pick off exponent bits
-        unsigned int32 hm = h & (int32)0x03FFu;  // Pick off mantissa bits
+        unsigned int32 hs = h & (int32)0x8000u;     // Pick off sign bit
+        unsigned int32 hem = h & (int32)0x7fffu;    // Pick off exponent-mantissa bits
 
-        // sign
-        unsigned int32 xs = ((unsigned int32) hs) << 16; 
-        // Exponent: unbias the halfp, then bias the single
-        int32 xes = ((int32) (he >> 10)) - 15 + 127; 
-        // Exponent
-        unsigned int32 xe = (unsigned int32) (xes << 23);
-        // Mantissa
-        unsigned int32 xm = ((unsigned int32) hm) << 13; 
-        return floatbits(xs | xe | xm);
+        unsigned int32 xs = ((unsigned int32) hs) << 16;
+        unsigned int32 xem = ((unsigned int32) hem) << 13;
+
+        return floatbits(xs | (xem + 0x38000000 /* (127 - 15) << 23 */));
     }
 }
 
