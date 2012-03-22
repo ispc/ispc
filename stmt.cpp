@@ -541,6 +541,10 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
         bool safeToRunWithAllLanesOff = (SafeToRunWithMaskAllOff(trueStmts) &&
                                          SafeToRunWithMaskAllOff(falseStmts));
 
+        Debug(pos, "If statement: true cost %d (safe %d), false cost %d (safe %d).",
+              ::EstimateCost(trueStmts), (int)SafeToRunWithMaskAllOff(trueStmts),
+              ::EstimateCost(falseStmts), (int)SafeToRunWithMaskAllOff(falseStmts));
+              
         if (safeToRunWithAllLanesOff &&
             (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
