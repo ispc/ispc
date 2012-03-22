@@ -327,8 +327,8 @@ ShadeTile(
 
                 // Reconstruct normal from G-buffer
                 float surface_normal_x, surface_normal_y, surface_normal_z;
-                float normal_x = half_to_float_fast(inputData.normalEncoded_x[gBufferOffset]);
-                float normal_y = half_to_float_fast(inputData.normalEncoded_y[gBufferOffset]);
+                float normal_x = half_to_float(inputData.normalEncoded_x[gBufferOffset]);
+                float normal_y = half_to_float(inputData.normalEncoded_y[gBufferOffset]);
                     
                 float f = (normal_x - normal_x * normal_x) + (normal_y - normal_y * normal_y);
                 float m = sqrt(4.0f * f - 1.0f);
@@ -339,9 +339,9 @@ ShadeTile(
 
                 // Load other G-buffer parameters
                 float surface_specularAmount = 
-                    half_to_float_fast(inputData.specularAmount[gBufferOffset]);
+                    half_to_float(inputData.specularAmount[gBufferOffset]);
                 float surface_specularPower  = 
-                    half_to_float_fast(inputData.specularPower[gBufferOffset]);
+                    half_to_float(inputData.specularPower[gBufferOffset]);
                 float surface_albedo_x = Unorm8ToFloat32(inputData.albedo_x[gBufferOffset]);
                 float surface_albedo_y = Unorm8ToFloat32(inputData.albedo_y[gBufferOffset]);
                 float surface_albedo_z = Unorm8ToFloat32(inputData.albedo_z[gBufferOffset]);

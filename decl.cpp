@@ -538,10 +538,31 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             return NULL;
         }
 
-        const Type *functionType = 
+        const FunctionType *functionType = 
             new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
         functionType = functionType->ResolveUnboundVariability(Variability::Varying);
+
+        // handle any explicit __declspecs on the function
+        if (ds != NULL) {
+            for (int i = 0; i < (int)ds->declSpecList.size(); ++i) {
+                std::string str = ds->declSpecList[i].first;
+                SourcePos pos = ds->declSpecList[i].second;
+
+                if (str == "safe")
+                    (const_cast<FunctionType *>(functionType))->isSafe = true;
+                else if (!strncmp(str.c_str(), "cost", 4)) {
+                    int cost = atoi(str.c_str() + 4);
+                    if (cost < 0)
+                        Error(pos, "Negative function cost %d is illegal.",
+                              cost);
+                    (const_cast<FunctionType *>(functionType))->costOverride = cost;
+                }
+                else
+                    Error(pos, "__declspec parameter \"%s\" unknown.", str.c_str());
+            }
+        }
+
         return child->GetType(functionType, ds);
     }
     default:
@@ -555,6 +576,14 @@ const Type *
 Declarator::GetType(DeclSpecs *ds) const {
     const Type *baseType = ds->GetBaseType(pos);
     const Type *type = GetType(baseType, ds);
+
+    if (ds->declSpecList.size() > 0 && 
+        type != NULL &
+        dynamic_cast<const FunctionType *>(type) == NULL) {
+        Error(pos, "__declspec specifiers for non-function type \"%s\" are "
+              "not used.", type->GetString().c_str());
+    }
+
     return type;
 }
 

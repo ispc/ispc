@@ -323,14 +323,22 @@ static bool
 lCheckAllOffSafety(ASTNode *node, void *data) {
     bool *okPtr = (bool *)data;
 
-    if (dynamic_cast<FunctionCallExpr *>(node) != NULL) {
-        // FIXME: If we could somehow determine that the function being
-        // called was safe (and all of the args Exprs were safe, then it'd
-        // be nice to be able to return true here.  (Consider a call to
-        // e.g. floatbits() in the stdlib.)  Unfortunately for now we just
-        // have to be conservative.
-        *okPtr = false;
-        return false;
+    FunctionCallExpr *fce;
+    if ((fce = dynamic_cast<FunctionCallExpr *>(node)) != NULL) {
+        if (fce->func == NULL)
+            return false;
+
+        const Type *type = fce->func->GetType();
+        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        if (pt != NULL)
+            type = pt->GetBaseType();
+        const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+        Assert(ftype != NULL);
+
+        if (ftype->isSafe == false) {
+            *okPtr = false;
+            return false;
+        }
     }
 
     if (dynamic_cast<AssertStmt *>(node) != NULL) {

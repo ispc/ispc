@@ -1269,6 +1269,9 @@ UnaryExpr::TypeCheck() {
 
 int
 UnaryExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+        return 0;
+
     return COST_SIMPLE_ARITH_LOGIC_OP;
 }
 
@@ -2501,6 +2504,10 @@ BinaryExpr::TypeCheck() {
 
 int
 BinaryExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(arg0) != NULL &&
+        dynamic_cast<ConstExpr *>(arg1) != NULL)
+        return 0;
+
     return (op == Div || op == Mod) ? COST_COMPLEX_ARITH_OP : 
                                       COST_SIMPLE_ARITH_LOGIC_OP;
 }
@@ -3518,18 +3525,23 @@ int
 FunctionCallExpr::EstimateCost() const {
     if (isLaunch)
         return COST_TASK_LAUNCH;
-    else if (dynamic_cast<FunctionSymbolExpr *>(func) == NULL) {
-        // it's going through a function pointer
-        const Type *fpType = func->GetType();
-        if (fpType != NULL) {
-            Assert(dynamic_cast<const PointerType *>(fpType) != NULL);
-            if (fpType->IsUniformType())
-                return COST_FUNPTR_UNIFORM;
-            else 
-                return COST_FUNPTR_VARYING;
-        }
-    }
-    return COST_FUNCALL;
+
+    const Type *type = func->GetType();
+    if (type == NULL)
+        return 0;
+
+    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    if (pt != NULL)
+        type = type->GetBaseType();
+    const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+
+    if (ftype->costOverride > -1)
+        return ftype->costOverride;
+
+    if (pt != NULL)
+        return pt->IsUniformType() ? COST_FUNPTR_UNIFORM : COST_FUNPTR_VARYING;
+    else
+        return COST_FUNCALL;
 }
 
 
@@ -6714,6 +6726,9 @@ TypeCastExpr::Optimize() {
 
 int
 TypeCastExpr::EstimateCost() const {
+    if (dynamic_cast<ConstExpr *>(expr) != NULL)
+        return 0;
+
     // FIXME: return COST_TYPECAST_COMPLEX when appropriate
     return COST_TYPECAST_SIMPLE;
 }
