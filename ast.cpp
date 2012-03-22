@@ -180,7 +180,8 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         MemberExpr *me;
         TypeCastExpr *tce;
         ReferenceExpr *re;
-        DereferenceExpr *dre;
+        PtrDerefExpr *ptrderef;
+        RefDerefExpr *refderef;
         SizeOfExpr *soe;
         AddressOfExpr *aoe;
         NewExpr *newe;
@@ -221,8 +222,12 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             tce->expr = (Expr *)WalkAST(tce->expr, preFunc, postFunc, data);
         else if ((re = dynamic_cast<ReferenceExpr *>(node)) != NULL)
             re->expr = (Expr *)WalkAST(re->expr, preFunc, postFunc, data);
-        else if ((dre = dynamic_cast<DereferenceExpr *>(node)) != NULL)
-            dre->expr = (Expr *)WalkAST(dre->expr, preFunc, postFunc, data);
+        else if ((ptrderef = dynamic_cast<PtrDerefExpr *>(node)) != NULL)
+            ptrderef->expr = (Expr *)WalkAST(ptrderef->expr, preFunc, postFunc,
+                                             data);
+        else if ((refderef = dynamic_cast<RefDerefExpr *>(node)) != NULL)
+            refderef->expr = (Expr *)WalkAST(refderef->expr, preFunc, postFunc,
+                                             data);
         else if ((soe = dynamic_cast<SizeOfExpr *>(node)) != NULL)
             soe->expr = (Expr *)WalkAST(soe->expr, preFunc, postFunc, data);
         else if ((aoe = dynamic_cast<AddressOfExpr *>(node)) != NULL)
@@ -417,13 +422,9 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    DereferenceExpr *de;
-    if ((de = dynamic_cast<DereferenceExpr *>(node)) != NULL) {
-        const Type *exprType = de->expr->GetType();
-        if (dynamic_cast<const PointerType *>(exprType) != NULL) {
-            *okPtr = false;
-            return false;
-        }
+    if (dynamic_cast<PtrDerefExpr *>(node) != NULL) {
+        *okPtr = false;
+        return false;
     }
 
     return true;

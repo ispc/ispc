@@ -2426,7 +2426,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
         return NULL;
 
     if (dynamic_cast<const ReferenceType *>(type) != NULL) {
-        expr = new DereferenceExpr(expr, expr->pos);
+        expr = new RefDerefExpr(expr, expr->pos);
         type = expr->GetType();
         if (type == NULL)
             return NULL;

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -530,23 +530,45 @@ public:
 };
 
 
-/** @brief Expression that represents dereferencing a reference to get its
-    value. */
-class DereferenceExpr : public Expr {
+/** @brief Common base class that provides shared functionality for
+    PtrDerefExpr and RefDerefExpr. */
+class DerefExpr : public Expr {
 public:
-    DereferenceExpr(Expr *e, SourcePos p);
+    DerefExpr(Expr *e, SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
-    const Type *GetType() const;
     const Type *GetLValueType() const;
     Symbol *GetBaseSymbol() const;
-    void Print() const;
-    Expr *TypeCheck();
     Expr *Optimize();
-    int EstimateCost() const;
 
     Expr *expr;
+};
+
+
+/** @brief Expression that represents dereferencing a pointer to get its
+    value. */
+class PtrDerefExpr : public DerefExpr {
+public:
+    PtrDerefExpr(Expr *e, SourcePos p);
+
+    const Type *GetType() const;
+    void Print() const;
+    Expr *TypeCheck();
+    int EstimateCost() const;
+};
+
+
+/** @brief Expression that represents dereferencing a reference to get its
+    value. */
+class RefDerefExpr : public DerefExpr {
+public:
+    RefDerefExpr(Expr *e, SourcePos p);
+
+    const Type *GetType() const;
+    void Print() const;
+    Expr *TypeCheck();
+    int EstimateCost() const;
 };
 
 
