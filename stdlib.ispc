@@ -3551,8 +3551,9 @@ static inline int16 float_to_half(float f) {
         //   like recursive filters in DSP - not a typical half-float application. Whether
         //   FP16 denormals are rare in practice, I don't know. Whatever slow path your HW
         //   may or may not have for denormals, this may well hit it.
-        int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
-        fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+        float fscale = floatbits(fint & round_mask) * floatbits(magic);
+        fscale = min(fscale, floatbits((31 << 23) - 0x1000));
+        int32 fint2 = intbits(fscale) - round_mask;
 
         if (fint < f32infty)
             o = fint2 >> 13; // Take the bits!
