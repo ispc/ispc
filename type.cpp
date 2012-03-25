@@ -2014,6 +2014,10 @@ StructType::GetElementType(int i) const {
     Assert(variability != Variability::Unbound);
     Assert(i < (int)elementTypes.size());
     const Type *ret = elementTypes[i];
+    if (ret == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
 
     // If the element has unbound variability, resolve its variability to
     // the struct type's variability
