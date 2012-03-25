@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,10 @@
 */
 
 /** @file ast.cpp
-    @brief 
-*/
+
+    @brief General functionality related to abstract syntax trees and
+    traversal of them.
+ */
 
 #include "ast.h"
 #include "expr.h"
@@ -359,6 +361,16 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         // We definitely don't want to run the uniform variants of these if
         // the mask is all off.  It's also worth skipping the overhead of
         // executing the varying versions of them in the all-off mask case.
+        *okPtr = false;
+        return false;
+    }
+
+    if (dynamic_cast<ForeachStmt *>(node) != NULL) {
+        // foreach() statements also shouldn't be run with an all-off mask.
+        // Since they re-establish an 'all on' mask, this would be pretty
+        // unintuitive.  (More generally, it's possibly a little strange to
+        // allow foreach() in the presence of any non-uniform control
+        // flow...)
         *okPtr = false;
         return false;
     }
