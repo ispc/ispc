@@ -20,6 +20,7 @@ distribution.
   + `How can I generate a single binary executable with support for multiple instruction sets?`_
   + `How can I determine at run-time which vector instruction set's instructions were selected to execute?`_
   + `Is it possible to inline ispc functions in C/C++ code?`_
+  + `Why is it illegal to pass "varying" values from C/C++ to ispc functions?`_ 
 
 * Programming Techniques
 
@@ -390,6 +391,48 @@ linking your applicaiton.
 (Note that if you're using the AVX instruction set, you must provide the
 ``-mattr=+avx`` flag to ``llc``.)
     
+
+Why is it illegal to pass "varying" values from C/C++ to ispc functions?
+------------------------------------------------------------------------
+
+If any of the types in the parameter list to an exported function is
+"varying" (including recursively, and members of structure types, etc.),
+then ``ispc`` will issue an error and refuse to compile the function:
+
+::
+
+    % echo "export int add(int x) { return ++x; }" | ispc
+    <stdin>:1:12: Error: Illegal to return a "varying" type from exported function "foo" 
+    <stdin>:1:20: Error: Varying parameter "x" is illegal in an exported function. 
+
+While there's no fundamental reason why this isn't possible, recall the
+definition of "varying" variables: they have one value for each program
+instance in the gang.  As such, the number of values and amount of storage
+required to represent a varying variable depends on the gang size
+(i.e. ``programCount``), which can have different values depending on the
+compilation target.
+
+``ispc`` therefore prohibits passing "varying" values between the
+application and the ``ispc`` program in order to prevent the
+application-side code from depending on a particular gang size, in order to
+encourage portability to different gang sizes.  (A generally desirable
+programming practice.)
+
+For cases where the size of data is actually fixed from the application
+side, the value can be passed via a pointer to a short ``uniform`` array,
+as follows:
+
+::
+
+    export void add4(uniform int ptr[4]) {
+        foreach (i = 0 ... 4)
+            ptr[i]++;
+    }
+
+On the 4-wide SSE instruction set, this compiles to a single vector add
+instruction (and associated move instructions), while it still also
+efficiently computes the correct result on 8-wide AVX targets.
+
 
 Programming Techniques
 ======================
