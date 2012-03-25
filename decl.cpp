@@ -739,15 +739,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             if (Type::Equal(sym->type, AtomicType::Void))
                 Error(d->pos, "\"void\" type illegal for struct member.");
 
-            const ArrayType *arrayType = 
-                dynamic_cast<const ArrayType *>(sym->type);
-            if (arrayType != NULL && arrayType->GetElementCount() == 0) {
-                Error(d->pos, "Unsized arrays aren't allowed in struct "
-                      "definitions.");
-                elementTypes->push_back(NULL);
-            }
-            else
-                elementTypes->push_back(sym->type);
+            elementTypes->push_back(sym->type);
 
             if (seenNames.find(sym->name) != seenNames.end())
                 Error(d->pos, "Struct member \"%s\" has same name as a "
@@ -758,5 +750,14 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
             elementNames->push_back(sym->name);
             elementPositions->push_back(sym->pos);
         }
+    }
+
+    for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
+        const ArrayType *arrayType = 
+            dynamic_cast<const ArrayType *>((*elementTypes)[i]);
+
+        if (arrayType != NULL && arrayType->GetElementCount() == 0)
+            Error((*elementPositions)[i], "Unsized arrays aren't allowed except "
+                  "for the last member in a struct definition.");
     }
 }
