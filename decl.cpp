@@ -579,7 +579,7 @@ Declarator::GetType(DeclSpecs *ds) const {
     const Type *type = GetType(baseType, ds);
 
     if (ds->declSpecList.size() > 0 && 
-        type != NULL &
+        type != NULL &&
         dynamic_cast<const FunctionType *>(type) == NULL) {
         Error(pos, "__declspec specifiers for non-function type \"%s\" are "
               "not used.", type->GetString().c_str());
