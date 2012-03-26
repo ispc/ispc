@@ -121,10 +121,14 @@ Contents:
 
 * `The ISPC Standard Library`_
 
+  + `Basic Operations On Data`_
+
+    * `Logical and Selection Operations`_
+    * `Bit Operations`_
+
   + `Math Functions`_
 
     * `Basic Math Functions`_
-    * `Bit-Level Operations`_
     * `Transcendental Functions`_
     * `Pseudo-Random Numbers`_
 
@@ -2150,6 +2154,12 @@ greater than or equal to ``NUM_ITEMS``.
         // ...
     }
 
+Short-circuiting may impose some overhead in the generated code; for cases
+where short-circuiting is undesirable due to performance impact, see
+the section `Logical and Selection Operations`_, which introduces helper
+functions in the standard library that provide these operations without
+short-circuiting.
+
 
 Dynamic Memory Allocation
 -------------------------
@@ -2827,6 +2837,123 @@ The ISPC Standard Library
 compiling ``ispc`` programs.  (To disable the standard library, pass the
 ``--nostdlib`` command-line flag to the compiler.)
 
+Basic Operations On Data
+------------------------
+
+Logical and Selection Operations
+--------------------------------
+
+Recall from `Expressions`_ that ``ispc`` short-circuits the evaluation of
+logical and selection operators: given an expression like ``(index < count
+&& array[index] == 0)``, then ``array[index] == 0`` is only evaluated if
+``index < count`` is true.  This property is useful for writing expressions
+like the preceeding one, where the second expression may not be safe to
+evaluate in some cases.
+
+This short-circuiting can impose overhead in the generated code; additional
+operations are required to test the first value and to conditionally jump
+over the code that evaluates the second value.  The ``ispc`` compiler does
+try to mitigate this cost by detecting cases where it is both safe and
+inexpensive to evaluate both expressions, and skips short-circuiting in the
+generated code in this case (without there being any programmer-visible
+change in program behavior.)
+
+For cases where the compiler can't detect this case but the programmer
+wants to avoid short-circuiting behavior, the standard library provides a
+few helper functions.  First, ``and()`` and ``or()`` provide
+non-short-circuiting logical AND and OR operations.
+
+::
+
+    bool and(bool a, bool b)
+    bool or(bool a, bool b)
+    uniform bool and(uniform bool a, uniform bool b)
+    uniform bool or(uniform bool a, uniform bool b)
+
+And there are three variants of ``select()`` that select between two values
+based on a boolean condition.  These are the variants of ``select()`` for
+the ``int8`` type:
+
+::
+
+    int8 select(bool v, int8 a, int8 b)
+    int8 select(uniform bool v, int8 a, int8 b)
+    uniform int8 select(uniform bool v, uniform int8 a, uniform int8 b)
+
+There are also variants for ``int16``, ``int32``, ``int64``, ``float``, and
+``double`` types.
+
+Bit Operations
+--------------
+
+The various variants of ``popcnt()`` return the population count--the
+number of bits set in the given value.
+
+::
+
+    uniform int popcnt(uniform int v)
+    int popcnt(int v)
+    uniform int popcnt(bool v)
+
+
+A few functions determine how many leading bits in the given value are zero
+and how many of the trailing bits are zero; there are also ``unsigned``
+variants of these functions and variants that take ``int64`` and ``unsigned
+int64`` types.
+
+::
+
+    int32 count_leading_zeros(int32 v)
+    uniform int32 count_leading_zeros(uniform int32 v)
+    int32 count_trailing_zeros(int32 v)
+    uniform int32 count_trailing_zeros(uniform int32 v)
+
+Sometimes it's useful to convert a ``bool`` value to an integer using sign
+extension so that the integer's bits are all on if the ``bool`` has the
+value ``true`` (rather than just having the value one).  The
+``sign_extend()`` functions provide this functionality:
+
+::
+
+    int sign_extend(bool value) 
+    uniform int sign_extend(uniform bool value) 
+
+The ``intbits()`` and ``floatbits()`` functions can be used to implement
+low-level floating-point bit twiddling.  For example, ``intbits()`` returns
+an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
+value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
+something like ``*((int *)&a)`` in C.
+
+::
+
+    float floatbits(unsigned int a);
+    uniform float floatbits(uniform unsigned int a);
+    unsigned int intbits(float a);
+    uniform unsigned int intbits(uniform float a);
+
+
+The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
+they just let the compiler know how to interpret the bits of the given
+value.  They make it possible to efficiently write functions that take
+advantage of the low-level bit representation of floating-point values.
+
+For example, the ``abs()`` function in the standard library is implemented
+as follows:
+
+::
+
+    float abs(float a) {
+        unsigned int i = intbits(a);
+        i &= 0x7fffffff;
+        return floatbits(i);
+    }
+
+This code directly clears the high order bit to ensure that the given
+floating-point value is positive.  This compiles down to a single ``andps``
+instruction when used with an Intel® SSE target, for example.
+
+
+
 Math Functions
 --------------
 
@@ -2918,77 +3045,6 @@ quite efficient.)
     uniform unsigned int clamp(uniform unsigned int v,
                                uniform unsigned int low,
                                uniform unsigned int high)
-
-Bit-Level Operations
---------------------
-
-
-The various variants of ``popcnt()`` return the population count--the
-number of bits set in the given value.
-
-::
-
-    uniform int popcnt(uniform int v)
-    int popcnt(int v)
-    uniform int popcnt(bool v)
-
-
-A few functions determine how many leading bits in the given value are zero
-and how many of the trailing bits are zero; there are also ``unsigned``
-variants of these functions and variants that take ``int64`` and ``unsigned
-int64`` types.
-
-::
-
-    int32 count_leading_zeros(int32 v)
-    uniform int32 count_leading_zeros(uniform int32 v)
-    int32 count_trailing_zeros(int32 v)
-    uniform int32 count_trailing_zeros(uniform int32 v)
-
-Sometimes it's useful to convert a ``bool`` value to an integer using sign
-extension so that the integer's bits are all on if the ``bool`` has the
-value ``true`` (rather than just having the value one).  The
-``sign_extend()`` functions provide this functionality:
-
-::
-
-    int sign_extend(bool value) 
-    uniform int sign_extend(uniform bool value) 
-
-The ``intbits()`` and ``floatbits()`` functions can be used to implement
-low-level floating-point bit twiddling.  For example, ``intbits()`` returns
-an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
-value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
-something like ``*((int *)&a)`` in C.
-
-::
-
-    float floatbits(unsigned int a);
-    uniform float floatbits(uniform unsigned int a);
-    unsigned int intbits(float a);
-    uniform unsigned int intbits(uniform float a);
-
-
-The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
-they just let the compiler know how to interpret the bits of the given
-value.  They make it possible to efficiently write functions that take
-advantage of the low-level bit representation of floating-point values.
-
-For example, the ``abs()`` function in the standard library is implemented
-as follows:
-
-::
-
-    float abs(float a) {
-        unsigned int i = intbits(a);
-        i &= 0x7fffffff;
-        return floatbits(i);
-    }
-
-This code directly clears the high order bit to ensure that the given
-floating-point value is positive.  This compiles down to a single ``andps``
-instruction when used with an Intel® SSE target, for example.
-
 
 Transcendental Functions
 ------------------------

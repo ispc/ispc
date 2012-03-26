@@ -747,6 +747,125 @@ static inline void prefetch_nt(const void * varying ptr) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// non-short-circuiting alternatives
+
+__declspec(safe,cost1)
+static inline bool and(bool a, bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool and(uniform bool a, uniform bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline bool or(bool a, bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool or(uniform bool a, uniform bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(uniform bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int8 select(uniform bool c, uniform int8 a,
+                                  uniform int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(uniform bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int16 select(uniform bool c, uniform int16 a,
+                                   uniform int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(uniform bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int32 select(uniform bool c, uniform int32 a,
+                                   uniform int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(uniform bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int64 select(uniform bool c, uniform int64 a,
+                                   uniform int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(uniform bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform float select(uniform bool c, uniform float a,
+                                   uniform float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(uniform bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform double select(uniform bool c, uniform double a,
+                                    uniform double b) {
+    return c ? a : b;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
 
 __declspec(safe) 
