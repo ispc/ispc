@@ -44,6 +44,7 @@
 #include "stmt.h"
 #include "expr.h"
 #include <stdio.h>
+#include <string.h>
 #include <set>
 
 static void
