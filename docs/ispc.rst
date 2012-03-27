@@ -3083,8 +3083,8 @@ The corresponding inverse functions are also available:
    uniform float acos(uniform float x)
    float atan(float x)
    uniform float atan(uniform float x)
-   float atan2(float x, float y)
-   uniform float atan2(uniform float x, uniform float y)
+   float atan2(float y, float x)
+   uniform float atan2(uniform float y, uniform float x)
 
 If both sine and cosine are needed, then the ``sincos()`` call computes
 both more efficiently than two calls to the respective individual
