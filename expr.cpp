@@ -253,6 +253,11 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     // "float foo[10]" -> "float * uniform foo", we have what's seemingly
     // a varying to uniform conversion (but not really)
     if (fromArrayType != NULL && toPointerType != NULL) {
+        // can convert any array to a void pointer (both uniform and
+        // varying).
+        if (PointerType::IsVoidPointer(toPointerType))
+            goto typecast_ok;
+
         // array to pointer to array element type
         const Type *eltType = fromArrayType->GetElementType();
         if (toPointerType->GetBaseType()->IsConstType())
@@ -6411,7 +6416,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // implicit array to pointer to first element
         Expr *arrayAsPtr = lArrayToPointer(expr);
         if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
-            Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
+            Assert(PointerType::IsVoidPointer(toPointerType) ||
+                   Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
