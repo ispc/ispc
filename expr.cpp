@@ -6284,10 +6284,17 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     const Type *toType = GetType(), *fromType = expr->GetType();
-    if (!toType || !fromType || Type::Equal(toType, AtomicType::Void) || 
-        Type::Equal(fromType, AtomicType::Void))
-        // an error should have been issued elsewhere in this case
+    if (toType == NULL || fromType == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+
+    if (Type::Equal(toType, AtomicType::Void)) {
+        // emit the code for the expression in case it has side-effects but
+        // then we're done.
+        (void)expr->GetValue(ctx);
+        return NULL;
+    }
 
     const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
     const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
@@ -6590,7 +6597,12 @@ TypeCastExpr::TypeCheck() {
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
 
-    if (fromType->IsVaryingType() && toType->IsUniformType()) {
+    // Anything can be cast to void...
+    if (Type::Equal(toType, AtomicType::Void))
+        return this;
+
+    if (Type::Equal(fromType, AtomicType::Void) ||
+        fromType->IsVaryingType() && toType->IsUniformType()) {
         Error(pos, "Can't type cast from type \"%s\" to type \"%s\"",
               fromType->GetString().c_str(), toType->GetString().c_str());
         return NULL;
