@@ -84,6 +84,13 @@
   #endif
 #endif // ISPC_IS_WINDOWS
 
+#ifndef PRId64
+#define PRId64 "lld"
+#endif
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
+
 static llvm::Pass *CreateIntrinsicsOptPass();
 static llvm::Pass *CreateVSelMovmskOptPass();
 static llvm::Pass *CreateDetectGSBaseOffsetsPass();
