@@ -542,7 +542,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{SSE2,SSE4,AVX}
+  * - ISPC_TARGET_{SSE2,SSE4,AVX,AVX2}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
