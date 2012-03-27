@@ -3409,7 +3409,9 @@ FunctionCallExpr::TypeCheck() {
         if (t == NULL)
             return NULL;
         argTypes.push_back(t);
-        argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
+
+        argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]) ||
+                       dynamic_cast<NullPointerExpr *>(args->exprs[i]) != NULL);
     }
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
