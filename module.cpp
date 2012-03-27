@@ -755,109 +755,56 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 }
 
 
-/** Small structure used in representing dependency graphs of structures
-    (i.e. given a StructType, which other structure types does it have as
-    elements).
- */ 
-struct StructDAGNode {
-    StructDAGNode()
-        : visited(false) { }
-
-    bool visited;
-    std::vector<const StructType *> dependents;
-};
-
-
-/** Visit a node for the topological sort.
+/** Emits a declaration for the given struct to the given file.  This
+    function first makes sure that declarations for any structs that are
+    (recursively) members of this struct are emitted first.
  */
 static void
-lVisitNode(const StructType *structType, 
-           std::map<const StructType *, StructDAGNode *> &structToNode,
-           std::vector<const StructType *> &sortedTypes) {
-    Assert(structToNode.find(structType) != structToNode.end());
-    // Get the node that encodes the structs that this one is immediately
-    // dependent on.
-    StructDAGNode *node = structToNode[structType];
-    if (node->visited)
-        return;
+lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedStructs,
+                FILE *file) {
+    // Has this struct type already been declared?  (This happens if it's a
+    // member of another struct for which we emitted a declaration
+    // previously.)
+    for (int i = 0; i < (int)emittedStructs->size(); ++i)
+        if (Type::EqualIgnoringConst(st, (*emittedStructs)[i]))
+            return;
 
-    node->visited = true;
-    // Depth-first traversal: visit all of the dependent nodes...
-    for (unsigned int i = 0; i < node->dependents.size(); ++i)
-        lVisitNode(node->dependents[i], structToNode, sortedTypes);
-    // ...and then add this one to the sorted list
-    sortedTypes.push_back(structType);
+    // Otherwise first make sure any contained structs have been declared.
+    for (int i = 0; i < st->GetElementCount(); ++i) {
+        const StructType *elementStructType = 
+            dynamic_cast<const StructType *>(st->GetElementType(i));
+        if (elementStructType != NULL)
+            lEmitStructDecl(elementStructType, emittedStructs, file);
+    }
+
+    // And now it's safe to declare this one
+    emittedStructs->push_back(st);
+
+    fprintf(file, "struct %s", st->GetStructName().c_str());
+    if (st->GetSOAWidth() > 0)
+        // This has to match the naming scheme in
+        // StructType::GetCDeclaration().
+        fprintf(file, "_SOA%d", st->GetSOAWidth());
+    fprintf(file, " {\n");
+
+    for (int i = 0; i < st->GetElementCount(); ++i) {
+        const Type *type = st->GetElementType(i)->GetAsNonConstType();
+        std::string d = type->GetCDeclaration(st->GetElementName(i));
+        fprintf(file, "    %s;\n", d.c_str());
+    }
+    fprintf(file, "};\n\n");
 }
-           
+
 
 /** Given a set of structures that we want to print C declarations of in a
-    header file, order them so that any struct that is used as a member
-    variable in another struct is printed before the struct that uses it
-    and then print them to the given file.
+    header file, emit their declarations.
  */
 static void
 lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
-    // First, build a DAG among the struct types where there is an edge
-    // from node A to node B if struct type A depends on struct type B
-
-    // Records the struct types that have incoming edges in the
-    // DAG--i.e. the ones that one or more other struct types depend on
-    std::set<const StructType *> hasIncomingEdges;
-    // Records the mapping between struct type pointers and the
-    // StructDagNode structures
-    std::map<const StructType *, StructDAGNode *> structToNode;
-    for (unsigned int i = 0; i < structTypes.size(); ++i) {
-        // For each struct type, create its DAG node and record the
-        // relationship between it and its node
-        const StructType *st = structTypes[i];
-        StructDAGNode *node = new StructDAGNode;
-        structToNode[st] = node;
-
-        for (int j = 0; j < st->GetElementCount(); ++j) {
-            const StructType *elementStructType = 
-                dynamic_cast<const StructType *>(st->GetElementType(j));
-            // If this element is a struct type and we haven't already
-            // processed it for the current struct type, then upate th
-            // dependencies and record that this element type has other
-            // struct types that depend on it.
-            if (elementStructType != NULL &&
-                (std::find(node->dependents.begin(), node->dependents.end(), 
-                           elementStructType) == node->dependents.end())) {
-                node->dependents.push_back(elementStructType);
-                hasIncomingEdges.insert(elementStructType);
-            }
-        }
-    }
-
-    // Perform a topological sort of the struct types.  Kick it off by
-    // visiting nodes with no incoming edges; i.e. the struct types that no
-    // other struct types depend on.
-    std::vector<const StructType *> sortedTypes;
-    for (unsigned int i = 0; i < structTypes.size(); ++i) {
-        const StructType *structType = structTypes[i];
-        if (hasIncomingEdges.find(structType) == hasIncomingEdges.end())
-            lVisitNode(structType, structToNode, sortedTypes);
-    }
-    Assert(sortedTypes.size() == structTypes.size());
-
-    // And finally we can emit the struct declarations by going through the
-    // sorted ones in order.
-    for (unsigned int i = 0; i < sortedTypes.size(); ++i) {
-        const StructType *st = sortedTypes[i];
-        fprintf(file, "struct %s", st->GetStructName().c_str());
-        if (st->GetSOAWidth() > 0)
-            // This has to match the naming scheme in
-            // StructType::GetCDeclaration().
-            fprintf(file, "_SOA%d", st->GetSOAWidth());
-        fprintf(file, " {\n");
-
-        for (int j = 0; j < st->GetElementCount(); ++j) {
-            const Type *type = st->GetElementType(j)->GetAsNonConstType();
-            std::string d = type->GetCDeclaration(st->GetElementName(j));
-            fprintf(file, "    %s;\n", d.c_str());
-        }
-        fprintf(file, "};\n\n");
-    }
+    std::vector<const StructType *> emittedStructs;
+    for (unsigned int i = 0; i < structTypes.size(); ++i)
+        lEmitStructDecl(structTypes[i], &emittedStructs, file);
+    Assert(emittedStructs.size() == structTypes.size());
 }
 
 
