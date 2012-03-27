@@ -2314,6 +2314,7 @@ BinaryExpr::TypeCheck() {
         if (type1->IsVaryingType()) {
             arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), 
                                    "pointer addition");
+            offsetType = offsetType->GetAsVaryingType();
             Assert(arg0 != NULL);
         }
 
