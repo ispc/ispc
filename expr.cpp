@@ -7209,7 +7209,10 @@ SymbolExpr::GetLValueType() const {
     if (symbol == NULL)
         return NULL;
 
-    return PointerType::GetUniform(symbol->type);
+    if (dynamic_cast<const ReferenceType *>(symbol->type) != NULL)
+        return PointerType::GetUniform(symbol->type->GetReferenceTarget());
+    else
+        return PointerType::GetUniform(symbol->type);
 }
 
 
