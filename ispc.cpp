@@ -70,6 +70,49 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
+#ifndef ISPC_IS_WINDOWS
+static void __cpuid(int info[4], int infoType) {
+    __asm__ __volatile__ ("cpuid"
+                          : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
+                          : "0" (infoType));
+}
+
+/* Save %ebx in case it's the PIC register */
+static void __cpuidex(int info[4], int level, int count) {
+  __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
+                        "cpuid\n\t"
+                        "xchg{l}\t{%%}ebx, %1\n\t"
+                        : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
+                        : "0" (level), "2" (count));
+}
+#endif // ISPC_IS_WINDOWS
+
+
+static const char *
+lGetSystemISA() {
+    int info[4];
+    __cpuid(info, 1);
+
+    if ((info[2] & (1 << 28)) != 0) {
+        // AVX1 for sure. Do we have AVX2?
+        // Call cpuid with eax=7, ecx=0
+        __cpuidex(info, 7, 0);
+        if ((info[1] & (1 << 5)) != 0)
+            return "avx2";
+        else
+            return "avx";
+    }
+    else if ((info[2] & (1 << 19)) != 0)
+        return "sse4";
+    else if ((info[3] & (1 << 26)) != 0)
+        return "sse2";
+    else {
+        fprintf(stderr, "Unable to detect supported SSE/AVX ISA.  Exiting.\n");
+        exit(1);
+    }
+}
+
+
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   bool pic, Target *t) {
@@ -85,15 +128,9 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     t->cpu = cpu;
 
     if (isa == NULL) {
-        if (!strcasecmp(cpu, "atom"))
-            isa = "sse2";
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        else if (!strcasecmp(cpu, "sandybridge") ||
-                 !strcasecmp(cpu, "corei7-avx"))
-            isa = "avx";
-#endif // LLVM_3_0
-        else
-            isa = "sse4";
+        isa = lGetSystemISA();
+        fprintf(stderr, "Notice: no --target specified on command-line.  Using "
+                "system ISA \"%s\".\n", isa);
     }
     if (arch == NULL)
         arch = "x86-64";
