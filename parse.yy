@@ -250,6 +250,12 @@ struct ForeachDimension {
 
 string_constant
     : TOKEN_STRING_LITERAL { $$ = new std::string(*yylval.stringVal); }
+    | string_constant TOKEN_STRING_LITERAL
+    {
+        std::string s = *((std::string *)$1);
+        s += *yylval.stringVal;
+        $$ = new std::string(s);
+    }
     ;
 
 primary_expression
