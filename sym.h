@@ -75,7 +75,7 @@ public:
     std::string MangledName() const;
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
-    const std::string name;   /*!< Symbol's name */
+    std::string name;         /*!< Symbol's name */
     llvm::Value *storagePtr;  /*!< For symbols with storage associated with
                                    them (i.e. variables but not functions),
                                    this member stores a pointer to its

@@ -270,53 +270,106 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
             Error(sym->pos, "Initializer can't be provided with \"extern\" "
                   "global variable \"%s\".", sym->name.c_str());
     }
-    else if (initExpr != NULL) {
-        initExpr = TypeCheck(initExpr);
+    else {
         if (initExpr != NULL) {
-            // We need to make sure the initializer expression is
-            // the same type as the global.  (But not if it's an
-            // ExprList; they don't have types per se / can't type
-            // convert themselves anyway.)
-            if (dynamic_cast<ExprList *>(initExpr) == NULL)
-                initExpr = TypeConvertExpr(initExpr, sym->type, "initializer");
-            
+            initExpr = TypeCheck(initExpr);
             if (initExpr != NULL) {
-                initExpr = Optimize(initExpr);
-                // Fingers crossed, now let's see if we've got a
-                // constant value..
-                llvmInitializer = initExpr->GetConstant(sym->type);
+                // We need to make sure the initializer expression is
+                // the same type as the global.  (But not if it's an
+                // ExprList; they don't have types per se / can't type
+                // convert themselves anyway.)
+                if (dynamic_cast<ExprList *>(initExpr) == NULL)
+                    initExpr = TypeConvertExpr(initExpr, sym->type, "initializer");
+            
+                if (initExpr != NULL) {
+                    initExpr = Optimize(initExpr);
+                    // Fingers crossed, now let's see if we've got a
+                    // constant value..
+                    llvmInitializer = initExpr->GetConstant(sym->type);
 
-                if (llvmInitializer != NULL) {
-                    if (sym->type->IsConstType())
-                        // Try to get a ConstExpr associated with
-                        // the symbol.  This dynamic_cast can
-                        // validly fail, for example for types like
-                        // StructTypes where a ConstExpr can't
-                        // represent their values.
-                        sym->constValue = 
-                            dynamic_cast<ConstExpr *>(initExpr);
+                    if (llvmInitializer != NULL) {
+                        if (sym->type->IsConstType())
+                            // Try to get a ConstExpr associated with
+                            // the symbol.  This dynamic_cast can
+                            // validly fail, for example for types like
+                            // StructTypes where a ConstExpr can't
+                            // represent their values.
+                            sym->constValue = 
+                                dynamic_cast<ConstExpr *>(initExpr);
+                    }
+                    else
+                        Error(initExpr->pos, "Initializer for global variable \"%s\" "
+                              "must be a constant.", sym->name.c_str());
                 }
-                else
-                    Error(initExpr->pos, "Initializer for global variable \"%s\" "
-                          "must be a constant.", sym->name.c_str());
             }
         }
+
+        // If no initializer was provided or if we couldn't get a value
+        // above, initialize it with zeros..
+        if (llvmInitializer == NULL)
+            llvmInitializer = llvm::Constant::getNullValue(llvmType);
     }
 
-    // If no initializer was provided or if we couldn't get a value
-    // above, initialize it with zeros..
-    if (llvmInitializer == NULL)
-        llvmInitializer = llvm::Constant::getNullValue(llvmType);
+    Symbol *stSym = symbolTable->LookupVariable(sym->name.c_str());
+    llvm::GlobalVariable *oldGV = NULL;
+    if (stSym != NULL) {
+        // We've already seen either a declaration or a definition of this
+        // global.
+
+        // If the type doesn't match with the previous one, issue an error.
+        if (!Type::Equal(sym->type, stSym->type)) {
+            Error(sym->pos, "Definition of variable \"%s\" conflicts with "
+                  "definition at %s:%d.", sym->name.c_str(),
+                  stSym->pos.name, stSym->pos.first_line);
+            return;
+        }
+
+        llvm::GlobalVariable *gv = 
+            llvm::dyn_cast<llvm::GlobalVariable>(stSym->storagePtr);
+        Assert(gv != NULL);
+
+        // And issue an error if this is a redefinition of a variable
+        if (gv->hasInitializer() && 
+            sym->storageClass != SC_EXTERN && sym->storageClass != SC_EXTERN_C) {
+            Error(sym->pos, "Redefinition of variable \"%s\" is illegal. "
+                  "(Previous definition at %s:%d.)", sym->name.c_str(),
+                  stSym->pos.name, stSym->pos.first_line);
+            return;
+        }
+
+        // Now, we either have a redeclaration of a global, or a definition
+        // of a previously-declared global.  First, save the pointer to the
+        // previous llvm::GlobalVariable
+        oldGV = gv;
+
+        // Now copy over all of the members of the current Symbol to the
+        // symbol in the symbol table.
+        *stSym = *sym;
+        // And copy the pointer of the one in the symbol table to sym, so
+        // that the operations below update storagePtr for the Symbol
+        // already in the symbol table.
+        sym = stSym;
+    }
+    else
+        symbolTable->AddVariable(sym);
 
     llvm::GlobalValue::LinkageTypes linkage =
         (sym->storageClass == SC_STATIC) ? llvm::GlobalValue::InternalLinkage :
         llvm::GlobalValue::ExternalLinkage;
+
+    // Note that the NULL llvmInitializer is what leads to "extern"
+    // declarations coming up extern and not defining storage (a bit
+    // subtle)...
     sym->storagePtr = new llvm::GlobalVariable(*module, llvmType, isConst, 
                                                linkage, llvmInitializer, 
                                                sym->name.c_str());
-    symbolTable->AddVariable(sym);
 
-    if (diBuilder && (sym->storageClass != SC_EXTERN)) {
+    // Patch up any references to the previous GlobalVariable (e.g. from a
+    // declaration of a global that was later defined.)
+    if (oldGV != NULL)
+        oldGV->replaceAllUsesWith(sym->storagePtr);
+    
+    if (diBuilder) {
         llvm::DIFile file = sym->pos.GetDIFile();
         diBuilder->createGlobalVariable(sym->name, 
                                         file,
