@@ -486,16 +486,18 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             if (d->declarators.size()) {
                 // Try to find an initializer expression.
                 Declarator *decl = d->declarators[0];
-                while (decl->child != NULL) {
+                while (decl != NULL) {
                     if (decl->initExpr != NULL) {
                         decl->initExpr = TypeCheck(decl->initExpr);
                         decl->initExpr = Optimize(decl->initExpr);
-                        if (decl->initExpr != NULL &&
-                            ((init = dynamic_cast<ConstExpr *>(decl->initExpr)) == NULL) &&
-                            ((init = dynamic_cast<NullPointerExpr *>(decl->initExpr)) == NULL)) {
-                            Error(decl->initExpr->pos, "Default value for parameter "
-                                  "\"%s\" must be a compile-time constant.", 
-                                  sym->name.c_str());
+                        if (decl->initExpr != NULL) {
+                            init = dynamic_cast<ConstExpr *>(decl->initExpr);
+                            if (init == NULL)
+                                init = dynamic_cast<NullPointerExpr *>(decl->initExpr);
+                            if (init == NULL)
+                                Error(decl->initExpr->pos, "Default value for parameter "
+                                      "\"%s\" must be a compile-time constant.", 
+                                      sym->name.c_str());
                         }
                         break;
                     }
@@ -511,6 +513,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             Error(pos, "No return type provided in function declaration.");
             return NULL;
         }
+
         if (dynamic_cast<const FunctionType *>(returnType) != NULL) {
             Error(pos, "Illegal to return function type from function.");
             return NULL;
