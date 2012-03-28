@@ -355,8 +355,15 @@ Target::GetTargetMachine() const {
 #if defined(LLVM_3_1svn)
     std::string featuresString = attributes;
     llvm::TargetOptions options;
+#if 0
+    // This was breaking e.g. round() on SSE2, where the code we want to
+    // run wants to do:
+    // x += 0x1.0p23f;
+    // x -= 0x1.0p23f;
+    // But then LLVM was optimizing this away...
     if (g->opt.fastMath == true)
         options.UnsafeFPMath = 1;
+#endif
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, options,
                                     relocModel);
