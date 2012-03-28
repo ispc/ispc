@@ -424,7 +424,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     case DK_FUNCTION: {
         std::vector<const Type *> args;
         std::vector<std::string> argNames;
-        std::vector<ConstExpr *> argDefaults;
+        std::vector<Expr *> argDefaults;
         std::vector<SourcePos> argPos;
 
         // Loop over the function arguments and store the names, types,
@@ -482,23 +482,25 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             argNames.push_back(sym->name);
             argPos.push_back(sym->pos);
 
-            ConstExpr *init = NULL;
+            Expr *init = NULL;
             if (d->declarators.size()) {
-                // Try to find an initializer expression; if there is one,
-                // it lives down to the base declarator.
+                // Try to find an initializer expression.
                 Declarator *decl = d->declarators[0];
                 while (decl->child != NULL) {
-                    Assert(decl->initExpr == NULL);
-                    decl = decl->child;
-                }
-
-                if (decl->initExpr != NULL &&
-                    (decl->initExpr = TypeCheck(decl->initExpr)) != NULL &&
-                    (decl->initExpr = Optimize(decl->initExpr)) != NULL &&
-                    (init = dynamic_cast<ConstExpr *>(decl->initExpr)) == NULL) {
-                    Error(decl->initExpr->pos, "Default value for parameter "
-                          "\"%s\" must be a compile-time constant.", 
-                          sym->name.c_str());
+                    if (decl->initExpr != NULL) {
+                        decl->initExpr = TypeCheck(decl->initExpr);
+                        decl->initExpr = Optimize(decl->initExpr);
+                        if (decl->initExpr != NULL &&
+                            ((init = dynamic_cast<ConstExpr *>(decl->initExpr)) == NULL) &&
+                            ((init = dynamic_cast<NullPointerExpr *>(decl->initExpr)) == NULL)) {
+                            Error(decl->initExpr->pos, "Default value for parameter "
+                                  "\"%s\" must be a compile-time constant.", 
+                                  sym->name.c_str());
+                        }
+                        break;
+                    }
+                    else
+                        decl = decl->child;
                 }
             }
             argDefaults.push_back(init);

@@ -547,7 +547,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
     for (int i = 0; i < nArgs; ++i) {
         const Type *argType = functionType->GetParameterType(i);
         const std::string &argName = functionType->GetParameterName(i);
-        ConstExpr *defaultValue = functionType->GetParameterDefault(i);
+        Expr *defaultValue = functionType->GetParameterDefault(i);
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
 
         // If the function is exported, make sure that the parameter

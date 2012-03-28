@@ -745,7 +745,7 @@ public:
     FunctionType(const Type *returnType, 
                  const std::vector<const Type *> &argTypes,
                  const std::vector<std::string> &argNames,
-                 const std::vector<ConstExpr *> &argDefaults,
+                 const std::vector<Expr *> &argDefaults,
                  const std::vector<SourcePos> &argPos,
                  bool isTask, bool isExported, bool isExternC);
 
@@ -785,7 +785,7 @@ public:
 
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
-    ConstExpr * GetParameterDefault(int i) const;
+    Expr * GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
@@ -818,7 +818,7 @@ private:
     const std::vector<std::string> paramNames;
     /** Default values of the function's arguments.  For arguments without
         default values provided, NULL is stored. */
-    mutable std::vector<ConstExpr *> paramDefaults;
+    mutable std::vector<Expr *> paramDefaults;
     /** The names provided (if any) with the function arguments in the
         function's signature.  These should only be used for error messages
         and the like and so not affect testing function types for equality,

@@ -2330,7 +2330,7 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
                            SourcePos p)
     : isTask(false), isExported(false), isExternC(false), returnType(r), 
       paramTypes(a), paramNames(std::vector<std::string>(a.size(), "")),
-      paramDefaults(std::vector<ConstExpr *>(a.size(), NULL)),
+      paramDefaults(std::vector<Expr *>(a.size(), NULL)),
       paramPositions(std::vector<SourcePos>(a.size(), p)) {
     Assert(returnType != NULL);
     isSafe = false;
@@ -2340,7 +2340,7 @@ FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a,
 
 FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
                            const std::vector<std::string> &an, 
-                           const std::vector<ConstExpr *> &ad,
+                           const std::vector<Expr *> &ad,
                            const std::vector<SourcePos> &ap,
                            bool it, bool is, bool ec) 
     : isTask(it), isExported(is), isExternC(ec), returnType(r), paramTypes(a), 
@@ -2614,7 +2614,7 @@ FunctionType::GetParameterType(int i) const {
 }
 
 
-ConstExpr *
+Expr *
 FunctionType::GetParameterDefault(int i) const { 
     Assert(i < (int)paramDefaults.size());
     return paramDefaults[i]; 
