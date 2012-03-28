@@ -173,8 +173,11 @@ struct ForeachDimension {
 }
 
 
-%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT TOKEN_INT64_CONSTANT
-%token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT 
+%token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT 
+%token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT 
+%token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
+%token TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -196,7 +199,7 @@ struct ForeachDimension {
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
-%type <expr> primary_expression postfix_expression
+%type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
@@ -1620,10 +1623,33 @@ foreach_active_identifier
     }
     ;
 
+integer_dotdotdot
+    : TOKEN_INT32DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1); 
+    }
+    | TOKEN_UINT32DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1); 
+    }
+    | TOKEN_INT64DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1); 
+    }
+    | TOKEN_UINT64DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1); 
+    }
+    ;
+
 foreach_dimension_specifier
     : foreach_identifier '=' assignment_expression TOKEN_DOTDOTDOT assignment_expression
     {
         $$ = new ForeachDimension($1, $3, $5);
+    }
+    | foreach_identifier '=' integer_dotdotdot assignment_expression
+    {
+        $$ = new ForeachDimension($1, $3, $4);
     }
     ;
 

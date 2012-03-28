@@ -43,6 +43,7 @@
 #include <stdint.h>
 
 static uint64_t lParseBinary(const char *ptr, SourcePos pos, char **endPtr);
+static int lParseInteger(bool dotdotdot);
 static void lCComment(SourcePos *);
 static void lCppComment(SourcePos *);
 static void lHandleCppHash(SourcePos *);
@@ -322,7 +323,8 @@ inline int ispcRand() {
 %option nounistd
 
 WHITESPACE [ \t\r]+
-INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[kMG]?
+INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
+INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 
@@ -406,53 +408,14 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
         return TOKEN_IDENTIFIER; 
 }
 
-{INT_NUMBER}+(u|U|l|L)*? { 
+{INT_NUMBER} { 
     RT;
-    int ls = 0, us = 0;
+    return lParseInteger(false);
+}
 
-    char *endPtr = NULL;
-    if (yytext[0] == '0' && yytext[1] == 'b')
-        yylval.intVal = lParseBinary(yytext+2, yylloc, &endPtr);
-    else {
-#if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
-        yylval.intVal = _strtoui64(yytext, &endPtr, 0);
-#else
-        // FIXME: should use strtouq and then issue an error if we can't
-        // fit into 64 bits...
-        yylval.intVal = strtoull(yytext, &endPtr, 0);
-#endif
-    }
-
-    bool kilo = false, mega = false, giga = false;
-    for (; *endPtr; endPtr++) {
-        if (*endPtr == 'k')
-            kilo = true;
-        else if (*endPtr == 'M')
-            mega = true;
-        else if (*endPtr == 'G')
-            giga = true;        
-        else if (*endPtr == 'l' || *endPtr == 'L')
-            ls++;
-        else if (*endPtr == 'u' || *endPtr == 'U')
-            us++;
-    }
-    if (kilo)
-        yylval.intVal *= 1024;
-    if (mega)
-        yylval.intVal *= 1024*1024;
-    if (giga)
-        yylval.intVal *= 1024*1024*1024;
-
-    if (ls >= 2)
-        return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
-    else if (ls == 1)
-        return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
-
-    // See if we can fit this into a 32-bit integer...
-    if ((yylval.intVal & 0xffffffff) == yylval.intVal)
-        return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
-    else
-        return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+{INT_NUMBER_DOTDOTDOT} {
+    RT;
+    return lParseInteger(true);
 }
 
 
@@ -559,6 +522,72 @@ lParseBinary(const char *ptr, SourcePos pos, char **endPtr) {
     }
     *endPtr = (char *)ptr;
     return val;
+}
+
+
+static int
+lParseInteger(bool dotdotdot) {
+    int ls = 0, us = 0;
+
+    char *endPtr = NULL;
+    if (yytext[0] == '0' && yytext[1] == 'b')
+        yylval.intVal = lParseBinary(yytext+2, yylloc, &endPtr);
+    else {
+#if defined(ISPC_IS_WINDOWS) && !defined(__MINGW32__)
+        yylval.intVal = _strtoui64(yytext, &endPtr, 0);
+#else
+        // FIXME: should use strtouq and then issue an error if we can't
+        // fit into 64 bits...
+        yylval.intVal = strtoull(yytext, &endPtr, 0);
+#endif
+    }
+
+    bool kilo = false, mega = false, giga = false;
+    for (; *endPtr; endPtr++) {
+        if (*endPtr == 'k')
+            kilo = true;
+        else if (*endPtr == 'M')
+            mega = true;
+        else if (*endPtr == 'G')
+            giga = true;        
+        else if (*endPtr == 'l' || *endPtr == 'L')
+            ls++;
+        else if (*endPtr == 'u' || *endPtr == 'U')
+            us++;
+        else
+            Assert(dotdotdot && *endPtr == '.');
+    }
+    if (kilo)
+        yylval.intVal *= 1024;
+    if (mega)
+        yylval.intVal *= 1024*1024;
+    if (giga)
+        yylval.intVal *= 1024*1024*1024;
+
+    if (dotdotdot) {
+        if (ls >= 2)
+            return us ? TOKEN_UINT64DOTDOTDOT_CONSTANT : TOKEN_INT64DOTDOTDOT_CONSTANT;
+        else if (ls == 1)
+            return us ? TOKEN_UINT32DOTDOTDOT_CONSTANT : TOKEN_INT32DOTDOTDOT_CONSTANT;
+
+        // See if we can fit this into a 32-bit integer...
+        if ((yylval.intVal & 0xffffffff) == yylval.intVal)
+            return us ? TOKEN_UINT32DOTDOTDOT_CONSTANT : TOKEN_INT32DOTDOTDOT_CONSTANT;
+        else
+            return us ? TOKEN_UINT64DOTDOTDOT_CONSTANT : TOKEN_INT64DOTDOTDOT_CONSTANT;
+    }
+    else {
+        if (ls >= 2)
+            return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+        else if (ls == 1)
+            return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
+
+        // See if we can fit this into a 32-bit integer...
+        if ((yylval.intVal & 0xffffffff) == yylval.intVal)
+            return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
+        else
+            return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+    }
 }
 
 
