@@ -6614,7 +6614,7 @@ TypeCastExpr::TypeCheck() {
         return this;
 
     if (Type::Equal(fromType, AtomicType::Void) ||
-        fromType->IsVaryingType() && toType->IsUniformType()) {
+        (fromType->IsVaryingType() && toType->IsUniformType())) {
         Error(pos, "Can't type cast from type \"%s\" to type \"%s\"",
               fromType->GetString().c_str(), toType->GetString().c_str());
         return NULL;
