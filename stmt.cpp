@@ -2228,6 +2228,9 @@ GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip)
 
 void
 GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     if (ctx->VaryingCFDepth() > 0) {
         Error(pos, "\"goto\" statements are only legal under \"uniform\" "
               "control flow.");
@@ -2478,6 +2481,9 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
  */
 void
 PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     ctx->SetDebugPos(pos);
 
     // __do_print takes 5 arguments; we'll get them stored in the args[] array
@@ -2583,6 +2589,9 @@ AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p)
 
 void
 AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     if (expr == NULL)
         return;
     const Type *type = expr->GetType();
@@ -2658,6 +2667,9 @@ DeleteStmt::DeleteStmt(Expr *e, SourcePos p)
 
 void
 DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL)) {
         Assert(m->errorCount > 0);
