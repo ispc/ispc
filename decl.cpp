@@ -56,6 +56,7 @@ lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
     if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
+    if (typeQualifiers & TYPEQUAL_EXPORT)    printf("export ");
 }
 
 
@@ -189,7 +190,6 @@ lGetStorageClassName(StorageClass storageClass) {
     case SC_NONE:     return "";
     case SC_EXTERN:   return "extern";
     case SC_EXTERN_C: return "extern \"C\"";
-    case SC_EXPORT:   return "export";
     case SC_STATIC:   return "static";
     case SC_TYPEDEF:  return "typedef";
     default:          FATAL("Unhandled storage class in lGetStorageClassName");
@@ -347,6 +347,7 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
     bool isTask =         ((typeQualifiers & TYPEQUAL_TASK) != 0);
+    bool isExported =     ((typeQualifiers & TYPEQUAL_EXPORT) != 0);
     bool isConst =        ((typeQualifiers & TYPEQUAL_CONST) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
@@ -355,6 +356,8 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     }
     if (kind != DK_FUNCTION && isTask)
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
+    if (kind != DK_FUNCTION && isExported)
+        Error(pos, "\"export\" qualifier illegal in variable declaration.");
 
     Variability variability(Variability::Unbound);
     if (hasUniformQual)
@@ -519,8 +522,8 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             return NULL;
         }
         
-        bool isExported = ds && (ds->storageClass == SC_EXPORT);
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
+        bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
 
         if (isExported && isTask) {
@@ -731,10 +734,15 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
         // FIXME: making this fake little DeclSpecs here is really
         // disgusting
         DeclSpecs ds(type);
-        if (type->IsUniformType()) 
-            ds.typeQualifiers |= TYPEQUAL_UNIFORM;
-        else if (type->IsVaryingType())
-            ds.typeQualifiers |= TYPEQUAL_VARYING;
+        if (Type::Equal(type, AtomicType::Void) == false) {
+            if (type->IsUniformType()) 
+                ds.typeQualifiers |= TYPEQUAL_UNIFORM;
+            else if (type->IsVaryingType())
+                ds.typeQualifiers |= TYPEQUAL_VARYING;
+            else if (type->GetSOAWidth() != 0)
+                ds.soaWidth = type->GetSOAWidth();
+            // FIXME: ds.vectorSize?
+        }
 
         for (unsigned int j = 0; j < sd[i]->declarators->size(); ++j) {
             Declarator *d = (*sd[i]->declarators)[j];

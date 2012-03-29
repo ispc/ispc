@@ -584,7 +584,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
 
     // Make sure that the return type isn't 'varying' if the function is
     // 'export'ed.
-    if (funSym->storageClass == SC_EXPORT && 
+    if (functionType->isExported && 
         lRecursiveCheckValidParamType(functionType->GetReturnType()))
         Error(funSym->pos, "Illegal to return a \"varying\" type from exported "
               "function \"%s\"", funSym->name.c_str());
@@ -608,7 +608,7 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
 
         // If the function is exported, make sure that the parameter
         // doesn't have any varying stuff going on in it.
-        if (funSym->storageClass == SC_EXPORT)
+        if (functionType->isExported)
             lCheckForVaryingParameter(argType, argName, argPos);
 
         // ISPC assumes that no pointers alias.  (It should be possible to

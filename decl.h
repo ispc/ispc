@@ -64,7 +64,6 @@ class Declarator;
 enum StorageClass {
     SC_NONE,
     SC_EXTERN,
-    SC_EXPORT,
     SC_STATIC,
     SC_TYPEDEF,
     SC_EXTERN_C
@@ -82,6 +81,7 @@ enum StorageClass {
 #define TYPEQUAL_SIGNED     (1<<4)
 #define TYPEQUAL_UNSIGNED   (1<<5)
 #define TYPEQUAL_INLINE     (1<<6)
+#define TYPEQUAL_EXPORT     (1<<7)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 

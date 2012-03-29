@@ -810,7 +810,6 @@ storage_class_specifier
     : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
     | TOKEN_EXTERN { $$ = SC_EXTERN; }
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_EXPORT { $$ = SC_EXPORT; }
     | TOKEN_STATIC { $$ = SC_STATIC; }
     ;
 
@@ -985,6 +984,11 @@ specifier_qualifier_list
                       "function declarations.");
                 $$ = $2;
             }
+            else if ($1 == TYPEQUAL_EXPORT) {
+                Error(@1, "\"export\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
             else
                 FATAL("Unhandled type qualifier in parser.");
         }
@@ -1117,6 +1121,7 @@ type_qualifier
     | TOKEN_UNIFORM    { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
+    | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
@@ -2096,8 +2101,6 @@ lGetStorageClassString(StorageClass sc) {
         return "";
     case SC_EXTERN:
         return "extern";
-    case SC_EXPORT:
-        return "export";
     case SC_STATIC:
         return "static";
     case SC_TYPEDEF:
