@@ -366,8 +366,11 @@ Module::AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst) {
 
     // Patch up any references to the previous GlobalVariable (e.g. from a
     // declaration of a global that was later defined.)
-    if (oldGV != NULL)
+    if (oldGV != NULL) {
         oldGV->replaceAllUsesWith(sym->storagePtr);
+        oldGV->removeFromParent();
+        sym->storagePtr->setName(sym->name.c_str());
+    }
     
     if (diBuilder) {
         llvm::DIFile file = sym->pos.GetDIFile();
