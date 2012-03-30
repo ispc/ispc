@@ -2454,15 +2454,13 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
 
 const Type *
 FunctionType::GetAsConstType() const {
-    FATAL("FunctionType::GetAsConstType shouldn't be called");
-    return NULL;
+    return this;
 }
 
 
 const Type *
 FunctionType::GetAsNonConstType() const {
-    FATAL("FunctionType::GetAsNonConstType shouldn't be called");
-    return NULL;
+    return this;
 }
 
 
