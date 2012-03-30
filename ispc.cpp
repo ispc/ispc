@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -116,6 +116,34 @@ lGetSystemISA() {
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   bool pic, Target *t) {
+    if (isa == NULL) {
+        if (cpu != NULL) {
+            // If a CPU was specified explicitly, try to pick the best
+            // possible ISA based on that.
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+            if (!strcasecmp(cpu, "sandybridge") ||
+                !strcasecmp(cpu, "corei7-avx"))
+                isa = "avx";
+            else
+#endif
+                  if (!strcasecmp(cpu, "corei7") ||
+                      !strcasecmp(cpu, "penryn"))
+                isa = "sse4";
+            else
+                isa = "sse2";
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using ISA \"%s\" based on specified CPU \"%s\".\n", isa,
+                    cpu);
+        }
+        else {
+            // No CPU and no ISA, so use CPUID to figure out what this CPU
+            // supports.
+            isa = lGetSystemISA();
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using system ISA \"%s\".\n", isa);
+        }
+    }
+
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
@@ -127,11 +155,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     }
     t->cpu = cpu;
 
-    if (isa == NULL) {
-        isa = lGetSystemISA();
-        fprintf(stderr, "Notice: no --target specified on command-line.  Using "
-                "system ISA \"%s\".\n", isa);
-    }
     if (arch == NULL)
         arch = "x86-64";
 
