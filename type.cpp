@@ -2695,6 +2695,17 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
                       bool forceVarying, int vecSize) {
     Assert(reason != NULL);
 
+    // First, if one or both types are function types, convert them to
+    // pointer to function types and then try again.
+    if (dynamic_cast<const FunctionType *>(t0) ||
+        dynamic_cast<const FunctionType *>(t1)) {
+        if (dynamic_cast<const FunctionType *>(t0))
+            t0 = PointerType::GetUniform(t0);
+        if (dynamic_cast<const FunctionType *>(t1))
+            t1 = PointerType::GetUniform(t1);
+        return MoreGeneralType(t0, t1, pos, reason, forceVarying, vecSize);
+    }
+
     // First, if we need to go varying, promote both of the types to be
     // varying.
     if (t0->IsVaryingType() || t1->IsVaryingType() || forceVarying) {

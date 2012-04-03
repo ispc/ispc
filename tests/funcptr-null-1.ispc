@@ -15,7 +15,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     float b = aFOO[0]-1;
     uniform FuncType func = foo;
-    RET[programIndex] = (func ? func : bar)(a, b);
+    RET[programIndex] = (func ? func : &bar)(a, b);
 }
 
 export void result(uniform float RET[]) {

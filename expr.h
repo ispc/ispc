@@ -584,6 +584,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     Expr *expr;
 };
