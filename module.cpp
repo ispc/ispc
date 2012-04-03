@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1027,21 +1027,6 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
 }
 
 
-static void
-lPrintExternGlobals(FILE *file, const std::vector<Symbol *> &externGlobals) {
-    for (unsigned int i = 0; i < externGlobals.size(); ++i) {
-        Symbol *sym = externGlobals[i];
-        if (lRecursiveCheckValidParamType(sym->type))
-            Warning(sym->pos, "Not emitting declaration for symbol \"%s\" into "
-                    "generated header file since it (or some of its members) "
-                    "has types that are illegal in exported symbols.",
-                    sym->name.c_str());
-        else
-            fprintf(file, "extern %s;\n", sym->type->GetCDeclaration(sym->name).c_str());
-    }
-}
-
-
 static bool
 lIsExported(const Symbol *sym) {
     const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
@@ -1055,12 +1040,6 @@ lIsExternC(const Symbol *sym) {
     const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
     Assert(ft);
     return ft->isExternC;
-}
-
-
-static bool
-lIsExternGlobal(const Symbol *sym) {
-    return sym->storageClass == SC_EXTERN || sym->storageClass == SC_EXTERN_C;
 }
 
 
@@ -1116,13 +1095,6 @@ Module::writeHeader(const char *fn) {
     lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
                            &exportedEnumTypes, &exportedVectorTypes);
 
-    // And do the same for the 'extern' globals
-    std::vector<Symbol *> externGlobals;
-    symbolTable->GetMatchingVariables(lIsExternGlobal, &externGlobals);
-    for (unsigned int i = 0; i < externGlobals.size(); ++i)
-        lGetExportedTypes(externGlobals[i]->type, &exportedStructTypes,
-                          &exportedEnumTypes, &exportedVectorTypes);
-
     // And print them
     lEmitVectorTypedefs(exportedVectorTypes, f);
     lEmitEnumDecls(exportedEnumTypes, f);
@@ -1148,15 +1120,6 @@ Module::writeHeader(const char *fn) {
 
     // end namespace
     fprintf(f, "\n#ifdef __cplusplus\n}\n#endif // __cplusplus\n");
-
-    // and only now emit externs for globals, outside of the ispc namespace
-    if (externGlobals.size() > 0) {
-        fprintf(f, "\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        fprintf(f, "// Globals declared \"extern\" from ispc code\n");
-        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
-        lPrintExternGlobals(f, externGlobals);
-    }
 
     // end guard
     fprintf(f, "\n#endif // %s\n", guard.c_str());
