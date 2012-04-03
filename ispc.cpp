@@ -113,6 +113,14 @@ lGetSystemISA() {
 }
 
 
+static const char *supportedCPUs[] = { 
+    "atom", "penryn", "core2", "corei7",
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    "corei7-avx"
+#endif
+};
+
+
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   bool pic, Target *t) {
@@ -121,13 +129,13 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
             // If a CPU was specified explicitly, try to pick the best
             // possible ISA based on that.
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-            if (!strcasecmp(cpu, "sandybridge") ||
-                !strcasecmp(cpu, "corei7-avx"))
+            if (!strcmp(cpu, "sandybridge") ||
+                !strcmp(cpu, "corei7-avx"))
                 isa = "avx";
             else
 #endif
-                  if (!strcasecmp(cpu, "corei7") ||
-                      !strcasecmp(cpu, "penryn"))
+                  if (!strcmp(cpu, "corei7") ||
+                      !strcmp(cpu, "penryn"))
                 isa = "sse4";
             else
                 isa = "sse2";
@@ -153,6 +161,22 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
             cpu = "generic";
         }
     }
+    else {
+        bool foundCPU = false;
+        for (int i = 0; i < int(sizeof(supportedCPUs) / sizeof(supportedCPUs[0])); 
+             ++i) {
+            if (!strcmp(cpu, supportedCPUs[i])) {
+                foundCPU = true;
+                break;
+            }
+        }
+        if (foundCPU == false) {
+            fprintf(stderr, "Error: CPU type \"%s\" unknown. Supported CPUs: "
+                    "%s.\n", cpu, SupportedTargetCPUs().c_str());
+            return false;
+        }
+    }
+
     t->cpu = cpu;
 
     if (arch == NULL)
@@ -309,17 +333,16 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 }
 
 
-const char *
+std::string
 Target::SupportedTargetCPUs() {
-    return "atom, barcelona, core2, corei7, "
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        "corei7-avx, "
-#endif
-        "istanbul, nocona, penryn, "
-#ifdef LLVM_2_9
-        "sandybridge, "
-#endif
-        "westmere";
+    std::string ret;
+    int count = sizeof(supportedCPUs) / sizeof(supportedCPUs[0]);
+    for (int i = 0; i < count; ++i) {
+        ret += supportedCPUs[i];
+        if (i != count - 1)
+            ret += ", ";
+    }
+    return ret;
 }
 
 

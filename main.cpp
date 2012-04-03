@@ -91,7 +91,7 @@ usage(int ret) {
            Target::SupportedTargetArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
-    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
+    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs().c_str());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
 #ifndef LLVM_2_9

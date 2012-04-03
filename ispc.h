@@ -164,7 +164,7 @@ struct Target {
 
     /** Returns a comma-delimited string giving the names of the currently
         supported target CPUs. */
-    static const char *SupportedTargetCPUs();
+    static std::string SupportedTargetCPUs();
 
     /** Returns a comma-delimited string giving the names of the currently
         supported target architectures. */
