@@ -506,10 +506,13 @@ Module::AddFunctionDeclaration(Symbol *funSym, bool isInline) {
                         break;
                 }
                 if (i == functionType->GetNumParameters()) {
+                    std::string thisRetType = functionType->GetReturnTypeString();
+                    std::string otherRetType = ofType->GetReturnTypeString();
                     Error(funSym->pos, "Illegal to overload function by return "
-                          "type only (previous declaration was at line %d of "
-                          "file %s).", overloadFunc->pos.first_line,
-                          overloadFunc->pos.name);
+                          "type only.  This function returns \"%s\" while "
+                          "previous declaration at %s:%d returns \"%s\".",
+                          thisRetType.c_str(), overloadFunc->pos.name,
+                          overloadFunc->pos.first_line, otherRetType.c_str());
                     return;
                 }
             }

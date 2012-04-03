@@ -776,6 +776,8 @@ public:
 
     const Type *GetReturnType() const { return returnType; }
 
+    const std::string GetReturnTypeString() const;
+
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c includeMask parameter indicates whether the
         llvm::FunctionType should have a mask as the last argument in its

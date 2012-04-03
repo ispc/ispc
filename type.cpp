@@ -2552,6 +2552,19 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 }
 
 
+const std::string
+FunctionType::GetReturnTypeString() const {
+    std::string ret;
+    if (isTask)
+        ret += "task ";
+    if (isExported)
+        ret += "export ";
+    if (isExternC)
+        ret += "extern \"C\" ";
+    return ret + returnType->GetString();
+}
+
+
 LLVM_TYPE_CONST llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (isTask == true) 
