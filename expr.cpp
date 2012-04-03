@@ -328,8 +328,8 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
                  !Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), 
                               toPointerType->GetBaseType())) {
             if (!failureOk)
-                Error(pos, "Can't convert between incompatible pointer types "
-                      "\"%s\" and \"%s\" for %s.",
+                Error(pos, "Can't convert from pointer type \"%s\" to "
+                      "incompatible pointer type \"%s\" for %s.",
                       fromPointerType->GetString().c_str(),
                       toPointerType->GetString().c_str(), errorMsgBase);
             return false;

@@ -2466,18 +2466,7 @@ FunctionType::GetAsNonConstType() const {
 
 std::string
 FunctionType::GetString() const {
-    std::string ret;
-    if (isTask) ret += "task ";
-    if (isSafe) ret += "/*safe*/ ";
-    if (costOverride > 0) {
-        char buf[32];
-        sprintf(buf, "/*cost=%d*/ ", costOverride);
-        ret += buf;
-    }
-    if (returnType != NULL)
-        ret += returnType->GetString();
-    else
-        ret += "/* ERROR */";
+    std::string ret = GetReturnTypeString();
     ret += "(";
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL)
@@ -2554,6 +2543,9 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
 
 const std::string
 FunctionType::GetReturnTypeString() const {
+    if (returnType == NULL)
+        return "/* ERROR */";
+
     std::string ret;
     if (isTask)
         ret += "task ";
@@ -2561,6 +2553,13 @@ FunctionType::GetReturnTypeString() const {
         ret += "export ";
     if (isExternC)
         ret += "extern \"C\" ";
+    if (isSafe) 
+        ret += "/*safe*/ ";
+    if (costOverride > 0) {
+        char buf[32];
+        sprintf(buf, "/*cost=%d*/ ", costOverride);
+        ret += buf;
+    }
     return ret + returnType->GetString();
 }
 
