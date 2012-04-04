@@ -153,7 +153,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         else if ((ls = dynamic_cast<LabeledStmt *>(node)) != NULL)
             ls->stmt = (Stmt *)WalkAST(ls->stmt, preFunc, postFunc, data);
         else if ((rs = dynamic_cast<ReturnStmt *>(node)) != NULL)
-            rs->val = (Expr *)WalkAST(rs->val, preFunc, postFunc, data);
+            rs->expr = (Expr *)WalkAST(rs->expr, preFunc, postFunc, data);
         else if ((sl = dynamic_cast<StmtList *>(node)) != NULL) {
             std::vector<Stmt *> &sls = sl->stmts;
             for (unsigned int i = 0; i < sls.size(); ++i)

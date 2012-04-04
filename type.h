@@ -828,4 +828,8 @@ private:
     const std::vector<SourcePos> paramPositions;
 };
 
+inline bool IsReferenceType(const Type *t) {
+    return dynamic_cast<const ReferenceType *>(t) != NULL;
+}
+
 #endif // ISPC_TYPE_H

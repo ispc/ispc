@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 #include "util.h"
 #include "expr.h"
 #include "type.h"
+#include "func.h"
 #include "sym.h"
 #include "module.h"
 #include "llvmutil.h"
@@ -167,11 +168,25 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         // References must have initializer expressions as well.
-        if (dynamic_cast<const ReferenceType *>(sym->type) && initExpr == NULL) {
-            Error(sym->pos,
-                  "Must provide initializer for reference-type variable \"%s\".",
-                  sym->name.c_str());
-            continue;
+        if (IsReferenceType(sym->type) == true) {
+            if (initExpr == NULL) {
+                Error(sym->pos, "Must provide initializer for reference-type "
+                      "variable \"%s\".", sym->name.c_str());
+                continue;
+            }
+            if (IsReferenceType(initExpr->GetType()) == false) {
+                const Type *initLVType = initExpr->GetLValueType();
+                if (initLVType == NULL) {
+                    Error(initExpr->pos, "Initializer for reference-type variable "
+                          "\"%s\" must have an lvalue type.", sym->name.c_str());
+                    continue;
+                }
+                if (initLVType->IsUniformType() == false) {
+                    Error(initExpr->pos, "Initializer for reference-type variable "
+                          "\"%s\" must have a uniform lvalue type.", sym->name.c_str());
+                    continue;
+                }
+            }
         }
 
         LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
@@ -2173,8 +2188,8 @@ SwitchStmt::EstimateCost() const {
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *v, bool cc, SourcePos p) 
-    : Stmt(p), val(v), 
+ReturnStmt::ReturnStmt(Expr *e, bool cc, SourcePos p) 
+    : Stmt(p), expr(e), 
       doCoherenceCheck(cc && !g->opt.disableCoherentControlFlow) {
 }
 
@@ -2189,8 +2204,29 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
+    // Make sure we're not trying to return a reference to something where
+    // that doesn't make sense
+    const Function *func = ctx->GetFunction();
+    const Type *returnType = func->GetReturnType();
+    if (IsReferenceType(returnType) == true &&
+        IsReferenceType(expr->GetType()) == false) {
+        const Type *lvType = expr->GetLValueType();
+        if (lvType == NULL) {
+            Error(expr->pos, "Illegal to return non-lvalue from function "
+                  "returning reference type \"%s\".",
+                  returnType->GetString().c_str());
+            return;
+        }
+        else if (lvType->IsUniformType() == false) {
+            Error(expr->pos, "Illegal to return varying lvalue type from "
+                  "function returning a reference type \"%s\".",
+                  returnType->GetString().c_str());
+            return;
+        }
+    }
+
     ctx->SetDebugPos(pos);
-    ctx->CurrentLanesReturned(val, doCoherenceCheck);
+    ctx->CurrentLanesReturned(expr, doCoherenceCheck);
 }
 
 
@@ -2210,7 +2246,8 @@ void
 ReturnStmt::Print(int indent) const {
     printf("%*c%sReturn Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
     pos.Print();
-    if (val) val->Print();
+    if (expr)
+        expr->Print();
     else printf("(void)");
     printf("\n");
 }
