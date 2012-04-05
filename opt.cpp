@@ -286,6 +286,8 @@ Optimize(llvm::Module *module, int optLevel) {
     llvm::PassManager optPM;
     llvm::FunctionPassManager funcPM(module);
 
+    optPM.add(llvm::createVerifierPass());
+
     if (g->target.isa != Target::GENERIC) {
         llvm::TargetLibraryInfo *targetLibraryInfo =
             new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
