@@ -933,6 +933,20 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
 }
 #endif // LLVM_3_1svn
 
+#ifdef LLVM_3_1svn
+static inline std::string ftostr(const APFloat& V) {
+  std::string Buf;
+  if (&V.getSemantics() == &APFloat::IEEEdouble) {
+    raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &APFloat::IEEEsingle) {
+    raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+  return "<unknown format in ftostr>"; // error
+}
+#endif // LLVM_3_1svn
+
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
 // variable). We decide this by converting CFP to a string and back into a
