@@ -1130,7 +1130,11 @@ lExtractFromInserts(llvm::Value *v, unsigned int index) {
         return NULL;
 
     Assert(iv->hasIndices() && iv->getNumIndices() == 1);
+#ifdef LLVM_2_9
+    if (*(iv->idx_begin()) == index)
+#else
     if (iv->getIndices()[0] == index)
+#endif
         return iv->getInsertedValueOperand();
     else
         return lExtractFromInserts(iv->getAggregateOperand(), index);
@@ -1260,7 +1264,11 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
     llvm::ExtractValueInst *ev = llvm::dyn_cast<llvm::ExtractValueInst>(ptrs);
     if (ev != NULL) {
         Assert(ev->getNumIndices() == 1);
+#ifdef LLVM_2_9
+        int index = *(ev->idx_begin());
+#else
         int index = ev->getIndices()[0];
+#endif
         ptrs = lExtractFromInserts(ev->getAggregateOperand(), index);
         if (ptrs != NULL)
             return lGetBasePtrAndOffsets(ptrs, offsets, insertBefore);

@@ -1443,7 +1443,10 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
         llvm::PHINode *scalarPhi = 
             llvm::PHINode::Create(vt->getElementType(), 
-                                  phi->getNumIncomingValues(), newName,
+#ifndef LLVM_2_9
+                                  phi->getNumIncomingValues(), 
+#endif // !LLVM_2_9
+                                  newName,
                                   phiInsertPos);
         phiMap[phi] = scalarPhi;
 
