@@ -2,6 +2,15 @@
 # ispc Makefile
 #
 
+# If you have your own special version of llvm and/or clang, change
+# these variables to match.
+LLVM_CONFIG=$(shell which llvm-config)
+CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
+
+# Add llvm bin to the path so any scripts run will go to the right llvm-config
+LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
+export PATH:=$(LLVM_BIN):$(PATH)
+
 ARCH_OS = $(shell uname)
 ifeq ($(ARCH_OS), Darwin)
 	ARCH_OS2 = "OSX"
@@ -10,7 +19,7 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-ifeq ($(shell llvm-config --version), 3.1svn)
+ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
   LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
 	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
 	-lLLVMBitWriter -lLLVMTableGen -lLLVMCBackendInfo			\
@@ -22,18 +31,18 @@ ifeq ($(shell llvm-config --version), 3.1svn)
 	-lLLVMExecutionEngine -lLLVMTarget -lLLVMMC -lLLVMObject -lLLVMCore 	\
 	-lLLVMSupport
 else
-  LLVM_LIBS=$(shell llvm-config --libs)
+  LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
 endif
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
-ifeq ($(shell llvm-config --version), 3.1svn)
+ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
   CLANG_LIBS += -lclangEdit
 endif
 
-ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
+ISPC_LIBS=$(shell $(LLVM_CONFIG) --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread
 
 ifeq ($(ARCH_OS),Linux)
@@ -44,8 +53,8 @@ ifeq ($(ARCH_OS2),Msys)
 	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
 endif
 
-LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
-LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
+LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
+LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed s/\\./_/)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 BUILD_DATE=$(shell date +%Y%m%d)
@@ -54,7 +63,8 @@ BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
 CXX=g++
 CPP=cpp
 OPT=-g3
-CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -Wall $(LLVM_VERSION_DEF) \
+CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
+	-Wall $(LLVM_VERSION_DEF) \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
 
 LDFLAGS=
