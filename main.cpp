@@ -44,7 +44,6 @@
 #ifdef ISPC_IS_WINDOWS
   #include <time.h>
 #endif // ISPC_IS_WINDOWS
-#include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
   #include <llvm/Support/TargetRegistry.h>
@@ -202,17 +201,18 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
 }
 
 
+static void
+lSignal(void *) {
+    FATAL("Unhandled signal sent to process; terminating.");
+}
+
+
 int main(int Argc, char *Argv[]) {
     int argc;
     char *argv[128];
     lGetAllArgs(Argc, Argv, argc, argv);
 
-#if 0
-    // Use LLVM's little utility function to print out nice stack traces if
-    // we crash
-    llvm::sys::PrintStackTraceOnErrorSignal();
-    llvm::PrettyStackTraceProgram X(argc, argv);
-#endif
+    llvm::sys::AddSignalHandler(lSignal, NULL);
 
     // initialize available LLVM targets
     LLVMInitializeX86TargetInfo();

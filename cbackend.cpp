@@ -16,6 +16,8 @@
 #warning "The C++ backend isn't supported when building with LLVM 2.9"
 #else
 
+#include <stdio.h>
+
 #ifndef _MSC_VER
 #include <inttypes.h>
 #endif
@@ -930,6 +932,20 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
       printConstant(CDS->getElementAsConstant(i), Static);
     }
   }
+}
+#endif // LLVM_3_1svn
+
+#ifdef LLVM_3_1svn
+static inline std::string ftostr(const APFloat& V) {
+  std::string Buf;
+  if (&V.getSemantics() == &APFloat::IEEEdouble) {
+    raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &APFloat::IEEEsingle) {
+    raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+  return "<unknown format in ftostr>"; // error
 }
 #endif // LLVM_3_1svn
 
