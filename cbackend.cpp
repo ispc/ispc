@@ -16,6 +16,8 @@
 #warning "The C++ backend isn't supported when building with LLVM 2.9"
 #else
 
+#include <stdio.h>
+
 #ifndef _MSC_VER
 #include <inttypes.h>
 #endif
