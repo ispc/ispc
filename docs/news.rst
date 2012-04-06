@@ -2,6 +2,24 @@
 ispc News
 =========
 
+ispc 1.2.1 is Released
+----------------------
+
+This is a bugfix release, fixing approximately 20 bugs in the system and
+improving error handling and error reporting.  New functionality includes
+very efficient float/half conversion routines thanks to Fabian 
+Giesen.  See the `1.2.1 release notes`_ for details.
+
+.. _1.2.1 release notes: https://github.com/ispc/ispc/tree/master/docs/ReleaseNotes.txt
+
+ispc 1.2.0 is Released
+-----------------------
+
+A new major release was posted on March 20, 2012.  This release includes
+significant new functionality for cleanly handling "structure of arrays"
+(SoA) data layout and a new model for how uniform and varying are handled
+with structure types.  
+
 Paper on ispc To Appear in InPar 2012
 -------------------------------------
 
