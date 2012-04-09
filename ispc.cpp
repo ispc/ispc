@@ -518,7 +518,9 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
+    uint64_t bitSize = td->getTypeSizeInBits(type);
+    Assert((bitSize % 8) == 0);
+    uint64_t byteSize = bitSize / 8;
     if (is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
     else

@@ -643,13 +643,17 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
             return;
         }
 
-        llvm::Value *constPtr = 
-            new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
-                                     llvm::GlobalValue::InternalLinkage,
-                                     constValue, "const_initializer");
-        llvm::Value *size = g->target.SizeOf(llvmType, 
-                                             ctx->GetCurrentBasicBlock());
-        ctx->MemcpyInst(ptr, constPtr, size);
+        if (Type::IsBasicType(symType))
+            ctx->StoreInst(constValue, ptr);
+        else {
+            llvm::Value *constPtr = 
+                new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
+                                         llvm::GlobalValue::InternalLinkage,
+                                         constValue, "const_initializer");
+            llvm::Value *size = g->target.SizeOf(llvmType, 
+                                                 ctx->GetCurrentBasicBlock());
+            ctx->MemcpyInst(ptr, constPtr, size);
+        }
 
         return;
     }
