@@ -1157,13 +1157,15 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target.is32Bit ? 32 : 64;
+    int ptrAlignBits = bitsSize;
     switch (variability.type) {
     case Variability::Uniform:
-        return m->diBuilder->createPointerType(diTargetType, bitsSize);
+        return m->diBuilder->createPointerType(diTargetType, bitsSize, 
+                                               ptrAlignBits);
     case Variability::Varying: {
         // emit them as an array of pointers
         llvm::DIType eltType = m->diBuilder->createPointerType(diTargetType, 
-                                                               bitsSize);
+                                                               bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target.vectorWidth);
     }
     case Variability::SOA: {
@@ -1963,6 +1965,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
         llvm::DIType eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
+        Assert(eltAlign != 0);
 
         // The alignment for the entire structure is the maximum of the
         // required alignments of its elements
