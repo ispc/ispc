@@ -3880,6 +3880,11 @@ code.
 
     void memory_barrier();
 
+Note that this barrier is *not* needed for coordinating reads and writes
+among the program instances in a gang; it's only needed for coordinating
+between multiple hardware threads running on different cores.  See the
+section `Data Races Within a Gang`_ for the guarantees provided about
+memory read/write ordering across a gang.
 
 Prefetches
 ----------
