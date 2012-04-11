@@ -88,6 +88,24 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
+static void
+lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
+    const Type *ptrIntType = (g->target.is32Bit) ? AtomicType::VaryingInt32 :
+        AtomicType::VaryingInt64;
+    ptrIntType = ptrIntType->GetAsUnboundVariabilityType();
+
+    symbolTable->AddType("intptr_t", ptrIntType, SourcePos());
+    symbolTable->AddType("uintptr_t", ptrIntType->GetAsUnsignedType(),
+                         SourcePos());
+    symbolTable->AddType("ptrdiff_t", ptrIntType, SourcePos());
+
+    const Type *sizeType = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+        AtomicType::VaryingInt32 : AtomicType::VaryingInt64;
+    sizeType = sizeType->GetAsUnboundVariabilityType();
+    symbolTable->AddType("size_t", sizeType, SourcePos());
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -102,6 +120,8 @@ Module::Module(const char *fn) {
     errorCount = 0;
     symbolTable = new SymbolTable;
     ast = new AST;
+
+    lDeclareSizeAndPtrIntTypes(symbolTable);
 
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target.GetTripleString());

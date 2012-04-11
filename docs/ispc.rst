@@ -1394,8 +1394,8 @@ Types
 Basic Types and Type Qualifiers
 -------------------------------
 
-``ispc`` is a statically-typed language.  It supports a variety of basic
-types.
+``ispc`` is a statically-typed language.  It supports a variety of core
+basic types:
 
 * ``void``: "empty" type representing no value.
 * ``bool``: boolean value; may be assigned ``true``, ``false``, or the
@@ -1411,6 +1411,15 @@ types.
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer.
 * ``double``: 64-bit double-precision floating point value.
+
+There are also a few built-in types related to pointers and memory:
+
+* ``size_t``: the maximum size of any object (structure or array)
+* ``ptrdiff_t``: an integer type large enough to represent the difference
+  between two pointers
+* ``intptr_t``: signed integer type that is large enough to represent
+  a pointer value
+* ``uintptr_t``: unsigned integer type large enough to represent a pointer
 
 Implicit type conversion between values of different types is done
 automatically by the ``ispc`` compiler.  Thus, a value of ``float`` type
