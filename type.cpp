@@ -1912,10 +1912,7 @@ StructType::Mangle() const {
         ret += "_c_";
     ret += variability.MangleString();
 
-    ret += name + std::string("]<");
-    for (unsigned int i = 0; i < elementTypes.size(); ++i)
-        ret += GetElementType(i)->Mangle();
-    ret += ">";
+    ret += name + std::string("]");
     return ret;
 }
     
