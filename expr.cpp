@@ -7487,8 +7487,12 @@ static void
 lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
                          const std::vector<const Type *> &argTypes, 
                          const std::vector<bool> *argCouldBeNULL) {
-    for (unsigned int i = 0; i < funcs.size(); ++i)
-        Error(funcs[i]->pos, "Candidate function:");
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(funcs[i]->type);
+        Assert(ft != NULL);
+        Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
+    }
 
     std::string passedTypes = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
