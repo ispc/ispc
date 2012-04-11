@@ -632,7 +632,7 @@ private:
     std::vector<CFInfo *> controlFlowInfo;
 
     /** DIFile object corresponding to the source file where the current
-        function was defined (used for debugging info0. */
+        function was defined (used for debugging info). */
     llvm::DIFile diFile;
 
     /** DISubprogram corresponding to this function (used for debugging
