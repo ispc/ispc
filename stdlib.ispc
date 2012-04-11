@@ -1772,6 +1772,49 @@ ATOMIC_DECL_CMPXCHG(double, double, IntMaskType)
 
 #undef ATOMIC_DECL_CMPXCHG
 
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_global(void ** uniform ptr,
+                                       void * value) {
+    return (void *)atomic_swap_global((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_global(void ** uniform ptr,
+                                                void * uniform value) {
+    return (void * uniform)atomic_swap_global((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_global(void ** ptr, void * value) {
+    return (void *)atomic_swap_global((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_global(void ** uniform ptr, 
+                               void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_global(void ** uniform ptr, void * uniform oldval, 
+                               void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_global(void ** ptr, void * oldval,
+                               void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // local atomics
 
@@ -1942,6 +1985,49 @@ LOCAL_CMPXCHG(double)
 
 #undef LOCAL_ATOMIC
 #undef LOCAL_CMPXCHG
+
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_local(void ** uniform ptr,
+                                      void * value) {
+    return (void *)atomic_swap_local((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_local(void ** uniform ptr,
+                                               void * uniform value) {
+    return (void * uniform)atomic_swap_local((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_local(void ** ptr, void * value) {
+    return (void *)atomic_swap_local((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_local(void ** uniform ptr, 
+                              void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_local(void ** uniform ptr, void * uniform oldval, 
+                              void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_local(void ** ptr, void * oldval,
+                              void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (float precision)
