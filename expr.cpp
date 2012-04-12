@@ -7292,8 +7292,7 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
-    if (type->HasUnboundVariability())
-        type = type->ResolveUnboundVariability(Variability::Varying);
+    type = type->ResolveUnboundVariability(Variability::Varying);
 }
 
 
@@ -7970,7 +7969,7 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
 
-    if (allocType != NULL && allocType->HasUnboundVariability())
+    if (allocType != NULL)
         allocType = allocType->ResolveUnboundVariability(Variability::Uniform);
 }
 
