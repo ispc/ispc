@@ -3662,7 +3662,19 @@ ExprList::GetConstant(const Type *type) const {
         if (exprs[i] == NULL)
             return NULL;
         const Type *elementType = collectionType->GetElementType(i);
-        llvm::Constant *c = exprs[i]->GetConstant(elementType);
+
+        Expr *expr = exprs[i];
+        if (dynamic_cast<ExprList *>(expr) == NULL) {
+            // If there's a simple type conversion from the type of this
+            // expression to the type we need, then let the regular type
+            // conversion machinery handle it.
+            expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
+            Assert(expr != NULL);
+            // Re-establish const-ness if possible
+            expr = ::Optimize(expr);
+        }
+
+        llvm::Constant *c = expr->GetConstant(elementType);
         if (c == NULL)
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
@@ -7503,8 +7515,12 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (ft == NULL)
         return NULL;
 
-    if (Type::Equal(type, matchingFunc->type) == false)
+    if (Type::Equal(type, matchingFunc->type) == false) {
+        Error(pos, "Type of function symbol \"%s\" doesn't match expected type "
+              "\"%s\".", matchingFunc->type->GetString().c_str(),
+              type->GetString().c_str());
         return NULL;
+    }
 
     return matchingFunc->function;
 }
