@@ -6861,7 +6861,34 @@ ReferenceExpr::ReferenceExpr(Expr *e, SourcePos p)
 llvm::Value *
 ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    return expr ? expr->GetLValue(ctx) : NULL;
+    if (expr == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    
+    llvm::Value *value = expr->GetLValue(ctx);
+    if (value != NULL)
+        return value;
+
+    // value is NULL if the expression is a temporary; in this case, we'll
+    // allocate storage for it so that we can return the pointer to that...
+    const Type *type;
+    LLVM_TYPE_CONST llvm::Type *llvmType;
+    if ((type = expr->GetType()) == NULL ||
+        (llvmType = type->LLVMType(g->ctx)) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    value = expr->GetValue(ctx);
+    if (value == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Value *ptr = ctx->AllocaInst(llvmType);
+    ctx->StoreInst(value, ptr);
+    return ptr;
 }
 
 
