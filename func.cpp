@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -66,9 +66,8 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Assembly/PrintModulePass.h>
 
-Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
+Function::Function(Symbol *s, Stmt *c) {
     sym = s;
-    args = a;
     code = c;
 
     maskSymbol = m->symbolTable->LookupVariable("__mask");
@@ -104,9 +103,17 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
     const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
     Assert(type != NULL);
 
-    for (unsigned int i = 0; i < args.size(); ++i)
-        if (dynamic_cast<const ReferenceType *>(args[i]->type) == NULL)
-            args[i]->parentFunction = this;
+    for (int i = 0; i < type->GetNumParameters(); ++i) {
+        const char *paramName = type->GetParameterName(i).c_str();
+        Symbol *sym = m->symbolTable->LookupVariable(paramName);
+        if (sym == NULL)
+            Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
+        args.push_back(sym);
+
+        const Type *t = type->GetParameterType(i);
+        if (sym != NULL && dynamic_cast<const ReferenceType *>(t) == NULL)
+            sym->parentFunction = this;
+    }
 
     if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
@@ -145,7 +152,8 @@ Function::GetType() const {
     'mem2reg' pass will in turn promote to SSA registers..
  */
 static void
-lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol *> &args,
+lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const 
+                     std::vector<Symbol *> &args,
                      FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
@@ -159,6 +167,10 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
     // Get the type of the argument we're copying in and its Symbol pointer
     LLVM_TYPE_CONST llvm::Type *argType = argStructType->getElementType(i);
     Symbol *sym = args[i];
+
+    if (sym == NULL)
+        // anonymous parameter, so don't worry about it
+        return;
 
     // allocate space to copy the parameter in to
     sym->storagePtr = ctx->AllocaInst(argType, sym->name.c_str());
@@ -240,6 +252,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Function::arg_iterator argIter = function->arg_begin(); 
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *sym = args[i];
+            if (sym == NULL)
+                // anonymous function parameter
+                continue;
+
             argIter->setName(sym->name.c_str());
 
             // Allocate stack storage for the parameter and emit code

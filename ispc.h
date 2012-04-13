@@ -116,6 +116,15 @@ class SymbolTable;
 class Type;
 struct VariableDeclaration;
 
+enum StorageClass {
+    SC_NONE,
+    SC_EXTERN,
+    SC_STATIC,
+    SC_TYPEDEF,
+    SC_EXTERN_C
+};
+
+
 /** @brief Representation of a range of positions in a source file.
 
     This class represents a range of characters in a source file

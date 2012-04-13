@@ -56,12 +56,6 @@ Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
 }
 
 
-std::string
-Symbol::MangledName() const {
-    return name + type->Mangle();
-}
-
-
 ///////////////////////////////////////////////////////////////////////////
 // SymbolTable
 

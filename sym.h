@@ -67,13 +67,6 @@ public:
     Symbol(const std::string &name, SourcePos pos, const Type *t = NULL,
            StorageClass sc = SC_NONE);
 
-    /** This method should only be called for function symbols; for them,
-        it returns a mangled version of the function name with the argument
-        types encoded into the returned name.  This is used to generate
-        unique symbols in object files for overloaded functions.
-     */
-    std::string MangledName() const;
-
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
     llvm::Value *storagePtr;  /*!< For symbols with storage associated with
