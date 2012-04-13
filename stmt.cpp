@@ -2823,7 +2823,7 @@ CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
     Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
     std::vector<Symbol *> mmFuns;
     m->symbolTable->LookupFunction("__movmsk", &mmFuns);
-    Assert(mmFuns.size() == (g->target.isa == Target::GENERIC ? 1 : 2));
+    Assert(mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
     FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
                                                             pos);
     ExprList *movmskArgs = new ExprList(maskVecExpr, pos);
