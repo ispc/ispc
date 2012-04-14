@@ -410,6 +410,10 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
             Assert(d->declarators.size() == 1);
             Declarator *decl = d->declarators[0];
+            if (decl == NULL || decl->type == NULL) {
+                Assert(m->errorCount > 0);
+                continue;
+            }
 
             if (decl->name == "") {
                 // Give a name to any anonymous parameter declarations
