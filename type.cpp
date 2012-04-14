@@ -2535,9 +2535,22 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 FunctionType::GetDIType(llvm::DIDescriptor scope) const {
-    // @todo need to implement FunctionType::GetDIType()
-    FATAL("need to implement FunctionType::GetDIType()");
-    return llvm::DIType();
+    std::vector<llvm::Value *> retArgTypes;
+
+    retArgTypes.push_back(returnType->GetDIType(scope));
+    for (int i = 0; i < GetNumParameters(); ++i) {
+        const Type *t = GetParameterType(i);
+        if (t == NULL)
+            return llvm::DIType();
+        retArgTypes.push_back(t->GetDIType(scope));
+    }
+
+    llvm::DIArray retArgTypesArray = 
+        m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
+    llvm::DIType diType = 
+        // FIXME: DIFile 
+        m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);
+    return diType;
 }
 
 
