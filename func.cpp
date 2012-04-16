@@ -165,7 +165,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
         llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
     // Get the type of the argument we're copying in and its Symbol pointer
-    LLVM_TYPE_CONST llvm::Type *argType = argStructType->getElementType(i);
+    llvm::Type *argType = argStructType->getElementType(i);
     Symbol *sym = args[i];
 
     if (sym == NULL)
@@ -435,7 +435,7 @@ Function::GenerateIR() {
         Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {
-                LLVM_TYPE_CONST llvm::FunctionType *ftype = 
+                llvm::FunctionType *ftype = 
                     type->LLVMFunctionType(g->ctx);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;

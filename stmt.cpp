@@ -189,7 +189,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             }
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+        llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return;
@@ -2497,7 +2497,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     else {
         argTypes.push_back(t);
 
-        LLVM_TYPE_CONST llvm::Type *llvmExprType = type->LLVMType(g->ctx);
+        llvm::Type *llvmExprType = type->LLVMType(g->ctx);
         llvm::Value *ptr = ctx->AllocaInst(llvmExprType, "print_arg");
         llvm::Value *val = expr->GetValue(ctx);
         if (!val)
@@ -2537,7 +2537,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::string argTypes;
 
     if (values == NULL) {
-        LLVM_TYPE_CONST llvm::Type *ptrPtrType = 
+        llvm::Type *ptrPtrType = 
             llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
         args[4] = llvm::Constant::getNullValue(ptrPtrType);
     }
@@ -2549,7 +2549,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         int nArgs = elist ? elist->exprs.size() : 1;
 
         // Allocate space for the array of pointers to values to be printed 
-        LLVM_TYPE_CONST llvm::Type *argPtrArrayType = 
+        llvm::Type *argPtrArrayType = 
             llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
         llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType,
                                                    "print_arg_ptrs");

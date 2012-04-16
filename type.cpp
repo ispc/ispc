@@ -414,7 +414,7 @@ AtomicType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability.type != Variability::Unbound);
     bool isUniform = (variability == Variability::Uniform);
@@ -725,7 +725,7 @@ EnumType::GetCDeclaration(const std::string &varName) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 EnumType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
 
@@ -1083,7 +1083,7 @@ PointerType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
@@ -1098,7 +1098,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
 
     switch (variability.type) {
     case Variability::Uniform: {
-        LLVM_TYPE_CONST llvm::Type *ptype = NULL;
+        llvm::Type *ptype = NULL;
         const FunctionType *ftype = dynamic_cast<const FunctionType *>(baseType);
         if (ftype != NULL) 
             // Get the type of the function variant that takes the mask as the
@@ -1178,14 +1178,14 @@ ArrayType::ArrayType(const Type *c, int a)
 }
 
 
-LLVM_TYPE_CONST llvm::ArrayType *
+llvm::ArrayType *
 ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *ct = child->LLVMType(ctx);
+    llvm::Type *ct = child->LLVMType(ctx);
     if (ct == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -1630,14 +1630,14 @@ VectorType::GetElementType() const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 VectorType::LLVMType(llvm::LLVMContext *ctx) const {
     if (base == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *bt = base->LLVMType(ctx);
+    llvm::Type *bt = base->LLVMType(ctx);
     if (!bt)
         return NULL;
 
@@ -1912,9 +1912,9 @@ StructType::GetCDeclaration(const std::string &n) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 StructType::LLVMType(llvm::LLVMContext *ctx) const {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmTypes;
+    std::vector<llvm::Type *> llvmTypes;
     for (int i = 0; i < GetElementCount(); ++i) {
         const Type *type = GetElementType(i);
         if (type == NULL)
@@ -2257,14 +2257,14 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *t = targetType->LLVMType(ctx);
+    llvm::Type *t = targetType->LLVMType(ctx);
     if (t == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -2489,7 +2489,7 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     FATAL("FunctionType::LLVMType() shouldn't be called");
     return NULL;
@@ -2540,13 +2540,13 @@ FunctionType::GetReturnTypeString() const {
 }
 
 
-LLVM_TYPE_CONST llvm::FunctionType *
+llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (isTask == true) 
         Assert(includeMask == true);
 
     // Get the LLVM Type *s for the function arguments
-    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
+    std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
@@ -2554,7 +2554,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
         }
         Assert(Type::Equal(paramTypes[i], AtomicType::Void) == false);
 
-        LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
+        llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -2566,7 +2566,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (includeMask)
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
-    std::vector<LLVM_TYPE_CONST llvm::Type *> callTypes;
+    std::vector<llvm::Type *> callTypes;
     if (isTask) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of

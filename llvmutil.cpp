@@ -43,44 +43,44 @@
 #include <set>
 #include <map>
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::VoidType = NULL;
-LLVM_TYPE_CONST llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::PointerIntType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::BoolType = NULL;
+llvm::Type *LLVMTypes::VoidType = NULL;
+llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
+llvm::Type *LLVMTypes::PointerIntType = NULL;
+llvm::Type *LLVMTypes::BoolType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoubleType = NULL;
+llvm::Type *LLVMTypes::Int8Type = NULL;
+llvm::Type *LLVMTypes::Int16Type = NULL;
+llvm::Type *LLVMTypes::Int32Type = NULL;
+llvm::Type *LLVMTypes::Int64Type = NULL;
+llvm::Type *LLVMTypes::FloatType = NULL;
+llvm::Type *LLVMTypes::DoubleType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoublePointerType = NULL;
+llvm::Type *LLVMTypes::Int8PointerType = NULL;
+llvm::Type *LLVMTypes::Int16PointerType = NULL;
+llvm::Type *LLVMTypes::Int32PointerType = NULL;
+llvm::Type *LLVMTypes::Int64PointerType = NULL;
+llvm::Type *LLVMTypes::FloatPointerType = NULL;
+llvm::Type *LLVMTypes::DoublePointerType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::MaskType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
+llvm::VectorType *LLVMTypes::MaskType = NULL;
+llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int1VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int16VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int32VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int64VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
+llvm::VectorType *LLVMTypes::Int1VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int16VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int32VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int64VectorType = NULL;
+llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
+llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int8VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int16VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int32VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
+llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
+llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
+llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
 
 llvm::Constant *LLVMTrue = NULL;
 llvm::Constant *LLVMFalse = NULL;
@@ -473,9 +473,9 @@ LLVMBoolVector(const bool *bvec) {
 
 
 llvm::Constant *
-LLVMIntAsType(int64_t val, LLVM_TYPE_CONST llvm::Type *type) {
-    LLVM_TYPE_CONST llvm::VectorType *vecType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+LLVMIntAsType(int64_t val, llvm::Type *type) {
+    llvm::VectorType *vecType =
+        llvm::dyn_cast<llvm::VectorType>(type);
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
@@ -491,9 +491,9 @@ LLVMIntAsType(int64_t val, LLVM_TYPE_CONST llvm::Type *type) {
 
 
 llvm::Constant *
-LLVMUIntAsType(uint64_t val, LLVM_TYPE_CONST llvm::Type *type) {
-    LLVM_TYPE_CONST llvm::VectorType *vecType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+LLVMUIntAsType(uint64_t val, llvm::Type *type) {
+    llvm::VectorType *vecType =
+        llvm::dyn_cast<llvm::VectorType>(type);
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
@@ -642,8 +642,8 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 bool
 LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
     // Make sure we do in fact have a vector of integer values here
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
 
@@ -696,7 +696,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 static bool
 lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
                  std::vector<llvm::PHINode *> &seenPhis) {
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()) == false) {
+    if (llvm::isa<llvm::VectorType>(val->getType()) == false) {
         // If we've worked down to a constant int, then the moment of truth
         // has arrived...
         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(val);
@@ -780,7 +780,7 @@ static bool
 lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
                  std::vector<llvm::PHINode *> &seenPhis,
                  bool &canAdd) {
-    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()));
+    Assert(llvm::isa<llvm::VectorType>(val->getType()));
     // Make sure the base value is a positive power of 2
     Assert(baseValue > 0 && (baseValue & (baseValue-1)) == 0);
 
@@ -790,7 +790,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
 
     int64_t vecVals[ISPC_MAX_NVEC];
     int nElts;
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()) &&
+    if (llvm::isa<llvm::VectorType>(val->getType()) &&
         LLVMExtractVectorInts(val, vecVals, &nElts)) {
         // If we have a vector of compile-time constant integer values,
         // then go ahead and check them directly..
@@ -1074,8 +1074,8 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 */
 bool
 LLVMVectorValuesAllEqual(llvm::Value *v) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1344,8 +1344,8 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
 */
 bool
 LLVMVectorIsLinear(llvm::Value *v, int stride) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1399,8 +1399,8 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
                                                 insertBefore);
 
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
 
     std::string newName = v->getName().str() + std::string(".elt0");
@@ -1489,8 +1489,8 @@ LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
                   llvm::Instruction *insertBefore) {
     Assert(v1->getType() == v2->getType());
 
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v1->getType());
     Assert(vt != NULL);
 
     int32_t identity[ISPC_MAX_NVEC];

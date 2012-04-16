@@ -457,7 +457,7 @@ Target::GetISAString() const {
 
 
 static bool
-lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
+lGenericTypeLayoutIndeterminate(llvm::Type *type) {
     if (type->isPrimitiveType() || type->isIntegerTy())
         return false;
 
@@ -466,18 +466,18 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         type == LLVMTypes::Int1VectorType)
         return true;
 
-    LLVM_TYPE_CONST llvm::ArrayType *at = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
+    llvm::ArrayType *at = 
+        llvm::dyn_cast<llvm::ArrayType>(type);
     if (at != NULL)
         return lGenericTypeLayoutIndeterminate(at->getElementType());
 
-    LLVM_TYPE_CONST llvm::PointerType *pt = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+    llvm::PointerType *pt = 
+        llvm::dyn_cast<llvm::PointerType>(type);
     if (pt != NULL)
         return false;
 
-    LLVM_TYPE_CONST llvm::StructType *st =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    llvm::StructType *st =
+        llvm::dyn_cast<llvm::StructType>(type);
     if (st != NULL) {
         for (int i = 0; i < (int)st->getNumElements(); ++i)
             if (lGenericTypeLayoutIndeterminate(st->getElementType(i)))
@@ -485,18 +485,18 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         return false;
     }
 
-    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type));
+    Assert(llvm::isa<llvm::VectorType>(type));
     return true;
 }
 
 
 llvm::Value *
-Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type, 
+Target::SizeOf(llvm::Type *type, 
                llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = { LLVMInt32(1) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
@@ -529,12 +529,12 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
 
 llvm::Value *
-Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
+Target::StructOffset(llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC && 
         lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
@@ -556,8 +556,8 @@ Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    LLVM_TYPE_CONST llvm::StructType *structType = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    llvm::StructType *structType = 
+        llvm::dyn_cast<llvm::StructType>(type);
     Assert(structType != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
     Assert(sl != NULL);

@@ -92,12 +92,6 @@ namespace llvm {
     class Value;
 }
 
-// llvm::Type *s are no longer const in llvm 3.0
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-#define LLVM_TYPE_CONST
-#else
-#define LLVM_TYPE_CONST const
-#endif
 
 class ArrayType;
 class AST;
@@ -191,13 +185,13 @@ struct Target {
     const char *GetISAString() const;
 
     /** Returns the size of the given type */
-    llvm::Value *SizeOf(LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Value *SizeOf(llvm::Type *type,
                         llvm::BasicBlock *insertAtEnd);
 
     /** Given a structure type and an element number in the structure,
         returns a value corresponding to the number of bytes from the start
         of the structure where the element is located. */
-    llvm::Value *StructOffset(LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Value *StructOffset(llvm::Type *type,
                               int element, llvm::BasicBlock *insertAtEnd);
 
     /** llvm Target object representing this target. */

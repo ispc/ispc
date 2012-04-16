@@ -984,7 +984,7 @@ static llvm::Value *
 lCheckForActualPointer(llvm::Value *v) {
     if (v == NULL)
         return NULL;
-    else if (llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(v->getType()))
+    else if (llvm::isa<llvm::PointerType>(v->getType()))
         return v;
     else if (llvm::isa<llvm::PtrToIntInst>(v))
         return v;
@@ -1908,8 +1908,8 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular store
-            LLVM_TYPE_CONST llvm::Type *rvalueType = rvalue->getType();
-            LLVM_TYPE_CONST llvm::Type *ptrType = 
+            llvm::Type *rvalueType = rvalue->getType();
+            llvm::Type *ptrType = 
                 llvm::PointerType::get(rvalueType, 0);
 
             lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
@@ -2011,7 +2011,7 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular load
-            LLVM_TYPE_CONST llvm::Type *ptrType = 
+            llvm::Type *ptrType = 
                 llvm::PointerType::get(callInst->getType(), 0);
             ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", 
                                         callInst);
@@ -2069,17 +2069,17 @@ lIsSafeToBlend(llvm::Value *lvalue) {
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
-            LLVM_TYPE_CONST llvm::Type *type = ai->getType();
-            LLVM_TYPE_CONST llvm::PointerType *pt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+            llvm::Type *type = ai->getType();
+            llvm::PointerType *pt = 
+                llvm::dyn_cast<llvm::PointerType>(type);
             assert(pt != NULL);
             type = pt->getElementType();
-            LLVM_TYPE_CONST llvm::ArrayType *at;
-            while ((at = llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type))) {
+            llvm::ArrayType *at;
+            while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }
-            LLVM_TYPE_CONST llvm::VectorType *vt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+            llvm::VectorType *vt = 
+                llvm::dyn_cast<llvm::VectorType>(type);
             return (vt != NULL && 
                     (int)vt->getNumElements() == g->target.vectorWidth);
         }
@@ -2232,7 +2232,7 @@ lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
 
 struct ScatterImpInfo {
     ScatterImpInfo(const char *pName, const char *msName, 
-                   LLVM_TYPE_CONST llvm::Type *vpt, int a)
+                   llvm::Type *vpt, int a)
         : align(a) {
         pseudoFunc = m->module->getFunction(pName);
         maskedStoreFunc = m->module->getFunction(msName);
@@ -2241,7 +2241,7 @@ struct ScatterImpInfo {
     }
     llvm::Function *pseudoFunc;
     llvm::Function *maskedStoreFunc;
-    LLVM_TYPE_CONST llvm::Type *vecPtrType;
+    llvm::Type *vecPtrType;
     const int align;
 };
     
@@ -2742,7 +2742,7 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
  */
 llvm::Value *
 lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align,
-            llvm::Instruction *insertBefore, LLVM_TYPE_CONST llvm::Type *type) {
+            llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base",
                                 insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0),
@@ -2796,7 +2796,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 4: {
             // 4-wide vector load
-            LLVM_TYPE_CONST llvm::VectorType *vt =
+            llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,
                                           insertBefore, vt);
@@ -2804,7 +2804,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 8: {
             // 8-wide vector load
-            LLVM_TYPE_CONST llvm::VectorType *vt =
+            llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 8);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align, 
                                           insertBefore, vt);
@@ -2896,7 +2896,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             Assert(set[elt] == false && set[elt+1] == false);
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
-            LLVM_TYPE_CONST llvm::Type *vec2x64Type = 
+            llvm::Type *vec2x64Type = 
                 llvm::VectorType::get(LLVMTypes::Int64Type, 2);
             result = new llvm::BitCastInst(result, vec2x64Type, "to2x64",
                                            insertBefore);
@@ -2908,7 +2908,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
                                                      "insert64", insertBefore);
             
             // And back to 4xi32.
-            LLVM_TYPE_CONST llvm::Type *vec4x32Type = 
+            llvm::Type *vec4x32Type = 
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             result = new llvm::BitCastInst(result, vec4x32Type, "to4x32",
                                            insertBefore);
@@ -2988,7 +2988,7 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
 static llvm::Value *
 lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    LLVM_TYPE_CONST llvm::Type *returnType = 
+    llvm::Type *returnType = 
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
@@ -3128,7 +3128,7 @@ lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
 static llvm::Value *
 lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    LLVM_TYPE_CONST llvm::Type *returnType = 
+    llvm::Type *returnType = 
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 

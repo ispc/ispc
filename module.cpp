@@ -278,7 +278,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
         
-    LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+    llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL)
         return;
 
@@ -573,7 +573,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 
     // Get the LLVM FunctionType
     bool includeMask = (storageClass != SC_EXTERN_C);
-    LLVM_TYPE_CONST llvm::FunctionType *llvmFunctionType = 
+    llvm::FunctionType *llvmFunctionType = 
         functionType->LLVMFunctionType(g->ctx, includeMask);
     if (llvmFunctionType == NULL)
         return;
@@ -1405,7 +1405,7 @@ lAddExtractedGlobals(llvm::Module *module,
     for (unsigned int i = 0; i < globals[firstActive].size(); ++i) {
         RewriteGlobalInfo &rgi = globals[firstActive][i];
         llvm::GlobalVariable *gv = rgi.gv;
-        LLVM_TYPE_CONST llvm::Type *type = gv->getType()->getElementType();
+        llvm::Type *type = gv->getType()->getElementType();
         llvm::Constant *initializer = rgi.init;
 
         // Create a new global in the given model that matches the original
@@ -1469,7 +1469,7 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     // we'll start by generating an 'extern' declaration of each one that
     // we have in the current module so that we can then call out to that.
     llvm::Function *targetFuncs[Target::NUM_ISAS];
-    LLVM_TYPE_CONST llvm::FunctionType *ftype = NULL;
+    llvm::FunctionType *ftype = NULL;
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
         if (funcs.func[i] == NULL) {

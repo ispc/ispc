@@ -48,53 +48,50 @@ namespace llvm {
     class InsertElementInst;
 }
 
-// llvm::Type *s are no longer const in llvm 3.0
-#define LLVM_TYPE_CONST
-
 
 /** This structure holds pointers to a variety of LLVM types; code
     elsewhere can use them from here, ratherthan needing to make more
     verbose LLVM API calls.
  */ 
 struct LLVMTypes {
-    static LLVM_TYPE_CONST llvm::Type *VoidType;
-    static LLVM_TYPE_CONST llvm::PointerType *VoidPointerType;
-    static LLVM_TYPE_CONST llvm::Type *PointerIntType;
-    static LLVM_TYPE_CONST llvm::Type *BoolType;
+    static llvm::Type *VoidType;
+    static llvm::PointerType *VoidPointerType;
+    static llvm::Type *PointerIntType;
+    static llvm::Type *BoolType;
 
-    static LLVM_TYPE_CONST llvm::Type *Int8Type;
-    static LLVM_TYPE_CONST llvm::Type *Int16Type;
-    static LLVM_TYPE_CONST llvm::Type *Int32Type;
-    static LLVM_TYPE_CONST llvm::Type *Int64Type;
-    static LLVM_TYPE_CONST llvm::Type *FloatType;
-    static LLVM_TYPE_CONST llvm::Type *DoubleType;
+    static llvm::Type *Int8Type;
+    static llvm::Type *Int16Type;
+    static llvm::Type *Int32Type;
+    static llvm::Type *Int64Type;
+    static llvm::Type *FloatType;
+    static llvm::Type *DoubleType;
 
-    static LLVM_TYPE_CONST llvm::Type *Int8PointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int16PointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int32PointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int64PointerType;
-    static LLVM_TYPE_CONST llvm::Type *FloatPointerType;
-    static LLVM_TYPE_CONST llvm::Type *DoublePointerType;
+    static llvm::Type *Int8PointerType;
+    static llvm::Type *Int16PointerType;
+    static llvm::Type *Int32PointerType;
+    static llvm::Type *Int64PointerType;
+    static llvm::Type *FloatPointerType;
+    static llvm::Type *DoublePointerType;
 
-    static LLVM_TYPE_CONST llvm::VectorType *MaskType;
+    static llvm::VectorType *MaskType;
 
-    static LLVM_TYPE_CONST llvm::VectorType *BoolVectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *Int1VectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *Int8VectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *Int16VectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *Int32VectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *Int64VectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *FloatVectorType;
-    static LLVM_TYPE_CONST llvm::VectorType *DoubleVectorType;
+    static llvm::VectorType *BoolVectorType;
+    static llvm::VectorType *Int1VectorType;
+    static llvm::VectorType *Int8VectorType;
+    static llvm::VectorType *Int16VectorType;
+    static llvm::VectorType *Int32VectorType;
+    static llvm::VectorType *Int64VectorType;
+    static llvm::VectorType *FloatVectorType;
+    static llvm::VectorType *DoubleVectorType;
 
-    static LLVM_TYPE_CONST llvm::Type *Int8VectorPointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int16VectorPointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int32VectorPointerType;
-    static LLVM_TYPE_CONST llvm::Type *Int64VectorPointerType;
-    static LLVM_TYPE_CONST llvm::Type *FloatVectorPointerType;
-    static LLVM_TYPE_CONST llvm::Type *DoubleVectorPointerType;
+    static llvm::Type *Int8VectorPointerType;
+    static llvm::Type *Int16VectorPointerType;
+    static llvm::Type *Int32VectorPointerType;
+    static llvm::Type *Int64VectorPointerType;
+    static llvm::Type *FloatVectorPointerType;
+    static llvm::Type *DoubleVectorPointerType;
 
-    static LLVM_TYPE_CONST llvm::VectorType *VoidPointerVectorType;
+    static llvm::VectorType *VoidPointerVectorType;
 };
 
 /** These variables hold the corresponding LLVM constant values as a
@@ -171,11 +168,11 @@ extern llvm::Constant *LLVMDoubleVector(double f);
 
 /** Returns a constant integer or vector (according to the given type) of
     the given signed integer value. */
-extern llvm::Constant *LLVMIntAsType(int64_t, LLVM_TYPE_CONST llvm::Type *t);
+extern llvm::Constant *LLVMIntAsType(int64_t, llvm::Type *t);
 
 /** Returns a constant integer or vector (according to the given type) of
     the given unsigned integer value. */
-extern llvm::Constant *LLVMUIntAsType(uint64_t, LLVM_TYPE_CONST llvm::Type *t);
+extern llvm::Constant *LLVMUIntAsType(uint64_t, llvm::Type *t);
 
 /** Returns an LLVM boolean vector based on the given array of values.
     The array should have g->target.vectorWidth elements. */
