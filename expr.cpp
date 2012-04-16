@@ -4692,12 +4692,13 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         exprType = pointerType->GetBaseType();
 
     if (derefLValue == true && pointerType == NULL) {
-        if (dynamic_cast<const StructType *>(exprType->GetReferenceTarget()) != NULL)
-            Error(p, "Dereference operator \"->\" can't be applied to non-pointer "
+        const Type *targetType = exprType->GetReferenceTarget();
+        if (dynamic_cast<const StructType *>(targetType) != NULL)
+            Error(p, "Member operator \"->\" can't be applied to non-pointer "
                   "type \"%s\".  Did you mean to use \".\"?", 
                   exprType->GetString().c_str());
         else
-            Error(p, "Dereference operator \"->\" can't be applied to non-struct "
+            Error(p, "Member operator \"->\" can't be applied to non-struct "
                   "pointer type \"%s\".", exprType->GetString().c_str());
         return NULL;
     }
@@ -4713,6 +4714,12 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         return new StructMemberExpr(e, id, p, idpos, derefLValue);
     else if (dynamic_cast<const VectorType *>(exprType) != NULL)
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
+    else if (dynamic_cast<const UndefinedStructType *>(exprType)) {
+        Error(p, "Member operator \"%s\" can't be applied to declared "
+              "but not defined struct type \"%s\".", derefLValue ? "->" : ".",
+              exprType->GetString().c_str());
+        return NULL;
+    }
     else {
         Error(p, "Member operator \"%s\" can't be used with expression of "
               "\"%s\" type.", derefLValue ? "->" : ".", 

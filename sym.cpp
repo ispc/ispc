@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -66,7 +66,7 @@ SymbolTable::SymbolTable() {
 
 SymbolTable::~SymbolTable() {
     // Otherwise we have mismatched push/pop scopes
-    Assert(variables.size() == 1 && types.size() == 1);
+    Assert(variables.size() == 1);
     PopScope();
 }
 
@@ -74,7 +74,6 @@ SymbolTable::~SymbolTable() {
 void
 SymbolTable::PushScope() { 
     variables.push_back(new SymbolMapType);
-    types.push_back(new TypeMapType);
 }
 
 
@@ -83,10 +82,6 @@ SymbolTable::PopScope() {
     Assert(variables.size() > 1);
     delete variables.back();
     variables.pop_back();
-
-    Assert(types.size() > 1);
-    delete types.back();
-    types.pop_back();
 }
 
 
@@ -186,26 +181,17 @@ SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
 
 bool
 SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
-    // Like AddVariable(), we go backwards through the type maps, working
-    // from innermost scope to outermost.
-    for (int i = types.size()-1; i >= 0; --i) {
-        TypeMapType &sm = *(types[i]);
-        if (sm.find(name) != sm.end()) {
-            if (i == (int)types.size() - 1) {
-                Error(pos, "Ignoring redefinition of type \"%s\".", name);
-                return false;
-            }
-            else {
-                Warning(pos, "Type \"%s\" shadows type declared in outer scope.", name);
-                TypeMapType &sm = *(types.back());
-                sm[name] = type;
-                return true;
-            }
-        }
+    const Type *t = LookupType(name);
+    if (t != NULL && dynamic_cast<const UndefinedStructType *>(t) == NULL) {
+        // If we have a previous declaration of anything other than an
+        // UndefinedStructType with this struct name, issue an error.  If
+        // we have an UndefinedStructType, then we'll fall through to the
+        // code below that adds the definition to the type map.
+        Error(pos, "Ignoring redefinition of type \"%s\".", name);
+        return false;
     }
 
-    TypeMapType &sm = *(types.back());
-    sm[name] = type;
+    types[name] = type;
     return true;
 }
 
@@ -213,11 +199,9 @@ SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
 const Type *
 SymbolTable::LookupType(const char *name) const {
     // Again, search through the type maps backward to get scoping right.
-    for (int i = types.size()-1; i >= 0; --i) {
-        TypeMapType &sm = *(types[i]);
-        if (sm.find(name) != sm.end())
-            return sm[name];
-    }
+    TypeMapType::const_iterator iter = types.find(name);
+    if (iter != types.end())
+        return iter->second;
     return NULL;
 }
 
@@ -282,21 +266,19 @@ SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
     const int maxDelta = 2;
     std::vector<std::string> matches[maxDelta+1];
 
-    for (unsigned int i = 0; i < types.size(); ++i) {
-        TypeMapType::const_iterator iter;
-        for (iter = types[i]->begin(); iter != types[i]->end(); ++iter) {
-            // Skip over either StructTypes or EnumTypes, depending on the
-            // value of the structsVsEnums parameter
-            bool isEnum = (dynamic_cast<const EnumType *>(iter->second) != NULL);
-            if (isEnum && structsVsEnums)
-                continue;
-            else if (!isEnum && !structsVsEnums)
-                continue;
+    TypeMapType::const_iterator iter;
+    for (iter = types.begin(); iter != types.end(); ++iter) {
+        // Skip over either StructTypes or EnumTypes, depending on the
+        // value of the structsVsEnums parameter
+        bool isEnum = (dynamic_cast<const EnumType *>(iter->second) != NULL);
+        if (isEnum && structsVsEnums)
+            continue;
+        else if (!isEnum && !structsVsEnums)
+            continue;
 
-            int dist = StringEditDistance(str, iter->first, maxDelta+1);
-            if (dist <= maxDelta)
-                matches[dist].push_back(iter->first);
-        }
+        int dist = StringEditDistance(str, iter->first, maxDelta+1);
+        if (dist <= maxDelta)
+            matches[dist].push_back(iter->first);
     }
 
     for (int i = 0; i <= maxDelta; ++i) {
@@ -336,16 +318,12 @@ SymbolTable::Print() {
 
     depth = 0;
     fprintf(stderr, "Named types:\n---------------\n");
-    for (unsigned int i = 0; i < types.size(); ++i) {
-        TypeMapType &sm = *types[i];
-        TypeMapType::iterator siter = sm.begin();
-        while (siter != sm.end()) {
-            fprintf(stderr, "%*c", depth, ' ');
-            fprintf(stderr, "%s -> %s\n", siter->first.c_str(),
-                    siter->second->GetString().c_str());
-            ++siter;
-        }
-        depth += 4;
+    TypeMapType::iterator siter = types.begin();
+    while (siter != types.end()) {
+        fprintf(stderr, "%*c", depth, ' ');
+        fprintf(stderr, "%s -> %s\n", siter->first.c_str(),
+                siter->second->GetString().c_str());
+        ++siter;
     }
 }
 
@@ -376,14 +354,11 @@ SymbolTable::RandomSymbol() {
 
 const Type *
 SymbolTable::RandomType() {
-    int v = ispcRand() % types.size();
-    if (types[v]->size() == 0)
-        return NULL;
-    int count = ispcRand() % types[v]->size();
-    TypeMapType::iterator iter = types[v]->begin();
+    int count = types.size();
+    TypeMapType::iterator iter = types.begin();
     while (count-- > 0) {
         ++iter;
-        Assert(iter != types[v]->end());
+        Assert(iter != types.end());
     }
     return iter->second;
 }

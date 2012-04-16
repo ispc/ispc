@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -201,6 +201,9 @@ public:
     /** Adds the named type to the symbol table.  This is used for both
         struct definitions (where <tt>struct Foo</tt> causes type \c Foo to
         be added to the symbol table) as well as for <tt>typedef</tt>s.
+        For structs with forward declarations ("struct Foo;") and are thus
+        UndefinedStructTypes, this method replaces these with an actual
+        struct definition if one is provided.
 
         @param name Name of the type to be added
         @param type Type that \c name represents
@@ -265,12 +268,10 @@ private:
     typedef std::map<std::string, std::vector<Symbol *> > FunctionMapType;
     FunctionMapType functions;
 
-    /** Type definitions can also be scoped.  A new \c TypeMapType
-        is added to the back of the \c types \c vector each time a new scope
-        is entered.  (And it's removed when the scope exits).
+    /** Type definitions can't currently be scoped.
      */
     typedef std::map<std::string, const Type *> TypeMapType;
-    std::vector<TypeMapType *> types;
+    TypeMapType types;
 };
 
 

@@ -874,7 +874,6 @@ struct_or_union_specifier
               std::vector<SourcePos> elementPositions;
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
-              // FIXME: should be unbound
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
                                   false, Variability::Unbound, @1);
           }
@@ -892,10 +891,9 @@ struct_or_union_specifier
     | struct_or_union struct_or_union_name
       { 
           const Type *st = m->symbolTable->LookupType($2); 
-          if (!st) {
-              std::vector<std::string> alternates = m->symbolTable->ClosestTypeMatch($2);
-              std::string alts = lGetAlternates(alternates);
-              Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
+          if (st == NULL) {
+              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, st, @2);
           }
           else if (dynamic_cast<const StructType *>(st) == NULL)
               Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,

@@ -2609,14 +2609,22 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
     const PointerType *pt = dynamic_cast<const PointerType *>(valueType);
     if (pt != NULL) {
         if (pt->IsSlice()) {
-            // For masked stores of (varying) slice pointers to memory, we
-            // grab the equivalent StructType and make a recursive call to
-            // maskedStore, giving it that type for the pointer type; that
-            // in turn will lead to the base pointer and offset index being
-            // mask stored to memory..
-            const StructType *sliceStructType = pt->GetSliceStructType();
-            ptrType = PointerType::GetUniform(sliceStructType);
-            maskedStore(value, ptr, ptrType, mask);
+            // Masked store of (varying) slice pointer.
+            Assert(pt->IsVaryingType());
+                    
+            // First, extract the pointer from the slice struct and masked
+            // store that.
+            llvm::Value *v0 = ExtractInst(value, 0);
+            llvm::Value *p0 = AddElementOffset(ptr, 0, ptrType);
+            maskedStore(v0, p0, PointerType::GetUniform(pt->GetAsNonSlice()),
+                        mask);
+
+            // And then do same for the integer offset
+            llvm::Value *v1 = ExtractInst(value, 1);
+            llvm::Value *p1 = AddElementOffset(ptr, 1, ptrType);
+            const Type *offsetType = AtomicType::VaryingInt32;
+            maskedStore(v1, p1, PointerType::GetUniform(offsetType), mask);
+
             return;
         }
 

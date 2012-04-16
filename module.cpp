@@ -1477,10 +1477,14 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
             continue;
         }
 
-        // Grab the type of the function as well.
-        if (ftype != NULL)
-            Assert(ftype == funcs.func[i]->getFunctionType());
-        else
+        // Grab the type of the function as well.  Note that the various
+        // functions will have different types if they have arguments that
+        // are pointers to structs, due to the fact that we mangle LLVM
+        // struct type names with the target vector width.  However,
+        // because we only allow uniform stuff to pass through the
+        // export'ed function layer, they should all have the same memory
+        // layout, so this is benign..
+        if (ftype == NULL)
             ftype = funcs.func[i]->getFunctionType();
 
         targetFuncs[i] = 

@@ -409,7 +409,6 @@ public:
     const PointerType *GetAsSlice() const;
     const PointerType *GetAsNonSlice() const;
     const PointerType *GetAsFrozenSlice() const;
-    const StructType *GetSliceStructType() const;
 
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
@@ -668,7 +667,7 @@ public:
 private:
     static bool checkIfCanBeSOA(const StructType *st);
 
-    const std::string name;
+    /*const*/ std::string name;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
         (In other words, even if this struct has a varying qualifier and
@@ -684,6 +683,52 @@ private:
     /** Source file position at which each structure element declaration
         appeared. */
     const std::vector<SourcePos> elementPositions;
+    const Variability variability;
+    const bool isConst;
+    const SourcePos pos;
+};
+
+
+/** Type implementation representing a struct name that has been declared
+    but where the struct members haven't been defined (i.e. "struct Foo;").
+    This class doesn't do much besides serve as a placeholder that other
+    code can use to detect the presence of such as truct.
+ */
+class UndefinedStructType : public Type {
+public:
+    UndefinedStructType(const std::string &name, const Variability variability,
+                        bool isConst, SourcePos pos);
+
+    Variability GetVariability() const;
+
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const UndefinedStructType *GetAsVaryingType() const;
+    const UndefinedStructType *GetAsUniformType() const;
+    const UndefinedStructType *GetAsUnboundVariabilityType() const;
+    const UndefinedStructType *GetAsSOAType(int width) const;
+    const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
+
+    const UndefinedStructType *GetAsConstType() const;
+    const UndefinedStructType *GetAsNonConstType() const;
+
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+
+    /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
+    const std::string &GetStructName() const { return name; }
+
+private:
+    const std::string name;
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
