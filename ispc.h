@@ -40,8 +40,8 @@
 
 #define ISPC_VERSION "1.2.2dev"
 
-#if !defined(LLVM_2_9) && !defined(LLVM_3_0) && !defined(LLVM_3_0svn) && !defined(LLVM_3_1svn)
-#error "Only LLVM 2.9, 3.0, and the 3.1 development branch are supported"
+#if !defined(LLVM_3_0) && !defined(LLVM_3_0svn) && !defined(LLVM_3_1svn)
+#error "Only LLVM 3.0, and the 3.1 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)

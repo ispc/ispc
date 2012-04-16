@@ -706,10 +706,8 @@ Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     if (diBuilder != NULL && outputType != Header)
         diBuilder->finalize();
-#endif // LLVM_3_0
 
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
@@ -731,14 +729,12 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
             if (strcasecmp(suffix, "o") && strcasecmp(suffix, "obj"))
                 fileType = "object";
             break;
-#ifndef LLVM_2_9
         case CXX:
             if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
                 strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
                 strcasecmp(suffix, "cpp"))
                 fileType = "c++";
             break;
-#endif // !LLVM_2_9
         case Header:
             if (strcasecmp(suffix, "h") && strcasecmp(suffix, "hh") &&
                 strcasecmp(suffix, "hpp"))
@@ -754,14 +750,12 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         return writeHeader(outFileName);
     else if (outputType == Bitcode)
         return writeBitcode(module, outFileName);
-#ifndef LLVM_2_9
     else if (outputType == CXX) {
         extern bool WriteCXXFile(llvm::Module *module, const char *fn, 
                                  int vectorWidth, const char *includeName);
         return WriteCXXFile(module, outFileName, g->target.vectorWidth,
                             includeFileName);
     }
-#endif // !LLVM_2_9
     else
         return writeObjectFileOrAssembly(outputType, outFileName);
 }
@@ -1172,18 +1166,12 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
     clang::DiagnosticsEngine *diagEngine = 
         new clang::DiagnosticsEngine(diagIDs, diagPrinter);
     inst.setDiagnostics(diagEngine);
-#else
-    clang::TextDiagnosticPrinter *diagPrinter = 
-        new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
-    inst.createDiagnostics(0, NULL, diagPrinter);
-#endif
 
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
@@ -1209,9 +1197,7 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
     headerOpts.UseBuiltinIncludes = 0;
-#ifndef LLVM_2_9
     headerOpts.UseStandardSystemIncludes = 0;
-#endif // !LLVM_2_9
     headerOpts.UseStandardCXXIncludes = 0;
     if (g->debugPrint)
         headerOpts.Verbose = 1;
@@ -1549,24 +1535,13 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         for (; argIter != dispatchFunc->arg_end(); ++argIter)
             args.push_back(argIter);
         if (voidReturn) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
-#else
-            llvm::CallInst::Create(targetFuncs[i], args.begin(), args.end(),
-                                   "", callBBlock);
-#endif
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
         }
         else {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
             llvm::Value *retValue = 
                 llvm::CallInst::Create(targetFuncs[i], args, "ret_value", 
                                        callBBlock);
-#else
-            llvm::Value *retValue = 
-                llvm::CallInst::Create(targetFuncs[i], args.begin(), args.end(),
-                                       "ret_value", callBBlock);
-#endif
             llvm::ReturnInst::Create(*g->ctx, retValue, callBBlock);
         }
 
@@ -1664,13 +1639,11 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
         return errorCount > 0;
     }
     else {
-#ifndef LLVM_2_9
         if (outputType == CXX) {
             Error(SourcePos(), "Illegal to specify more then one target when "
                   "compiling C++ output.");
             return 1;
         }
-#endif // !LLVM_2_9
 
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);

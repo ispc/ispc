@@ -85,9 +85,7 @@ public:
     enum OutputType { Asm,      /** Generate text assembly language output */
                       Bitcode,  /** Generate LLVM IR bitcode output */
                       Object,   /** Generate a native object file */
-#ifndef LLVM_2_9
                       CXX,      /** Generate a C++ file */
-#endif // !LLVM_2_9
                       Header    /** Generate a C/C++ header file with 
                                     declarations of 'export'ed functions, global
                                     variables, and the types used by them. */

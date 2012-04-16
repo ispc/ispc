@@ -1359,13 +1359,8 @@ lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
                                                  llvm::GlobalValue::InternalLinkage,
                                                  sConstant, s);
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);
-#else
-    return llvm::GetElementPtrInst::Create(sPtr, &indices[0], &indices[2],
-                                           "sptr", bblock);
-#endif
 }
 
 
@@ -2067,16 +2062,10 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *ind[1] = { index };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&ind[0], &ind[1]);
         llvm::Instruction *inst = 
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
-#else
-        llvm::Instruction *inst = 
-            llvm::GetElementPtrInst::Create(basePtr, &ind[0], &ind[1], 
-                                            name ? name : "gep", bblock);
-#endif
         AddDebugPos(inst);
         return inst;
     }
@@ -2133,16 +2122,10 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // The easy case: both the base pointer and the indices are
         // uniform, so just emit the regular LLVM GEP instruction
         llvm::Value *indices[2] = { index0, index1 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
         llvm::Instruction *inst = 
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "gep", bblock);
-#else
-        llvm::Instruction *inst = 
-            llvm::GetElementPtrInst::Create(basePtr, &indices[0], &indices[2], 
-                                            name ? name : "gep", bblock);
-#endif
         AddDebugPos(inst);
         return inst;
     }
@@ -2222,16 +2205,10 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     if (ptrType == NULL || ptrType->IsUniformType()) {
         // If the pointer is uniform, we can use the regular LLVM GEP.
         llvm::Value *offsets[2] = { LLVMInt32(0), LLVMInt32(elementNum) };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&offsets[0], &offsets[2]);
         resultPtr = 
             llvm::GetElementPtrInst::Create(basePtr, arrayRef,
                                             name ? name : "struct_offset", bblock);
-#else
-        resultPtr =
-            llvm::GetElementPtrInst::Create(basePtr, &offsets[0], &offsets[2],
-                                            name ? name : "struct_offset", bblock);
-#endif
     }
     else {
         // Otherwise do the math to find the offset and add it to the given
@@ -3014,10 +2991,7 @@ FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
 llvm::PHINode *
 FunctionEmitContext::PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
                              const char *name) {
-    llvm::PHINode *pn = llvm::PHINode::Create(type, 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-                                              count, 
-#endif // LLVM_3_0
+    llvm::PHINode *pn = llvm::PHINode::Create(type, count,
                                               name ? name : "phi", bblock);
     AddDebugPos(pn);
     return pn;
@@ -3086,14 +3060,8 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
     if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(func->getType()) == false) {
         // Regular 'uniform' function call--just one function or function
         // pointer, so just emit the IR directly.
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::Instruction *ci = 
             llvm::CallInst::Create(func, argVals, name ? name : "", bblock);
-#else
-        llvm::Instruction *ci = 
-            llvm::CallInst::Create(func, argVals.begin(), argVals.end(), 
-                                   name ? name : "", bblock);
-#endif
         AddDebugPos(ci);
         return ci;
     }

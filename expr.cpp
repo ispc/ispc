@@ -3701,14 +3701,10 @@ ExprList::GetConstant(const Type *type) const {
     }
 
     if (dynamic_cast<const StructType *>(type) != NULL) {
-#if defined(LLVM_2_9)
-        return llvm::ConstantStruct::get(*g->ctx, cv, false);
-#else
         LLVM_TYPE_CONST llvm::StructType *llvmStructType =
             llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(collectionType->LLVMType(g->ctx));
         Assert(llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
-#endif
     }
     else {
         LLVM_TYPE_CONST llvm::Type *lt = type->LLVMType(g->ctx);

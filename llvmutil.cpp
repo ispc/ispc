@@ -1443,11 +1443,8 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
         llvm::PHINode *scalarPhi = 
             llvm::PHINode::Create(vt->getElementType(), 
-#ifndef LLVM_2_9
                                   phi->getNumIncomingValues(), 
-#endif // !LLVM_2_9
-                                  newName,
-                                  phiInsertPos);
+                                  newName, phiInsertPos);
         phiMap[phi] = scalarPhi;
 
         for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
@@ -1521,12 +1518,8 @@ LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
             shufVec.push_back(LLVMInt32(shuf[i]));
     }
 
-#ifndef LLVM_2_9
     llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
     llvm::Value *vec = llvm::ConstantVector::get(aref);
-#else // LLVM_2_9
-    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
-#endif
 
     return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
 }

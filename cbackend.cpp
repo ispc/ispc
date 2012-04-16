@@ -12,10 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLVM_2_9
-#warning "The C++ backend isn't supported when building with LLVM 2.9"
-#else
-
 #include <stdio.h>
 
 #ifndef _MSC_VER
@@ -4462,5 +4458,3 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
 
     return true;
 }
-
-#endif // LLVM_2_9

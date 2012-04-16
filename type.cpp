@@ -81,11 +81,7 @@ lCreateDIArray(llvm::DIType eltType, int count) {
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
     std::vector<llvm::Value *> subs;
     subs.push_back(sub);
-#ifdef LLVM_2_9
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(&subs[0], subs.size());
-#else
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
-#endif
 
     uint64_t size = eltType.getSizeInBits() * count;
     uint64_t align = eltType.getAlignInBits();
@@ -518,12 +514,7 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
     else if (variability == Variability::Varying) {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
-#ifdef LLVM_2_9
-        llvm::Value *suba[] = { sub };
-        llvm::DIArray subArray = m->diBuilder->getOrCreateArray(suba, 1);
-#else
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif // LLVM_2_9
         uint64_t size =  unifType.getSizeInBits()  * g->target.vectorWidth;
         uint64_t align = unifType.getAlignInBits() * g->target.vectorWidth;
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
@@ -767,14 +758,8 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
             m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
         enumeratorDescriptors.push_back(descriptor);
     }
-#ifdef LLVM_2_9
-    llvm::DIArray elementArray = 
-        m->diBuilder->getOrCreateArray(&enumeratorDescriptors[0],
-                                       enumeratorDescriptors.size());
-#else
     llvm::DIArray elementArray = 
         m->diBuilder->getOrCreateArray(enumeratorDescriptors);
-#endif
 
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIType diType =
@@ -789,12 +774,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
         return diType;
     case Variability::Varying: {
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
-#ifdef LLVM_2_9
-        llvm::Value *suba[] = { sub };
-        llvm::DIArray subArray = m->diBuilder->getOrCreateArray(suba, 1);
-#else
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif // !LLVM_2_9
         uint64_t size =  diType.getSizeInBits()  * g->target.vectorWidth;
         uint64_t align = diType.getAlignInBits() * g->target.vectorWidth;
         return m->diBuilder->createVectorType(size, align, diType, subArray);
@@ -1686,12 +1666,7 @@ llvm::DIType
 VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
-#ifdef LLVM_2_9
-    llvm::Value *subs[1] = { sub };
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs, 1);
-#else
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif
 
     uint64_t sizeBits = eltType.getSizeInBits() * numElements;
 
@@ -1976,17 +1951,10 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
         llvm::DIFile diFile = elementPositions[i].GetDIFile();
         int line = elementPositions[i].first_line;
-#ifdef LLVM_2_9
-        llvm::DIType fieldType = 
-            m->diBuilder->createMemberType(elementNames[i], diFile, line,
-                                           eltSize, eltAlign, currentSize, 0,
-                                           eltType);
-#else
         llvm::DIType fieldType = 
             m->diBuilder->createMemberType(scope, elementNames[i], diFile, 
                                            line, eltSize, eltAlign, 
                                            currentSize, 0, eltType);
-#endif // LLVM_2_9
         elementLLVMTypes.push_back(fieldType);
 
         currentSize += eltSize;
@@ -1997,12 +1965,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     if (currentSize > 0 && (currentSize % align))
         currentSize += align - (currentSize % align);
 
-#ifdef LLVM_2_9
-    llvm::DIArray elements = m->diBuilder->getOrCreateArray(&elementLLVMTypes[0], 
-                                                            elementLLVMTypes.size());
-#else
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
-#endif
     llvm::DIFile diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, currentSize, 
                                           align, 0, elements);
