@@ -121,10 +121,14 @@ Contents:
 
 * `The ISPC Standard Library`_
 
+  + `Basic Operations On Data`_
+
+    * `Logical and Selection Operations`_
+    * `Bit Operations`_
+
   + `Math Functions`_
 
     * `Basic Math Functions`_
-    * `Bit-Level Operations`_
     * `Transcendental Functions`_
     * `Pseudo-Random Numbers`_
 
@@ -538,7 +542,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{SSE2,SSE4,AVX}
+  * - ISPC_TARGET_{SSE2,SSE4,AVX,AVX2}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
@@ -1390,8 +1394,8 @@ Types
 Basic Types and Type Qualifiers
 -------------------------------
 
-``ispc`` is a statically-typed language.  It supports a variety of basic
-types.
+``ispc`` is a statically-typed language.  It supports a variety of core
+basic types:
 
 * ``void``: "empty" type representing no value.
 * ``bool``: boolean value; may be assigned ``true``, ``false``, or the
@@ -1407,6 +1411,15 @@ types.
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer.
 * ``double``: 64-bit double-precision floating point value.
+
+There are also a few built-in types related to pointers and memory:
+
+* ``size_t``: the maximum size of any object (structure or array)
+* ``ptrdiff_t``: an integer type large enough to represent the difference
+  between two pointers
+* ``intptr_t``: signed integer type that is large enough to represent
+  a pointer value
+* ``uintptr_t``: unsigned integer type large enough to represent a pointer
 
 Implicit type conversion between values of different types is done
 automatically by the ``ispc`` compiler.  Thus, a value of ``float`` type
@@ -2150,6 +2163,12 @@ greater than or equal to ``NUM_ITEMS``.
         // ...
     }
 
+Short-circuiting may impose some overhead in the generated code; for cases
+where short-circuiting is undesirable due to performance impact, see
+the section `Logical and Selection Operations`_, which introduces helper
+functions in the standard library that provide these operations without
+short-circuiting.
+
 
 Dynamic Memory Allocation
 -------------------------
@@ -2827,6 +2846,123 @@ The ISPC Standard Library
 compiling ``ispc`` programs.  (To disable the standard library, pass the
 ``--nostdlib`` command-line flag to the compiler.)
 
+Basic Operations On Data
+------------------------
+
+Logical and Selection Operations
+--------------------------------
+
+Recall from `Expressions`_ that ``ispc`` short-circuits the evaluation of
+logical and selection operators: given an expression like ``(index < count
+&& array[index] == 0)``, then ``array[index] == 0`` is only evaluated if
+``index < count`` is true.  This property is useful for writing expressions
+like the preceeding one, where the second expression may not be safe to
+evaluate in some cases.
+
+This short-circuiting can impose overhead in the generated code; additional
+operations are required to test the first value and to conditionally jump
+over the code that evaluates the second value.  The ``ispc`` compiler does
+try to mitigate this cost by detecting cases where it is both safe and
+inexpensive to evaluate both expressions, and skips short-circuiting in the
+generated code in this case (without there being any programmer-visible
+change in program behavior.)
+
+For cases where the compiler can't detect this case but the programmer
+wants to avoid short-circuiting behavior, the standard library provides a
+few helper functions.  First, ``and()`` and ``or()`` provide
+non-short-circuiting logical AND and OR operations.
+
+::
+
+    bool and(bool a, bool b)
+    bool or(bool a, bool b)
+    uniform bool and(uniform bool a, uniform bool b)
+    uniform bool or(uniform bool a, uniform bool b)
+
+And there are three variants of ``select()`` that select between two values
+based on a boolean condition.  These are the variants of ``select()`` for
+the ``int8`` type:
+
+::
+
+    int8 select(bool v, int8 a, int8 b)
+    int8 select(uniform bool v, int8 a, int8 b)
+    uniform int8 select(uniform bool v, uniform int8 a, uniform int8 b)
+
+There are also variants for ``int16``, ``int32``, ``int64``, ``float``, and
+``double`` types.
+
+Bit Operations
+--------------
+
+The various variants of ``popcnt()`` return the population count--the
+number of bits set in the given value.
+
+::
+
+    uniform int popcnt(uniform int v)
+    int popcnt(int v)
+    uniform int popcnt(bool v)
+
+
+A few functions determine how many leading bits in the given value are zero
+and how many of the trailing bits are zero; there are also ``unsigned``
+variants of these functions and variants that take ``int64`` and ``unsigned
+int64`` types.
+
+::
+
+    int32 count_leading_zeros(int32 v)
+    uniform int32 count_leading_zeros(uniform int32 v)
+    int32 count_trailing_zeros(int32 v)
+    uniform int32 count_trailing_zeros(uniform int32 v)
+
+Sometimes it's useful to convert a ``bool`` value to an integer using sign
+extension so that the integer's bits are all on if the ``bool`` has the
+value ``true`` (rather than just having the value one).  The
+``sign_extend()`` functions provide this functionality:
+
+::
+
+    int sign_extend(bool value) 
+    uniform int sign_extend(uniform bool value) 
+
+The ``intbits()`` and ``floatbits()`` functions can be used to implement
+low-level floating-point bit twiddling.  For example, ``intbits()`` returns
+an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
+value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
+something like ``*((int *)&a)`` in C.
+
+::
+
+    float floatbits(unsigned int a);
+    uniform float floatbits(uniform unsigned int a);
+    unsigned int intbits(float a);
+    uniform unsigned int intbits(uniform float a);
+
+
+The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
+they just let the compiler know how to interpret the bits of the given
+value.  They make it possible to efficiently write functions that take
+advantage of the low-level bit representation of floating-point values.
+
+For example, the ``abs()`` function in the standard library is implemented
+as follows:
+
+::
+
+    float abs(float a) {
+        unsigned int i = intbits(a);
+        i &= 0x7fffffff;
+        return floatbits(i);
+    }
+
+This code directly clears the high order bit to ensure that the given
+floating-point value is positive.  This compiles down to a single ``andps``
+instruction when used with an Intel® SSE target, for example.
+
+
+
 Math Functions
 --------------
 
@@ -2919,77 +3055,6 @@ quite efficient.)
                                uniform unsigned int low,
                                uniform unsigned int high)
 
-Bit-Level Operations
---------------------
-
-
-The various variants of ``popcnt()`` return the population count--the
-number of bits set in the given value.
-
-::
-
-    uniform int popcnt(uniform int v)
-    int popcnt(int v)
-    uniform int popcnt(bool v)
-
-
-A few functions determine how many leading bits in the given value are zero
-and how many of the trailing bits are zero; there are also ``unsigned``
-variants of these functions and variants that take ``int64`` and ``unsigned
-int64`` types.
-
-::
-
-    int32 count_leading_zeros(int32 v)
-    uniform int32 count_leading_zeros(uniform int32 v)
-    int32 count_trailing_zeros(int32 v)
-    uniform int32 count_trailing_zeros(uniform int32 v)
-
-Sometimes it's useful to convert a ``bool`` value to an integer using sign
-extension so that the integer's bits are all on if the ``bool`` has the
-value ``true`` (rather than just having the value one).  The
-``sign_extend()`` functions provide this functionality:
-
-::
-
-    int sign_extend(bool value) 
-    uniform int sign_extend(uniform bool value) 
-
-The ``intbits()`` and ``floatbits()`` functions can be used to implement
-low-level floating-point bit twiddling.  For example, ``intbits()`` returns
-an ``unsigned int`` that is a bit-for-bit copy of the given ``float``
-value.  (Note: it is **not** the same as ``(int)a``, but corresponds to
-something like ``*((int *)&a)`` in C.
-
-::
-
-    float floatbits(unsigned int a);
-    uniform float floatbits(uniform unsigned int a);
-    unsigned int intbits(float a);
-    uniform unsigned int intbits(uniform float a);
-
-
-The ``intbits()`` and ``floatbits()`` functions have no cost at runtime;
-they just let the compiler know how to interpret the bits of the given
-value.  They make it possible to efficiently write functions that take
-advantage of the low-level bit representation of floating-point values.
-
-For example, the ``abs()`` function in the standard library is implemented
-as follows:
-
-::
-
-    float abs(float a) {
-        unsigned int i = intbits(a);
-        i &= 0x7fffffff;
-        return floatbits(i);
-    }
-
-This code directly clears the high order bit to ensure that the given
-floating-point value is positive.  This compiles down to a single ``andps``
-instruction when used with an Intel® SSE target, for example.
-
-
 Transcendental Functions
 ------------------------
 
@@ -3027,8 +3092,8 @@ The corresponding inverse functions are also available:
    uniform float acos(uniform float x)
    float atan(float x)
    uniform float atan(uniform float x)
-   float atan2(float x, float y)
-   uniform float atan2(uniform float x, uniform float y)
+   float atan2(float y, float x)
+   uniform float atan2(uniform float y, uniform float x)
 
 If both sine and cosine are needed, then the ``sincos()`` call computes
 both more efficiently than two calls to the respective individual
@@ -3732,6 +3797,13 @@ For global atomics, only atomic swap is available for these types:
   float atomic_swap_global(uniform float * uniform ptr, float value)
   double atomic_swap_global(uniform double * uniform ptr, double value)
 
+Finally, "swap" (but none of these other atomics) is available for pointer
+types:
+
+::
+
+  void *atomic_swap_{local,global}(void * * uniform ptr, void * value)
+
 There are also variants of the atomic that take ``uniform`` values for the
 operand and return a ``uniform`` result.  These correspond to a single
 atomic operation being performed for the entire gang of program instances,
@@ -3755,6 +3827,13 @@ rather than one per program instance.
                                           uniform int32 value)
   uniform int32 atomic_swap_{local,global}(uniform int32 * uniform ptr,
                                            uniform int32 newval)
+
+And similarly for pointers:
+
+::
+
+  uniform void *atomic_swap_{local,global}(void * * uniform ptr,
+                                           void *newval)
 
 Be careful that you use the atomic function that you mean to; consider the
 following code:
@@ -3797,12 +3876,18 @@ the same location in memory!)
   int32 atomic_xor_{local,global}(uniform int32 * varying ptr, int32 value)
   int32 atomic_swap_{local,global}(uniform int32 * varying ptr, int32 value)
 
+And:
+
+::
+
+  void *atomic_swap_{local,global}(void * * ptr, void *value)
+
 There are also atomic "compare and exchange" functions.  Compare and
 exchange atomically compares the value in "val" to "compare"--if they
 match, it assigns "newval" to "val".  In either case, the old value of
 "val" is returned.  (As with the other atomic operations, there are also
 ``unsigned`` and 64-bit variants of this function.  Furthermore, there are
-``float`` and ``double`` variants as well.)
+``float``, ``double``, and ``void *`` variants as well.)
 
 ::
 
@@ -3824,6 +3909,11 @@ code.
 
     void memory_barrier();
 
+Note that this barrier is *not* needed for coordinating reads and writes
+among the program instances in a gang; it's only needed for coordinating
+between multiple hardware threads running on different cores.  See the
+section `Data Races Within a Gang`_ for the guarantees provided about
+memory read/write ordering across a gang.
 
 Prefetches
 ----------

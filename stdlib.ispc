@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -747,6 +747,125 @@ static inline void prefetch_nt(const void * varying ptr) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// non-short-circuiting alternatives
+
+__declspec(safe,cost1)
+static inline bool and(bool a, bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool and(uniform bool a, uniform bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline bool or(bool a, bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool or(uniform bool a, uniform bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(uniform bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int8 select(uniform bool c, uniform int8 a,
+                                  uniform int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(uniform bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int16 select(uniform bool c, uniform int16 a,
+                                   uniform int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(uniform bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int32 select(uniform bool c, uniform int32 a,
+                                   uniform int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(uniform bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int64 select(uniform bool c, uniform int64 a,
+                                   uniform int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(uniform bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform float select(uniform bool c, uniform float a,
+                                   uniform float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(uniform bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform double select(uniform bool c, uniform double a,
+                                    uniform double b) {
+    return c ? a : b;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
 
 __declspec(safe) 
@@ -1469,22 +1588,17 @@ static inline void memory_barrier() {
 
 #define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE)                        \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
-    memory_barrier();                                                   \
     TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1492,13 +1606,11 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
 #define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
 static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
-    memory_barrier();                                                   \
     uniform int i = 0;                                                  \
     TA ret[programCount];                                               \
     TA memVal;                                                          \
@@ -1528,20 +1640,16 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
     /* And the last instance that wanted to swap gets the value we      \
        originally got back from memory... */                            \
     ret[lastSwap] = memVal;                                             \
-    memory_barrier();                                                   \
     return ret[programIndex];                                           \
 }                                                                       \
 static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
                                             uniform TA value) {         \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_swap_uniform_##TB##_global(ptr, value);   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1549,7 +1657,6 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
         uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);       \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
@@ -1557,25 +1664,19 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
-    if (lanemask() != 0) {                                              \
-        memory_barrier();                                               \
+    if (lanemask() != 0)                                                \
         ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval);      \
-        memory_barrier();                                               \
-    }                                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
                                        TA value) {                      \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1583,7 +1684,6 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }
 
@@ -1638,25 +1738,20 @@ DEFINE_ATOMIC_SWAP(double,double)
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline uniform TA atomic_compare_exchange_global(               \
          uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
-    memory_barrier();                                                      \
     uniform TA ret =                                                    \
         __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_compare_exchange_global(                           \
          uniform TA * uniform ptr, TA oldval, TA newval) {                 \
-    memory_barrier();                                                      \
     TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval,  \
                                                      (MASKTYPE)__mask);    \
-    memory_barrier();                                                      \
     return ret;                                                            \
 } \
 static inline TA atomic_compare_exchange_global(               \
          uniform TA * varying ptr, TA oldval, TA newval) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA r =                                                  \
@@ -1665,7 +1760,6 @@ static inline TA atomic_compare_exchange_global(               \
                                                             extract(newval, i)); \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }
 
@@ -1677,6 +1771,49 @@ ATOMIC_DECL_CMPXCHG(unsigned int64, int64, UIntMaskType)
 ATOMIC_DECL_CMPXCHG(double, double, IntMaskType)
 
 #undef ATOMIC_DECL_CMPXCHG
+
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_global(void ** uniform ptr,
+                                       void * value) {
+    return (void *)atomic_swap_global((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_global(void ** uniform ptr,
+                                                void * uniform value) {
+    return (void * uniform)atomic_swap_global((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_global(void ** ptr, void * value) {
+    return (void *)atomic_swap_global((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_global(void ** uniform ptr, 
+                               void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_global(void ** uniform ptr, void * uniform oldval, 
+                               void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_global(void ** ptr, void * oldval,
+                               void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // local atomics
@@ -1848,6 +1985,49 @@ LOCAL_CMPXCHG(double)
 
 #undef LOCAL_ATOMIC
 #undef LOCAL_CMPXCHG
+
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_local(void ** uniform ptr,
+                                      void * value) {
+    return (void *)atomic_swap_local((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_local(void ** uniform ptr,
+                                               void * uniform value) {
+    return (void * uniform)atomic_swap_local((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_local(void ** ptr, void * value) {
+    return (void *)atomic_swap_local((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_local(void ** uniform ptr, 
+                              void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_local(void ** uniform ptr, void * uniform oldval, 
+                              void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_local(void ** ptr, void * oldval,
+                              void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (float precision)
@@ -3551,8 +3731,9 @@ static inline int16 float_to_half(float f) {
         //   like recursive filters in DSP - not a typical half-float application. Whether
         //   FP16 denormals are rare in practice, I don't know. Whatever slow path your HW
         //   may or may not have for denormals, this may well hit it.
-        int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
-        fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+        float fscale = floatbits(fint & round_mask) * floatbits(magic);
+        fscale = min(fscale, floatbits((31 << 23) - 0x1000));
+        int32 fint2 = intbits(fscale) - round_mask;
 
         if (fint < f32infty)
             o = fint2 >> 13; // Take the bits!

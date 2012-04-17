@@ -16,7 +16,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float b = aFOO[0]-1;
     FuncType func = NULL;
     if (a == 2)
-        func = foo;
+        func = &foo;
     if (!func)
         RET[programIndex] = -1;
     else

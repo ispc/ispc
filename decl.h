@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,8 @@
     variables--here, that the declaration has the 'static' and 'uniform'
     qualifiers, and that it's basic type is 'int'.  Then for each variable
     declaration, the Declaraiton class holds an instance of a Declarator,
-    which in turn records the per-variable information like the symbol
-    name, array size (if any), initializer expression, etc.
+    which in turn records the per-variable information like the name, array
+    size (if any), initializer expression, etc.  
 */
 
 #ifndef ISPC_DECL_H
@@ -61,16 +61,6 @@ struct VariableDeclaration;
 class Declaration;
 class Declarator;
 
-enum StorageClass {
-    SC_NONE,
-    SC_EXTERN,
-    SC_EXPORT,
-    SC_STATIC,
-    SC_TYPEDEF,
-    SC_EXTERN_C
-};
-
-
 /* Multiple qualifiers can be provided with types in declarations;
    therefore, they are set up so that they can be ANDed together into an
    int. */
@@ -82,6 +72,7 @@ enum StorageClass {
 #define TYPEQUAL_SIGNED     (1<<4)
 #define TYPEQUAL_UNSIGNED   (1<<5)
 #define TYPEQUAL_INLINE     (1<<6)
+#define TYPEQUAL_EXPORT     (1<<7)
 
 /** @brief Representation of the declaration specifiers in a declaration.
 
@@ -141,25 +132,11 @@ public:
     Declarator(DeclaratorKind dk, SourcePos p);
 
     /** Once a DeclSpecs instance is available, this method completes the
-        initialization of the Symbol, setting its Type accordingly.
+        initialization of the type member.
      */
     void InitFromDeclSpecs(DeclSpecs *ds);
 
-    /** Get the actual type of the combination of Declarator and the given
-        DeclSpecs.  If an explicit base type is provided, the declarator is
-        applied to that type; otherwise the base type from the DeclSpecs is
-        used. */
-    const Type *GetType(DeclSpecs *ds) const;
-    const Type *GetType(const Type *base, DeclSpecs *ds) const;
-
-    /** Returns the symbol corresponding to the function declared by this
-        declarator and symbols for its arguments in *args. */
-    Symbol *GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *args);
-
-    Symbol *GetSymbolForFunctionParameter(int paramNum) const;
-
-    /** Returns the symbol associated with the declarator. */
-    Symbol *GetSymbol() const;
+    void InitFromType(const Type *base, DeclSpecs *ds);
 
     void Print(int indent) const;
 
@@ -180,18 +157,24 @@ public:
     /** Type qualifiers provided with the declarator. */
     int typeQualifiers;
 
+    StorageClass storageClass;
+
     /** For array declarators, this gives the declared size of the array.
         Unsized arrays have arraySize == 0. */ 
     int arraySize;
 
-    /** Symbol associated with the declarator. */
-    Symbol *sym;
+    /** Name associated with the declarator. */
+    std::string name;
 
     /** Initialization expression for the variable.  May be NULL. */
     Expr *initExpr;
 
+    /** Type of the declarator.  This is NULL until InitFromDeclSpecs() or
+        InitFromType() is called. */
+    const Type *type;
+
     /** For function declarations, this holds the Declaration *s for the
-        funciton's parameters. */
+        function's parameters. */
     std::vector<Declaration *> functionParams;
 };
 

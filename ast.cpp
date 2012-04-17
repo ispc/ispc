@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,10 @@
 */
 
 /** @file ast.cpp
-    @brief 
-*/
+
+    @brief General functionality related to abstract syntax trees and
+    traversal of them.
+ */
 
 #include "ast.h"
 #include "expr.h"
@@ -53,10 +55,10 @@ ASTNode::~ASTNode() {
 // AST
 
 void
-AST::AddFunction(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code) {
+AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == NULL)
         return;
-    functions.push_back(new Function(sym, args, code));
+    functions.push_back(new Function(sym, code));
 }
 
 
@@ -151,7 +153,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         else if ((ls = dynamic_cast<LabeledStmt *>(node)) != NULL)
             ls->stmt = (Stmt *)WalkAST(ls->stmt, preFunc, postFunc, data);
         else if ((rs = dynamic_cast<ReturnStmt *>(node)) != NULL)
-            rs->val = (Expr *)WalkAST(rs->val, preFunc, postFunc, data);
+            rs->expr = (Expr *)WalkAST(rs->expr, preFunc, postFunc, data);
         else if ((sl = dynamic_cast<StmtList *>(node)) != NULL) {
             std::vector<Stmt *> &sls = sl->stmts;
             for (unsigned int i = 0; i < sls.size(); ++i)
@@ -305,19 +307,39 @@ TypeCheck(Stmt *stmt) {
 }
 
 
+struct CostData {
+    CostData() { cost = foreachDepth = 0; }
+
+    int cost;
+    int foreachDepth;
+};
+
+
 static bool
-lCostCallback(ASTNode *node, void *c) {
-    int *cost = (int *)c;
-    *cost += node->EstimateCost();
+lCostCallbackPre(ASTNode *node, void *d) {
+    CostData *data = (CostData *)d;
+    if (dynamic_cast<ForeachStmt *>(node) != NULL)
+        ++data->foreachDepth;
+    if (data->foreachDepth == 0)
+        data->cost += node->EstimateCost();
     return true;
+}
+
+
+static ASTNode *
+lCostCallbackPost(ASTNode *node, void *d) {
+    CostData *data = (CostData *)d;
+    if (dynamic_cast<ForeachStmt *>(node) != NULL)
+        --data->foreachDepth;
+    return node;
 }
 
 
 int
 EstimateCost(ASTNode *root) {
-    int cost = 0;
-    WalkAST(root, lCostCallback, NULL, &cost);
-    return cost;
+    CostData data;
+    WalkAST(root, lCostCallbackPre, lCostCallbackPost, &data);
+    return data.cost;
 }
 
 
@@ -359,6 +381,16 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         // We definitely don't want to run the uniform variants of these if
         // the mask is all off.  It's also worth skipping the overhead of
         // executing the varying versions of them in the all-off mask case.
+        *okPtr = false;
+        return false;
+    }
+
+    if (dynamic_cast<ForeachStmt *>(node) != NULL) {
+        // foreach() statements also shouldn't be run with an all-off mask.
+        // Since they re-establish an 'all on' mask, this would be pretty
+        // unintuitive.  (More generally, it's possibly a little strange to
+        // allow foreach() in the presence of any non-uniform control
+        // flow...)
         *okPtr = false;
         return false;
     }

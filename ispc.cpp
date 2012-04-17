@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -70,9 +70,88 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
+#ifndef ISPC_IS_WINDOWS
+static void __cpuid(int info[4], int infoType) {
+    __asm__ __volatile__ ("cpuid"
+                          : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
+                          : "0" (infoType));
+}
+
+/* Save %ebx in case it's the PIC register */
+static void __cpuidex(int info[4], int level, int count) {
+  __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
+                        "cpuid\n\t"
+                        "xchg{l}\t{%%}ebx, %1\n\t"
+                        : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
+                        : "0" (level), "2" (count));
+}
+#endif // ISPC_IS_WINDOWS
+
+
+static const char *
+lGetSystemISA() {
+    int info[4];
+    __cpuid(info, 1);
+
+    if ((info[2] & (1 << 28)) != 0) {
+        // AVX1 for sure. Do we have AVX2?
+        // Call cpuid with eax=7, ecx=0
+        __cpuidex(info, 7, 0);
+        if ((info[1] & (1 << 5)) != 0)
+            return "avx2";
+        else
+            return "avx";
+    }
+    else if ((info[2] & (1 << 19)) != 0)
+        return "sse4";
+    else if ((info[3] & (1 << 26)) != 0)
+        return "sse2";
+    else {
+        fprintf(stderr, "Unable to detect supported SSE/AVX ISA.  Exiting.\n");
+        exit(1);
+    }
+}
+
+
+static const char *supportedCPUs[] = { 
+    "atom", "penryn", "core2", "corei7",
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+    "corei7-avx"
+#endif
+};
+
+
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   bool pic, Target *t) {
+    if (isa == NULL) {
+        if (cpu != NULL) {
+            // If a CPU was specified explicitly, try to pick the best
+            // possible ISA based on that.
+#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
+            if (!strcmp(cpu, "sandybridge") ||
+                !strcmp(cpu, "corei7-avx"))
+                isa = "avx";
+            else
+#endif
+                  if (!strcmp(cpu, "corei7") ||
+                      !strcmp(cpu, "penryn"))
+                isa = "sse4";
+            else
+                isa = "sse2";
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using ISA \"%s\" based on specified CPU \"%s\".\n", isa,
+                    cpu);
+        }
+        else {
+            // No CPU and no ISA, so use CPUID to figure out what this CPU
+            // supports.
+            isa = lGetSystemISA();
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using system ISA \"%s\".\n", isa);
+        }
+    }
+
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
@@ -82,19 +161,24 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
             cpu = "generic";
         }
     }
+    else {
+        bool foundCPU = false;
+        for (int i = 0; i < int(sizeof(supportedCPUs) / sizeof(supportedCPUs[0])); 
+             ++i) {
+            if (!strcmp(cpu, supportedCPUs[i])) {
+                foundCPU = true;
+                break;
+            }
+        }
+        if (foundCPU == false) {
+            fprintf(stderr, "Error: CPU type \"%s\" unknown. Supported CPUs: "
+                    "%s.\n", cpu, SupportedTargetCPUs().c_str());
+            return false;
+        }
+    }
+
     t->cpu = cpu;
 
-    if (isa == NULL) {
-        if (!strcasecmp(cpu, "atom"))
-            isa = "sse2";
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        else if (!strcasecmp(cpu, "sandybridge") ||
-                 !strcasecmp(cpu, "corei7-avx"))
-            isa = "avx";
-#endif // LLVM_3_0
-        else
-            isa = "sse4";
-    }
     if (arch == NULL)
         arch = "x86-64";
 
@@ -249,17 +333,16 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 }
 
 
-const char *
+std::string
 Target::SupportedTargetCPUs() {
-    return "atom, barcelona, core2, corei7, "
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        "corei7-avx, "
-#endif
-        "istanbul, nocona, penryn, "
-#ifdef LLVM_2_9
-        "sandybridge, "
-#endif
-        "westmere";
+    std::string ret;
+    int count = sizeof(supportedCPUs) / sizeof(supportedCPUs[0]);
+    for (int i = 0; i < count; ++i) {
+        ret += supportedCPUs[i];
+        if (i != count - 1)
+            ret += ", ";
+    }
+    return ret;
 }
 
 
@@ -318,8 +401,15 @@ Target::GetTargetMachine() const {
 #if defined(LLVM_3_1svn)
     std::string featuresString = attributes;
     llvm::TargetOptions options;
+#if 0
+    // This was breaking e.g. round() on SSE2, where the code we want to
+    // run wants to do:
+    // x += 0x1.0p23f;
+    // x -= 0x1.0p23f;
+    // But then LLVM was optimizing this away...
     if (g->opt.fastMath == true)
         options.UnsafeFPMath = 1;
+#endif
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, options,
                                     relocModel);
@@ -367,7 +457,7 @@ Target::GetISAString() const {
 
 
 static bool
-lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
+lGenericTypeLayoutIndeterminate(llvm::Type *type) {
     if (type->isPrimitiveType() || type->isIntegerTy())
         return false;
 
@@ -376,18 +466,18 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         type == LLVMTypes::Int1VectorType)
         return true;
 
-    LLVM_TYPE_CONST llvm::ArrayType *at = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
+    llvm::ArrayType *at = 
+        llvm::dyn_cast<llvm::ArrayType>(type);
     if (at != NULL)
         return lGenericTypeLayoutIndeterminate(at->getElementType());
 
-    LLVM_TYPE_CONST llvm::PointerType *pt = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+    llvm::PointerType *pt = 
+        llvm::dyn_cast<llvm::PointerType>(type);
     if (pt != NULL)
         return false;
 
-    LLVM_TYPE_CONST llvm::StructType *st =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    llvm::StructType *st =
+        llvm::dyn_cast<llvm::StructType>(type);
     if (st != NULL) {
         for (int i = 0; i < (int)st->getNumElements(); ++i)
             if (lGenericTypeLayoutIndeterminate(st->getElementType(i)))
@@ -395,18 +485,18 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         return false;
     }
 
-    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type));
+    Assert(llvm::isa<llvm::VectorType>(type));
     return true;
 }
 
 
 llvm::Value *
-Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type, 
+Target::SizeOf(llvm::Type *type, 
                llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = { LLVMInt32(1) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
@@ -428,7 +518,9 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
+    uint64_t bitSize = td->getTypeSizeInBits(type);
+    Assert((bitSize % 8) == 0);
+    uint64_t byteSize = bitSize / 8;
     if (is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
     else
@@ -437,12 +529,12 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
 
 llvm::Value *
-Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
+Target::StructOffset(llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC && 
         lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
 #if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
@@ -464,8 +556,8 @@ Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    LLVM_TYPE_CONST llvm::StructType *structType = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    llvm::StructType *structType = 
+        llvm::dyn_cast<llvm::StructType>(type);
     Assert(structType != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
     Assert(sl != NULL);

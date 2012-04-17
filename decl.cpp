@@ -33,7 +33,7 @@
 
 /** @file decl.cpp
     @brief Implementations of classes related to turning declarations into 
-           symbols and types.
+           symbol names and types.
 */
 
 #include "decl.h"
@@ -44,6 +44,7 @@
 #include "stmt.h"
 #include "expr.h"
 #include <stdio.h>
+#include <string.h>
 #include <set>
 
 static void
@@ -55,6 +56,7 @@ lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_TASK)      printf("task ");
     if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
+    if (typeQualifiers & TYPEQUAL_EXPORT)    printf("export ");
 }
 
 
@@ -188,7 +190,6 @@ lGetStorageClassName(StorageClass storageClass) {
     case SC_NONE:     return "";
     case SC_EXTERN:   return "extern";
     case SC_EXTERN_C: return "extern \"C\"";
-    case SC_EXPORT:   return "export";
     case SC_STATIC:   return "static";
     case SC_TYPEDEF:  return "typedef";
     default:          FATAL("Unhandled storage class in lGetStorageClassName");
@@ -217,36 +218,30 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p)
     : pos(p), kind(dk) { 
     child = NULL;
     typeQualifiers = 0;
+    storageClass = SC_NONE;
     arraySize = -1;
-    sym = NULL;
+    type = NULL;
     initExpr = NULL;
 }
 
 
 void
 Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
-    const Type *t = GetType(ds);
-    if (t == NULL) {
+    const Type *baseType = ds->GetBaseType(pos);
+    InitFromType(baseType, ds);
+
+    if (type == NULL) {
         Assert(m->errorCount > 0);
         return;
     }
 
-    Symbol *sym = GetSymbol();
-    if (sym != NULL) {
-        sym->type = t;
-        sym->storageClass = ds->storageClass;
+    storageClass = ds->storageClass;
+
+    if (ds->declSpecList.size() > 0 && 
+        dynamic_cast<const FunctionType *>(type) == NULL) {
+        Error(pos, "__declspec specifiers for non-function type \"%s\" are "
+              "not used.", type->GetString().c_str());
     }
-}
-
-
-Symbol *
-Declarator::GetSymbol() const {
-    // The symbol lives at the last child in the chain, so walk down there
-    // and return the one there.
-    const Declarator *d = this;
-    while (d->child != NULL)
-        d = d->child;
-    return d->sym;
 }
 
 
@@ -256,11 +251,11 @@ Declarator::Print(int indent) const {
     pos.Print();
 
     lPrintTypeQualifiers(typeQualifiers);
-    Symbol *sym = GetSymbol();
-    if (sym != NULL)
-        printf("%s", sym->name.c_str());
+    printf("%s ", lGetStorageClassName(storageClass));
+    if (name.size() > 0)
+        printf("%s", name.c_str());
     else
-        printf("(null symbol)");
+        printf("(unnamed)");
 
     printf(", array size = %d", arraySize);
 
@@ -294,66 +289,26 @@ Declarator::Print(int indent) const {
 }
 
 
-Symbol *
-Declarator::GetFunctionInfo(DeclSpecs *ds, std::vector<Symbol *> *funArgs) {
-    const FunctionType *type = 
-        dynamic_cast<const FunctionType *>(GetType(ds));
-    if (type == NULL)
-        return NULL;
-
-    Symbol *declSym = GetSymbol();
-    Assert(declSym != NULL);
-
-    // Get the symbol for the function from the symbol table.  (It should
-    // already have been added to the symbol table by AddGlobal() by the
-    // time we get here.)
-    Symbol *funSym = m->symbolTable->LookupFunction(declSym->name.c_str(), type);
-    if (funSym == NULL)
-        // May be NULL due to error earlier in compilation
-        Assert(m->errorCount > 0);
-    else
-        funSym->pos = pos;
-
-    // Walk down to the declarator for the function.  (We have to get past
-    // the stuff that specifies the function's return type before we get to
-    // the function's declarator.)
-    Declarator *d = this;
-    while (d != NULL && d->kind != DK_FUNCTION)
-        d = d->child;
-    Assert(d != NULL);
-
-    for (unsigned int i = 0; i < d->functionParams.size(); ++i) {
-        Symbol *sym = d->GetSymbolForFunctionParameter(i);
-        if (sym->type == NULL) {
-            Assert(m->errorCount > 0);
-            continue;
-        }
-        else
-            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
-
-        funArgs->push_back(sym);
-    }
-
-    if (funSym != NULL)
-        funSym->type = funSym->type->ResolveUnboundVariability(Variability::Varying);
-
-    return funSym;
-}
-
-
-const Type *
-Declarator::GetType(const Type *base, DeclSpecs *ds) const {
+void
+Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool hasUniformQual = ((typeQualifiers & TYPEQUAL_UNIFORM) != 0);
     bool hasVaryingQual = ((typeQualifiers & TYPEQUAL_VARYING) != 0);
     bool isTask =         ((typeQualifiers & TYPEQUAL_TASK) != 0);
+    bool isExported =     ((typeQualifiers & TYPEQUAL_EXPORT) != 0);
     bool isConst =        ((typeQualifiers & TYPEQUAL_CONST) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
         Error(pos, "Can't provide both \"uniform\" and \"varying\" qualifiers.");
-        return NULL;
+        return;
     }
-    if (kind != DK_FUNCTION && isTask)
+    if (kind != DK_FUNCTION && isTask) {
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
+        return;
+    }
+    if (kind != DK_FUNCTION && isExported) {
+        Error(pos, "\"export\" qualifier illegal in variable declaration.");
+        return;
+    }
 
     Variability variability(Variability::Unbound);
     if (hasUniformQual)
@@ -361,69 +316,79 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
     else if (hasVaryingQual)
         variability = Variability::Varying;
 
-    const Type *type = base;
-    switch (kind) {
-    case DK_BASE:
+    if (kind == DK_BASE) {
         // All of the type qualifiers should be in the DeclSpecs for the
         // base declarator
         Assert(typeQualifiers == 0);
         Assert(child == NULL);
-        return type;
-
-    case DK_POINTER:
+        type = baseType;
+    }
+    else if (kind == DK_POINTER) {
         /* For now, any pointer to an SOA type gets the slice property; if
            we add the capability to declare pointers as slices or not,
            we'll want to set this based on a type qualifier here. */
-        type = new PointerType(type, variability, isConst, type->IsSOAType());
-        if (child != NULL)
-            return child->GetType(type, ds);
+        const Type *ptrType = new PointerType(baseType, variability, isConst,
+                                              baseType->IsSOAType());
+        if (child != NULL) {
+            child->InitFromType(ptrType, ds);
+            type = child->type;
+            name = child->name;
+        }
         else
-            return type;
-        break;
-
-    case DK_REFERENCE:
-        if (hasUniformQual)
+            type = ptrType;
+    }
+    else if (kind == DK_REFERENCE) {
+        if (hasUniformQual) {
             Error(pos, "\"uniform\" qualifier is illegal to apply to references.");
-        if (hasVaryingQual)
+            return;
+        }
+        if (hasVaryingQual) {
             Error(pos, "\"varying\" qualifier is illegal to apply to references.");
-        if (isConst)
+            return;
+        }
+        if (isConst) {
             Error(pos, "\"const\" qualifier is to illegal apply to references.");
-
+            return;
+        }
         // The parser should disallow this already, but double check.
-        if (dynamic_cast<const ReferenceType *>(type) != NULL) {
+        if (dynamic_cast<const ReferenceType *>(baseType) != NULL) {
             Error(pos, "References to references are illegal.");
-            return NULL;
+            return;
         }
 
-        type = new ReferenceType(type);
-        if (child != NULL)
-            return child->GetType(type, ds);
+        const Type *refType = new ReferenceType(baseType);
+        if (child != NULL) {
+            child->InitFromType(refType, ds);
+            type = child->type;
+            name = child->name;
+        }
         else
-            return type;
-        break;
-
-    case DK_ARRAY:
-        if (Type::Equal(type, AtomicType::Void)) {
+            type = refType;
+    }
+    else if (kind == DK_ARRAY) {
+        if (Type::Equal(baseType, AtomicType::Void)) {
             Error(pos, "Arrays of \"void\" type are illegal.");
-            return NULL;
+            return;
         }
-        if (dynamic_cast<const ReferenceType *>(type)) {
+        if (dynamic_cast<const ReferenceType *>(baseType)) {
             Error(pos, "Arrays of references (type \"%s\") are illegal.",
-                  type->GetString().c_str());
-            return NULL;
+                  baseType->GetString().c_str());
+            return;
         }
 
-        type = new ArrayType(type, arraySize);
-        if (child)
-            return child->GetType(type, ds);
+        const Type *arrayType = new ArrayType(baseType, arraySize);
+        if (child != NULL) {
+            child->InitFromType(arrayType, ds);
+            type = child->type;
+            name = child->name;
+        }
         else
-            return type;
-        break;
-
-    case DK_FUNCTION: {
+            type = arrayType;
+    }
+    else if (kind == DK_FUNCTION) {
         std::vector<const Type *> args;
         std::vector<std::string> argNames;
-        std::vector<ConstExpr *> argDefaults;
+        std::vector<Expr *> argDefaults;
         std::vector<SourcePos> argPos;
 
         // Loop over the function arguments and store the names, types,
@@ -432,20 +397,44 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
         for (unsigned int i = 0; i < functionParams.size(); ++i) {
             Declaration *d = functionParams[i];
 
-            Symbol *sym = GetSymbolForFunctionParameter(i);
-
-            if (d->declSpecs->storageClass != SC_NONE)
-                Error(sym->pos, "Storage class \"%s\" is illegal in "
-                      "function parameter declaration for parameter \"%s\".", 
-                      lGetStorageClassName(d->declSpecs->storageClass),
-                      sym->name.c_str());
-            if (Type::Equal(sym->type, AtomicType::Void)) {
-                Error(sym->pos, "Parameter with type \"void\" illegal in function "
-                      "parameter list.");
-                sym->type = NULL;
+            if (d == NULL) {
+                Assert(m->errorCount > 0);
+                continue;
+            }
+            if (d->declarators.size() == 0) {
+                // function declaration like foo(float), w/o a name for the
+                // parameter; wire up a placeholder Declarator for it
+                d->declarators.push_back(new Declarator(DK_BASE, pos));
+                d->declarators[0]->InitFromDeclSpecs(d->declSpecs);
             }
 
-            const ArrayType *at = dynamic_cast<const ArrayType *>(sym->type);
+            Assert(d->declarators.size() == 1);
+            Declarator *decl = d->declarators[0];
+            if (decl == NULL || decl->type == NULL) {
+                Assert(m->errorCount > 0);
+                continue;
+            }
+
+            if (decl->name == "") {
+                // Give a name to any anonymous parameter declarations
+                char buf[32];
+                sprintf(buf, "__anon_parameter_%d", i);
+                decl->name = buf;
+            }
+            decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+
+            if (d->declSpecs->storageClass != SC_NONE)
+                Error(decl->pos, "Storage class \"%s\" is illegal in "
+                      "function parameter declaration for parameter \"%s\".", 
+                      lGetStorageClassName(d->declSpecs->storageClass),
+                      decl->name.c_str());
+            if (Type::Equal(decl->type, AtomicType::Void)) {
+                Error(decl->pos, "Parameter with type \"void\" illegal in function "
+                      "parameter list.");
+                decl->type = NULL;
+            }
+
+            const ArrayType *at = dynamic_cast<const ArrayType *>(decl->type);
             if (at != NULL) {
                 // As in C, arrays are passed to functions as pointers to
                 // their element type.  We'll just immediately make this
@@ -455,93 +444,94 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
                 // report this differently than it was originally declared
                 // in the function, but it's not clear that this is a
                 // significant problem.)
-                if (at->GetElementType() == NULL) {
+                const Type *targetType = at->GetElementType();
+                if (targetType == NULL) {
                     Assert(m->errorCount > 0);
-                    return NULL;
+                    return;
                 }
 
-                const Type *targetType = at->GetElementType();
-                targetType = 
-                    targetType->ResolveUnboundVariability(Variability::Varying);
-                sym->type = PointerType::GetUniform(targetType);
+                decl->type = PointerType::GetUniform(targetType);
 
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
-                at = dynamic_cast<const ArrayType *>(at->GetElementType());
+                at = dynamic_cast<const ArrayType *>(targetType);
                 while (at != NULL) {
                     if (at->GetElementCount() == 0)
-                        Error(sym->pos, "Arrays with unsized dimensions in "
+                        Error(decl->pos, "Arrays with unsized dimensions in "
                               "dimensions after the first one are illegal in "
                               "function parameter lists.");
                     at = dynamic_cast<const ArrayType *>(at->GetElementType());
                 }
             }
 
-            args.push_back(sym->type);
-            argNames.push_back(sym->name);
-            argPos.push_back(sym->pos);
+            args.push_back(decl->type);
+            argNames.push_back(decl->name);
+            argPos.push_back(decl->pos);
 
-            ConstExpr *init = NULL;
-            if (d->declarators.size()) {
-                // Try to find an initializer expression; if there is one,
-                // it lives down to the base declarator.
-                Declarator *decl = d->declarators[0];
-                while (decl->child != NULL) {
-                    Assert(decl->initExpr == NULL);
+            Expr *init = NULL;
+            // Try to find an initializer expression.
+            while (decl != NULL) {
+                if (decl->initExpr != NULL) {
+                    decl->initExpr = TypeCheck(decl->initExpr);
+                    decl->initExpr = Optimize(decl->initExpr);
+                    if (decl->initExpr != NULL) {
+                        init = dynamic_cast<ConstExpr *>(decl->initExpr);
+                        if (init == NULL)
+                            init = dynamic_cast<NullPointerExpr *>(decl->initExpr);
+                        if (init == NULL)
+                            Error(decl->initExpr->pos, "Default value for parameter "
+                                  "\"%s\" must be a compile-time constant.", 
+                                  decl->name.c_str());
+                    }
+                    break;
+                }
+                else
                     decl = decl->child;
-                }
-
-                if (decl->initExpr != NULL &&
-                    (decl->initExpr = TypeCheck(decl->initExpr)) != NULL &&
-                    (decl->initExpr = Optimize(decl->initExpr)) != NULL &&
-                    (init = dynamic_cast<ConstExpr *>(decl->initExpr)) == NULL) {
-                    Error(decl->initExpr->pos, "Default value for parameter "
-                          "\"%s\" must be a compile-time constant.", 
-                          sym->name.c_str());
-                }
             }
             argDefaults.push_back(init);
         }
 
-        const Type *returnType = type;
+        const Type *returnType = baseType;
         if (returnType == NULL) {
             Error(pos, "No return type provided in function declaration.");
-            return NULL;
+            return;
         }
+
         if (dynamic_cast<const FunctionType *>(returnType) != NULL) {
             Error(pos, "Illegal to return function type from function.");
-            return NULL;
+            return;
         }
         
-        bool isExported = ds && (ds->storageClass == SC_EXPORT);
+        returnType = returnType->ResolveUnboundVariability(Variability::Varying);
+
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
+        bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
                   "qualifiers");
-            return NULL;
+            return;
         }
         if (isExternC && isTask) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
                   "qualifiers");
-            return NULL;
+            return;
         }
         if (isExternC && isExported) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
                   "qualifiers");
-            return NULL;
+            return;
         }
 
         if (child == NULL) {
             Assert(m->errorCount > 0);
-            return NULL;
+            return;
         }
 
         const FunctionType *functionType = 
             new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC);
-        functionType = functionType->ResolveUnboundVariability(Variability::Varying);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {
@@ -563,11 +553,9 @@ Declarator::GetType(const Type *base, DeclSpecs *ds) const {
             }
         }
 
-        return child->GetType(functionType, ds);
-    }
-    default:
-        FATAL("Unexpected decl kind");
-        return NULL;
+        child->InitFromType(functionType, ds);
+        type = child->type;
+        name = child->name;
     }
 }
 
@@ -646,27 +634,23 @@ Declaration::GetVariableDeclarations() const {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL) {
+        if (decl == NULL || decl->type == NULL) {
             // Ignore earlier errors
             Assert(m->errorCount > 0);
             continue;
         }
 
-        Symbol *sym = decl->GetSymbol();
-        if (sym == NULL || sym->type == NULL) {
-            // Ignore errors
-            Assert(m->errorCount > 0);
-            continue;
-        }
-        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
-
-        if (Type::Equal(sym->type, AtomicType::Void))
-            Error(sym->pos, "\"void\" type variable illegal in declaration.");
-        else if (dynamic_cast<const FunctionType *>(sym->type) == NULL) {
+        if (Type::Equal(decl->type, AtomicType::Void))
+            Error(decl->pos, "\"void\" type variable illegal in declaration.");
+        else if (dynamic_cast<const FunctionType *>(decl->type) == NULL) {
+            decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+            Symbol *sym = new Symbol(decl->name, decl->pos, decl->type,
+                                     decl->storageClass);
             m->symbolTable->AddVariable(sym);
             vars.push_back(VariableDeclaration(sym, decl->initExpr));
         }
     }
+
     return vars;
 }
 
@@ -677,25 +661,20 @@ Declaration::DeclareFunctions() {
 
     for (unsigned int i = 0; i < declarators.size(); ++i) {
         Declarator *decl = declarators[i];
-        if (decl == NULL) {
+        if (decl == NULL || decl->type == NULL) {
             // Ignore earlier errors
             Assert(m->errorCount > 0);
             continue;
         }
 
-        Symbol *sym = decl->GetSymbol();
-        if (sym == NULL || sym->type == NULL) {
-            // Ignore errors
-            Assert(m->errorCount > 0);
-            continue;
-        }
-        sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
-
-        if (dynamic_cast<const FunctionType *>(sym->type) == NULL)
+        const FunctionType *ftype = 
+            dynamic_cast<const FunctionType *>(decl->type);
+        if (ftype == NULL)
             continue;
 
         bool isInline = (declSpecs->typeQualifiers & TYPEQUAL_INLINE);
-        m->AddFunctionDeclaration(sym, isInline);
+        m->AddFunctionDeclaration(decl->name, ftype, decl->storageClass,
+                                  isInline, decl->pos);
     }
 }
 
@@ -708,6 +687,7 @@ Declaration::Print(int indent) const {
     for (unsigned int i = 0 ; i < declarators.size(); ++i)
         declarators[i]->Print(indent+4);
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -725,38 +705,42 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
         // FIXME: making this fake little DeclSpecs here is really
         // disgusting
         DeclSpecs ds(type);
-        if (type->IsUniformType()) 
-            ds.typeQualifiers |= TYPEQUAL_UNIFORM;
-        else if (type->IsVaryingType())
-            ds.typeQualifiers |= TYPEQUAL_VARYING;
+        if (Type::Equal(type, AtomicType::Void) == false) {
+            if (type->IsUniformType()) 
+                ds.typeQualifiers |= TYPEQUAL_UNIFORM;
+            else if (type->IsVaryingType())
+                ds.typeQualifiers |= TYPEQUAL_VARYING;
+            else if (type->GetSOAWidth() != 0)
+                ds.soaWidth = type->GetSOAWidth();
+            // FIXME: ds.vectorSize?
+        }
 
         for (unsigned int j = 0; j < sd[i]->declarators->size(); ++j) {
             Declarator *d = (*sd[i]->declarators)[j];
             d->InitFromDeclSpecs(&ds);
 
-            Symbol *sym = d->GetSymbol();
-
-            if (Type::Equal(sym->type, AtomicType::Void))
+            if (Type::Equal(d->type, AtomicType::Void))
                 Error(d->pos, "\"void\" type illegal for struct member.");
 
-            const ArrayType *arrayType = 
-                dynamic_cast<const ArrayType *>(sym->type);
-            if (arrayType != NULL && arrayType->GetElementCount() == 0) {
-                Error(d->pos, "Unsized arrays aren't allowed in struct "
-                      "definitions.");
-                elementTypes->push_back(NULL);
-            }
-            else
-                elementTypes->push_back(sym->type);
+            elementTypes->push_back(d->type);
 
-            if (seenNames.find(sym->name) != seenNames.end())
+            if (seenNames.find(d->name) != seenNames.end())
                 Error(d->pos, "Struct member \"%s\" has same name as a "
-                      "previously-declared member.", sym->name.c_str());
+                      "previously-declared member.", d->name.c_str());
             else
-                seenNames.insert(sym->name);
+                seenNames.insert(d->name);
 
-            elementNames->push_back(sym->name);
-            elementPositions->push_back(sym->pos);
+            elementNames->push_back(d->name);
+            elementPositions->push_back(d->pos);
         }
+    }
+
+    for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
+        const ArrayType *arrayType = 
+            dynamic_cast<const ArrayType *>((*elementTypes)[i]);
+
+        if (arrayType != NULL && arrayType->GetElementCount() == 0)
+            Error((*elementPositions)[i], "Unsized arrays aren't allowed except "
+                  "for the last member in a struct definition.");
     }
 }

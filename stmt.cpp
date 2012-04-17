@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,7 @@
 #include "util.h"
 #include "expr.h"
 #include "type.h"
+#include "func.h"
 #include "sym.h"
 #include "module.h"
 #include "llvmutil.h"
@@ -167,14 +168,28 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         // References must have initializer expressions as well.
-        if (dynamic_cast<const ReferenceType *>(sym->type) && initExpr == NULL) {
-            Error(sym->pos,
-                  "Must provide initializer for reference-type variable \"%s\".",
-                  sym->name.c_str());
-            continue;
+        if (IsReferenceType(sym->type) == true) {
+            if (initExpr == NULL) {
+                Error(sym->pos, "Must provide initializer for reference-type "
+                      "variable \"%s\".", sym->name.c_str());
+                continue;
+            }
+            if (IsReferenceType(initExpr->GetType()) == false) {
+                const Type *initLVType = initExpr->GetLValueType();
+                if (initLVType == NULL) {
+                    Error(initExpr->pos, "Initializer for reference-type variable "
+                          "\"%s\" must have an lvalue type.", sym->name.c_str());
+                    continue;
+                }
+                if (initLVType->IsUniformType() == false) {
+                    Error(initExpr->pos, "Initializer for reference-type variable "
+                          "\"%s\" must have a uniform lvalue type.", sym->name.c_str());
+                    continue;
+                }
+            }
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+        llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return;
@@ -2173,8 +2188,8 @@ SwitchStmt::EstimateCost() const {
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *v, bool cc, SourcePos p) 
-    : Stmt(p), val(v), 
+ReturnStmt::ReturnStmt(Expr *e, bool cc, SourcePos p) 
+    : Stmt(p), expr(e), 
       doCoherenceCheck(cc && !g->opt.disableCoherentControlFlow) {
 }
 
@@ -2189,8 +2204,29 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
     }
 
+    // Make sure we're not trying to return a reference to something where
+    // that doesn't make sense
+    const Function *func = ctx->GetFunction();
+    const Type *returnType = func->GetReturnType();
+    if (IsReferenceType(returnType) == true &&
+        IsReferenceType(expr->GetType()) == false) {
+        const Type *lvType = expr->GetLValueType();
+        if (lvType == NULL) {
+            Error(expr->pos, "Illegal to return non-lvalue from function "
+                  "returning reference type \"%s\".",
+                  returnType->GetString().c_str());
+            return;
+        }
+        else if (lvType->IsUniformType() == false) {
+            Error(expr->pos, "Illegal to return varying lvalue type from "
+                  "function returning a reference type \"%s\".",
+                  returnType->GetString().c_str());
+            return;
+        }
+    }
+
     ctx->SetDebugPos(pos);
-    ctx->CurrentLanesReturned(val, doCoherenceCheck);
+    ctx->CurrentLanesReturned(expr, doCoherenceCheck);
 }
 
 
@@ -2210,7 +2246,8 @@ void
 ReturnStmt::Print(int indent) const {
     printf("%*c%sReturn Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
     pos.Print();
-    if (val) val->Print();
+    if (expr)
+        expr->Print();
     else printf("(void)");
     printf("\n");
 }
@@ -2228,6 +2265,9 @@ GotoStmt::GotoStmt(const char *l, SourcePos gotoPos, SourcePos ip)
 
 void
 GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     if (ctx->VaryingCFDepth() > 0) {
         Error(pos, "\"goto\" statements are only legal under \"uniform\" "
               "control flow.");
@@ -2457,7 +2497,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     else {
         argTypes.push_back(t);
 
-        LLVM_TYPE_CONST llvm::Type *llvmExprType = type->LLVMType(g->ctx);
+        llvm::Type *llvmExprType = type->LLVMType(g->ctx);
         llvm::Value *ptr = ctx->AllocaInst(llvmExprType, "print_arg");
         llvm::Value *val = expr->GetValue(ctx);
         if (!val)
@@ -2478,6 +2518,9 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
  */
 void
 PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     ctx->SetDebugPos(pos);
 
     // __do_print takes 5 arguments; we'll get them stored in the args[] array
@@ -2494,7 +2537,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::string argTypes;
 
     if (values == NULL) {
-        LLVM_TYPE_CONST llvm::Type *ptrPtrType = 
+        llvm::Type *ptrPtrType = 
             llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
         args[4] = llvm::Constant::getNullValue(ptrPtrType);
     }
@@ -2506,7 +2549,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         int nArgs = elist ? elist->exprs.size() : 1;
 
         // Allocate space for the array of pointers to values to be printed 
-        LLVM_TYPE_CONST llvm::Type *argPtrArrayType = 
+        llvm::Type *argPtrArrayType = 
             llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
         llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType,
                                                    "print_arg_ptrs");
@@ -2583,6 +2626,9 @@ AssertStmt::AssertStmt(const std::string &msg, Expr *e, SourcePos p)
 
 void
 AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     if (expr == NULL)
         return;
     const Type *type = expr->GetType();
@@ -2658,6 +2704,9 @@ DeleteStmt::DeleteStmt(Expr *e, SourcePos p)
 
 void
 DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL)) {
         Assert(m->errorCount > 0);
@@ -2774,7 +2823,7 @@ CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
     Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
     std::vector<Symbol *> mmFuns;
     m->symbolTable->LookupFunction("__movmsk", &mmFuns);
-    Assert(mmFuns.size() == 2);
+    Assert(mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
     FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
                                                             pos);
     ExprList *movmskArgs = new ExprList(maskVecExpr, pos);

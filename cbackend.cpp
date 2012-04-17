@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLVM_2_9
-#warning "The C++ backend isn't supported when building with LLVM 2.9"
-#else
+#include <stdio.h>
 
 #ifndef _MSC_VER
 #include <inttypes.h>
@@ -930,6 +928,20 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
       printConstant(CDS->getElementAsConstant(i), Static);
     }
   }
+}
+#endif // LLVM_3_1svn
+
+#ifdef LLVM_3_1svn
+static inline std::string ftostr(const APFloat& V) {
+  std::string Buf;
+  if (&V.getSemantics() == &APFloat::IEEEdouble) {
+    raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &APFloat::IEEEsingle) {
+    raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+  return "<unknown format in ftostr>"; // error
 }
 #endif // LLVM_3_1svn
 
@@ -2071,69 +2083,16 @@ bool CWriter::doInitialization(Module &M) {
 
   Out << "#include \"" << includeName << "\"\n";
 
-  generateCompilerSpecificCode(Out, TD);
-
-  // Function declarations
-  Out << "\n/* Function Declarations */\n";
+  Out << "\n/* Basic Library Function Declarations */\n";
   Out << "extern \"C\" {\n";
   Out << "int puts(unsigned char *);\n";
   Out << "unsigned int putchar(unsigned int);\n";
   Out << "int fflush(void *);\n";
   Out << "int printf(const unsigned char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+  Out << "}\n\n";
 
-  // Store the intrinsics which will be declared/defined below.
-  SmallVector<const Function*, 8> intrinsicsToDefine;
-
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    // Don't print declarations for intrinsic functions.
-    // Store the used intrinsics, which need to be explicitly defined.
-    if (I->isIntrinsic()) {
-      switch (I->getIntrinsicID()) {
-        default:
-          break;
-        case Intrinsic::uadd_with_overflow:
-        case Intrinsic::sadd_with_overflow:
-          intrinsicsToDefine.push_back(I);
-          break;
-      }
-      continue;
-    }
-
-    if (I->getName() == "setjmp" || I->getName() == "abort" ||
-        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
-        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
-        I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" || I->getName() == "malloc" ||
-        I->getName() == "free")
-      continue;
-
-    // Don't redeclare ispc's own intrinsics
-    std::string name = I->getName();
-    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
-        continue;
-
-    if (I->hasExternalWeakLinkage())
-      Out << "extern ";
-    printFunctionSignature(I, true);
-    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
-      Out << " __ATTRIBUTE_WEAK__";
-    if (I->hasExternalWeakLinkage())
-      Out << " __EXTERNAL_WEAK__";
-    if (StaticCtors.count(I))
-      Out << " __ATTRIBUTE_CTOR__";
-    if (StaticDtors.count(I))
-      Out << " __ATTRIBUTE_DTOR__";
-    if (I->hasHiddenVisibility())
-      Out << " __HIDDEN__";
-
-    if (I->hasName() && I->getName()[0] == 1)
-      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
-
-    Out << ";\n";
-  }
-  Out << "}\n";
+  generateCompilerSpecificCode(Out, TD);
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
   Out << "\n"
@@ -2302,6 +2261,63 @@ bool CWriter::doInitialization(Module &M) {
         Out << ";\n";
       }
   }
+
+  // Function declarations
+  Out << "\n/* Function Declarations */\n";
+  Out << "extern \"C\" {\n";
+
+  // Store the intrinsics which will be declared/defined below.
+  SmallVector<const Function*, 8> intrinsicsToDefine;
+
+  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+    // Don't print declarations for intrinsic functions.
+    // Store the used intrinsics, which need to be explicitly defined.
+    if (I->isIntrinsic()) {
+      switch (I->getIntrinsicID()) {
+        default:
+          break;
+        case Intrinsic::uadd_with_overflow:
+        case Intrinsic::sadd_with_overflow:
+          intrinsicsToDefine.push_back(I);
+          break;
+      }
+      continue;
+    }
+
+    if (I->getName() == "setjmp" || I->getName() == "abort" ||
+        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
+        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
+        I->getName() == "puts" ||
+        I->getName() == "printf" || I->getName() == "putchar" ||
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
+      continue;
+
+    // Don't redeclare ispc's own intrinsics
+    std::string name = I->getName();
+    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
+        continue;
+
+    if (I->hasExternalWeakLinkage())
+      Out << "extern ";
+    printFunctionSignature(I, true);
+    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
+      Out << " __ATTRIBUTE_WEAK__";
+    if (I->hasExternalWeakLinkage())
+      Out << " __EXTERNAL_WEAK__";
+    if (StaticCtors.count(I))
+      Out << " __ATTRIBUTE_CTOR__";
+    if (StaticDtors.count(I))
+      Out << " __ATTRIBUTE_DTOR__";
+    if (I->hasHiddenVisibility())
+      Out << " __HIDDEN__";
+
+    if (I->hasName() && I->getName()[0] == 1)
+      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
+
+    Out << ";\n";
+  }
+  Out << "}\n\n";
 
   if (!M.empty())
     Out << "\n\n/* Function Bodies */\n";
@@ -4442,5 +4458,3 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
 
     return true;
 }
-
-#endif // LLVM_2_9

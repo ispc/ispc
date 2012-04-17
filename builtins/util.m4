@@ -2880,11 +2880,11 @@ define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets, i32
   %newDelta = load <$1 x i32> * %deltaPtr
 
   %ret0 = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %newOffsets,
-                                            i32 %offset_scale, <$1 x i32> %offset_delta,
+                                            i32 %offset_scale, <$1 x i32> %newDelta,
                                             <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
           `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, 
-                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x i32> %offset_delta,
+                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x i32> %newDelta,
                                 <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -59,30 +59,33 @@ public:
     int CompileFile();
 
     /** Add a named type definition to the module. */
-    void AddTypeDef(Symbol *sym);
+    void AddTypeDef(const std::string &name, const Type *type,
+                    SourcePos pos);
 
     /** Add a new global variable corresponding to the given Symbol to the
         module.  If non-NULL, initExpr gives the initiailizer expression
         for the global's inital value. */ 
-    void AddGlobalVariable(Symbol *sym, Expr *initExpr, bool isConst);
+    void AddGlobalVariable(const std::string &name, const Type *type,
+                           Expr *initExpr, bool isConst,
+                           StorageClass storageClass, SourcePos pos);
 
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
-    void AddFunctionDeclaration(Symbol *funSym, bool isInline);
+    void AddFunctionDeclaration(const std::string &name,
+                                const FunctionType *ftype, 
+                                StorageClass sc, bool isInline, SourcePos pos);
 
     /** Adds the function described by the declaration information and the
         provided statements to the module. */
-    void AddFunctionDefinition(Symbol *sym, const std::vector<Symbol *> &args,
-                               Stmt *code);
+    void AddFunctionDefinition(const std::string &name,
+                               const FunctionType *ftype, Stmt *code);
 
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType { Asm,      /** Generate text assembly language output */
                       Bitcode,  /** Generate LLVM IR bitcode output */
                       Object,   /** Generate a native object file */
-#ifndef LLVM_2_9
                       CXX,      /** Generate a C++ file */
-#endif // !LLVM_2_9
                       Header    /** Generate a C/C++ header file with 
                                     declarations of 'export'ed functions, global
                                     variables, and the types used by them. */

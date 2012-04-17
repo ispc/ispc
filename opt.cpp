@@ -59,9 +59,6 @@
 #include <llvm/Constants.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
-#ifdef LLVM_2_9
-    #include <llvm/Support/StandardPasses.h>
-#endif // LLVM_2_9
 #include <llvm/ADT/Triple.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
@@ -188,13 +185,8 @@ static llvm::Instruction *
 lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
           const char *name, llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[2] = { arg0, arg1 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-#else
-    return llvm::CallInst::Create(func, &args[0], &args[2],
-                                  name, insertBefore);
-#endif
 }
 
 
@@ -203,13 +195,8 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, const char *name,
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[3] = { arg0, arg1, arg2 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[3]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-#else
-    return llvm::CallInst::Create(func, &args[0], &args[3],
-                                  name, insertBefore);
-#endif
 }
 
 
@@ -219,13 +206,8 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, llvm::Value *arg3, const char *name,
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[4]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-#else
-    return llvm::CallInst::Create(func, &args[0], &args[4],
-                                  name, insertBefore);
-#endif
 }
 #endif
 
@@ -234,14 +216,10 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4,
           const char *name, llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[5] = { arg0, arg1, arg2, arg3, arg4 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[5]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-#else
-    return llvm::CallInst::Create(func, &args[0], &args[5],
-                                  name, insertBefore);
-#endif
 }
+
 
 static llvm::Instruction *
 lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
@@ -249,13 +227,8 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg5, const char *name, 
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[6] = { arg0, arg1, arg2, arg3, arg4, arg5 };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
     return llvm::CallInst::Create(func, newArgArray, name, insertBefore);
-#else
-    return llvm::CallInst::Create(func, &args[0], &args[6],
-                                  name, insertBefore);
-#endif
 }
 
 
@@ -263,14 +236,9 @@ static llvm::Instruction *
 lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
          llvm::Instruction *insertBefore) {
     llvm::Value *index[1] = { offset };
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
     return llvm::GetElementPtrInst::Create(ptr, arrayRef, name,
                                            insertBefore);
-#else
-    return llvm::GetElementPtrInst::Create(ptr, &index[0], &index[1],
-                                           name, insertBefore);
-#endif
 }
 
 
@@ -286,6 +254,8 @@ Optimize(llvm::Module *module, int optLevel) {
     llvm::PassManager optPM;
     llvm::FunctionPassManager funcPM(module);
 
+    optPM.add(llvm::createVerifierPass());
+
     if (g->target.isa != Target::GENERIC) {
         llvm::TargetLibraryInfo *targetLibraryInfo =
             new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
@@ -293,9 +263,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(new llvm::TargetData(module));
     }
 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     optPM.add(llvm::createIndVarSimplifyPass());
-#endif
 
     if (optLevel == 0) {
         // This is more or less the minimum set of optimizations that we
@@ -419,32 +387,6 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateVSelMovmskOptPass());
 
-#if defined(LLVM_2_9)
-        llvm::createStandardModulePasses(&optPM, 3, 
-                                         false /* opt size */,
-                                         true /* unit at a time */, 
-                                         g->opt.unrollLoops,
-                                         true /* simplify lib calls */,
-                                         false /* may have exceptions */,
-                                         llvm::createFunctionInliningPass());
-        llvm::createStandardLTOPasses(&optPM, true /* internalize pass */,
-                                      true /* inline once again */,
-                                      false /* verify after each pass */);
-        llvm::createStandardFunctionPasses(&optPM, 3);
-
-        optPM.add(CreateIsCompileTimeConstantPass(true));
-        optPM.add(CreateIntrinsicsOptPass());
-        optPM.add(CreateVSelMovmskOptPass());
-
-        llvm::createStandardModulePasses(&optPM, 3, 
-                                         false /* opt size */,
-                                         true /* unit at a time */, 
-                                         g->opt.unrollLoops,
-                                         true /* simplify lib calls */,
-                                         false /* may have exceptions */,
-                                         llvm::createFunctionInliningPass());
-
-#else
         funcPM.add(llvm::createTypeBasedAliasAnalysisPass());
         funcPM.add(llvm::createBasicAliasAnalysisPass());
         funcPM.add(llvm::createCFGSimplificationPass());
@@ -540,7 +482,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createStripDeadPrototypesPass()); 
         optPM.add(llvm::createGlobalDCEPass());         
         optPM.add(llvm::createConstantMergePass());     
-#endif
+
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());
     }
@@ -631,22 +573,18 @@ IntrinsicsOpt::IntrinsicsOpt()
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
     maskInstructions.push_back(sseMovmsk);
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Function *avxMovmsk = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
     Assert(avxMovmsk != NULL);
     maskInstructions.push_back(avxMovmsk);
-#endif
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse41_blendvps),
         0xf, 0, 1, 2));
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     blendInstructions.push_back(BlendInstruction(
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_blendv_ps_256),
         0xff, 0, 1, 2));
-#endif
 }
 
 
@@ -744,7 +682,6 @@ lIsUndef(llvm::Value *value) {
 
 bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     llvm::Function *avxMaskedLoad32 = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
     llvm::Function *avxMaskedLoad64 = 
@@ -755,7 +692,6 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_pd_256);
     Assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
     Assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
-#endif
 
     bool modifiedAny = false;
  restart:
@@ -827,7 +763,6 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                  callInst->getCalledFunction() == avxMaskedLoad64) {
             llvm::Value *factor = callInst->getArgOperand(1);
@@ -894,7 +829,6 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
-#endif
     }
     return modifiedAny;
 }
@@ -1050,7 +984,7 @@ static llvm::Value *
 lCheckForActualPointer(llvm::Value *v) {
     if (v == NULL)
         return NULL;
-    else if (llvm::isa<LLVM_TYPE_CONST llvm::PointerType>(v->getType()))
+    else if (llvm::isa<llvm::PointerType>(v->getType()))
         return v;
     else if (llvm::isa<llvm::PtrToIntInst>(v))
         return v;
@@ -1247,13 +1181,9 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         }
 
         Assert(base != NULL);
-#ifdef LLVM_2_9
-        *offsets = llvm::ConstantVector::get(delta);
-#else
         llvm::ArrayRef<llvm::Constant *> deltas(&delta[0], 
                                                 &delta[elements.size()]);
         *offsets = llvm::ConstantVector::get(deltas);
-#endif
         return base;
     }
 
@@ -1978,8 +1908,8 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular store
-            LLVM_TYPE_CONST llvm::Type *rvalueType = rvalue->getType();
-            LLVM_TYPE_CONST llvm::Type *ptrType = 
+            llvm::Type *rvalueType = rvalue->getType();
+            llvm::Type *ptrType = 
                 llvm::PointerType::get(rvalueType, 0);
 
             lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
@@ -2081,7 +2011,7 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (maskAsInt == allOnMask) {
             // The mask is all on, so turn this into a regular load
-            LLVM_TYPE_CONST llvm::Type *ptrType = 
+            llvm::Type *ptrType = 
                 llvm::PointerType::get(callInst->getType(), 0);
             ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", 
                                         callInst);
@@ -2139,17 +2069,17 @@ lIsSafeToBlend(llvm::Value *lvalue) {
     else {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
-            LLVM_TYPE_CONST llvm::Type *type = ai->getType();
-            LLVM_TYPE_CONST llvm::PointerType *pt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+            llvm::Type *type = ai->getType();
+            llvm::PointerType *pt = 
+                llvm::dyn_cast<llvm::PointerType>(type);
             assert(pt != NULL);
             type = pt->getElementType();
-            LLVM_TYPE_CONST llvm::ArrayType *at;
-            while ((at = llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type))) {
+            llvm::ArrayType *at;
+            while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }
-            LLVM_TYPE_CONST llvm::VectorType *vt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+            llvm::VectorType *vt = 
+                llvm::dyn_cast<llvm::VectorType>(type);
             return (vt != NULL && 
                     (int)vt->getNumElements() == g->target.vectorWidth);
         }
@@ -2302,7 +2232,7 @@ lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
 
 struct ScatterImpInfo {
     ScatterImpInfo(const char *pName, const char *msName, 
-                   LLVM_TYPE_CONST llvm::Type *vpt, int a)
+                   llvm::Type *vpt, int a)
         : align(a) {
         pseudoFunc = m->module->getFunction(pName);
         maskedStoreFunc = m->module->getFunction(msName);
@@ -2311,7 +2241,7 @@ struct ScatterImpInfo {
     }
     llvm::Function *pseudoFunc;
     llvm::Function *maskedStoreFunc;
-    LLVM_TYPE_CONST llvm::Type *vecPtrType;
+    llvm::Type *vecPtrType;
     const int align;
 };
     
@@ -2812,7 +2742,7 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
  */
 llvm::Value *
 lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align,
-            llvm::Instruction *insertBefore, LLVM_TYPE_CONST llvm::Type *type) {
+            llvm::Instruction *insertBefore, llvm::Type *type) {
     llvm::Value *ptr = lGEPInst(basePtr, LLVMInt64(offset), "new_base",
                                 insertBefore);
     ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(type, 0),
@@ -2866,7 +2796,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 4: {
             // 4-wide vector load
-            LLVM_TYPE_CONST llvm::VectorType *vt =
+            llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,
                                           insertBefore, vt);
@@ -2874,7 +2804,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 8: {
             // 8-wide vector load
-            LLVM_TYPE_CONST llvm::VectorType *vt =
+            llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 8);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align, 
                                           insertBefore, vt);
@@ -2966,7 +2896,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             Assert(set[elt] == false && set[elt+1] == false);
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
-            LLVM_TYPE_CONST llvm::Type *vec2x64Type = 
+            llvm::Type *vec2x64Type = 
                 llvm::VectorType::get(LLVMTypes::Int64Type, 2);
             result = new llvm::BitCastInst(result, vec2x64Type, "to2x64",
                                            insertBefore);
@@ -2978,7 +2908,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
                                                      "insert64", insertBefore);
             
             // And back to 4xi32.
-            LLVM_TYPE_CONST llvm::Type *vec4x32Type = 
+            llvm::Type *vec4x32Type = 
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             result = new llvm::BitCastInst(result, vec4x32Type, "to4x32",
                                            insertBefore);
@@ -3058,7 +2988,7 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
 static llvm::Value *
 lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    LLVM_TYPE_CONST llvm::Type *returnType = 
+    llvm::Type *returnType = 
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
@@ -3198,7 +3128,7 @@ lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
 static llvm::Value *
 lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    LLVM_TYPE_CONST llvm::Type *returnType = 
+    llvm::Type *returnType = 
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
@@ -3405,13 +3335,9 @@ lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
     memory. */
 static bool
 lInstructionMayWriteToMemory(llvm::Instruction *inst) {
-#ifdef LLVM_2_9
-    if (llvm::isa<llvm::StoreInst>(inst))
-#else
     if (llvm::isa<llvm::StoreInst>(inst) ||
         llvm::isa<llvm::AtomicRMWInst>(inst) ||
         llvm::isa<llvm::AtomicCmpXchgInst>(inst))
-#endif // !LLVM_2_9
         // FIXME: we could be less conservative and try to allow stores if
         // we are sure that the pointers don't overlap..
         return true;

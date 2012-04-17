@@ -1,3 +1,47 @@
+=== v1.2.1 === (6 April 2012)
+
+This release contains only minor new functionality and is mostly for many
+small bugfixes and improvements to error handling and error reporting.
+The new functionality that is present is:
+
+* Significantly more efficient versions of the float / half conversion
+  routines are now available in the standard library, thanks to Fabian
+  Giesen.
+
+* The last member of a struct can now be a zero-length array; this allows
+  the trick of dynamically allocating enough storage for the struct and
+  some number of array elements at the end of it.
+
+Significant bugs fixed include:
+
+* Issue #205: When a target ISA isn't specified, use the host system's
+  capabilities to choose a target for which it will be able to run the
+  generated code.
+
+* Issues #215 and #217: Don't allocate storage for global variables that
+  are declared "extern".
+
+* Issue #197: Allow NULL as a default argument value in a function
+  declaration.
+
+* Issue #223: Fix bugs where taking the address of a function wouldn't work
+  as expected.
+
+* Issue #224: When there are overloaded variants of a function that take
+  both reference and const reference parameters, give the non-const
+  reference preference when matching values of that underlying type.
+
+* Issue #225: An error is issed when a varying lvalue is assigned to a
+  reference type (rather than crashing).
+
+* Issue #193: Permit conversions from array types to void *, not just the
+  pointer type of the underlying array element.
+
+* Issue #199: Still evaluate expressions that are cast to (void).
+
+The documentation has also been improved, with FAQs added to clarify some
+aspects of the ispc pointer model.
+
 === v1.2.0 === (20 March 2012)
 
 This is a major new release of ispc, with a number of significant

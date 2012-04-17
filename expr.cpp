@@ -212,11 +212,27 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     }
 
     if (dynamic_cast<const FunctionType *>(fromType)) {
-        if (!failureOk)
-            Error(pos, "Can't convert function type \"%s\" to \"%s\" for %s.",
-                  fromType->GetString().c_str(),
-                  toType->GetString().c_str(), errorMsgBase);
-        return false;
+        if (dynamic_cast<const PointerType *>(toType) != NULL) {
+            // Convert function type to pointer to function type
+            if (expr != NULL) {
+                Expr *aoe = new AddressOfExpr(*expr, (*expr)->pos);
+                if (lDoTypeConv(aoe->GetType(), toType, &aoe, failureOk,
+                                errorMsgBase, pos)) {
+                    *expr = aoe;
+                    return true;
+                }
+            }
+            else
+                return lDoTypeConv(PointerType::GetUniform(fromType), toType, NULL,
+                                   failureOk, errorMsgBase, pos);
+        }
+        else {
+            if (!failureOk)
+                Error(pos, "Can't convert function type \"%s\" to \"%s\" for %s.",
+                      fromType->GetString().c_str(),
+                      toType->GetString().c_str(), errorMsgBase);
+            return false;
+        }
     }
     if (dynamic_cast<const FunctionType *>(toType)) {
         if (!failureOk)
@@ -253,6 +269,11 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     // "float foo[10]" -> "float * uniform foo", we have what's seemingly
     // a varying to uniform conversion (but not really)
     if (fromArrayType != NULL && toPointerType != NULL) {
+        // can convert any array to a void pointer (both uniform and
+        // varying).
+        if (PointerType::IsVoidPointer(toPointerType))
+            goto typecast_ok;
+
         // array to pointer to array element type
         const Type *eltType = fromArrayType->GetElementType();
         if (toPointerType->GetBaseType()->IsConstType())
@@ -323,8 +344,8 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
                  !Type::Equal(fromPointerType->GetBaseType()->GetAsConstType(), 
                               toPointerType->GetBaseType())) {
             if (!failureOk)
-                Error(pos, "Can't convert between incompatible pointer types "
-                      "\"%s\" and \"%s\" for %s.",
+                Error(pos, "Can't convert from pointer type \"%s\" to "
+                      "incompatible pointer type \"%s\" for %s.",
                       fromPointerType->GetString().c_str(),
                       toPointerType->GetString().c_str(), errorMsgBase);
             return false;
@@ -616,19 +637,23 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         // instead we'll make a constant static global that holds the
         // constant value and emit a memcpy to put its value into the
         // pointer we have.
-        LLVM_TYPE_CONST llvm::Type *llvmType = symType->LLVMType(g->ctx);
+        llvm::Type *llvmType = symType->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return;
         }
 
-        llvm::Value *constPtr = 
-            new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
-                                     llvm::GlobalValue::InternalLinkage,
-                                     constValue, "const_initializer");
-        llvm::Value *size = g->target.SizeOf(llvmType, 
-                                             ctx->GetCurrentBasicBlock());
-        ctx->MemcpyInst(ptr, constPtr, size);
+        if (Type::IsBasicType(symType))
+            ctx->StoreInst(constValue, ptr);
+        else {
+            llvm::Value *constPtr = 
+                new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
+                                         llvm::GlobalValue::InternalLinkage,
+                                         constValue, "const_initializer");
+            llvm::Value *size = g->target.SizeOf(llvmType, 
+                                                 ctx->GetCurrentBasicBlock());
+            ctx->MemcpyInst(ptr, constPtr, size);
+        }
 
         return;
     }
@@ -746,7 +771,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                 else {
                     // If we don't have enough initializer values, initialize the
                     // rest as zero.
-                    LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+                    llvm::Type *llvmType = elementType->LLVMType(g->ctx);
                     if (llvmType == NULL) {
                         Assert(m->errorCount > 0);
                         return;
@@ -880,7 +905,7 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
         // a recursive call to lLLVMConstantValue().
         const Type *baseType = vectorType->GetBaseType();
         llvm::Constant *constElement = lLLVMConstantValue(baseType, ctx, value);
-        LLVM_TYPE_CONST llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
+        llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
 
         // Now create a constant version of the corresponding LLVM type that we
         // use to represent the VectorType.
@@ -889,8 +914,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
         // LLVM ArrayTypes leaks into the code here; it feels like this detail
         // should be better encapsulated?
         if (baseType->IsUniformType()) {
-            LLVM_TYPE_CONST llvm::VectorType *lvt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(llvmVectorType);
+            llvm::VectorType *lvt = 
+                llvm::dyn_cast<llvm::VectorType>(llvmVectorType);
             Assert(lvt != NULL);
             std::vector<llvm::Constant *> vals;
             for (unsigned int i = 0; i < lvt->getNumElements(); ++i)
@@ -898,8 +923,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
             return llvm::ConstantVector::get(vals);
         }
         else {
-            LLVM_TYPE_CONST llvm::ArrayType *lat = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(llvmVectorType);
+            llvm::ArrayType *lat = 
+                llvm::dyn_cast<llvm::ArrayType>(llvmVectorType);
             Assert(lat != NULL);
             std::vector<llvm::Constant *> vals;
             for (unsigned int i = 0; i < lat->getNumElements(); ++i)
@@ -1414,7 +1439,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
 
             // Now divide by the size of the type that the pointer
             // points to in order to return the difference in elements.
-            LLVM_TYPE_CONST llvm::Type *llvmElementType = 
+            llvm::Type *llvmElementType = 
                 ptrType->GetBaseType()->LLVMType(g->ctx);
             llvm::Value *size = g->target.SizeOf(llvmElementType, 
                                                  ctx->GetCurrentBasicBlock());
@@ -1623,7 +1648,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
     // Allocate temporary storage for the return value
     const Type *retType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
-    LLVM_TYPE_CONST llvm::Type *llvmRetType = retType->LLVMType(g->ctx);
+    llvm::Type *llvmRetType = retType->LLVMType(g->ctx);
     llvm::Value *retPtr = ctx->AllocaInst(llvmRetType, "logical_op_mem");
 
     llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1");
@@ -2314,6 +2339,7 @@ BinaryExpr::TypeCheck() {
         if (type1->IsVaryingType()) {
             arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), 
                                    "pointer addition");
+            offsetType = offsetType->GetAsVaryingType();
             Assert(arg0 != NULL);
         }
 
@@ -2984,7 +3010,7 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // Temporary storage to store the values computed for each
         // expression, if any.  (These stay as uninitialized memory if we
         // short circuit around the corresponding expression.)
-        LLVM_TYPE_CONST llvm::Type *exprType = 
+        llvm::Type *exprType = 
             expr1->GetType()->LLVMType(g->ctx);
         llvm::Value *expr1Ptr = ctx->AllocaInst(exprType);
         llvm::Value *expr2Ptr = ctx->AllocaInst(exprType);
@@ -3400,32 +3426,43 @@ FunctionCallExpr::TypeCheck() {
         return NULL;
 
     std::vector<const Type *> argTypes;
-    std::vector<bool> argCouldBeNULL;
+    std::vector<bool> argCouldBeNULL, argIsConstant;
     for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-        if (args->exprs[i] == NULL)
+        Expr *expr = args->exprs[i];
+
+        if (expr == NULL)
             return NULL;
-        const Type *t = args->exprs[i]->GetType();
+        const Type *t = expr->GetType();
         if (t == NULL)
             return NULL;
+
         argTypes.push_back(t);
-        argCouldBeNULL.push_back(lIsAllIntZeros(args->exprs[i]));
+        argCouldBeNULL.push_back(lIsAllIntZeros(expr) ||
+                                 dynamic_cast<NullPointerExpr *>(expr));
+        argIsConstant.push_back(dynamic_cast<ConstExpr *>(expr) ||
+                                dynamic_cast<NullPointerExpr *>(expr));
     }
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
     if (fse != NULL) {
         // Regular function call
-
-        if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL) == false)
+        if (fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL,
+                                  &argIsConstant) == false)
             return NULL;
 
         func = ::TypeCheck(fse);
         if (func == NULL)
             return NULL;
 
-        const PointerType *pt = 
-            dynamic_cast<const PointerType *>(func->GetType());
-        const FunctionType *ft = (pt == NULL) ? NULL : 
-            dynamic_cast<const FunctionType *>(pt->GetBaseType());
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(func->GetType());
+        if (ft == NULL) {
+            const PointerType *pt = 
+                dynamic_cast<const PointerType *>(func->GetType());
+            ft = (pt == NULL) ? NULL : 
+                dynamic_cast<const FunctionType *>(pt->GetBaseType());
+        }
+
         if (ft == NULL) {
             Error(pos, "Valid function name must be used for function call.");
             return NULL;
@@ -3625,7 +3662,19 @@ ExprList::GetConstant(const Type *type) const {
         if (exprs[i] == NULL)
             return NULL;
         const Type *elementType = collectionType->GetElementType(i);
-        llvm::Constant *c = exprs[i]->GetConstant(elementType);
+
+        Expr *expr = exprs[i];
+        if (dynamic_cast<ExprList *>(expr) == NULL) {
+            // If there's a simple type conversion from the type of this
+            // expression to the type we need, then let the regular type
+            // conversion machinery handle it.
+            expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
+            Assert(expr != NULL);
+            // Re-establish const-ness if possible
+            expr = ::Optimize(expr);
+        }
+
+        llvm::Constant *c = expr->GetConstant(elementType);
         if (c == NULL)
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
@@ -3641,7 +3690,7 @@ ExprList::GetConstant(const Type *type) const {
             return NULL;
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+        llvm::Type *llvmType = elementType->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -3652,27 +3701,23 @@ ExprList::GetConstant(const Type *type) const {
     }
 
     if (dynamic_cast<const StructType *>(type) != NULL) {
-#if defined(LLVM_2_9)
-        return llvm::ConstantStruct::get(*g->ctx, cv, false);
-#else
-        LLVM_TYPE_CONST llvm::StructType *llvmStructType =
-            llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(collectionType->LLVMType(g->ctx));
+        llvm::StructType *llvmStructType =
+            llvm::dyn_cast<llvm::StructType>(collectionType->LLVMType(g->ctx));
         Assert(llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
-#endif
     }
     else {
-        LLVM_TYPE_CONST llvm::Type *lt = type->LLVMType(g->ctx);
-        LLVM_TYPE_CONST llvm::ArrayType *lat = 
-            llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lt);
+        llvm::Type *lt = type->LLVMType(g->ctx);
+        llvm::ArrayType *lat = 
+            llvm::dyn_cast<llvm::ArrayType>(lt);
         if (lat != NULL)
             return llvm::ConstantArray::get(lat, cv);
         else {
             // uniform short vector type
             Assert(type->IsUniformType() &&
                    dynamic_cast<const VectorType *>(type) != NULL);
-            LLVM_TYPE_CONST llvm::VectorType *lvt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(lt);
+            llvm::VectorType *lvt = 
+                llvm::dyn_cast<llvm::VectorType>(lt);
             Assert(lvt != NULL);
 
             // Uniform short vectors are stored as vectors of length
@@ -3949,10 +3994,10 @@ IndexExpr::GetBaseSymbol() const {
 static llvm::Value *
 lConvertToSlicePointer(FunctionEmitContext *ctx, llvm::Value *ptr,
                        const PointerType *slicePtrType) {
-    LLVM_TYPE_CONST llvm::Type *llvmSlicePtrType = 
+    llvm::Type *llvmSlicePtrType = 
         slicePtrType->LLVMType(g->ctx);
-    LLVM_TYPE_CONST llvm::StructType *sliceStructType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(llvmSlicePtrType);
+    llvm::StructType *sliceStructType =
+        llvm::dyn_cast<llvm::StructType>(llvmSlicePtrType);
     Assert(sliceStructType != NULL &&
            sliceStructType->getElementType(0) == ptr->getType());
 
@@ -4647,12 +4692,13 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         exprType = pointerType->GetBaseType();
 
     if (derefLValue == true && pointerType == NULL) {
-        if (dynamic_cast<const StructType *>(exprType->GetReferenceTarget()) != NULL)
-            Error(p, "Dereference operator \"->\" can't be applied to non-pointer "
+        const Type *targetType = exprType->GetReferenceTarget();
+        if (dynamic_cast<const StructType *>(targetType) != NULL)
+            Error(p, "Member operator \"->\" can't be applied to non-pointer "
                   "type \"%s\".  Did you mean to use \".\"?", 
                   exprType->GetString().c_str());
         else
-            Error(p, "Dereference operator \"->\" can't be applied to non-struct "
+            Error(p, "Member operator \"->\" can't be applied to non-struct "
                   "pointer type \"%s\".", exprType->GetString().c_str());
         return NULL;
     }
@@ -4668,6 +4714,12 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         return new StructMemberExpr(e, id, p, idpos, derefLValue);
     else if (dynamic_cast<const VectorType *>(exprType) != NULL)
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
+    else if (dynamic_cast<const UndefinedStructType *>(exprType)) {
+        Error(p, "Member operator \"%s\" can't be applied to declared "
+              "but not defined struct type \"%s\".", derefLValue ? "->" : ".",
+              exprType->GetString().c_str());
+        return NULL;
+    }
     else {
         Error(p, "Member operator \"%s\" can't be used with expression of "
               "\"%s\" type.", derefLValue ? "->" : ".", 
@@ -5630,7 +5682,7 @@ ConstExpr::GetConstant(const Type *type) const {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a NULL pointer of the
         // appropriate type.
-        LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+        llvm::Type *llvmType = type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -5743,7 +5795,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
     switch (toType->basicType) {
     case AtomicType::TYPE_FLOAT: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::FloatType : 
                                         LLVMTypes::FloatVectorType;
         switch (fromType->basicType) {
@@ -5787,7 +5839,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_DOUBLE: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::DoubleType :
                                         LLVMTypes::DoubleVectorType;
         switch (fromType->basicType) {
@@ -5825,7 +5877,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT8: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int8Type :
                                         LLVMTypes::Int8VectorType;
         switch (fromType->basicType) {
@@ -5861,7 +5913,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT8: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int8Type :
                                         LLVMTypes::Int8VectorType;
         switch (fromType->basicType) {
@@ -5903,7 +5955,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT16: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int16Type :
                                         LLVMTypes::Int16VectorType;
         switch (fromType->basicType) {
@@ -5943,7 +5995,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT16: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int16Type :
                                         LLVMTypes::Int16VectorType;
         switch (fromType->basicType) {
@@ -5989,7 +6041,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT32: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
@@ -6029,7 +6081,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT32: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
@@ -6075,7 +6127,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT64: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
@@ -6113,7 +6165,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT64: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
@@ -6257,7 +6309,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     const CollectionType *collectionType = 
         dynamic_cast<const CollectionType *>(type);
     if (collectionType != NULL) {
-        LLVM_TYPE_CONST llvm::Type *llvmType = 
+        llvm::Type *llvmType = 
             type->GetAsVaryingType()->LLVMType(g->ctx);
         llvm::Value *retValue = llvm::UndefValue::get(llvmType);
 
@@ -6283,10 +6335,17 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
     ctx->SetDebugPos(pos);
     const Type *toType = GetType(), *fromType = expr->GetType();
-    if (!toType || !fromType || Type::Equal(toType, AtomicType::Void) || 
-        Type::Equal(fromType, AtomicType::Void))
-        // an error should have been issued elsewhere in this case
+    if (toType == NULL || fromType == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
+
+    if (Type::Equal(toType, AtomicType::Void)) {
+        // emit the code for the expression in case it has side-effects but
+        // then we're done.
+        (void)expr->GetValue(ctx);
+        return NULL;
+    }
 
     const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
     const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
@@ -6352,10 +6411,10 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(dynamic_cast<const AtomicType *>(toType) != NULL);
             if (toType->IsBoolType()) {
                 // convert pointer to bool
-                LLVM_TYPE_CONST llvm::Type *lfu = 
+                llvm::Type *lfu = 
                     fromType->GetAsUniformType()->LLVMType(g->ctx);
-                LLVM_TYPE_CONST llvm::PointerType *llvmFromUnifType = 
-                    llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(lfu);
+                llvm::PointerType *llvmFromUnifType = 
+                    llvm::dyn_cast<llvm::PointerType>(lfu);
 
                 llvm::Value *nullPtrValue = 
                     llvm::ConstantPointerNull::get(llvmFromUnifType);
@@ -6384,7 +6443,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 if (toType->IsVaryingType() && fromType->IsUniformType())
                     value = ctx->SmearUniform(value);
 
-                LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+                llvm::Type *llvmToType = toType->LLVMType(g->ctx);
                 if (llvmToType == NULL)
                     return NULL;
                 return ctx->PtrToIntInst(value, llvmToType, "ptr_typecast");
@@ -6401,7 +6460,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // implicit array to pointer to first element
         Expr *arrayAsPtr = lArrayToPointer(expr);
         if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
-            Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
+            Assert(PointerType::IsVoidPointer(toPointerType) ||
+                   Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
@@ -6426,7 +6486,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         Assert(Type::EqualIgnoringConst(toArrayType->GetBaseType(),
                                         fromArrayType->GetBaseType()));
         llvm::Value *v = expr->GetValue(ctx);
-        LLVM_TYPE_CONST llvm::Type *ptype = toType->LLVMType(g->ctx);
+        llvm::Type *ptype = toType->LLVMType(g->ctx);
         return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
     }
 
@@ -6448,7 +6508,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(Type::EqualIgnoringConst(toArray->GetBaseType(),
                                             fromArray->GetBaseType()));
             llvm::Value *v = expr->GetValue(ctx);
-            LLVM_TYPE_CONST llvm::Type *ptype = toType->LLVMType(g->ctx);
+            llvm::Type *ptype = toType->LLVMType(g->ctx);
             return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
         }
 
@@ -6536,7 +6596,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (toType->IsVaryingType() && fromType->IsUniformType())
             exprVal = ctx->SmearUniform(exprVal);
 
-        LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+        llvm::Type *llvmToType = toType->LLVMType(g->ctx);
         if (llvmToType == NULL)
             return NULL;
 
@@ -6589,7 +6649,12 @@ TypeCastExpr::TypeCheck() {
     fromType = lDeconstifyType(fromType);
     toType = lDeconstifyType(toType);
 
-    if (fromType->IsVaryingType() && toType->IsUniformType()) {
+    // Anything can be cast to void...
+    if (Type::Equal(toType, AtomicType::Void))
+        return this;
+
+    if (Type::Equal(fromType, AtomicType::Void) ||
+        (fromType->IsVaryingType() && toType->IsUniformType())) {
         Error(pos, "Can't type cast from type \"%s\" to type \"%s\"",
               fromType->GetString().c_str(), toType->GetString().c_str());
         return NULL;
@@ -6749,6 +6814,34 @@ TypeCastExpr::GetBaseSymbol() const {
 }
 
 
+static
+llvm::Constant *
+lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
+    if (c == NULL || constType->IsUniformType())
+        return c;
+
+    // Handle conversion to int and then to vector of int or array of int
+    // (for varying and soa types, respectively)
+    llvm::Constant *intPtr = 
+        llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType);
+    Assert(constType->IsVaryingType() || constType->IsSOAType());
+    int count = constType->IsVaryingType() ? g->target.vectorWidth :
+        constType->GetSOAWidth();
+
+    std::vector<llvm::Constant *> smear;
+    for (int i = 0; i < count; ++i)
+        smear.push_back(intPtr);
+
+    if (constType->IsVaryingType())
+        return llvm::ConstantVector::get(smear);
+    else {
+        llvm::ArrayType *at =
+            llvm::ArrayType::get(LLVMTypes::PointerIntType, count);
+        return llvm::ConstantArray::get(at, smear);
+    }
+}
+
+
 llvm::Constant *
 TypeCastExpr::GetConstant(const Type *constType) const {
     // We don't need to worry about most the basic cases where the type
@@ -6756,11 +6849,18 @@ TypeCastExpr::GetConstant(const Type *constType) const {
     // TypeCastExpr::Optimize() method generally ends up doing the type
     // conversion and returning a ConstExpr, which in turn will have its
     // GetConstant() method called.  However, because ConstExpr currently
-    // can't represent pointer values, we have to handle two cases here:
-    // 1. Null pointers (NULL, 0) valued initializers, and
-    // 2. Converting a uniform function pointer to a varying function
-    //    pointer of the same type.
-    return expr->GetConstant(constType);
+    // can't represent pointer values, we have to handle a few cases
+    // related to pointers here:
+    //
+    // 1. Null pointer (NULL, 0) valued initializers
+    // 2. Converting function types to pointer-to-function types
+    // 3. And converting these from uniform to the varying/soa equivalents.
+    //
+    if (dynamic_cast<const PointerType *>(constType) == NULL)
+        return NULL;
+
+    llvm::Constant *c = expr->GetConstant(constType->GetAsUniformType());
+    return lConvertPointerConstant(c, constType);
 }
 
 
@@ -6776,7 +6876,34 @@ ReferenceExpr::ReferenceExpr(Expr *e, SourcePos p)
 llvm::Value *
 ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    return expr ? expr->GetLValue(ctx) : NULL;
+    if (expr == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    
+    llvm::Value *value = expr->GetLValue(ctx);
+    if (value != NULL)
+        return value;
+
+    // value is NULL if the expression is a temporary; in this case, we'll
+    // allocate storage for it so that we can return the pointer to that...
+    const Type *type;
+    llvm::Type *llvmType;
+    if ((type = expr->GetType()) == NULL ||
+        (llvmType = type->LLVMType(g->ctx)) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    value = expr->GetValue(ctx);
+    if (value == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Value *ptr = ctx->AllocaInst(llvmType);
+    ctx->StoreInst(value, ptr);
+    return ptr;
 }
 
 
@@ -7053,7 +7180,8 @@ AddressOfExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
 
     const Type *exprType = expr->GetType();
-    if (dynamic_cast<const ReferenceType *>(exprType) != NULL)
+    if (dynamic_cast<const ReferenceType *>(exprType) != NULL ||
+        dynamic_cast<const FunctionType *>(exprType) != NULL)
         return expr->GetValue(ctx);
     else
         return expr->GetLValue(ctx);
@@ -7068,8 +7196,18 @@ AddressOfExpr::GetType() const {
     const Type *exprType = expr->GetType();
     if (dynamic_cast<const ReferenceType *>(exprType) != NULL)
         return PointerType::GetUniform(exprType->GetReferenceTarget());
-    else
-        return expr->GetLValueType();
+
+    const Type *t = expr->GetLValueType();
+    if (t != NULL)
+        return t;
+    else {
+        t = expr->GetType();
+        if (t == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+        return PointerType::GetUniform(t);
+    }
 }
 
 
@@ -7093,7 +7231,22 @@ AddressOfExpr::Print() const {
 
 Expr *
 AddressOfExpr::TypeCheck() {
-    return this;
+    const Type *exprType;
+    if (expr == NULL || (exprType = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    if (dynamic_cast<const ReferenceType *>(exprType) != NULL||
+        dynamic_cast<const FunctionType *>(exprType) != NULL) {
+        return this;
+    }
+
+    if (expr->GetLValueType() != NULL)
+        return this;
+
+    Error(expr->pos, "Illegal to take address of non-lvalue or function.");
+    return NULL;
 }
 
 
@@ -7109,6 +7262,29 @@ AddressOfExpr::EstimateCost() const {
 }
 
 
+llvm::Constant *
+AddressOfExpr::GetConstant(const Type *type) const {
+    const Type *exprType;
+    if (expr == NULL || (exprType = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    if (pt == NULL)
+        return NULL;
+
+    const FunctionType *ft = 
+        dynamic_cast<const FunctionType *>(pt->GetBaseType());
+    if (ft != NULL) {
+        llvm::Constant *c = expr->GetConstant(ft);
+        return lConvertPointerConstant(c, type);
+    }
+    else
+        return NULL;
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // SizeOfExpr
 
@@ -7119,8 +7295,7 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
-    if (type->HasUnboundVariability())
-        type = type->ResolveUnboundVariability(Variability::Varying);
+    type = type->ResolveUnboundVariability(Variability::Varying);
 }
 
 
@@ -7131,7 +7306,7 @@ SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     if (t == NULL)
         return NULL;
 
-    LLVM_TYPE_CONST llvm::Type *llvmType = t->LLVMType(g->ctx);
+    llvm::Type *llvmType = t->LLVMType(g->ctx);
     if (llvmType == NULL)
         return NULL;
 
@@ -7209,7 +7384,10 @@ SymbolExpr::GetLValueType() const {
     if (symbol == NULL)
         return NULL;
 
-    return PointerType::GetUniform(symbol->type);
+    if (dynamic_cast<const ReferenceType *>(symbol->type) != NULL)
+        return PointerType::GetUniform(symbol->type->GetReferenceTarget());
+    else
+        return PointerType::GetUniform(symbol->type);
 }
 
 
@@ -7285,8 +7463,7 @@ FunctionSymbolExpr::GetType() const {
         return NULL;
     }
 
-    return matchingFunc ? 
-        new PointerType(matchingFunc->type, Variability::Uniform, true) : NULL;
+    return matchingFunc ? matchingFunc->type : NULL;
 }
 
 
@@ -7336,27 +7513,18 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (matchingFunc == NULL || matchingFunc->function == NULL)
         return NULL;
 
-    const FunctionType *ft;
-    if (dynamic_cast<const PointerType *>(type) == NULL ||
-        (ft = dynamic_cast<const FunctionType *>(type->GetBaseType())) == NULL)
+    const FunctionType *ft = dynamic_cast<const FunctionType *>(type);
+    if (ft == NULL)
         return NULL;
 
-    LLVM_TYPE_CONST llvm::Type *llvmUnifType = 
-        type->GetAsUniformType()->LLVMType(g->ctx);
-    if (llvmUnifType != matchingFunc->function->getType())
+    if (Type::Equal(type, matchingFunc->type) == false) {
+        Error(pos, "Type of function symbol \"%s\" doesn't match expected type "
+              "\"%s\".", matchingFunc->type->GetString().c_str(),
+              type->GetString().c_str());
         return NULL;
-
-    if (type->IsUniformType())
-        return matchingFunc->function;
-    else {
-        llvm::Constant *intPtr = 
-            llvm::ConstantExpr::getPtrToInt(matchingFunc->function, 
-                                            LLVMTypes::PointerIntType);
-        std::vector<llvm::Constant *> smear;
-        for (int i = 0; i < g->target.vectorWidth; ++i)
-            smear.push_back(intPtr);
-        return llvm::ConstantVector::get(smear);
     }
+
+    return matchingFunc->function;
 }
 
 
@@ -7364,8 +7532,12 @@ static void
 lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
                          const std::vector<const Type *> &argTypes, 
                          const std::vector<bool> *argCouldBeNULL) {
-    for (unsigned int i = 0; i < funcs.size(); ++i)
-        Error(funcs[i]->pos, "Candidate function:");
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(funcs[i]->type);
+        Assert(ft != NULL);
+        Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
+    }
 
     std::string passedTypes = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
@@ -7378,283 +7550,221 @@ lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs,
     Error(pos, "%s", passedTypes.c_str());
 }
 
-             
-/** Helper function used for function overload resolution: returns zero
-    cost if the call argument's type exactly matches the function argument
-    type (modulo a conversion to a const type if needed), otherwise reports
-    failure.
- */ 
-static int
-lExactMatch(const Type *callType, const Type *funcArgType) {
-    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = callType->GetAsNonConstType();
-    if (dynamic_cast<const ReferenceType *>(funcArgType) != NULL && 
-        dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = new ReferenceType(callType);
 
-    return Type::Equal(callType, funcArgType) ? 0 : -1;
+static bool
+lIsMatchToNonConstReference(const Type *callType, const Type *funcArgType) {
+    return (dynamic_cast<const ReferenceType *>(funcArgType) &&
+            (funcArgType->IsConstType() == false) &&
+            Type::Equal(callType, funcArgType->GetReferenceTarget()));
 }
 
 
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if the call argument type and the function argument type match,
-    modulo conversion to a reference type if needed.
- */
-static int
-lMatchIgnoringReferences(const Type *callType, const Type *funcArgType) {
-    int prev = lExactMatch(callType, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    callType = callType->GetReferenceTarget();
-    if (funcArgType->IsConstType())
-        callType = callType->GetAsConstType();
-
-    return Type::Equal(callType,
-                       funcArgType->GetReferenceTarget()) ? 1 : -1;
+static bool
+lIsMatchToNonConstReferenceUnifToVarying(const Type *callType,
+                                         const Type *funcArgType) {
+    return (dynamic_cast<const ReferenceType *>(funcArgType) &&
+            (funcArgType->IsConstType() == false) &&
+            Type::Equal(callType->GetAsVaryingType(),
+                        funcArgType->GetReferenceTarget()));
 }
 
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if converting the argument to the call type only requires a type
-    conversion that won't lose information.  Otherwise reports failure.
-*/
-static int
-lMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
-    int prev = lMatchIgnoringReferences(callType, funcArgType);
-    if (prev != -1)
-        return prev;
-
+/** Helper function used for function overload resolution: returns true if
+    converting the argument to the call type only requires a type
+    conversion that won't lose information.  Otherwise return false.
+  */
+static bool
+lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
     const AtomicType *callAt = dynamic_cast<const AtomicType *>(callType);
     const AtomicType *funcAt = dynamic_cast<const AtomicType *>(funcArgType);
     if (callAt == NULL || funcAt == NULL)
-        return -1;
+        return false;
 
     if (callAt->IsUniformType() != funcAt->IsUniformType())
-        return -1;
+        return false;
 
     switch (callAt->basicType) {
     case AtomicType::TYPE_BOOL:
-        return 1;
+        return true;
     case AtomicType::TYPE_INT8:
     case AtomicType::TYPE_UINT8:
-        return (funcAt->basicType != AtomicType::TYPE_BOOL) ? 1 : -1;
+        return (funcAt->basicType != AtomicType::TYPE_BOOL);
     case AtomicType::TYPE_INT16:
     case AtomicType::TYPE_UINT16:
         return (funcAt->basicType != AtomicType::TYPE_BOOL &&
                 funcAt->basicType != AtomicType::TYPE_INT8 &&
-                funcAt->basicType != AtomicType::TYPE_UINT8) ? 1 : -1;
+                funcAt->basicType != AtomicType::TYPE_UINT8);
     case AtomicType::TYPE_INT32:
     case AtomicType::TYPE_UINT32:
         return (funcAt->basicType == AtomicType::TYPE_INT32 ||
                 funcAt->basicType == AtomicType::TYPE_UINT32 ||
                 funcAt->basicType == AtomicType::TYPE_INT64 ||
-                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
+                funcAt->basicType == AtomicType::TYPE_UINT64);
     case AtomicType::TYPE_FLOAT:
-        return (funcAt->basicType == AtomicType::TYPE_DOUBLE) ? 1 : -1;
+        return (funcAt->basicType == AtomicType::TYPE_DOUBLE);
     case AtomicType::TYPE_INT64:
     case AtomicType::TYPE_UINT64:
         return (funcAt->basicType == AtomicType::TYPE_INT64 ||
-                funcAt->basicType == AtomicType::TYPE_UINT64) ? 1 : -1;
+                funcAt->basicType == AtomicType::TYPE_UINT64);
     case AtomicType::TYPE_DOUBLE:
-        return -1;
+        return false;
     default:
         FATAL("Unhandled atomic type");
-        return -1;
+        return false;
     }
 }
 
 
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if the call argument type and the function argument type match if
-    we only do a uniform -> varying type conversion but otherwise have
-    exactly the same type.
+/** Helper function used for function overload resolution: returns true if
+    the call argument type and the function argument type match if we only
+    do a uniform -> varying type conversion but otherwise have exactly the
+    same type.
  */
-static int
-lMatchIgnoringUniform(const Type *callType, const Type *funcArgType) {
-    int prev = lMatchWithTypeWidening(callType, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    if (dynamic_cast<const ReferenceType *>(callType) == NULL)
-        callType = callType->GetAsNonConstType();
-
+static bool
+lIsMatchWithUniformToVarying(const Type *callType, const Type *funcArgType) {
     return (callType->IsUniformType() && 
             funcArgType->IsVaryingType() &&
-            Type::Equal(callType->GetAsVaryingType(), funcArgType)) ? 1 : -1;
+            Type::EqualIgnoringConst(callType->GetAsVaryingType(), funcArgType));
 }
 
 
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if we can type convert from the call argument type to the function
+/** Helper function used for function overload resolution: returns true if
+    we can type convert from the call argument type to the function
     argument type, but without doing a uniform -> varying conversion.
  */
-static int
-lMatchWithTypeConvSameVariability(const Type *callType,
-                                  const Type *funcArgType) {
-    int prev = lMatchIgnoringUniform(callType, funcArgType);
-    if (prev != -1)
-        return prev;
-
-    if (CanConvertTypes(callType, funcArgType) &&
-        (callType->IsUniformType() == funcArgType->IsUniformType()))
-        return 1;
-    else
-        return -1;
+static bool
+lIsMatchWithTypeConvSameVariability(const Type *callType,
+                                    const Type *funcArgType) {
+    return (CanConvertTypes(callType, funcArgType) &&
+            (callType->GetVariability() == funcArgType->GetVariability()));
 }
 
 
-/** Helper function used for function overload resolution: returns a cost
-    of 1 if there is any type conversion that gets us from the caller
-    argument type to the function argument type.
+/* Returns the set of function overloads that are potential matches, given
+   argCount values being passed as arguments to the function call.
  */
-static int
-lMatchWithTypeConv(const Type *callType, const Type *funcArgType) {
-    int prev = lMatchWithTypeConvSameVariability(callType, funcArgType);
-    if (prev != -1)
-        return prev;
-        
-    return CanConvertTypes(callType, funcArgType) ? 0 : -1;
-}
-
-
-/** Given a set of potential matching functions and their associated cost,
-    return the one with the lowest cost, if unique.  Otherwise, if multiple
-    functions match with the same cost, return NULL.
- */
-static Symbol *
-lGetBestMatch(std::vector<std::pair<int, Symbol *> > &matches) {
-    Assert(matches.size() > 0);
-    int minCost = matches[0].first;
-
-    for (unsigned int i = 1; i < matches.size(); ++i)
-        minCost = std::min(minCost, matches[i].first);
-
-    Symbol *match = NULL;
-    for (unsigned int i = 0; i < matches.size(); ++i) {
-        if (matches[i].first == minCost) {
-            if (match != NULL)
-                // multiple things had the same cost
-                return NULL;
-            else
-                match = matches[i].second;
-        }
-    }
-    return match;
-}
-
-
-/** See if we can find a single function from the set of overload options
-    based on the predicate function passed in.  Returns true if no more
-    tries should be made to find a match, either due to success from
-    finding a single overloaded function that matches or failure due to
-    finding multiple ambiguous matches.
- */
-bool
-FunctionSymbolExpr::tryResolve(int (*matchFunc)(const Type *, const Type *),
-                               SourcePos argPos,
-                               const std::vector<const Type *> &callTypes,
-                               const std::vector<bool> *argCouldBeNULL) {
-    const char *funName = candidateFunctions.front()->name.c_str();
-
-    std::vector<std::pair<int, Symbol *> > matches;
-    std::vector<Symbol *>::iterator iter;
-    for (iter = candidateFunctions.begin(); 
-         iter != candidateFunctions.end(); ++iter) {
-        // Loop over the set of candidate functions and try each one
-        Symbol *candidateFunction = *iter;
+std::vector<Symbol *>
+FunctionSymbolExpr::getCandidateFunctions(int argCount) const {
+    std::vector<Symbol *> ret;
+    for (int i = 0; i < (int)candidateFunctions.size(); ++i) {
         const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(candidateFunction->type);
+            dynamic_cast<const FunctionType *>(candidateFunctions[i]->type);
         Assert(ft != NULL);
 
         // There's no way to match if the caller is passing more arguments
         // than this function instance takes.
-        if ((int)callTypes.size() > ft->GetNumParameters())
+        if (argCount > ft->GetNumParameters())
             continue;
 
-        int i;
-        // Note that we're looping over the caller arguments, not the
-        // function arguments; it may be ok to have more arguments to the
-        // function than are passed, if the function has default argument
-        // values.  This case is handled below.
-        int cost = 0;
-        for (i = 0; i < (int)callTypes.size(); ++i) {
-            // This may happen if there's an error earlier in compilation.
-            // It's kind of a silly to redundantly discover this for each
-            // potential match versus detecting this earlier in the
-            // matching process and just giving up.
-            const Type *paramType = ft->GetParameterType(i);
+        // Not enough arguments, and no default argument value to save us
+        if (argCount < ft->GetNumParameters() &&
+            ft->GetParameterDefault(argCount) == NULL)
+            continue;
 
-            if (callTypes[i] == NULL || paramType == NULL ||
-                dynamic_cast<const FunctionType *>(callTypes[i]) != NULL)
-                return false;
-
-            int argCost = matchFunc(callTypes[i], paramType);
-            if (argCost == -1) {
-                if (argCouldBeNULL != NULL && (*argCouldBeNULL)[i] == true &&
-                    dynamic_cast<const PointerType *>(paramType) != NULL)
-                    // If the passed argument value is zero and this is a
-                    // pointer type, then it can convert to a NULL value of
-                    // that pointer type.
-                    argCost = 0;
-                else
-                    // If the predicate function returns -1, we have failed no
-                    // matter what else happens, so we stop trying
-                    break;
-            }
-            cost += argCost;
-        }
-        if (i == (int)callTypes.size()) {
-            // All of the arguments matched!
-            if (i == ft->GetNumParameters())
-                // And we have exactly as many arguments as the function
-                // wants, so we're done.
-                matches.push_back(std::make_pair(cost, candidateFunction));
-            else if (i < ft->GetNumParameters() && 
-                     ft->GetParameterDefault(i) != NULL)
-                // Otherwise we can still make it if there are default
-                // arguments for the rest of the arguments!  Because in
-                // Module::AddFunction() we have verified that once the
-                // default arguments start, then all of the following ones
-                // have them as well.  Therefore, we just need to check if
-                // the arg we stopped at has a default value and we're
-                // done.
-                matches.push_back(std::make_pair(cost, candidateFunction));
-            // otherwise, we don't have a match
-        }
+        // Success
+        ret.push_back(candidateFunctions[i]);
     }
+    return ret;
+}
 
-    if (matches.size() == 0)
+
+static bool
+lArgIsPointerType(const Type *type) {
+    if (dynamic_cast<const PointerType *>(type) != NULL)
+        return true;
+
+    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(type);
+    if (rt == NULL)
         return false;
-    else if ((matchingFunc = lGetBestMatch(matches)) != NULL)
-        // We have a match!
-        return true;
-    else {
-        Error(pos, "Multiple overloaded instances of function \"%s\" matched.",
-              funName);
 
-        // select the matches that have the lowest cost
-        std::vector<Symbol *> bestMatches;
-        int minCost = matches[0].first;
-        for (unsigned int i = 1; i < matches.size(); ++i)
-            minCost = std::min(minCost, matches[i].first);
-        for (unsigned int i = 0; i < matches.size(); ++i)
-            if (matches[i].first == minCost)
-                bestMatches.push_back(matches[i].second);
+    const Type *t = rt->GetReferenceTarget();
+    return (dynamic_cast<const PointerType *>(t) != NULL);
+}
 
-        // And print a useful error message
-        lPrintOverloadCandidates(argPos, bestMatches, callTypes, argCouldBeNULL);
 
-        // Stop trying to find more matches after an ambigious set of
-        // matches.
-        return true;
+/** This function computes the value of a cost function that represents the
+    cost of calling a function of the given type with arguments of the
+    given types.  If it's not possible to call the function, regardless of
+    any type conversions applied, a cost of -1 is returned.
+ */
+int
+FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
+                                        const std::vector<const Type *> &argTypes,
+                                        const std::vector<bool> *argCouldBeNULL,
+                                        const std::vector<bool> *argIsConstant) {
+    int costSum = 0;
+
+    // In computing the cost function, we only worry about the actual
+    // argument types--using function default parameter values is free for
+    // the purposes here...
+    for (int i = 0; i < (int)argTypes.size(); ++i) {
+        // The cost imposed by this argument will be a multiple of
+        // costScale, which has a value set so that for each of the cost
+        // buckets, even if all of the function arguments undergo the next
+        // lower-cost conversion, the sum of their costs will be less than
+        // a single instance of the next higher-cost conversion.
+        int costScale = argTypes.size() + 1;
+
+        const Type *fargType = ftype->GetParameterType(i);
+        const Type *callType = argTypes[i];
+
+        if (Type::Equal(callType, fargType))
+            // Perfect match: no cost
+            costSum += 0;
+        else if (argCouldBeNULL && (*argCouldBeNULL)[i] &&
+                 lArgIsPointerType(fargType))
+            // Passing NULL to a pointer-typed parameter is also a no-cost
+            // operation
+            costSum += 0;
+        else {
+            // If the argument is a compile-time constant, we'd like to
+            // count the cost of various conversions as much lower than the
+            // cost if it wasn't--so scale up the cost when this isn't the
+            // case..
+            if (argIsConstant == NULL || (*argIsConstant)[i] == false)
+                costScale *= 128;
+
+            // For convenience, normalize to non-const types (except for
+            // references, where const-ness matters).  For all other types,
+            // we're passing by value anyway, so const doesn't matter.
+            const Type *callTypeNC = callType, *fargTypeNC = fargType;
+            if (dynamic_cast<const ReferenceType *>(callType) == NULL)
+                callTypeNC = callType->GetAsNonConstType();
+            if (dynamic_cast<const ReferenceType *>(fargType) == NULL)
+                fargTypeNC = fargType->GetAsNonConstType();
+                
+            if (Type::Equal(callTypeNC, fargTypeNC))
+                // Exact match (after dealing with references, above)
+                costSum += 1 * costScale;
+            // note: orig fargType for the next two...
+            else if (lIsMatchToNonConstReference(callTypeNC, fargType))
+                costSum += 2 * costScale;
+            else if (lIsMatchToNonConstReferenceUnifToVarying(callTypeNC, fargType))
+                costSum += 4 * costScale;
+            else if (lIsMatchWithTypeWidening(callTypeNC, fargTypeNC))
+                costSum += 8 * costScale;
+            else if (lIsMatchWithUniformToVarying(callTypeNC, fargTypeNC))
+                costSum += 16 * costScale;
+            else if (lIsMatchWithTypeConvSameVariability(callTypeNC, fargTypeNC))
+                costSum += 32 * costScale;
+            else if (CanConvertTypes(callTypeNC, fargTypeNC))
+                costSum += 64 * costScale;
+            else
+                // Failure--no type conversion possible...
+                return -1;
+        }
     }
+
+    return costSum;
 }
 
 
 bool
 FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
                                      const std::vector<const Type *> &argTypes,
-                                     const std::vector<bool> *argCouldBeNULL) {
+                                     const std::vector<bool> *argCouldBeNULL,
+                                     const std::vector<bool> *argIsConstant) {
+    const char *funName = candidateFunctions.front()->name.c_str();
+
     triedToResolve = true;
 
     // Functions with names that start with "__" should only be various
@@ -7665,45 +7775,67 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     // called.
     bool exactMatchOnly = (name.substr(0,2) == "__");
 
-    // Is there an exact match that doesn't require any argument type
-    // conversion (other than converting type -> reference type)?
-    if (tryResolve(lExactMatch, argPos, argTypes, argCouldBeNULL))
-        return true;
+    // First, find the subset of overload candidates that take the same
+    // number of arguments as have parameters (including functions that
+    // take more arguments but have defaults starting no later than after
+    // our last parameter).
+    std::vector<Symbol *> actualCandidates = 
+        getCandidateFunctions(argTypes.size());
 
-    if (exactMatchOnly == false) {
-        // Try to find a single match ignoring references
-        if (tryResolve(lMatchIgnoringReferences, argPos, argTypes, 
-                       argCouldBeNULL))
-            return true;
+    int bestMatchCost = 1<<30;
+    std::vector<Symbol *> matches;
+    std::vector<int> candidateCosts;
 
-        // Try to find an exact match via type widening--i.e. int8 ->
-        // int16, etc.--things that don't lose data.
-        if (tryResolve(lMatchWithTypeWidening, argPos, argTypes, argCouldBeNULL))
-            return true;
+    if (actualCandidates.size() == 0)
+        goto failure;
 
-        // Next try to see if there's a match via just uniform -> varying
-        // promotions.
-        if (tryResolve(lMatchIgnoringUniform, argPos, argTypes, argCouldBeNULL))
-            return true;
-
-        // Try to find a match via type conversion, but don't change
-        // unif->varying
-        if (tryResolve(lMatchWithTypeConvSameVariability, argPos, argTypes,
-                       argCouldBeNULL))
-            return true;
-    
-        // Last chance: try to find a match via arbitrary type conversion.
-        if (tryResolve(lMatchWithTypeConv, argPos, argTypes, argCouldBeNULL))
-            return true;
+    // Compute the cost for calling each of the candidate functions
+    for (int i = 0; i < (int)actualCandidates.size(); ++i) {
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(actualCandidates[i]->type);
+        Assert(ft != NULL);
+        candidateCosts.push_back(computeOverloadCost(ft, argTypes,
+                                                     argCouldBeNULL,
+                                                     argIsConstant));
     }
 
-    // failure :-(
-    const char *funName = candidateFunctions.front()->name.c_str();
-    Error(pos, "Unable to find matching overload for call to function \"%s\"%s.",
-          funName, exactMatchOnly ? " only considering exact matches" : "");
-    lPrintOverloadCandidates(argPos, candidateFunctions, argTypes, 
-                             argCouldBeNULL);
-    return false;
+    // Find the best cost, and then the candidate or candidates that have
+    // that cost.
+    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
+        if (candidateCosts[i] != -1 && candidateCosts[i] < bestMatchCost)
+            bestMatchCost = candidateCosts[i];
+    }
+    // None of the candidates matched
+    if (bestMatchCost == (1<<30))
+        goto failure;
+    for (int i = 0; i < (int)candidateCosts.size(); ++i) {
+        if (candidateCosts[i] == bestMatchCost)
+            matches.push_back(actualCandidates[i]);
+    }
+
+    if (matches.size() == 1) {
+        // Only one match: success
+        matchingFunc = matches[0];
+        return true;
+    }
+    else if (matches.size() > 1) {
+        // Multiple matches: ambiguous
+        Error(pos, "Multiple overloaded functions matched call to function "
+              "\"%s\"%s.", funName, 
+              exactMatchOnly ? " only considering exact matches" : "");
+        lPrintOverloadCandidates(argPos, matches, argTypes, argCouldBeNULL);
+        return false;
+    }
+    else {
+        // No matches at all
+ failure:
+        Error(pos, "Unable to find any matching overload for call to function "
+              "\"%s\"%s.", funName, 
+              exactMatchOnly ? " only considering exact matches" : "");
+        lPrintOverloadCandidates(argPos, candidateFunctions, argTypes, 
+                                 argCouldBeNULL);
+        return false;
+    }
 }
 
 
@@ -7788,7 +7920,7 @@ NullPointerExpr::GetConstant(const Type *type) const {
     if (pt == NULL)
         return NULL;
 
-    LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+    llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -7840,7 +7972,7 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
 
-    if (allocType != NULL && allocType->HasUnboundVariability())
+    if (allocType != NULL)
         allocType = allocType->ResolveUnboundVariability(Variability::Uniform);
 }
 
@@ -7934,7 +8066,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
                 // Initialize the memory pointed to by the pointer for the
                 // current lane.
                 ctx->SetCurrentBasicBlock(bbInit);
-                LLVM_TYPE_CONST llvm::Type *ptrType = 
+                llvm::Type *ptrType = 
                     retType->GetAsUniformType()->LLVMType(g->ctx);
                 llvm::Value *ptr = ctx->IntToPtrInst(p, ptrType);
                 InitSymbol(ptr, allocType, initExpr, ctx, pos);
@@ -7950,7 +8082,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
         // For uniform news, we just need to cast the void * to be a
         // pointer of the return type and to run the code for initializers,
         // if present.
-        LLVM_TYPE_CONST llvm::Type *ptrType = retType->LLVMType(g->ctx);
+        llvm::Type *ptrType = retType->LLVMType(g->ctx);
         ptrValue = ctx->BitCastInst(ptrValue, ptrType, "cast_new_ptr");
 
         if (initExpr != NULL)

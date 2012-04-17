@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -84,8 +84,7 @@ class AST {
 public:
     /** Add the AST for a function described by the given declaration
         information and source code. */
-    void AddFunction(Symbol *sym, const std::vector<Symbol *> &args, 
-                     Stmt *code);
+    void AddFunction(Symbol *sym, Stmt *code);
 
     /** Generate LLVM IR for all of the functions into the current
         module. */

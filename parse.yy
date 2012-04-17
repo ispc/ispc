@@ -173,8 +173,11 @@ struct ForeachDimension {
 }
 
 
-%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT TOKEN_INT64_CONSTANT
-%token TOKEN_UINT64_CONSTANT TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT 
+%token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT 
+%token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT 
+%token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
+%token TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -196,7 +199,7 @@ struct ForeachDimension {
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
-%type <expr> primary_expression postfix_expression
+%type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression
 %type <expr> multiplicative_expression additive_expression shift_expression
 %type <expr> relational_expression equality_expression and_expression
@@ -250,6 +253,12 @@ struct ForeachDimension {
 
 string_constant
     : TOKEN_STRING_LITERAL { $$ = new std::string(*yylval.stringVal); }
+    | string_constant TOKEN_STRING_LITERAL
+    {
+        std::string s = *((std::string *)$1);
+        s += *yylval.stringVal;
+        $$ = new std::string(s);
+    }
     ;
 
 primary_expression
@@ -622,7 +631,9 @@ declaration_statement
                 if ($1->declarators[i] == NULL)
                     Assert(m->errorCount > 0);
                 else
-                    m->AddTypeDef($1->declarators[i]->GetSymbol());
+                    m->AddTypeDef($1->declarators[i]->name,
+                                  $1->declarators[i]->type,
+                                  $1->declarators[i]->pos);
             }
             $$ = NULL;
         }
@@ -801,7 +812,6 @@ storage_class_specifier
     : TOKEN_TYPEDEF { $$ = SC_TYPEDEF; }
     | TOKEN_EXTERN { $$ = SC_EXTERN; }
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL  { $$ = SC_EXTERN_C; }
-    | TOKEN_EXPORT { $$ = SC_EXPORT; }
     | TOKEN_STATIC { $$ = SC_STATIC; }
     ;
 
@@ -864,7 +874,6 @@ struct_or_union_specifier
               std::vector<SourcePos> elementPositions;
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
-              // FIXME: should be unbound
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
                                   false, Variability::Unbound, @1);
           }
@@ -882,10 +891,9 @@ struct_or_union_specifier
     | struct_or_union struct_or_union_name
       { 
           const Type *st = m->symbolTable->LookupType($2); 
-          if (!st) {
-              std::vector<std::string> alternates = m->symbolTable->ClosestTypeMatch($2);
-              std::string alts = lGetAlternates(alternates);
-              Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
+          if (st == NULL) {
+              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, st, @2);
           }
           else if (dynamic_cast<const StructType *>(st) == NULL)
               Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
@@ -973,6 +981,11 @@ specifier_qualifier_list
             }
             else if ($1 == TYPEQUAL_TASK) {
                 Error(@1, "\"task\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
+            else if ($1 == TYPEQUAL_EXPORT) {
+                Error(@1, "\"export\" qualifier is illegal outside of "
                       "function declarations.");
                 $$ = $2;
             }
@@ -1108,6 +1121,7 @@ type_qualifier
     | TOKEN_UNIFORM    { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
+    | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
     | TOKEN_UNSIGNED   { $$ = TYPEQUAL_UNSIGNED; }
@@ -1160,7 +1174,7 @@ direct_declarator
     : TOKEN_IDENTIFIER
       {
           Declarator *d = new Declarator(DK_BASE, @1);
-          d->sym = new Symbol(yytext, @1);
+          d->name = yytext;
           $$ = d;
       }
     | '(' declarator ')' 
@@ -1335,8 +1349,10 @@ type_name
     {
         if ($1 == NULL || $2 == NULL)
             $$ = NULL;
-        else
-            $$ = $2->GetType($1, NULL);
+        else {
+            $2->InitFromType($1, NULL);
+            $$ = $2->type;
+        }
     }
     ;
 
@@ -1614,10 +1630,33 @@ foreach_active_identifier
     }
     ;
 
+integer_dotdotdot
+    : TOKEN_INT32DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
+                           (int32_t)yylval.intVal, @1); 
+    }
+    | TOKEN_UINT32DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
+                           (uint32_t)yylval.intVal, @1); 
+    }
+    | TOKEN_INT64DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
+                           (int64_t)yylval.intVal, @1); 
+    }
+    | TOKEN_UINT64DOTDOTDOT_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
+                           (uint64_t)yylval.intVal, @1); 
+    }
+    ;
+
 foreach_dimension_specifier
     : foreach_identifier '=' assignment_expression TOKEN_DOTDOTDOT assignment_expression
     {
         $$ = new ForeachDimension($1, $3, $5);
+    }
+    | foreach_identifier '=' integer_dotdotdot assignment_expression
+    {
+        $$ = new ForeachDimension($1, $3, $4);
     }
     ;
 
@@ -1817,11 +1856,14 @@ function_definition
     } 
     compound_statement
     {
-        std::vector<Symbol *> args;
         if ($2 != NULL) {
-            Symbol *sym = $2->GetFunctionInfo($1, &args);
-            if (sym != NULL)
-                m->AddFunctionDefinition(sym, args, $4);
+            $2->InitFromDeclSpecs($1);
+            const FunctionType *funcType =
+                dynamic_cast<const FunctionType *>($2->type);
+            if (funcType == NULL)
+                Assert(m->errorCount > 0);
+            else
+                m->AddFunctionDefinition($2->name, funcType, $4);
         }
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
@@ -1931,35 +1973,27 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         // Error happened earlier during parsing
         return;
 
+    decl->InitFromDeclSpecs(ds);
     if (ds->storageClass == SC_TYPEDEF)
-        m->AddTypeDef(decl->GetSymbol());
+        m->AddTypeDef(decl->name, decl->type, decl->pos);
     else {
-        const Type *t = decl->GetType(ds);
-        if (t == NULL) {
+        if (decl->type == NULL) {
             Assert(m->errorCount > 0);
             return;
         }
 
-        Symbol *sym = decl->GetSymbol();
-        if (sym == NULL) {
-            Assert(m->errorCount > 0);
-            return;
-        }
-
-        const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
+        decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+        
+        const FunctionType *ft = dynamic_cast<const FunctionType *>(decl->type);
         if (ft != NULL) {
-            sym->type = ft;
-            sym->storageClass = ds->storageClass;
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
-            m->AddFunctionDeclaration(sym, isInline);
+            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
+                                      isInline, decl->pos);
         }
         else {
-            if (sym->type == NULL)
-                Assert(m->errorCount > 0);
-            else
-                sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
-            m->AddGlobalVariable(sym, decl->initExpr, isConst);
+            m->AddGlobalVariable(decl->name, decl->type, decl->initExpr,
+                                 isConst, decl->storageClass, decl->pos);
         }
     }
 }
@@ -1988,16 +2022,13 @@ lAddFunctionParams(Declarator *decl) {
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
         Declaration *pdecl = decl->functionParams[i];
-        if (pdecl == NULL || pdecl->declarators.size() == 0)
-            // zero size declarators array corresponds to an anonymous 
-            // parameter
-            continue;
-        Assert(pdecl->declarators.size() == 1);
-        Symbol *sym = pdecl->declarators[0]->GetSymbol();
-        if (sym == NULL || sym->type == NULL)
+        Assert(pdecl != NULL && pdecl->declarators.size() == 1);
+        Declarator *declarator = pdecl->declarators[0];
+        if (declarator == NULL)
             Assert(m->errorCount > 0);
         else {
-            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
+            Symbol *sym = new Symbol(declarator->name, declarator->pos,
+                                     declarator->type, declarator->storageClass);
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)
@@ -2064,8 +2095,6 @@ lGetStorageClassString(StorageClass sc) {
         return "";
     case SC_EXTERN:
         return "extern";
-    case SC_EXPORT:
-        return "export";
     case SC_STATIC:
         return "static";
     case SC_TYPEDEF:

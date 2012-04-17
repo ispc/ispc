@@ -1,4 +1,4 @@
-// Unsized arrays aren't allowed in struct definitions
+// Unsized arrays aren't allowed except for the last member in a struct definition.
 
 struct Foo {
     float a[];
