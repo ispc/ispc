@@ -256,12 +256,10 @@ Optimize(llvm::Module *module, int optLevel) {
 
     optPM.add(llvm::createVerifierPass());
 
-    if (g->target.isa != Target::GENERIC) {
-        llvm::TargetLibraryInfo *targetLibraryInfo =
-            new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
-        optPM.add(targetLibraryInfo);
-        optPM.add(new llvm::TargetData(module));
-    }
+    llvm::TargetLibraryInfo *targetLibraryInfo =
+        new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
+    optPM.add(targetLibraryInfo);
+    optPM.add(new llvm::TargetData(module));
 
     optPM.add(llvm::createIndVarSimplifyPass());
 
