@@ -2090,6 +2090,8 @@ bool CWriter::doInitialization(Module &M) {
   Out << "int fflush(void *);\n";
   Out << "int printf(const unsigned char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+  Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
+  Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
   Out << "}\n\n";
 
   generateCompilerSpecificCode(Out, TD);
@@ -2199,69 +2201,6 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
-  // Output the global variable definitions and contents...
-  if (!M.global_empty()) {
-    Out << "\n\n/* Global Variable Definitions and Initialization */\n";
-    for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-         I != E; ++I)
-      if (!I->isDeclaration()) {
-        // Ignore special globals, such as debug info.
-        if (getGlobalVariableClass(I))
-          continue;
-
-        if (I->hasLocalLinkage())
-          Out << "static ";
-        else if (I->hasDLLImportLinkage())
-          Out << "__declspec(dllimport) ";
-        else if (I->hasDLLExportLinkage())
-          Out << "__declspec(dllexport) ";
-
-        // Thread Local Storage
-        if (I->isThreadLocal())
-          Out << "__thread ";
-
-        printType(Out, I->getType()->getElementType(), false,
-                  GetValueName(I));
-        if (I->hasLinkOnceLinkage())
-          Out << " __attribute__((common))";
-        else if (I->hasWeakLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
-        else if (I->hasCommonLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
-
-        if (I->hasHiddenVisibility())
-          Out << " __HIDDEN__";
-
-        // If the initializer is not null, emit the initializer.  If it is null,
-        // we try to avoid emitting large amounts of zeros.  The problem with
-        // this, however, occurs when the variable has weak linkage.  In this
-        // case, the assembler will complain about the variable being both weak
-        // and common, so we disable this optimization.
-        // FIXME common linkage should avoid this problem.
-        if (!I->getInitializer()->isNullValue()) {
-          Out << " = " ;
-          writeOperand(I->getInitializer(), false);
-        } else if (I->hasWeakLinkage()) {
-          // We have to specify an initializer, but it doesn't have to be
-          // complete.  If the value is an aggregate, print out { 0 }, and let
-          // the compiler figure out the rest of the zeros.
-          Out << " = " ;
-          if (I->getInitializer()->getType()->isStructTy() ||
-              I->getInitializer()->getType()->isVectorTy()) {
-            Out << "{ 0 }";
-          } else if (I->getInitializer()->getType()->isArrayTy()) {
-            // As with structs and vectors, but with an extra set of braces
-            // because arrays are wrapped in structs.
-            Out << "{ { 0 } }";
-          } else {
-            // Just print it out normally.
-            writeOperand(I->getInitializer(), false);
-          }
-        }
-        Out << ";\n";
-      }
-  }
-
   // Function declarations
   Out << "\n/* Function Declarations */\n";
   Out << "extern \"C\" {\n";
@@ -2360,6 +2299,69 @@ bool CWriter::doInitialization(Module &M) {
        I = intrinsicsToDefine.begin(),
        E = intrinsicsToDefine.end(); I != E; ++I) {
     printIntrinsicDefinition(**I, Out);
+  }
+
+  // Output the global variable definitions and contents...
+  if (!M.global_empty()) {
+    Out << "\n\n/* Global Variable Definitions and Initialization */\n";
+    for (Module::global_iterator I = M.global_begin(), E = M.global_end();
+         I != E; ++I)
+      if (!I->isDeclaration()) {
+        // Ignore special globals, such as debug info.
+        if (getGlobalVariableClass(I))
+          continue;
+
+        if (I->hasLocalLinkage())
+          Out << "static ";
+        else if (I->hasDLLImportLinkage())
+          Out << "__declspec(dllimport) ";
+        else if (I->hasDLLExportLinkage())
+          Out << "__declspec(dllexport) ";
+
+        // Thread Local Storage
+        if (I->isThreadLocal())
+          Out << "__thread ";
+
+        printType(Out, I->getType()->getElementType(), false,
+                  GetValueName(I));
+        if (I->hasLinkOnceLinkage())
+          Out << " __attribute__((common))";
+        else if (I->hasWeakLinkage())
+          Out << " __ATTRIBUTE_WEAK__";
+        else if (I->hasCommonLinkage())
+          Out << " __ATTRIBUTE_WEAK__";
+
+        if (I->hasHiddenVisibility())
+          Out << " __HIDDEN__";
+
+        // If the initializer is not null, emit the initializer.  If it is null,
+        // we try to avoid emitting large amounts of zeros.  The problem with
+        // this, however, occurs when the variable has weak linkage.  In this
+        // case, the assembler will complain about the variable being both weak
+        // and common, so we disable this optimization.
+        // FIXME common linkage should avoid this problem.
+        if (!I->getInitializer()->isNullValue()) {
+          Out << " = " ;
+          writeOperand(I->getInitializer(), false);
+        } else if (I->hasWeakLinkage()) {
+          // We have to specify an initializer, but it doesn't have to be
+          // complete.  If the value is an aggregate, print out { 0 }, and let
+          // the compiler figure out the rest of the zeros.
+          Out << " = " ;
+          if (I->getInitializer()->getType()->isStructTy() ||
+              I->getInitializer()->getType()->isVectorTy()) {
+            Out << "{ 0 }";
+          } else if (I->getInitializer()->getType()->isArrayTy()) {
+            // As with structs and vectors, but with an extra set of braces
+            // because arrays are wrapped in structs.
+            Out << "{ { 0 } }";
+          } else {
+            // Just print it out normally.
+            writeOperand(I->getInitializer(), false);
+          }
+        }
+        Out << ";\n";
+      }
   }
 
   return false;
@@ -3417,6 +3419,7 @@ void CWriter::lowerIntrinsics(Function &F) {
           case Intrinsic::ppc_altivec_lvsl:
           case Intrinsic::uadd_with_overflow:
           case Intrinsic::sadd_with_overflow:
+          case Intrinsic::trap:
               // We directly implement these intrinsics
             break;
           default:
@@ -3584,7 +3587,6 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
-    Function *F = I.getCalledFunction();
 #define GET_GCC_BUILTIN_NAME
 #include "llvm/Intrinsics.gen"
 #undef GET_GCC_BUILTIN_NAME
@@ -3726,6 +3728,9 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     Out << ", ";
     writeOperand(I.getArgOperand(1));
     Out << ")";
+    return true;
+  case Intrinsic::trap:
+    Out << "abort()";
     return true;
   }
 }
