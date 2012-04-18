@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -899,8 +899,8 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // Mask all on -> replace with the first select value
                 value = selectInst->getOperand(1);
             else if (mask == 0)
-                // Mask all off -> replace with the second select blend value
-                value = selectInst->getOperand(1);
+                // Mask all off -> replace with the second select value
+                value = selectInst->getOperand(2);
 
             if (value != NULL) {
                 llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
