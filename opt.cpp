@@ -586,6 +586,40 @@ IntrinsicsOpt::IntrinsicsOpt()
 }
 
 
+/** Given a vector of constant values (int, float, or bool) representing an
+    execution mask, convert it to a bitvector where the 0th bit corresponds
+    to the first vector value and so forth.
+*/
+static int
+lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, 
+                                             ISPC_MAX_NVEC> &elements) {
+    Assert(elements.size() <= 32);
+
+    int mask = 0;
+    for (unsigned int i = 0; i < elements.size(); ++i) {
+        llvm::APInt intMaskValue;
+        // SSE has the "interesting" approach of encoding blending
+        // masks as <n x float>.
+        llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i]);
+        if (cf != NULL) {
+            llvm::APFloat apf = cf->getValueAPF();
+            intMaskValue = apf.bitcastToAPInt();
+        }
+        else {
+            // Otherwise get it as an int
+            llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
+            Assert(ci != NULL);  // vs return -1 if NULL?
+            intMaskValue = ci->getValue();
+        }
+        // Is the high-bit set?  If so, OR in the appropriate bit in
+        // the result mask
+        if (intMaskValue.countLeadingOnes() > 0)
+            mask |= (1 << i);
+    }
+    return mask;
+}
+
+
 /** Given an llvm::Value represinting a vector mask, see if the value is a
     constant.  If so, return the integer mask found by taking the high bits
     of the mask values in turn and concatenating them into a single integer.
@@ -600,41 +634,30 @@ lGetMask(llvm::Value *factor) {
     Assert(g->target.vectorWidth < 32);
 
 #ifdef LLVM_3_1svn
-    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
-#endif
-    if (cv) {
-        int mask = 0;
+    llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
+    if (cdv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifdef LLVM_3_1svn
-        for (int i = 0; i < (int)cv->getNumElements(); ++i)
-            elements.push_back(cv->getElementAsConstant(i));
+        for (int i = 0; i < (int)cdv->getNumElements(); ++i)
+            elements.push_back(cdv->getElementAsConstant(i));
+        return lConstElementsToMask(elements);
+    }
+#endif
+
+    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
+    if (cv != NULL) {
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+ #ifdef LLVM_3_1svn
+        for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
+            llvm::Constant *c = 
+                llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
+            if (c == NULL)
+                return NULL;
+            elements.push_back(c);
+        }
 #else
         cv->getVectorElements(elements);
 #endif
-
-        for (unsigned int i = 0; i < elements.size(); ++i) {
-            llvm::APInt intMaskValue;
-            // SSE has the "interesting" approach of encoding blending
-            // masks as <n x float>.
-            llvm::ConstantFP *cf = llvm::dyn_cast<llvm::ConstantFP>(elements[i]);
-            if (cf) {
-                llvm::APFloat apf = cf->getValueAPF();
-                intMaskValue = apf.bitcastToAPInt();
-            }
-            else {
-                // Otherwise get it as an int
-                llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-                Assert(ci != NULL);  // vs return -1 if NULL?
-                intMaskValue = ci->getValue();
-            }
-            // Is the high-bit set?  If so, OR in the appropriate bit in
-            // the result mask
-            if (intMaskValue.countLeadingOnes() > 0)
-                mask |= (1 << i);
-        }
-        return mask;
+        return lConstElementsToMask(elements);
     }
     else if (llvm::isa<llvm::ConstantAggregateZero>(factor))
         return 0;
@@ -1149,7 +1172,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // Indexing into global arrays can lead to this form, with
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifdef LLVM_3_1svn
+ #ifdef LLVM_3_1svn
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
