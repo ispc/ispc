@@ -559,52 +559,6 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     }
 }
 
-
-const Type *
-Declarator::GetType(DeclSpecs *ds) const {
-    const Type *baseType = ds->GetBaseType(pos);
-    const Type *type = GetType(baseType, ds);
-
-    if (ds->declSpecList.size() > 0 && 
-        type != NULL &&
-        dynamic_cast<const FunctionType *>(type) == NULL) {
-        Error(pos, "__declspec specifiers for non-function type \"%s\" are "
-              "not used.", type->GetString().c_str());
-    }
-
-    return type;
-}
-
-
-Symbol *
-Declarator::GetSymbolForFunctionParameter(int paramNum) const {
-    Assert(paramNum < (int)functionParams.size());
-    Declaration *d = functionParams[paramNum];
-
-    char buf[32];
-    Symbol *sym;
-    if (d->declarators.size() == 0) {
-        // function declaration like foo(float), w/o a name for
-        // the parameter
-        sprintf(buf, "__anon_parameter_%d", paramNum);
-        sym = new Symbol(buf, pos);
-        sym->type = d->declSpecs->GetBaseType(pos);
-    }
-    else {
-        Assert(d->declarators.size() == 1);
-        sym = d->declarators[0]->GetSymbol();
-        if (sym == NULL) {
-            // Handle more complex anonymous declarations like
-            // float (float **).
-            sprintf(buf, "__anon_parameter_%d", paramNum);
-            sym = new Symbol(buf, d->declarators[0]->pos);
-            sym->type = d->declarators[0]->GetType(d->declSpecs);
-        }
-    }
-    return sym;
-}
-
-
 ///////////////////////////////////////////////////////////////////////////
 // Declaration
 
