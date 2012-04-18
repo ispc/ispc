@@ -3587,6 +3587,9 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
+#ifdef LLVM_3_0
+    Function *F = I.getCalledFunction();
+#endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
 #include "llvm/Intrinsics.gen"
 #undef GET_GCC_BUILTIN_NAME

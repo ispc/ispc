@@ -1258,6 +1258,11 @@ UnaryExpr::TypeCheck() {
                   type->GetString().c_str());
             return NULL;
         }
+        if (dynamic_cast<const UndefinedStructType *>(pt->GetBaseType())) {
+            Error(expr->pos, "Illegal to pre/post increment pointer to "
+                  "undefined struct type \"%s\".", type->GetString().c_str());
+            return NULL;
+        }
 
         return this;
     }
@@ -2296,6 +2301,16 @@ BinaryExpr::TypeCheck() {
                   "on \"%s\" type.", type1->GetString().c_str());
             return NULL;
         }
+        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt0->GetString().c_str());
+            return NULL;
+        }
+        if (dynamic_cast<const UndefinedStructType *>(pt1->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt1->GetString().c_str());
+            return NULL;
+        }
 
         const Type *t = Type::MoreGeneralType(type0, type1, pos, "-");
         if (t == NULL)
@@ -2329,6 +2344,11 @@ BinaryExpr::TypeCheck() {
         if (PointerType::IsVoidPointer(pt0)) {
             Error(pos, "Illegal to perform pointer arithmetic "
                   "on \"%s\" type.", pt0->GetString().c_str());
+            return NULL;
+        }
+        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt0->GetString().c_str());
             return NULL;
         }
 
@@ -7336,6 +7356,14 @@ SizeOfExpr::Print() const {
 
 Expr *
 SizeOfExpr::TypeCheck() {
+    // Can't compute the size of a struct without a definition
+    if (type != NULL &&
+        dynamic_cast<const UndefinedStructType *>(type) != NULL) {
+        Error(pos, "Can't compute the size of declared but not defined "
+              "struct type \"%s\".", type->GetString().c_str());
+        return NULL;
+    }
+
     return this;
 }
 
@@ -8105,9 +8133,20 @@ NewExpr::GetType() const {
 
 Expr *
 NewExpr::TypeCheck() {
-    // Here we only need to make sure that if we have an expression giving
-    // a number of elements to allocate that it can be converted to an
-    // integer of the appropriate variability.
+    // It's illegal to call new with an undefined struct type
+    if (allocType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    if (dynamic_cast<const UndefinedStructType *>(allocType) != NULL) {
+        Error(pos, "Can't dynamically allocate storage for declared "
+              "but not defined type \"%s\".", allocType->GetString().c_str());
+        return NULL;
+    }
+
+    // Otherwise we only need to make sure that if we have an expression
+    // giving a number of elements to allocate that it can be converted to
+    // an integer of the appropriate variability.
     if (countExpr == NULL)
         return this;
 
