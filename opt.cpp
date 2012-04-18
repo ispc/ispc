@@ -100,6 +100,28 @@ static llvm::Pass *CreateMaskedLoadOptPass();
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
+#define DEBUG_START_PASS(NAME)                                 \
+    if (g->debugPrint &&                                       \
+        (getenv("FUNC") == NULL ||                             \
+         !strcmp(bb.getParent()->getName().str().c_str(), getenv("FUNC")))) { \
+        fprintf(stderr, "Start of " NAME "\n");                \
+        fprintf(stderr, "---------------\n");                  \
+        bb.dump();                                             \
+        fprintf(stderr, "---------------\n\n");                \
+    } else /* eat semicolon */
+
+#define DEBUG_END_PASS(NAME)                                   \
+    if (g->debugPrint &&                                       \
+        (getenv("FUNC") == NULL ||                             \
+         !strcmp(bb.getParent()->getName().str().c_str(), getenv("FUNC")))) { \
+        fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : ""); \
+        fprintf(stderr, "---------------\n");                  \
+        bb.dump();                                             \
+        fprintf(stderr, "---------------\n\n");                \
+    } else /* eat semicolon */
+
+
+
 ///////////////////////////////////////////////////////////////////////////
 
 
@@ -703,12 +725,7 @@ lIsUndef(llvm::Value *value) {
 
 bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of IntrinsicsOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("IntrinsicsOpt");
 
     llvm::Function *avxMaskedLoad32 = 
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
@@ -859,12 +876,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of IntrinsicsOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("IntrinsicsOpt");
 
     return modifiedAny;
 }
@@ -921,12 +933,7 @@ char VSelMovmskOpt::ID = 0;
 
 bool
 VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of VSelMovmskOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("VSelMovmaskOpt");
 
     bool modifiedAny = false;
 
@@ -978,12 +985,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of VSelMovMskOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("VSelMovMskOpt");
 
     return modifiedAny;
 }
@@ -1718,12 +1720,7 @@ struct GSInfo {
 
 bool
 DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of DetectGSBaseOffsets\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("DetectGSBaseOffsets");
 
     GSInfo gsFuncs[] = {
         GSInfo("__pseudo_gather32_8",  "__pseudo_gather_base_offsets32_8",
@@ -1864,12 +1861,7 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         goto restart;
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of DetectGSBaseOffsets\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("DetectGSBaseOffsets");
 
     return modifiedAny;
 }
@@ -1915,12 +1907,7 @@ struct MSInfo {
 
 bool
 MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of MaskedStoreOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("MaskedStoreOpt");
 
     MSInfo msInfo[] = {
         MSInfo("__pseudo_masked_store_8",  1),
@@ -1996,12 +1983,7 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of MaskedStoreOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("MaskedStoreOpt");
 
     return modifiedAny;
 }
@@ -2043,12 +2025,7 @@ struct MLInfo {
 
 bool
 MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of MaskedLoadOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("MaskedLoadOpt");
 
     MLInfo mlInfo[] = {
         MLInfo("__masked_load_8",  1),
@@ -2110,12 +2087,7 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of MaskedLoadOpt\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("MaskedLoadOpt");
 
     return modifiedAny;
 }
@@ -2204,12 +2176,7 @@ struct LMSInfo {
 
 bool
 PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of PseudoMaskedStorePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("PseudoMaskedStorePass");
 
     LMSInfo msInfo[] = {
         LMSInfo("__pseudo_masked_store_8", "__masked_store_blend_8", 
@@ -2263,12 +2230,7 @@ PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         goto restart;
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of PseudoMaskedStorePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("PseudoMaskedStorePass");
 
     return modifiedAny;
 }
@@ -2355,12 +2317,7 @@ struct ScatterImpInfo {
 
 bool
 GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of GSToLoadStorePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("GSToLoadStorePass");
 
     GatherImpInfo gInfo[] = {
         GatherImpInfo("__pseudo_gather_base_offsets32_8", "__load_and_broadcast_8",
@@ -2544,12 +2501,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of GSToLoadStorePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("GSToLoadStorePass");
 
     return modifiedAny;
 }
@@ -3483,12 +3435,7 @@ lInstructionMayWriteToMemory(llvm::Instruction *inst) {
 
 bool
 GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of GatherCoalescePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("GatherCoalescePass");
 
     llvm::Function *gatherFuncs[] = {
         m->module->getFunction("__pseudo_gather_base_offsets32_32"),
@@ -3624,12 +3571,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of GatherCoalescePass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("GatherCoalescePass");
 
     return modifiedAny;
 }
@@ -3676,12 +3618,7 @@ struct LowerGSInfo {
 
 bool
 PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of PseudoGSToGSPass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("PseudoGSToGSPass");
 
     LowerGSInfo lgsInfo[] = {
         LowerGSInfo("__pseudo_gather_base_offsets32_8",  "__gather_base_offsets32_i8",  true),
@@ -3766,12 +3703,7 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         goto restart;
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of PseudoGSToGSPass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("PseudoGSToGSPass");
 
     return modifiedAny;
 }
@@ -3814,14 +3746,10 @@ public:
 
 char IsCompileTimeConstantPass::ID = 0;
 
+
 bool
 IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    if (g->debugPrint) {
-        fprintf(stderr, "Start of IsCompileTimeConstantPass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_START_PASS("IsCompileTimeConstantPass");
 
     llvm::Function *funcs[] = {
         m->module->getFunction("__is_compile_time_constant_mask"),
@@ -3880,12 +3808,7 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
     }
 
-    if (g->debugPrint) {
-        fprintf(stderr, "End of IsCompileTimeConstantPass\n");
-        fprintf(stderr, "---------------\n");
-        bb.dump();
-        fprintf(stderr, "---------------\n\n");
-    }
+    DEBUG_END_PASS("IsCompileTimeConstantPass");
 
     return modifiedAny;
 }
