@@ -266,6 +266,10 @@ static FORCEINLINE void __store(__vec4_i1 *p, __vec4_i1 value, int align) {
     _mm_storeu_ps((float *)(&p->v), value.v);
 }
 
+static FORCEINLINE __vec4_i1 __smear_i1(int v) {
+    return __vec4_i1(v, v, v, v);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // int8
 
