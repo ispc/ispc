@@ -290,4 +290,10 @@ extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2,
                                        int32_t shuf[], int shufSize,
                                        llvm::Instruction *insertBefore);
 
+/** Utility routines to concat strings with the names of existing values to
+    create meaningful new names for instruction values.
+*/
+extern const char *LLVMGetName(llvm::Value *v, const char *);
+extern const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2);
+
 #endif // ISPC_LLVMUTIL_H
