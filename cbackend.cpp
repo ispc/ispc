@@ -1702,7 +1702,12 @@ std::string CWriter::GetValueName(const Value *Operand) {
       VarName += ch;
   }
 
-  return VarName + "_llvm_cbe";
+  if (isa<BasicBlock>(Operand))
+    VarName += "_label";
+  else
+    VarName += "_";
+
+  return VarName;
 }
 
 /// writeInstComputationInline - Emit the computation for the specified
