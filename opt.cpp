@@ -829,14 +829,16 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 llvm::Type *returnType = callInst->getType();
                 Assert(llvm::isa<llvm::VectorType>(returnType));
                 // cast the i8 * to the appropriate type
+                const char *name = LLVMGetName(callInst->getArgOperand(0), "_cast");
                 llvm::Value *castPtr = 
                     new llvm::BitCastInst(callInst->getArgOperand(0),
                                           llvm::PointerType::get(returnType, 0), 
-                                          "ptr2vec", callInst);
+                                          name, callInst);
                 lCopyMetadata(castPtr, callInst);
                 int align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
+                name = LLVMGetName(callInst->getArgOperand(0), "_load");
                 llvm::Instruction *loadInst = 
-                    new llvm::LoadInst(castPtr, "load", false /* not volatile */,
+                    new llvm::LoadInst(castPtr, name, false /* not volatile */,
                                        align, (llvm::Instruction *)NULL);
                 lCopyMetadata(loadInst, callInst);
                 llvm::ReplaceInstWithInst(callInst, loadInst);
@@ -859,10 +861,12 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // all lanes storing, so replace with a regular store
                 llvm::Value *rvalue = callInst->getArgOperand(2);
                 llvm::Type *storeType = rvalue->getType();
+                const char *name = LLVMGetName(callInst->getArgOperand(0),
+                                               "_ptrcast");
                 llvm::Value *castPtr = 
                     new llvm::BitCastInst(callInst->getArgOperand(0),
                                           llvm::PointerType::get(storeType, 0), 
-                                          "ptr2vec", callInst);
+                                          name, callInst);
                 lCopyMetadata(castPtr, callInst);
 
                 llvm::StoreInst *storeInst = 
@@ -1291,12 +1295,13 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             *constOffset = NULL;
         else
             *constOffset = new llvm::SExtInst(co, sext->getType(), 
-                                              "const_offset_sext", insertBefore);
+                                              LLVMGetName(co, "_sext"),
+                                              insertBefore);
         if (vo == NULL)
             *variableOffset = NULL;
         else
             *variableOffset = new llvm::SExtInst(vo, sext->getType(), 
-                                                 "variable_offset_sext", 
+                                                 LLVMGetName(vo, "_sext"),
                                                  insertBefore);
         return;
     }
@@ -1320,7 +1325,8 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             else
                 *constOffset = 
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, c0, c1,
-                                                 "const_op", insertBefore);
+                                                 LLVMGetName("add", c0, c1),
+                                                 insertBefore);
 
             if (v0 == NULL || llvm::isa<llvm::ConstantAggregateZero>(v0))
                 *variableOffset = v1;
@@ -1329,7 +1335,8 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             else
                 *variableOffset = 
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, v0, v1,
-                                                 "variable_op", insertBefore);
+                                                 LLVMGetName("add", v0, v1),
+                                                 insertBefore);
             return;
         }
         else if (bop->getOpcode() == llvm::Instruction::Mul) {
@@ -1343,26 +1350,27 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             if (c0 != NULL && c1 != NULL)
                 *constOffset =
                     llvm::BinaryOperator::Create(llvm::Instruction::Mul, c0, c1,
-                                                 "const_mul", insertBefore);
+                                                 LLVMGetName("mul", c0, c1),
+                                                 insertBefore);
             else
                 *constOffset = NULL;
 
             llvm::Value *va = NULL, *vb = NULL, *vc = NULL;
             if (v0 != NULL && c1 != NULL)
                 va = llvm::BinaryOperator::Create(llvm::Instruction::Mul, v0, c1,
-                                                  "va_mul", insertBefore);
+                                                  LLVMGetName("mul", v0, c1), insertBefore);
             if (c0 != NULL && v1 != NULL)
                 vb = llvm::BinaryOperator::Create(llvm::Instruction::Mul, c0, v1,
-                                                  "vb_mul", insertBefore);
+                                                  LLVMGetName("mul", c0, v1), insertBefore);
             if (v0 != NULL && v1 != NULL)
                 vc = llvm::BinaryOperator::Create(llvm::Instruction::Mul, v0, v1,
-                                                  "vc_mul", insertBefore);
+                                                  LLVMGetName("mul", v0, v1), insertBefore);
 
             
             llvm::Value *vab = NULL;
             if (va != NULL && vb != NULL)
                 vab = llvm::BinaryOperator::Create(llvm::Instruction::Add, va, vb,
-                                                   "vab_add", insertBefore);
+                                                   LLVMGetName("add", va, vb), insertBefore);
             else if (va != NULL)
                 vab = va;
             else
@@ -1371,7 +1379,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             if (vab != NULL && vc != NULL)
                 *variableOffset = 
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, vab, vc,
-                                                 "vabc_add", insertBefore);
+                                                 LLVMGetName("add", vab, vc), insertBefore);
             else if (vab != NULL)
                 *variableOffset = vab;
             else
@@ -1443,7 +1451,7 @@ lExtract248Scale(llvm::Value *splatOperand, int splatValue,
             *result = 
                 llvm::BinaryOperator::Create(llvm::Instruction::Mul,
                                              splatDiv, otherOperand,
-                                             "add", insertBefore);
+                                             "mul", insertBefore);
             return LLVMInt32(scale);
         }
     }
@@ -1673,7 +1681,8 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
             // do the more general check with lVectorIs32BitInts().
             variableOffset = 
                 new llvm::TruncInst(variableOffset, LLVMTypes::Int32VectorType,
-                                    "trunc_variable_offset", insertBefore);
+                                    LLVMGetName(variableOffset, "_trunc"),
+                                    insertBefore);
         else
             return false;
     }
@@ -1683,7 +1692,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
             // Truncate them so we have a 32-bit vector type for them.
             constOffset = 
                 new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
-                                    "trunc_const_offset", insertBefore);
+                                    LLVMGetName(constOffset, "_trunc"), insertBefore);
         }
         else {
             // FIXME: otherwise we just assume that all constant offsets
@@ -1696,7 +1705,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
             // enough for us in some cases if we call it from here.
             constOffset = 
                 new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
-                                    "trunc_const_offset", insertBefore);
+                                    LLVMGetName(constOffset, "_trunc"), insertBefore);
         }
     }
 
@@ -1819,7 +1828,7 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         // Cast the base pointer to a void *, since that's what the
         // __pseudo_*_base_offsets_* functions want.
         basePtr = new llvm::IntToPtrInst(basePtr, LLVMTypes::VoidPointerType,
-                                         "base2void", callInst);
+                                         LLVMGetName(basePtr, "_2void"), callInst);
         lCopyMetadata(basePtr, callInst);
 
         llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
@@ -1842,7 +1851,8 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             // way we can then call ReplaceInstWithInst().
             llvm::Instruction *newCall = 
                 lCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
-                          constOffset, mask, "newgather", NULL);
+                          constOffset, mask, callInst->getName().str().c_str(),
+                          NULL);
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
         }
@@ -2443,7 +2453,7 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 Debug(pos, "Transformed gather to scalar load and broadcast!");
                 llvm::Instruction *newCall = 
                     lCallInst(gatherInfo->loadBroadcastFunc, ptr, mask, 
-                              "load_braodcast");
+                              LLVMGetName(callInst, "_broadcast"));
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
 
@@ -2481,7 +2491,8 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 if (gatherInfo != NULL) {
                     Debug(pos, "Transformed gather to unaligned vector load!");
                     llvm::Instruction *newCall = 
-                        lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, "masked_load");
+                        lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, 
+                                  LLVMGetName(ptr, "_masked_load"));
                     lCopyMetadata(newCall, callInst);
                     llvm::ReplaceInstWithInst(callInst, newCall);
                 }

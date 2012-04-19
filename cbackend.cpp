@@ -4402,7 +4402,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             Value *args[1] = { toMatch };
             ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
             Instruction *smearCall = 
-                CallInst::Create(smearFunc, argArray, "smear", (Instruction *)NULL);
+                CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
+                                 (Instruction *)NULL);
 
             ReplaceInstWithInst(iter, smearCall);
 
