@@ -103,7 +103,8 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
         (getenv("FUNC") == NULL ||                             \
-         !strcmp(bb.getParent()->getName().str().c_str(), getenv("FUNC")))) { \
+         !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"), \
+                  strlen(getenv("FUNC"))))) {                           \
         fprintf(stderr, "Start of " NAME "\n");                \
         fprintf(stderr, "---------------\n");                  \
         bb.dump();                                             \
@@ -113,7 +114,8 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 #define DEBUG_END_PASS(NAME)                                   \
     if (g->debugPrint &&                                       \
         (getenv("FUNC") == NULL ||                             \
-         !strcmp(bb.getParent()->getName().str().c_str(), getenv("FUNC")))) { \
+         !strncmp(bb.getParent()->getName().str().c_str(), getenv("FUNC"), \
+                  strlen(getenv("FUNC"))))) {                           \
         fprintf(stderr, "End of " NAME " %s\n", modifiedAny ? "** CHANGES **" : ""); \
         fprintf(stderr, "---------------\n");                  \
         bb.dump();                                             \
