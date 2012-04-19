@@ -2663,6 +2663,7 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     }
 
     // And store the result back to the lvalue.
+    ctx->SetDebugPos(arg0->pos);
     lStoreAssignResult(newValue, lv, resultType, lvalueType, ctx, baseSym);
 
     return newValue;
@@ -2707,7 +2708,7 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         }
 
-        ctx->SetDebugPos(pos);
+        ctx->SetDebugPos(lvalue->pos);
 
         lStoreAssignResult(value, ptr, valueType, ptrType, ctx, baseSym);
 
