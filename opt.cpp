@@ -2295,8 +2295,7 @@ struct GatherImpInfo {
 static llvm::Value *
 lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
                       llvm::Instruction *insertBefore) {
-    llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets,
-                                                             insertBefore);
+    llvm::Value *firstOffset = LLVMExtractFirstVectorElement(offsets);
     return lGEPInst(base, firstOffset, "ptr", insertBefore);
 }
 
@@ -3290,8 +3289,7 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
     // All of the variable offsets values should be the same, due to
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
-    llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets,
-                                                          insertBefore);
+    llvm::Value *variable = LLVMExtractFirstVectorElement(variableOffsets);
     if (variable->getType() == LLVMTypes::Int64Type)
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type,
                                          "scale_to64", insertBefore);

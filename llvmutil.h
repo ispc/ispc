@@ -274,8 +274,7 @@ extern void LLVMDumpValue(llvm::Value *v);
     worth of values just to extract the first element, in cases where only
     the first element's value is needed.
   */
-extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v, 
-                                              llvm::Instruction *insertBefore);
+extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v);
 
 /** This function takes two vectors, expected to be the same length, and
     returns a new vector of twice the length that represents concatenating

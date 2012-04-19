@@ -1390,18 +1390,37 @@ LLVMDumpValue(llvm::Value *v) {
 
 
 static llvm::Value *
-lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
+lExtractFirstVectorElement(llvm::Value *v, 
                            std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
-    // If it's not an instruction (i.e. is a constant), then we can just
-    // emit an extractelement instruction and let the regular optimizer do
-    // the rest.
-    if (llvm::isa<llvm::Instruction>(v) == false)
-        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
-                                                insertBefore);
-
     llvm::VectorType *vt =
         llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
+
+    // First, handle various constant types; do the extraction manually, as
+    // appropriate.
+    if (llvm::isa<llvm::ConstantAggregateZero>(v) == true) {
+        Assert(vt->getElementType()->isIntegerTy());
+        return llvm::ConstantInt::get(vt->getElementType(), 0);
+    }
+    if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
+#ifdef LLVM_3_1svn
+        return cv->getOperand(0);
+#else
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        cv->getVectorElements(elements);
+        return elements[0];
+#endif // LLVM_3_1
+    }
+#ifdef LLVM_3_1svn
+    if (llvm::ConstantDataVector *cdv = 
+        llvm::dyn_cast<llvm::ConstantDataVector>(v))
+        return cdv->getElementAsConstant(0);
+#endif  // LLVM_3_1
+
+    // Otherwise, all that we should have at this point is an instruction
+    // of some sort
+    Assert(llvm::isa<llvm::Constant>(v) == false);
+    Assert(llvm::isa<llvm::Instruction>(v) == true);
 
     std::string newName = v->getName().str() + std::string(".elt0");
 
@@ -1410,20 +1429,24 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
         llvm::Value *v0 = lExtractFirstVectorElement(bop->getOperand(0),
-                                                     insertBefore, phiMap);
+                                                     phiMap);
         llvm::Value *v1 = lExtractFirstVectorElement(bop->getOperand(1),
-                                                     insertBefore, phiMap);
+                                                     phiMap);
+        // Note that the new binary operator is inserted immediately before
+        // the previous vector one
         return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1,
-                                            newName, insertBefore);
+                                            newName, bop);
     }
 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(v);
     if (cast != NULL) {
         llvm::Value *v = lExtractFirstVectorElement(cast->getOperand(0),
-                                                    insertBefore, phiMap);
+                                                    phiMap);
+        // Similarly, the equivalent scalar cast instruction goes right
+        // before the vector cast
         return llvm::CastInst::Create(cast->getOpcode(), v,
                                       vt->getElementType(), newName,
-                                      insertBefore);
+                                      cast);
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
@@ -1438,8 +1461,7 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         // return the pointer and not get stuck in an infinite loop.
         //
         // The insertion point for the new phi node also has to be the
-        // start of the bblock of the original phi node, which isn't
-        // necessarily the same bblock as insertBefore is in!
+        // start of the bblock of the original phi node.
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
         llvm::PHINode *scalarPhi = 
             llvm::PHINode::Create(vt->getElementType(), 
@@ -1449,7 +1471,7 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
 
         for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
             llvm::Value *v = lExtractFirstVectorElement(phi->getIncomingValue(i),
-                                                        insertBefore, phiMap);
+                                                        phiMap);
             scalarPhi->addIncoming(v, phi->getIncomingBlock(i));
         }
 
@@ -1466,15 +1488,22 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
     }
 
     // Worst case, for everything else, just do a regular extract element
-    return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
-                                            insertBefore);
+    // instruction, which we insert immediately after the instruction we
+    // have here.
+    llvm::Instruction *insertAfter = llvm::dyn_cast<llvm::Instruction>(v);
+    Assert(insertAfter != NULL);
+    llvm::Instruction *ee = 
+        llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
+                                         (llvm::Instruction *)NULL);
+    ee->insertAfter(insertAfter);
+    return ee;
 }
 
 
 llvm::Value *
-LLVMExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore) {
+LLVMExtractFirstVectorElement(llvm::Value *v) {
     std::map<llvm::PHINode *, llvm::PHINode *> phiMap;
-    llvm::Value *ret = lExtractFirstVectorElement(v, insertBefore, phiMap);
+    llvm::Value *ret = lExtractFirstVectorElement(v, phiMap);
     return ret;
 }
 
