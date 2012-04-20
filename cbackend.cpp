@@ -1495,8 +1495,9 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         printConstantDataSequential(CDV, Static);
         Out << ")";
       }
+    }
 #endif
-    } else {
+    else {
       assert(isa<UndefValue>(CPV));
       Constant *CZ = Constant::getNullValue(VT->getElementType());
       printType(Out, CPV->getType());
