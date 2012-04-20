@@ -1155,6 +1155,19 @@ FunctionEmitContext::GetLabeledBasicBlock(const std::string &label) {
         return NULL;
 }
 
+std::vector<std::string>
+FunctionEmitContext::GetLabels() {
+    // Initialize vector to the right size
+    std::vector<std::string> labels(labelMap.size());
+
+    // Iterate through labelMap and grab only the keys
+    std::map<std::string, llvm::BasicBlock*>::iterator iter;
+    for (iter=labelMap.begin(); iter != labelMap.end(); iter++)
+        labels.push_back(iter->first);
+
+    return labels;
+}
+
 
 void
 FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {

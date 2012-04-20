@@ -248,6 +248,10 @@ public:
         new basic block that it starts. */
     llvm::BasicBlock *GetLabeledBasicBlock(const std::string &label);
 
+    /** Returns a vector of all labels in the context. This is
+        simply the key set of the labelMap */
+    std::vector<std::string> GetLabels();
+
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
         doCoherenceCheck indicates whether instructions should be generated

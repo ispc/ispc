@@ -2281,10 +2281,26 @@ GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     llvm::BasicBlock *bb = ctx->GetLabeledBasicBlock(label);
     if (bb == NULL) {
-        // TODO: use the string distance stuff to suggest alternatives if
-        // there are some with names close to the label name we have here..
-        Error(identifierPos, "No label named \"%s\" found in current function.",
+        /* Label wasn't found. Emit an error */
+        Error(identifierPos, 
+                "No label named \"%s\" found in current function.",
               label.c_str());
+
+        /* Look for suggestions that are close */
+        std::vector<std::string> labels = ctx->GetLabels();
+        std::vector<std::string> matches = MatchStrings(label, labels);
+        if (! matches.empty()) {
+            /* Print up to 5 matches. Don't want to spew too much */
+            std::string match_output("Did you mean\n");
+            for (unsigned int i=0; i<matches.size() && i<5; i++)
+                match_output += " " + matches[i] + "?\n";
+
+            /*TODO. Embed these suggestions IN the error message
+               itself. Currently it looks ugly since line breaks
+               are ignored inside Error() strings. Multiple
+               Error() messages are not an option either */
+            printf("%s", match_output.c_str());
+        }
         return;
     }
 
