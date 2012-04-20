@@ -3711,7 +3711,10 @@ ExprList::GetConstant(const Type *type) const {
             // expression to the type we need, then let the regular type
             // conversion machinery handle it.
             expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
-            Assert(expr != NULL);
+            if (expr == NULL) {
+                Assert(m->errorCount > 0);
+                return NULL;
+            }
             // Re-establish const-ness if possible
             expr = ::Optimize(expr);
         }
