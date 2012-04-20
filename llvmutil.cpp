@@ -880,7 +880,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
         // the addConstants[], mod baseValue.  If we round that up to the
         // next power of 2, we'll have a value that will be no greater than
         // baseValue and sometimes less.
-        int maxMod = addConstants[0] % baseValue;
+        int maxMod = int(addConstants[0] % baseValue);
         for (int i = 1; i < vectorLength; ++i)
             maxMod = std::max(maxMod, int(addConstants[i] % baseValue));
         int requiredAlignment = lRoundUpPow2(maxMod);

@@ -549,7 +549,7 @@ rate_qualified_type_specifier
         if ($2 == NULL)
             $$ = NULL;
         else {
-            int soaWidth = $1;
+            int soaWidth = (int)$1;
             const StructType *st = dynamic_cast<const StructType *>($2);
             if (st == NULL) {
                 Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",

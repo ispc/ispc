@@ -101,7 +101,7 @@ lHaveANSIColors() {
 static const char *
 lStartBold() {
     if (lHaveANSIColors())
-        return "\e[1m";
+        return "\033[1m";
     else
         return "";
 }
@@ -110,7 +110,7 @@ lStartBold() {
 static const char *
 lStartRed() {
     if (lHaveANSIColors())
-        return "\e[31m";
+        return "\033[31m";
     else
         return "";
 }
@@ -119,7 +119,7 @@ lStartRed() {
 static const char *
 lStartBlue() {
     if (lHaveANSIColors())
-        return "\e[34m";
+        return "\033[34m";
     else
         return "";
 }
@@ -128,7 +128,7 @@ lStartBlue() {
 static const char *
 lResetColor() {
     if (lHaveANSIColors())
-        return "\e[0m";
+        return "\033[0m";
     else
         return "";
 }
@@ -192,7 +192,7 @@ static int
 lFindIndent(int numColons, const char *buf) {
     int indent = 0;
     while (*buf != '\0') {
-        if (*buf == '\e') {
+        if (*buf == '\033') {
             while (*buf != '\0' && *buf != 'm')
                 ++buf;
             if (*buf == 'm')
@@ -229,7 +229,7 @@ lPrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 
     const char *msgPos = buf;
     while (true) {
-        if (*msgPos == '\e') {
+        if (*msgPos == '\033') {
             // handle ANSI color escape: copy it to the output buffer
             // without charging for the characters it uses
             do {
