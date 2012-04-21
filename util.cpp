@@ -237,6 +237,20 @@ lPrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
             } while (*msgPos != '\0' && *msgPos != 'm');
             continue;
         }
+        else if (*msgPos == '\n') {
+            // Handle newlines cleanly
+            column = indent;
+            outStr.push_back('\n');
+            for (int i = 0; i < indent; ++i)
+                outStr.push_back(' ');
+            // Respect spaces after newlines
+            ++msgPos;
+            while (*msgPos == ' ') {
+                outStr.push_back(' ');
+                ++msgPos;
+            }
+            continue;
+        }
 
         while (*msgPos != '\0' && isspace(*msgPos))
             ++msgPos;
@@ -314,7 +328,7 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     int indent = 0;
     if (p.first_line == 0) {
         // We don't have a valid SourcePos, so create a message without it
-        if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s\n", lStartBold(),
+        if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s", lStartBold(),
                      isError ? lStartRed() : lStartBlue(), type,
                      lResetColor(), lStartBold(), errorBuf, 
                      lResetColor()) == -1) {
@@ -325,7 +339,7 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     }
     else {
         // Create an error message that includes the file and line number
-        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s\n", 
+        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s", 
                      lStartBold(), p.name, p.first_line, p.first_column, 
                      isError ? lStartRed() : lStartBlue(), type, 
                      lResetColor(), lStartBold(), errorBuf, 
