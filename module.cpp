@@ -144,10 +144,13 @@ Module::Module(const char *fn) {
             std::string directory, name;
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory,
                                     &name);
+            char producerString[512];
+            sprintf(producerString, "ispc version %s (build %s on %s)",
+                    ISPC_VERSION, BUILD_VERSION, BUILD_DATE);
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
-                                         "ispc", /* producer */
+                                         producerString, /* producer */
                                          g->opt.level > 0 /* is optimized */,
                                          "-g", /* command line args */
                                          0 /* run time version */);
