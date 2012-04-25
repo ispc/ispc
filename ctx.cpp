@@ -297,23 +297,43 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     }
 
     if (m->diBuilder) {
+        currentPos = funSym->pos;
+
         /* If debugging is enabled, tell the debug information emission
            code about this new function */
         diFile = funcStartPos.GetDIFile();
-        llvm::DIType retType = function->GetReturnType()->GetDIType(diFile);
-        int flags = llvm::DIDescriptor::FlagPrototyped; // ??
-        diFunction = m->diBuilder->createFunction(diFile, /* scope */
-                                                  llvmFunction->getName(), // mangled
-                                                  funSym->name,
-                                                  diFile,
-                                                  funcStartPos.first_line,
-                                                  retType,
-                                                  funSym->storageClass == SC_STATIC,
-                                                  true, /* is definition */
-                                                  flags,
-                                                  g->opt.level > 0,
-                                                  llvmFunction);
         Assert(diFile.Verify());
+
+        llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
+        Assert(scope.Verify());
+
+        const FunctionType *functionType = function->GetType();
+        llvm::DIType diSubprogramType;
+        if (functionType == NULL)
+            Assert(m->errorCount > 0);
+        else {
+            diSubprogramType = functionType->GetDIType(scope);
+            Assert(diSubprogramType.Verify());
+        }
+
+        std::string mangledName = llvmFunction->getName();
+        if (mangledName == funSym->name)
+            mangledName = "";
+
+        bool isStatic = (funSym->storageClass == SC_STATIC);
+        bool isOptimized = (g->opt.level > 0);
+        int firstLine = funcStartPos.first_line;
+        int flags =  (llvm::DIDescriptor::FlagPrototyped);
+
+        diSubprogram = 
+            m->diBuilder->createFunction(diFile /* scope */, funSym->name,
+                                         mangledName,        diFile,
+                                         firstLine,          diSubprogramType,
+                                         isStatic,           true, /* is defn */
+                                         firstLine,          flags,
+                                         isOptimized,        llvmFunction);
+        Assert(diSubprogram.Verify());
+
         /* And start a scope representing the initial function scope */
         StartScope();
 
@@ -1439,7 +1459,7 @@ FunctionEmitContext::StartScope() {
         if (debugScopes.size() > 0)
             parentScope = debugScopes.back();
         else
-            parentScope = diFunction;
+            parentScope = diSubprogram;
 
         llvm::DILexicalBlock lexicalBlock = 
             m->diBuilder->createLexicalBlock(parentScope, diFile,
@@ -1495,7 +1515,7 @@ FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == NULL)
         return;
 
-    llvm::DIScope scope = diFunction;
+    llvm::DIScope scope = diSubprogram;
     llvm::DIType diType = sym->type->GetDIType(scope);
     Assert(diType.Verify());
     int flags = 0;

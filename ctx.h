@@ -641,7 +641,7 @@ private:
 
     /** DISubprogram corresponding to this function (used for debugging
         info). */
-    llvm::DISubprogram diFunction;
+    llvm::DISubprogram diSubprogram;
 
     /** These correspond to the current set of nested scopes in the
         function. */
