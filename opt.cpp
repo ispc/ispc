@@ -69,7 +69,6 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Analysis/DIBuilder.h>
 #include <llvm/Analysis/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
@@ -293,12 +292,12 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(CreateDetectGSBaseOffsetsPass());
         if (g->opt.disableHandlePseudoMemoryOps == false) {
             optPM.add(CreatePseudoGSToGSPass());
             optPM.add(CreatePseudoMaskedStorePass());
         }
+        optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
