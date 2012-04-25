@@ -313,27 +313,32 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                                   flags,
                                                   g->opt.level > 0,
                                                   llvmFunction);
+        Assert(diFile.Verify());
         /* And start a scope representing the initial function scope */
         StartScope();
 
         llvm::DIFile file = funcStartPos.GetDIFile();
         Symbol *programIndexSymbol = m->symbolTable->LookupVariable("programIndex");
         Assert(programIndexSymbol && programIndexSymbol->storagePtr);
-        m->diBuilder->createGlobalVariable(programIndexSymbol->name, 
-                                           file,
-                                           funcStartPos.first_line,
-                                           programIndexSymbol->type->GetDIType(file),
-                                           true /* static */,
-                                           programIndexSymbol->storagePtr);
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(programIndexSymbol->name, 
+                                               file,
+                                               funcStartPos.first_line,
+                                               programIndexSymbol->type->GetDIType(file),
+                                               true /* static */,
+                                               programIndexSymbol->storagePtr);
+        Assert(var.Verify());
 
         Symbol *programCountSymbol = m->symbolTable->LookupVariable("programCount");
         Assert(programCountSymbol);
-        m->diBuilder->createGlobalVariable(programCountSymbol->name, 
-                                           file,
-                                           funcStartPos.first_line,
-                                           programCountSymbol->type->GetDIType(file),
-                                           true /* static */,
-                                           programCountSymbol->storagePtr);
+        var = 
+            m->diBuilder->createGlobalVariable(programCountSymbol->name, 
+                                               file,
+                                               funcStartPos.first_line,
+                                               programCountSymbol->type->GetDIType(file),
+                                               true /* static */,
+                                               programCountSymbol->storagePtr);
+        Assert(var.Verify());
     }
 }
 
@@ -1440,6 +1445,7 @@ FunctionEmitContext::StartScope() {
             m->diBuilder->createLexicalBlock(parentScope, diFile,
                                              currentPos.first_line,
                                              currentPos.first_column);
+        Assert(lexicalBlock.Verify());
         debugScopes.push_back(lexicalBlock);
     }
 }
@@ -1467,14 +1473,17 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
         return;
 
     llvm::DIScope scope = GetDIScope();
+    llvm::DIType diType = sym->type->GetDIType(scope);
+    Assert(diType.Verify());
     llvm::DIVariable var = 
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_auto_variable,
                                           scope,
                                           sym->name,
                                           sym->pos.GetDIFile(),
                                           sym->pos.first_line,
-                                          sym->type->GetDIType(scope),
+                                          diType,
                                           true /* preserve through opts */);
+    Assert(var.Verify());
     llvm::Instruction *declareInst = 
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);

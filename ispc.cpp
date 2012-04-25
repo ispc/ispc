@@ -644,7 +644,9 @@ llvm::DIFile
 SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
-    return m->diBuilder->createFile(filename, directory);
+    llvm::DIFile ret = m->diBuilder->createFile(filename, directory);
+    Assert(ret.Verify());
+    return ret;
 }
 
 

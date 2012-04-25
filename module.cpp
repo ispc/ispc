@@ -395,12 +395,14 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     
     if (diBuilder) {
         llvm::DIFile file = pos.GetDIFile();
-        diBuilder->createGlobalVariable(name, 
-                                        file,
-                                        pos.first_line,
-                                        sym->type->GetDIType(file),
-                                        (sym->storageClass == SC_STATIC),
-                                        sym->storagePtr);
+        llvm::DIGlobalVariable var =
+            diBuilder->createGlobalVariable(name, 
+                                            file,
+                                            pos.first_line,
+                                            sym->type->GetDIType(file),
+                                            (sym->storageClass == SC_STATIC),
+                                            sym->storagePtr);
+        Assert(var.Verify());
     }
 }
 
