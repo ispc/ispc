@@ -106,6 +106,102 @@ lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
 }
 
 
+/** After compilation completes, there's often a lot of extra debugging
+    metadata left around that isn't needed any more--for example, for
+    static functions that weren't actually used, function information for
+    functions that were inlined, etc.  This function takes a llvm::Module
+    and tries to strip out all of this extra stuff.
+ */
+static void
+lStripUnusedDebugInfo(llvm::Module *module) {
+    if (g->generateDebuggingSymbols == false)
+        return;
+
+    // loop over the compile units that contributed to the final module
+    if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
+        for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
+            llvm::MDNode *cuNode = cuNodes->getOperand(i);
+            llvm::DICompileUnit cu(cuNode);
+            llvm::DIArray subprograms = cu.getSubprograms();
+            std::vector<llvm::Value *> usedSubprograms;
+
+            if (subprograms.getNumElements() == 0)
+                continue;
+
+            // And now loop over the subprograms inside each compile unit.
+            for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j) {
+                llvm::MDNode *spNode = 
+                    llvm::dyn_cast<llvm::MDNode>(subprograms->getOperand(j));
+                Assert(spNode != NULL);
+                llvm::DISubprogram sp(spNode);
+
+                // Get the name of the subprogram.  Start with the mangled
+                // name; if that's empty then we have an export'ed
+                // function, so grab the unmangled name in that case.
+                std::string name = sp.getLinkageName();
+                if (name == "")
+                    name = sp.getName();
+
+                // Does the llvm::Function for this function survive in the
+                // module?
+                if (module->getFunction(name) != NULL)
+                    usedSubprograms.push_back(sp);
+            }
+
+            Debug(SourcePos(), "%d / %d functions left in module with debug "
+                  "info.", (int)usedSubprograms.size(),
+                  (int)subprograms.getNumElements());
+
+            // We'd now like to replace the array of subprograms in the
+            // compile unit with only the ones that actually have function
+            // definitions present.  Unfortunately, llvm::DICompileUnit
+            // doesn't provide a method to set the subprograms.  Therefore,
+            // we end up needing to directly stuff a new array into the
+            // appropriate slot (number 12) in the MDNode for the compile
+            // unit.
+            //
+            // Because this is all so hard-coded and would break if the
+            // debugging metadata organization on the LLVM side changed,
+            // here is a bunch of asserting to make sure that element 12 of
+            // the compile unit's MDNode has the subprograms array....
+            llvm::MDNode *nodeSPMD = 
+                llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(12));
+            Assert(nodeSPMD != NULL);
+            llvm::MDNode *nodeSPMDArray =
+                llvm::dyn_cast<llvm::MDNode>(nodeSPMD->getOperand(0));
+            llvm::DIArray nodeSPs(nodeSPMDArray);
+            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
+            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
+                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+
+            // And now we can go and stuff it into the node with some
+            // confidence...
+            llvm::DIArray usedSubprogramsArray = 
+                m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
+            cuNode->replaceOperandWith(12, usedSubprogramsArray);
+        }
+    }
+
+    // Also, erase a bunch of named metadata detrius; for each function
+    // there is sometimes named metadata llvm.dbg.lv.{funcname} that
+    // doesn't seem to be otherwise needed.
+    std::vector<llvm::NamedMDNode *> toErase;
+    llvm::Module::named_metadata_iterator iter = module->named_metadata_begin();
+    for (; iter != module->named_metadata_end(); ++iter) {
+        if (!strncmp(iter->getName().str().c_str(), "llvm.dbg.lv", 11))
+            toErase.push_back(iter);
+    }
+    for (int i = 0; i < (int)toErase.size(); ++i)
+        module->eraseNamedMetadata(toErase[i]);
+
+    // Wrap up by running the LLVM pass to remove anything left that's
+    // unused.
+    llvm::PassManager pm;
+    pm.add(llvm::createStripDeadDebugInfoPass());
+    pm.run(*module);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -711,8 +807,11 @@ Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
-    if (diBuilder != NULL && outputType != Header)
+    if (diBuilder != NULL && outputType != Header) {
         diBuilder->finalize();
+
+        lStripUnusedDebugInfo(module);
+    }
 
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
