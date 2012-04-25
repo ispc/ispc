@@ -342,7 +342,7 @@ public:
 
     /** Emits debugging information for the function parameter represented
         by sym.  */
-    void EmitFunctionParameterDebugInfo(Symbol *sym);
+    void EmitFunctionParameterDebugInfo(Symbol *sym, int parameterNum);
     /** @} */
 
     /** @name IR instruction emission

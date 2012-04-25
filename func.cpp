@@ -182,7 +182,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
     // memory
     llvm::Value *ptrval = ctx->LoadInst(ptr, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
-    ctx->EmitFunctionParameterDebugInfo(sym);
+    ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
 
@@ -262,7 +262,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             // to store the its value there.
             sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
             ctx->StoreInst(argIter, sym->storagePtr);
-            ctx->EmitFunctionParameterDebugInfo(sym);
+            ctx->EmitFunctionParameterDebugInfo(sym, i);
         }
 
         // If the number of actual function arguments is equal to the

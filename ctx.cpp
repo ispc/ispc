@@ -1482,19 +1482,26 @@ FunctionEmitContext::EmitVariableDebugInfo(Symbol *sym) {
 
 
 void
-FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym) {
+FunctionEmitContext::EmitFunctionParameterDebugInfo(Symbol *sym, int argNum) {
     if (m->diBuilder == NULL)
         return;
 
     llvm::DIScope scope = diFunction;
+    llvm::DIType diType = sym->type->GetDIType(scope);
+    Assert(diType.Verify());
+    int flags = 0;
+
     llvm::DIVariable var = 
         m->diBuilder->createLocalVariable(llvm::dwarf::DW_TAG_arg_variable,
                                           scope,
                                           sym->name,
                                           sym->pos.GetDIFile(),
                                           sym->pos.first_line,
-                                          sym->type->GetDIType(scope),
-                                          true /* preserve through opts */);
+                                          diType,
+                                          true /* preserve through opts */,
+                                          flags,
+                                          argNum+1);
+    Assert(var.Verify());
     llvm::Instruction *declareInst = 
         m->diBuilder->insertDeclare(sym->storagePtr, var, bblock);
     AddDebugPos(declareInst, &sym->pos, &scope);
