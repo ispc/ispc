@@ -1505,13 +1505,17 @@ Defining New Names For Types
 The ``typedef`` keyword can be used to name types:
 
 ::
+ 
+    typedef int64 BigInt;
+    typedef float Float3[3];
 
-  typedef Float3 float[3];
+Following C's syntax, the code above defines ``BigInt`` to have ``int64``
+type and ``Float3`` to have ``float[3]`` type.
 
-``typedef`` doesn't create a new type: it just provides an alternative name
-for an existing type.  Thus, in the above example, it is legal to pass a
-value with ``float[3]`` type to a function that has been declared to take a
-``Float3`` parameter.
+Also as in C, ``typedef`` doesn't create a new type: it just provides an
+alternative name for an existing type.  Thus, in the above example, it is
+legal to pass a value with ``float[3]`` type to a function that has been
+declared to take a ``Float3`` parameter.
 
 
 Pointer Types
