@@ -117,6 +117,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     if (g->generateDebuggingSymbols == false)
         return;
 
+#ifndef LLVM_3_0
     // loop over the compile units that contributed to the final module
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
@@ -193,6 +194,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     }
     for (int i = 0; i < (int)toErase.size(); ++i)
         module->eraseNamedMetadata(toErase[i]);
+#endif // !LLVM_3_0
 
     // Wrap up by running the LLVM pass to remove anything left that's
     // unused.

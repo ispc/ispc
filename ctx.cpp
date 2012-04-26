@@ -330,7 +330,10 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          mangledName,        diFile,
                                          firstLine,          diSubprogramType,
                                          isStatic,           true, /* is defn */
-                                         firstLine,          flags,
+#ifndef LLVM_3_0
+                                         firstLine,
+#endif // !LLVM_3_0
+                                         flags,
                                          isOptimized,        llvmFunction);
         Assert(diSubprogram.Verify());
 
