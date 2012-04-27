@@ -34,6 +34,7 @@ distribution.
   + `How can a gang of program instances generate variable amounts of output efficiently?`_
   + `Is it possible to use ispc for explicit vector programming?`_
   + `How can I debug my ispc programs using Valgrind?`_
+  + `foreach statements generate more complex assembly than I'd expect; what's going on?`_
 
 Understanding ispc's Output
 ===========================
@@ -693,3 +694,79 @@ you can use ``--target=sse4`` when compiling to run with ``valgrind``.
 Note that ``valgrind`` does not yet support programs that use the AVX
 instruction set.
 
+foreach statements generate more complex assembly than I'd expect; what's going on?
+-----------------------------------------------------------------------------------
+
+Given a simple ``foreach`` loop like the following:
+
+::
+
+    void foo(uniform float a[], uniform int count) {
+        foreach (i = 0 ... count)
+            a[i] *= 2;
+    }
+
+
+the ``ispc`` compiler generates approximately 40 instructions--why isn't
+the generated code simpler?
+
+There are two main components to the code: one handles
+``programCount``-sized chunks of elements of the array, and the other
+handles any excess elements at the end of the array that don't completely
+fill a gang.  The code for the main loop is essentially what one would
+expect: a vector of values are laoded from the array, the multiply is done,
+and the result is stored.
+
+::
+
+    LBB0_2:                                 ## %foreach_full_body
+	movslq	%edx, %rdx
+	vmovups	(%rdi,%rdx), %ymm1
+	vmulps	%ymm0, %ymm1, %ymm1
+	vmovups	%ymm1, (%rdi,%rdx)
+	addl	$32, %edx
+	addl	$8, %eax
+	cmpl	%ecx, %eax
+	jl	LBB0_2
+
+
+Then, there is a sequence of instructions that handles any additional
+elements at the end of the array.  (These instructions don't execute if
+there aren't any left-over values to process, but they do lengthen the
+amount of generated code.)
+
+::
+
+  ## BB#4:                                ## %partial_inner_only
+	vmovd	%eax, %xmm0
+	vinsertf128	$1, %xmm0, %ymm0, %ymm0
+	vpermilps	$0, %ymm0, %ymm0 ## ymm0 = ymm0[0,0,0,0,4,4,4,4]
+	vextractf128	$1, %ymm0, %xmm3
+	vmovd	%esi, %xmm2
+	vmovaps	LCPI0_1(%rip), %ymm1
+	vextractf128	$1, %ymm1, %xmm4
+	vpaddd	%xmm4, %xmm3, %xmm3
+        # ....
+	vmulps	LCPI0_0(%rip), %ymm1, %ymm1
+	vmaskmovps	%ymm1, %ymm0, (%rdi,%rax)
+
+
+If you know that the number of elements to be processed will always be an
+exact multiple of the 8, 16, etc., then adding a simple assignment to
+``count`` like the one below gives the compiler enough information to be
+able to eliminate the code for the additional array elements.
+
+::
+
+    void foo(uniform float a[], uniform int count) {
+        // This assignment doesn't change the value of count
+        // if it's a multiple of 16, but it gives the compiler
+        // insight into this fact, allowing for simpler code to
+        // be generated for the foreach loop.
+        count = (count & ~(16-1));
+        foreach (i = 0 ... count)
+            a[i] *= 2;
+    }
+
+With this new version of ``foo()``, only the code for the first loop above
+is generated.
