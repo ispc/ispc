@@ -177,9 +177,11 @@ lStripUnusedDebugInfo(llvm::Module *module) {
 
             // And now we can go and stuff it into the node with some
             // confidence...
-            llvm::DIArray usedSubprogramsArray = 
+            llvm::Value *usedSubprogramsArray = 
                 m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
-            cuNode->replaceOperandWith(12, usedSubprogramsArray);
+            llvm::MDNode *replNode = 
+                llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Value *>(usedSubprogramsArray));
+            cuNode->replaceOperandWith(12, replNode);
         }
     }
 
