@@ -339,29 +339,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
 
         /* And start a scope representing the initial function scope */
         StartScope();
-
-        llvm::DIFile file = funcStartPos.GetDIFile();
-        Symbol *programIndexSymbol = m->symbolTable->LookupVariable("programIndex");
-        Assert(programIndexSymbol && programIndexSymbol->storagePtr);
-        llvm::DIGlobalVariable var =
-            m->diBuilder->createGlobalVariable(programIndexSymbol->name, 
-                                               file,
-                                               funcStartPos.first_line,
-                                               programIndexSymbol->type->GetDIType(file),
-                                               true /* static */,
-                                               programIndexSymbol->storagePtr);
-        Assert(var.Verify());
-
-        Symbol *programCountSymbol = m->symbolTable->LookupVariable("programCount");
-        Assert(programCountSymbol);
-        var = 
-            m->diBuilder->createGlobalVariable(programCountSymbol->name, 
-                                               file,
-                                               funcStartPos.first_line,
-                                               programCountSymbol->type->GetDIType(file),
-                                               true /* static */,
-                                               programCountSymbol->storagePtr);
-        Assert(var.Verify());
     }
 }
 

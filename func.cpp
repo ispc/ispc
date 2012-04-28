@@ -198,7 +198,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     // value
     maskSymbol->storagePtr = ctx->GetFullMaskPointer();
 
-    // add debugging info for __mask, programIndex, ...
+    // add debugging info for __mask
     maskSymbol->pos = firstStmtPos;
     ctx->EmitVariableDebugInfo(maskSymbol);
 

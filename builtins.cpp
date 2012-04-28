@@ -637,16 +637,36 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
                    SymbolTable *symbolTable) {
-    Symbol *pw = 
+    Symbol *sym = 
         new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
                    SC_STATIC);
-    pw->constValue = new ConstExpr(pw->type, val, SourcePos());
+    sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
-    pw->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                              llvm::GlobalValue::InternalLinkage,
-                                              linit, pw->name.c_str());
-    symbolTable->AddVariable(pw);
+    // Use WeakODRLinkage rather than InternalLinkage so that a definition
+    // survives even if it's not used in the module, so that the symbol is
+    // there in the debugger.
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
+                                               llvm::GlobalValue::WeakODRLinkage,
+                                               linit, name);
+    symbolTable->AddVariable(sym);
+
+    if (m->diBuilder != NULL) {
+        llvm::DIFile file;
+        llvm::DIType diType = sym->type->GetDIType(file);
+        Assert(diType.Verify());
+        // FIXME? DWARF says that this (and programIndex below) should
+        // have the DW_AT_artifical attribute.  It's not clear if this
+        // matters for anything though.
+        llvm::DIGlobalVariable var = 
+            m->diBuilder->createGlobalVariable(name, 
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+        Assert(var.Verify());
+    }
 }
 
 
@@ -672,21 +692,37 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
-    Symbol *pidx = 
+    Symbol *sym = 
         new Symbol("programIndex", SourcePos(), 
                    AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target.vectorWidth; ++i)
         pi[i] = i;
-    pidx->constValue = new ConstExpr(pidx->type, pi, SourcePos());
+    sym->constValue = new ConstExpr(sym->type, pi, SourcePos());
 
     llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
-    pidx->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                                llvm::GlobalValue::InternalLinkage, linit, 
-                                                pidx->name.c_str());
-    symbolTable->AddVariable(pidx);
+    // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
+                                               llvm::GlobalValue::WeakODRLinkage,
+                                               linit, 
+                                               sym->name.c_str());
+    symbolTable->AddVariable(sym);
+
+    if (m->diBuilder != NULL) {
+        llvm::DIFile file;
+        llvm::DIType diType = sym->type->GetDIType(file);
+        Assert(diType.Verify());
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(sym->name.c_str(), 
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               false /* static */,
+                                               sym->storagePtr);
+        Assert(var.Verify());
+    }
 }
 
 
