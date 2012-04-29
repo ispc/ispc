@@ -792,10 +792,12 @@ void
 Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
                               Stmt *code) {
     Symbol *sym = symbolTable->LookupFunction(name.c_str(), type);
-    if (sym == NULL) {
+    if (sym == NULL || code == NULL) {
         Assert(m->errorCount > 0);
         return;
     }
+
+    sym->pos = code->pos;
 
     // FIXME: because we encode the parameter names in the function type,
     // we need to override the function type here in case the function had

@@ -1862,8 +1862,11 @@ function_definition
                 dynamic_cast<const FunctionType *>($2->type);
             if (funcType == NULL)
                 Assert(m->errorCount > 0);
-            else
-                m->AddFunctionDefinition($2->name, funcType, $4);
+            else {
+                Stmt *code = $4;
+                if (code == NULL) code = new StmtList(@4);
+                m->AddFunctionDefinition($2->name, funcType, code);
+            }
         }
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
