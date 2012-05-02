@@ -189,7 +189,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             }
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
+        llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return;
@@ -2281,10 +2281,22 @@ GotoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     llvm::BasicBlock *bb = ctx->GetLabeledBasicBlock(label);
     if (bb == NULL) {
-        // TODO: use the string distance stuff to suggest alternatives if
-        // there are some with names close to the label name we have here..
-        Error(identifierPos, "No label named \"%s\" found in current function.",
-              label.c_str());
+        /* Label wasn't found. Look for suggestions that are close */
+        std::vector<std::string> labels = ctx->GetLabels();
+        std::vector<std::string> matches = MatchStrings(label, labels);
+        std::string match_output;
+        if (! matches.empty()) {
+            /* Print up to 5 matches. Don't want to spew too much */
+            match_output += "\nDid you mean:";
+            for (unsigned int i=0; i<matches.size() && i<5; i++)
+                match_output += "\n " + matches[i] + "?";
+        }
+
+        /* Label wasn't found. Emit an error */
+        Error(identifierPos, 
+                "No label named \"%s\" found in current function.%s",
+              label.c_str(), match_output.c_str());
+
         return;
     }
 
@@ -2497,7 +2509,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     else {
         argTypes.push_back(t);
 
-        LLVM_TYPE_CONST llvm::Type *llvmExprType = type->LLVMType(g->ctx);
+        llvm::Type *llvmExprType = type->LLVMType(g->ctx);
         llvm::Value *ptr = ctx->AllocaInst(llvmExprType, "print_arg");
         llvm::Value *val = expr->GetValue(ctx);
         if (!val)
@@ -2537,7 +2549,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::string argTypes;
 
     if (values == NULL) {
-        LLVM_TYPE_CONST llvm::Type *ptrPtrType = 
+        llvm::Type *ptrPtrType = 
             llvm::PointerType::get(LLVMTypes::VoidPointerType, 0);
         args[4] = llvm::Constant::getNullValue(ptrPtrType);
     }
@@ -2549,7 +2561,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
         int nArgs = elist ? elist->exprs.size() : 1;
 
         // Allocate space for the array of pointers to values to be printed 
-        LLVM_TYPE_CONST llvm::Type *argPtrArrayType = 
+        llvm::Type *argPtrArrayType = 
             llvm::ArrayType::get(LLVMTypes::VoidPointerType, nArgs);
         llvm::Value *argPtrArray = ctx->AllocaInst(argPtrArrayType,
                                                    "print_arg_ptrs");
@@ -2823,7 +2835,7 @@ CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
     Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
     std::vector<Symbol *> mmFuns;
     m->symbolTable->LookupFunction("__movmsk", &mmFuns);
-    Assert(mmFuns.size() == (g->target.isa == Target::GENERIC ? 1 : 2));
+    Assert(mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
     FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
                                                             pos);
     ExprList *movmskArgs = new ExprList(maskVecExpr, pos);

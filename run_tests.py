@@ -17,6 +17,10 @@ import shlex
 import platform
 import tempfile
 
+# disable fancy error/warning printing with ANSI colors, so grepping for error
+# messages doesn't get confused
+os.environ["TERM"] = "dumb"
+
 # This script is affected by http://bugs.python.org/issue5261 on OSX 10.5 Leopard
 # git history has a workaround for that issue.
 

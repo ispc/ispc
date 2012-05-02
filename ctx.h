@@ -248,6 +248,10 @@ public:
         new basic block that it starts. */
     llvm::BasicBlock *GetLabeledBasicBlock(const std::string &label);
 
+    /** Returns a vector of all labels in the context. This is
+        simply the key set of the labelMap */
+    std::vector<std::string> GetLabels();
+
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
         doCoherenceCheck indicates whether instructions should be generated
@@ -380,23 +384,23 @@ public:
         array, for pointer types). */
     llvm::Value *SmearUniform(llvm::Value *value, const char *name = NULL);
 
-    llvm::Value *BitCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Value *BitCastInst(llvm::Value *value, llvm::Type *type,
                              const char *name = NULL);
     llvm::Value *PtrToIntInst(llvm::Value *value, const char *name = NULL);
-    llvm::Value *PtrToIntInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Value *PtrToIntInst(llvm::Value *value, llvm::Type *type,
                               const char *name = NULL);
-    llvm::Value *IntToPtrInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Value *IntToPtrInst(llvm::Value *value, llvm::Type *type,
                               const char *name = NULL);
 
-    llvm::Instruction *TruncInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type,
+    llvm::Instruction *TruncInst(llvm::Value *value, llvm::Type *type,
                                  const char *name = NULL);
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
-                                LLVM_TYPE_CONST llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *FPCastInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
+                                llvm::Type *type, const char *name = NULL);
+    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, 
                                   const char *name = NULL);
-    llvm::Instruction *SExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
+    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, 
                                 const char *name = NULL);
-    llvm::Instruction *ZExtInst(llvm::Value *value, LLVM_TYPE_CONST llvm::Type *type, 
+    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, 
                                 const char *name = NULL);
 
     /** Given two integer-typed values (but possibly one vector and the
@@ -448,7 +452,7 @@ public:
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
         the atEntryBlock parameter should be false. */ 
-    llvm::Value *AllocaInst(LLVM_TYPE_CONST llvm::Type *llvmType, 
+    llvm::Value *AllocaInst(llvm::Type *llvmType, 
                             const char *name = NULL, int align = 0, 
                             bool atEntryBlock = true);
 
@@ -485,7 +489,7 @@ public:
     llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, 
                             const char *name = NULL);
 
-    llvm::PHINode *PhiNode(LLVM_TYPE_CONST llvm::Type *type, int count, 
+    llvm::PHINode *PhiNode(llvm::Type *type, int count, 
                            const char *name = NULL);
     llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
                                   llvm::Value *val1, const char *name = NULL);
@@ -632,7 +636,7 @@ private:
     std::vector<CFInfo *> controlFlowInfo;
 
     /** DIFile object corresponding to the source file where the current
-        function was defined (used for debugging info0. */
+        function was defined (used for debugging info). */
     llvm::DIFile diFile;
 
     /** DISubprogram corresponding to this function (used for debugging

@@ -14,6 +14,12 @@ distribution.
   + `Why are there multiple versions of exported ispc functions in the assembly output?`_
   + `How can I more easily see gathers and scatters in generated assembly?`_
 
+* Language Details
+
+  + `What is the difference between "int *foo" and "int foo[]"?`_
+  + `Why are pointed-to types "uniform" by default?`_
+  + `What am I getting an error about assigning a varying lvalue to a reference type?`_ 
+  
 * Interoperability
 
   + `How can I supply an initial execution mask in the call from the application?`_
@@ -212,6 +218,125 @@ easier to understand:
             movdqa        %xmm1, %xmm0
             movaps        %xmm3, %xmm1
             jmp        ___pseudo_scatter_base_offsets32_32 ## TAILCALL
+
+
+Language Details
+================
+
+What is the difference between "int \*foo" and "int foo[]"?
+-----------------------------------------------------------
+
+In C and C++, declaring a function to take a parameter ``int *foo`` and
+``int foo[]`` results in the same type for the parameter.  Both are
+pointers to integers.  In ``ispc``, these are different types.  The first
+one is a varying pointer to a uniform integer value in memory, while the
+second results in a uniform pointer to the start of an array of varying
+integer values in memory.
+
+To understand why the first is a varying pointer to a uniform integer,
+first recall that types without explicit rate qualifiers (``uniform``,
+``varying``, or ``soa<>``) are ``varying`` by default.  Second, recall from
+the `discussion of pointer types in the ispc User's Guide`_ that pointed-to
+types without rate qualifiers are ``uniform`` by default.  (This second
+rule is discussed further below, in `Why are pointed-to types "uniform" by
+default?`_.)  The type of ``int *foo`` follows from these.
+
+.. _discussion of pointer types in the ispc User's Guide: ispc.html#pointer-types 
+
+Conversely, in a function body, ``int foo[10]`` represents a declaration of
+a 10-element array of varying ``int`` values.  In that we'd certainly like
+to be able to pass such an array to a function that takes a ``int []``
+parameter, the natural type for an ``int []`` parameter is a uniform
+pointer to varying integer values.
+
+In terms of compatibility with C/C++, it's unfortunate that this
+distinction exists, though any other set of rules seems to introduce more
+awkwardness than this one.  (Though we're interested to hear ideas to
+improve these rules!).
+
+Why are pointed-to types "uniform" by default?
+----------------------------------------------
+
+In ``ispc``, types without rate qualifiers are "varying" by default, but
+types pointed to by pointers without rate qualifiers are "uniform" by
+default.  Why this difference?
+
+::
+
+    int foo;  // no rate qualifier, "varying int".
+    uniform int *foo;  // pointer type has no rate qualifier, pointed-to does.
+                       // "varying pointer to uniform int".
+    int *foo;  // neither pointer type nor pointed-to type ("int") have
+               // rate qualifiers. Pointer type is varying by default,
+               // pointed-to is uniform. "varying pointer to uniform int".
+    varying int *foo;   // varying pointer to varying int
+
+The first rule, having types without rate qualifiers be varying by default,
+is a default that keeps the number of "uniform" or "varying" qualifiers in
+``ispc`` programs low.  Most ``ispc`` programs use mostly "varying"
+variables, so this rule allows most variables to be declared without also
+requiring rate qualifiers.
+
+On a related note, this rule allows many C/C++ functions to be used to
+define equivalent functions in the SPMD execution model that ``ispc``
+provides with little or no modification:
+
+::
+
+    // scalar add in C/C++, SPMD/vector add in ispc
+    int add(int a, int b) { return a + b; }
+
+This motivation also explains why ``uniform int *foo`` represents a varying
+pointer; having pointers be varying by default if they don't have rate
+qualifiers similarly helps with porting code from C/C++ to ``ispc``.
+
+The tricker issue is why pointed-to types are "uniform" by default.  In our
+experience, data in memory that is accessed via pointers is most often
+uniform; this generally includes all data that has been allocated and
+initialized by the C/C++ application code. In practice, "varying" types are
+more generally (but not exclusively) used for local data in ``ispc``
+functions.  Thus, making the pointed-to type uniform by default leads to
+more concise code for the most common cases.
+
+
+What am I getting an error about assigning a varying lvalue to a reference type?
+--------------------------------------------------------------------------------
+
+Given code like the following:
+
+::
+
+    uniform float a[...];
+    int index = ...;
+    float &r = a[index];
+
+``ispc`` issues the error "Initializer for reference-type variable "r" must
+have a uniform lvalue type.".  The underlying issue stems from how
+references are represented in the code generated by ``ispc``.  Recall that
+``ispc`` supports both uniform and varying pointer types--a uniform pointer
+points to the same location in memory for all program instances in the
+gang, while a varying pointer allows each program instance to have its own
+pointer value.
+
+References are represented a pointer in the code generated by ``ispc``,
+though this is generally opaque to the user; in ``ispc``, they are
+specifically uniform pointers.  This design decision was made so that given
+code like this:
+
+::
+
+    extern void func(float &val);
+    float foo = ...;
+    func(foo);
+
+Then the reference would be handled efficiently as a single pointer, rather
+than unnecessarily being turned into a gang-size of pointers.
+
+However, an implication of this decision is that it's not possible for
+references to refer to completely different things for each of the program
+instances.  (And hence the error that is issued).  In cases where a unique
+per-program-instance pointer is needed, a varying pointer should be used
+instead of a reference.
 
 
 Interoperability

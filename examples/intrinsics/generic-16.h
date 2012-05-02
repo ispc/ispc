@@ -374,6 +374,11 @@ static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v, int align) {
     *ptr = v.v;
 }
 
+static FORCEINLINE __vec16_i1 __smear_i1(int v) {
+    return __vec16_i1(v, v, v, v, v, v, v, v, 
+                      v, v, v, v, v, v, v, v);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // int8
 

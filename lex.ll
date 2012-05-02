@@ -704,7 +704,7 @@ lEscapeChar(char *str, char *pChar, SourcePos *pos)
             str = tail - 1;
             break;
         default:
-            Error(*pos, "Bad character escape sequence: '%s'\n.", str);
+            Error(*pos, "Bad character escape sequence: '%s'.", str);
             break;
         }
     }

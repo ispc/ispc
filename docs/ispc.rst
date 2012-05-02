@@ -1394,8 +1394,8 @@ Types
 Basic Types and Type Qualifiers
 -------------------------------
 
-``ispc`` is a statically-typed language.  It supports a variety of basic
-types.
+``ispc`` is a statically-typed language.  It supports a variety of core
+basic types:
 
 * ``void``: "empty" type representing no value.
 * ``bool``: boolean value; may be assigned ``true``, ``false``, or the
@@ -1411,6 +1411,15 @@ types.
 * ``int64``: 64-bit signed integer.
 * ``unsigned int64``: 64-bit unsigned integer.
 * ``double``: 64-bit double-precision floating point value.
+
+There are also a few built-in types related to pointers and memory:
+
+* ``size_t``: the maximum size of any object (structure or array)
+* ``ptrdiff_t``: an integer type large enough to represent the difference
+  between two pointers
+* ``intptr_t``: signed integer type that is large enough to represent
+  a pointer value
+* ``uintptr_t``: unsigned integer type large enough to represent a pointer
 
 Implicit type conversion between values of different types is done
 automatically by the ``ispc`` compiler.  Thus, a value of ``float`` type
@@ -3788,6 +3797,13 @@ For global atomics, only atomic swap is available for these types:
   float atomic_swap_global(uniform float * uniform ptr, float value)
   double atomic_swap_global(uniform double * uniform ptr, double value)
 
+Finally, "swap" (but none of these other atomics) is available for pointer
+types:
+
+::
+
+  void *atomic_swap_{local,global}(void * * uniform ptr, void * value)
+
 There are also variants of the atomic that take ``uniform`` values for the
 operand and return a ``uniform`` result.  These correspond to a single
 atomic operation being performed for the entire gang of program instances,
@@ -3811,6 +3827,13 @@ rather than one per program instance.
                                           uniform int32 value)
   uniform int32 atomic_swap_{local,global}(uniform int32 * uniform ptr,
                                            uniform int32 newval)
+
+And similarly for pointers:
+
+::
+
+  uniform void *atomic_swap_{local,global}(void * * uniform ptr,
+                                           void *newval)
 
 Be careful that you use the atomic function that you mean to; consider the
 following code:
@@ -3853,12 +3876,18 @@ the same location in memory!)
   int32 atomic_xor_{local,global}(uniform int32 * varying ptr, int32 value)
   int32 atomic_swap_{local,global}(uniform int32 * varying ptr, int32 value)
 
+And:
+
+::
+
+  void *atomic_swap_{local,global}(void * * ptr, void *value)
+
 There are also atomic "compare and exchange" functions.  Compare and
 exchange atomically compares the value in "val" to "compare"--if they
 match, it assigns "newval" to "val".  In either case, the old value of
 "val" is returned.  (As with the other atomic operations, there are also
 ``unsigned`` and 64-bit variants of this function.  Furthermore, there are
-``float`` and ``double`` variants as well.)
+``float``, ``double``, and ``void *`` variants as well.)
 
 ::
 
@@ -3880,6 +3909,11 @@ code.
 
     void memory_barrier();
 
+Note that this barrier is *not* needed for coordinating reads and writes
+among the program instances in a gang; it's only needed for coordinating
+between multiple hardware threads running on different cores.  See the
+section `Data Races Within a Gang`_ for the guarantees provided about
+memory read/write ordering across a gang.
 
 Prefetches
 ----------

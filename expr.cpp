@@ -68,6 +68,7 @@
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/InstIterator.h>
 
+
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr
 
@@ -637,19 +638,23 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         // instead we'll make a constant static global that holds the
         // constant value and emit a memcpy to put its value into the
         // pointer we have.
-        LLVM_TYPE_CONST llvm::Type *llvmType = symType->LLVMType(g->ctx);
+        llvm::Type *llvmType = symType->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return;
         }
 
-        llvm::Value *constPtr = 
-            new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
-                                     llvm::GlobalValue::InternalLinkage,
-                                     constValue, "const_initializer");
-        llvm::Value *size = g->target.SizeOf(llvmType, 
-                                             ctx->GetCurrentBasicBlock());
-        ctx->MemcpyInst(ptr, constPtr, size);
+        if (Type::IsBasicType(symType))
+            ctx->StoreInst(constValue, ptr);
+        else {
+            llvm::Value *constPtr = 
+                new llvm::GlobalVariable(*m->module, llvmType, true /* const */, 
+                                         llvm::GlobalValue::InternalLinkage,
+                                         constValue, "const_initializer");
+            llvm::Value *size = g->target.SizeOf(llvmType, 
+                                                 ctx->GetCurrentBasicBlock());
+            ctx->MemcpyInst(ptr, constPtr, size);
+        }
 
         return;
     }
@@ -767,7 +772,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                 else {
                     // If we don't have enough initializer values, initialize the
                     // rest as zero.
-                    LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+                    llvm::Type *llvmType = elementType->LLVMType(g->ctx);
                     if (llvmType == NULL) {
                         Assert(m->errorCount > 0);
                         return;
@@ -901,7 +906,7 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
         // a recursive call to lLLVMConstantValue().
         const Type *baseType = vectorType->GetBaseType();
         llvm::Constant *constElement = lLLVMConstantValue(baseType, ctx, value);
-        LLVM_TYPE_CONST llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
+        llvm::Type *llvmVectorType = vectorType->LLVMType(ctx);
 
         // Now create a constant version of the corresponding LLVM type that we
         // use to represent the VectorType.
@@ -910,8 +915,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
         // LLVM ArrayTypes leaks into the code here; it feels like this detail
         // should be better encapsulated?
         if (baseType->IsUniformType()) {
-            LLVM_TYPE_CONST llvm::VectorType *lvt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(llvmVectorType);
+            llvm::VectorType *lvt = 
+                llvm::dyn_cast<llvm::VectorType>(llvmVectorType);
             Assert(lvt != NULL);
             std::vector<llvm::Constant *> vals;
             for (unsigned int i = 0; i < lvt->getNumElements(); ++i)
@@ -919,8 +924,8 @@ lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
             return llvm::ConstantVector::get(vals);
         }
         else {
-            LLVM_TYPE_CONST llvm::ArrayType *lat = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(llvmVectorType);
+            llvm::ArrayType *lat = 
+                llvm::dyn_cast<llvm::ArrayType>(llvmVectorType);
             Assert(lat != NULL);
             std::vector<llvm::Constant *> vals;
             for (unsigned int i = 0; i < lat->getNumElements(); ++i)
@@ -1025,20 +1030,26 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
     llvm::Value *binop = NULL;
     int delta = (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc) ? 1 : -1;
 
+    std::string opName = rvalue->getName().str();
+    if (op == UnaryExpr::PreInc || op == UnaryExpr::PostInc)
+        opName += "_plus1";
+    else
+        opName += "_minus1";
+
     if (dynamic_cast<const PointerType *>(type) != NULL) {
         const Type *incType = type->IsUniformType() ? AtomicType::UniformInt32 :
             AtomicType::VaryingInt32;
         llvm::Constant *dval = lLLVMConstantValue(incType, g->ctx, delta);
-        binop = ctx->GetElementPtrInst(rvalue, dval, type, "ptr_inc_or_dec");
+        binop = ctx->GetElementPtrInst(rvalue, dval, type, opName.c_str());
     }
     else {
         llvm::Constant *dval = lLLVMConstantValue(type, g->ctx, delta);
         if (type->IsFloatType())
             binop = ctx->BinaryOperator(llvm::Instruction::FAdd, rvalue, 
-                                        dval, "val_inc_or_dec");
+                                        dval, opName.c_str());
         else
             binop = ctx->BinaryOperator(llvm::Instruction::Add, rvalue, 
-                                        dval, "val_inc_or_dec");
+                                        dval, opName.c_str());
     }
 
     // And store the result out to the lvalue
@@ -1067,11 +1078,11 @@ lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx) {
     ctx->SetDebugPos(pos);
     if (type->IsFloatType())
         return ctx->BinaryOperator(llvm::Instruction::FSub, zero, argVal,
-                                   "fnegate");
+                                   LLVMGetName(argVal, "_negate"));
     else {
         Assert(type->IsIntType());
         return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal,
-                                   "inegate");
+                                   LLVMGetName(argVal, "_negate"));
     }
 }
 
@@ -1099,11 +1110,11 @@ UnaryExpr::GetValue(FunctionEmitContext *ctx) const {
         return lEmitNegate(expr, pos, ctx);
     case LogicalNot: {
         llvm::Value *argVal = expr->GetValue(ctx);
-        return ctx->NotOperator(argVal, "logicalnot");
+        return ctx->NotOperator(argVal, LLVMGetName(argVal, "_logicalnot"));
     }
     case BitNot: {
         llvm::Value *argVal = expr->GetValue(ctx);
-        return ctx->NotOperator(argVal, "bitnot");
+        return ctx->NotOperator(argVal, LLVMGetName(argVal, "_bitnot"));
     }
     default:
         FATAL("logic error");
@@ -1252,6 +1263,11 @@ UnaryExpr::TypeCheck() {
         if (PointerType::IsVoidPointer(type)) {
             Error(expr->pos, "Illegal to pre/post increment \"%s\" type.",
                   type->GetString().c_str());
+            return NULL;
+        }
+        if (dynamic_cast<const UndefinedStructType *>(pt->GetBaseType())) {
+            Error(expr->pos, "Illegal to pre/post increment pointer to "
+                  "undefined struct type \"%s\".", type->GetString().c_str());
             return NULL;
         }
 
@@ -1435,7 +1451,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
 
             // Now divide by the size of the type that the pointer
             // points to in order to return the difference in elements.
-            LLVM_TYPE_CONST llvm::Type *llvmElementType = 
+            llvm::Type *llvmElementType = 
                 ptrType->GetBaseType()->LLVMType(g->ctx);
             llvm::Value *size = g->target.SizeOf(llvmElementType, 
                                                  ctx->GetCurrentBasicBlock());
@@ -1497,17 +1513,22 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
         bool isFloatOp = type0->IsFloatType();
         bool isUnsignedOp = type0->IsUnsignedType();
 
+        const char *opName = NULL;
         switch (op) {
         case BinaryExpr::Add:
+            opName = "add";
             inst = isFloatOp ? llvm::Instruction::FAdd : llvm::Instruction::Add;
             break;
         case BinaryExpr::Sub:
+            opName = "sub";
             inst = isFloatOp ? llvm::Instruction::FSub : llvm::Instruction::Sub;
             break;
         case BinaryExpr::Mul:
+            opName = "mul";
             inst = isFloatOp ? llvm::Instruction::FMul : llvm::Instruction::Mul;
             break;
         case BinaryExpr::Div:
+            opName = "div";
             if (type0->IsVaryingType() && !isFloatOp)
                 PerformanceWarning(pos, "Division with varying integer types is "
                                    "very inefficient."); 
@@ -1515,6 +1536,7 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
                 (isUnsignedOp ? llvm::Instruction::UDiv : llvm::Instruction::SDiv);
             break;
         case BinaryExpr::Mod:
+            opName = "mod";
             if (type0->IsVaryingType() && !isFloatOp)
                 PerformanceWarning(pos, "Modulus operator with varying types is "
                                    "very inefficient."); 
@@ -1526,7 +1548,7 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
             return NULL;
         }
 
-        return ctx->BinaryOperator(inst, value0, value1, "binop");
+        return ctx->BinaryOperator(inst, value0, value1, LLVMGetName(opName, value0, value1));
     }
 }
 
@@ -1541,27 +1563,34 @@ lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::Value *e1Val,
     bool isUnsignedOp = type->IsUnsignedType();
 
     llvm::CmpInst::Predicate pred;
+    const char *opName = NULL;
     switch (op) {
     case BinaryExpr::Lt:
+        opName = "less";
         pred = isFloatOp ? llvm::CmpInst::FCMP_OLT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULT : llvm::CmpInst::ICMP_SLT);
         break;
     case BinaryExpr::Gt:
+        opName = "greater";
         pred = isFloatOp ? llvm::CmpInst::FCMP_OGT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGT : llvm::CmpInst::ICMP_SGT);
         break;
     case BinaryExpr::Le:
+        opName = "lessequal";
         pred = isFloatOp ? llvm::CmpInst::FCMP_OLE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULE : llvm::CmpInst::ICMP_SLE);
         break;
     case BinaryExpr::Ge:
+        opName = "greaterequal";
         pred = isFloatOp ? llvm::CmpInst::FCMP_OGE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGE : llvm::CmpInst::ICMP_SGE);
         break;
     case BinaryExpr::Equal:
+        opName = "equal";
         pred = isFloatOp ? llvm::CmpInst::FCMP_OEQ : llvm::CmpInst::ICMP_EQ;
         break;
     case BinaryExpr::NotEqual:
+        opName = "notequal";
         pred = isFloatOp ? llvm::CmpInst::FCMP_ONE : llvm::CmpInst::ICMP_NE;
         break;
     default:
@@ -1571,7 +1600,8 @@ lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::Value *e1Val,
 
     llvm::Value *cmp = ctx->CmpInst(isFloatOp ? llvm::Instruction::FCmp : 
                                     llvm::Instruction::ICmp,
-                                    pred, e0Val, e1Val, "bincmp");
+                                    pred, e0Val, e1Val, 
+                                    LLVMGetName(opName, e0Val, e1Val));
     // This is a little ugly: CmpInst returns i1 values, but we use vectors
     // of i32s for varying bool values; type convert the result here if
     // needed.
@@ -1644,7 +1674,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
     // Allocate temporary storage for the return value
     const Type *retType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
-    LLVM_TYPE_CONST llvm::Type *llvmRetType = retType->LLVMType(g->ctx);
+    llvm::Type *llvmRetType = retType->LLVMType(g->ctx);
     llvm::Value *retPtr = ctx->AllocaInst(llvmRetType, "logical_op_mem");
 
     llvm::BasicBlock *bbSkipEvalValue1 = ctx->CreateBasicBlock("skip_eval_1");
@@ -2292,6 +2322,16 @@ BinaryExpr::TypeCheck() {
                   "on \"%s\" type.", type1->GetString().c_str());
             return NULL;
         }
+        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt0->GetString().c_str());
+            return NULL;
+        }
+        if (dynamic_cast<const UndefinedStructType *>(pt1->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt1->GetString().c_str());
+            return NULL;
+        }
 
         const Type *t = Type::MoreGeneralType(type0, type1, pos, "-");
         if (t == NULL)
@@ -2325,6 +2365,11 @@ BinaryExpr::TypeCheck() {
         if (PointerType::IsVoidPointer(pt0)) {
             Error(pos, "Illegal to perform pointer arithmetic "
                   "on \"%s\" type.", pt0->GetString().c_str());
+            return NULL;
+        }
+        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+            Error(pos, "Illegal to perform pointer arithmetic "
+                  "on undefined struct type \"%s\".", pt0->GetString().c_str());
             return NULL;
         }
 
@@ -2594,7 +2639,7 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     llvm::Value *rvalue = arg1->GetValue(ctx);
     ctx->SetDebugPos(pos);
     llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
-    llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType, "opassign_load");
+    llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType);
 
     // Map the operator to the corresponding BinaryExpr::Op operator
     BinaryExpr::Op basicop;
@@ -2639,6 +2684,7 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     }
 
     // And store the result back to the lvalue.
+    ctx->SetDebugPos(arg0->pos);
     lStoreAssignResult(newValue, lv, resultType, lvalueType, ctx, baseSym);
 
     return newValue;
@@ -2683,7 +2729,7 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
             return NULL;
         }
 
-        ctx->SetDebugPos(pos);
+        ctx->SetDebugPos(lvalue->pos);
 
         lStoreAssignResult(value, ptr, valueType, ptrType, ctx, baseSym);
 
@@ -3006,7 +3052,7 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         // Temporary storage to store the values computed for each
         // expression, if any.  (These stay as uninitialized memory if we
         // short circuit around the corresponding expression.)
-        LLVM_TYPE_CONST llvm::Type *exprType = 
+        llvm::Type *exprType = 
             expr1->GetType()->LLVMType(g->ctx);
         llvm::Value *expr1Ptr = ctx->AllocaInst(exprType);
         llvm::Value *expr2Ptr = ctx->AllocaInst(exprType);
@@ -3658,7 +3704,22 @@ ExprList::GetConstant(const Type *type) const {
         if (exprs[i] == NULL)
             return NULL;
         const Type *elementType = collectionType->GetElementType(i);
-        llvm::Constant *c = exprs[i]->GetConstant(elementType);
+
+        Expr *expr = exprs[i];
+        if (dynamic_cast<ExprList *>(expr) == NULL) {
+            // If there's a simple type conversion from the type of this
+            // expression to the type we need, then let the regular type
+            // conversion machinery handle it.
+            expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
+            if (expr == NULL) {
+                Assert(m->errorCount > 0);
+                return NULL;
+            }
+            // Re-establish const-ness if possible
+            expr = ::Optimize(expr);
+        }
+
+        llvm::Constant *c = expr->GetConstant(elementType);
         if (c == NULL)
             // If this list element couldn't convert to the right constant
             // type for the corresponding collection member, then give up.
@@ -3674,7 +3735,7 @@ ExprList::GetConstant(const Type *type) const {
             return NULL;
         }
 
-        LLVM_TYPE_CONST llvm::Type *llvmType = elementType->LLVMType(g->ctx);
+        llvm::Type *llvmType = elementType->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -3685,27 +3746,23 @@ ExprList::GetConstant(const Type *type) const {
     }
 
     if (dynamic_cast<const StructType *>(type) != NULL) {
-#if defined(LLVM_2_9)
-        return llvm::ConstantStruct::get(*g->ctx, cv, false);
-#else
-        LLVM_TYPE_CONST llvm::StructType *llvmStructType =
-            llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(collectionType->LLVMType(g->ctx));
+        llvm::StructType *llvmStructType =
+            llvm::dyn_cast<llvm::StructType>(collectionType->LLVMType(g->ctx));
         Assert(llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
-#endif
     }
     else {
-        LLVM_TYPE_CONST llvm::Type *lt = type->LLVMType(g->ctx);
-        LLVM_TYPE_CONST llvm::ArrayType *lat = 
-            llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(lt);
+        llvm::Type *lt = type->LLVMType(g->ctx);
+        llvm::ArrayType *lat = 
+            llvm::dyn_cast<llvm::ArrayType>(lt);
         if (lat != NULL)
             return llvm::ConstantArray::get(lat, cv);
         else {
             // uniform short vector type
             Assert(type->IsUniformType() &&
                    dynamic_cast<const VectorType *>(type) != NULL);
-            LLVM_TYPE_CONST llvm::VectorType *lvt = 
-                llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(lt);
+            llvm::VectorType *lvt = 
+                llvm::dyn_cast<llvm::VectorType>(lt);
             Assert(lvt != NULL);
 
             // Uniform short vectors are stored as vectors of length
@@ -3922,7 +3979,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(ptr, mask, lvalueType, "index");
+    return ctx->LoadInst(ptr, mask, lvalueType);
 }
 
 
@@ -3982,10 +4039,10 @@ IndexExpr::GetBaseSymbol() const {
 static llvm::Value *
 lConvertToSlicePointer(FunctionEmitContext *ctx, llvm::Value *ptr,
                        const PointerType *slicePtrType) {
-    LLVM_TYPE_CONST llvm::Type *llvmSlicePtrType = 
+    llvm::Type *llvmSlicePtrType = 
         slicePtrType->LLVMType(g->ctx);
-    LLVM_TYPE_CONST llvm::StructType *sliceStructType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(llvmSlicePtrType);
+    llvm::StructType *sliceStructType =
+        llvm::dyn_cast<llvm::StructType>(llvmSlicePtrType);
     Assert(sliceStructType != NULL &&
            sliceStructType->getElementType(0) == ptr->getType());
 
@@ -3993,7 +4050,7 @@ lConvertToSlicePointer(FunctionEmitContext *ctx, llvm::Value *ptr,
     // offsets
     llvm::Value *result = llvm::Constant::getNullValue(sliceStructType);
     // And replace the pointer in the struct with the given pointer
-    return ctx->InsertInst(result, ptr, 0);
+    return ctx->InsertInst(result, ptr, 0, LLVMGetName(ptr, "_slice"));
 }
 
 
@@ -4084,7 +4141,8 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
                                                   &baseExprType);
 
         llvm::Value *ptr = ctx->GetElementPtrInst(basePtrValue, indexValue,
-                                                  baseExprType, "ptr_offset");
+                                                  baseExprType, 
+                                                  LLVMGetName(basePtrValue, "_offset"));
         return lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
     }
 
@@ -4120,7 +4178,7 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     // And do the actual indexing calculation..
     llvm::Value *ptr = 
         ctx->GetElementPtrInst(basePtr, LLVMInt32(0), indexValue, 
-                               basePtrType);
+                               basePtrType, LLVMGetName(basePtr, "_offset"));
     return lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 }
 
@@ -4610,8 +4668,8 @@ VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Allocate temporary memory to tore the result
         llvm::Value *resultPtr = ctx->AllocaInst(memberType->LLVMType(g->ctx), 
-                                            "vector_tmp");
-
+                                                 "vector_tmp");
+        
         // FIXME: we should be able to use the internal mask here according
         // to the same logic where it's used elsewhere
         llvm::Value *elementMask = ctx->GetFullMask();
@@ -4622,17 +4680,19 @@ VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
         ctx->SetDebugPos(pos);
         for (size_t i = 0; i < identifier.size(); ++i) {
+            char idStr[2] = { identifier[i], '\0' };
             llvm::Value *elementPtr = ctx->AddElementOffset(basePtr, indices[i],
-                                                            basePtrType);
+                                                            basePtrType,
+                                                            LLVMGetName(basePtr, idStr));
             llvm::Value *elementValue = 
-                ctx->LoadInst(elementPtr, elementMask, elementPtrType, 
-                              "vec_element");
+                ctx->LoadInst(elementPtr, elementMask, elementPtrType);
 
-            llvm::Value *ptmp = ctx->AddElementOffset(resultPtr, i, NULL);
+            const char *resultName = LLVMGetName(resultPtr, idStr);
+            llvm::Value *ptmp = ctx->AddElementOffset(resultPtr, i, NULL, resultName);
             ctx->StoreInst(elementValue, ptmp);
         }
 
-        return ctx->LoadInst(resultPtr, "swizzle_vec");
+        return ctx->LoadInst(resultPtr, LLVMGetName(basePtr, "_swizzle"));
     }
 }
 
@@ -4680,12 +4740,13 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         exprType = pointerType->GetBaseType();
 
     if (derefLValue == true && pointerType == NULL) {
-        if (dynamic_cast<const StructType *>(exprType->GetReferenceTarget()) != NULL)
-            Error(p, "Dereference operator \"->\" can't be applied to non-pointer "
+        const Type *targetType = exprType->GetReferenceTarget();
+        if (dynamic_cast<const StructType *>(targetType) != NULL)
+            Error(p, "Member operator \"->\" can't be applied to non-pointer "
                   "type \"%s\".  Did you mean to use \".\"?", 
                   exprType->GetString().c_str());
         else
-            Error(p, "Dereference operator \"->\" can't be applied to non-struct "
+            Error(p, "Member operator \"->\" can't be applied to non-struct "
                   "pointer type \"%s\".", exprType->GetString().c_str());
         return NULL;
     }
@@ -4701,6 +4762,12 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         return new StructMemberExpr(e, id, p, idpos, derefLValue);
     else if (dynamic_cast<const VectorType *>(exprType) != NULL)
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
+    else if (dynamic_cast<const UndefinedStructType *>(exprType)) {
+        Error(p, "Member operator \"%s\" can't be applied to declared "
+              "but not defined struct type \"%s\".", derefLValue ? "->" : ".",
+              exprType->GetString().c_str());
+        return NULL;
+    }
     else {
         Error(p, "Member operator \"%s\" can't be used with expression of "
               "\"%s\" type.", derefLValue ? "->" : ".", 
@@ -4759,7 +4826,9 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(lvalue, mask, lvalueType, "structelement");
+    std::string suffix = std::string("_") + identifier;
+    return ctx->LoadInst(lvalue, mask, lvalueType, 
+                         LLVMGetName(lvalue, suffix.c_str()));
 }
 
 
@@ -4801,7 +4870,8 @@ MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
         expr->GetLValueType();
     ctx->SetDebugPos(pos);
     llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber,
-                                             exprLValueType);
+                                             exprLValueType, 
+                                             basePtr->getName().str().c_str());
 
     ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 
@@ -5663,7 +5733,7 @@ ConstExpr::GetConstant(const Type *type) const {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a NULL pointer of the
         // appropriate type.
-        LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+        llvm::Type *llvmType = type->LLVMType(g->ctx);
         if (llvmType == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -5774,9 +5844,26 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 SourcePos pos) {
     llvm::Value *cast = NULL;
 
+    std::string opName = exprVal->getName().str();
+    switch (toType->basicType) {
+    case AtomicType::TYPE_BOOL: opName += "_to_bool"; break;
+    case AtomicType::TYPE_INT8: opName += "_to_int8"; break;
+    case AtomicType::TYPE_UINT8: opName += "_to_uint8"; break;
+    case AtomicType::TYPE_INT16: opName += "_to_int16"; break;
+    case AtomicType::TYPE_UINT16: opName += "_to_uint16"; break;
+    case AtomicType::TYPE_INT32: opName += "_to_int32"; break;
+    case AtomicType::TYPE_UINT32: opName += "_to_uint32"; break;
+    case AtomicType::TYPE_INT64: opName += "_to_int64"; break;
+    case AtomicType::TYPE_UINT64: opName += "_to_uint64"; break;
+    case AtomicType::TYPE_FLOAT: opName += "_to_float"; break;
+    case AtomicType::TYPE_DOUBLE: opName += "_to_double"; break;
+    default: FATAL("Unimplemented");
+    }
+    const char *cOpName = opName.c_str();
+
     switch (toType->basicType) {
     case AtomicType::TYPE_FLOAT: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::FloatType : 
                                         LLVMTypes::FloatVectorType;
         switch (fromType->basicType) {
@@ -5785,17 +5872,17 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 // If we have a bool vector of i32 elements, first truncate
                 // down to a single bit
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
-                                 exprVal, targetType, "bool2float");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_INT64:
             cast = ctx->CastInst(llvm::Instruction::SIToFP, // signed int to float
-                                 exprVal, targetType, "int2float");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
@@ -5805,14 +5892,14 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
-                                 exprVal, targetType, "uint2float");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             // No-op cast.
             cast = exprVal;
             break;
         case AtomicType::TYPE_DOUBLE:
-            cast = ctx->FPCastInst(exprVal, targetType, "double2float");
+            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -5820,7 +5907,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_DOUBLE: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::DoubleType :
                                         LLVMTypes::DoubleVectorType;
         switch (fromType->basicType) {
@@ -5828,26 +5915,26 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
                 // truncate i32 bool vector values to i1s
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
-                                 exprVal, targetType, "bool2double");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_INT64:
             cast = ctx->CastInst(llvm::Instruction::SIToFP, // signed int
-                                 exprVal, targetType, "int2double");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
-                                 exprVal, targetType, "uint2double");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            cast = ctx->FPCastInst(exprVal, targetType, "float2double");
+            cast = ctx->FPCastInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             cast = exprVal;
@@ -5858,15 +5945,15 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT8: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int8Type :
                                         LLVMTypes::Int8VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2int");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
@@ -5878,15 +5965,15 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_int8");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "float2int");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "double2int");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -5894,15 +5981,15 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT8: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int8Type :
                                         LLVMTypes::Int8VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_UINT8:
@@ -5914,21 +6001,21 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_uint8");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "float2uint");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "double2uint");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -5936,21 +6023,21 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT16: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int16Type :
                                         LLVMTypes::Int16VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2int");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
-            cast = ctx->SExtInst(exprVal, targetType, "int2int16");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint2uint16");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_UINT16:
@@ -5958,17 +6045,17 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "float2int");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_int16");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "double2int");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -5976,21 +6063,21 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT16: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int16Type :
                                         LLVMTypes::Int16VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint16");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
-            cast = ctx->SExtInst(exprVal, targetType, "uint2uint16");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint2uint16");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;            
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_UINT16:
@@ -6001,20 +6088,20 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "float2uint");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_uint16");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "double2uint");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -6022,23 +6109,23 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT32: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2int");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
-            cast = ctx->SExtInst(exprVal, targetType, "int2int32");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint2uint32");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
@@ -6046,15 +6133,15 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "float2int");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_int32");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "double2int");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -6062,23 +6149,23 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT32: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int32Type :
                                         LLVMTypes::Int32VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
-            cast = ctx->SExtInst(exprVal, targetType, "uint2uint");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint2uint");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;            
         case AtomicType::TYPE_INT32:
         case AtomicType::TYPE_UINT32:
@@ -6089,18 +6176,18 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "float2uint");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
-            cast = ctx->TruncInst(exprVal, targetType, "int64_to_uint32");
+            cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
-                                 exprVal, targetType, "double2uint");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -6108,29 +6195,29 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_INT64: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2int64");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
-            cast = ctx->SExtInst(exprVal, targetType, "int_to_int64");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint_to_int64");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "float2int64");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
@@ -6138,7 +6225,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             break;
         case AtomicType::TYPE_DOUBLE:
             cast = ctx->CastInst(llvm::Instruction::FPToSI, // signed int
-                                 exprVal, targetType, "double2int64");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -6146,32 +6233,32 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         break;
     }
     case AtomicType::TYPE_UINT64: {
-        LLVM_TYPE_CONST llvm::Type *targetType = 
+        llvm::Type *targetType = 
             fromType->IsUniformType() ? LLVMTypes::Int64Type : 
                                         LLVMTypes::Int64VectorType;
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() && 
                 LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, "bool_to_i1");
-            cast = ctx->ZExtInst(exprVal, targetType, "bool2uint");
+                exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT8:
         case AtomicType::TYPE_INT16:
         case AtomicType::TYPE_INT32:
-            cast = ctx->SExtInst(exprVal, targetType, "int_to_uint64");
+            cast = ctx->SExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_UINT8:
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
-            cast = ctx->ZExtInst(exprVal, targetType, "uint_to_uint64");
+            cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
             if (fromType->IsVaryingType())
                 PerformanceWarning(pos, "Conversion from float to unsigned int64 is slow. "
                                    "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
-                                 exprVal, targetType, "float2uint");
+                                 exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_INT64:
         case AtomicType::TYPE_UINT64:
@@ -6182,7 +6269,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 PerformanceWarning(pos, "Conversion from double to unsigned int64 is slow. "
                                    "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
-                                 exprVal, targetType, "double2uint");
+                                 exprVal, targetType, cOpName);
             break;
         default:
             FATAL("unimplemented");
@@ -6199,7 +6286,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMInt8(0) : 
                 (llvm::Value *)LLVMInt8Vector((int8_t)0);
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                                exprVal, zero, "cmpi0");
+                                exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT16:
@@ -6207,7 +6294,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMInt16(0) : 
                 (llvm::Value *)LLVMInt16Vector((int16_t)0);
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                                exprVal, zero, "cmpi0");
+                                exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT32:
@@ -6215,14 +6302,14 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMInt32(0) : 
                 (llvm::Value *)LLVMInt32Vector(0);
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                                exprVal, zero, "cmpi0");
+                                exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_FLOAT: {
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMFloat(0.f) : 
                 (llvm::Value *)LLVMFloatVector(0.f);
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE,
-                                exprVal, zero, "cmpf0");
+                                exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_INT64:
@@ -6230,14 +6317,14 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMInt64(0) : 
                 (llvm::Value *)LLVMInt64Vector((int64_t)0);
             cast = ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
-                                exprVal, zero, "cmpi0");
+                                exprVal, zero, cOpName);
             break;
         }
         case AtomicType::TYPE_DOUBLE: {
             llvm::Value *zero = fromType->IsUniformType() ? (llvm::Value *)LLVMDouble(0.) : 
                 (llvm::Value *)LLVMDoubleVector(0.);
             cast = ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_ONE,
-                                exprVal, zero, "cmpd0");
+                                exprVal, zero, cOpName);
             break;
         }
         default:
@@ -6251,7 +6338,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
                 // turn into a vector below, the way it does for everyone
                 // else...
                 cast = ctx->SExtInst(cast, LLVMTypes::BoolVectorType->getElementType(),
-                                     "i1bool_to_i32bool");
+                                     LLVMGetName(cast, "to_i32bool"));
             }
         }
         else
@@ -6290,7 +6377,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
     const CollectionType *collectionType = 
         dynamic_cast<const CollectionType *>(type);
     if (collectionType != NULL) {
-        LLVM_TYPE_CONST llvm::Type *llvmType = 
+        llvm::Type *llvmType = 
             type->GetAsVaryingType()->LLVMType(g->ctx);
         llvm::Value *retValue = llvm::UndefValue::get(llvmType);
 
@@ -6392,10 +6479,10 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(dynamic_cast<const AtomicType *>(toType) != NULL);
             if (toType->IsBoolType()) {
                 // convert pointer to bool
-                LLVM_TYPE_CONST llvm::Type *lfu = 
+                llvm::Type *lfu = 
                     fromType->GetAsUniformType()->LLVMType(g->ctx);
-                LLVM_TYPE_CONST llvm::PointerType *llvmFromUnifType = 
-                    llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(lfu);
+                llvm::PointerType *llvmFromUnifType = 
+                    llvm::dyn_cast<llvm::PointerType>(lfu);
 
                 llvm::Value *nullPtrValue = 
                     llvm::ConstantPointerNull::get(llvmFromUnifType);
@@ -6424,7 +6511,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                 if (toType->IsVaryingType() && fromType->IsUniformType())
                     value = ctx->SmearUniform(value);
 
-                LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+                llvm::Type *llvmToType = toType->LLVMType(g->ctx);
                 if (llvmToType == NULL)
                     return NULL;
                 return ctx->PtrToIntInst(value, llvmToType, "ptr_typecast");
@@ -6467,7 +6554,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         Assert(Type::EqualIgnoringConst(toArrayType->GetBaseType(),
                                         fromArrayType->GetBaseType()));
         llvm::Value *v = expr->GetValue(ctx);
-        LLVM_TYPE_CONST llvm::Type *ptype = toType->LLVMType(g->ctx);
+        llvm::Type *ptype = toType->LLVMType(g->ctx);
         return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
     }
 
@@ -6489,7 +6576,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             Assert(Type::EqualIgnoringConst(toArray->GetBaseType(),
                                             fromArray->GetBaseType()));
             llvm::Value *v = expr->GetValue(ctx);
-            LLVM_TYPE_CONST llvm::Type *ptype = toType->LLVMType(g->ctx);
+            llvm::Type *ptype = toType->LLVMType(g->ctx);
             return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
         }
 
@@ -6577,7 +6664,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (toType->IsVaryingType() && fromType->IsUniformType())
             exprVal = ctx->SmearUniform(exprVal);
 
-        LLVM_TYPE_CONST llvm::Type *llvmToType = toType->LLVMType(g->ctx);
+        llvm::Type *llvmToType = toType->LLVMType(g->ctx);
         if (llvmToType == NULL)
             return NULL;
 
@@ -6816,7 +6903,7 @@ lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
     if (constType->IsVaryingType())
         return llvm::ConstantVector::get(smear);
     else {
-        LLVM_TYPE_CONST llvm::ArrayType *at =
+        llvm::ArrayType *at =
             llvm::ArrayType::get(LLVMTypes::PointerIntType, count);
         return llvm::ConstantArray::get(at, smear);
     }
@@ -6857,7 +6944,34 @@ ReferenceExpr::ReferenceExpr(Expr *e, SourcePos p)
 llvm::Value *
 ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
-    return expr ? expr->GetLValue(ctx) : NULL;
+    if (expr == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    
+    llvm::Value *value = expr->GetLValue(ctx);
+    if (value != NULL)
+        return value;
+
+    // value is NULL if the expression is a temporary; in this case, we'll
+    // allocate storage for it so that we can return the pointer to that...
+    const Type *type;
+    llvm::Type *llvmType;
+    if ((type = expr->GetType()) == NULL ||
+        (llvmType = type->LLVMType(g->ctx)) == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    value = expr->GetValue(ctx);
+    if (value == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::Value *ptr = ctx->AllocaInst(llvmType);
+    ctx->StoreInst(value, ptr);
+    return ptr;
 }
 
 
@@ -6955,7 +7069,7 @@ DerefExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->GetFullMask();
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(ptr, mask, type, "deref_load");
+    return ctx->LoadInst(ptr, mask, type);
 }
 
 
@@ -7249,8 +7363,7 @@ SizeOfExpr::SizeOfExpr(Expr *e, SourcePos p)
 
 SizeOfExpr::SizeOfExpr(const Type *t, SourcePos p)
     : Expr(p), expr(NULL), type(t) {
-    if (type->HasUnboundVariability())
-        type = type->ResolveUnboundVariability(Variability::Varying);
+    type = type->ResolveUnboundVariability(Variability::Varying);
 }
 
 
@@ -7261,7 +7374,7 @@ SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     if (t == NULL)
         return NULL;
 
-    LLVM_TYPE_CONST llvm::Type *llvmType = t->LLVMType(g->ctx);
+    llvm::Type *llvmType = t->LLVMType(g->ctx);
     if (llvmType == NULL)
         return NULL;
 
@@ -7291,6 +7404,14 @@ SizeOfExpr::Print() const {
 
 Expr *
 SizeOfExpr::TypeCheck() {
+    // Can't compute the size of a struct without a definition
+    if (type != NULL &&
+        dynamic_cast<const UndefinedStructType *>(type) != NULL) {
+        Error(pos, "Can't compute the size of declared but not defined "
+              "struct type \"%s\".", type->GetString().c_str());
+        return NULL;
+    }
+
     return this;
 }
 
@@ -7321,7 +7442,9 @@ SymbolExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!symbol || !symbol->storagePtr)
         return NULL;
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(symbol->storagePtr, symbol->name.c_str());
+
+    std::string loadName = symbol->name + std::string("_load");
+    return ctx->LoadInst(symbol->storagePtr, loadName.c_str());
 }
 
 
@@ -7472,8 +7595,12 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (ft == NULL)
         return NULL;
 
-    if (Type::Equal(type, matchingFunc->type) == false)
+    if (Type::Equal(type, matchingFunc->type) == false) {
+        Error(pos, "Type of function symbol \"%s\" doesn't match expected type "
+              "\"%s\".", matchingFunc->type->GetString().c_str(),
+              type->GetString().c_str());
         return NULL;
+    }
 
     return matchingFunc->function;
 }
@@ -7483,8 +7610,12 @@ static void
 lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
                          const std::vector<const Type *> &argTypes, 
                          const std::vector<bool> *argCouldBeNULL) {
-    for (unsigned int i = 0; i < funcs.size(); ++i)
-        Error(funcs[i]->pos, "Candidate function:");
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *ft = 
+            dynamic_cast<const FunctionType *>(funcs[i]->type);
+        Assert(ft != NULL);
+        Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
+    }
 
     std::string passedTypes = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
@@ -7867,7 +7998,7 @@ NullPointerExpr::GetConstant(const Type *type) const {
     if (pt == NULL)
         return NULL;
 
-    LLVM_TYPE_CONST llvm::Type *llvmType = type->LLVMType(g->ctx);
+    llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -7919,7 +8050,7 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
         // varying new.
         isVarying = (typeQual == 0) || (typeQual & TYPEQUAL_VARYING);
 
-    if (allocType != NULL && allocType->HasUnboundVariability())
+    if (allocType != NULL)
         allocType = allocType->ResolveUnboundVariability(Variability::Uniform);
 }
 
@@ -8013,7 +8144,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
                 // Initialize the memory pointed to by the pointer for the
                 // current lane.
                 ctx->SetCurrentBasicBlock(bbInit);
-                LLVM_TYPE_CONST llvm::Type *ptrType = 
+                llvm::Type *ptrType = 
                     retType->GetAsUniformType()->LLVMType(g->ctx);
                 llvm::Value *ptr = ctx->IntToPtrInst(p, ptrType);
                 InitSymbol(ptr, allocType, initExpr, ctx, pos);
@@ -8029,8 +8160,9 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
         // For uniform news, we just need to cast the void * to be a
         // pointer of the return type and to run the code for initializers,
         // if present.
-        LLVM_TYPE_CONST llvm::Type *ptrType = retType->LLVMType(g->ctx);
-        ptrValue = ctx->BitCastInst(ptrValue, ptrType, "cast_new_ptr");
+        llvm::Type *ptrType = retType->LLVMType(g->ctx);
+        ptrValue = ctx->BitCastInst(ptrValue, ptrType, 
+                                    LLVMGetName(ptrValue, "_cast_ptr"));
 
         if (initExpr != NULL)
             InitSymbol(ptrValue, allocType, initExpr, ctx, pos);
@@ -8052,9 +8184,20 @@ NewExpr::GetType() const {
 
 Expr *
 NewExpr::TypeCheck() {
-    // Here we only need to make sure that if we have an expression giving
-    // a number of elements to allocate that it can be converted to an
-    // integer of the appropriate variability.
+    // It's illegal to call new with an undefined struct type
+    if (allocType == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    if (dynamic_cast<const UndefinedStructType *>(allocType) != NULL) {
+        Error(pos, "Can't dynamically allocate storage for declared "
+              "but not defined type \"%s\".", allocType->GetString().c_str());
+        return NULL;
+    }
+
+    // Otherwise we only need to make sure that if we have an expression
+    // giving a number of elements to allocate that it can be converted to
+    // an integer of the appropriate variability.
     if (countExpr == NULL)
         return this;
 

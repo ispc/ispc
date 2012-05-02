@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLVM_2_9
-#warning "The C++ backend isn't supported when building with LLVM 2.9"
-#else
+#include <stdio.h>
 
 #ifndef _MSC_VER
 #include <inttypes.h>
@@ -933,6 +931,20 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
 }
 #endif // LLVM_3_1svn
 
+#ifdef LLVM_3_1svn
+static inline std::string ftostr(const APFloat& V) {
+  std::string Buf;
+  if (&V.getSemantics() == &APFloat::IEEEdouble) {
+    raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &APFloat::IEEEsingle) {
+    raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+  return "<unknown format in ftostr>"; // error
+}
+#endif // LLVM_3_1svn
+
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
 // variable). We decide this by converting CFP to a string and back into a
@@ -1083,6 +1095,26 @@ bool CWriter::printCast(unsigned opc, Type *SrcTy, Type *DstTy) {
   }
   return false;
 }
+
+
+// FIXME: generalize this/make it not so hard-coded?
+static const char *lGetSmearFunc(Type *matchType) {
+    switch (matchType->getTypeID()) {
+    case Type::FloatTyID:  return "__smear_float";
+    case Type::DoubleTyID: return "__smear_double";
+    case Type::IntegerTyID: {
+        switch (cast<IntegerType>(matchType)->getBitWidth()) {
+        case 1:  return "__smear_i1";
+        case 8:  return "__smear_i8";
+        case 16: return "__smear_i16";
+        case 32: return "__smear_i32";
+        case 64: return "__smear_i64";
+        }
+    }
+    default: return NULL;
+    }
+}
+
 
 // printConstant - The LLVM Constant to C Constant converter.
 void CWriter::printConstant(Constant *CPV, bool Static) {
@@ -1423,30 +1455,62 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         Out << ")";
     break;
   }
-  case Type::VectorTyID:
-    printType(Out, CPV->getType());
-    Out << "(";
+  case Type::VectorTyID: {
+    VectorType *VT = dyn_cast<VectorType>(CPV->getType());
+    const char *smearFunc = lGetSmearFunc(VT->getElementType());
 
-    if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
-      printConstantVector(CV, Static);
+    if (isa<ConstantAggregateZero>(CPV)) {
+        assert(smearFunc != NULL);
+
+        Constant *CZ = Constant::getNullValue(VT->getElementType());
+        Out << smearFunc << "(";
+        printConstant(CZ, Static);
+        Out << ")";
+    }
+    else if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
+      llvm::Constant *splatValue = CV->getSplatValue();
+      if (splatValue != NULL && smearFunc != NULL) {
+        Out << smearFunc << "(";
+        printConstant(splatValue, Static);
+        Out << ")";
+      }
+      else {
+        printType(Out, CPV->getType());
+        Out << "(";
+        printConstantVector(CV, Static);
+        Out << ")";
+      }
+    }
 #ifdef LLVM_3_1svn
-    } else if (ConstantDataSequential *CDS = 
-               dyn_cast<ConstantDataSequential>(CPV)) {
-      printConstantDataSequential(CDS, Static);
+    else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(CPV)) {
+      llvm::Constant *splatValue = CDV->getSplatValue();
+      if (splatValue != NULL && smearFunc != NULL) {
+        Out << smearFunc << "(";
+        printConstant(splatValue, Static);
+        Out << ")";
+      }
+      else {
+        printType(Out, CPV->getType());
+        Out << "(";
+        printConstantDataSequential(CDV, Static);
+        Out << ")";
+      }
+    }
 #endif
-    } else {
-      assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
-      VectorType *VT = cast<VectorType>(CPV->getType());
+    else {
+      assert(isa<UndefValue>(CPV));
       Constant *CZ = Constant::getNullValue(VT->getElementType());
+      printType(Out, CPV->getType());
+      Out << "(";
       printConstant(CZ, Static);
       for (unsigned i = 1, e = VT->getNumElements(); i != e; ++i) {
         Out << ", ";
         printConstant(CZ, Static);
       }
+      Out << ")";
     }
-    Out << ")";
     break;
-
+  }
   case Type::StructTyID:
     if (!Static) {
       // call init func...
@@ -1639,7 +1703,12 @@ std::string CWriter::GetValueName(const Value *Operand) {
       VarName += ch;
   }
 
-  return VarName + "_llvm_cbe";
+  if (isa<BasicBlock>(Operand))
+    VarName += "_label";
+  else
+    VarName += "_";
+
+  return VarName;
 }
 
 /// writeInstComputationInline - Emit the computation for the specified
@@ -2078,6 +2147,8 @@ bool CWriter::doInitialization(Module &M) {
   Out << "int fflush(void *);\n";
   Out << "int printf(const unsigned char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+  Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
+  Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
   Out << "}\n\n";
 
   generateCompilerSpecificCode(Out, TD);
@@ -2187,69 +2258,6 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
-  // Output the global variable definitions and contents...
-  if (!M.global_empty()) {
-    Out << "\n\n/* Global Variable Definitions and Initialization */\n";
-    for (Module::global_iterator I = M.global_begin(), E = M.global_end();
-         I != E; ++I)
-      if (!I->isDeclaration()) {
-        // Ignore special globals, such as debug info.
-        if (getGlobalVariableClass(I))
-          continue;
-
-        if (I->hasLocalLinkage())
-          Out << "static ";
-        else if (I->hasDLLImportLinkage())
-          Out << "__declspec(dllimport) ";
-        else if (I->hasDLLExportLinkage())
-          Out << "__declspec(dllexport) ";
-
-        // Thread Local Storage
-        if (I->isThreadLocal())
-          Out << "__thread ";
-
-        printType(Out, I->getType()->getElementType(), false,
-                  GetValueName(I));
-        if (I->hasLinkOnceLinkage())
-          Out << " __attribute__((common))";
-        else if (I->hasWeakLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
-        else if (I->hasCommonLinkage())
-          Out << " __ATTRIBUTE_WEAK__";
-
-        if (I->hasHiddenVisibility())
-          Out << " __HIDDEN__";
-
-        // If the initializer is not null, emit the initializer.  If it is null,
-        // we try to avoid emitting large amounts of zeros.  The problem with
-        // this, however, occurs when the variable has weak linkage.  In this
-        // case, the assembler will complain about the variable being both weak
-        // and common, so we disable this optimization.
-        // FIXME common linkage should avoid this problem.
-        if (!I->getInitializer()->isNullValue()) {
-          Out << " = " ;
-          writeOperand(I->getInitializer(), false);
-        } else if (I->hasWeakLinkage()) {
-          // We have to specify an initializer, but it doesn't have to be
-          // complete.  If the value is an aggregate, print out { 0 }, and let
-          // the compiler figure out the rest of the zeros.
-          Out << " = " ;
-          if (I->getInitializer()->getType()->isStructTy() ||
-              I->getInitializer()->getType()->isVectorTy()) {
-            Out << "{ 0 }";
-          } else if (I->getInitializer()->getType()->isArrayTy()) {
-            // As with structs and vectors, but with an extra set of braces
-            // because arrays are wrapped in structs.
-            Out << "{ { 0 } }";
-          } else {
-            // Just print it out normally.
-            writeOperand(I->getInitializer(), false);
-          }
-        }
-        Out << ";\n";
-      }
-  }
-
   // Function declarations
   Out << "\n/* Function Declarations */\n";
   Out << "extern \"C\" {\n";
@@ -2348,6 +2356,69 @@ bool CWriter::doInitialization(Module &M) {
        I = intrinsicsToDefine.begin(),
        E = intrinsicsToDefine.end(); I != E; ++I) {
     printIntrinsicDefinition(**I, Out);
+  }
+
+  // Output the global variable definitions and contents...
+  if (!M.global_empty()) {
+    Out << "\n\n/* Global Variable Definitions and Initialization */\n";
+    for (Module::global_iterator I = M.global_begin(), E = M.global_end();
+         I != E; ++I)
+      if (!I->isDeclaration()) {
+        // Ignore special globals, such as debug info.
+        if (getGlobalVariableClass(I))
+          continue;
+
+        if (I->hasLocalLinkage())
+          Out << "static ";
+        else if (I->hasDLLImportLinkage())
+          Out << "__declspec(dllimport) ";
+        else if (I->hasDLLExportLinkage())
+          Out << "__declspec(dllexport) ";
+
+        // Thread Local Storage
+        if (I->isThreadLocal())
+          Out << "__thread ";
+
+        printType(Out, I->getType()->getElementType(), false,
+                  GetValueName(I));
+        if (I->hasLinkOnceLinkage())
+          Out << " __attribute__((common))";
+        else if (I->hasWeakLinkage())
+          Out << " __ATTRIBUTE_WEAK__";
+        else if (I->hasCommonLinkage())
+          Out << " __ATTRIBUTE_WEAK__";
+
+        if (I->hasHiddenVisibility())
+          Out << " __HIDDEN__";
+
+        // If the initializer is not null, emit the initializer.  If it is null,
+        // we try to avoid emitting large amounts of zeros.  The problem with
+        // this, however, occurs when the variable has weak linkage.  In this
+        // case, the assembler will complain about the variable being both weak
+        // and common, so we disable this optimization.
+        // FIXME common linkage should avoid this problem.
+        if (!I->getInitializer()->isNullValue()) {
+          Out << " = " ;
+          writeOperand(I->getInitializer(), false);
+        } else if (I->hasWeakLinkage()) {
+          // We have to specify an initializer, but it doesn't have to be
+          // complete.  If the value is an aggregate, print out { 0 }, and let
+          // the compiler figure out the rest of the zeros.
+          Out << " = " ;
+          if (I->getInitializer()->getType()->isStructTy() ||
+              I->getInitializer()->getType()->isVectorTy()) {
+            Out << "{ 0 }";
+          } else if (I->getInitializer()->getType()->isArrayTy()) {
+            // As with structs and vectors, but with an extra set of braces
+            // because arrays are wrapped in structs.
+            Out << "{ { 0 } }";
+          } else {
+            // Just print it out normally.
+            writeOperand(I->getInitializer(), false);
+          }
+        }
+        Out << ";\n";
+      }
   }
 
   return false;
@@ -3405,6 +3476,7 @@ void CWriter::lowerIntrinsics(Function &F) {
           case Intrinsic::ppc_altivec_lvsl:
           case Intrinsic::uadd_with_overflow:
           case Intrinsic::sadd_with_overflow:
+          case Intrinsic::trap:
               // We directly implement these intrinsics
             break;
           default:
@@ -3572,7 +3644,9 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
+#ifdef LLVM_3_0
     Function *F = I.getCalledFunction();
+#endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
 #include "llvm/Intrinsics.gen"
 #undef GET_GCC_BUILTIN_NAME
@@ -3714,6 +3788,9 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     Out << ", ";
     writeOperand(I.getArgOperand(1));
     Out << ")";
+    return true;
+  case Intrinsic::trap:
+    Out << "abort()";
     return true;
   }
 }
@@ -4307,23 +4384,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         assert(toMatch != NULL);
 
         {
-        // FIXME: generalize this/make it not so hard-coded?
         Type *matchType = toMatch->getType();
-        const char *smearFuncName = NULL;
-
-        switch (matchType->getTypeID()) {
-        case Type::FloatTyID:  smearFuncName = "__smear_float"; break;
-        case Type::DoubleTyID: smearFuncName = "__smear_double"; break;
-        case Type::IntegerTyID: {
-            switch (cast<IntegerType>(matchType)->getBitWidth()) {
-            case 8:  smearFuncName = "__smear_i8";  break;
-            case 16: smearFuncName = "__smear_i16"; break;
-            case 32: smearFuncName = "__smear_i32"; break;
-            case 64: smearFuncName = "__smear_i64"; break;
-            }
-        }
-        default: break;
-        }
+        const char *smearFuncName = lGetSmearFunc(matchType);
 
         if (smearFuncName != NULL) {
             Function *smearFunc = module->getFunction(smearFuncName);
@@ -4341,7 +4403,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             Value *args[1] = { toMatch };
             ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
             Instruction *smearCall = 
-                CallInst::Create(smearFunc, argArray, "smear", (Instruction *)NULL);
+                CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
+                                 (Instruction *)NULL);
 
             ReplaceInstWithInst(iter, smearCall);
 
@@ -4446,5 +4509,3 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
 
     return true;
 }
-
-#endif // LLVM_2_9

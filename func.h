@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -43,7 +43,7 @@
 
 class Function {
 public:
-    Function(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code);
+    Function(Symbol *sym, Stmt *code);
 
     const Type *GetReturnType() const;
     const FunctionType *GetType() const;

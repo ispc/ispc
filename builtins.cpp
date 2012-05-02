@@ -291,7 +291,7 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
             Assert(id != 0);
-            LLVM_TYPE_CONST llvm::Type *intrinsicType = 
+            llvm::Type *intrinsicType = 
                 llvm::Intrinsic::getType(*g->ctx, id);
             intrinsicType = llvm::PointerType::get(intrinsicType, 0);
             Assert(func->getType() == intrinsicType);
@@ -620,9 +620,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, 
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
                                       llvm::Linker::DestroySource,
-#endif // LLVM_3_0
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
         lSetInternalFunctions(module);
@@ -643,7 +641,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
                    SC_STATIC);
     pw->constValue = new ConstExpr(pw->type, val, SourcePos());
-    LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32Type;
+    llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
     pw->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
                                               llvm::GlobalValue::InternalLinkage,
@@ -683,7 +681,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         pi[i] = i;
     pidx->constValue = new ConstExpr(pidx->type, pi, SourcePos());
 
-    LLVM_TYPE_CONST llvm::Type *ltype = LLVMTypes::Int32VectorType;
+    llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
     pidx->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
                                                 llvm::GlobalValue::InternalLinkage, linit, 

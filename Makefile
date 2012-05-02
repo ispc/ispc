@@ -22,7 +22,7 @@ ARCH_TYPE = $(shell arch)
 ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
   LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
 	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
-	-lLLVMBitWriter -lLLVMTableGen -lLLVMCBackendInfo			\
+	-lLLVMBitWriter -lLLVMTableGen 			\
 	-lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMSelectionDAG		\
 	-lLLVMAsmPrinter -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info		\
 	-lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCDisassembler	-lLLVMMCParser	\

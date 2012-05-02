@@ -549,7 +549,7 @@ rate_qualified_type_specifier
         if ($2 == NULL)
             $$ = NULL;
         else {
-            int soaWidth = $1;
+            int soaWidth = (int)$1;
             const StructType *st = dynamic_cast<const StructType *>($2);
             if (st == NULL) {
                 Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
@@ -631,7 +631,9 @@ declaration_statement
                 if ($1->declarators[i] == NULL)
                     Assert(m->errorCount > 0);
                 else
-                    m->AddTypeDef($1->declarators[i]->GetSymbol());
+                    m->AddTypeDef($1->declarators[i]->name,
+                                  $1->declarators[i]->type,
+                                  $1->declarators[i]->pos);
             }
             $$ = NULL;
         }
@@ -872,7 +874,6 @@ struct_or_union_specifier
               std::vector<SourcePos> elementPositions;
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
-              // FIXME: should be unbound
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
                                   false, Variability::Unbound, @1);
           }
@@ -890,10 +891,9 @@ struct_or_union_specifier
     | struct_or_union struct_or_union_name
       { 
           const Type *st = m->symbolTable->LookupType($2); 
-          if (!st) {
-              std::vector<std::string> alternates = m->symbolTable->ClosestTypeMatch($2);
-              std::string alts = lGetAlternates(alternates);
-              Error(@2, "Struct type \"%s\" unknown.%s", $2, alts.c_str());
+          if (st == NULL) {
+              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, st, @2);
           }
           else if (dynamic_cast<const StructType *>(st) == NULL)
               Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
@@ -1174,7 +1174,7 @@ direct_declarator
     : TOKEN_IDENTIFIER
       {
           Declarator *d = new Declarator(DK_BASE, @1);
-          d->sym = new Symbol(yytext, @1);
+          d->name = yytext;
           $$ = d;
       }
     | '(' declarator ')' 
@@ -1349,8 +1349,10 @@ type_name
     {
         if ($1 == NULL || $2 == NULL)
             $$ = NULL;
-        else
-            $$ = $2->GetType($1, NULL);
+        else {
+            $2->InitFromType($1, NULL);
+            $$ = $2->type;
+        }
     }
     ;
 
@@ -1854,11 +1856,14 @@ function_definition
     } 
     compound_statement
     {
-        std::vector<Symbol *> args;
         if ($2 != NULL) {
-            Symbol *sym = $2->GetFunctionInfo($1, &args);
-            if (sym != NULL)
-                m->AddFunctionDefinition(sym, args, $4);
+            $2->InitFromDeclSpecs($1);
+            const FunctionType *funcType =
+                dynamic_cast<const FunctionType *>($2->type);
+            if (funcType == NULL)
+                Assert(m->errorCount > 0);
+            else
+                m->AddFunctionDefinition($2->name, funcType, $4);
         }
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
@@ -1968,35 +1973,27 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         // Error happened earlier during parsing
         return;
 
+    decl->InitFromDeclSpecs(ds);
     if (ds->storageClass == SC_TYPEDEF)
-        m->AddTypeDef(decl->GetSymbol());
+        m->AddTypeDef(decl->name, decl->type, decl->pos);
     else {
-        const Type *t = decl->GetType(ds);
-        if (t == NULL) {
+        if (decl->type == NULL) {
             Assert(m->errorCount > 0);
             return;
         }
 
-        Symbol *sym = decl->GetSymbol();
-        if (sym == NULL) {
-            Assert(m->errorCount > 0);
-            return;
-        }
-
-        const FunctionType *ft = dynamic_cast<const FunctionType *>(t);
+        decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
+        
+        const FunctionType *ft = dynamic_cast<const FunctionType *>(decl->type);
         if (ft != NULL) {
-            sym->type = ft;
-            sym->storageClass = ds->storageClass;
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
-            m->AddFunctionDeclaration(sym, isInline);
+            m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,
+                                      isInline, decl->pos);
         }
         else {
-            if (sym->type == NULL)
-                Assert(m->errorCount > 0);
-            else
-                sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
             bool isConst = (ds->typeQualifiers & TYPEQUAL_CONST) != 0;
-            m->AddGlobalVariable(sym, decl->initExpr, isConst);
+            m->AddGlobalVariable(decl->name, decl->type, decl->initExpr,
+                                 isConst, decl->storageClass, decl->pos);
         }
     }
 }
@@ -2025,16 +2022,13 @@ lAddFunctionParams(Declarator *decl) {
     // now loop over its parameters and add them to the symbol table
     for (unsigned int i = 0; i < decl->functionParams.size(); ++i) {
         Declaration *pdecl = decl->functionParams[i];
-        if (pdecl == NULL || pdecl->declarators.size() == 0)
-            // zero size declarators array corresponds to an anonymous 
-            // parameter
-            continue;
-        Assert(pdecl->declarators.size() == 1);
-        Symbol *sym = pdecl->declarators[0]->GetSymbol();
-        if (sym == NULL || sym->type == NULL)
+        Assert(pdecl != NULL && pdecl->declarators.size() == 1);
+        Declarator *declarator = pdecl->declarators[0];
+        if (declarator == NULL)
             Assert(m->errorCount > 0);
         else {
-            sym->type = sym->type->ResolveUnboundVariability(Variability::Varying);
+            Symbol *sym = new Symbol(declarator->name, declarator->pos,
+                                     declarator->type, declarator->storageClass);
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)

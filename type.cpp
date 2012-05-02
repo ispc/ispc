@@ -42,6 +42,7 @@
 #include "module.h"
 
 #include <stdio.h>
+#include <map>
 #include <llvm/Value.h>
 #include <llvm/Module.h>
 #include <llvm/Analysis/DIBuilder.h>
@@ -59,7 +60,7 @@ static bool
 lShouldPrintName(const std::string &name) {
     if (name.size() == 0)
         return false;
-    else if (name[0] != '_')
+    else if (name[0] != '_' && name[0] != '$')
         return true;
     else
         return (name.size() == 1) || (name[1] != '_');
@@ -81,11 +82,7 @@ lCreateDIArray(llvm::DIType eltType, int count) {
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(lowerBound, upperBound);
     std::vector<llvm::Value *> subs;
     subs.push_back(sub);
-#ifdef LLVM_2_9
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(&subs[0], subs.size());
-#else
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs);
-#endif
 
     uint64_t size = eltType.getSizeInBits() * count;
     uint64_t align = eltType.getAlignInBits();
@@ -418,7 +415,7 @@ AtomicType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 AtomicType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability.type != Variability::Unbound);
     bool isUniform = (variability == Variability::Uniform);
@@ -518,12 +515,7 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
     else if (variability == Variability::Varying) {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
-#ifdef LLVM_2_9
-        llvm::Value *suba[] = { sub };
-        llvm::DIArray subArray = m->diBuilder->getOrCreateArray(suba, 1);
-#else
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif // LLVM_2_9
         uint64_t size =  unifType.getSizeInBits()  * g->target.vectorWidth;
         uint64_t align = unifType.getAlignInBits() * g->target.vectorWidth;
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
@@ -734,7 +726,7 @@ EnumType::GetCDeclaration(const std::string &varName) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 EnumType::LLVMType(llvm::LLVMContext *ctx) const {
     Assert(variability != Variability::Unbound);
 
@@ -767,14 +759,8 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
             m->diBuilder->createEnumerator(enumerators[i]->name, enumeratorValue);
         enumeratorDescriptors.push_back(descriptor);
     }
-#ifdef LLVM_2_9
-    llvm::DIArray elementArray = 
-        m->diBuilder->getOrCreateArray(&enumeratorDescriptors[0],
-                                       enumeratorDescriptors.size());
-#else
     llvm::DIArray elementArray = 
         m->diBuilder->getOrCreateArray(enumeratorDescriptors);
-#endif
 
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIType diType =
@@ -789,12 +775,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
         return diType;
     case Variability::Varying: {
         llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
-#ifdef LLVM_2_9
-        llvm::Value *suba[] = { sub };
-        llvm::DIArray subArray = m->diBuilder->getOrCreateArray(suba, 1);
-#else
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif // !LLVM_2_9
         uint64_t size =  diType.getSizeInBits()  * g->target.vectorWidth;
         uint64_t align = diType.getAlignInBits() * g->target.vectorWidth;
         return m->diBuilder->createVectorType(size, align, diType, subArray);
@@ -966,42 +947,6 @@ PointerType::GetAsFrozenSlice() const {
 }
 
 
-/** Returns a structure corresponding to the pointer representation for
-    slice pointers; the first member of this structure is a uniform or
-    varying pointer, and the second element is either a uniform or varying
-    int32.
- */
-const StructType *
-PointerType::GetSliceStructType() const {
-    Assert(isSlice == true);
-
-    std::vector<const Type *> eltTypes;
-    eltTypes.push_back(GetAsNonSlice());
-    switch (variability.type) {
-    case Variability::Uniform:
-        eltTypes.push_back(AtomicType::UniformInt32);
-        break;
-    case Variability::Varying:
-        eltTypes.push_back(AtomicType::VaryingInt32);
-        break;
-    default:
-        FATAL("Unexpected variability in PointerType::GetSliceStructType()");
-    }
-
-    std::vector<std::string> eltNames;
-    std::vector<SourcePos> eltPos;
-
-    eltNames.push_back("ptr");
-    eltNames.push_back("offset");
-
-    eltPos.push_back(SourcePos());
-    eltPos.push_back(SourcePos());
-
-    return new StructType("__ptr_slice_tmp", eltTypes, eltNames, eltPos, isConst,
-                          Variability::Uniform, SourcePos());
-}
-
-
 const PointerType *
 PointerType::ResolveUnboundVariability(Variability v) const {
     if (baseType == NULL) {
@@ -1103,22 +1048,41 @@ PointerType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     if (baseType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    if (isSlice)
-        // Slice pointers are represented as a structure with a pointer and
-        // an integer offset; the corresponding ispc type is returned by
-        // GetSliceStructType().
-        return GetSliceStructType()->LLVMType(ctx);
+    if (isSlice) {
+        llvm::Type *types[2];
+        types[0] = GetAsNonSlice()->LLVMType(ctx);
+        
+        switch (variability.type) {
+        case Variability::Uniform:
+            types[1] = LLVMTypes::Int32Type;
+            break;
+        case Variability::Varying:
+            types[1] = LLVMTypes::Int32VectorType;
+            break;
+        case Variability::SOA:
+            types[1] = llvm::ArrayType::get(LLVMTypes::Int32Type,
+                                            variability.soaWidth);
+            break;
+        default:
+            FATAL("unexpected variability for slice pointer in "
+                  "PointerType::LLVMType");
+        }
+
+        llvm::ArrayRef<llvm::Type *> typesArrayRef =
+            llvm::ArrayRef<llvm::Type *>(types, 2);
+        return llvm::StructType::get(*g->ctx, typesArrayRef);
+    }
 
     switch (variability.type) {
     case Variability::Uniform: {
-        LLVM_TYPE_CONST llvm::Type *ptype = NULL;
+        llvm::Type *ptype = NULL;
         const FunctionType *ftype = dynamic_cast<const FunctionType *>(baseType);
         if (ftype != NULL) 
             // Get the type of the function variant that takes the mask as the
@@ -1157,13 +1121,15 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
     int bitsSize = g->target.is32Bit ? 32 : 64;
+    int ptrAlignBits = bitsSize;
     switch (variability.type) {
     case Variability::Uniform:
-        return m->diBuilder->createPointerType(diTargetType, bitsSize);
+        return m->diBuilder->createPointerType(diTargetType, bitsSize, 
+                                               ptrAlignBits);
     case Variability::Varying: {
         // emit them as an array of pointers
         llvm::DIType eltType = m->diBuilder->createPointerType(diTargetType, 
-                                                               bitsSize);
+                                                               bitsSize, ptrAlignBits);
         return lCreateDIArray(eltType, g->target.vectorWidth);
     }
     case Variability::SOA: {
@@ -1196,14 +1162,14 @@ ArrayType::ArrayType(const Type *c, int a)
 }
 
 
-LLVM_TYPE_CONST llvm::ArrayType *
+llvm::ArrayType *
 ArrayType::LLVMType(llvm::LLVMContext *ctx) const {
     if (child == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *ct = child->LLVMType(ctx);
+    llvm::Type *ct = child->LLVMType(ctx);
     if (ct == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -1648,14 +1614,14 @@ VectorType::GetElementType() const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 VectorType::LLVMType(llvm::LLVMContext *ctx) const {
     if (base == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *bt = base->LLVMType(ctx);
+    llvm::Type *bt = base->LLVMType(ctx);
     if (!bt)
         return NULL;
 
@@ -1684,12 +1650,7 @@ llvm::DIType
 VectorType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIType eltType = base->GetDIType(scope);
     llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, numElements-1);
-#ifdef LLVM_2_9
-    llvm::Value *subs[1] = { sub };
-    llvm::DIArray subArray = m->diBuilder->getOrCreateArray(subs, 1);
-#else
     llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-#endif
 
     uint64_t sizeBits = eltType.getSizeInBits() * numElements;
 
@@ -1744,12 +1705,103 @@ VectorType::getVectorMemoryCount() const {
 ///////////////////////////////////////////////////////////////////////////
 // StructType
 
+// We maintain a map from struct names to LLVM struct types so that we can
+// uniquely get the llvm::StructType * for a given ispc struct type.  Note
+// that we need to mangle the name a bit so that we can e.g. differentiate
+// between the uniform and varying variants of a given struct type.  This
+// is handled by lMangleStructName() below.
+static std::map<std::string, llvm::StructType *> lStructTypeMap;
+
+/** Using a struct's name, its variability, and the vector width for the
+    current compilation target, this function generates a string that
+    encodes that full structure type, for use in the lStructTypeMap.  Note
+    that the vector width is needed in order to differentiate between
+    'varying' structs with different compilation targets, which have
+    different memory layouts...
+ */
+static std::string
+lMangleStructName(const std::string &name, Variability variability) {
+    char buf[32];
+    std::string n;
+
+    // Encode vector width
+    sprintf(buf, "v%d", g->target.vectorWidth);
+    n += buf;
+
+    // Variability
+    switch (variability.type) {
+    case Variability::Uniform:
+        n += "_uniform_";
+        break;
+    case Variability::Varying:
+        n += "_varying_";
+        break;
+    case Variability::SOA:
+        sprintf(buf, "_soa%d_", variability.soaWidth);
+        n += buf;
+        break;
+    default:
+        FATAL("Unexpected varaibility in lMangleStructName()");
+    }
+    
+    // And stuff the name at the end....
+    n += name;
+    return n;
+}
+
+        
 StructType::StructType(const std::string &n, const std::vector<const Type *> &elts, 
                        const std::vector<std::string> &en,
                        const std::vector<SourcePos> &ep,
                        bool ic, Variability v, SourcePos p) 
     : name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
       variability(v), isConst(ic), pos(p) {
+    if (variability != Variability::Unbound) {
+        // For structs with non-unbound variability, we'll create the
+        // correspoing LLVM struct type now, if one hasn't been made
+        // already.
+
+        // Create a unique anonymous struct name if we have an anonymous
+        // struct (name == ""), or if we are creating a derived type from
+        // an anonymous struct (e.g. the varying variant--name == '$').
+        if (name == "" || name[0] == '$') {
+            char buf[16];
+            static int count = 0;
+            sprintf(buf, "$anon%d", count);
+            name = buf;
+            ++count;
+        }
+
+        // If a non-opaque LLVM struct for this type has already been
+        // created, we're done.  For an opaque struct type, we'll override
+        // the old definition now that we have a full definition.
+        std::string mname = lMangleStructName(name, variability);
+        if (lStructTypeMap.find(mname) != lStructTypeMap.end() &&
+            lStructTypeMap[mname]->isOpaque() == false)
+            return;
+
+        // Actually make the LLVM struct
+        std::vector<llvm::Type *> elementTypes;
+        for (int i = 0; i < GetElementCount(); ++i) {
+            const Type *type = GetElementType(i);
+            if (type == NULL) {
+                Assert(m->errorCount > 0);
+                return;
+            }
+            elementTypes.push_back(type->LLVMType(g->ctx));
+        }
+
+        if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+            // New struct definition
+            llvm::StructType *st =
+                llvm::StructType::create(*g->ctx, elementTypes, mname);
+            lStructTypeMap[mname] = st;
+        }
+        else {
+            // Definition for what was before just a declaration
+            lStructTypeMap[mname]->setBody(elementTypes);
+        }
+    }
 }
 
 
@@ -1877,31 +1929,34 @@ StructType::GetAsNonConstType() const {
 std::string
 StructType::GetString() const {
     std::string ret;
-    if (isConst)   ret += "const ";
+    if (isConst)
+        ret += "const ";
     ret += variability.GetString();
     ret += " ";
 
-    // Don't print the entire struct declaration, just print the struct's name.
-    // @todo Do we need a separate method that prints the declaration?
-#if 0
-    ret += std::string("struct { ") + name;
-    for (unsigned int i = 0; i < elementTypes.size(); ++i) {
-        ret += elementTypes[i]->GetString();
-        ret += " ";
-        ret += elementNames[i];
-        ret += "; ";
+    if (name[0] == '$') {
+        // Print the whole anonymous struct declaration
+        ret += std::string("struct { ") + name;
+        for (unsigned int i = 0; i < elementTypes.size(); ++i) {
+            ret += elementTypes[i]->GetString();
+            ret += " ";
+            ret += elementNames[i];
+            ret += "; ";
+        }
+        ret += "}";
     }
-    ret += "}";
-#else
-    ret += "struct ";
-    ret += name;
-#endif
+    else {
+        ret += "struct ";
+        ret += name;
+    }
+
     return ret;
 }
 
 
-std::string
-StructType::Mangle() const {
+/** Mangle a struct name for use in function name mangling. */
+static std::string
+lMangleStruct(Variability variability, bool isConst, const std::string &name) {
     Assert(variability != Variability::Unbound);
 
     std::string ret;
@@ -1910,11 +1965,14 @@ StructType::Mangle() const {
         ret += "_c_";
     ret += variability.MangleString();
 
-    ret += name + std::string("]<");
-    for (unsigned int i = 0; i < elementTypes.size(); ++i)
-        ret += GetElementType(i)->Mangle();
-    ret += ">";
+    ret += name + std::string("]");
     return ret;
+}
+
+
+std::string
+StructType::Mangle() const {
+    return lMangleStruct(variability, isConst, name);
 }
     
 
@@ -1923,31 +1981,31 @@ StructType::GetCDeclaration(const std::string &n) const {
     std::string ret;
     if (isConst) ret += "const ";
     ret += std::string("struct ") + name;
-    if (lShouldPrintName(n))
+    if (lShouldPrintName(n)) {
         ret += std::string(" ") + n;
 
-    if (variability.soaWidth > 0) {
-        char buf[32];
-        // This has to match the naming scheme used in lEmitStructDecls()
-        // in module.cpp
-        sprintf(buf, "_SOA%d", variability.soaWidth);
-        ret += buf;
+        if (variability.soaWidth > 0) {
+            char buf[32];
+            // This has to match the naming scheme used in lEmitStructDecls()
+            // in module.cpp
+            sprintf(buf, "_SOA%d", variability.soaWidth);
+            ret += buf;
+        }
     }
 
     return ret;
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 StructType::LLVMType(llvm::LLVMContext *ctx) const {
-    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmTypes;
-    for (int i = 0; i < GetElementCount(); ++i) {
-        const Type *type = GetElementType(i);
-        if (type == NULL)
-            return NULL;
-        llvmTypes.push_back(type->LLVMType(ctx));
+    Assert(variability != Variability::Unbound);
+    std::string mname = lMangleStructName(name, variability);
+    if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+        Assert(m->errorCount > 0);
+        return NULL;
     }
-    return llvm::StructType::get(*ctx, llvmTypes);
+    return lStructTypeMap[mname];
 }
 
 
@@ -1963,6 +2021,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
         llvm::DIType eltType = GetElementType(i)->GetDIType(scope);
         uint64_t eltAlign = eltType.getAlignInBits();
         uint64_t eltSize = eltType.getSizeInBits();
+        Assert(eltAlign != 0);
 
         // The alignment for the entire structure is the maximum of the
         // required alignments of its elements
@@ -1976,17 +2035,10 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
         llvm::DIFile diFile = elementPositions[i].GetDIFile();
         int line = elementPositions[i].first_line;
-#ifdef LLVM_2_9
-        llvm::DIType fieldType = 
-            m->diBuilder->createMemberType(elementNames[i], diFile, line,
-                                           eltSize, eltAlign, currentSize, 0,
-                                           eltType);
-#else
         llvm::DIType fieldType = 
             m->diBuilder->createMemberType(scope, elementNames[i], diFile, 
                                            line, eltSize, eltAlign, 
                                            currentSize, 0, eltType);
-#endif // LLVM_2_9
         elementLLVMTypes.push_back(fieldType);
 
         currentSize += eltSize;
@@ -1997,12 +2049,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
     if (currentSize > 0 && (currentSize % align))
         currentSize += align - (currentSize % align);
 
-#ifdef LLVM_2_9
-    llvm::DIArray elements = m->diBuilder->getOrCreateArray(&elementLLVMTypes[0], 
-                                                            elementLLVMTypes.size());
-#else
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
-#endif
     llvm::DIFile diFile = pos.GetDIFile();
     return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, currentSize, 
                                           align, 0, elements);
@@ -2071,6 +2118,170 @@ StructType::checkIfCanBeSOA(const StructType *st) {
         }
     }
     return ok;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// UndefinedStructType
+
+UndefinedStructType::UndefinedStructType(const std::string &n, 
+                                         const Variability var, bool ic,
+                                         SourcePos p) 
+    : name(n), variability(var), isConst(ic), pos(p) {
+    Assert(name != "");
+    if (variability != Variability::Unbound) {
+        // Create a new opaque LLVM struct type for this struct name
+        std::string mname = lMangleStructName(name, variability);
+        if (lStructTypeMap.find(mname) == lStructTypeMap.end())
+            lStructTypeMap[mname] = llvm::StructType::create(*g->ctx, mname);
+    }
+}
+
+
+Variability
+UndefinedStructType::GetVariability() const {
+    return variability;
+}
+
+
+bool
+UndefinedStructType::IsBoolType() const {
+    return false;
+}
+
+
+bool
+UndefinedStructType::IsFloatType() const {
+    return false;
+}
+
+
+bool
+UndefinedStructType::IsIntType() const {
+    return false;
+}
+
+
+bool
+UndefinedStructType::IsUnsignedType() const {
+    return false;
+}
+
+
+bool
+UndefinedStructType::IsConstType() const {
+    return isConst;
+}
+
+
+const Type *
+UndefinedStructType::GetBaseType() const {
+    return this;
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsVaryingType() const {
+    if (variability == Variability::Varying)
+        return this;
+    return new UndefinedStructType(name, Variability::Varying, isConst, pos);
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsUniformType() const {
+    if (variability == Variability::Uniform)
+        return this;
+    return new UndefinedStructType(name, Variability::Uniform, isConst, pos);
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsUnboundVariabilityType() const {
+    if (variability == Variability::Unbound)
+        return this;
+    return new UndefinedStructType(name, Variability::Unbound, isConst, pos);
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsSOAType(int width) const {
+    FATAL("UndefinedStructType::GetAsSOAType() shouldn't be called.");
+    return NULL;
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::ResolveUnboundVariability(Variability v) const {
+    if (variability != Variability::Unbound)
+        return this;
+    return new UndefinedStructType(name, v, isConst, pos);
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsConstType() const {
+    if (isConst)
+        return this;
+    return new UndefinedStructType(name, variability, true, pos);
+}
+
+
+const UndefinedStructType *
+UndefinedStructType::GetAsNonConstType() const {
+    if (isConst == false)
+        return this;
+    return new UndefinedStructType(name, variability, false, pos);
+}
+
+
+std::string
+UndefinedStructType::GetString() const {
+    std::string ret;
+    if (isConst)   ret += "const ";
+    ret += variability.GetString();
+    ret += " struct ";
+    ret += name;
+    return ret;
+}
+
+
+std::string
+UndefinedStructType::Mangle() const {
+    return lMangleStruct(variability, isConst, name);
+}
+
+
+std::string
+UndefinedStructType::GetCDeclaration(const std::string &n) const {
+    std::string ret;
+    if (isConst) ret += "const ";
+    ret += std::string("struct ") + name;
+    if (lShouldPrintName(n))
+        ret += std::string(" ") + n;
+    return ret;
+}
+
+
+llvm::Type *
+UndefinedStructType::LLVMType(llvm::LLVMContext *ctx) const {
+    Assert(variability != Variability::Unbound);
+    std::string mname = lMangleStructName(name, variability);
+    if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
+    return lStructTypeMap[mname];
+}
+
+
+llvm::DIType
+UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
+    llvm::DIFile diFile = pos.GetDIFile();
+    llvm::DIArray elements;
+    return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, 
+                                          0 /* size */, 0 /* align */, 
+                                          0 /* flags */, elements); 
 }
 
 
@@ -2294,14 +2505,14 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 ReferenceType::LLVMType(llvm::LLVMContext *ctx) const {
     if (targetType == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
     }
 
-    LLVM_TYPE_CONST llvm::Type *t = targetType->LLVMType(ctx);
+    llvm::Type *t = targetType->LLVMType(ctx);
     if (t == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -2526,7 +2737,7 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
 }
 
 
-LLVM_TYPE_CONST llvm::Type *
+llvm::Type *
 FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     FATAL("FunctionType::LLVMType() shouldn't be called");
     return NULL;
@@ -2535,9 +2746,22 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
 
 llvm::DIType
 FunctionType::GetDIType(llvm::DIDescriptor scope) const {
-    // @todo need to implement FunctionType::GetDIType()
-    FATAL("need to implement FunctionType::GetDIType()");
-    return llvm::DIType();
+    std::vector<llvm::Value *> retArgTypes;
+
+    retArgTypes.push_back(returnType->GetDIType(scope));
+    for (int i = 0; i < GetNumParameters(); ++i) {
+        const Type *t = GetParameterType(i);
+        if (t == NULL)
+            return llvm::DIType();
+        retArgTypes.push_back(t->GetDIType(scope));
+    }
+
+    llvm::DIArray retArgTypesArray = 
+        m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
+    llvm::DIType diType = 
+        // FIXME: DIFile 
+        m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);
+    return diType;
 }
 
 
@@ -2564,13 +2788,13 @@ FunctionType::GetReturnTypeString() const {
 }
 
 
-LLVM_TYPE_CONST llvm::FunctionType *
+llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (isTask == true) 
         Assert(includeMask == true);
 
     // Get the LLVM Type *s for the function arguments
-    std::vector<LLVM_TYPE_CONST llvm::Type *> llvmArgTypes;
+    std::vector<llvm::Type *> llvmArgTypes;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
@@ -2578,7 +2802,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
         }
         Assert(Type::Equal(paramTypes[i], AtomicType::Void) == false);
 
-        LLVM_TYPE_CONST llvm::Type *t = paramTypes[i]->LLVMType(ctx);
+        llvm::Type *t = paramTypes[i]->LLVMType(ctx);
         if (t == NULL) {
             Assert(m->errorCount > 0);
             return NULL;
@@ -2590,7 +2814,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     if (includeMask)
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
-    std::vector<LLVM_TYPE_CONST llvm::Type *> callTypes;
+    std::vector<llvm::Type *> callTypes;
     if (isTask) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
@@ -2913,20 +3137,19 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
     const StructType *sta = dynamic_cast<const StructType *>(a);
     const StructType *stb = dynamic_cast<const StructType *>(b);
-    if (sta != NULL && stb != NULL) {
-        if (sta->GetElementCount() != stb->GetElementCount())
+    const UndefinedStructType *usta =
+        dynamic_cast<const UndefinedStructType *>(a);
+    const UndefinedStructType *ustb =
+        dynamic_cast<const UndefinedStructType *>(b);
+    if ((sta != NULL || usta != NULL) && (stb != NULL || ustb != NULL)) {
+        // Report both defuned and undefined structs as equal if their
+        // names are the same.
+        if (a->GetVariability() != b->GetVariability())
             return false;
-        if (sta->GetStructName() != stb->GetStructName())
-            return false;
-        if (sta->GetVariability() != stb->GetVariability())
-            return false;
-        for (int i = 0; i < sta->GetElementCount(); ++i)
-            // FIXME: is this redundant now?
-            if (!lCheckTypeEquality(sta->GetElementType(i), stb->GetElementType(i),
-                                    ignoreConst))
-                return false;
 
-        return true;
+        std::string namea = sta ? sta->GetStructName() : usta->GetStructName();
+        std::string nameb = stb ? stb->GetStructName() : ustb->GetStructName();
+        return (namea == nameb);
     }
 
     const PointerType *pta = dynamic_cast<const PointerType *>(a);

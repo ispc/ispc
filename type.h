@@ -187,7 +187,7 @@ public:
     virtual std::string GetCDeclaration(const std::string &name) const = 0;
 
     /** Returns the LLVM type corresponding to this ispc type */
-    virtual LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
+    virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
 
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
@@ -269,7 +269,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** This enumerator records the basic types that AtomicTypes can be 
@@ -343,7 +343,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** Provides the enumerators defined in the enum definition. */
@@ -409,7 +409,6 @@ public:
     const PointerType *GetAsSlice() const;
     const PointerType *GetAsNonSlice() const;
     const PointerType *GetAsFrozenSlice() const;
-    const StructType *GetSliceStructType() const;
 
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
@@ -425,7 +424,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     static PointerType *Void;
@@ -523,7 +522,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-    LLVM_TYPE_CONST llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
 
     /** This method returns the total number of elements in the array,
         including all dimensions if this is a multidimensional array. */
@@ -589,7 +588,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     int GetElementCount() const;
@@ -639,7 +638,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** Returns the type of the structure element with the given name (if any).
@@ -668,7 +667,7 @@ public:
 private:
     static bool checkIfCanBeSOA(const StructType *st);
 
-    const std::string name;
+    /*const*/ std::string name;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
         (In other words, even if this struct has a varying qualifier and
@@ -684,6 +683,52 @@ private:
     /** Source file position at which each structure element declaration
         appeared. */
     const std::vector<SourcePos> elementPositions;
+    const Variability variability;
+    const bool isConst;
+    const SourcePos pos;
+};
+
+
+/** Type implementation representing a struct name that has been declared
+    but where the struct members haven't been defined (i.e. "struct Foo;").
+    This class doesn't do much besides serve as a placeholder that other
+    code can use to detect the presence of such as truct.
+ */
+class UndefinedStructType : public Type {
+public:
+    UndefinedStructType(const std::string &name, const Variability variability,
+                        bool isConst, SourcePos pos);
+
+    Variability GetVariability() const;
+
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const UndefinedStructType *GetAsVaryingType() const;
+    const UndefinedStructType *GetAsUniformType() const;
+    const UndefinedStructType *GetAsUnboundVariabilityType() const;
+    const UndefinedStructType *GetAsSOAType(int width) const;
+    const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
+
+    const UndefinedStructType *GetAsConstType() const;
+    const UndefinedStructType *GetAsNonConstType() const;
+
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+
+    /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
+    const std::string &GetStructName() const { return name; }
+
+private:
+    const std::string name;
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
@@ -719,7 +764,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
 private:
@@ -771,7 +816,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &fname) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     const Type *GetReturnType() const { return returnType; }
@@ -782,7 +827,7 @@ public:
         function type.  The \c includeMask parameter indicates whether the
         llvm::FunctionType should have a mask as the last argument in its
         function signature. */
-    LLVM_TYPE_CONST llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
+    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
                                                          bool includeMask = false) const;
 
     int GetNumParameters() const { return (int)paramTypes.size(); }

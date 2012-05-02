@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -66,13 +66,6 @@ public:
         position in a source file, and its type (if known). */
     Symbol(const std::string &name, SourcePos pos, const Type *t = NULL,
            StorageClass sc = SC_NONE);
-
-    /** This method should only be called for function symbols; for them,
-        it returns a mangled version of the function name with the argument
-        types encoded into the returned name.  This is used to generate
-        unique symbols in object files for overloaded functions.
-     */
-    std::string MangledName() const;
 
     SourcePos pos;            /*!< Source file position where the symbol was defined */
     std::string name;         /*!< Symbol's name */
@@ -208,6 +201,9 @@ public:
     /** Adds the named type to the symbol table.  This is used for both
         struct definitions (where <tt>struct Foo</tt> causes type \c Foo to
         be added to the symbol table) as well as for <tt>typedef</tt>s.
+        For structs with forward declarations ("struct Foo;") and are thus
+        UndefinedStructTypes, this method replaces these with an actual
+        struct definition if one is provided.
 
         @param name Name of the type to be added
         @param type Type that \c name represents
@@ -272,12 +268,10 @@ private:
     typedef std::map<std::string, std::vector<Symbol *> > FunctionMapType;
     FunctionMapType functions;
 
-    /** Type definitions can also be scoped.  A new \c TypeMapType
-        is added to the back of the \c types \c vector each time a new scope
-        is entered.  (And it's removed when the scope exits).
+    /** Type definitions can't currently be scoped.
      */
     typedef std::map<std::string, const Type *> TypeMapType;
-    std::vector<TypeMapType *> types;
+    TypeMapType types;
 };
 
 

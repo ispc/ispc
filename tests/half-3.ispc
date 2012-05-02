@@ -10,6 +10,8 @@ export void f_v(uniform float RET[]) {
         h = float_to_half(f);
 
         int mismatches = (f == f && i != h);
+        if (any(mismatches != 0))
+            print("mismatch: orig int16 % -> float % -> half %\n", i, f, h);
         errors += reduce_add(mismatches);
     }
 
