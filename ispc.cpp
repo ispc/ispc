@@ -197,6 +197,9 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->arch = arch;
     }
 
+    // This is the case for most of them
+    t->hasHalf = t->hasTranscendentals = false;
+
     if (!strcasecmp(isa, "sse2")) {
         t->isa = Target::SSE2;
         t->nativeVectorWidth = 4;
@@ -256,6 +259,8 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = true;
         t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-32")) {
         t->isa = Target::GENERIC;
@@ -264,6 +269,8 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = true;
         t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-1")) {
         t->isa = Target::GENERIC;
@@ -300,6 +307,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
+        t->hasHalf = true;
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
         t->isa = Target::AVX2;
@@ -309,6 +317,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
+        t->hasHalf = true;
     }
 #endif // !LLVM_3_0
     else {

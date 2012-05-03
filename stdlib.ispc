@@ -2915,7 +2915,10 @@ static inline uniform float atan2(uniform float y, uniform float x) {
 
 __declspec(safe)
 static inline float exp(float x_full) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __exp_varying_float(x_full);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_exp(x_full);
     }
     else if (__math_lib == __math_lib_system) {
@@ -2994,7 +2997,10 @@ static inline float exp(float x_full) {
 
 __declspec(safe)
 static inline uniform float exp(uniform float x_full) {
-    if (__math_lib == __math_lib_system ||
+    if (__have_native_transcendentals) {
+        return __exp_uniform_float(x_full);
+    }
+    else if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_expf(x_full);
     }
@@ -3116,7 +3122,10 @@ static inline void __range_reduce_log(uniform float input, uniform float * unifo
 
 __declspec(safe)
 static inline float log(float x_full) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __log_varying_float(x_full);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_log(x_full);
     }
     else if (__math_lib == __math_lib_system) {
@@ -3204,7 +3213,10 @@ static inline float log(float x_full) {
 
 __declspec(safe)
 static inline uniform float log(uniform float x_full) {
-    if (__math_lib == __math_lib_system ||
+    if (__have_native_transcendentals) {
+        return __log_uniform_float(x_full);
+    }
+    else if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_logf(x_full);
     }
@@ -3285,7 +3297,10 @@ static inline uniform float log(uniform float x_full) {
 
 __declspec(safe)
 static inline float pow(float a, float b) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __pow_varying_float(a, b);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_pow(a, b);
     }
     else if (__math_lib == __math_lib_system) {
@@ -3304,6 +3319,9 @@ static inline float pow(float a, float b) {
 
 __declspec(safe)
 static inline uniform float pow(uniform float a, uniform float b) {
+    if (__have_native_transcendentals) {
+        return __pow_uniform_float(a, b);
+    }
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_powf(a, b);

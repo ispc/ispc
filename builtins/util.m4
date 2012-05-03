@@ -1654,6 +1654,13 @@ declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, 
 declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i64>, <WIDTH x MASK>) nounwind
 
+declare float @__log_uniform_float(float) nounwind readnone
+declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
+declare float @__exp_uniform_float(float) nounwind readnone
+declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
+declare float @__pow_uniform_float(float, float) nounwind readnone
+declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
 

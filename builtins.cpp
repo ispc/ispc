@@ -886,10 +886,12 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
                        symbolTable);
-    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module,
-                           symbolTable);
+    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
+                           module, symbolTable);
 
-    lDefineConstantInt("__have_native_half", (g->target.isa == Target::AVX2),
+    lDefineConstantInt("__have_native_half", g->target.hasHalf, module, 
+                       symbolTable);
+    lDefineConstantInt("__have_native_transcendentals", g->target.hasTranscendentals,
                        module, symbolTable);
 
     if (includeStdlibISPC) {

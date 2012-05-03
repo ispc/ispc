@@ -249,6 +249,14 @@ struct Target {
         is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
         the generic target. */
     int maskBitCount;
+
+    /** Indicates whether the target has native support for float/half
+        conversions. */
+    bool hasHalf;
+
+    /** Indicates whether the target has support for transcendentals (beyond
+        sqrt, which we assume that all of them handle). */
+    bool hasTranscendentals;
 };
 
 

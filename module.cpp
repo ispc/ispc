@@ -1333,6 +1333,11 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     else
         opts.addMacroDef("ISPC_POINTER_SIZE=64");
 
+    if (g->target.hasHalf)
+        opts.addMacroDef("ISPC_TARGET_HAS_HALF");
+    if (g->target.hasTranscendentals)
+        opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
+
     opts.addMacroDef("ISPC_MAJOR_VERSION=1");
     opts.addMacroDef("ISPC_MINOR_VERSION=2");
 
