@@ -4,7 +4,7 @@ export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform float a[programCount+4];
-    for (unsigned int i = 0; i < programCount+4; ++i)
+    for (uniform int i = 0; i < programCount+4; ++i)
         a[i] = aFOO[min((int)i, programCount)];
 
     RET[programIndex] = *(a + 2);
