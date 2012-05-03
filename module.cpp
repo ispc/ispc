@@ -1334,7 +1334,7 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         opts.addMacroDef("ISPC_POINTER_SIZE=64");
 
     opts.addMacroDef("ISPC_MAJOR_VERSION=1");
-    opts.addMacroDef("ISPC_MINOR_VERSION=1");
+    opts.addMacroDef("ISPC_MINOR_VERSION=2");
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts) 
