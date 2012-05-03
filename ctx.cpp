@@ -1314,10 +1314,10 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
-#ifdef LLVM_3_1svn
-    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
-#else
+#ifdef LLVM_3_0
     llvm::Constant *lstr = llvm::ConstantArray::get(*g->ctx, str);
+#else
+    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
 #endif
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
@@ -1368,10 +1368,10 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
-#ifdef LLVM_3_1svn
-    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
-#else
+#ifdef LLVM_3_0
     llvm::Constant *sConstant = llvm::ConstantArray::get(*g->ctx, s);
+#else
+    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
 #endif
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), 
                                                  true /* const */,

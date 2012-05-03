@@ -19,10 +19,12 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
+ifeq ($(shell $(LLVM_CONFIG) --version), 3.0)
+  LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
+else
   LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
 	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
-	-lLLVMBitWriter -lLLVMTableGen 			\
+	-lLLVMBitWriter -lLLVMTableGen 			                        \
 	-lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMSelectionDAG		\
 	-lLLVMAsmPrinter -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info		\
 	-lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCDisassembler	-lLLVMMCParser	\
@@ -30,15 +32,13 @@ ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
 	-lLLVMipa -lLLVMAnalysis -lLLVMMCJIT -lLLVMRuntimeDyld			\
 	-lLLVMExecutionEngine -lLLVMTarget -lLLVMMC -lLLVMObject -lLLVMCore 	\
 	-lLLVMSupport
-else
-  LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
 endif
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
-ifeq ($(shell $(LLVM_CONFIG) --version), 3.1svn)
+ifneq ($(shell $(LLVM_CONFIG) --version), 3.0)
   CLANG_LIBS += -lclangEdit
 endif
 
@@ -54,7 +54,7 @@ ifeq ($(ARCH_OS2),Msys)
 endif
 
 LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
-LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed s/\\./_/)
+LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 BUILD_DATE=$(shell date +%Y%m%d)

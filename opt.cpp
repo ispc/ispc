@@ -656,7 +656,7 @@ lGetMask(llvm::Value *factor) {
        "known and all bits on". */
     Assert(g->target.vectorWidth < 32);
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
     if (cdv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
@@ -669,7 +669,7 @@ lGetMask(llvm::Value *factor) {
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
     if (cv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
- #ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
@@ -945,7 +945,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
     // vector select wasn't available before 3.1...
-#if defined(LLVM_3_1svn)
+#ifndef LLVM_3_0
         llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
         if (selectInst != NULL && selectInst->getType()->isVectorTy()) {
             llvm::Value *factor = selectInst->getOperand(0);
@@ -966,7 +966,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
 
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
         if (callInst == NULL)
@@ -1179,7 +1179,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // Indexing into global arrays can lead to this form, with
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
- #ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
@@ -1274,7 +1274,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                        llvm::Value **variableOffset, 
                        llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::ConstantVector>(vec) ||
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
         llvm::isa<llvm::ConstantDataVector>(vec) ||
 #endif
         llvm::isa<llvm::ConstantAggregateZero>(vec)) {
@@ -1399,11 +1399,11 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
    *splat, if so). */
 static bool
 lIsIntegerSplat(llvm::Value *v, int *splat) {
-#ifdef LLVM_3_1svn
+#ifdef LLVM_3_0
+    llvm::ConstantVector *cvec = llvm::dyn_cast<llvm::ConstantVector>(v);
+#else
     llvm::ConstantDataVector *cvec = 
         llvm::dyn_cast<llvm::ConstantDataVector>(v);
-#else
-    llvm::ConstantVector *cvec = llvm::dyn_cast<llvm::ConstantVector>(v);
 #endif
     if (cvec == NULL)
         return false;
@@ -1539,7 +1539,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     fprintf(stderr, "\n");
 
     if (llvm::isa<llvm::ConstantVector>(*vec) ||
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
         llvm::isa<llvm::ConstantDataVector>(*vec) ||
 #endif
         llvm::isa<llvm::ConstantAggregateZero>(*vec))

@@ -657,7 +657,7 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
 
     // Deal with the fact that LLVM3.1 and previous versions have different
     // representations for vectors of constant ints...
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cv == NULL)
         return false;
@@ -678,7 +678,7 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
          ret[i] = ci->getSExtValue();
      }
      return true;
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
 }
 
 
@@ -947,7 +947,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     if (cv != NULL)
         return (cv->getSplatValue() != NULL);
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cdv != NULL)
         return (cdv->getSplatValue() != NULL);
@@ -1102,7 +1102,7 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
  */
 static bool
 lVectorIsLinearConstantInts(
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
                             llvm::ConstantDataVector *cv, 
 #else
                             llvm::ConstantVector *cv, 
@@ -1111,7 +1111,7 @@ lVectorIsLinearConstantInts(
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     for (int i = 0; i < (int)cv->getNumElements(); ++i)
         elements.push_back(cv->getElementAsConstant(i));
 #else
@@ -1152,7 +1152,7 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
 #else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
@@ -1226,7 +1226,7 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 std::vector<llvm::PHINode *> &seenPhis) {
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
 #else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
@@ -1403,19 +1403,19 @@ lExtractFirstVectorElement(llvm::Value *v,
         return llvm::ConstantInt::get(vt->getElementType(), 0);
     }
     if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
         return cv->getOperand(0);
 #else
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
         cv->getVectorElements(elements);
         return elements[0];
-#endif // LLVM_3_1
+#endif // !LLVM_3_0
     }
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     if (llvm::ConstantDataVector *cdv = 
         llvm::dyn_cast<llvm::ConstantDataVector>(v))
         return cdv->getElementAsConstant(0);
-#endif  // LLVM_3_1
+#endif  // !LLVM_3_0
 
     // Otherwise, all that we should have at this point is an instruction
     // of some sort

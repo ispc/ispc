@@ -271,11 +271,6 @@ extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
-#ifndef LLVM_3_1svn
-    if (g->opt.fastMath == true)
-        llvm::UnsafeFPMath = true;
-#endif // !LLVM_3_1svn
-
     extern void ParserInit();
     ParserInit();
 
@@ -1286,10 +1281,10 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
-#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
-        triple.setTriple(llvm::sys::getDefaultTargetTriple());
-#else
+#ifdef LLVM_3_0
         triple.setTriple(llvm::sys::getHostTriple());
+#else
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
 #endif
     }
     options.Triple = triple.getTriple();
