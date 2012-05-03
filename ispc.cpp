@@ -257,6 +257,14 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
     }
+    else if (!strcasecmp(isa, "generic-32")) {
+        t->isa = Target::GENERIC;
+        t->nativeVectorWidth = 32;
+        t->vectorWidth = 32;
+        t->maskingIsFree = true;
+        t->allOffMaskIsSafe = true;
+        t->maskBitCount = 1;
+    }
     else if (!strcasecmp(isa, "generic-1")) {
         t->isa = Target::GENERIC;
         t->nativeVectorWidth = 1;
@@ -313,6 +321,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         llvm::TargetMachine *targetMachine = t->GetTargetMachine();
         const llvm::TargetData *targetData = targetMachine->getTargetData();
         t->is32Bit = (targetData->getPointerSize() == 4);
+        Assert(t->vectorWidth <= ISPC_MAX_NVEC);
     }
 
     return !error;
@@ -344,7 +353,7 @@ Target::SupportedTargetISAs() {
 #ifndef LLVM_3_0
         ", avx2, avx2-x2"
 #endif // !LLVM_3_0
-        ", generic-4, generic-8, generic-16, generic-1";
+        ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
 
 

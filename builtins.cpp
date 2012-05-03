@@ -847,6 +847,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                                builtins_bitcode_generic_16_length, 
                                module, symbolTable);
             break;
+        case 32:
+            extern unsigned char builtins_bitcode_generic_32[];
+            extern int builtins_bitcode_generic_32_length;
+            AddBitcodeToModule(builtins_bitcode_generic_32, 
+                               builtins_bitcode_generic_32_length, 
+                               module, symbolTable);
+            break;
 	case 1:
             extern unsigned char builtins_bitcode_generic_1[];
             extern int builtins_bitcode_generic_1_length;

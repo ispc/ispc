@@ -71,7 +71,7 @@
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
-#define ISPC_MAX_NVEC 16
+#define ISPC_MAX_NVEC 32
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
