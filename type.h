@@ -333,7 +333,7 @@ private:
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
 
-    mutable const AtomicType *asOtherConstType;
+    mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
 };
 
 

@@ -186,6 +186,7 @@ const AtomicType *AtomicType::Void =
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
     : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {
     asOtherConstType = NULL;
+    asUniformType = asVaryingType = NULL;
 }
 
 
@@ -290,7 +291,13 @@ AtomicType::GetAsVaryingType() const {
     Assert(basicType != TYPE_VOID);
     if (variability == Variability::Varying)
         return this;
-    return new AtomicType(basicType, Variability::Varying, isConst);
+
+    if (asVaryingType == NULL) {
+        asVaryingType = new AtomicType(basicType, Variability::Varying, isConst);
+        if (variability == Variability::Uniform)
+            asVaryingType->asUniformType = this;
+    }
+    return asVaryingType;
 }
 
 
@@ -299,7 +306,13 @@ AtomicType::GetAsUniformType() const {
     Assert(basicType != TYPE_VOID);
     if (variability == Variability::Uniform)
         return this;
-    return new AtomicType(basicType, Variability::Uniform, isConst);
+
+    if (asUniformType == NULL) {
+        asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
+        if (variability == Variability::Varying)
+            asUniformType->asVaryingType = this;
+    }
+    return asUniformType;
 }
 
 
