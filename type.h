@@ -42,6 +42,7 @@
 #include "util.h"
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
+#include <llvm/ADT/SmallVector.h>
 
 class ConstExpr;
 class StructType;
@@ -642,9 +643,9 @@ private:
  */
 class StructType : public CollectionType {
 public:
-    StructType(const std::string &name, const std::vector<const Type *> &elts, 
-               const std::vector<std::string> &eltNames, 
-               const std::vector<SourcePos> &eltPositions, bool isConst, 
+    StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts, 
+               const llvm::SmallVector<std::string, 8> &eltNames, 
+               const llvm::SmallVector<SourcePos, 8> &eltPositions, bool isConst, 
                Variability variability, SourcePos pos);
 
     Variability GetVariability() const;
@@ -709,16 +710,16 @@ private:
         make a uniform version of the struct, we've maintained the original
         information about the member types.
      */
-    const std::vector<const Type *> elementTypes;
-    const std::vector<std::string> elementNames;
+    const llvm::SmallVector<const Type *, 8> elementTypes;
+    const llvm::SmallVector<std::string, 8> elementNames;
     /** Source file position at which each structure element declaration
         appeared. */
-    const std::vector<SourcePos> elementPositions;
+    const llvm::SmallVector<SourcePos, 8> elementPositions;
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
 
-    mutable std::vector<const Type *> finalElementTypes;
+    mutable llvm::SmallVector<const Type *, 8> finalElementTypes;
 
     mutable const StructType *oppositeConstStructType;
 };
@@ -822,12 +823,12 @@ private:
 class FunctionType : public Type {
 public:
     FunctionType(const Type *returnType, 
-                 const std::vector<const Type *> &argTypes, SourcePos pos);
+                 const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
     FunctionType(const Type *returnType, 
-                 const std::vector<const Type *> &argTypes,
-                 const std::vector<std::string> &argNames,
-                 const std::vector<Expr *> &argDefaults,
-                 const std::vector<SourcePos> &argPos,
+                 const llvm::SmallVector<const Type *, 8> &argTypes,
+                 const llvm::SmallVector<std::string, 8> &argNames,
+                 const llvm::SmallVector<Expr *, 8> &argDefaults,
+                 const llvm::SmallVector<SourcePos, 8> &argPos,
                  bool isTask, bool isExported, bool isExternC);
 
     Variability GetVariability() const;
@@ -897,16 +898,16 @@ private:
 
     // The following four vectors should all have the same length (which is
     // in turn the length returned by GetNumParameters()).
-    const std::vector<const Type *> paramTypes;
-    const std::vector<std::string> paramNames;
+    const llvm::SmallVector<const Type *, 8> paramTypes;
+    const llvm::SmallVector<std::string, 8> paramNames;
     /** Default values of the function's arguments.  For arguments without
         default values provided, NULL is stored. */
-    mutable std::vector<Expr *> paramDefaults;
+    mutable llvm::SmallVector<Expr *, 8> paramDefaults;
     /** The names provided (if any) with the function arguments in the
         function's signature.  These should only be used for error messages
         and the like and so not affect testing function types for equality,
         etc. */
-    const std::vector<SourcePos> paramPositions;
+    const llvm::SmallVector<SourcePos, 8> paramPositions;
 };
 
 

@@ -386,11 +386,11 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             type = arrayType;
     }
     else if (kind == DK_FUNCTION) {
-        std::vector<const Type *> args;
-        std::vector<std::string> argNames;
-        std::vector<Expr *> argDefaults;
-        std::vector<SourcePos> argPos;
-
+        llvm::SmallVector<const Type *, 8> args;
+        llvm::SmallVector<std::string, 8> argNames;
+        llvm::SmallVector<Expr *, 8> argDefaults;
+        llvm::SmallVector<SourcePos, 8> argPos;
+        
         // Loop over the function arguments and store the names, types,
         // default values (if any), and source file positions each one in
         // the corresponding vector.
@@ -646,9 +646,9 @@ Declaration::Print(int indent) const {
 
 void
 GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
-                             std::vector<const Type *> *elementTypes,
-                             std::vector<std::string> *elementNames,
-                             std::vector<SourcePos> *elementPositions) {
+                             llvm::SmallVector<const Type *, 8> *elementTypes,
+                             llvm::SmallVector<std::string, 8> *elementNames,
+                             llvm::SmallVector<SourcePos, 8> *elementPositions) {
     std::set<std::string> seenNames;
     for (unsigned int i = 0; i < sd.size(); ++i) {
         const Type *type = sd[i]->type;

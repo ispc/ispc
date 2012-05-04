@@ -157,7 +157,7 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
 static void
 lCreateSymbol(const std::string &name, const Type *returnType, 
-              const std::vector<const Type *> &argTypes, 
+              llvm::SmallVector<const Type *, 8> &argTypes, 
               const llvm::FunctionType *ftype, llvm::Function *func, 
               SymbolTable *symbolTable) {
     SourcePos noPos;
@@ -199,7 +199,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     // bool, so just have a one-off override for that one...
     if (g->target.maskBitCount != 1 && name == "__sext_varying_bool") {
         const Type *returnType = AtomicType::VaryingInt32;
-        std::vector<const Type *> argTypes;
+        llvm::SmallVector<const Type *, 8> argTypes;
         argTypes.push_back(AtomicType::VaryingBool);
 
         FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
@@ -229,7 +229,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         // Iterate over the arguments and try to find their equivalent ispc
         // types.  Track if any of the arguments has an integer type.
         bool anyIntArgs = false;
-        std::vector<const Type *> argTypes;
+        llvm::SmallVector<const Type *, 8> argTypes;
         for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
@@ -674,7 +674,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 static void
 lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
                        SymbolTable *symbolTable) {
-    std::vector<const Type *> args;
+    llvm::SmallVector<const Type *, 8> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
     Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
 

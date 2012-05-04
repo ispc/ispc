@@ -853,9 +853,9 @@ struct_or_union_specifier
     : struct_or_union struct_or_union_name '{' struct_declaration_list '}' 
       {
           if ($4 != NULL) {
-              std::vector<const Type *> elementTypes;
-              std::vector<std::string> elementNames;
-              std::vector<SourcePos> elementPositions;
+              llvm::SmallVector<const Type *, 8> elementTypes;
+              llvm::SmallVector<std::string, 8> elementNames;
+              llvm::SmallVector<SourcePos, 8> elementPositions;
               GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
                                            &elementPositions);
               StructType *st = new StructType($2, elementTypes, elementNames,
@@ -869,9 +869,9 @@ struct_or_union_specifier
     | struct_or_union '{' struct_declaration_list '}' 
       {
           if ($3 != NULL) {
-              std::vector<const Type *> elementTypes;
-              std::vector<std::string> elementNames;
-              std::vector<SourcePos> elementPositions;
+              llvm::SmallVector<const Type *, 8> elementTypes;
+              llvm::SmallVector<std::string, 8> elementNames;
+              llvm::SmallVector<SourcePos, 8> elementPositions;
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
               $$ = new StructType("", elementTypes, elementNames, elementPositions,

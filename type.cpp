@@ -1772,9 +1772,9 @@ lMangleStructName(const std::string &name, Variability variability) {
 }
 
         
-StructType::StructType(const std::string &n, const std::vector<const Type *> &elts, 
-                       const std::vector<std::string> &en,
-                       const std::vector<SourcePos> &ep,
+StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts, 
+                       const llvm::SmallVector<std::string, 8> &en,
+                       const llvm::SmallVector<SourcePos, 8> &ep,
                        bool ic, Variability v, SourcePos p) 
     : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), 
       elementPositions(ep), variability(v), isConst(ic), pos(p) {
@@ -2590,22 +2590,22 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionType
 
-FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
+FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
                            SourcePos p)
     : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), 
-      returnType(r), paramTypes(a), paramNames(std::vector<std::string>(a.size(), "")),
-      paramDefaults(std::vector<Expr *>(a.size(), NULL)),
-      paramPositions(std::vector<SourcePos>(a.size(), p)) {
+      returnType(r), paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+      paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
+      paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
     Assert(returnType != NULL);
     isSafe = false;
     costOverride = -1;
 }
 
 
-FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
-                           const std::vector<std::string> &an, 
-                           const std::vector<Expr *> &ad,
-                           const std::vector<SourcePos> &ap,
+FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
+                           const llvm::SmallVector<std::string, 8> &an, 
+                           const llvm::SmallVector<Expr *, 8> &ad,
+                           const llvm::SmallVector<SourcePos, 8> &ap,
                            bool it, bool is, bool ec) 
     : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), returnType(r), 
       paramTypes(a), paramNames(an), paramDefaults(ad), paramPositions(ap) {
@@ -2697,7 +2697,7 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
     }
     const Type *rt = returnType->ResolveUnboundVariability(v);
 
-    std::vector<const Type *> pt;
+    llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
