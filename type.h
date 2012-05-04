@@ -685,12 +685,12 @@ public:
     int GetElementNumber(const std::string &name) const;
 
     /** Returns the name of the i'th element of the structure. */
-    const std::string GetElementName(int i) const { return elementNames[i]; }
+    const std::string &GetElementName(int i) const { return elementNames[i]; }
     
     /** Returns the total number of elements in the structure. */
     int GetElementCount() const { return int(elementTypes.size()); }
 
-    SourcePos GetElementPosition(int i) const { return elementPositions[i]; }
+    const SourcePos &GetElementPosition(int i) const { return elementPositions[i]; }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
