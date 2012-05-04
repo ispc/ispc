@@ -284,6 +284,10 @@ public:
     int EstimateCost() const;
 
     Expr *baseExpr, *index;
+
+private:
+    mutable const Type *type;
+    mutable const PointerType *lvalueType;
 };
 
 
@@ -320,6 +324,9 @@ public:
         member is found.  (i.e. this is true if the MemberExpr was a '->'
         operator, and is false if it was a '.' operator. */
     bool dereferenceExpr;
+
+protected:
+    mutable const Type *type, *lvalueType;
 };
 
 

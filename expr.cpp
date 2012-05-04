@@ -447,9 +447,10 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             }
             return false;
         }
-        else
-            return lDoTypeConv(new ReferenceType(fromType), toType, NULL, 
-                               failureOk, errorMsgBase, pos);
+        else {
+            ReferenceType rt(fromType);
+            return lDoTypeConv(&rt, toType, NULL, failureOk, errorMsgBase, pos);
+        }
     }
     else if (Type::Equal(toType, fromType->GetAsNonConstType()))
         // convert: const T -> T (as long as T isn't a reference)
@@ -3799,6 +3800,7 @@ IndexExpr::IndexExpr(Expr *a, Expr *i, SourcePos p)
     : Expr(p) {
     baseExpr = a;
     index = i;
+    type = lvalueType = NULL;
 }
 
 
@@ -3939,7 +3941,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
     llvm::Value *ptr = GetLValue(ctx);
     llvm::Value *mask = NULL;
-    const Type *lvalueType = GetLValueType();
+    const Type *lvType = GetLValueType();
     if (ptr == NULL) {
         // We may be indexing into a temporary that hasn't hit memory, so
         // get the full value and stuff it into temporary alloca'd space so
@@ -3958,12 +3960,12 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
         Assert(st != NULL);
-        lvalueType = PointerType::GetUniform(st->GetElementType());
+        lvType = PointerType::GetUniform(st->GetElementType());
 
         // And do the indexing calculation into the temporary array in memory
         ptr = ctx->GetElementPtrInst(tmpPtr, LLVMInt32(0), index->GetValue(ctx), 
                                      PointerType::GetUniform(baseExprType));
-        ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, lvalueType);
+        ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, lvType);
 
         mask = LLVMMaskAllOn;
     }
@@ -3974,12 +3976,15 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetDebugPos(pos);
-    return ctx->LoadInst(ptr, mask, lvalueType);
+    return ctx->LoadInst(ptr, mask, lvType);
 }
 
 
 const Type *
 IndexExpr::GetType() const {
+    if (type != NULL)
+        return type;
+
     const Type *baseExprType, *indexType;
     if (!baseExpr || !index || 
         ((baseExprType = baseExpr->GetType()) == NULL) ||
@@ -4015,9 +4020,11 @@ IndexExpr::GetType() const {
     // type.
     if (indexType->IsUniformType() &&
         (pointerType == NULL || pointerType->IsUniformType()))
-        return elementType;
+        type = elementType;
     else
-        return elementType->GetAsVaryingType();
+        type = elementType->GetAsVaryingType();
+
+    return type;
 }
 
 
@@ -4089,8 +4096,7 @@ lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
 */
 static llvm::Value *
 lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx, 
-                           llvm::Value *ptr,
-                           const Type **type) {
+                           llvm::Value *ptr, const Type **type) {
     Assert(*type != NULL);
     const PointerType *ptrType = CastType<PointerType>(*type);
     bool convertToSlice = (ptrType->GetBaseType()->IsSOAType() &&
@@ -4178,6 +4184,9 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
 
 const Type *
 IndexExpr::GetLValueType() const {
+    if (lvalueType != NULL)
+        return lvalueType;
+
     const Type *baseExprType, *baseExprLValueType, *indexType;
     if (baseExpr == NULL || index == NULL ||
         ((baseExprType = baseExpr->GetType()) == NULL) ||
@@ -4215,19 +4224,18 @@ IndexExpr::GetLValueType() const {
 
     // The return type is uniform iff. the base is a uniform pointer / a
     // collection of uniform typed elements and the index is uniform.
-    const PointerType *retType;
     if (baseVarying == false && indexType->IsUniformType())
-        retType = PointerType::GetUniform(elementType);
+        lvalueType = PointerType::GetUniform(elementType);
     else
-        retType = PointerType::GetVarying(elementType);
+        lvalueType = PointerType::GetVarying(elementType);
 
     // Finally, if we're indexing into an SOA type, then the resulting
     // pointer must (currently) be a slice pointer; we don't allow indexing
     // the soa-width-wide structs directly.
     if (elementType->IsSOAType())
-        retType = retType->GetAsSlice();
+        lvalueType = lvalueType->GetAsSlice();
 
-    return retType;
+    return lvalueType;
 }
 
 
@@ -4370,6 +4378,9 @@ StructMemberExpr::StructMemberExpr(Expr *e, const char *id, SourcePos p,
 
 const Type *
 StructMemberExpr::GetType() const {
+    if (type != NULL)
+        return type;
+
     // It's a struct, and the result type is the element type, possibly
     // promoted to varying if the struct type / lvalue is varying.
     const Type *exprType, *lvalueType;
@@ -4412,12 +4423,16 @@ StructMemberExpr::GetType() const {
         // result type must be the varying version of the element type.
         elementType = elementType->GetAsVaryingType();
 
-    return elementType;
+    type = elementType;
+    return type;
 }
 
 
 const Type *
 StructMemberExpr::GetLValueType() const {
+    if (lvalueType != NULL)
+        return lvalueType;
+
     if (expr == NULL) {
         Assert(m->errorCount > 0);
         return NULL;
@@ -4446,7 +4461,8 @@ StructMemberExpr::GetLValueType() const {
         CastType<PointerType>(exprLValueType)->IsSlice())
         ptrType = ptrType->GetAsFrozenSlice();
 
-    return ptrType;
+    lvalueType = ptrType;
+    return lvalueType;
 }
 
 
@@ -4548,25 +4564,28 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p,
 
 const Type *
 VectorMemberExpr::GetType() const {
+    if (type != NULL)
+        return type;
+
     // For 1-element expressions, we have the base vector element
     // type.  For n-element expressions, we have a shortvec type
     // with n > 1 elements.  This can be changed when we get
     // type<1> -> type conversions.
-    const Type *type = (identifier.length() == 1) ? 
+    type = (identifier.length() == 1) ? 
         (const Type *)exprVectorType->GetElementType() : 
         (const Type *)memberType;
 
-    const Type *lvalueType = GetLValueType();
-    if (lvalueType != NULL) {
-        bool isSlice = (CastType<PointerType>(lvalueType) &&
-                        CastType<PointerType>(lvalueType)->IsSlice());
+    const Type *lvType = GetLValueType();
+    if (lvType != NULL) {
+        bool isSlice = (CastType<PointerType>(lvType) &&
+                        CastType<PointerType>(lvType)->IsSlice());
         if (isSlice) {
 //CO            Assert(type->IsSOAType());
-            if (lvalueType->IsUniformType())
+            if (lvType->IsUniformType())
                 type = type->GetAsUniformType();
         }
 
-        if (lvalueType->IsVaryingType())
+        if (lvType->IsVaryingType())
             type = type->GetAsVaryingType();
     }
 
@@ -4586,6 +4605,9 @@ VectorMemberExpr::GetLValue(FunctionEmitContext* ctx) const {
 
 const Type *
 VectorMemberExpr::GetLValueType() const {
+    if (lvalueType != NULL)
+        return lvalueType;
+
     if (identifier.length() == 1) {
         if (expr == NULL) {
             Assert(m->errorCount > 0);
@@ -4608,7 +4630,7 @@ VectorMemberExpr::GetLValueType() const {
         // but a pointer to a float, etc.
         const Type *elementType = vt->GetElementType();
         if (CastType<ReferenceType>(exprLValueType) != NULL)
-            return new ReferenceType(elementType);
+            lvalueType = new ReferenceType(elementType);
         else {
             const PointerType *ptrType = exprLValueType->IsUniformType() ?
                 PointerType::GetUniform(elementType) : 
@@ -4617,11 +4639,11 @@ VectorMemberExpr::GetLValueType() const {
             if (CastType<PointerType>(exprLValueType) &&
                 CastType<PointerType>(exprLValueType)->IsSlice())
                 ptrType = ptrType->GetAsFrozenSlice();
-            return ptrType;
+            lvalueType = ptrType;
         }
     }
-    else
-        return NULL;
+
+    return lvalueType;
 }
 
 
@@ -4775,6 +4797,7 @@ MemberExpr::MemberExpr(Expr *e, const char *id, SourcePos p, SourcePos idpos,
     expr = e;
     identifier = id;
     dereferenceExpr = derefLValue;
+    type = lvalueType = NULL;
 }
 
 
