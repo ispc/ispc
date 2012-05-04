@@ -1754,8 +1754,10 @@ StructType::StructType(const std::string &n, const std::vector<const Type *> &el
                        const std::vector<std::string> &en,
                        const std::vector<SourcePos> &ep,
                        bool ic, Variability v, SourcePos p) 
-    : name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
-      variability(v), isConst(ic), pos(p) {
+    : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), 
+      elementPositions(ep), variability(v), isConst(ic), pos(p) {
+    oppositeConstStructType = NULL;
+
     if (variability != Variability::Unbound) {
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
@@ -1908,21 +1910,33 @@ StructType::ResolveUnboundVariability(Variability v) const {
 
 const StructType *
 StructType::GetAsConstType() const {
-    if (IsConstType()) 
+    if (isConst == true)
         return this;
-    else
-        return new StructType(name, elementTypes, elementNames, elementPositions,
-                              true, variability, pos);
+    else if (oppositeConstStructType != NULL)
+        return oppositeConstStructType;
+    else {
+        oppositeConstStructType = 
+            new StructType(name, elementTypes, elementNames, elementPositions,
+                           true, variability, pos);
+        oppositeConstStructType->oppositeConstStructType = this;
+        return oppositeConstStructType;
+    }
 }
 
 
 const StructType *
 StructType::GetAsNonConstType() const {
-    if (!IsConstType()) 
+    if (isConst == false)
         return this;
-    else
-        return new StructType(name, elementTypes, elementNames, elementPositions,
-                              false, variability, pos);
+    else if (oppositeConstStructType != NULL)
+        return oppositeConstStructType;
+    else {
+        oppositeConstStructType = 
+            new StructType(name, elementTypes, elementNames, elementPositions,
+                           false, variability, pos);
+        oppositeConstStructType->oppositeConstStructType = this;
+        return oppositeConstStructType;
+    }
 }
 
 

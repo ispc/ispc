@@ -732,6 +732,8 @@ private:
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
+
+    mutable const StructType *oppositeConstStructType;
 };
 
 
