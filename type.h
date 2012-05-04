@@ -716,6 +716,8 @@ private:
     const bool isConst;
     const SourcePos pos;
 
+    mutable std::vector<const Type *> finalElementTypes;
+
     mutable const StructType *oppositeConstStructType;
 };
 

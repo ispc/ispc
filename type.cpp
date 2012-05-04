@@ -1757,7 +1757,8 @@ StructType::StructType(const std::string &n, const std::vector<const Type *> &el
     : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), 
       elementPositions(ep), variability(v), isConst(ic), pos(p) {
     oppositeConstStructType = NULL;
-
+    finalElementTypes.resize(elts.size(), NULL);
+    
     if (variability != Variability::Unbound) {
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
@@ -2074,17 +2075,23 @@ const Type *
 StructType::GetElementType(int i) const {
     Assert(variability != Variability::Unbound);
     Assert(i < (int)elementTypes.size());
-    const Type *ret = elementTypes[i];
-    if (ret == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
+
+    if (finalElementTypes[i] == NULL) {
+        const Type *type = elementTypes[i];
+        if (type == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+
+        // If the element has unbound variability, resolve its variability to
+        // the struct type's variability
+        type = type ->ResolveUnboundVariability(variability);
+        if (isConst)
+            type = type->GetAsConstType();
+        finalElementTypes[i] = type;
     }
 
-    // If the element has unbound variability, resolve its variability to
-    // the struct type's variability
-    ret = ret->ResolveUnboundVariability(variability);
-
-    return isConst ? ret->GetAsConstType() : ret;
+    return finalElementTypes[i];
 }
 
 
