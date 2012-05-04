@@ -3106,13 +3106,8 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     if (a == NULL || b == NULL)
         return false;
 
-    if (ignoreConst == true) {
-        if (CastType<FunctionType>(a) == NULL)
-            a = a->GetAsNonConstType();
-        if (CastType<FunctionType>(b) == NULL)
-            b = b->GetAsNonConstType();
-    }
-    else if (a->IsConstType() != b->IsConstType())
+    if (ignoreConst == false &&
+        a->IsConstType() != b->IsConstType())
         return false;
 
     const AtomicType *ata = CastType<AtomicType>(a);
@@ -3156,8 +3151,10 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
         if (a->GetVariability() != b->GetVariability())
             return false;
 
-        std::string namea = sta ? sta->GetStructName() : usta->GetStructName();
-        std::string nameb = stb ? stb->GetStructName() : ustb->GetStructName();
+        const std::string &namea = sta ? sta->GetStructName() : 
+            usta->GetStructName();
+        const std::string &nameb = stb ? stb->GetStructName() :
+            ustb->GetStructName();
         return (namea == nameb);
     }
 
