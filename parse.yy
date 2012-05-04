@@ -550,7 +550,7 @@ rate_qualified_type_specifier
             $$ = NULL;
         else {
             int soaWidth = (int)$1;
-            const StructType *st = dynamic_cast<const StructType *>($2);
+            const StructType *st = CastType<StructType>($2);
             if (st == NULL) {
                 Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
                       $2->GetString().c_str());
@@ -895,7 +895,7 @@ struct_or_union_specifier
               st = new UndefinedStructType($2, Variability::Unbound, false, @2);
               m->symbolTable->AddType($2, st, @2);
           }
-          else if (dynamic_cast<const StructType *>(st) == NULL)
+          else if (CastType<StructType>(st) == NULL)
               Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
                     st->GetString().c_str());
           $$ = st;
@@ -1060,7 +1060,7 @@ enum_specifier
               $$ = NULL;
           }
           else {
-              const EnumType *enumType = dynamic_cast<const EnumType *>(type);
+              const EnumType *enumType = CastType<EnumType>(type);
               if (enumType == NULL) {
                   Error(@2, "Type \"%s\" is not an enum type (%s).", $2,
                         type->GetString().c_str());
@@ -1858,8 +1858,7 @@ function_definition
     {
         if ($2 != NULL) {
             $2->InitFromDeclSpecs($1);
-            const FunctionType *funcType =
-                dynamic_cast<const FunctionType *>($2->type);
+            const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
                 Assert(m->errorCount > 0);
             else {
@@ -1987,7 +1986,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 
         decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
         
-        const FunctionType *ft = dynamic_cast<const FunctionType *>(decl->type);
+        const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,

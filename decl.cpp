@@ -136,7 +136,7 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     }
 
     if (vectorSize > 0) {
-        const AtomicType *atomicType = dynamic_cast<const AtomicType *>(retType);
+        const AtomicType *atomicType = CastType<AtomicType>(retType);
         if (atomicType == NULL) {
             Error(pos, "Only atomic types (int, float, ...) are legal for vector "
                   "types.");
@@ -148,7 +148,7 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
     
     if (soaWidth > 0) {
-        const StructType *st = dynamic_cast<const StructType *>(retType);
+        const StructType *st = CastType<StructType>(retType);
 
         if (st == NULL) {
             Error(pos, "Illegal to provide soa<%d> qualifier with non-struct "
@@ -238,7 +238,7 @@ Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     storageClass = ds->storageClass;
 
     if (ds->declSpecList.size() > 0 && 
-        dynamic_cast<const FunctionType *>(type) == NULL) {
+        CastType<FunctionType>(type) == NULL) {
         Error(pos, "__declspec specifiers for non-function type \"%s\" are "
               "not used.", type->GetString().c_str());
     }
@@ -351,7 +351,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
         // The parser should disallow this already, but double check.
-        if (dynamic_cast<const ReferenceType *>(baseType) != NULL) {
+        if (CastType<ReferenceType>(baseType) != NULL) {
             Error(pos, "References to references are illegal.");
             return;
         }
@@ -370,7 +370,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Error(pos, "Arrays of \"void\" type are illegal.");
             return;
         }
-        if (dynamic_cast<const ReferenceType *>(baseType)) {
+        if (CastType<ReferenceType>(baseType)) {
             Error(pos, "Arrays of references (type \"%s\") are illegal.",
                   baseType->GetString().c_str());
             return;
@@ -434,7 +434,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 decl->type = NULL;
             }
 
-            const ArrayType *at = dynamic_cast<const ArrayType *>(decl->type);
+            const ArrayType *at = CastType<ArrayType>(decl->type);
             if (at != NULL) {
                 // As in C, arrays are passed to functions as pointers to
                 // their element type.  We'll just immediately make this
@@ -454,13 +454,13 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
-                at = dynamic_cast<const ArrayType *>(targetType);
+                at = CastType<ArrayType>(targetType);
                 while (at != NULL) {
                     if (at->GetElementCount() == 0)
                         Error(decl->pos, "Arrays with unsized dimensions in "
                               "dimensions after the first one are illegal in "
                               "function parameter lists.");
-                    at = dynamic_cast<const ArrayType *>(at->GetElementType());
+                    at = CastType<ArrayType>(at->GetElementType());
                 }
             }
 
@@ -497,7 +497,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        if (dynamic_cast<const FunctionType *>(returnType) != NULL) {
+        if (CastType<FunctionType>(returnType) != NULL) {
             Error(pos, "Illegal to return function type from function.");
             return;
         }
@@ -596,7 +596,7 @@ Declaration::GetVariableDeclarations() const {
 
         if (Type::Equal(decl->type, AtomicType::Void))
             Error(decl->pos, "\"void\" type variable illegal in declaration.");
-        else if (dynamic_cast<const FunctionType *>(decl->type) == NULL) {
+        else if (CastType<FunctionType>(decl->type) == NULL) {
             decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
             Symbol *sym = new Symbol(decl->name, decl->pos, decl->type,
                                      decl->storageClass);
@@ -621,8 +621,7 @@ Declaration::DeclareFunctions() {
             continue;
         }
 
-        const FunctionType *ftype = 
-            dynamic_cast<const FunctionType *>(decl->type);
+        const FunctionType *ftype = CastType<FunctionType>(decl->type);
         if (ftype == NULL)
             continue;
 
@@ -690,8 +689,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
     }
 
     for (int i = 0; i < (int)elementTypes->size() - 1; ++i) {
-        const ArrayType *arrayType = 
-            dynamic_cast<const ArrayType *>((*elementTypes)[i]);
+        const ArrayType *arrayType = CastType<ArrayType>((*elementTypes)[i]);
 
         if (arrayType != NULL && arrayType->GetElementCount() == 0)
             Error((*elementPositions)[i], "Unsized arrays aren't allowed except "

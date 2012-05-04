@@ -368,7 +368,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     if (type == NULL)
         return;
 
-    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    const ArrayType *at = CastType<ArrayType>(type);
     if (at != NULL && at->TotalElementCount() == 0) {
         Error(pos, "Illegal to declare a global variable with unsized "
               "array dimensions that aren't set with an initializer "
@@ -517,7 +517,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
 */
 static bool
 lRecursiveCheckValidParamType(const Type *t) {
-    const StructType *st = dynamic_cast<const StructType *>(t);
+    const StructType *st = CastType<StructType>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
             if (lRecursiveCheckValidParamType(st->GetElementType(i)))
@@ -525,11 +525,11 @@ lRecursiveCheckValidParamType(const Type *t) {
         return false;
     }
 
-    const SequentialType *seqt = dynamic_cast<const SequentialType *>(t);
+    const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != NULL)
         return lRecursiveCheckValidParamType(seqt->GetElementType());
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(t);
+    const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL) {
         if (pt->IsSlice() || pt->IsVaryingType())
             return true;
@@ -550,7 +550,7 @@ lCheckForVaryingParameter(const Type *type, const std::string &name,
                           SourcePos pos) {
     if (lRecursiveCheckValidParamType(type)) {
         const Type *t = type->GetBaseType();
-        if (dynamic_cast<const StructType *>(t))
+        if (CastType<StructType>(t))
             Error(pos, "Struct parameter \"%s\" with varying member(s) is illegal "
                   "in an exported function.", name.c_str());
         else
@@ -568,7 +568,7 @@ static void
 lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
     for (int i = 0; i < ftype->GetNumParameters(); ++i) {
         const Type *type = ftype->GetParameterType(i);
-        if (dynamic_cast<const StructType *>(type) != NULL) {
+        if (CastType<StructType>(type) != NULL) {
             Error(pos, "Passing structs to/from application functions is "
                   "currently broken.  Use a pointer or const pointer to the "
                   "struct instead for now.");
@@ -615,7 +615,7 @@ Module::AddFunctionDeclaration(const std::string &name,
             // different, return an error--overloading by return type isn't
             // allowed.
             const FunctionType *ofType = 
-                dynamic_cast<const FunctionType *>(overloadFunc->type);
+                CastType<FunctionType>(overloadFunc->type);
             Assert(ofType != NULL);
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
                 int i;
@@ -737,9 +737,9 @@ Module::AddFunctionDeclaration(const std::string &name,
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && 
-            ((dynamic_cast<const PointerType *>(argType) != NULL &&
+            ((CastType<PointerType>(argType) != NULL &&
               argType->IsUniformType()) ||
-             dynamic_cast<const ReferenceType *>(argType) != NULL)) {
+             CastType<ReferenceType>(argType) != NULL)) {
 
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
@@ -962,7 +962,7 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     // Otherwise first make sure any contained structs have been declared.
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const StructType *elementStructType = 
-            dynamic_cast<const StructType *>(st->GetElementType(i));
+            CastType<StructType>(st->GetElementType(i));
         if (elementStructType != NULL)
             lEmitStructDecl(elementStructType, emittedStructs, file);
     }
@@ -1084,7 +1084,7 @@ lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
         if (Type::Equal((*exportedTypes)[i], type))
             return;
 
-    const T *castType = dynamic_cast<const T *>(type);
+    const T *castType = CastType<T>(type);
     Assert(castType != NULL);
     exportedTypes->push_back(castType);
 }
@@ -1099,13 +1099,13 @@ lGetExportedTypes(const Type *type,
                   std::vector<const StructType *> *exportedStructTypes,
                   std::vector<const EnumType *> *exportedEnumTypes,
                   std::vector<const VectorType *> *exportedVectorTypes) {
-    const ArrayType *arrayType = dynamic_cast<const ArrayType *>(type);
-    const StructType *structType = dynamic_cast<const StructType *>(type);
+    const ArrayType *arrayType = CastType<ArrayType>(type);
+    const StructType *structType = CastType<StructType>(type);
 
-    if (dynamic_cast<const ReferenceType *>(type) != NULL)
+    if (CastType<ReferenceType>(type) != NULL)
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, 
                           exportedEnumTypes, exportedVectorTypes);
-    else if (dynamic_cast<const PointerType *>(type) != NULL)
+    else if (CastType<PointerType>(type) != NULL)
         lGetExportedTypes(type->GetBaseType(), exportedStructTypes,
                           exportedEnumTypes, exportedVectorTypes);
     else if (arrayType != NULL)
@@ -1117,12 +1117,12 @@ lGetExportedTypes(const Type *type,
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes,
                               exportedEnumTypes, exportedVectorTypes);
     }
-    else if (dynamic_cast<const EnumType *>(type) != NULL)
+    else if (CastType<EnumType>(type) != NULL)
         lAddTypeIfNew(type, exportedEnumTypes);
-    else if (dynamic_cast<const VectorType *>(type) != NULL)
+    else if (CastType<VectorType>(type) != NULL)
         lAddTypeIfNew(type, exportedVectorTypes);
     else
-        Assert(dynamic_cast<const AtomicType *>(type) != NULL);
+        Assert(CastType<AtomicType>(type) != NULL);
 }
 
 
@@ -1135,7 +1135,7 @@ lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                        std::vector<const EnumType *> *exportedEnumTypes,
                        std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
+        const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         // Handle the return type
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes,
                           exportedEnumTypes, exportedVectorTypes);
@@ -1152,7 +1152,7 @@ static void
 lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
     fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
     for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
+        const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype);
         std::string decl = ftype->GetCDeclaration(funcs[i]->name);
         fprintf(file, "    extern %s;\n", decl.c_str());
@@ -1163,7 +1163,7 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
 
 static bool
 lIsExported(const Symbol *sym) {
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
     return ft->isExported;
 }
@@ -1171,7 +1171,7 @@ lIsExported(const Symbol *sym) {
 
 static bool
 lIsExternC(const Symbol *sym) {
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
     return ft->isExternC;
 }

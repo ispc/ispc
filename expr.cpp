@@ -148,7 +148,7 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 
 static Expr *
 lArrayToPointer(Expr *expr) {
-    Assert(expr && dynamic_cast<const ArrayType *>(expr->GetType()));
+    Assert(expr && CastType<ArrayType>(expr->GetType()));
 
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
@@ -212,8 +212,8 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         return false;
     }
 
-    if (dynamic_cast<const FunctionType *>(fromType)) {
-        if (dynamic_cast<const PointerType *>(toType) != NULL) {
+    if (CastType<FunctionType>(fromType)) {
+        if (CastType<PointerType>(toType) != NULL) {
             // Convert function type to pointer to function type
             if (expr != NULL) {
                 Expr *aoe = new AddressOfExpr(*expr, (*expr)->pos);
@@ -235,7 +235,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             return false;
         }
     }
-    if (dynamic_cast<const FunctionType *>(toType)) {
+    if (CastType<FunctionType>(toType)) {
         if (!failureOk)
             Error(pos, "Can't convert from type \"%s\" to function type \"%s\" "
                   "for %s.", fromType->GetString().c_str(),
@@ -253,18 +253,18 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         return false;
     }
 
-    const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
-    const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
-    const VectorType *toVectorType = dynamic_cast<const VectorType *>(toType);
-    const VectorType *fromVectorType = dynamic_cast<const VectorType *>(fromType);
-    const StructType *toStructType = dynamic_cast<const StructType *>(toType);
-    const StructType *fromStructType = dynamic_cast<const StructType *>(fromType);
-    const EnumType *toEnumType = dynamic_cast<const EnumType *>(toType);
-    const EnumType *fromEnumType = dynamic_cast<const EnumType *>(fromType);
-    const AtomicType *toAtomicType = dynamic_cast<const AtomicType *>(toType);
-    const AtomicType *fromAtomicType = dynamic_cast<const AtomicType *>(fromType);
-    const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
-    const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
+    const ArrayType *toArrayType = CastType<ArrayType>(toType);
+    const ArrayType *fromArrayType = CastType<ArrayType>(fromType);
+    const VectorType *toVectorType = CastType<VectorType>(toType);
+    const VectorType *fromVectorType = CastType<VectorType>(fromType);
+    const StructType *toStructType = CastType<StructType>(toType);
+    const StructType *fromStructType = CastType<StructType>(fromType);
+    const EnumType *toEnumType = CastType<EnumType>(toType);
+    const EnumType *fromEnumType = CastType<EnumType>(fromType);
+    const AtomicType *toAtomicType = CastType<AtomicType>(toType);
+    const AtomicType *fromAtomicType = CastType<AtomicType>(fromType);
+    const PointerType *fromPointerType = CastType<PointerType>(fromType);
+    const PointerType *toPointerType = CastType<PointerType>(toType);
 
     // Do this early, since for the case of a conversion like
     // "float foo[10]" -> "float * uniform foo", we have what's seemingly
@@ -303,7 +303,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     }
 
     if (fromPointerType != NULL) {
-        if (dynamic_cast<const AtomicType *>(toType) != NULL &&
+        if (CastType<AtomicType>(toType) != NULL &&
             toType->IsBoolType())
             // Allow implicit conversion of pointers to bools
             goto typecast_ok;
@@ -395,8 +395,8 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
     if (Type::Equal(toType, fromType->GetAsConstType()))
         goto typecast_ok;
     
-    if (dynamic_cast<const ReferenceType *>(fromType)) {
-        if (dynamic_cast<const ReferenceType *>(toType)) {
+    if (CastType<ReferenceType>(fromType)) {
+        if (CastType<ReferenceType>(toType)) {
             // Convert from a reference to a type to a const reference to a type;
             // this is handled by TypeCastExpr
             if (Type::Equal(toType->GetReferenceTarget(),
@@ -404,9 +404,9 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
                 goto typecast_ok;
 
             const ArrayType *atFrom = 
-                dynamic_cast<const ArrayType *>(fromType->GetReferenceTarget());
+                CastType<ArrayType>(fromType->GetReferenceTarget());
             const ArrayType *atTo = 
-                dynamic_cast<const ArrayType *>(toType->GetReferenceTarget());
+                CastType<ArrayType>(toType->GetReferenceTarget());
 
             if (atFrom != NULL && atTo != NULL && 
                 Type::Equal(atFrom->GetElementType(), atTo->GetElementType())) {
@@ -436,7 +436,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
                                    failureOk, errorMsgBase, pos);
         }
     }
-    else if (dynamic_cast<const ReferenceType *>(toType)) {
+    else if (CastType<ReferenceType>(toType)) {
         // T -> reference T
         if (expr != NULL) {
             Expr *rExpr = new ReferenceExpr(*expr, pos);
@@ -593,8 +593,8 @@ bool
 PossiblyResolveFunctionOverloads(Expr *expr, const Type *type) {
     FunctionSymbolExpr *fse = NULL;
     const FunctionType *funcType = NULL;
-    if (dynamic_cast<const PointerType *>(type) != NULL &&
-        (funcType = dynamic_cast<const FunctionType *>(type->GetBaseType())) &&
+    if (CastType<PointerType>(type) != NULL &&
+        (funcType = CastType<FunctionType>(type->GetBaseType())) &&
         (fse = dynamic_cast<FunctionSymbolExpr *>(expr)) != NULL) {
         // We're initializing a function pointer with a function symbol,
         // which in turn may represent an overloaded function.  So we need
@@ -693,7 +693,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         return;
     }
 
-    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(symType);
+    const ReferenceType *rt = CastType<ReferenceType>(symType);
     if (rt) {
         if (!Type::Equal(initExpr->GetType(), rt)) {
             Error(initExpr->pos, "Initializer for reference type \"%s\" must have same "
@@ -710,18 +710,17 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
 
     // Handle initiailizers for SOA types as well as for structs, arrays,
     // and vectors.
-    const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(symType);
+    const CollectionType *collectionType = CastType<CollectionType>(symType);
     if (collectionType != NULL || symType->IsSOAType()) {
         int nElements = collectionType ? collectionType->GetElementCount() :
             symType->GetSOAWidth();
 
         std::string name;
-        if (dynamic_cast<const StructType *>(symType) != NULL)
+        if (CastType<StructType>(symType) != NULL)
             name = "struct";
-        else if (dynamic_cast<const ArrayType *>(symType) != NULL) 
+        else if (CastType<ArrayType>(symType) != NULL) 
             name = "array";
-        else if (dynamic_cast<const VectorType *>(symType) != NULL) 
+        else if (CastType<VectorType>(symType) != NULL) 
             name = "vector";
         else if (symType->IsSOAType())
             name = symType->GetVariability().GetString();
@@ -760,7 +759,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                 }
 
                 llvm::Value *ep;
-                if (dynamic_cast<const StructType *>(symType) != NULL)
+                if (CastType<StructType>(symType) != NULL)
                     ep = ctx->AddElementOffset(ptr, i, NULL, "element");
                 else
                     ep = ctx->GetElementPtrInst(ptr, LLVMInt32(0), LLVMInt32(i), 
@@ -805,12 +804,12 @@ lMatchingBoolType(const Type *type) {
     bool uniformTest = type->IsUniformType();
     const AtomicType *boolBase = uniformTest ? AtomicType::UniformBool : 
                                                AtomicType::VaryingBool;
-    const VectorType *vt = dynamic_cast<const VectorType *>(type);
+    const VectorType *vt = CastType<VectorType>(type);
     if (vt != NULL)
         return new VectorType(boolBase, vt->GetElementCount());
     else {
-        Assert(dynamic_cast<const AtomicType *>(type) != NULL ||
-               dynamic_cast<const PointerType *>(type) != NULL);
+        Assert(CastType<AtomicType>(type) != NULL ||
+               CastType<PointerType>(type) != NULL);
         return boolBase;
     }
 }
@@ -820,10 +819,10 @@ lMatchingBoolType(const Type *type) {
 
 static llvm::Constant *
 lLLVMConstantValue(const Type *type, llvm::LLVMContext *ctx, double value) {
-    const AtomicType *atomicType = dynamic_cast<const AtomicType *>(type);
-    const EnumType *enumType = dynamic_cast<const EnumType *>(type);
-    const VectorType *vectorType = dynamic_cast<const VectorType *>(type);
-    const PointerType *pointerType = dynamic_cast<const PointerType *>(type);
+    const AtomicType *atomicType = CastType<AtomicType>(type);
+    const EnumType *enumType = CastType<EnumType>(type);
+    const VectorType *vectorType = CastType<VectorType>(type);
+    const PointerType *pointerType = CastType<PointerType>(type);
 
     // This function is only called with, and only works for atomic, enum,
     // and vector types.
@@ -941,8 +940,8 @@ lMaskForSymbol(Symbol *baseSym, FunctionEmitContext *ctx) {
     if (baseSym == NULL)
         return ctx->GetFullMask();
 
-    if (dynamic_cast<const PointerType *>(baseSym->type) != NULL ||
-        dynamic_cast<const ReferenceType *>(baseSym->type) != NULL)
+    if (CastType<PointerType>(baseSym->type) != NULL ||
+        CastType<ReferenceType>(baseSym->type) != NULL)
         // FIXME: for pointers, we really only want to do this for
         // dereferencing the pointer, not for things like pointer
         // arithmetic, when we may be able to use the internal mask,
@@ -969,8 +968,8 @@ lStoreAssignResult(llvm::Value *value, llvm::Value *ptr, const Type *valueType,
         baseSym != NULL &&
         baseSym->varyingCFDepth == ctx->VaryingCFDepth() &&
         baseSym->storageClass != SC_STATIC &&
-        dynamic_cast<const ReferenceType *>(baseSym->type) == NULL &&
-        dynamic_cast<const PointerType *>(baseSym->type) == NULL) {
+        CastType<ReferenceType>(baseSym->type) == NULL &&
+        CastType<PointerType>(baseSym->type) == NULL) {
         // If the variable is declared at the same varying control flow
         // depth as where it's being assigned, then we don't need to do any
         // masking but can just do the assignment as if all the lanes were
@@ -1000,7 +999,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
     // Get both the lvalue and the rvalue of the given expression
     llvm::Value *lvalue = NULL, *rvalue = NULL;
     const Type *lvalueType = NULL;
-    if (dynamic_cast<const ReferenceType *>(type) != NULL) {
+    if (CastType<ReferenceType>(type) != NULL) {
         lvalueType = type;
         type = type->GetReferenceTarget();
         lvalue = expr->GetValue(ctx);
@@ -1036,7 +1035,7 @@ lEmitPrePostIncDec(UnaryExpr::Op op, Expr *expr, SourcePos pos,
     else
         opName += "_minus1";
 
-    if (dynamic_cast<const PointerType *>(type) != NULL) {
+    if (CastType<PointerType>(type) != NULL) {
         const Type *incType = type->IsUniformType() ? AtomicType::UniformInt32 :
             AtomicType::VaryingInt32;
         llvm::Constant *dval = lLLVMConstantValue(incType, g->ctx, delta);
@@ -1161,7 +1160,7 @@ UnaryExpr::Optimize() {
         return this;
 
     const Type *type = constExpr->GetType();
-    bool isEnumType = dynamic_cast<const EnumType *>(type) != NULL;
+    bool isEnumType = CastType<EnumType>(type) != NULL;
 
     const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
     if (Type::Equal(baseType, AtomicType::UniformInt8) ||
@@ -1253,7 +1252,7 @@ UnaryExpr::TypeCheck() {
         if (type->IsNumericType())
             return this;
 
-        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        const PointerType *pt = CastType<PointerType>(type);
         if (pt == NULL) {
             Error(expr->pos, "Can only pre/post increment numeric and "
                   "pointer types, not \"%s\".", type->GetString().c_str());
@@ -1265,7 +1264,7 @@ UnaryExpr::TypeCheck() {
                   type->GetString().c_str());
             return NULL;
         }
-        if (dynamic_cast<const UndefinedStructType *>(pt->GetBaseType())) {
+        if (CastType<UndefinedStructType>(pt->GetBaseType())) {
             Error(expr->pos, "Illegal to pre/post increment pointer to "
                   "undefined struct type \"%s\".", type->GetString().c_str());
             return NULL;
@@ -1275,7 +1274,7 @@ UnaryExpr::TypeCheck() {
     }
 
     // don't do this for pre/post increment/decrement
-    if (dynamic_cast<const ReferenceType *>(type)) {
+    if (CastType<ReferenceType>(type)) {
         expr = new RefDerefExpr(expr, pos);
         type = expr->GetType();
     }
@@ -1399,7 +1398,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
                         llvm::Value *value1, const Type *type0,
                         const Type *type1, FunctionEmitContext *ctx,
                         SourcePos pos) {
-    const PointerType *ptrType = dynamic_cast<const PointerType *>(type0);
+    const PointerType *ptrType = CastType<PointerType>(type0);
 
     switch (op) {
     case BinaryExpr::Add:
@@ -1407,7 +1406,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
         return ctx->GetElementPtrInst(value0, value1, ptrType, "ptrmath");
         break;
     case BinaryExpr::Sub: {
-        if (dynamic_cast<const PointerType *>(type1) != NULL) {
+        if (CastType<PointerType>(type1) != NULL) {
             Assert(Type::Equal(type0, type1));
 
             if (ptrType->IsSlice()) {
@@ -1501,7 +1500,7 @@ static llvm::Value *
 lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
                  const Type *type0, const Type *type1,
                  FunctionEmitContext *ctx, SourcePos pos) {
-    const PointerType *ptrType = dynamic_cast<const PointerType *>(type0);
+    const PointerType *ptrType = CastType<PointerType>(type0);
 
     if (ptrType != NULL)
         return lEmitBinaryPointerArith(op, value0, value1, type0, type1,
@@ -1641,8 +1640,8 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
     // FIXME: not sure what we should do about vector types here...
     bool shortCircuit = (EstimateCost(arg1) > PREDICATE_SAFE_IF_STATEMENT_COST ||
                          SafeToRunWithMaskAllOff(arg1) == false ||
-                         dynamic_cast<const VectorType *>(type0) != NULL ||
-                         dynamic_cast<const VectorType *>(type1) != NULL);
+                         CastType<VectorType>(type0) != NULL ||
+                         CastType<VectorType>(type1) != NULL);
     if (shortCircuit == false) {
         // If one of the operands is uniform but the other is varying,
         // promote the uniform one to varying
@@ -1940,17 +1939,17 @@ BinaryExpr::GetType() const {
     // and will fail type checking and (int + ptr) should be canonicalized
     // into (ptr + int) by type checking.
     if (op == Add)
-        Assert(dynamic_cast<const PointerType *>(type1) == NULL);
+        Assert(CastType<PointerType>(type1) == NULL);
 
     if (op == Comma)
         return arg1->GetType();
 
-    if (dynamic_cast<const PointerType *>(type0) != NULL) {
+    if (CastType<PointerType>(type0) != NULL) {
         if (op == Add)
             // ptr + int -> ptr
             return type0;
         else if (op == Sub) {
-            if (dynamic_cast<const PointerType *>(type1) != NULL) {
+            if (CastType<PointerType>(type1) != NULL) {
                 // ptr - ptr -> ~ptrdiff_t
                 const Type *diffType = (g->target.is32Bit || 
                                         g->opt.force32BitAddressing) ? 
@@ -2232,7 +2231,7 @@ BinaryExpr::Optimize() {
     }
     else if (Type::Equal(type, AtomicType::UniformUInt32) || 
              Type::Equal(type, AtomicType::VaryingUInt32) ||
-             dynamic_cast<const EnumType *>(type) != NULL) {
+             CastType<EnumType>(type) != NULL) {
         uint32_t v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
         constArg0->AsUInt32(v0);
         constArg1->AsUInt32(v1);
@@ -2275,23 +2274,23 @@ BinaryExpr::TypeCheck() {
 
     // If either operand is a reference, dereference it before we move
     // forward
-    if (dynamic_cast<const ReferenceType *>(type0) != NULL) {
+    if (CastType<ReferenceType>(type0) != NULL) {
         arg0 = new RefDerefExpr(arg0, arg0->pos);
         type0 = arg0->GetType();
         Assert(type0 != NULL);
     }
-    if (dynamic_cast<const ReferenceType *>(type1) != NULL) {
+    if (CastType<ReferenceType>(type1) != NULL) {
         arg1 = new RefDerefExpr(arg1, arg1->pos);
         type1 = arg1->GetType();
         Assert(type1 != NULL);
     }
 
     // Convert arrays to pointers to their first elements
-    if (dynamic_cast<const ArrayType *>(type0) != NULL) {
+    if (CastType<ArrayType>(type0) != NULL) {
         arg0 = lArrayToPointer(arg0);
         type0 = arg0->GetType();
     }
-    if (dynamic_cast<const ArrayType *>(type1) != NULL) {
+    if (CastType<ArrayType>(type1) != NULL) {
         arg1 = lArrayToPointer(arg1);
         type1 = arg1->GetType();
     }
@@ -2308,8 +2307,8 @@ BinaryExpr::TypeCheck() {
         return NULL;
     }
 
-    const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
-    const PointerType *pt1 = dynamic_cast<const PointerType *>(type1);
+    const PointerType *pt0 = CastType<PointerType>(type0);
+    const PointerType *pt1 = CastType<PointerType>(type1);
     if (pt0 != NULL && pt1 != NULL && op == Sub) {
         // Pointer subtraction
         if (PointerType::IsVoidPointer(type0)) {
@@ -2322,12 +2321,12 @@ BinaryExpr::TypeCheck() {
                   "on \"%s\" type.", type1->GetString().c_str());
             return NULL;
         }
-        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+        if (CastType<UndefinedStructType>(pt0->GetBaseType())) {
             Error(pos, "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".", pt0->GetString().c_str());
             return NULL;
         }
-        if (dynamic_cast<const UndefinedStructType *>(pt1->GetBaseType())) {
+        if (CastType<UndefinedStructType>(pt1->GetBaseType())) {
             Error(pos, "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".", pt1->GetString().c_str());
             return NULL;
@@ -2367,7 +2366,7 @@ BinaryExpr::TypeCheck() {
                   "on \"%s\" type.", pt0->GetString().c_str());
             return NULL;
         }
-        if (dynamic_cast<const UndefinedStructType *>(pt0->GetBaseType())) {
+        if (CastType<UndefinedStructType>(pt0->GetBaseType())) {
             Error(pos, "Illegal to perform pointer arithmetic "
                   "on undefined struct type \"%s\".", pt0->GetString().c_str());
             return NULL;
@@ -2474,20 +2473,20 @@ BinaryExpr::TypeCheck() {
     case Ge:
     case Equal:
     case NotEqual: {
-        const PointerType *pt0 = dynamic_cast<const PointerType *>(type0);
-        const PointerType *pt1 = dynamic_cast<const PointerType *>(type1);
+        const PointerType *pt0 = CastType<PointerType>(type0);
+        const PointerType *pt1 = CastType<PointerType>(type1);
 
         // Convert '0' in expressions where the other expression is a
         // pointer type to a NULL pointer.
         if (pt0 != NULL && lIsAllIntZeros(arg1)) {
             arg1 = new NullPointerExpr(pos);
             type1 = arg1->GetType();
-            pt1 = dynamic_cast<const PointerType *>(type1);
+            pt1 = CastType<PointerType>(type1);
         }
         else if (pt1 != NULL && lIsAllIntZeros(arg0)) {
             arg0 = new NullPointerExpr(pos);
             type0 = arg1->GetType();
-            pt0 = dynamic_cast<const PointerType *>(type0);
+            pt0 = CastType<PointerType>(type0);
         }
 
         if (pt0 == NULL && pt1 == NULL) {
@@ -2529,8 +2528,8 @@ BinaryExpr::TypeCheck() {
             AtomicType::UniformBool : AtomicType::VaryingBool;
 
         const Type *destType0 = NULL, *destType1 = NULL;
-        const VectorType *vtype0 = dynamic_cast<const VectorType *>(type0);
-        const VectorType *vtype1 = dynamic_cast<const VectorType *>(type1);
+        const VectorType *vtype0 = CastType<VectorType>(type0);
+        const VectorType *vtype1 = CastType<VectorType>(type1);
         if (vtype0 && vtype1) {
             int sz0 = vtype0->GetElementCount(), sz1 = vtype1->GetElementCount();
             if (sz0 != sz1) {
@@ -2746,8 +2745,8 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     case XorAssign:
     case OrAssign: {
         // This should be caught during type checking
-        Assert(!dynamic_cast<const ArrayType *>(type) &&
-               !dynamic_cast<const StructType *>(type));
+        Assert(!CastType<ArrayType>(type) &&
+               !CastType<StructType>(type));
         return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx);
     }
     default:
@@ -2794,7 +2793,7 @@ lCheckForConstStructMember(SourcePos pos, const StructType *structType,
             return true;
         }
 
-        const StructType *st = dynamic_cast<const StructType *>(t);
+        const StructType *st = CastType<StructType>(t);
         if (st != NULL && lCheckForConstStructMember(pos, st, initialType))
             return true;
     }
@@ -2808,7 +2807,7 @@ AssignExpr::TypeCheck() {
         return NULL;
 
     bool lvalueIsReference = 
-        dynamic_cast<const ReferenceType *>(lvalue->GetType()) != NULL;
+        CastType<ReferenceType>(lvalue->GetType()) != NULL;
     if (lvalueIsReference)
         lvalue = new RefDerefExpr(lvalue, lvalue->pos);
 
@@ -2819,8 +2818,8 @@ AssignExpr::TypeCheck() {
         // function is overloaded.
         const Type *lvalueType = lvalue->GetType();
         const FunctionType *ftype;
-        if (dynamic_cast<const PointerType *>(lvalueType) == NULL ||
-            (ftype = dynamic_cast<const FunctionType *>(lvalueType->GetBaseType())) == NULL) {
+        if (CastType<PointerType>(lvalueType) == NULL ||
+            (ftype = CastType<FunctionType>(lvalueType->GetBaseType())) == NULL) {
             Error(lvalue->pos, "Can't assign function pointer to type \"%s\".",
                   lvalue->GetType()->GetString().c_str());
             return NULL;
@@ -2849,7 +2848,7 @@ AssignExpr::TypeCheck() {
         return NULL;
     }
 
-    if (dynamic_cast<const PointerType *>(lhsType) != NULL) {
+    if (CastType<PointerType>(lhsType) != NULL) {
         if (op == AddAssign || op == SubAssign) {
             if (PointerType::IsVoidPointer(lhsType)) {
                 Error(pos, "Illegal to perform pointer arithmetic on \"%s\" "
@@ -2871,7 +2870,7 @@ AssignExpr::TypeCheck() {
             return NULL;
         }
     }
-    else if (dynamic_cast<const ArrayType *>(lhsType) != NULL) {
+    else if (CastType<ArrayType>(lhsType) != NULL) {
         Error(lvalue->pos, "Illegal to assign to array type \"%s\".",
               lhsType->GetString().c_str());
         return NULL;
@@ -2891,7 +2890,7 @@ AssignExpr::TypeCheck() {
     }
 
     // Make sure we're not assigning to a struct that has a constant member
-    const StructType *st = dynamic_cast<const StructType *>(lhsType);
+    const StructType *st = CastType<StructType>(lhsType);
     if (st != NULL && lCheckForConstStructMember(pos, st, st))
         return NULL;
 
@@ -3027,7 +3026,7 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         ret->addIncoming(expr2Val, falsePred);
         return ret;
     }
-    else if (dynamic_cast<const VectorType *>(testType) == NULL) {
+    else if (CastType<VectorType>(testType) == NULL) {
         // the test is a varying bool type
         llvm::Value *testVal = test->GetValue(ctx);
         Assert(testVal->getType() == LLVMTypes::MaskType);
@@ -3091,11 +3090,11 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         llvm::Value *expr2Val = expr2->GetValue(ctx);
 
         ctx->SetDebugPos(pos);
-        const VectorType *vt = dynamic_cast<const VectorType *>(type);
+        const VectorType *vt = CastType<VectorType>(type);
         // Things that typechecking should have caught
         Assert(vt != NULL);
-        Assert(dynamic_cast<const VectorType *>(testType) != NULL &&
-               (dynamic_cast<const VectorType *>(testType)->GetElementCount() == 
+        Assert(CastType<VectorType>(testType) != NULL &&
+               (CastType<VectorType>(testType)->GetElementCount() == 
                 vt->GetElementCount()));
 
         // Do an element-wise select  
@@ -3131,10 +3130,10 @@ SelectExpr::GetType() const {
     bool becomesVarying = (testType->IsVaryingType() || expr1Type->IsVaryingType() ||
                            expr2Type->IsVaryingType());
     // if expr1 and expr2 have different vector sizes, typechecking should fail...
-    int testVecSize = dynamic_cast<const VectorType *>(testType) != NULL ?
-        dynamic_cast<const VectorType *>(testType)->GetElementCount() : 0;
-    int expr1VecSize = dynamic_cast<const VectorType *>(expr1Type) != NULL ?
-        dynamic_cast<const VectorType *>(expr1Type)->GetElementCount() : 0;
+    int testVecSize = CastType<VectorType>(testType) != NULL ?
+        CastType<VectorType>(testType)->GetElementCount() : 0;
+    int expr1VecSize = CastType<VectorType>(expr1Type) != NULL ?
+        CastType<VectorType>(expr1Type)->GetElementCount() : 0;
     Assert(!(testVecSize != 0 && expr1VecSize != 0 && testVecSize != expr1VecSize));
     
     int vectorSize = std::max(testVecSize, expr1VecSize);
@@ -3247,12 +3246,12 @@ SelectExpr::TypeCheck() {
     if (!type1 || !type2)
         return NULL;
 
-    if (dynamic_cast<const ArrayType *>(type1)) {
+    if (CastType<ArrayType>(type1)) {
         Error(pos, "Array type \"%s\" can't be used in select expression", 
               type1->GetString().c_str());
         return NULL;
     }
-    if (dynamic_cast<const ArrayType *>(type2)) {
+    if (CastType<ArrayType>(type2)) {
         Error(pos, "Array type \"%s\" can't be used in select expression", 
               type2->GetString().c_str());
         return NULL;
@@ -3266,8 +3265,8 @@ SelectExpr::TypeCheck() {
         return NULL;
     testType = test->GetType();
 
-    int testVecSize = dynamic_cast<const VectorType *>(testType) ?
-        dynamic_cast<const VectorType *>(testType)->GetElementCount() : 0;
+    int testVecSize = CastType<VectorType>(testType) ?
+        CastType<VectorType>(testType)->GetElementCount() : 0;
     const Type *promotedType = 
         Type::MoreGeneralType(type1, type2, Union(expr1->pos, expr2->pos),
                               "select expression", testType->IsVaryingType(), testVecSize);
@@ -3326,11 +3325,11 @@ lGetFunctionType(Expr *func) {
     if (type == NULL)
         return NULL;
 
-    const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+    const FunctionType *ftype = CastType<FunctionType>(type);
     if (ftype == NULL) {
         // Not a regular function symbol--is it a function pointer?
-        if (dynamic_cast<const PointerType *>(type) != NULL)
-            ftype = dynamic_cast<const FunctionType *>(type->GetBaseType());
+        if (CastType<PointerType>(type) != NULL)
+            ftype = CastType<FunctionType>(type->GetBaseType());
     }
     return ftype;
 }
@@ -3377,9 +3376,9 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 
         const Type *argLValueType = argExpr->GetLValueType();
         if (argLValueType != NULL &&
-            dynamic_cast<const PointerType *>(argLValueType) != NULL &&
+            CastType<PointerType>(argLValueType) != NULL &&
             argLValueType->IsVaryingType() &&
-            dynamic_cast<const ReferenceType *>(paramType) != NULL) {
+            CastType<ReferenceType>(paramType) != NULL) {
             Error(argExpr->pos, "Illegal to pass a \"varying\" lvalue to a "
                   "reference parameter of type \"%s\".",
                   paramType->GetString().c_str());
@@ -3496,13 +3495,11 @@ FunctionCallExpr::TypeCheck() {
         if (func == NULL)
             return NULL;
 
-        const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(func->GetType());
+        const FunctionType *ft = CastType<FunctionType>(func->GetType());
         if (ft == NULL) {
-            const PointerType *pt = 
-                dynamic_cast<const PointerType *>(func->GetType());
+            const PointerType *pt = CastType<PointerType>(func->GetType());
             ft = (pt == NULL) ? NULL : 
-                dynamic_cast<const FunctionType *>(pt->GetBaseType());
+                CastType<FunctionType>(pt->GetBaseType());
         }
 
         if (ft == NULL) {
@@ -3538,8 +3535,8 @@ FunctionCallExpr::TypeCheck() {
 
         // Make sure we do in fact have a function to call
         const FunctionType *funcType;
-        if (dynamic_cast<const PointerType *>(fptrType) == NULL ||
-            (funcType = dynamic_cast<const FunctionType *>(fptrType->GetBaseType())) == NULL) {
+        if (CastType<PointerType>(fptrType) == NULL ||
+            (funcType = CastType<FunctionType>(fptrType->GetBaseType())) == NULL) {
             Error(func->pos, "Must provide function name or function pointer for "
                   "function call expression.");
             return NULL;
@@ -3571,7 +3568,7 @@ FunctionCallExpr::TypeCheck() {
                 const Type *paramType = funcType->GetParameterType(i);
                 if (CanConvertTypes(argTypes[i], paramType) == false &&
                     !(argCouldBeNULL[i] == true &&
-                      dynamic_cast<const PointerType *>(paramType) != NULL)) {
+                      CastType<PointerType>(paramType) != NULL)) {
                     Error(args->exprs[i]->pos, "Can't convert argument of "
                           "type \"%s\" to type \"%s\" for function call "
                           "argument.", argTypes[i]->GetString().c_str(),
@@ -3609,10 +3606,10 @@ FunctionCallExpr::EstimateCost() const {
     if (type == NULL)
         return 0;
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    const PointerType *pt = CastType<PointerType>(type);
     if (pt != NULL)
         type = type->GetBaseType();
-    const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+    const FunctionType *ftype = CastType<FunctionType>(type);
 
     if (ftype->costOverride > -1)
         return ftype->costOverride;
@@ -3671,22 +3668,21 @@ ExprList::TypeCheck() {
 llvm::Constant *
 ExprList::GetConstant(const Type *type) const {
     if (exprs.size() == 1 &&
-        (dynamic_cast<const AtomicType *>(type) != NULL ||
-         dynamic_cast<const EnumType *>(type) != NULL ||
-         dynamic_cast<const PointerType *>(type) != NULL))
+        (CastType<AtomicType>(type) != NULL ||
+         CastType<EnumType>(type) != NULL ||
+         CastType<PointerType>(type) != NULL))
         return exprs[0]->GetConstant(type);
 
-    const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(type);
+    const CollectionType *collectionType = CastType<CollectionType>(type);
     if (collectionType == NULL)
         return NULL;
 
     std::string name;
-    if (dynamic_cast<const StructType *>(type) != NULL)
+    if (CastType<StructType>(type) != NULL)
         name = "struct";
-    else if (dynamic_cast<const ArrayType *>(type) != NULL) 
+    else if (CastType<ArrayType>(type) != NULL) 
         name = "array";
-    else if (dynamic_cast<const VectorType *>(type) != NULL) 
+    else if (CastType<VectorType>(type) != NULL) 
         name = "vector";
     else 
         FATAL("Unexpected CollectionType in ExprList::GetConstant()");
@@ -3745,7 +3741,7 @@ ExprList::GetConstant(const Type *type) const {
         cv.push_back(c);
     }
 
-    if (dynamic_cast<const StructType *>(type) != NULL) {
+    if (CastType<StructType>(type) != NULL) {
         llvm::StructType *llvmStructType =
             llvm::dyn_cast<llvm::StructType>(collectionType->LLVMType(g->ctx));
         Assert(llvmStructType != NULL);
@@ -3760,7 +3756,7 @@ ExprList::GetConstant(const Type *type) const {
         else {
             // uniform short vector type
             Assert(type->IsUniformType() &&
-                   dynamic_cast<const VectorType *>(type) != NULL);
+                   CastType<VectorType>(type) != NULL);
             llvm::VectorType *lvt = 
                 llvm::dyn_cast<llvm::VectorType>(lt);
             Assert(lvt != NULL);
@@ -3829,11 +3825,11 @@ IndexExpr::IndexExpr(Expr *a, Expr *i, SourcePos p)
 static llvm::Value *
 lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr, 
                            const Type *ptrRefType) {
-    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
         // References are uniform pointers, so no offsetting is needed
         return ptr;
 
-    const PointerType *ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+    const PointerType *ptrType = CastType<PointerType>(ptrRefType);
     Assert(ptrType != NULL);
     if (ptrType->IsUniformType() || ptrType->IsSlice())
         return ptr;
@@ -3869,21 +3865,21 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
  */
 static bool
 lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
-    if (dynamic_cast<const VectorType *>(type) != NULL ||
-        dynamic_cast<const ReferenceType *>(type) != NULL)
+    if (CastType<VectorType>(type) != NULL ||
+        CastType<ReferenceType>(type) != NULL)
         return false;
 
-    const StructType *st = dynamic_cast<const StructType *>(type);
+    const StructType *st = CastType<StructType>(type);
     if (st == NULL) {
-        const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+        const ArrayType *at = CastType<ArrayType>(type);
         if (at != NULL)
-            st = dynamic_cast<const StructType *>(at->GetElementType());
+            st = CastType<StructType>(at->GetElementType());
         else {
-            const PointerType *pt = dynamic_cast<const PointerType *>(type);
+            const PointerType *pt = CastType<PointerType>(type);
             if (pt == NULL)
                 return false;
 
-            st = dynamic_cast<const StructType *>(pt->GetBaseType());
+            st = CastType<StructType>(pt->GetBaseType());
         }
 
         if (st == NULL)
@@ -3900,7 +3896,7 @@ lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
             continue;
         }
 
-        if (dynamic_cast<const StructType *>(eltType) != NULL) {
+        if (CastType<StructType>(eltType) != NULL) {
             // We know that the enclosing struct is varying at this point,
             // so push that down to the enclosed struct before makign the
             // recursive call.
@@ -3960,8 +3956,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->StoreInst(val, tmpPtr);
 
         // Get a pointer type to the underlying elements
-        const SequentialType *st = 
-            dynamic_cast<const SequentialType *>(baseExprType);
+        const SequentialType *st = CastType<SequentialType>(baseExprType);
         Assert(st != NULL);
         lvalueType = PointerType::GetUniform(st->GetElementType());
 
@@ -3992,15 +3987,14 @@ IndexExpr::GetType() const {
         return NULL;
 
     const Type *elementType = NULL;
-    const PointerType *pointerType = 
-        dynamic_cast<const PointerType *>(baseExprType);
+    const PointerType *pointerType = CastType<PointerType>(baseExprType);
     if (pointerType != NULL)
         // ptr[index] -> type that the pointer points to
         elementType = pointerType->GetBaseType();
     else {
         // sequential type[index] -> element type of the sequential type
         const SequentialType *sequentialType = 
-            dynamic_cast<const SequentialType *>(baseExprType->GetReferenceTarget());
+            CastType<SequentialType>(baseExprType->GetReferenceTarget());
         // Typechecking should have caught this...
         Assert(sequentialType != NULL);
         elementType = sequentialType->GetElementType();
@@ -4060,8 +4054,7 @@ lConvertToSlicePointer(FunctionEmitContext *ctx, llvm::Value *ptr,
 */
 static void
 lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
-    const SequentialType *seqType = 
-        dynamic_cast<const SequentialType *>(baseExprType);
+    const SequentialType *seqType = CastType<SequentialType>(baseExprType);
     if (seqType == NULL)
         return;
 
@@ -4099,7 +4092,7 @@ lConvertPtrToSliceIfNeeded(FunctionEmitContext *ctx,
                            llvm::Value *ptr,
                            const Type **type) {
     Assert(*type != NULL);
-    const PointerType *ptrType = dynamic_cast<const PointerType *>(*type);
+    const PointerType *ptrType = CastType<PointerType>(*type);
     bool convertToSlice = (ptrType->GetBaseType()->IsSOAType() &&
                            ptrType->IsSlice() == false);
     if (convertToSlice == false)
@@ -4127,7 +4120,7 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetDebugPos(pos);
-    if (dynamic_cast<const PointerType *>(baseExprType) != NULL) {
+    if (CastType<PointerType>(baseExprType) != NULL) {
         // We're indexing off of a pointer 
         llvm::Value *basePtrValue = baseExpr->GetValue(ctx);
         if (basePtrValue == NULL) {
@@ -4150,16 +4143,16 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     // a reference thereuponfore.)
     llvm::Value *basePtr = NULL;
     const PointerType *basePtrType = NULL;
-    if (dynamic_cast<const ArrayType *>(baseExprType) ||
-        dynamic_cast<const VectorType *>(baseExprType)) {
+    if (CastType<ArrayType>(baseExprType) ||
+        CastType<VectorType>(baseExprType)) {
         basePtr = baseExpr->GetLValue(ctx);
-        basePtrType = dynamic_cast<const PointerType *>(baseExpr->GetLValueType());
+        basePtrType = CastType<PointerType>(baseExpr->GetLValueType());
         if (baseExpr->GetLValueType()) Assert(basePtrType != NULL);
     }
     else {
         baseExprType = baseExprType->GetReferenceTarget();
-        Assert(dynamic_cast<const ArrayType *>(baseExprType) ||
-               dynamic_cast<const VectorType *>(baseExprType));
+        Assert(CastType<ArrayType>(baseExprType) ||
+               CastType<VectorType>(baseExprType));
         basePtr = baseExpr->GetValue(ctx);
         basePtrType = PointerType::GetUniform(baseExprType);
     }
@@ -4193,21 +4186,21 @@ IndexExpr::GetLValueType() const {
         return NULL;
 
     // regularize to a PointerType 
-    if (dynamic_cast<const ReferenceType *>(baseExprLValueType) != NULL) {
+    if (CastType<ReferenceType>(baseExprLValueType) != NULL) {
         const Type *refTarget = baseExprLValueType->GetReferenceTarget();
         baseExprLValueType = PointerType::GetUniform(refTarget);
     }
-    Assert(dynamic_cast<const PointerType *>(baseExprLValueType) != NULL);
+    Assert(CastType<PointerType>(baseExprLValueType) != NULL);
 
     // Find the type of thing that we're indexing into
     const Type *elementType;
     const SequentialType *st = 
-        dynamic_cast<const SequentialType *>(baseExprLValueType->GetBaseType());
+        CastType<SequentialType>(baseExprLValueType->GetBaseType());
     if (st != NULL)
         elementType = st->GetElementType();
     else {
         const PointerType *pt = 
-            dynamic_cast<const PointerType *>(baseExprLValueType->GetBaseType());
+            CastType<PointerType>(baseExprLValueType->GetBaseType());
         Assert(pt != NULL);
         elementType = pt->GetBaseType();
     }
@@ -4215,7 +4208,7 @@ IndexExpr::GetLValueType() const {
     // Are we indexing into a varying type, or are we indexing with a
     // varying pointer?
     bool baseVarying;
-    if (dynamic_cast<const PointerType *>(baseExprType) != NULL)
+    if (CastType<PointerType>(baseExprType) != NULL)
         baseVarying = baseExprType->IsVaryingType();
     else
         baseVarying = baseExprLValueType->IsVaryingType();
@@ -4261,8 +4254,8 @@ IndexExpr::TypeCheck() {
         return NULL;
     }
 
-    if (!dynamic_cast<const SequentialType *>(baseExprType->GetReferenceTarget()) &&
-        !dynamic_cast<const PointerType *>(baseExprType)) {
+    if (!CastType<SequentialType>(baseExprType->GetReferenceTarget()) &&
+        !CastType<PointerType>(baseExprType)) {
         Error(pos, "Trying to index into non-array, vector, or pointer "
               "type \"%s\".", baseExprType->GetString().c_str());
         return NULL;
@@ -4298,7 +4291,7 @@ IndexExpr::EstimateCost() const {
     const Type *baseExprType = baseExpr->GetType();
     
     if ((indexType != NULL && indexType->IsVaryingType()) ||
-        (dynamic_cast<const PointerType *>(baseExprType) != NULL &&
+        (CastType<PointerType>(baseExprType) != NULL &&
          baseExprType->IsVaryingType()))
         // be pessimistic; some of these will later turn out to be vector
         // loads/stores, but it's too early for us to know that here.
@@ -4399,8 +4392,8 @@ StructMemberExpr::GetType() const {
     }
     Assert(Type::Equal(lvalueType->GetBaseType(), elementType));
 
-    bool isSlice = (dynamic_cast<const PointerType *>(lvalueType) &&
-                    dynamic_cast<const PointerType *>(lvalueType)->IsSlice());
+    bool isSlice = (CastType<PointerType>(lvalueType) &&
+                    CastType<PointerType>(lvalueType)->IsSlice());
     if (isSlice) {
         // FIXME: not true if we allow bound unif/varying for soa<>
         // structs?...
@@ -4441,7 +4434,7 @@ StructMemberExpr::GetLValueType() const {
     // varying (and otherwise uniform)
     const PointerType *ptrType =
         (exprLValueType->IsUniformType() ||
-         dynamic_cast<const ReferenceType *>(exprLValueType) != NULL) ?
+         CastType<ReferenceType>(exprLValueType) != NULL) ?
         PointerType::GetUniform(getElementType()) : 
         PointerType::GetVarying(getElementType());
 
@@ -4449,8 +4442,8 @@ StructMemberExpr::GetLValueType() const {
     // needs to be a frozen slice pointer--i.e. any further indexing with
     // the result shouldn't modify the minor slice offset, but it should be
     // left unchanged until we get to a leaf SOA value.
-    if (dynamic_cast<const PointerType *>(exprLValueType) &&
-        dynamic_cast<const PointerType *>(exprLValueType)->IsSlice())
+    if (CastType<PointerType>(exprLValueType) &&
+        CastType<PointerType>(exprLValueType)->IsSlice())
         ptrType = ptrType->GetAsFrozenSlice();
 
     return ptrType;
@@ -4494,16 +4487,16 @@ StructMemberExpr::getStructType() const {
         return NULL;
 
     const Type *structType;
-    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(type);
+    const ReferenceType *rt = CastType<ReferenceType>(type);
     if (rt != NULL)
         structType = rt->GetReferenceTarget();
     else {
-        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        const PointerType *pt = CastType<PointerType>(type);
         Assert(pt != NULL);
         structType = pt->GetBaseType();
     }
 
-    const StructType *ret = dynamic_cast<const StructType *>(structType);
+    const StructType *ret = CastType<StructType>(structType);
     Assert(ret != NULL);
     return ret;
 }
@@ -4536,15 +4529,15 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p,
                                    SourcePos idpos, bool derefLValue)
     : MemberExpr(e, id, p, idpos, derefLValue) {
     const Type *exprType = e->GetType();
-    exprVectorType = dynamic_cast<const VectorType *>(exprType);
+    exprVectorType = CastType<VectorType>(exprType);
     if (exprVectorType == NULL) {
-        const PointerType *pt = dynamic_cast<const PointerType *>(exprType);
+        const PointerType *pt = CastType<PointerType>(exprType);
         if (pt != NULL)
-            exprVectorType = dynamic_cast<const VectorType *>(pt->GetBaseType());
+            exprVectorType = CastType<VectorType>(pt->GetBaseType());
         else {
-            Assert(dynamic_cast<const ReferenceType *>(exprType) != NULL);
+            Assert(CastType<ReferenceType>(exprType) != NULL);
             exprVectorType = 
-                dynamic_cast<const VectorType *>(exprType->GetReferenceTarget());
+                CastType<VectorType>(exprType->GetReferenceTarget());
         }
         Assert(exprVectorType != NULL);
     }
@@ -4565,8 +4558,8 @@ VectorMemberExpr::GetType() const {
 
     const Type *lvalueType = GetLValueType();
     if (lvalueType != NULL) {
-        bool isSlice = (dynamic_cast<const PointerType *>(lvalueType) &&
-                        dynamic_cast<const PointerType *>(lvalueType)->IsSlice());
+        bool isSlice = (CastType<PointerType>(lvalueType) &&
+                        CastType<PointerType>(lvalueType)->IsSlice());
         if (isSlice) {
 //CO            Assert(type->IsSOAType());
             if (lvalueType->IsUniformType())
@@ -4605,24 +4598,24 @@ VectorMemberExpr::GetLValueType() const {
             return NULL;
 
         const VectorType *vt = NULL;
-        if (dynamic_cast<const ReferenceType *>(exprLValueType) != NULL)
-            vt = dynamic_cast<const VectorType *>(exprLValueType->GetReferenceTarget());
+        if (CastType<ReferenceType>(exprLValueType) != NULL)
+            vt = CastType<VectorType>(exprLValueType->GetReferenceTarget());
         else
-            vt = dynamic_cast<const VectorType *>(exprLValueType->GetBaseType());
+            vt = CastType<VectorType>(exprLValueType->GetBaseType());
         Assert(vt != NULL);
 
         // we don't want to report that it's e.g. a pointer to a float<1>,
         // but a pointer to a float, etc.
         const Type *elementType = vt->GetElementType();
-        if (dynamic_cast<const ReferenceType *>(exprLValueType) != NULL)
+        if (CastType<ReferenceType>(exprLValueType) != NULL)
             return new ReferenceType(elementType);
         else {
             const PointerType *ptrType = exprLValueType->IsUniformType() ?
                 PointerType::GetUniform(elementType) : 
                 PointerType::GetVarying(elementType);
             // FIXME: replicated logic with structmemberexpr.... 
-            if (dynamic_cast<const PointerType *>(exprLValueType) &&
-                dynamic_cast<const PointerType *>(exprLValueType)->IsSlice())
+            if (CastType<PointerType>(exprLValueType) &&
+                CastType<PointerType>(exprLValueType)->IsSlice())
                 ptrType = ptrType->GetAsFrozenSlice();
             return ptrType;
         }
@@ -4727,21 +4720,20 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
     if (e == NULL || (exprType = e->GetType()) == NULL)
         return NULL;
 
-    const ReferenceType *referenceType =
-        dynamic_cast<const ReferenceType *>(exprType);
+    const ReferenceType *referenceType = CastType<ReferenceType>(exprType);
     if (referenceType != NULL) {
         e = new RefDerefExpr(e, e->pos);
         exprType = e->GetType();
         Assert(exprType != NULL);
     }
 
-    const PointerType *pointerType = dynamic_cast<const PointerType *>(exprType);
+    const PointerType *pointerType = CastType<PointerType>(exprType);
     if (pointerType != NULL)
         exprType = pointerType->GetBaseType();
 
     if (derefLValue == true && pointerType == NULL) {
         const Type *targetType = exprType->GetReferenceTarget();
-        if (dynamic_cast<const StructType *>(targetType) != NULL)
+        if (CastType<StructType>(targetType) != NULL)
             Error(p, "Member operator \"->\" can't be applied to non-pointer "
                   "type \"%s\".  Did you mean to use \".\"?", 
                   exprType->GetString().c_str());
@@ -4751,18 +4743,18 @@ MemberExpr::create(Expr *e, const char *id, SourcePos p, SourcePos idpos,
         return NULL;
     }
     if (derefLValue == false && pointerType != NULL &&
-        dynamic_cast<const StructType *>(pointerType->GetBaseType()) != NULL) {
+        CastType<StructType>(pointerType->GetBaseType()) != NULL) {
             Error(p, "Member operator \".\" can't be applied to pointer "
                   "type \"%s\".  Did you mean to use \"->\"?", 
                   exprType->GetString().c_str());
         return NULL;
     }
 
-    if (dynamic_cast<const StructType *>(exprType) != NULL)
+    if (CastType<StructType>(exprType) != NULL)
         return new StructMemberExpr(e, id, p, idpos, derefLValue);
-    else if (dynamic_cast<const VectorType *>(exprType) != NULL)
+    else if (CastType<VectorType>(exprType) != NULL)
         return new VectorMemberExpr(e, id, p, idpos, derefLValue);
-    else if (dynamic_cast<const UndefinedStructType *>(exprType)) {
+    else if (CastType<UndefinedStructType>(exprType)) {
         Error(p, "Member operator \"%s\" can't be applied to declared "
               "but not defined struct type \"%s\".", derefLValue ? "->" : ".",
               exprType->GetString().c_str());
@@ -4919,8 +4911,7 @@ MemberExpr::Print() const {
  */
 std::string
 MemberExpr::getCandidateNearMatches() const {
-    const StructType *structType = 
-        dynamic_cast<const StructType *>(expr->GetType());
+    const StructType *structType = CastType<StructType>(expr->GetType());
     if (!structType)
         return "";
 
@@ -5049,7 +5040,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p)
     type = t;
     type = type->GetAsConstType();
     Assert(Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
-           (dynamic_cast<const EnumType *>(type) != NULL &&
+           (CastType<EnumType>(type) != NULL &&
             type->IsUniformType()));
     uint32Val[0] = u;
 }
@@ -5061,7 +5052,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
     type = type->GetAsConstType();
     Assert(Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingUInt32->GetAsConstType()) ||
-           (dynamic_cast<const EnumType *>(type) != NULL));
+           (CastType<EnumType>(type) != NULL));
     for (int j = 0; j < Count(); ++j)
         uint32Val[j] = u[j];
 }
@@ -5270,11 +5261,11 @@ ConstExpr::ConstExpr(ConstExpr *old, SourcePos p)
 
 AtomicType::BasicType
 ConstExpr::getBasicType() const {
-    const AtomicType *at = dynamic_cast<const AtomicType *>(type);
+    const AtomicType *at = CastType<AtomicType>(type);
     if (at != NULL)
         return at->basicType;
     else {
-        Assert(dynamic_cast<const EnumType *>(type) != NULL);
+        Assert(CastType<EnumType>(type) != NULL);
         return AtomicType::TYPE_UINT32;
     }
 }
@@ -5685,7 +5676,7 @@ ConstExpr::GetConstant(const Type *type) const {
     }
     else if (Type::Equal(type, AtomicType::UniformUInt32) || 
              Type::Equal(type, AtomicType::VaryingUInt32) ||
-             dynamic_cast<const EnumType *>(type) != NULL) {
+             CastType<EnumType>(type) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
         AsUInt32(uiv, type->IsVaryingType());
         if (type->IsUniformType())
@@ -5729,7 +5720,7 @@ ConstExpr::GetConstant(const Type *type) const {
         else
             return LLVMDoubleVector(dv);
     }
-    else if (dynamic_cast<const PointerType *>(type) != NULL) {
+    else if (CastType<PointerType>(type) != NULL) {
         // The only time we should get here is if we have an integer '0'
         // constant that should be turned into a NULL pointer of the
         // appropriate type.
@@ -6374,8 +6365,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
 
     // for structs/arrays/vectors, just recursively make their elements
     // varying (if needed) and populate the return value.
-    const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(type);
+    const CollectionType *collectionType = CastType<CollectionType>(type);
     if (collectionType != NULL) {
         llvm::Type *llvmType = 
             type->GetAsVaryingType()->LLVMType(g->ctx);
@@ -6391,7 +6381,7 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
 
     // Otherwise we must have a uniform AtomicType, so smear its value
     // across the vector lanes.
-    Assert(dynamic_cast<const AtomicType *>(type) != NULL);
+    Assert(CastType<AtomicType>(type) != NULL);
     return ctx->SmearUniform(value);
 }
 
@@ -6415,10 +6405,10 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 
-    const PointerType *fromPointerType = dynamic_cast<const PointerType *>(fromType);
-    const PointerType *toPointerType = dynamic_cast<const PointerType *>(toType);
-    const ArrayType *toArrayType = dynamic_cast<const ArrayType *>(toType);
-    const ArrayType *fromArrayType = dynamic_cast<const ArrayType *>(fromType);
+    const PointerType *fromPointerType = CastType<PointerType>(fromType);
+    const PointerType *toPointerType = CastType<PointerType>(toType);
+    const ArrayType *toArrayType = CastType<ArrayType>(toType);
+    const ArrayType *fromArrayType = CastType<ArrayType>(fromType);
     if (fromPointerType != NULL) {
         if (toArrayType != NULL) {
             return expr->GetValue(ctx);
@@ -6476,7 +6466,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             }
         }
         else {
-            Assert(dynamic_cast<const AtomicType *>(toType) != NULL);
+            Assert(CastType<AtomicType>(toType) != NULL);
             if (toType->IsBoolType()) {
                 // convert pointer to bool
                 llvm::Type *lfu = 
@@ -6558,14 +6548,14 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
     }
 
-    const ReferenceType *toReference = dynamic_cast<const ReferenceType *>(toType);
-    const ReferenceType *fromReference = dynamic_cast<const ReferenceType *>(fromType);
+    const ReferenceType *toReference = CastType<ReferenceType>(toType);
+    const ReferenceType *fromReference = CastType<ReferenceType>(fromType);
     if (toReference && fromReference) {
         const Type *toTarget = toReference->GetReferenceTarget();
         const Type *fromTarget = fromReference->GetReferenceTarget();
 
-        const ArrayType *toArray = dynamic_cast<const ArrayType *>(toTarget);
-        const ArrayType *fromArray = dynamic_cast<const ArrayType *>(fromTarget);
+        const ArrayType *toArray = CastType<ArrayType>(toTarget);
+        const ArrayType *fromArray = CastType<ArrayType>(fromTarget);
         if (toArray && fromArray) {
             // cast array pointer from [n x foo] to [0 x foo] if needed to be able
             // to pass to a function that takes an unsized array as a parameter
@@ -6585,8 +6575,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return expr->GetValue(ctx);
     }
 
-    const StructType *toStruct = dynamic_cast<const StructType *>(toType);
-    const StructType *fromStruct = dynamic_cast<const StructType *>(fromType);
+    const StructType *toStruct = CastType<StructType>(toType);
+    const StructType *fromStruct = CastType<StructType>(fromType);
     if (toStruct && fromStruct) {
         // The only legal type conversions for structs are to go from a
         // uniform to a varying instance of the same struct type.
@@ -6599,8 +6589,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return lUniformValueToVarying(ctx, origValue, fromType);
     }
 
-    const VectorType *toVector = dynamic_cast<const VectorType *>(toType);
-    const VectorType *fromVector = dynamic_cast<const VectorType *>(fromType);
+    const VectorType *toVector = CastType<VectorType>(toType);
+    const VectorType *fromVector = CastType<VectorType>(fromType);
     if (toVector && fromVector) {
         // this should be caught during typechecking
         Assert(toVector->GetElementCount() == fromVector->GetElementCount());
@@ -6632,8 +6622,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!exprVal)
         return NULL;
 
-    const EnumType *fromEnum = dynamic_cast<const EnumType *>(fromType);
-    const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
+    const EnumType *fromEnum = CastType<EnumType>(fromType);
+    const EnumType *toEnum = CastType<EnumType>(toType);
     if (fromEnum)
         // treat it as an uint32 type for the below and all will be good.
         fromType = fromEnum->IsUniformType() ? AtomicType::UniformUInt32 :
@@ -6643,7 +6633,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         toType = toEnum->IsUniformType() ? AtomicType::UniformUInt32 :
             AtomicType::VaryingUInt32;
 
-    const AtomicType *fromAtomic = dynamic_cast<const AtomicType *>(fromType);
+    const AtomicType *fromAtomic = CastType<AtomicType>(fromType);
     // at this point, coming from an atomic type is all that's left...
     Assert(fromAtomic != NULL);
 
@@ -6671,7 +6661,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         return ctx->IntToPtrInst(exprVal, llvmToType, "int_to_ptr");
     }
     else {
-        const AtomicType *toAtomic = dynamic_cast<const AtomicType *>(toType);
+        const AtomicType *toAtomic = CastType<AtomicType>(toType);
         // typechecking should ensure this is the case
         Assert(toAtomic != NULL);
 
@@ -6689,7 +6679,7 @@ TypeCastExpr::GetType() const {
 
 static const Type *
 lDeconstifyType(const Type *t) {
-    const PointerType *pt = dynamic_cast<const PointerType *>(t);
+    const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL)
         return new PointerType(lDeconstifyType(pt->GetBaseType()), 
                                pt->GetVariability(), false);
@@ -6729,16 +6719,16 @@ TypeCastExpr::TypeCheck() {
     }
 
     // First some special cases that we allow only with an explicit type cast
-    const PointerType *fromPtr = dynamic_cast<const PointerType *>(fromType);
-    const PointerType *toPtr = dynamic_cast<const PointerType *>(toType);
+    const PointerType *fromPtr = CastType<PointerType>(fromType);
+    const PointerType *toPtr = CastType<PointerType>(toType);
     if (fromPtr != NULL && toPtr != NULL)
         // allow explicit typecasts between any two different pointer types
         return this;
 
-    const AtomicType *fromAtomic = dynamic_cast<const AtomicType *>(fromType);
-    const AtomicType *toAtomic = dynamic_cast<const AtomicType *>(toType);
-    const EnumType *fromEnum = dynamic_cast<const EnumType *>(fromType);
-    const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
+    const AtomicType *fromAtomic = CastType<AtomicType>(fromType);
+    const AtomicType *toAtomic = CastType<AtomicType>(toType);
+    const EnumType *fromEnum = CastType<EnumType>(fromType);
+    const EnumType *toEnum = CastType<EnumType>(toType);
     if ((fromAtomic || fromEnum) && (toAtomic || toEnum))
         // Allow explicit casts between all of these
         return this;
@@ -6779,8 +6769,8 @@ TypeCastExpr::Optimize() {
         return this;
 
     const Type *toType = GetType();
-    const AtomicType *toAtomic = dynamic_cast<const AtomicType *>(toType);
-    const EnumType *toEnum = dynamic_cast<const EnumType *>(toType);
+    const AtomicType *toAtomic = CastType<AtomicType>(toType);
+    const EnumType *toEnum = CastType<EnumType>(toType);
     // If we're not casting to an atomic or enum type, we can't do anything
     // here, since ConstExprs can only represent those two types.  (So
     // e.g. we're casting from an int to an int<4>.)
@@ -6924,7 +6914,7 @@ TypeCastExpr::GetConstant(const Type *constType) const {
     // 2. Converting function types to pointer-to-function types
     // 3. And converting these from uniform to the varying/soa equivalents.
     //
-    if (dynamic_cast<const PointerType *>(constType) == NULL)
+    if (CastType<PointerType>(constType) == NULL)
         return NULL;
 
     llvm::Constant *c = expr->GetConstant(constType->GetAsUniformType());
@@ -7118,7 +7108,7 @@ PtrDerefExpr::GetType() const {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    Assert(dynamic_cast<const PointerType *>(type) != NULL);
+    Assert(CastType<PointerType>(type) != NULL);
 
     if (type->IsUniformType())
         return type->GetBaseType();
@@ -7135,7 +7125,7 @@ PtrDerefExpr::TypeCheck() {
         return NULL;
     }
 
-    if (dynamic_cast<const PointerType *>(type) == NULL) {
+    if (CastType<PointerType>(type) == NULL) {
         Error(pos, "Illegal to dereference non-pointer type \"%s\".", 
               type->GetString().c_str());
         return NULL;
@@ -7190,7 +7180,7 @@ RefDerefExpr::GetType() const {
         return NULL;
     }
         
-    Assert(dynamic_cast<const ReferenceType *>(type) != NULL);
+    Assert(CastType<ReferenceType>(type) != NULL);
     return type->GetReferenceTarget();
 }
 
@@ -7206,7 +7196,7 @@ RefDerefExpr::TypeCheck() {
     // We only create RefDerefExprs internally for references in
     // expressions, so we should never create one with a non-reference
     // expression...
-    Assert(dynamic_cast<const ReferenceType *>(type) != NULL);
+    Assert(CastType<ReferenceType>(type) != NULL);
 
     return this;
 }
@@ -7248,8 +7238,8 @@ AddressOfExpr::GetValue(FunctionEmitContext *ctx) const {
         return NULL;
 
     const Type *exprType = expr->GetType();
-    if (dynamic_cast<const ReferenceType *>(exprType) != NULL ||
-        dynamic_cast<const FunctionType *>(exprType) != NULL)
+    if (CastType<ReferenceType>(exprType) != NULL ||
+        CastType<FunctionType>(exprType) != NULL)
         return expr->GetValue(ctx);
     else
         return expr->GetLValue(ctx);
@@ -7262,7 +7252,7 @@ AddressOfExpr::GetType() const {
         return NULL;
 
     const Type *exprType = expr->GetType();
-    if (dynamic_cast<const ReferenceType *>(exprType) != NULL)
+    if (CastType<ReferenceType>(exprType) != NULL)
         return PointerType::GetUniform(exprType->GetReferenceTarget());
 
     const Type *t = expr->GetLValueType();
@@ -7305,8 +7295,8 @@ AddressOfExpr::TypeCheck() {
         return NULL;
     }
 
-    if (dynamic_cast<const ReferenceType *>(exprType) != NULL||
-        dynamic_cast<const FunctionType *>(exprType) != NULL) {
+    if (CastType<ReferenceType>(exprType) != NULL ||
+        CastType<FunctionType>(exprType) != NULL) {
         return this;
     }
 
@@ -7338,12 +7328,11 @@ AddressOfExpr::GetConstant(const Type *type) const {
         return NULL;
     }
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    const PointerType *pt = CastType<PointerType>(type);
     if (pt == NULL)
         return NULL;
 
-    const FunctionType *ft = 
-        dynamic_cast<const FunctionType *>(pt->GetBaseType());
+    const FunctionType *ft = CastType<FunctionType>(pt->GetBaseType());
     if (ft != NULL) {
         llvm::Constant *c = expr->GetConstant(ft);
         return lConvertPointerConstant(c, type);
@@ -7406,7 +7395,7 @@ Expr *
 SizeOfExpr::TypeCheck() {
     // Can't compute the size of a struct without a definition
     if (type != NULL &&
-        dynamic_cast<const UndefinedStructType *>(type) != NULL) {
+        CastType<UndefinedStructType>(type) != NULL) {
         Error(pos, "Can't compute the size of declared but not defined "
               "struct type \"%s\".", type->GetString().c_str());
         return NULL;
@@ -7462,7 +7451,7 @@ SymbolExpr::GetLValueType() const {
     if (symbol == NULL)
         return NULL;
 
-    if (dynamic_cast<const ReferenceType *>(symbol->type) != NULL)
+    if (CastType<ReferenceType>(symbol->type) != NULL)
         return PointerType::GetUniform(symbol->type->GetReferenceTarget());
     else
         return PointerType::GetUniform(symbol->type);
@@ -7591,7 +7580,7 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
     if (matchingFunc == NULL || matchingFunc->function == NULL)
         return NULL;
 
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(type);
+    const FunctionType *ft = CastType<FunctionType>(type);
     if (ft == NULL)
         return NULL;
 
@@ -7611,8 +7600,7 @@ lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs,
                          const std::vector<const Type *> &argTypes, 
                          const std::vector<bool> *argCouldBeNULL) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(funcs[i]->type);
+        const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
         Assert(ft != NULL);
         Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
     }
@@ -7631,7 +7619,7 @@ lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs,
 
 static bool
 lIsMatchToNonConstReference(const Type *callType, const Type *funcArgType) {
-    return (dynamic_cast<const ReferenceType *>(funcArgType) &&
+    return (CastType<ReferenceType>(funcArgType) &&
             (funcArgType->IsConstType() == false) &&
             Type::Equal(callType, funcArgType->GetReferenceTarget()));
 }
@@ -7640,7 +7628,7 @@ lIsMatchToNonConstReference(const Type *callType, const Type *funcArgType) {
 static bool
 lIsMatchToNonConstReferenceUnifToVarying(const Type *callType,
                                          const Type *funcArgType) {
-    return (dynamic_cast<const ReferenceType *>(funcArgType) &&
+    return (CastType<ReferenceType>(funcArgType) &&
             (funcArgType->IsConstType() == false) &&
             Type::Equal(callType->GetAsVaryingType(),
                         funcArgType->GetReferenceTarget()));
@@ -7652,8 +7640,8 @@ lIsMatchToNonConstReferenceUnifToVarying(const Type *callType,
   */
 static bool
 lIsMatchWithTypeWidening(const Type *callType, const Type *funcArgType) {
-    const AtomicType *callAt = dynamic_cast<const AtomicType *>(callType);
-    const AtomicType *funcAt = dynamic_cast<const AtomicType *>(funcArgType);
+    const AtomicType *callAt = CastType<AtomicType>(callType);
+    const AtomicType *funcAt = CastType<AtomicType>(funcArgType);
     if (callAt == NULL || funcAt == NULL)
         return false;
 
@@ -7725,7 +7713,7 @@ FunctionSymbolExpr::getCandidateFunctions(int argCount) const {
     std::vector<Symbol *> ret;
     for (int i = 0; i < (int)candidateFunctions.size(); ++i) {
         const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(candidateFunctions[i]->type);
+            CastType<FunctionType>(candidateFunctions[i]->type);
         Assert(ft != NULL);
 
         // There's no way to match if the caller is passing more arguments
@@ -7747,15 +7735,15 @@ FunctionSymbolExpr::getCandidateFunctions(int argCount) const {
 
 static bool
 lArgIsPointerType(const Type *type) {
-    if (dynamic_cast<const PointerType *>(type) != NULL)
+    if (CastType<PointerType>(type) != NULL)
         return true;
 
-    const ReferenceType *rt = dynamic_cast<const ReferenceType *>(type);
+    const ReferenceType *rt = CastType<ReferenceType>(type);
     if (rt == NULL)
         return false;
 
     const Type *t = rt->GetReferenceTarget();
-    return (dynamic_cast<const PointerType *>(t) != NULL);
+    return (CastType<PointerType>(t) != NULL);
 }
 
 
@@ -7805,9 +7793,9 @@ FunctionSymbolExpr::computeOverloadCost(const FunctionType *ftype,
             // references, where const-ness matters).  For all other types,
             // we're passing by value anyway, so const doesn't matter.
             const Type *callTypeNC = callType, *fargTypeNC = fargType;
-            if (dynamic_cast<const ReferenceType *>(callType) == NULL)
+            if (CastType<ReferenceType>(callType) == NULL)
                 callTypeNC = callType->GetAsNonConstType();
-            if (dynamic_cast<const ReferenceType *>(fargType) == NULL)
+            if (CastType<ReferenceType>(fargType) == NULL)
                 fargTypeNC = fargType->GetAsNonConstType();
                 
             if (Type::Equal(callTypeNC, fargTypeNC))
@@ -7870,7 +7858,7 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     // Compute the cost for calling each of the candidate functions
     for (int i = 0; i < (int)actualCandidates.size(); ++i) {
         const FunctionType *ft = 
-            dynamic_cast<const FunctionType *>(actualCandidates[i]->type);
+            CastType<FunctionType>(actualCandidates[i]->type);
         Assert(ft != NULL);
         candidateCosts.push_back(computeOverloadCost(ft, argTypes,
                                                      argCouldBeNULL,
@@ -7994,7 +7982,7 @@ NullPointerExpr::Optimize() {
 
 llvm::Constant *
 NullPointerExpr::GetConstant(const Type *type) const {
-    const PointerType *pt = dynamic_cast<const PointerType *>(type);
+    const PointerType *pt = CastType<PointerType>(type);
     if (pt == NULL)
         return NULL;
 
@@ -8189,7 +8177,7 @@ NewExpr::TypeCheck() {
         Assert(m->errorCount > 0);
         return NULL;
     }
-    if (dynamic_cast<const UndefinedStructType *>(allocType) != NULL) {
+    if (CastType<UndefinedStructType>(allocType) != NULL) {
         Error(pos, "Can't dynamically allocate storage for declared "
               "but not defined type \"%s\".", allocType->GetString().c_str());
         return NULL;

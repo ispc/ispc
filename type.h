@@ -72,6 +72,21 @@ struct Variability {
 };
 
 
+/** Enumerant that records each of the types that inherit from the Type
+    baseclass. */
+enum TypeId {
+    ATOMIC_TYPE,
+    ENUM_TYPE,
+    POINTER_TYPE,
+    ARRAY_TYPE,
+    VECTOR_TYPE,
+    STRUCT_TYPE,
+    UNDEFINED_STRUCT_TYPE,
+    REFERENCE_TYPE,
+    FUNCTION_TYPE
+};
+
+
 /** @brief Interface class that defines the type abstraction.
 
     Abstract base class that defines the interface that must be implemented
@@ -231,6 +246,14 @@ public:
         (i.e. not an aggregation of multiple instances of a type or
         types.) */
     static bool IsBasicType(const Type *type);
+
+    /** Indicates which Type implementation this type is.  This value can
+        be used to determine the actual type much more efficiently than
+        using dynamic_cast. */
+    const TypeId typeId;
+
+protected:
+    Type(TypeId id) : typeId(id) { }
 };
 
 
@@ -452,6 +475,9 @@ public:
         index must be between 0 and GetElementCount()-1.
      */
     virtual const Type *GetElementType(int index) const = 0;
+
+protected:
+    CollectionType(TypeId id) : Type(id) { }
 };
 
 
@@ -473,6 +499,9 @@ public:
         the same type.
      */
     const Type *GetElementType(int index) const;
+
+protected:
+    SequentialType(TypeId id) : CollectionType(id) { }
 };
 
 
@@ -686,6 +715,8 @@ private:
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
+
+    mutable const StructType *oppositeConstStructType;
 };
 
 
@@ -732,8 +763,6 @@ private:
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
-
-    mutable const StructType *oppositeConstStructType;
 };
 
 
@@ -875,8 +904,119 @@ private:
     const std::vector<SourcePos> paramPositions;
 };
 
-inline bool IsReferenceType(const Type *t) {
-    return dynamic_cast<const ReferenceType *>(t) != NULL;
+
+/* Efficient dynamic casting of Types.  First, we specify a default
+   template function that returns NULL, indicating a failed cast, for
+   arbitrary types. */
+template <typename T> inline const T *
+CastType(const Type *type) {
+    return NULL;
 }
+
+
+/* Now we have template specializaitons for the Types implemented in this
+   file.  Each one checks the Type::typeId member and then performs the
+   corresponding static cast if it's safe as per the typeId.
+ */
+template <> inline const AtomicType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ATOMIC_TYPE)
+        return (const AtomicType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const EnumType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ENUM_TYPE)
+        return (const EnumType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const PointerType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == POINTER_TYPE)
+        return (const PointerType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const ArrayType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ARRAY_TYPE)
+        return (const ArrayType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const VectorType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == VECTOR_TYPE)
+        return (const VectorType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const SequentialType *
+CastType(const Type *type) {
+    // Note that this function must be updated if other sequential type
+    // implementations are added.
+    if (type != NULL && 
+        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE))
+        return (const SequentialType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const CollectionType *
+CastType(const Type *type) {
+    // Similarly a new collection type implementation requires updating
+    // this function.
+    if (type != NULL && 
+        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE ||
+         type->typeId == STRUCT_TYPE))
+        return (const CollectionType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const StructType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == STRUCT_TYPE)
+        return (const StructType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const UndefinedStructType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == UNDEFINED_STRUCT_TYPE)
+        return (const UndefinedStructType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const ReferenceType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == REFERENCE_TYPE)
+        return (const ReferenceType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const FunctionType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == FUNCTION_TYPE)
+        return (const FunctionType *)type;
+    else
+        return NULL;
+}
+
+
+inline bool IsReferenceType(const Type *t) {
+    return CastType<ReferenceType>(t) != NULL;
+}
+
 
 #endif // ISPC_TYPE_H

@@ -1194,7 +1194,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
             llvm::Value *retVal = expr->GetValue(this);
             if (retVal != NULL) {
                 if (returnType->IsUniformType() ||
-                    dynamic_cast<const ReferenceType *>(returnType) != NULL)
+                    CastType<ReferenceType>(returnType) != NULL)
                     StoreInst(retVal, returnValuePtr);
                 else {
                     // Use a masked store to store the value of the expression
@@ -2063,10 +2063,10 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
 
     // Regularize to a standard pointer type for basePtr's type
     const PointerType *ptrType;
-    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
-        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        ptrType = CastType<PointerType>(ptrRefType);
         Assert(ptrType != NULL);
     }
 
@@ -2133,10 +2133,10 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
 
     // Regaularize the pointer type for basePtr
     const PointerType *ptrType = NULL;
-    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
-        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        ptrType = CastType<PointerType>(ptrRefType);
         Assert(ptrType != NULL);
     }
 
@@ -2184,7 +2184,7 @@ FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0
         // Now index into the second dimension with index1.  First figure
         // out the type of ptr0.
         const Type *baseType = ptrType->GetBaseType();
-        const SequentialType *st = dynamic_cast<const SequentialType *>(baseType);
+        const SequentialType *st = CastType<SequentialType>(baseType);
         Assert(st != NULL);
 
         bool ptr0IsUniform = 
@@ -2211,10 +2211,10 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     const PointerType *ptrType = NULL;
     if (ptrRefType != NULL) {
         // Normalize references to uniform pointers
-        if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+        if (CastType<ReferenceType>(ptrRefType) != NULL)
             ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
         else
-            ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+            ptrType = CastType<PointerType>(ptrRefType);
         Assert(ptrType != NULL);
     }
 
@@ -2240,8 +2240,8 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     // want it.
     if (resultPtrType != NULL) {
         Assert(ptrType != NULL);
-        const CollectionType *ct = 
-            dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+        const CollectionType *ct =
+            CastType<CollectionType>(ptrType->GetBaseType());
         Assert(ct != NULL);
         *resultPtrType = new PointerType(ct->GetElementType(elementNum),
                                          ptrType->GetVariability(),
@@ -2261,8 +2261,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     else {
         // Otherwise do the math to find the offset and add it to the given
         // varying pointers
-        const StructType *st = 
-            dynamic_cast<const StructType *>(ptrType->GetBaseType());
+        const StructType *st = CastType<StructType>(ptrType->GetBaseType());
         llvm::Value *offset = NULL;
         if (st != NULL)
             // If the pointer is to a structure, Target::StructOffset() gives
@@ -2273,8 +2272,8 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
             // Otherwise we should have a vector or array here and the offset
             // is given by the element number times the size of the element
             // type of the vector.
-            const SequentialType *st = 
-                dynamic_cast<const SequentialType *>(ptrType->GetBaseType());
+            const SequentialType *st =
+                CastType<SequentialType>(ptrType->GetBaseType());
             Assert(st != NULL);
             llvm::Value *size = 
                 g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
@@ -2340,7 +2339,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
 static llvm::Value *
 lFinalSliceOffset(FunctionEmitContext *ctx, llvm::Value *ptr,
                   const PointerType **ptrType) {
-    Assert(dynamic_cast<const PointerType *>(*ptrType) != NULL);
+    Assert(CastType<PointerType>(*ptrType) != NULL);
 
     llvm::Value *slicePtr = ctx->ExtractInst(ptr, 0, LLVMGetName(ptr, "_ptr"));
     llvm::Value *sliceOffset = ctx->ExtractInst(ptr, 1, LLVMGetName(ptr, "_offset"));
@@ -2377,8 +2376,7 @@ FunctionEmitContext::loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,
                                         const char *name) {
     const Type *unifType = ptrType->GetBaseType()->GetAsUniformType();
 
-    const CollectionType *ct = 
-        dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+    const CollectionType *ct = CastType<CollectionType>(ptrType->GetBaseType());
     if (ct != NULL) {
         // If we have a struct/array, we need to decompose it into
         // individual element loads to fill in the result structure since
@@ -2420,10 +2418,10 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
         name = LLVMGetName(ptr, "_load");
 
     const PointerType *ptrType;
-    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
-        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        ptrType = CastType<PointerType>(ptrRefType);
         Assert(ptrType != NULL);
     }
 
@@ -2440,8 +2438,8 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
             // atomic types, we need to make sure that the compiler emits
             // unaligned vector loads, so we specify a reduced alignment here.
             int align = 0;
-            const AtomicType *atomicType = 
-                dynamic_cast<const AtomicType *>(ptrType->GetBaseType());
+            const AtomicType *atomicType =
+                CastType<AtomicType>(ptrType->GetBaseType());
             if (atomicType != NULL && atomicType->IsVaryingType())
                 // We actually just want to align to the vector element
                 // alignment, but can't easily get that here, so just tell LLVM
@@ -2473,7 +2471,7 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
 
     const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+        CastType<CollectionType>(ptrType->GetBaseType());
     if (collectionType != NULL) {
         // For collections, recursively gather element wise to find the
         // result.
@@ -2508,7 +2506,7 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
 
     // Figure out which gather function to call based on the size of
     // the elements.
-    const PointerType *pt = dynamic_cast<const PointerType *>(returnType);
+    const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = NULL;
     if (pt != NULL)
         funcName = g->target.is32Bit ? "__pseudo_gather32_32" : 
@@ -2631,12 +2629,11 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         return;
     }
 
-    Assert(dynamic_cast<const PointerType *>(ptrType) != NULL);
+    Assert(CastType<PointerType>(ptrType) != NULL);
     Assert(ptrType->IsUniformType());
 
     const Type *valueType = ptrType->GetBaseType();
-    const CollectionType *collectionType = 
-        dynamic_cast<const CollectionType *>(valueType);
+    const CollectionType *collectionType = CastType<CollectionType>(valueType);
     if (collectionType != NULL) {
         // Assigning a structure / array / vector. Handle each element
         // individually with what turns into a recursive call to
@@ -2660,7 +2657,7 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
     // Figure out if we need a 8, 16, 32 or 64-bit masked store.
     llvm::Function *maskedStoreFunc = NULL;
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(valueType);
+    const PointerType *pt = CastType<PointerType>(valueType);
     if (pt != NULL) {
         if (pt->IsSlice()) {
             // Masked store of (varying) slice pointer.
@@ -2714,7 +2711,7 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
              Type::Equal(valueType, AtomicType::VaryingBool) ||
              Type::Equal(valueType, AtomicType::VaryingInt32) ||
              Type::Equal(valueType, AtomicType::VaryingUInt32) ||
-             dynamic_cast<const EnumType *>(valueType) != NULL) {
+             CastType<EnumType>(valueType) != NULL) {
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
                           LLVMGetName(ptr, "_to_int32vecptr"));
@@ -2755,12 +2752,12 @@ void
 FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr, 
                              const Type *valueType, const Type *origPt,
                              llvm::Value *mask) {
-    const PointerType *ptrType = dynamic_cast<const PointerType *>(origPt);
+    const PointerType *ptrType = CastType<PointerType>(origPt);
     Assert(ptrType != NULL);
     Assert(ptrType->IsVaryingType());
 
     const CollectionType *srcCollectionType = 
-        dynamic_cast<const CollectionType *>(valueType);
+        CastType<CollectionType>(valueType);
     if (srcCollectionType != NULL) {
         // We're scattering a collection type--we need to keep track of the
         // source type (the type of the data values to be stored) and the
@@ -2771,7 +2768,7 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
         // same struct type, versus scattering into an array of varying
         // instances of the struct type, etc.
         const CollectionType *dstCollectionType =
-            dynamic_cast<const CollectionType *>(ptrType->GetBaseType());
+            CastType<CollectionType>(ptrType->GetBaseType());
         Assert(dstCollectionType != NULL);
             
         // Scatter the collection elements individually
@@ -2816,11 +2813,10 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
         ptr = lFinalSliceOffset(this, ptr, &ptrType);
     }
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(valueType);
+    const PointerType *pt = CastType<PointerType>(valueType);
 
     // And everything should be a pointer or atomic from here on out...
-    Assert(pt != NULL || 
-           dynamic_cast<const AtomicType *>(valueType) != NULL);
+    Assert(pt != NULL || CastType<AtomicType>(valueType) != NULL);
 
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
@@ -2896,10 +2892,10 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
     }
 
     const PointerType *ptrType;
-    if (dynamic_cast<const ReferenceType *>(ptrRefType) != NULL)
+    if (CastType<ReferenceType>(ptrRefType) != NULL)
         ptrType = PointerType::GetUniform(ptrRefType->GetReferenceTarget());
     else {
-        ptrType = dynamic_cast<const PointerType *>(ptrRefType);
+        ptrType = CastType<PointerType>(ptrRefType);
         Assert(ptrType != NULL);
     }
 
@@ -2936,7 +2932,7 @@ FunctionEmitContext::storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
     Assert(Type::EqualIgnoringConst(ptrType->GetBaseType()->GetAsUniformType(), 
                                     valueType));
 
-    const CollectionType *ct = dynamic_cast<const CollectionType *>(valueType);
+    const CollectionType *ct = CastType<CollectionType>(valueType);
     if (ct != NULL) {
         // Handle collections element wise...
         for (int i = 0; i < ct->GetElementCount(); ++i) {
@@ -3418,7 +3414,7 @@ llvm::Value *
 FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr, 
                                                const Type *ptrType) {
     // This should only be called for varying pointers
-    const PointerType *pt = dynamic_cast<const PointerType *>(ptrType);
+    const PointerType *pt = CastType<PointerType>(ptrType);
     Assert(pt && pt->IsVaryingType());
 
     const Type *baseType = ptrType->GetBaseType();
