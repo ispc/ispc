@@ -73,14 +73,23 @@ SymbolTable::~SymbolTable() {
 
 void
 SymbolTable::PushScope() { 
-    variables.push_back(new SymbolMapType);
+    SymbolMapType *sm;
+    if (freeSymbolMaps.size() > 0) {
+        sm = freeSymbolMaps.back();
+        freeSymbolMaps.pop_back();
+        sm->erase(sm->begin(), sm->end());
+    }
+    else
+        sm = new SymbolMapType;
+
+    variables.push_back(sm);
 }
 
 
 void
 SymbolTable::PopScope() { 
     Assert(variables.size() > 1);
-    delete variables.back();
+    freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
 }
 
