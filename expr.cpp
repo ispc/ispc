@@ -279,10 +279,10 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
         const Type *eltType = fromArrayType->GetElementType();
         if (toPointerType->GetBaseType()->IsConstType())
             eltType = eltType->GetAsConstType();
-        if (Type::Equal(toPointerType, 
-                        new PointerType(eltType,
-                                        toPointerType->GetVariability(),
-                                        toPointerType->IsConstType())))
+
+        PointerType pt(eltType, toPointerType->GetVariability(),
+                       toPointerType->IsConstType());
+        if (Type::Equal(toPointerType, &pt))
             goto typecast_ok;
         else {
             if (!failureOk)
@@ -392,7 +392,9 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
     // Convert from type T -> const T; just return a TypeCast expr, which
     // can handle this
-    if (Type::Equal(toType, fromType->GetAsConstType()))
+    if (Type::EqualIgnoringConst(toType, fromType) &&
+        toType->IsConstType() == true &&
+        fromType->IsConstType() == false)
         goto typecast_ok;
     
     if (CastType<ReferenceType>(fromType)) {
