@@ -332,6 +332,8 @@ private:
     const Variability variability;
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
+
+    mutable const AtomicType *asOtherConstType;
 };
 
 
@@ -802,6 +804,7 @@ public:
 
 private:
     const Type * const targetType;
+    mutable const ReferenceType *asOtherConstType;
 };
 
 

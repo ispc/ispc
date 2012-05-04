@@ -185,6 +185,7 @@ const AtomicType *AtomicType::Void =
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
     : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {
+    asOtherConstType = NULL;
 }
 
 
@@ -257,7 +258,11 @@ AtomicType::GetAsConstType() const {
     if (basicType == TYPE_VOID || isConst == true) 
         return this;
     
-    return new AtomicType(basicType, variability, true);
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new AtomicType(basicType, variability, true);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -266,7 +271,11 @@ AtomicType::GetAsNonConstType() const {
     if (basicType == TYPE_VOID || isConst == false) 
         return this;
 
-    return new AtomicType(basicType, variability, false);
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new AtomicType(basicType, variability, false);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -2310,6 +2319,7 @@ UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
 
 ReferenceType::ReferenceType(const Type *t) 
     : Type(REFERENCE_TYPE), targetType(t) {
+    asOtherConstType = NULL;
 }
 
 
@@ -2450,7 +2460,12 @@ ReferenceType::GetAsConstType() const {
     }
     if (IsConstType())
         return this;
-    return new ReferenceType(targetType->GetAsConstType());
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new ReferenceType(targetType->GetAsConstType());
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -2462,7 +2477,12 @@ ReferenceType::GetAsNonConstType() const {
     }
     if (!IsConstType())
         return this;
-    return new ReferenceType(targetType->GetAsNonConstType());
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new ReferenceType(targetType->GetAsNonConstType());
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
