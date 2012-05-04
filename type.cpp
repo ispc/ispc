@@ -254,7 +254,7 @@ AtomicType::GetAsUnsignedType() const {
 
 const AtomicType *
 AtomicType::GetAsConstType() const {
-    if (Type::Equal(this, AtomicType::Void) || isConst == true) 
+    if (basicType == TYPE_VOID || isConst == true) 
         return this;
     
     return new AtomicType(basicType, variability, true);
@@ -263,7 +263,7 @@ AtomicType::GetAsConstType() const {
 
 const AtomicType *
 AtomicType::GetAsNonConstType() const {
-    if (Type::Equal(this, AtomicType::Void) || isConst == false) 
+    if (basicType == TYPE_VOID || isConst == false) 
         return this;
 
     return new AtomicType(basicType, variability, false);
@@ -278,7 +278,7 @@ AtomicType::GetBaseType() const {
 
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Varying)
         return this;
     return new AtomicType(basicType, Variability::Varying, isConst);
@@ -287,7 +287,7 @@ AtomicType::GetAsVaryingType() const {
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Uniform)
         return this;
     return new AtomicType(basicType, Variability::Uniform, isConst);
@@ -296,7 +296,7 @@ AtomicType::GetAsUniformType() const {
 
 const AtomicType *
 AtomicType::GetAsUnboundVariabilityType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Unbound)
         return this;
     return new AtomicType(basicType, Variability::Unbound, isConst);
@@ -305,7 +305,7 @@ AtomicType::GetAsUnboundVariabilityType() const {
 
 const AtomicType *
 AtomicType::GetAsSOAType(int width) const {
-    Assert(this != AtomicType::Void);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability(Variability::SOA, width))
         return this;
     return new AtomicType(basicType, Variability(Variability::SOA, width), isConst);
