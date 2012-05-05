@@ -446,6 +446,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeTarget(*registry);
 
         bool runSROA = true;
+        optPM.add(llvm::createGlobalDCEPass());
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
@@ -3906,6 +3907,7 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__scatter32_i32", "__scatter32_i64",
         "__scatter64_i8", "__scatter64_i16",
         "__scatter64_i32", "__scatter64_i64",
+        "__keep_funcs_live",
     };
 
     bool modifiedAny = false;
