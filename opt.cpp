@@ -393,9 +393,12 @@ Optimize(llvm::Module *module, int optLevel) {
     }
 
     llvm::PassManager optPM;
-    llvm::FunctionPassManager funcPM(module);
-
     optPM.add(llvm::createVerifierPass());
+
+#if 0
+    std::string err;
+    optPM.add(llvm::createPrintModulePass(new llvm::raw_fd_ostream("-", err)));
+#endif
 
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
@@ -423,17 +426,6 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalDCEPass());
     }
     else {
-        // Otherwise throw the kitchen sink of optimizations at the code.
-        // This is almost certainly overkill and likely could be reduced,
-        // but on the other hand trying to remove some of these has
-        // historically caused performance slowdowns.  Benchmark carefully
-        // if changing these around.
-        //
-        // Note in particular that a number of the ispc optimization
-        // passes are run repeatedly along the way; they often can kick in
-        // only later in the optimization process as things like constant
-        // propagation have done their thing, and then when they do kick
-        // in, they can often open up new opportunities for optimization...
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
         llvm::initializeScalarOpts(*registry);
@@ -445,13 +437,11 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        bool runSROA = true;
         optPM.add(llvm::createGlobalDCEPass());
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
         optPM.add(llvm::createReassociatePass());
-        optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
@@ -466,8 +456,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createDeadInstEliminationPass());
 
         // On to more serious optimizations
-        if (runSROA)
-            optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createScalarReplAggregatesPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -489,8 +478,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCFGSimplificationPass());
-        if (runSROA)
-            optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createScalarReplAggregatesPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createTailCallEliminationPass());
 
@@ -527,25 +515,13 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateVSelMovmskOptPass());
 
-        funcPM.add(llvm::createTypeBasedAliasAnalysisPass());
-        funcPM.add(llvm::createBasicAliasAnalysisPass());
-        funcPM.add(llvm::createCFGSimplificationPass());
-        if (runSROA)
-            funcPM.add(llvm::createScalarReplAggregatesPass());
-        funcPM.add(llvm::createEarlyCSEPass());
-        funcPM.add(llvm::createLowerExpectIntrinsicPass());
-
-        optPM.add(llvm::createTypeBasedAliasAnalysisPass());
-        optPM.add(llvm::createBasicAliasAnalysisPass());
-        optPM.add(llvm::createGlobalOptimizerPass());     
         optPM.add(llvm::createIPSCCPPass());              
         optPM.add(llvm::createDeadArgEliminationPass());  
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());   
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());   
-        if (runSROA)
-            optPM.add(llvm::createScalarReplAggregatesPass(-1, false));
+        optPM.add(llvm::createScalarReplAggregatesPass(-1, false));
         optPM.add(llvm::createInstructionCombiningPass());  
         optPM.add(llvm::createCFGSimplificationPass());     
         optPM.add(llvm::createReassociatePass());           
@@ -559,57 +535,11 @@ Optimize(llvm::Module *module, int optLevel) {
         if (g->opt.unrollLoops)
             optPM.add(llvm::createLoopUnrollPass());          
         optPM.add(llvm::createGVNPass());                 
-        optPM.add(llvm::createMemCpyOptPass());             
-        optPM.add(llvm::createSCCPPass());                  
-        optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createJumpThreadingPass());         
-        optPM.add(llvm::createCorrelatedValuePropagationPass());
-        optPM.add(llvm::createDeadStoreEliminationPass());  
-        optPM.add(llvm::createAggressiveDCEPass());         
-        optPM.add(llvm::createCFGSimplificationPass());     
-        optPM.add(llvm::createInstructionCombiningPass());  
-        optPM.add(llvm::createStripDeadPrototypesPass()); 
-        optPM.add(llvm::createGlobalDCEPass());         
-        optPM.add(llvm::createConstantMergePass());     
-
-        optPM.add(CreateIsCompileTimeConstantPass(false));
-        optPM.add(CreateIntrinsicsOptPass());
-        optPM.add(CreateVSelMovmskOptPass());
-
-        optPM.add(llvm::createGlobalOptimizerPass());
-        optPM.add(llvm::createGlobalDCEPass()); 
-        optPM.add(llvm::createArgumentPromotionPass());
-        optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createJumpThreadingPass());
-        if (runSROA)
-            optPM.add(llvm::createScalarReplAggregatesPass());
-        optPM.add(llvm::createFunctionAttrsPass()); 
-        optPM.add(llvm::createGlobalsModRefPass()); 
-        optPM.add(llvm::createLICMPass());      
-        optPM.add(llvm::createGVNPass());       
-        optPM.add(llvm::createMemCpyOptPass()); 
-        optPM.add(llvm::createDeadStoreEliminationPass());
-        optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createJumpThreadingPass());
-        optPM.add(llvm::createCFGSimplificationPass());
-        optPM.add(llvm::createGlobalDCEPass());
 
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateVSelMovmskOptPass());
             
-        optPM.add(llvm::createArgumentPromotionPass());   
-        if (runSROA)
-            optPM.add(llvm::createScalarReplAggregatesPass(-1, false));
-        optPM.add(llvm::createEarlyCSEPass());              
-        optPM.add(llvm::createSimplifyLibCallsPass());    
-        optPM.add(llvm::createJumpThreadingPass());         
-        optPM.add(llvm::createCorrelatedValuePropagationPass()); 
-        optPM.add(llvm::createCFGSimplificationPass());     
-        optPM.add(llvm::createInstructionCombiningPass());  
-        optPM.add(llvm::createCFGSimplificationPass());     
-        optPM.add(llvm::createReassociatePass());           
-        optPM.add(llvm::createGVNPass());                 
         optPM.add(llvm::createMemCpyOptPass());             
         optPM.add(llvm::createSCCPPass());                  
         optPM.add(llvm::createInstructionCombiningPass());
@@ -620,21 +550,14 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());     
         optPM.add(llvm::createInstructionCombiningPass());  
         optPM.add(llvm::createStripDeadPrototypesPass()); 
+        optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());         
         optPM.add(llvm::createConstantMergePass());     
-
-        optPM.add(CreateMakeInternalFuncsStaticPass());
-        optPM.add(llvm::createGlobalDCEPass());
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along
     // the way.
     optPM.add(llvm::createVerifierPass());
-    
-    for (llvm::Module::iterator fiter = module->begin(); fiter != module->end();
-         ++fiter)
-        funcPM.run(*fiter);
-
     optPM.run(*module);
 
     if (g->debugPrint) {
