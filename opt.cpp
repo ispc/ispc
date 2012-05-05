@@ -3865,6 +3865,10 @@ public:
     MakeInternalFuncsStaticPass(bool last = false) : ModulePass(ID) {
     }
 
+    void getAnalysisUsage(llvm::AnalysisUsage &AU) const {
+        AU.setPreservesCFG();
+    }
+
     const char *getPassName() const { return "Make internal funcs \"static\""; }
     bool runOnModule(llvm::Module &m);
 };
