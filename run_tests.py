@@ -32,8 +32,10 @@ parser.add_option("-r", "--random-shuffle", dest="random", help="Randomly order 
                   default=False, action="store_true")
 parser.add_option("-g", "--generics-include", dest="include_file", help="Filename for header implementing functions for generics",
                   default=None)
+parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
+                  default="")
 parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2, generic-4, generic-8, generic-16)',
+                  help='Set compilation target (sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
                   default="sse4")
 parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (x86, x86-64)',
@@ -57,6 +59,10 @@ if not is_windows:
 else:
     ispc_exe = "../Release/ispc.exe"
 
+ispc_exe += " " + options.ispc_flags
+
+print ispc_exe
+
 is_generic_target = (options.target.find("generic-") != -1 and
                      options.target != "generic-1")
 if is_generic_target and options.include_file == None:
@@ -69,6 +75,9 @@ if is_generic_target and options.include_file == None:
     elif options.target == "generic-16":
         sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-16.h\n")
         options.include_file = "examples/intrinsics/generic-16.h"
+    elif options.target == "generic-32":
+        sys.stderr.write("No generics #include specified and no default available for \"generic-32\" target.\n")
+        sys.exit(1)
 
 if options.compiler_exe == None:
     if is_windows:

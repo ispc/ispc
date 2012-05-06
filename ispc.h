@@ -40,8 +40,8 @@
 
 #define ISPC_VERSION "1.2.3dev"
 
-#if !defined(LLVM_3_0) && !defined(LLVM_3_0svn) && !defined(LLVM_3_1svn)
-#error "Only LLVM 3.0, and the 3.1 development branch are supported"
+#if !defined(LLVM_3_0) && !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#error "Only LLVM 3.0, 3.1, and the 3.2 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -71,7 +71,7 @@
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
-#define ISPC_MAX_NVEC 16
+#define ISPC_MAX_NVEC 32
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
@@ -249,6 +249,14 @@ struct Target {
         is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
         the generic target. */
     int maskBitCount;
+
+    /** Indicates whether the target has native support for float/half
+        conversions. */
+    bool hasHalf;
+
+    /** Indicates whether the target has support for transcendentals (beyond
+        sqrt, which we assume that all of them handle). */
+    bool hasTranscendentals;
 };
 
 

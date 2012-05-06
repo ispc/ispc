@@ -361,7 +361,7 @@ namespace {
     bool printConstExprCast(const ConstantExpr *CE, bool Static);
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
 #endif
 
@@ -438,11 +438,11 @@ namespace {
     void visitInvokeInst(InvokeInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
-#if !defined(LLVM_3_1) && !defined(LLVM_3_1svn)
+#ifdef LLVM_3_0
     void visitUnwindInst(UnwindInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
-#endif // !LLVM_3_1svn
+#endif // LLVM_3_0
     void visitResumeInst(ResumeInst &I) {
       llvm_unreachable("DwarfEHPrepare pass didn't work!");
     }
@@ -802,7 +802,7 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
 }
 
 void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
-#ifndef LLVM_3_1svn
+#ifdef LLVM_3_0
   Type *ETy = CPA->getType()->getElementType();
   // MMP: this looks like a bug: both sides of the || are the same
   bool isString = ETy == Type::getInt8Ty(CPA->getContext());
@@ -855,7 +855,7 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     Out << "\"";
     return;
   }
-#endif // !LLVM_3_1
+#endif // LLVM_3_0
 
   printConstant(cast<Constant>(CPA->getOperand(0)), Static);
   for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
@@ -872,7 +872,7 @@ void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
   }
 }
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
 void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
                                           bool Static) {
   // As a special case, print the array as a string if it is an array of
@@ -929,9 +929,9 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
     }
   }
 }
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
 static inline std::string ftostr(const APFloat& V) {
   std::string Buf;
   if (&V.getSemantics() == &APFloat::IEEEdouble) {
@@ -943,7 +943,7 @@ static inline std::string ftostr(const APFloat& V) {
   }
   return "<unknown format in ftostr>"; // error
 }
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
 
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
@@ -1432,11 +1432,11 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     } else if (ConstantDataSequential *CDS = 
                dyn_cast<ConstantDataSequential>(CPV)) {
       printConstantDataSequential(CDS, Static);
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       if (AT->getNumElements()) {
@@ -1481,7 +1481,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         Out << ")";
       }
     }
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(CPV)) {
       llvm::Constant *splatValue = CDV->getSplatValue();
       if (splatValue != NULL && smearFunc != NULL) {
@@ -1496,7 +1496,7 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         Out << ")";
       }
     }
-#endif
+#endif // !LLVM_3_0
     else {
       assert(isa<UndefValue>(CPV));
       Constant *CZ = Constant::getNullValue(VT->getElementType());
@@ -2898,17 +2898,17 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
   printBranchToBlock(SI.getParent(), SI.getDefaultDest(), 2);
   Out << ";\n";
 
-#ifdef LLVM_3_1svn
-  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
-    ConstantInt* CaseVal = i.getCaseValue();
-    BasicBlock* Succ = i.getCaseSuccessor();
-#else
+#ifdef LLVM_3_0
   // Skip the first item since that's the default case.
   unsigned NumCases = SI.getNumCases();
   for (unsigned i = 1; i < NumCases; ++i) {
     ConstantInt* CaseVal = SI.getCaseValue(i);
     BasicBlock* Succ = SI.getSuccessor(i);
-#endif // LLVM_3_1svn
+#else
+  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
+    ConstantInt* CaseVal = i.getCaseValue();
+    BasicBlock* Succ = i.getCaseSuccessor();
+#endif // !LLVM_3_0
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";
@@ -3806,10 +3806,10 @@ std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
   const MCAsmInfo *TargetAsm;
   std::string Triple = TheModule->getTargetTriple();
   if (Triple.empty())
-#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
-    Triple = llvm::sys::getDefaultTargetTriple();
-#else
+#ifdef LLVM_3_0
     Triple = llvm::sys::getHostTriple();
+#else
+    Triple = llvm::sys::getDefaultTargetTriple();
 #endif
 
   std::string E;

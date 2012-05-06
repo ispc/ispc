@@ -106,6 +106,106 @@ lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
 }
 
 
+/** After compilation completes, there's often a lot of extra debugging
+    metadata left around that isn't needed any more--for example, for
+    static functions that weren't actually used, function information for
+    functions that were inlined, etc.  This function takes a llvm::Module
+    and tries to strip out all of this extra stuff.
+ */
+static void
+lStripUnusedDebugInfo(llvm::Module *module) {
+    if (g->generateDebuggingSymbols == false)
+        return;
+
+#ifndef LLVM_3_0
+    // loop over the compile units that contributed to the final module
+    if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
+        for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
+            llvm::MDNode *cuNode = cuNodes->getOperand(i);
+            llvm::DICompileUnit cu(cuNode);
+            llvm::DIArray subprograms = cu.getSubprograms();
+            std::vector<llvm::Value *> usedSubprograms;
+
+            if (subprograms.getNumElements() == 0)
+                continue;
+
+            // And now loop over the subprograms inside each compile unit.
+            for (unsigned j = 0, je = subprograms.getNumElements(); j != je; ++j) {
+                llvm::MDNode *spNode = 
+                    llvm::dyn_cast<llvm::MDNode>(subprograms->getOperand(j));
+                Assert(spNode != NULL);
+                llvm::DISubprogram sp(spNode);
+
+                // Get the name of the subprogram.  Start with the mangled
+                // name; if that's empty then we have an export'ed
+                // function, so grab the unmangled name in that case.
+                std::string name = sp.getLinkageName();
+                if (name == "")
+                    name = sp.getName();
+
+                // Does the llvm::Function for this function survive in the
+                // module?
+                if (module->getFunction(name) != NULL)
+                    usedSubprograms.push_back(sp);
+            }
+
+            Debug(SourcePos(), "%d / %d functions left in module with debug "
+                  "info.", (int)usedSubprograms.size(),
+                  (int)subprograms.getNumElements());
+
+            // We'd now like to replace the array of subprograms in the
+            // compile unit with only the ones that actually have function
+            // definitions present.  Unfortunately, llvm::DICompileUnit
+            // doesn't provide a method to set the subprograms.  Therefore,
+            // we end up needing to directly stuff a new array into the
+            // appropriate slot (number 12) in the MDNode for the compile
+            // unit.
+            //
+            // Because this is all so hard-coded and would break if the
+            // debugging metadata organization on the LLVM side changed,
+            // here is a bunch of asserting to make sure that element 12 of
+            // the compile unit's MDNode has the subprograms array....
+            llvm::MDNode *nodeSPMD = 
+                llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(12));
+            Assert(nodeSPMD != NULL);
+            llvm::MDNode *nodeSPMDArray =
+                llvm::dyn_cast<llvm::MDNode>(nodeSPMD->getOperand(0));
+            llvm::DIArray nodeSPs(nodeSPMDArray);
+            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
+            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
+                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+
+            // And now we can go and stuff it into the node with some
+            // confidence...
+            llvm::Value *usedSubprogramsArray = 
+                m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
+            llvm::MDNode *replNode = 
+                llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Value *>(usedSubprogramsArray));
+            cuNode->replaceOperandWith(12, replNode);
+        }
+    }
+
+    // Also, erase a bunch of named metadata detrius; for each function
+    // there is sometimes named metadata llvm.dbg.lv.{funcname} that
+    // doesn't seem to be otherwise needed.
+    std::vector<llvm::NamedMDNode *> toErase;
+    llvm::Module::named_metadata_iterator iter = module->named_metadata_begin();
+    for (; iter != module->named_metadata_end(); ++iter) {
+        if (!strncmp(iter->getName().str().c_str(), "llvm.dbg.lv", 11))
+            toErase.push_back(iter);
+    }
+    for (int i = 0; i < (int)toErase.size(); ++i)
+        module->eraseNamedMetadata(toErase[i]);
+#endif // !LLVM_3_0
+
+    // Wrap up by running the LLVM pass to remove anything left that's
+    // unused.
+    llvm::PassManager pm;
+    pm.add(llvm::createStripDeadDebugInfoPass());
+    pm.run(*module);
+}
+
+
 ///////////////////////////////////////////////////////////////////////////
 // Module
 
@@ -144,10 +244,13 @@ Module::Module(const char *fn) {
             std::string directory, name;
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory,
                                     &name);
+            char producerString[512];
+            sprintf(producerString, "ispc version %s (build %s on %s)",
+                    ISPC_VERSION, BUILD_VERSION, BUILD_DATE);
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
-                                         "ispc", /* producer */
+                                         producerString, /* producer */
                                          g->opt.level > 0 /* is optimized */,
                                          "-g", /* command line args */
                                          0 /* run time version */);
@@ -168,11 +271,6 @@ extern void yy_delete_buffer(YY_BUFFER_STATE);
 
 int
 Module::CompileFile() {
-#ifndef LLVM_3_1svn
-    if (g->opt.fastMath == true)
-        llvm::UnsafeFPMath = true;
-#endif // !LLVM_3_1svn
-
     extern void ParserInit();
     ParserInit();
 
@@ -270,7 +368,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     if (type == NULL)
         return;
 
-    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    const ArrayType *at = CastType<ArrayType>(type);
     if (at != NULL && at->TotalElementCount() == 0) {
         Error(pos, "Illegal to declare a global variable with unsized "
               "array dimensions that aren't set with an initializer "
@@ -392,12 +490,14 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
     
     if (diBuilder) {
         llvm::DIFile file = pos.GetDIFile();
-        diBuilder->createGlobalVariable(name, 
-                                        file,
-                                        pos.first_line,
-                                        sym->type->GetDIType(file),
-                                        (sym->storageClass == SC_STATIC),
-                                        sym->storagePtr);
+        llvm::DIGlobalVariable var =
+            diBuilder->createGlobalVariable(name, 
+                                            file,
+                                            pos.first_line,
+                                            sym->type->GetDIType(file),
+                                            (sym->storageClass == SC_STATIC),
+                                            sym->storagePtr);
+        Assert(var.Verify());
     }
 }
 
@@ -417,7 +517,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
 */
 static bool
 lRecursiveCheckValidParamType(const Type *t) {
-    const StructType *st = dynamic_cast<const StructType *>(t);
+    const StructType *st = CastType<StructType>(t);
     if (st != NULL) {
         for (int i = 0; i < st->GetElementCount(); ++i)
             if (lRecursiveCheckValidParamType(st->GetElementType(i)))
@@ -425,11 +525,11 @@ lRecursiveCheckValidParamType(const Type *t) {
         return false;
     }
 
-    const SequentialType *seqt = dynamic_cast<const SequentialType *>(t);
+    const SequentialType *seqt = CastType<SequentialType>(t);
     if (seqt != NULL)
         return lRecursiveCheckValidParamType(seqt->GetElementType());
 
-    const PointerType *pt = dynamic_cast<const PointerType *>(t);
+    const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL) {
         if (pt->IsSlice() || pt->IsVaryingType())
             return true;
@@ -450,7 +550,7 @@ lCheckForVaryingParameter(const Type *type, const std::string &name,
                           SourcePos pos) {
     if (lRecursiveCheckValidParamType(type)) {
         const Type *t = type->GetBaseType();
-        if (dynamic_cast<const StructType *>(t))
+        if (CastType<StructType>(t))
             Error(pos, "Struct parameter \"%s\" with varying member(s) is illegal "
                   "in an exported function.", name.c_str());
         else
@@ -468,7 +568,7 @@ static void
 lCheckForStructParameters(const FunctionType *ftype, SourcePos pos) {
     for (int i = 0; i < ftype->GetNumParameters(); ++i) {
         const Type *type = ftype->GetParameterType(i);
-        if (dynamic_cast<const StructType *>(type) != NULL) {
+        if (CastType<StructType>(type) != NULL) {
             Error(pos, "Passing structs to/from application functions is "
                   "currently broken.  Use a pointer or const pointer to the "
                   "struct instead for now.");
@@ -515,7 +615,7 @@ Module::AddFunctionDeclaration(const std::string &name,
             // different, return an error--overloading by return type isn't
             // allowed.
             const FunctionType *ofType = 
-                dynamic_cast<const FunctionType *>(overloadFunc->type);
+                CastType<FunctionType>(overloadFunc->type);
             Assert(ofType != NULL);
             if (ofType->GetNumParameters() == functionType->GetNumParameters()) {
                 int i;
@@ -637,9 +737,9 @@ Module::AddFunctionDeclaration(const std::string &name,
         // default.)  Set parameter attributes accordingly.  (Only for
         // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && 
-            ((dynamic_cast<const PointerType *>(argType) != NULL &&
+            ((CastType<PointerType>(argType) != NULL &&
               argType->IsUniformType()) ||
-             dynamic_cast<const ReferenceType *>(argType) != NULL)) {
+             CastType<ReferenceType>(argType) != NULL)) {
 
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
@@ -687,10 +787,12 @@ void
 Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
                               Stmt *code) {
     Symbol *sym = symbolTable->LookupFunction(name.c_str(), type);
-    if (sym == NULL) {
+    if (sym == NULL || code == NULL) {
         Assert(m->errorCount > 0);
         return;
     }
+
+    sym->pos = code->pos;
 
     // FIXME: because we encode the parameter names in the function type,
     // we need to override the function type here in case the function had
@@ -706,8 +808,11 @@ Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
-    if (diBuilder != NULL && outputType != Header)
+    if (diBuilder != NULL && outputType != Header) {
         diBuilder->finalize();
+
+        lStripUnusedDebugInfo(module);
+    }
 
     // First, issue a warning if the output file suffix and the type of
     // file being created seem to mismatch.  This can help catch missing
@@ -857,7 +962,7 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     // Otherwise first make sure any contained structs have been declared.
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const StructType *elementStructType = 
-            dynamic_cast<const StructType *>(st->GetElementType(i));
+            CastType<StructType>(st->GetElementType(i));
         if (elementStructType != NULL)
             lEmitStructDecl(elementStructType, emittedStructs, file);
     }
@@ -979,7 +1084,7 @@ lAddTypeIfNew(const Type *type, std::vector<const T *> *exportedTypes) {
         if (Type::Equal((*exportedTypes)[i], type))
             return;
 
-    const T *castType = dynamic_cast<const T *>(type);
+    const T *castType = CastType<T>(type);
     Assert(castType != NULL);
     exportedTypes->push_back(castType);
 }
@@ -994,13 +1099,13 @@ lGetExportedTypes(const Type *type,
                   std::vector<const StructType *> *exportedStructTypes,
                   std::vector<const EnumType *> *exportedEnumTypes,
                   std::vector<const VectorType *> *exportedVectorTypes) {
-    const ArrayType *arrayType = dynamic_cast<const ArrayType *>(type);
-    const StructType *structType = dynamic_cast<const StructType *>(type);
+    const ArrayType *arrayType = CastType<ArrayType>(type);
+    const StructType *structType = CastType<StructType>(type);
 
-    if (dynamic_cast<const ReferenceType *>(type) != NULL)
+    if (CastType<ReferenceType>(type) != NULL)
         lGetExportedTypes(type->GetReferenceTarget(), exportedStructTypes, 
                           exportedEnumTypes, exportedVectorTypes);
-    else if (dynamic_cast<const PointerType *>(type) != NULL)
+    else if (CastType<PointerType>(type) != NULL)
         lGetExportedTypes(type->GetBaseType(), exportedStructTypes,
                           exportedEnumTypes, exportedVectorTypes);
     else if (arrayType != NULL)
@@ -1012,12 +1117,12 @@ lGetExportedTypes(const Type *type,
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes,
                               exportedEnumTypes, exportedVectorTypes);
     }
-    else if (dynamic_cast<const EnumType *>(type) != NULL)
+    else if (CastType<EnumType>(type) != NULL)
         lAddTypeIfNew(type, exportedEnumTypes);
-    else if (dynamic_cast<const VectorType *>(type) != NULL)
+    else if (CastType<VectorType>(type) != NULL)
         lAddTypeIfNew(type, exportedVectorTypes);
     else
-        Assert(dynamic_cast<const AtomicType *>(type) != NULL);
+        Assert(CastType<AtomicType>(type) != NULL);
 }
 
 
@@ -1030,7 +1135,7 @@ lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
                        std::vector<const EnumType *> *exportedEnumTypes,
                        std::vector<const VectorType *> *exportedVectorTypes) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
+        const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         // Handle the return type
         lGetExportedTypes(ftype->GetReturnType(), exportedStructTypes,
                           exportedEnumTypes, exportedVectorTypes);
@@ -1047,7 +1152,7 @@ static void
 lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
     fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
     for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(funcs[i]->type);
+        const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
         Assert(ftype);
         std::string decl = ftype->GetCDeclaration(funcs[i]->name);
         fprintf(file, "    extern %s;\n", decl.c_str());
@@ -1058,7 +1163,7 @@ lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
 
 static bool
 lIsExported(const Symbol *sym) {
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
     return ft->isExported;
 }
@@ -1066,7 +1171,7 @@ lIsExported(const Symbol *sym) {
 
 static bool
 lIsExternC(const Symbol *sym) {
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
     return ft->isExternC;
 }
@@ -1176,10 +1281,10 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
-#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
-        triple.setTriple(llvm::sys::getDefaultTargetTriple());
-#else
+#ifdef LLVM_3_0
         triple.setTriple(llvm::sys::getHostTriple());
+#else
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
 #endif
     }
     options.Triple = triple.getTriple();
@@ -1228,8 +1333,13 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     else
         opts.addMacroDef("ISPC_POINTER_SIZE=64");
 
+    if (g->target.hasHalf)
+        opts.addMacroDef("ISPC_TARGET_HAS_HALF");
+    if (g->target.hasTranscendentals)
+        opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
+
     opts.addMacroDef("ISPC_MAJOR_VERSION=1");
-    opts.addMacroDef("ISPC_MINOR_VERSION=1");
+    opts.addMacroDef("ISPC_MINOR_VERSION=2");
 
     if (g->includeStdlib) {
         if (g->opt.disableAsserts) 

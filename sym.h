@@ -260,6 +260,8 @@ private:
     typedef std::map<std::string, Symbol *> SymbolMapType;
     std::vector<SymbolMapType *> variables;
 
+    std::vector<SymbolMapType *> freeSymbolMaps;
+
     /** Function declarations are *not* scoped.  (C99, for example, allows
         an implementation to maintain function declarations in a single
         namespace.)  A STL \c vector is used to store the function symbols

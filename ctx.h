@@ -342,7 +342,7 @@ public:
 
     /** Emits debugging information for the function parameter represented
         by sym.  */
-    void EmitFunctionParameterDebugInfo(Symbol *sym);
+    void EmitFunctionParameterDebugInfo(Symbol *sym, int parameterNum);
     /** @} */
 
     /** @name IR instruction emission
@@ -641,7 +641,7 @@ private:
 
     /** DISubprogram corresponding to this function (used for debugging
         info). */
-    llvm::DISubprogram diFunction;
+    llvm::DISubprogram diSubprogram;
 
     /** These correspond to the current set of nested scopes in the
         function. */

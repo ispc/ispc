@@ -122,7 +122,7 @@ DeclStmt::DeclStmt(const std::vector<VariableDeclaration> &v, SourcePos p)
 
 static bool
 lHasUnsizedArrays(const Type *type) {
-    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    const ArrayType *at = CastType<ArrayType>(type);
     if (at == NULL)
         return false;
 
@@ -297,8 +297,8 @@ DeclStmt::TypeCheck() {
         // the int->float type conversion is in there and we don't return
         // an int as the constValue later...
         const Type *type = vars[i].sym->type;
-        if (dynamic_cast<const AtomicType *>(type) != NULL ||
-            dynamic_cast<const EnumType *>(type) != NULL) {
+        if (CastType<AtomicType>(type) != NULL ||
+            CastType<EnumType>(type) != NULL) {
             // If it's an expr list with an atomic type, we'll later issue
             // an error.  Need to leave vars[i].init as is in that case so
             // it is in fact caught later, though.
@@ -2461,7 +2461,7 @@ lEncodeType(const Type *t) {
     if (Type::Equal(t, AtomicType::VaryingUInt64)) return 'V';
     if (Type::Equal(t, AtomicType::UniformDouble)) return 'd';
     if (Type::Equal(t, AtomicType::VaryingDouble)) return 'D';
-    if (dynamic_cast<const PointerType *>(t) != NULL) {
+    if (CastType<PointerType>(t) != NULL) {
         if (t->IsUniformType())
             return 'p';
         else
@@ -2481,7 +2481,7 @@ lProcessPrintArg(Expr *expr, FunctionEmitContext *ctx, std::string &argTypes) {
     if (type == NULL)
         return NULL;
 
-    if (dynamic_cast<const ReferenceType *>(type) != NULL) {
+    if (CastType<ReferenceType>(type) != NULL) {
         expr = new RefDerefExpr(expr, expr->pos);
         type = expr->GetType();
         if (type == NULL)
@@ -2732,7 +2732,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     // Typechecking should catch this
-    Assert(dynamic_cast<const PointerType *>(exprType) != NULL);
+    Assert(CastType<PointerType>(exprType) != NULL);
 
     if (exprType->IsUniformType()) {
         // For deletion of a uniform pointer, we just need to cast the
@@ -2772,7 +2772,7 @@ DeleteStmt::TypeCheck() {
     if (expr == NULL || ((exprType = expr->GetType()) == NULL))
         return NULL;
 
-    if (dynamic_cast<const PointerType *>(exprType) == NULL) {
+    if (CastType<PointerType>(exprType) == NULL) {
         Error(pos, "Illegal to delete non-pointer type \"%s\".",
               exprType->GetString().c_str());
         return NULL;

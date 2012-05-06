@@ -100,7 +100,7 @@ Function::Function(Symbol *s, Stmt *c) {
         printf("\n\n\n");
     }
 
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
 
     for (int i = 0; i < type->GetNumParameters(); ++i) {
@@ -111,7 +111,7 @@ Function::Function(Symbol *s, Stmt *c) {
         args.push_back(sym);
 
         const Type *t = type->GetParameterType(i);
-        if (sym != NULL && dynamic_cast<const ReferenceType *>(t) == NULL)
+        if (sym != NULL && CastType<ReferenceType>(t) == NULL)
             sym->parentFunction = this;
     }
 
@@ -132,7 +132,7 @@ Function::Function(Symbol *s, Stmt *c) {
 
 const Type *
 Function::GetReturnType() const {
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     return type->GetReturnType();
 }
@@ -140,7 +140,7 @@ Function::GetReturnType() const {
 
 const FunctionType *
 Function::GetType() const {
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     return type;
 }
@@ -182,7 +182,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
     // memory
     llvm::Value *ptrval = ctx->LoadInst(ptr, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
-    ctx->EmitFunctionParameterDebugInfo(sym);
+    ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
 
@@ -198,14 +198,14 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     // value
     maskSymbol->storagePtr = ctx->GetFullMaskPointer();
 
-    // add debugging info for __mask, programIndex, ...
+    // add debugging info for __mask
     maskSymbol->pos = firstStmtPos;
     ctx->EmitVariableDebugInfo(maskSymbol);
 
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     if (type->isTask == true) {
         // For tasks, we there should always be three parmeters: the
@@ -262,7 +262,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             // to store the its value there.
             sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
             ctx->StoreInst(argIter, sym->storagePtr);
-            ctx->EmitFunctionParameterDebugInfo(sym);
+            ctx->EmitFunctionParameterDebugInfo(sym, i);
         }
 
         // If the number of actual function arguments is equal to the
@@ -431,7 +431,7 @@ Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+        const FunctionType *type = CastType<FunctionType>(sym->type);
         Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {

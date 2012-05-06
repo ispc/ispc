@@ -184,7 +184,9 @@ const AtomicType *AtomicType::Void =
 
 
 AtomicType::AtomicType(BasicType bt, Variability v, bool ic) 
-    : basicType(bt), variability(v), isConst(ic) {
+    : Type(ATOMIC_TYPE), basicType(bt), variability(v), isConst(ic) {
+    asOtherConstType = NULL;
+    asUniformType = asVaryingType = NULL;
 }
 
 
@@ -254,19 +256,27 @@ AtomicType::GetAsUnsignedType() const {
 
 const AtomicType *
 AtomicType::GetAsConstType() const {
-    if (Type::Equal(this, AtomicType::Void) || isConst == true) 
+    if (basicType == TYPE_VOID || isConst == true) 
         return this;
     
-    return new AtomicType(basicType, variability, true);
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new AtomicType(basicType, variability, true);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
 const AtomicType *
 AtomicType::GetAsNonConstType() const {
-    if (Type::Equal(this, AtomicType::Void) || isConst == false) 
+    if (basicType == TYPE_VOID || isConst == false) 
         return this;
 
-    return new AtomicType(basicType, variability, false);
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new AtomicType(basicType, variability, false);
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -278,25 +288,37 @@ AtomicType::GetBaseType() const {
 
 const AtomicType *
 AtomicType::GetAsVaryingType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Varying)
         return this;
-    return new AtomicType(basicType, Variability::Varying, isConst);
+
+    if (asVaryingType == NULL) {
+        asVaryingType = new AtomicType(basicType, Variability::Varying, isConst);
+        if (variability == Variability::Uniform)
+            asVaryingType->asUniformType = this;
+    }
+    return asVaryingType;
 }
 
 
 const AtomicType *
 AtomicType::GetAsUniformType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Uniform)
         return this;
-    return new AtomicType(basicType, Variability::Uniform, isConst);
+
+    if (asUniformType == NULL) {
+        asUniformType = new AtomicType(basicType, Variability::Uniform, isConst);
+        if (variability == Variability::Varying)
+            asUniformType->asVaryingType = this;
+    }
+    return asUniformType;
 }
 
 
 const AtomicType *
 AtomicType::GetAsUnboundVariabilityType() const {
-    Assert(Type::Equal(this, AtomicType::Void) == false);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability::Unbound)
         return this;
     return new AtomicType(basicType, Variability::Unbound, isConst);
@@ -305,7 +327,7 @@ AtomicType::GetAsUnboundVariabilityType() const {
 
 const AtomicType *
 AtomicType::GetAsSOAType(int width) const {
-    Assert(this != AtomicType::Void);
+    Assert(basicType != TYPE_VOID);
     if (variability == Variability(Variability::SOA, width))
         return this;
     return new AtomicType(basicType, Variability(Variability::SOA, width), isConst);
@@ -532,7 +554,7 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
 // EnumType
 
 EnumType::EnumType(SourcePos p) 
-    : pos(p) {
+    : Type(ENUM_TYPE), pos(p) {
     //    name = "/* (anonymous) */";
     isConst = false;
     variability = Variability(Variability::Unbound);
@@ -540,7 +562,7 @@ EnumType::EnumType(SourcePos p)
 
 
 EnumType::EnumType(const char *n, SourcePos p) 
-    : pos(p), name(n) {
+    : Type(ENUM_TYPE), pos(p), name(n) {
     isConst = false;
     variability = Variability(Variability::Unbound);
 }
@@ -817,7 +839,7 @@ PointerType *PointerType::Void =
 
 PointerType::PointerType(const Type *t, Variability v, bool ic, bool is, 
                          bool fr)
-    : variability(v), isConst(ic), isSlice(is), isFrozen(fr) {
+    : Type(POINTER_TYPE), variability(v), isConst(ic), isSlice(is), isFrozen(fr) {
     baseType = t;
 }
 
@@ -1083,7 +1105,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
     switch (variability.type) {
     case Variability::Uniform: {
         llvm::Type *ptype = NULL;
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(baseType);
+        const FunctionType *ftype = CastType<FunctionType>(baseType);
         if (ftype != NULL) 
             // Get the type of the function variant that takes the mask as the
             // last parameter--i.e. we don't allow taking function pointers of
@@ -1155,7 +1177,7 @@ const Type *SequentialType::GetElementType(int index) const {
 // ArrayType
 
 ArrayType::ArrayType(const Type *c, int a) 
-    : child(c), numElements(a) {
+    : SequentialType(ARRAY_TYPE), child(c), numElements(a) {
     // 0 -> unsized array.
     Assert(numElements >= 0);
     Assert(Type::Equal(c, AtomicType::Void) == false);
@@ -1217,11 +1239,11 @@ ArrayType::IsConstType() const {
 const Type *
 ArrayType::GetBaseType() const {
     const Type *type = child;
-    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    const ArrayType *at = CastType<ArrayType>(type);
     // Keep walking until we reach a child that isn't itself an array
     while (at) {
         type = at->child;
-        at = dynamic_cast<const ArrayType *>(type);
+        at = CastType<ArrayType>(type);
     }
     return type;
 }
@@ -1338,7 +1360,7 @@ ArrayType::GetString() const {
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
-        at = dynamic_cast<const ArrayType *>(at->child);
+        at = CastType<ArrayType>(at->child);
     }
     return s;
 }
@@ -1381,7 +1403,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
         else
             buf[0] = '\0';
         s += std::string("[") + std::string(buf) + std::string("]");
-        at = dynamic_cast<const ArrayType *>(at->child);
+        at = CastType<ArrayType>(at->child);
     }
 
     if (soaWidth > 0) {
@@ -1396,7 +1418,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
 
 int
 ArrayType::TotalElementCount() const {
-    const ArrayType *ct = dynamic_cast<const ArrayType *>(child);
+    const ArrayType *ct = CastType<ArrayType>(child);
     if (ct != NULL)
         return numElements * ct->TotalElementCount();
     else
@@ -1425,7 +1447,7 @@ ArrayType::GetSizedArray(int sz) const {
 
 const Type *
 ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
-    const ArrayType *at = dynamic_cast<const ArrayType *>(type);
+    const ArrayType *at = CastType<ArrayType>(type);
     if (at == NULL)
         return type;
 
@@ -1437,7 +1459,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
     // length of the expression list
     if (at->GetElementCount() == 0) {
         type = at->GetSizedArray(exprList->exprs.size());
-        at = dynamic_cast<const ArrayType *>(type);
+        at = CastType<ArrayType>(type);
     }
 
     // Is there another nested level of expression lists?  If not, bail out
@@ -1449,7 +1471,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
         return type;
 
     const Type *nextType = at->GetElementType();
-    const ArrayType *nextArrayType = dynamic_cast<const ArrayType *>(nextType);
+    const ArrayType *nextArrayType = CastType<ArrayType>(nextType);
     if (nextArrayType != NULL && nextArrayType->GetElementCount() == 0) {
         // If the recursive call to SizeUnsizedArrays at the bottom of the
         // function is going to size an unsized dimension, make sure that
@@ -1485,7 +1507,7 @@ ArrayType::SizeUnsizedArrays(const Type *type, Expr *initExpr) {
 // VectorType
 
 VectorType::VectorType(const AtomicType *b, int a) 
-    : base(b), numElements(a) {
+    : SequentialType(VECTOR_TYPE), base(b), numElements(a) {
     Assert(numElements > 0);
     Assert(base != NULL);
 }
@@ -1750,12 +1772,15 @@ lMangleStructName(const std::string &name, Variability variability) {
 }
 
         
-StructType::StructType(const std::string &n, const std::vector<const Type *> &elts, 
-                       const std::vector<std::string> &en,
-                       const std::vector<SourcePos> &ep,
+StructType::StructType(const std::string &n, const llvm::SmallVector<const Type *, 8> &elts, 
+                       const llvm::SmallVector<std::string, 8> &en,
+                       const llvm::SmallVector<SourcePos, 8> &ep,
                        bool ic, Variability v, SourcePos p) 
-    : name(n), elementTypes(elts), elementNames(en), elementPositions(ep),
-      variability(v), isConst(ic), pos(p) {
+    : CollectionType(STRUCT_TYPE), name(n), elementTypes(elts), elementNames(en), 
+      elementPositions(ep), variability(v), isConst(ic), pos(p) {
+    oppositeConstStructType = NULL;
+    finalElementTypes.resize(elts.size(), NULL);
+    
     if (variability != Variability::Unbound) {
         // For structs with non-unbound variability, we'll create the
         // correspoing LLVM struct type now, if one hasn't been made
@@ -1908,21 +1933,33 @@ StructType::ResolveUnboundVariability(Variability v) const {
 
 const StructType *
 StructType::GetAsConstType() const {
-    if (IsConstType()) 
+    if (isConst == true)
         return this;
-    else
-        return new StructType(name, elementTypes, elementNames, elementPositions,
-                              true, variability, pos);
+    else if (oppositeConstStructType != NULL)
+        return oppositeConstStructType;
+    else {
+        oppositeConstStructType = 
+            new StructType(name, elementTypes, elementNames, elementPositions,
+                           true, variability, pos);
+        oppositeConstStructType->oppositeConstStructType = this;
+        return oppositeConstStructType;
+    }
 }
 
 
 const StructType *
 StructType::GetAsNonConstType() const {
-    if (!IsConstType()) 
+    if (isConst == false)
         return this;
-    else
-        return new StructType(name, elementTypes, elementNames, elementPositions,
-                              false, variability, pos);
+    else if (oppositeConstStructType != NULL)
+        return oppositeConstStructType;
+    else {
+        oppositeConstStructType = 
+            new StructType(name, elementTypes, elementNames, elementPositions,
+                           false, variability, pos);
+        oppositeConstStructType->oppositeConstStructType = this;
+        return oppositeConstStructType;
+    }
 }
 
 
@@ -2060,17 +2097,23 @@ const Type *
 StructType::GetElementType(int i) const {
     Assert(variability != Variability::Unbound);
     Assert(i < (int)elementTypes.size());
-    const Type *ret = elementTypes[i];
-    if (ret == NULL) {
-        Assert(m->errorCount > 0);
-        return NULL;
+
+    if (finalElementTypes[i] == NULL) {
+        const Type *type = elementTypes[i];
+        if (type == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+
+        // If the element has unbound variability, resolve its variability to
+        // the struct type's variability
+        type = type ->ResolveUnboundVariability(variability);
+        if (isConst)
+            type = type->GetAsConstType();
+        finalElementTypes[i] = type;
     }
 
-    // If the element has unbound variability, resolve its variability to
-    // the struct type's variability
-    ret = ret->ResolveUnboundVariability(variability);
-
-    return isConst ? ret->GetAsConstType() : ret;
+    return finalElementTypes[i];
 }
 
 
@@ -2097,8 +2140,7 @@ StructType::checkIfCanBeSOA(const StructType *st) {
     bool ok = true;
     for (int i = 0; i < (int)st->elementTypes.size(); ++i) {
         const Type *eltType = st->elementTypes[i];
-        const StructType *childStructType = 
-            dynamic_cast<const StructType *>(eltType);
+        const StructType *childStructType = CastType<StructType>(eltType);
 
         if (childStructType != NULL)
             ok &= checkIfCanBeSOA(childStructType);
@@ -2110,7 +2152,7 @@ StructType::checkIfCanBeSOA(const StructType *st) {
                   eltType->IsUniformType() ? "uniform" : "varying");
             ok = false;
         }
-        else if (dynamic_cast<const ReferenceType *>(eltType)) {
+        else if (CastType<ReferenceType>(eltType)) {
             Error(st->elementPositions[i], "Unable to apply SOA conversion to "
                   "struct due to member \"%s\" with reference type \"%s\".",
                   st->elementNames[i].c_str(), eltType->GetString().c_str());
@@ -2127,7 +2169,7 @@ StructType::checkIfCanBeSOA(const StructType *st) {
 UndefinedStructType::UndefinedStructType(const std::string &n, 
                                          const Variability var, bool ic,
                                          SourcePos p) 
-    : name(n), variability(var), isConst(ic), pos(p) {
+    : Type(UNDEFINED_STRUCT_TYPE), name(n), variability(var), isConst(ic), pos(p) {
     Assert(name != "");
     if (variability != Variability::Unbound) {
         // Create a new opaque LLVM struct type for this struct name
@@ -2289,7 +2331,8 @@ UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
 // ReferenceType
 
 ReferenceType::ReferenceType(const Type *t) 
-    : targetType(t) {
+    : Type(REFERENCE_TYPE), targetType(t) {
+    asOtherConstType = NULL;
 }
 
 
@@ -2430,7 +2473,12 @@ ReferenceType::GetAsConstType() const {
     }
     if (IsConstType())
         return this;
-    return new ReferenceType(targetType->GetAsConstType());
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new ReferenceType(targetType->GetAsConstType());
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -2442,7 +2490,12 @@ ReferenceType::GetAsNonConstType() const {
     }
     if (!IsConstType())
         return this;
-    return new ReferenceType(targetType->GetAsNonConstType());
+
+    if (asOtherConstType == NULL) {
+        asOtherConstType = new ReferenceType(targetType->GetAsNonConstType());
+        asOtherConstType->asOtherConstType = this;
+    }
+    return asOtherConstType;
 }
 
 
@@ -2479,7 +2532,7 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
         return "";
     }
 
-    const ArrayType *at = dynamic_cast<const ArrayType *>(targetType);
+    const ArrayType *at = CastType<ArrayType>(targetType);
     if (at != NULL) {
         if (at->GetElementCount() == 0) {
             // emit unsized arrays as pointers to the base type..
@@ -2537,25 +2590,25 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionType
 
-FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
+FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
                            SourcePos p)
-    : isTask(false), isExported(false), isExternC(false), returnType(r), 
-      paramTypes(a), paramNames(std::vector<std::string>(a.size(), "")),
-      paramDefaults(std::vector<Expr *>(a.size(), NULL)),
-      paramPositions(std::vector<SourcePos>(a.size(), p)) {
+    : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), 
+      returnType(r), paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+      paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
+      paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
     Assert(returnType != NULL);
     isSafe = false;
     costOverride = -1;
 }
 
 
-FunctionType::FunctionType(const Type *r, const std::vector<const Type *> &a, 
-                           const std::vector<std::string> &an, 
-                           const std::vector<Expr *> &ad,
-                           const std::vector<SourcePos> &ap,
+FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
+                           const llvm::SmallVector<std::string, 8> &an, 
+                           const llvm::SmallVector<Expr *, 8> &ad,
+                           const llvm::SmallVector<SourcePos, 8> &ap,
                            bool it, bool is, bool ec) 
-    : isTask(it), isExported(is), isExternC(ec), returnType(r), paramTypes(a), 
-      paramNames(an), paramDefaults(ad), paramPositions(ap) {
+    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), returnType(r), 
+      paramTypes(a), paramNames(an), paramDefaults(ad), paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && 
            paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
@@ -2644,7 +2697,7 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
     }
     const Type *rt = returnType->ResolveUnboundVariability(v);
 
-    std::vector<const Type *> pt;
+    llvm::SmallVector<const Type *, 8> pt;
     for (unsigned int i = 0; i < paramTypes.size(); ++i) {
         if (paramTypes[i] == NULL) {
             Assert(m->errorCount > 0);
@@ -2719,9 +2772,9 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
         // Convert pointers to arrays to unsized arrays, which are more clear
         // to print out for multidimensional arrays (i.e. "float foo[][4] "
         // versus "float (foo *)[4]").
-        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        const PointerType *pt = CastType<PointerType>(type);
         if (pt != NULL && 
-            dynamic_cast<const ArrayType *>(pt->GetBaseType()) != NULL) {
+            CastType<ArrayType>(pt->GetBaseType()) != NULL) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
 
@@ -2892,7 +2945,7 @@ Type::GetAsUnsignedType() const {
  */
 static const Type *
 lVectorConvert(const Type *type, SourcePos pos, const char *reason, int vecSize) {
-    const VectorType *vt = dynamic_cast<const VectorType *>(type);
+    const VectorType *vt = CastType<VectorType>(type);
     if (vt) {
         if (vt->GetElementCount() != vecSize) {
             Error(pos, "Implicit conversion between from vector type "
@@ -2903,7 +2956,7 @@ lVectorConvert(const Type *type, SourcePos pos, const char *reason, int vecSize)
         return vt;
     }
     else {
-        const AtomicType *at = dynamic_cast<const AtomicType *>(type);
+        const AtomicType *at = CastType<AtomicType>(type);
         if (!at) {
             Error(pos, "Non-atomic type \"%s\" can't be converted to vector type "
                   "for %s.", type->GetString().c_str(), reason);
@@ -2921,11 +2974,10 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
     // First, if one or both types are function types, convert them to
     // pointer to function types and then try again.
-    if (dynamic_cast<const FunctionType *>(t0) ||
-        dynamic_cast<const FunctionType *>(t1)) {
-        if (dynamic_cast<const FunctionType *>(t0))
+    if (CastType<FunctionType>(t0) || CastType<FunctionType>(t1)) {
+        if (CastType<FunctionType>(t0))
             t0 = PointerType::GetUniform(t0);
-        if (dynamic_cast<const FunctionType *>(t1))
+        if (CastType<FunctionType>(t1))
             t1 = PointerType::GetUniform(t1);
         return MoreGeneralType(t0, t1, pos, reason, forceVarying, vecSize);
     }
@@ -2953,8 +3005,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
     // If they're function types, it's hopeless if they didn't match in the
     // Type::Equal() call above.  Fail here so that we don't get into
     // trouble calling GetAsConstType()...
-    if (dynamic_cast<const FunctionType *>(t0) ||
-        dynamic_cast<const FunctionType *>(t1)) {
+    if (CastType<FunctionType>(t0) || CastType<FunctionType>(t1)) {
         Error(pos, "Incompatible function types \"%s\" and \"%s\" in %s.",
               t0->GetString().c_str(), t1->GetString().c_str(), reason);
         return NULL;
@@ -2965,8 +3016,8 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
     if (Type::EqualIgnoringConst(t0, t1))
         return t0->GetAsNonConstType();
 
-    const PointerType *pt0 = dynamic_cast<const PointerType *>(t0);
-    const PointerType *pt1 = dynamic_cast<const PointerType *>(t1);
+    const PointerType *pt0 = CastType<PointerType>(t0);
+    const PointerType *pt1 = CastType<PointerType>(t1);
     if (pt0 != NULL && pt1 != NULL) {
         if (PointerType::IsVoidPointer(pt0))
             return pt1;
@@ -2980,8 +3031,8 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
         }
     }
 
-    const VectorType *vt0 = dynamic_cast<const VectorType *>(t0);
-    const VectorType *vt1 = dynamic_cast<const VectorType *>(t1);
+    const VectorType *vt0 = CastType<VectorType>(t0);
+    const VectorType *vt1 = CastType<VectorType>(t1);
     if (vt0 && vt1) {
         // both are vectors; convert their base types and make a new vector
         // type, as long as their lengths match
@@ -2998,7 +3049,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
         // The 'more general' version of the two vector element types must
         // be an AtomicType (that's all that vectors can hold...)
-        const AtomicType *at = dynamic_cast<const AtomicType *>(t);
+        const AtomicType *at = CastType<AtomicType>(t);
         Assert(at != NULL);
 
         return new VectorType(at, vt0->GetElementCount());
@@ -3013,7 +3064,7 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
         if (!t) 
             return NULL;
 
-        const AtomicType *at = dynamic_cast<const AtomicType *>(t);
+        const AtomicType *at = CastType<AtomicType>(t);
         Assert(at != NULL);
         return new VectorType(at, vt0->GetElementCount());
     }
@@ -3025,18 +3076,18 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
         if (!t) 
             return NULL;
 
-        const AtomicType *at = dynamic_cast<const AtomicType *>(t);
+        const AtomicType *at = CastType<AtomicType>(t);
         Assert(at != NULL);
         return new VectorType(at, vt1->GetElementCount());
     }
 
     // TODO: what do we need to do about references here, if anything??
 
-    const AtomicType *at0 = dynamic_cast<const AtomicType *>(t0->GetReferenceTarget());
-    const AtomicType *at1 = dynamic_cast<const AtomicType *>(t1->GetReferenceTarget());
+    const AtomicType *at0 = CastType<AtomicType>(t0->GetReferenceTarget());
+    const AtomicType *at1 = CastType<AtomicType>(t1->GetReferenceTarget());
 
-    const EnumType *et0 = dynamic_cast<const EnumType *>(t0->GetReferenceTarget());
-    const EnumType *et1 = dynamic_cast<const EnumType *>(t1->GetReferenceTarget());
+    const EnumType *et0 = CastType<EnumType>(t0->GetReferenceTarget());
+    const EnumType *et1 = CastType<EnumType>(t1->GetReferenceTarget());
     if (et0 != NULL && et1 != NULL) {
         // Two different enum types -> make them uint32s...
         Assert(et0->IsVaryingType() == et1->IsVaryingType());
@@ -3084,9 +3135,9 @@ Type::MoreGeneralType(const Type *t0, const Type *t1, SourcePos pos, const char 
 
 bool
 Type::IsBasicType(const Type *type) {
-    return (dynamic_cast<const AtomicType *>(type) != NULL ||
-            dynamic_cast<const EnumType *>(type) != NULL ||
-            dynamic_cast<const PointerType *>(type) != NULL);
+    return (CastType<AtomicType>(type) != NULL ||
+            CastType<EnumType>(type) != NULL ||
+            CastType<PointerType>(type) != NULL);
 }
 
 
@@ -3095,17 +3146,12 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     if (a == NULL || b == NULL)
         return false;
 
-    if (ignoreConst == true) {
-        if (dynamic_cast<const FunctionType *>(a) == NULL)
-            a = a->GetAsNonConstType();
-        if (dynamic_cast<const FunctionType *>(b) == NULL)
-            b = b->GetAsNonConstType();
-    }
-    else if (a->IsConstType() != b->IsConstType())
+    if (ignoreConst == false &&
+        a->IsConstType() != b->IsConstType())
         return false;
 
-    const AtomicType *ata = dynamic_cast<const AtomicType *>(a);
-    const AtomicType *atb = dynamic_cast<const AtomicType *>(b);
+    const AtomicType *ata = CastType<AtomicType>(a);
+    const AtomicType *atb = CastType<AtomicType>(b);
     if (ata != NULL && atb != NULL) {
         return ((ata->basicType == atb->basicType) && 
                 (ata->GetVariability() == atb->GetVariability()));
@@ -3114,46 +3160,46 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
     // For all of the other types, we need to see if we have the same two
     // general types.  If so, then we dig into the details of the type and
     // see if all of the relevant bits are equal...
-    const EnumType *eta = dynamic_cast<const EnumType *>(a);
-    const EnumType *etb = dynamic_cast<const EnumType *>(b);
+    const EnumType *eta = CastType<EnumType>(a);
+    const EnumType *etb = CastType<EnumType>(b);
     if (eta != NULL && etb != NULL)
         // Kind of goofy, but this sufficies to check
         return (eta->pos == etb->pos &&
                 eta->GetVariability() == etb->GetVariability());
 
-    const ArrayType *arta = dynamic_cast<const ArrayType *>(a);
-    const ArrayType *artb = dynamic_cast<const ArrayType *>(b);
+    const ArrayType *arta = CastType<ArrayType>(a);
+    const ArrayType *artb = CastType<ArrayType>(b);
     if (arta != NULL && artb != NULL)
         return (arta->GetElementCount() == artb->GetElementCount() && 
                 lCheckTypeEquality(arta->GetElementType(), artb->GetElementType(), 
                                    ignoreConst));
 
-    const VectorType *vta = dynamic_cast<const VectorType *>(a);
-    const VectorType *vtb = dynamic_cast<const VectorType *>(b);
+    const VectorType *vta = CastType<VectorType>(a);
+    const VectorType *vtb = CastType<VectorType>(b);
     if (vta != NULL && vtb != NULL)
         return (vta->GetElementCount() == vtb->GetElementCount() && 
                 lCheckTypeEquality(vta->GetElementType(), vtb->GetElementType(),
                                    ignoreConst));
 
-    const StructType *sta = dynamic_cast<const StructType *>(a);
-    const StructType *stb = dynamic_cast<const StructType *>(b);
-    const UndefinedStructType *usta =
-        dynamic_cast<const UndefinedStructType *>(a);
-    const UndefinedStructType *ustb =
-        dynamic_cast<const UndefinedStructType *>(b);
+    const StructType *sta = CastType<StructType>(a);
+    const StructType *stb = CastType<StructType>(b);
+    const UndefinedStructType *usta = CastType<UndefinedStructType>(a);
+    const UndefinedStructType *ustb = CastType<UndefinedStructType>(b);
     if ((sta != NULL || usta != NULL) && (stb != NULL || ustb != NULL)) {
         // Report both defuned and undefined structs as equal if their
         // names are the same.
         if (a->GetVariability() != b->GetVariability())
             return false;
 
-        std::string namea = sta ? sta->GetStructName() : usta->GetStructName();
-        std::string nameb = stb ? stb->GetStructName() : ustb->GetStructName();
+        const std::string &namea = sta ? sta->GetStructName() : 
+            usta->GetStructName();
+        const std::string &nameb = stb ? stb->GetStructName() :
+            ustb->GetStructName();
         return (namea == nameb);
     }
 
-    const PointerType *pta = dynamic_cast<const PointerType *>(a);
-    const PointerType *ptb = dynamic_cast<const PointerType *>(b);
+    const PointerType *pta = CastType<PointerType>(a);
+    const PointerType *ptb = CastType<PointerType>(b);
     if (pta != NULL && ptb != NULL)
         return (pta->IsUniformType() == ptb->IsUniformType() &&
                 pta->IsSlice() == ptb->IsSlice() &&
@@ -3161,14 +3207,14 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
                 lCheckTypeEquality(pta->GetBaseType(), ptb->GetBaseType(), 
                                    ignoreConst));
 
-    const ReferenceType *rta = dynamic_cast<const ReferenceType *>(a);
-    const ReferenceType *rtb = dynamic_cast<const ReferenceType *>(b);
+    const ReferenceType *rta = CastType<ReferenceType>(a);
+    const ReferenceType *rtb = CastType<ReferenceType>(b);
     if (rta != NULL && rtb != NULL)
         return (lCheckTypeEquality(rta->GetReferenceTarget(),
                                    rtb->GetReferenceTarget(), ignoreConst));
 
-    const FunctionType *fta = dynamic_cast<const FunctionType *>(a);
-    const FunctionType *ftb = dynamic_cast<const FunctionType *>(b);
+    const FunctionType *fta = CastType<FunctionType>(a);
+    const FunctionType *ftb = CastType<FunctionType>(b);
     if (fta != NULL && ftb != NULL) {
         // Both the return types and all of the argument types must match
         // for function types to match

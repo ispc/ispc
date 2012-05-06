@@ -147,6 +147,7 @@ Contents:
 
     * `Converting Between Array-of-Structures and Structure-of-Arrays Layout`_
     * `Conversions To and From Half-Precision Floats`_
+    * `Converting to sRGB8`_
 
   + `Systems Programming Support`_
 
@@ -1505,13 +1506,17 @@ Defining New Names For Types
 The ``typedef`` keyword can be used to name types:
 
 ::
+ 
+    typedef int64 BigInt;
+    typedef float Float3[3];
 
-  typedef Float3 float[3];
+Following C's syntax, the code above defines ``BigInt`` to have ``int64``
+type and ``Float3`` to have ``float[3]`` type.
 
-``typedef`` doesn't create a new type: it just provides an alternative name
-for an existing type.  Thus, in the above example, it is legal to pass a
-value with ``float[3]`` type to a function that has been declared to take a
-``Float3`` parameter.
+Also as in C, ``typedef`` doesn't create a new type: it just provides an
+alternative name for an existing type.  Thus, in the above example, it is
+legal to pass a value with ``float[3]`` type to a function that has been
+declared to take a ``Float3`` parameter.
 
 
 Pointer Types
@@ -3685,6 +3690,22 @@ precise.
     uniform float half_to_float_fast(uniform unsigned int16 h)
     int16 float_to_half_fast(float f)
     uniform int16 float_to_half_fast(uniform float f)
+
+
+Converting to sRGB8
+-------------------
+
+The sRGB color space is used in many applications in graphics and imaging;
+see the `Wikipedia page on sRGB`_ for more information.  The ``ispc``
+standard library provides two functions for converting floating-point color
+values to 8-bit values in the sRGB space.
+
+.. _Wikipedia page on sRGB: http://en.wikipedia.org/wiki/SRGB
+
+::
+
+    int float_to_srgb8(float v)
+    uniform int float_to_srgb8(uniform float v)
 
 
 Systems Programming Support

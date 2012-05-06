@@ -550,7 +550,7 @@ rate_qualified_type_specifier
             $$ = NULL;
         else {
             int soaWidth = (int)$1;
-            const StructType *st = dynamic_cast<const StructType *>($2);
+            const StructType *st = CastType<StructType>($2);
             if (st == NULL) {
                 Error(@1, "\"soa\" qualifier is illegal with non-struct type \"%s\".",
                       $2->GetString().c_str());
@@ -853,9 +853,9 @@ struct_or_union_specifier
     : struct_or_union struct_or_union_name '{' struct_declaration_list '}' 
       {
           if ($4 != NULL) {
-              std::vector<const Type *> elementTypes;
-              std::vector<std::string> elementNames;
-              std::vector<SourcePos> elementPositions;
+              llvm::SmallVector<const Type *, 8> elementTypes;
+              llvm::SmallVector<std::string, 8> elementNames;
+              llvm::SmallVector<SourcePos, 8> elementPositions;
               GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
                                            &elementPositions);
               StructType *st = new StructType($2, elementTypes, elementNames,
@@ -869,9 +869,9 @@ struct_or_union_specifier
     | struct_or_union '{' struct_declaration_list '}' 
       {
           if ($3 != NULL) {
-              std::vector<const Type *> elementTypes;
-              std::vector<std::string> elementNames;
-              std::vector<SourcePos> elementPositions;
+              llvm::SmallVector<const Type *, 8> elementTypes;
+              llvm::SmallVector<std::string, 8> elementNames;
+              llvm::SmallVector<SourcePos, 8> elementPositions;
               GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
               $$ = new StructType("", elementTypes, elementNames, elementPositions,
@@ -895,7 +895,7 @@ struct_or_union_specifier
               st = new UndefinedStructType($2, Variability::Unbound, false, @2);
               m->symbolTable->AddType($2, st, @2);
           }
-          else if (dynamic_cast<const StructType *>(st) == NULL)
+          else if (CastType<StructType>(st) == NULL)
               Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
                     st->GetString().c_str());
           $$ = st;
@@ -1060,7 +1060,7 @@ enum_specifier
               $$ = NULL;
           }
           else {
-              const EnumType *enumType = dynamic_cast<const EnumType *>(type);
+              const EnumType *enumType = CastType<EnumType>(type);
               if (enumType == NULL) {
                   Error(@2, "Type \"%s\" is not an enum type (%s).", $2,
                         type->GetString().c_str());
@@ -1858,12 +1858,14 @@ function_definition
     {
         if ($2 != NULL) {
             $2->InitFromDeclSpecs($1);
-            const FunctionType *funcType =
-                dynamic_cast<const FunctionType *>($2->type);
+            const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
                 Assert(m->errorCount > 0);
-            else
-                m->AddFunctionDefinition($2->name, funcType, $4);
+            else {
+                Stmt *code = $4;
+                if (code == NULL) code = new StmtList(@4);
+                m->AddFunctionDefinition($2->name, funcType, code);
+            }
         }
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
@@ -1984,7 +1986,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
 
         decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
         
-        const FunctionType *ft = dynamic_cast<const FunctionType *>(decl->type);
+        const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
             m->AddFunctionDeclaration(decl->name, ft, ds->storageClass,

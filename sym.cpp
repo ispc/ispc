@@ -73,14 +73,23 @@ SymbolTable::~SymbolTable() {
 
 void
 SymbolTable::PushScope() { 
-    variables.push_back(new SymbolMapType);
+    SymbolMapType *sm;
+    if (freeSymbolMaps.size() > 0) {
+        sm = freeSymbolMaps.back();
+        freeSymbolMaps.pop_back();
+        sm->erase(sm->begin(), sm->end());
+    }
+    else
+        sm = new SymbolMapType;
+
+    variables.push_back(sm);
 }
 
 
 void
 SymbolTable::PopScope() { 
     Assert(variables.size() > 1);
-    delete variables.back();
+    freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
 }
 
@@ -136,7 +145,7 @@ SymbolTable::LookupVariable(const char *name) {
 
 bool
 SymbolTable::AddFunction(Symbol *symbol) {
-    const FunctionType *ft = dynamic_cast<const FunctionType *>(symbol->type);
+    const FunctionType *ft = CastType<FunctionType>(symbol->type);
     Assert(ft != NULL);
     if (LookupFunction(symbol->name.c_str(), ft) != NULL)
         // A function of the same name and type has already been added to
@@ -182,7 +191,7 @@ SymbolTable::LookupFunction(const char *name, const FunctionType *type) {
 bool
 SymbolTable::AddType(const char *name, const Type *type, SourcePos pos) {
     const Type *t = LookupType(name);
-    if (t != NULL && dynamic_cast<const UndefinedStructType *>(t) == NULL) {
+    if (t != NULL && CastType<UndefinedStructType>(t) == NULL) {
         // If we have a previous declaration of anything other than an
         // UndefinedStructType with this struct name, issue an error.  If
         // we have an UndefinedStructType, then we'll fall through to the
@@ -270,7 +279,7 @@ SymbolTable::closestTypeMatch(const char *str, bool structsVsEnums) const {
     for (iter = types.begin(); iter != types.end(); ++iter) {
         // Skip over either StructTypes or EnumTypes, depending on the
         // value of the structsVsEnums parameter
-        bool isEnum = (dynamic_cast<const EnumType *>(iter->second) != NULL);
+        bool isEnum = (CastType<EnumType>(iter->second) != NULL);
         if (isEnum && structsVsEnums)
             continue;
         else if (!isEnum && !structsVsEnums)

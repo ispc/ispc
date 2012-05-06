@@ -157,7 +157,7 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
 static void
 lCreateSymbol(const std::string &name, const Type *returnType, 
-              const std::vector<const Type *> &argTypes, 
+              llvm::SmallVector<const Type *, 8> &argTypes, 
               const llvm::FunctionType *ftype, llvm::Function *func, 
               SymbolTable *symbolTable) {
     SourcePos noPos;
@@ -199,7 +199,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     // bool, so just have a one-off override for that one...
     if (g->target.maskBitCount != 1 && name == "__sext_varying_bool") {
         const Type *returnType = AtomicType::VaryingInt32;
-        std::vector<const Type *> argTypes;
+        llvm::SmallVector<const Type *, 8> argTypes;
         argTypes.push_back(AtomicType::VaryingBool);
 
         FunctionType *funcType = new FunctionType(returnType, argTypes, noPos);
@@ -229,7 +229,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
         // Iterate over the arguments and try to find their equivalent ispc
         // types.  Track if any of the arguments has an integer type.
         bool anyIntArgs = false;
-        std::vector<const Type *> argTypes;
+        llvm::SmallVector<const Type *, 8> argTypes;
         for (unsigned int j = 0; j < ftype->getNumParams(); ++j) {
             const llvm::Type *llvmArgType = ftype->getParamType(j);
             const Type *type = lLLVMTypeToISPCType(llvmArgType, intAsUnsigned);
@@ -637,16 +637,36 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
                    SymbolTable *symbolTable) {
-    Symbol *pw = 
+    Symbol *sym = 
         new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
                    SC_STATIC);
-    pw->constValue = new ConstExpr(pw->type, val, SourcePos());
+    sym->constValue = new ConstExpr(sym->type, val, SourcePos());
     llvm::Type *ltype = LLVMTypes::Int32Type;
     llvm::Constant *linit = LLVMInt32(val);
-    pw->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                              llvm::GlobalValue::InternalLinkage,
-                                              linit, pw->name.c_str());
-    symbolTable->AddVariable(pw);
+    // Use WeakODRLinkage rather than InternalLinkage so that a definition
+    // survives even if it's not used in the module, so that the symbol is
+    // there in the debugger.
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
+                                               llvm::GlobalValue::WeakODRLinkage,
+                                               linit, name);
+    symbolTable->AddVariable(sym);
+
+    if (m->diBuilder != NULL) {
+        llvm::DIFile file;
+        llvm::DIType diType = sym->type->GetDIType(file);
+        Assert(diType.Verify());
+        // FIXME? DWARF says that this (and programIndex below) should
+        // have the DW_AT_artifical attribute.  It's not clear if this
+        // matters for anything though.
+        llvm::DIGlobalVariable var = 
+            m->diBuilder->createGlobalVariable(name, 
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               true /* static */,
+                                               sym->storagePtr);
+        Assert(var.Verify());
+    }
 }
 
 
@@ -654,7 +674,7 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
 static void
 lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
                        SymbolTable *symbolTable) {
-    std::vector<const Type *> args;
+    llvm::SmallVector<const Type *, 8> args;
     FunctionType *ft = new FunctionType(AtomicType::UniformInt32, args, SourcePos());
     Symbol *sym = new Symbol(name, SourcePos(), ft, SC_STATIC);
 
@@ -672,21 +692,37 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
-    Symbol *pidx = 
+    Symbol *sym = 
         new Symbol("programIndex", SourcePos(), 
                    AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
     for (int i = 0; i < g->target.vectorWidth; ++i)
         pi[i] = i;
-    pidx->constValue = new ConstExpr(pidx->type, pi, SourcePos());
+    sym->constValue = new ConstExpr(sym->type, pi, SourcePos());
 
     llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
-    pidx->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                                llvm::GlobalValue::InternalLinkage, linit, 
-                                                pidx->name.c_str());
-    symbolTable->AddVariable(pidx);
+    // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
+                                               llvm::GlobalValue::WeakODRLinkage,
+                                               linit, 
+                                               sym->name.c_str());
+    symbolTable->AddVariable(sym);
+
+    if (m->diBuilder != NULL) {
+        llvm::DIFile file;
+        llvm::DIType diType = sym->type->GetDIType(file);
+        Assert(diType.Verify());
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(sym->name.c_str(), 
+                                               file,
+                                               0 /* line */,
+                                               diType,
+                                               false /* static */,
+                                               sym->storagePtr);
+        Assert(var.Verify());
+    }
 }
 
 
@@ -811,6 +847,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                                builtins_bitcode_generic_16_length, 
                                module, symbolTable);
             break;
+        case 32:
+            extern unsigned char builtins_bitcode_generic_32[];
+            extern int builtins_bitcode_generic_32_length;
+            AddBitcodeToModule(builtins_bitcode_generic_32, 
+                               builtins_bitcode_generic_32_length, 
+                               module, symbolTable);
+            break;
 	case 1:
             extern unsigned char builtins_bitcode_generic_1[];
             extern int builtins_bitcode_generic_1_length;
@@ -843,10 +886,12 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
                        symbolTable);
-    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload, module,
-                           symbolTable);
+    lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
+                           module, symbolTable);
 
-    lDefineConstantInt("__have_native_half", (g->target.isa == Target::AVX2),
+    lDefineConstantInt("__have_native_half", g->target.hasHalf, module, 
+                       symbolTable);
+    lDefineConstantInt("__have_native_transcendentals", g->target.hasTranscendentals,
                        module, symbolTable);
 
     if (includeStdlibISPC) {
