@@ -3292,7 +3292,7 @@ lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
     // First, compute the shared base pointer for all of the gathers
     llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], insertBefore);
 
-    int elementSize;
+    int elementSize = 0;
     if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType)
         elementSize = 4;
     else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType)
