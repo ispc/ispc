@@ -124,7 +124,7 @@ doxygen:
 
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
+	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 objs/%.o: %.cpp
 	@echo Compiling $<
