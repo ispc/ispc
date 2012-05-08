@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -259,13 +259,13 @@ static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
    return ret;                                                      \
 }
 
-#define SMEAR(VTYPE, NAME, STYPE)               \
-static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {        \
-    VTYPE ret;                                  \
-    for (int i = 0; i < 16; ++i)                \
-        ret.v[i] = v;                           \
-    return ret;                                 \
-}                                               \
+#define SMEAR(VTYPE, NAME, STYPE)                                  \
+static FORCEINLINE VTYPE __smear_##NAME(VTYPE retType, STYPE v) {  \
+    VTYPE ret;                                                     \
+    for (int i = 0; i < 16; ++i)                                   \
+        ret.v[i] = v;                                              \
+    return ret;                                                    \
+}
 
 #define BROADCAST(VTYPE, NAME, STYPE)                 \
 static FORCEINLINE VTYPE __broadcast_##NAME(VTYPE v, int index) {   \
@@ -374,7 +374,7 @@ static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v, int align) {
     *ptr = v.v;
 }
 
-static FORCEINLINE __vec16_i1 __smear_i1(int v) {
+static FORCEINLINE __vec16_i1 __smear_i1(__vec16_i1, int v) {
     return __vec16_i1(v, v, v, v, v, v, v, v, 
                       v, v, v, v, v, v, v, v);
 }

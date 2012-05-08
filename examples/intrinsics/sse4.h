@@ -266,7 +266,7 @@ static FORCEINLINE void __store(__vec4_i1 *p, __vec4_i1 value, int align) {
     _mm_storeu_ps((float *)(&p->v), value.v);
 }
 
-static FORCEINLINE __vec4_i1 __smear_i1(int v) {
+static FORCEINLINE __vec4_i1 __smear_i1(__vec4_i1, int v) {
     return __vec4_i1(v, v, v, v);
 }
 
@@ -493,7 +493,7 @@ static FORCEINLINE void __insert_element(__vec4_i8 *v, int index, int8_t val) {
     ((int8_t *)v)[index] = val;
 }
 
-static FORCEINLINE __vec4_i8 __smear_i8(int8_t v) {
+static FORCEINLINE __vec4_i8 __smear_i8(__vec4_i8, int8_t v) {
     return _mm_set1_epi8(v);
 }
 
@@ -752,7 +752,7 @@ static FORCEINLINE void __insert_element(__vec4_i16 *v, int index, int16_t val) 
     ((int16_t *)v)[index] = val;
 }
 
-static FORCEINLINE __vec4_i16 __smear_i16(int16_t v) {
+static FORCEINLINE __vec4_i16 __smear_i16(__vec4_i16, int16_t v) {
     return _mm_set1_epi16(v);
 }
 
@@ -989,7 +989,7 @@ static FORCEINLINE __vec4_i32 __select(__vec4_i1 mask, __vec4_i32 a, __vec4_i32 
                                           _mm_castsi128_ps(a.v), mask.v));
 }
 
-static FORCEINLINE __vec4_i32 __smear_i32(int32_t v) {
+static FORCEINLINE __vec4_i32 __smear_i32(__vec4_i32, int32_t v) {
     return _mm_set1_epi32(v);
 }
 
@@ -1250,7 +1250,7 @@ static FORCEINLINE __vec4_i64 __select(__vec4_i1 mask, __vec4_i64 a, __vec4_i64 
     return __vec4_i64(_mm_castpd_si128(r0), _mm_castpd_si128(r1));
 }
 
-static FORCEINLINE __vec4_i64 __smear_i64(int64_t v) {
+static FORCEINLINE __vec4_i64 __smear_i64(__vec4_i64, int64_t v) {
     return __vec4_i64(v, v, v, v);
 }
 
@@ -1354,7 +1354,7 @@ static FORCEINLINE __vec4_f __select(__vec4_i1 mask, __vec4_f a, __vec4_f b) {
     return _mm_blendv_ps(b.v, a.v, mask.v);
 }
 
-static FORCEINLINE __vec4_f __smear_float(float v) {
+static FORCEINLINE __vec4_f __smear_float(__vec4_f, float v) {
     return _mm_set1_ps(v);
 }
 
@@ -1486,7 +1486,7 @@ static FORCEINLINE __vec4_d __select(__vec4_i1 mask, __vec4_d a, __vec4_d b) {
     return __vec4_d(r0, r1);
 }
 
-static FORCEINLINE __vec4_d __smear_double(double v) {
+static FORCEINLINE __vec4_d __smear_double(__vec4_d, double v) {
     return __vec4_d(_mm_set1_pd(v), _mm_set1_pd(v));
 }
 
@@ -1586,11 +1586,13 @@ static FORCEINLINE __vec4_i16 __cast_sext(__vec4_i16, __vec4_i8 val) {
 }
 
 static FORCEINLINE __vec4_i8 __cast_sext(__vec4_i8, __vec4_i1 v) {
-    return __select(v, __smear_i8(0xff), __smear_i8(0));
+    return __select(v, __smear_i8(__vec4_i8(), 0xff), 
+                       __smear_i8(__vec4_i8(), 0));
 }
 
 static FORCEINLINE __vec4_i16 __cast_sext(__vec4_i16, __vec4_i1 v) {
-    return __select(v, __smear_i16(0xffff), __smear_i16(0));
+    return __select(v, __smear_i16(__vec4_i16(), 0xffff),
+                       __smear_i16(__vec4_i16(), 0));
 }
 
 static FORCEINLINE __vec4_i32 __cast_sext(__vec4_i32, __vec4_i1 v) {
@@ -1650,11 +1652,12 @@ static FORCEINLINE __vec4_i16 __cast_zext(__vec4_i16, __vec4_i8 val) {
 }
 
 static FORCEINLINE __vec4_i8 __cast_zext(__vec4_i8, __vec4_i1 v) {
-    return __select(v, __smear_i8(1), __smear_i8(0));
+    return __select(v, __smear_i8(__vec4_i8(), 1), __smear_i8(__vec4_i8(), 0));
 }
 
 static FORCEINLINE __vec4_i16 __cast_zext(__vec4_i16, __vec4_i1 v) {
-    return __select(v, __smear_i16(1), __smear_i16(0));
+    return __select(v, __smear_i16(__vec4_i16(), 1), 
+                       __smear_i16(__vec4_i16(), 0));
 }
 
 static FORCEINLINE __vec4_i32 __cast_zext(__vec4_i32, __vec4_i1 v) {
@@ -1662,7 +1665,7 @@ static FORCEINLINE __vec4_i32 __cast_zext(__vec4_i32, __vec4_i1 v) {
 }
 
 static FORCEINLINE __vec4_i64 __cast_zext(__vec4_i64, __vec4_i1 v) {
-    return __select(v, __smear_i64(1), __smear_i64(0));
+    return __select(v, __smear_i64(__vec4_i64(), 1), __smear_i64(__vec4_i64(), 0));
 }
 
 // truncations
@@ -1822,11 +1825,11 @@ static FORCEINLINE __vec4_d __cast_uitofp(__vec4_d, __vec4_i64 val) {
 }
 
 static FORCEINLINE __vec4_f __cast_uitofp(__vec4_f, __vec4_i1 v) {
-    return __select(v, __smear_float(1.), __smear_float(0.));
+    return __select(v, __smear_float(__vec4_f(), 1.), __smear_float(__vec4_f(), 0.));
 }
 
 static FORCEINLINE __vec4_d __cast_uitofp(__vec4_d, __vec4_i1 v) {
-    return __select(v, __smear_double(1.), __smear_double(0.));
+    return __select(v, __smear_double(__vec4_d(), 1.), __smear_double(__vec4_d(), 0.));
 }
 
 // float/double to signed int
@@ -2617,8 +2620,8 @@ lGatherBaseOffsets32(RetVec, RetScalar, unsigned char *p, __vec4_i32 offsets,
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
-    offsets = __select(mask, offsets, __smear_i32(0));
-    constOffset = __select(mask, constOffset, __smear_i32(0));
+    offsets = __select(mask, offsets, __smear_i32(__vec4_i32(), 0));
+    constOffset = __select(mask, constOffset, __smear_i32(__vec4_i32(), 0));
 
     int offset = scale * _mm_extract_epi32(offsets.v, 0) + _mm_extract_epi32(constOffset.v, 0);
     RetScalar *ptr = (RetScalar *)(p + offset);
@@ -2675,8 +2678,8 @@ lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, __vec4_i64 offsets,
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
-    offsets = __select(mask, offsets, __smear_i64(0));
-    constOffset = __select(mask, constOffset, __smear_i64(0));
+    offsets = __select(mask, offsets, __smear_i64(__vec4_i64(), 0));
+    constOffset = __select(mask, constOffset, __smear_i64(__vec4_i64(), 0));
 
     int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) + _mm_extract_epi64(constOffset.v[0], 0);
     RetScalar *ptr = (RetScalar *)(p + offset);
@@ -2760,8 +2763,8 @@ __gather_base_offsets32_i32(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
     __m128i r = _mm_set_epi32(0, 0, 0, 0);
 #if 1
     // "Fast gather"...
-    offsets = __select(mask, offsets, __smear_i32(0));
-    constOffset = __select(mask, constOffset, __smear_i32(0));
+    offsets = __select(mask, offsets, __smear_i32(__vec4_i32(), 0));
+    constOffset = __select(mask, constOffset, __smear_i32(__vec4_i32(), 0));
 
     int offset = scale * _mm_extract_epi32(offsets.v, 0) +
         _mm_extract_epi32(constOffset.v, 0);

@@ -1464,6 +1464,8 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
 
         Constant *CZ = Constant::getNullValue(VT->getElementType());
         Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
         printConstant(CZ, Static);
         Out << ")";
     }
@@ -1471,6 +1473,8 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       llvm::Constant *splatValue = CV->getSplatValue();
       if (splatValue != NULL && smearFunc != NULL) {
         Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
         printConstant(splatValue, Static);
         Out << ")";
       }
@@ -1486,6 +1490,8 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
       llvm::Constant *splatValue = CDV->getSplatValue();
       if (splatValue != NULL && smearFunc != NULL) {
         Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
         printConstant(splatValue, Static);
         Out << ")";
       }
@@ -4392,16 +4398,17 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (smearFunc == NULL) {
                 Constant *sf = 
                     module->getOrInsertFunction(smearFuncName, iter->getType(), 
-                                                matchType, NULL);
+                                                iter->getType(), matchType, NULL);
                 smearFunc = dyn_cast<Function>(sf);
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
             }
-                
+
+            llvm::Value *undefResult = llvm::UndefValue::get(vt);
             assert(smearFunc != NULL);
-            Value *args[1] = { toMatch };
-            ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
+            Value *args[2] = { undefResult, toMatch };
+            ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
             Instruction *smearCall = 
                 CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
                                  (Instruction *)NULL);
