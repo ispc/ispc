@@ -395,11 +395,6 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (g->target.allOffMaskIsSafe == true)
-        // Don't worry about memory accesses if we have a target that can
-        // safely run them with the mask all off
-        return true;
-
     IndexExpr *ie;
     if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {
         const Type *type = ie->baseExpr->GetType();

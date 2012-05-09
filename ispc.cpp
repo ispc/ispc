@@ -206,7 +206,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse2-x2")) {
@@ -215,7 +214,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4")) {
@@ -224,7 +222,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2")) {
@@ -233,7 +230,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "generic-4")) {
@@ -241,7 +237,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 4;
         t->vectorWidth = 4;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
     }
     else if (!strcasecmp(isa, "generic-8")) {
@@ -249,7 +244,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
     }
     else if (!strcasecmp(isa, "generic-16")) {
@@ -257,7 +251,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 16;
         t->vectorWidth = 16;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
         t->hasHalf = true;
         t->hasTranscendentals = true;
@@ -267,7 +260,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 32;
         t->vectorWidth = 32;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
         t->hasHalf = true;
         t->hasTranscendentals = true;
@@ -277,7 +269,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 1;
         t->vectorWidth = 1;
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx")) {
@@ -286,7 +277,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+avx,+popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx-x2")) {
@@ -295,7 +285,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 16;
         t->attributes = "+avx,+popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
 #ifndef LLVM_3_0
@@ -305,7 +294,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
     }
@@ -315,7 +303,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 16;
         t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
     }

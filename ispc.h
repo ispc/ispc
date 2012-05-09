@@ -239,12 +239,6 @@ struct Target {
         natively. */
     bool maskingIsFree;
 
-    /** Is it safe to run code with the mask all if: e.g. on SSE, the fast
-        gather trick assumes that at least one program instance is running
-        (so that it can safely assume that the array base pointer is
-        valid). */
-    bool allOffMaskIsSafe;
-
     /** How many bits are used to store each element of the mask: e.g. this
         is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
         the generic target. */
