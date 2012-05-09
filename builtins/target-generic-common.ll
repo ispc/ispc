@@ -249,7 +249,16 @@ declare void @__masked_store_32(<WIDTH x i32>* nocapture, <WIDTH x i32>,
 declare void @__masked_store_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
                                 <WIDTH x i1> %mask) nounwind 
 
-ifelse(LLVM_VERSION, `LLVM_3_1svn',`
+ifelse(LLVM_VERSION, `LLVM_3_0', `
+declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
+                                     <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+                                      <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
+                                      <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
+                                      <WIDTH x i1> %mask) nounwind 
+', `
 define void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i8> * %0
@@ -281,15 +290,6 @@ define void @__masked_store_blend_64(<WIDTH x i64>* nocapture,
   store <WIDTH x i64> %v1, <WIDTH x i64> * %0
   ret void
 }
-',`
-declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                     <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                      <WIDTH x i1> %mask) nounwind 
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
