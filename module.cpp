@@ -245,8 +245,13 @@ Module::Module(const char *fn) {
             GetDirectoryAndFileName(g->currentDirectory, filename, &directory,
                                     &name);
             char producerString[512];
+#if defined(BUILD_VERSION) && defined (BUILD_DATE)
             sprintf(producerString, "ispc version %s (build %s on %s)",
                     ISPC_VERSION, BUILD_VERSION, BUILD_DATE);
+#else
+            sprintf(producerString, "ispc version %s (built on %s)",
+                    ISPC_VERSION, __DATE__);
+#endif
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
