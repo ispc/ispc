@@ -339,6 +339,24 @@ static FORCEINLINE __vec16_i1 __or(__vec16_i1 a, __vec16_i1 b) {
     return r;
 }
 
+static FORCEINLINE __vec16_i1 __not(__vec16_i1 v) {
+    __vec16_i1 r;
+    r.v = ~v.v;
+    return r;
+}
+
+static FORCEINLINE __vec16_i1 __and_not1(__vec16_i1 a, __vec16_i1 b) {
+    __vec16_i1 r;
+    r.v = ~a.v & b.v;
+    return r;
+}
+
+static FORCEINLINE __vec16_i1 __and_not2(__vec16_i1 a, __vec16_i1 b) {
+    __vec16_i1 r;
+    r.v = a.v & ~b.v;
+    return r;
+}
+
 static FORCEINLINE __vec16_i1 __select(__vec16_i1 mask, __vec16_i1 a, 
                                        __vec16_i1 b) {
     __vec16_i1 r;
@@ -378,6 +396,7 @@ static FORCEINLINE __vec16_i1 __smear_i1(__vec16_i1, int v) {
     return __vec16_i1(v, v, v, v, v, v, v, v, 
                       v, v, v, v, v, v, v, v);
 }
+
 
 ///////////////////////////////////////////////////////////////////////////
 // int8

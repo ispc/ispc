@@ -4327,14 +4327,14 @@ void CWriter::visitAtomicCmpXchgInst(AtomicCmpXchgInst &ACXI) {
 
 class SmearCleanupPass : public llvm::BasicBlockPass {
 public:
-    SmearCleanupPass(llvm::Module *m, int width)
+    SmearCleanupPass(Module *m, int width)
         : BasicBlockPass(ID) { module = m; vectorWidth = width; }
 
     const char *getPassName() const { return "Smear Cleanup Pass"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
-    llvm::Module *module;
+    Module *module;
     int vectorWidth;
 };
 
@@ -4475,6 +4475,155 @@ BitcastCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
+///////////////////////////////////////////////////////////////////////////
+// MaskOpsCleanupPass
+
+/** This pass does various peephole improvements to mask modification
+    operations.  In particular, it converts mask XORs with "all true" to
+    calls to __not() and replaces operations like and(not(a), b) to
+    __and_not1(a, b) (and similarly if the second operand has not applied
+    to it...)
+ */
+class MaskOpsCleanupPass : public llvm::BasicBlockPass {
+public:
+    MaskOpsCleanupPass(Module *m)
+        : BasicBlockPass(ID) { 
+        Type *mt = LLVMTypes::MaskType;
+
+        // Declare the __not, __and_not1, and __and_not2 functions that we
+        // expect the target to end up providing.
+        notFunc = 
+            dyn_cast<Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
+        assert(notFunc != NULL);
+        notFunc->addFnAttr(Attribute::NoUnwind);
+        notFunc->addFnAttr(Attribute::ReadNone);
+
+        andNotFuncs[0] = 
+            dyn_cast<Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt,
+                                                      NULL));
+        assert(andNotFuncs[0] != NULL);
+        andNotFuncs[0]->addFnAttr(Attribute::NoUnwind);
+        andNotFuncs[0]->addFnAttr(Attribute::ReadNone);
+
+        andNotFuncs[1] = 
+            dyn_cast<Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt,
+                                                      NULL));
+        assert(andNotFuncs[1] != NULL);
+        andNotFuncs[1]->addFnAttr(Attribute::NoUnwind);
+        andNotFuncs[1]->addFnAttr(Attribute::ReadNone);
+    }
+
+    const char *getPassName() const { return "MaskOps Cleanup Pass"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+private:
+    Value *lGetNotOperand(Value *v) const;
+
+    Function *notFunc, *andNotFuncs[2];
+
+    static char ID;
+};
+
+char MaskOpsCleanupPass::ID = 0;
+
+
+/** Returns true if the given value is a compile-time constant vector of
+    i1s with all elements 'true'. 
+*/
+static bool
+lIsAllTrue(Value *v) {
+    if (ConstantVector *cv = dyn_cast<ConstantVector>(v)) {
+        ConstantInt *ci;
+        return (cv->getSplatValue() != NULL &&
+                (ci = dyn_cast<ConstantInt>(cv->getSplatValue())) != NULL &&
+                ci->isOne());
+    }
+                
+#ifndef LLVM_3_0
+    if (ConstantDataVector *cdv = dyn_cast<ConstantDataVector>(v)) {
+        ConstantInt *ci;
+        return (cdv->getSplatValue() != NULL &&
+                (ci = dyn_cast<ConstantInt>(cdv->getSplatValue())) != NULL &&
+                ci->isOne());
+    }
+#endif
+
+    return false;
+}
+
+
+/** Checks to see if the given value is the NOT of some other value.  If
+    so, it returns the operand of the NOT; otherwise returns NULL.
+ */
+Value *
+MaskOpsCleanupPass::lGetNotOperand(Value *v) const {
+    if (CallInst *ci = dyn_cast<CallInst>(v))
+        if (ci->getCalledFunction() == notFunc)
+            // Direct call to __not()
+            return ci->getArgOperand(0);
+
+    if (BinaryOperator *bop = dyn_cast<BinaryOperator>(v))
+        if (bop->getOpcode() == Instruction::Xor &&
+            lIsAllTrue(bop->getOperand(1)))
+            // XOR of all-true vector.
+            return bop->getOperand(0);
+
+    return NULL;
+}
+
+
+bool
+MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+ restart:
+    for (BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        BinaryOperator *bop = dyn_cast<BinaryOperator>(&*iter);
+        if (bop == NULL)
+            continue;
+
+        if (bop->getType() != LLVMTypes::MaskType)
+            continue;
+
+        if (bop->getOpcode() == Instruction::Xor) {
+            // Check for XOR with all-true values
+            if (lIsAllTrue(bop->getOperand(1))) {
+                ArrayRef<Value *> arg(bop->getOperand(0));
+                CallInst *notCall = CallInst::Create(notFunc, arg, 
+                                                     bop->getName());
+                ReplaceInstWithInst(iter, notCall);
+                modifiedAny = true;
+                goto restart;
+            }
+        }
+        else if (bop->getOpcode() == Instruction::And) {
+            // Check each of the operands to see if they have NOT applied
+            // to them.
+            for (int i = 0; i < 2; ++i) {
+                if (Value *notOp = lGetNotOperand(bop->getOperand(i))) {
+                    // In notOp we have the target of the NOT operation;
+                    // put it in its appropriate spot in the operand array.
+                    // Copy in the other operand directly.
+                    Value *args[2];
+                    args[i]     = notOp;
+                    args[i ^ 1] = bop->getOperand(i ^ 1);
+                    ArrayRef<Value *> argsRef(&args[0], 2);
+
+                    // Call the appropriate __and_not* function.
+                    CallInst *andNotCall = 
+                        CallInst::Create(andNotFuncs[i], argsRef, bop->getName());
+
+                    ReplaceInstWithInst(iter, andNotCall);
+                    modifiedAny = true;
+                    goto restart;
+                }
+            }
+        }
+    }
+
+    return modifiedAny;
+}
+
 
 //===----------------------------------------------------------------------===//
 //                       External Interface declaration
@@ -4506,6 +4655,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(createCFGSimplificationPass());   // clean up after lower invoke.
     pm.add(new SmearCleanupPass(module, vectorWidth));
     pm.add(new BitcastCleanupPass);
+    pm.add(new MaskOpsCleanupPass(module));
     pm.add(createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(createPrintModulePass(&fos));
     pm.add(new CWriter(fos, includeName, vectorWidth));
