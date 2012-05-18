@@ -2211,7 +2211,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     if (llvmPtrType != NULL) {
         llvm::StructType *llvmStructType = 
             llvm::dyn_cast<llvm::StructType>(llvmPtrType->getElementType());
-        if (llvmStructType->isSized() == false) {
+        if (llvmStructType != NULL && llvmStructType->isSized() == false) {
             Assert(m->errorCount > 0);
             return NULL;
         }
