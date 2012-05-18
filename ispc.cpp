@@ -238,6 +238,8 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->maskingIsFree = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-8")) {
         t->isa = Target::GENERIC;
@@ -245,6 +247,8 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->maskingIsFree = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-16")) {
         t->isa = Target::GENERIC;
