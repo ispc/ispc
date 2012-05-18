@@ -554,8 +554,10 @@ static void
 lCheckForVaryingParameter(const Type *type, const std::string &name, 
                           SourcePos pos) {
     if (lRecursiveCheckValidParamType(type)) {
-        const Type *t = type->GetBaseType();
-        if (CastType<StructType>(t))
+        if (CastType<PointerType>(type))
+            Error(pos, "Varying pointer type parameter \"%s\" is illegal "
+                  "in an exported function.", name.c_str());
+        else if (CastType<StructType>(type->GetBaseType()))
             Error(pos, "Struct parameter \"%s\" with varying member(s) is illegal "
                   "in an exported function.", name.c_str());
         else
