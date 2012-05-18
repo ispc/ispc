@@ -2206,6 +2206,17 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
     if (resultPtrType != NULL)
         Assert(ptrRefType != NULL);
 
+    llvm::PointerType *llvmPtrType = 
+        llvm::dyn_cast<llvm::PointerType>(fullBasePtr->getType());
+    if (llvmPtrType != NULL) {
+        llvm::StructType *llvmStructType = 
+            llvm::dyn_cast<llvm::StructType>(llvmPtrType->getElementType());
+        if (llvmStructType->isSized() == false) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
+    }
+
     // (Unfortunately) it's not required to pass a non-NULL ptrRefType, but
     // if we have one, regularize into a pointer type.
     const PointerType *ptrType = NULL;

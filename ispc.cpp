@@ -520,7 +520,10 @@ Target::StructOffset(llvm::Type *type, int element,
     Assert(td != NULL);
     llvm::StructType *structType = 
         llvm::dyn_cast<llvm::StructType>(type);
-    Assert(structType != NULL);
+    if (structType == NULL || structType->isSized() == false) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     const llvm::StructLayout *sl = td->getStructLayout(structType);
     Assert(sl != NULL);
 

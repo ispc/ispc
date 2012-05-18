@@ -4813,6 +4813,9 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
 
     llvm::Value *mask = NULL;
     if (lvalue == NULL) {
+        if (m->errorCount > 0)
+            return NULL;
+
         // As in the array case, this may be a temporary that hasn't hit
         // memory; get the full value and stuff it into a temporary array
         // so that we can index from there...
@@ -4889,6 +4892,10 @@ MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
     llvm::Value *ptr = ctx->AddElementOffset(basePtr, elementNumber,
                                              exprLValueType, 
                                              basePtr->getName().str().c_str());
+    if (ptr == NULL) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
 
     ptr = lAddVaryingOffsetsIfNeeded(ctx, ptr, GetLValueType());
 
@@ -6606,7 +6613,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // The only legal type conversions for structs are to go from a
         // uniform to a varying instance of the same struct type.
         Assert(toStruct->IsVaryingType() && fromStruct->IsUniformType() &&
-               Type::Equal(toStruct, fromStruct->GetAsVaryingType()));
+               Type::EqualIgnoringConst(toStruct, 
+                                        fromStruct->GetAsVaryingType()));
 
         llvm::Value *origValue = expr->GetValue(ctx);
         if (!origValue)
