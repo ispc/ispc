@@ -2583,7 +2583,12 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
     }
 
     llvm::DIType diTargetType = targetType->GetDIType(scope);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     return m->diBuilder->createReferenceType(diTargetType);
+#else
+    return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
+                                             diTargetType);
+#endif
 }
 
 
