@@ -789,7 +789,11 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
         m->diBuilder->createEnumerationType(scope, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
-                                            elementArray);
+                                            elementArray
+#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+                                            , llvm::DIType()
+#endif
+                                            );
 
 
     switch (variability.type) {
