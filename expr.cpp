@@ -3586,11 +3586,15 @@ FunctionCallExpr::TypeCheck() {
                 Assert(funcType->GetParameterDefault(i) != NULL);
         }
 
-        if (fptrType->IsVaryingType() && 
-            funcType->GetReturnType()->IsUniformType()) {
-            Error(pos, "Illegal to call a varying function pointer that "
-                  "points to a function with a uniform return type.");
-            return NULL;
+        if (fptrType->IsVaryingType()) {
+            const Type *retType = funcType->GetReturnType();
+            if (Type::Equal(retType, AtomicType::Void) == false &&
+                retType->IsUniformType()) {
+                Error(pos, "Illegal to call a varying function pointer that "
+                      "points to a function with a uniform return type \"%s\".",
+                      funcType->GetReturnType()->GetString().c_str());
+                return NULL;
+            }
         }
     }
 

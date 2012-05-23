@@ -3243,7 +3243,8 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
 
             // Now, do a masked store into the memory allocated to
             // accumulate the result using the call mask.
-            if (callResult != NULL) {
+            if (callResult != NULL && 
+                callResult->getType() != LLVMTypes::VoidType) {
                 Assert(resultPtr != NULL);
                 StoreInst(callResult, resultPtr, callMask, returnType,
                           PointerType::GetUniform(returnType));
