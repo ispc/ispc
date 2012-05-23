@@ -1843,6 +1843,7 @@ external_declaration
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
     }
+    | ';'
     ;
 
 function_definition
