@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
-            ispc::RenderStatic(&input->header, &input->arrays, 
+            ispc::RenderStatic(input->header, input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
         double mcycles = get_elapsed_mcycles() / nframes;

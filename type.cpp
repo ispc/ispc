@@ -2554,7 +2554,7 @@ ReferenceType::GetCDeclaration(const std::string &name) const {
     }
     else {
         std::string ret;
-        ret += targetType->GetCDeclaration("") + std::string(" *");
+        ret += targetType->GetCDeclaration("") + std::string(" &");
         if (lShouldPrintName(name))
             ret += name;
         return ret;
