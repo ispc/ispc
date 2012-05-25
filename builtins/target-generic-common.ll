@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2012, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -201,7 +201,7 @@ declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
-declare i32 @__movmsk(<WIDTH x i1>) nounwind readnone 
+declare i64 @__movmsk(<WIDTH x i1>) nounwind readnone 
 
 declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
 declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone 

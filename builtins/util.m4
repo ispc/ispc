@@ -38,6 +38,18 @@ declare i1 @__is_compile_time_constant_uniform_int32(i32)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
+define(`ALL_ON_MASK',
+`ifelse(WIDTH, `64', `-1', 
+        WIDTH, `32', `4294967295',
+                     `eval((1<<WIDTH)-1)')')
+
+define(`MASK_HIGH_BIT_ON',
+`ifelse(WIDTH, `64', `-9223372036854775808',
+        WIDTH, `32', `2147483648',
+                     `eval(1<<(WIDTH-1))')')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Helper macro for calling various SSE instructions for scalar values
 ;; but where the instruction takes a vector parameter.
@@ -1529,7 +1541,7 @@ declare i32 @__fast_masked_vload()
 declare i8* @ISPCAlloc(i8**, i64, i32) nounwind
 declare void @ISPCLaunch(i8**, i8*, i8*, i32) nounwind
 declare void @ISPCSync(i8*) nounwind
-declare void @ISPCInstrument(i8*, i8*, i32, i32) nounwind
+declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
@@ -2096,12 +2108,12 @@ ok:
 
 
 define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
-                                          <WIDTH x MASK> %mask) {
+                                 <WIDTH x MASK> %mask) {
   %nottest = xor <WIDTH x MASK> %test,
                  < forloop(i, 1, eval(WIDTH-1), `MASK -1, ') MASK -1 >
   %nottest_and_mask = and <WIDTH x MASK> %nottest, %mask
-  %mm = call i32 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
-  %all_ok = icmp eq i32 %mm, 0
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
+  %all_ok = icmp eq i64 %mm, 0
   br i1 %all_ok, label %ok, label %fail
 
 fail:
@@ -2505,12 +2517,16 @@ define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x MASK> %mask) nounwind alwa
 define(`masked_load', `
 define <$1 x $2> @__masked_load_$3(i8 *, <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
-  %mm = call i32 @__movmsk(<$1 x MASK> %mask)
+  %mm = call i64 @__movmsk(<$1 x MASK> %mask)
   
   ; if the first lane and the last lane are on, then it is safe to do a vector load
   ; of the whole thing--what the lanes in the middle want turns out to not matter...
-  %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
-  %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
+  %mm_and_low = and i64 %mm, 1
+  %mm_and_high = and i64 %mm, MASK_HIGH_BIT_ON
+  %mm_and_high_shift = lshr i64 %mm_and_high, eval(WIDTH-1)
+  %mm_and_low_i1 = trunc i64 %mm_and_low to i1
+  %mm_and_high_shift_i1 = trunc i64 %mm_and_high_shift to i1
+  %can_vload = and i1 %mm_and_low_i1, %mm_and_high_shift_i1
 
   %fast32 = call i32 @__fast_masked_vload()
   %fast_i1 = trunc i32 %fast32 to i1
@@ -2529,9 +2545,10 @@ load:
 loop:
   ; loop over the lanes and see if each one is on...
   %lane = phi i32 [ 0, %entry ], [ %next_lane, %lane_done ]
-  %lanemask = shl i32 1, %lane
-  %mask_and = and i32 %mm, %lanemask
-  %do_lane = icmp ne i32 %mask_and, 0
+  %lane64 = zext i32 %lane to i64
+  %lanemask = shl i64 1, %lane64
+  %mask_and = and i64 %mm, %lanemask
+  %do_lane = icmp ne i64 %mask_and, 0
   br i1 %do_lane, label %load_lane, label %lane_done
 
 load_lane:
@@ -2743,12 +2760,12 @@ define(`packed_load_and_store', `
 define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
                                  <WIDTH x i32> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i32 @__movmsk(<WIDTH x i32> %full_mask)
+  %mask = call i64 @__movmsk(<WIDTH x i32> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 
 known_mask:
-  %allon = icmp eq i32 %mask, eval((1 << WIDTH) -1)
+  %allon = icmp eq i64 %mask, ALL_ON_MASK
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
@@ -2764,12 +2781,12 @@ unknown_mask:
 
 loop:
   %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i32 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
+  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
   %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
 
   ; is the current lane on?
-  %and = and i32 %mask, %lanemask
-  %do_load = icmp eq i32 %and, %lanemask
+  %and = and i64 %mask, %lanemask
+  %do_load = icmp eq i64 %and, %lanemask
   br i1 %do_load, label %load, label %loopend 
 
 load:
@@ -2784,7 +2801,7 @@ load:
 loopend:
   %nextoffset = phi i32 [ %offset1, %load ], [ %offset, %loop ]
   %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i32 %lanemask, 2
+  %nextlanemask = mul i64 %lanemask, 2
 
   ; are we done yet?
   %test = icmp ne i32 %nextlane, WIDTH
@@ -2795,14 +2812,14 @@ done:
 }
 
 define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
-                                  <WIDTH x i32> %full_mask) nounwind alwaysinline {
+                                   <WIDTH x i32> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i32 @__movmsk(<WIDTH x i32> %full_mask)
+  %mask = call i64 @__movmsk(<WIDTH x i32> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 
 known_mask:
-  %allon = icmp eq i32 %mask, eval((1 << WIDTH) -1)
+  %allon = icmp eq i64 %mask, ALL_ON_MASK
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
@@ -2815,12 +2832,12 @@ unknown_mask:
 
 loop:
   %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i32 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
+  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
   %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
 
   ; is the current lane on?
-  %and = and i32 %mask, %lanemask
-  %do_store = icmp eq i32 %and, %lanemask
+  %and = and i64 %mask, %lanemask
+  %do_store = icmp eq i64 %and, %lanemask
   br i1 %do_store, label %store, label %loopend 
 
 store:
@@ -2833,7 +2850,7 @@ store:
 loopend:
   %nextoffset = phi i32 [ %offset1, %store ], [ %offset, %loop ]
   %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i32 %lanemask, 2
+  %nextlanemask = mul i64 %lanemask, 2
 
   ; are we done yet?
   %test = icmp ne i32 %nextlane, WIDTH
@@ -2857,14 +2874,15 @@ define(`reduce_equal_aux', `
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
-   %mm = call i32 @__movmsk(<$1 x MASK> %mask)
-   %allon = icmp eq i32 %mm, eval((1<<$1)-1)
+   %mm = call i64 @__movmsk(<$1 x MASK> %mask)
+   %allon = icmp eq i64 %mm, ALL_ON_MASK
    br i1 %allon, label %check_neighbors, label %domixed
 
 domixed:
   ; First, figure out which lane is the first active one
-  %first = call i32 @llvm.cttz.i32(i32 %mm)
-  %baseval = extractelement <$1 x $2> %v, i32 %first
+  %first = call i64 @llvm.cttz.i64(i64 %mm)
+  %first32 = trunc i64 %first to i32
+  %baseval = extractelement <$1 x $2> %v, i32 %first32
   %basev1 = bitcast $2 %baseval to <1 x $2>
   ; get a vector that is that value smeared across all elements
   %basesmear = shufflevector <1 x $2> %basev1, <1 x $2> undef,
@@ -2895,9 +2913,9 @@ check_neighbors:
   %eq = $5 eq <$1 x $2> %vec, %vr
   ifelse(MASK,i32, `
     %eq32 = sext <$1 x i1> %eq to <$1 x i32>
-    %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)', `
-    %eqmm = call i32 @__movmsk(<$1 x MASK> %eq)')
-  %alleq = icmp eq i32 %eqmm, eval((1<<$1)-1)
+    %eqmm = call i64 @__movmsk(<$1 x i32> %eq32)', `
+    %eqmm = call i64 @__movmsk(<$1 x MASK> %eq)')
+  %alleq = icmp eq i64 %eqmm, ALL_ON_MASK
   br i1 %alleq, label %all_equal, label %not_all_equal
   ', `
   ; But for 64-bit elements, it turns out to be more efficient to just
@@ -3010,14 +3028,14 @@ define(`per_lane', `
   br label %pl_entry
 
 pl_entry:
-  %pl_mask = call i32 @__movmsk($2)
+  %pl_mask = call i64 @__movmsk($2)
   %pl_mask_known = call i1 @__is_compile_time_constant_mask($2)
   br i1 %pl_mask_known, label %pl_known_mask, label %pl_unknown_mask
 
 pl_known_mask:
   ;; the mask is known at compile time; see if it is something we can
   ;; handle more efficiently
-  %pl_is_allon = icmp eq i32 %pl_mask, eval((1<<$1)-1)
+  %pl_is_allon = icmp eq i64 %pl_mask, ALL_ON_MASK
   br i1 %pl_is_allon, label %pl_all_on, label %pl_unknown_mask
 
 pl_all_on:
@@ -3039,11 +3057,11 @@ pl_unknown_mask:
 pl_loop:
   ;; Loop over each lane and see if we want to do the work for this lane
   %pl_lane = phi i32 [ 0, %pl_unknown_mask ], [ %pl_nextlane, %pl_loopend ]
-  %pl_lanemask = phi i32 [ 1, %pl_unknown_mask ], [ %pl_nextlanemask, %pl_loopend ]
+  %pl_lanemask = phi i64 [ 1, %pl_unknown_mask ], [ %pl_nextlanemask, %pl_loopend ]
 
   ; is the current lane on?  if so, goto do work, otherwise to end of loop
-  %pl_and = and i32 %pl_mask, %pl_lanemask
-  %pl_doit = icmp eq i32 %pl_and, %pl_lanemask
+  %pl_and = and i64 %pl_mask, %pl_lanemask
+  %pl_doit = icmp eq i64 %pl_and, %pl_lanemask
   br i1 %pl_doit, label %pl_dolane, label %pl_loopend 
 
 pl_dolane:
@@ -3054,7 +3072,7 @@ pl_dolane:
 
 pl_loopend:
   %pl_nextlane = add i32 %pl_lane, 1
-  %pl_nextlanemask = mul i32 %pl_lanemask, 2
+  %pl_nextlanemask = mul i64 %pl_lanemask, 2
 
   ; are we done yet?
   %pl_test = icmp ne i32 %pl_nextlane, $1

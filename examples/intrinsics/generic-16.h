@@ -311,8 +311,8 @@ INSERT_EXTRACT(__vec1_d, double)
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
-static FORCEINLINE uint32_t __movmsk(__vec16_i1 mask) {
-    return mask.v;
+static FORCEINLINE uint64_t __movmsk(__vec16_i1 mask) {
+    return (uint64_t)mask.v;
 }
 
 static FORCEINLINE __vec16_i1 __equal(__vec16_i1 a, __vec16_i1 b) {

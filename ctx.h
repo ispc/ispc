@@ -276,7 +276,7 @@ public:
     llvm::Value *None(llvm::Value *mask);
 
     /** Given a boolean mask value of type LLVMTypes::MaskType, return an
-        i32 value wherein the i'th bit is on if and only if the i'th lane
+        i64 value wherein the i'th bit is on if and only if the i'th lane
         of the mask is on. */
     llvm::Value *LaneMask(llvm::Value *mask);
 

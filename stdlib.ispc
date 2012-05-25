@@ -355,7 +355,8 @@ static inline uniform bool all(bool v) {
 #else
     int32 match = __sext_varying_bool((__sext_varying_bool(v) & __mask) == __mask);
 #endif
-    return __movmsk(match) == (1 << programCount) - 1;
+    return __movmsk(match) == ((programCount == 64) ? ~0ull : 
+                               ((1ull << programCount) - 1));
 }
 
 __declspec(safe) 
@@ -388,14 +389,14 @@ __declspec(safe)
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
 #ifdef ISPC_TARGET_GENERIC
-    return __popcnt_int32(__movmsk(v & __mask));
+    return __popcnt_int64(__movmsk(v & __mask));
 #else
-    return __popcnt_int32(__movmsk(__sext_varying_bool(v) & __mask));
+    return __popcnt_int64(__movmsk(__sext_varying_bool(v) & __mask));
 #endif
 }
 
 __declspec(safe) 
-static inline uniform int lanemask() {
+static inline uniform unsigned int64 lanemask() {
     return __movmsk(__mask);
 }
 
@@ -1615,12 +1616,12 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
     TA ret[programCount];                                               \
     TA memVal;                                                          \
     uniform int lastSwap;                                               \
-    uniform int mask = lanemask();                                      \
+    uniform unsigned int64 mask = lanemask();                           \
     /* First, have the first running program instance (if any) perform  \
        the swap with memory with its value of "value"; record the       \
        value returned. */                                               \
     for (; i < programCount; ++i) {                                     \
-        if ((mask & (1 << i)) == 0)                                     \
+        if ((mask & (1ull << i)) == 0)                                  \
             continue;                                                   \
         memVal = __atomic_swap_uniform_##TB##_global(ptr, extract(value, i)); \
         lastSwap = i;                                                   \
@@ -1632,7 +1633,7 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
        current instance had executed a hardware atomic swap right before \
        the last one that did a swap. */                                 \
     for (; i < programCount; ++i) {                                     \
-        if ((mask & (1 << i)) == 0)                                     \
+        if ((mask & (1ull << i)) == 0)                                  \
             continue;                                                   \
         ret[lastSwap] = extract(value, i);                              \
         lastSwap = i;                                                   \

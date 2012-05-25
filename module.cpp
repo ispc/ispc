@@ -1228,7 +1228,7 @@ Module::writeHeader(const char *fn) {
     if (g->emitInstrumentation) {
         fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");
         fprintf(f, "extern \"C\" {\n");
-        fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, int mask);\n");
+        fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);\n");
         fprintf(f, "}\n");
     }
 

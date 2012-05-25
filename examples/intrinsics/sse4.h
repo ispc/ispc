@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -224,8 +224,8 @@ CAST_BITS_SCALAR(double, int64_t)
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
-static FORCEINLINE uint32_t __movmsk(__vec4_i1 mask) {
-    return _mm_movemask_ps(mask.v);
+static FORCEINLINE uint64_t __movmsk(__vec4_i1 mask) {
+    return (uint64_t)_mm_movemask_ps(mask.v);
 }
 
 static FORCEINLINE __vec4_i1 __equal(__vec4_i1 a, __vec4_i1 b) {

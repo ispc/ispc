@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2012, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -175,7 +175,7 @@ define <16 x float> @__min_varying_float(<16 x float>,
 
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
-define i32 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
+define i64 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
   %floatmask = bitcast <16 x i32> %0 to <16 x float>
   %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -186,7 +186,8 @@ define i32 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
 
   %v1shift = shl i32 %v1, 8
   %v = or i32 %v1shift, %v0
-  ret i32 %v
+  %v64 = zext i32 %v to i64
+  ret i64 %v64
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

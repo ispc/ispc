@@ -1254,16 +1254,19 @@ llvm::Value *
 FunctionEmitContext::Any(llvm::Value *mask) {
     llvm::Value *mmval = LaneMask(mask);
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, mmval,
-                   LLVMInt32(0), LLVMGetName(mask, "_any"));
+                   LLVMInt64(0), LLVMGetName(mask, "_any"));
 }
 
 
 llvm::Value *
 FunctionEmitContext::All(llvm::Value *mask) {
     llvm::Value *mmval = LaneMask(mask);
+    llvm::Value *allOnMaskValue = (g->target.vectorWidth == 64) ?
+        LLVMInt64(~0ull) :
+        LLVMInt64((1ull << g->target.vectorWidth) - 1);
+
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mmval,
-                   LLVMInt32((1<<g->target.vectorWidth)-1), 
-                   LLVMGetName(mask, "_all"));
+                   allOnMaskValue, LLVMGetName(mask, "_all"));
 }
 
 
@@ -1271,14 +1274,14 @@ llvm::Value *
 FunctionEmitContext::None(llvm::Value *mask) {
     llvm::Value *mmval = LaneMask(mask);
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mmval,
-                   LLVMInt32(0), LLVMGetName(mask, "_none"));
+                   LLVMInt64(0), LLVMGetName(mask, "_none"));
 }
 
 
 llvm::Value *
 FunctionEmitContext::LaneMask(llvm::Value *v) {
     // Call the target-dependent movmsk function to turn the vector mask
-    // into an i32 value
+    // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__movmsk", &mm);
     if (g->target.maskBitCount == 1)
@@ -1396,7 +1399,7 @@ FunctionEmitContext::AddInstrumentationPoint(const char *note) {
     args.push_back(lGetStringAsValue(bblock, note));
     // arg 3: line number
     args.push_back(LLVMInt32(currentPos.first_line));
-    // arg 4: current mask, movmsk'ed down to an int32
+    // arg 4: current mask, movmsk'ed down to an int64
     args.push_back(LaneMask(GetFullMask()));
 
     llvm::Function *finst = m->module->getFunction("ISPCInstrument");
@@ -3196,10 +3199,12 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             // pointer to be called.
             llvm::Value *currentMask = LoadInst(maskPtr);
             llvm::Function *cttz = 
-                m->module->getFunction("__count_trailing_zeros_i32");
+                m->module->getFunction("__count_trailing_zeros_i64");
             AssertPos(currentPos, cttz != NULL);
-            llvm::Value *firstLane = CallInst(cttz, NULL, LaneMask(currentMask),
-                                              "first_lane");
+            llvm::Value *firstLane64 = CallInst(cttz, NULL, LaneMask(currentMask),
+                                                "first_lane64");
+            llvm::Value *firstLane = 
+                TruncInst(firstLane64, LLVMTypes::Int32Type, "first_lane32");
 
             // Get the pointer to the function we're going to call this
             // time through: ftpr = func[firstLane]

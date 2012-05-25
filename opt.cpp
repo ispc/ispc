@@ -269,12 +269,12 @@ lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
     execution mask, convert it to a bitvector where the 0th bit corresponds
     to the first vector value and so forth.
 */
-static uint32_t
+static uint64_t
 lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, 
                                              ISPC_MAX_NVEC> &elements) {
-    Assert(elements.size() <= 32);
+    Assert(elements.size() <= 64);
 
-    uint32_t mask = 0;
+    uint64_t mask = 0;
     for (unsigned int i = 0; i < elements.size(); ++i) {
         llvm::APInt intMaskValue;
         // SSE has the "interesting" approach of encoding blending
@@ -293,7 +293,7 @@ lConstElementsToMask(const llvm::SmallVector<llvm::Constant *,
         // Is the high-bit set?  If so, OR in the appropriate bit in
         // the result mask
         if (intMaskValue.countLeadingOnes() > 0)
-            mask |= (1 << i);
+            mask |= (1ull << i);
     }
     return mask;
 }
@@ -306,7 +306,7 @@ lConstElementsToMask(const llvm::SmallVector<llvm::Constant *,
     4-wide mask: < 0xffffffff, 0, 0, 0xffffffff >, we have 0b1001 = 9.
  */
 static bool
-lGetMask(llvm::Value *factor, uint32_t *mask) {
+lGetMask(llvm::Value *factor, uint64_t *mask) {
 #ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
     if (cdv != NULL) {
@@ -364,7 +364,7 @@ enum MaskStatus { ALL_ON, ALL_OFF, MIXED, UNKNOWN };
 */
 static MaskStatus
 lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
-    uint32_t bits;
+    uint64_t bits;
     if (lGetMask(mask, &bits) == false)
         return UNKNOWN;
 
@@ -373,7 +373,7 @@ lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
 
     if (vecWidth == -1)
         vecWidth = g->target.vectorWidth;
-    Assert(vecWidth <= 32);
+    Assert(vecWidth <= 64);
 
     for (int i = 0; i < vecWidth; ++i) {
         if ((bits & (1ull << i)) == 0)
@@ -601,12 +601,12 @@ private:
         instruction for this optimization pass.
      */
     struct BlendInstruction {
-        BlendInstruction(llvm::Function *f, uint32_t ao, int o0, int o1, int of)
+        BlendInstruction(llvm::Function *f, uint64_t ao, int o0, int o1, int of)
             : function(f), allOnMask(ao), op0(o0), op1(o1), opFactor(of) { }
         /** Function pointer for the blend instruction */ 
         llvm::Function *function;
         /** Mask value for an "all on" mask for this instruction */
-        uint32_t allOnMask;
+        uint64_t allOnMask;
         /** The operand number in the llvm CallInst corresponds to the
             first operand to blend with. */
         int op0;
@@ -728,7 +728,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
 
-            uint32_t mask;
+            uint64_t mask;
             if (lGetMask(factor, &mask) == true) {
                 llvm::Value *value = NULL;
                 if (mask == 0)
@@ -748,12 +748,13 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         }
         else if (matchesMaskInstruction(callInst->getCalledFunction())) {
             llvm::Value *factor = callInst->getArgOperand(0);
-            uint32_t mask;
+            uint64_t mask;
             if (lGetMask(factor, &mask) == true) {
                 // If the vector-valued mask has a known value, replace it
                 // with the corresponding integer mask from its elements
                 // high bits.
-                llvm::Value *value = LLVMInt32(mask);
+                llvm::Value *value = (callInst->getType() == LLVMTypes::Int32Type) ?
+                    LLVMInt32(mask) : LLVMInt64(mask);
                 llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, value);
                 modifiedAny = true;
@@ -763,7 +764,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         else if (callInst->getCalledFunction() == avxMaskedLoad32 ||
                  callInst->getCalledFunction() == avxMaskedLoad64) {
             llvm::Value *factor = callInst->getArgOperand(1);
-            uint32_t mask;
+            uint64_t mask;
             if (lGetMask(factor, &mask) == true) {
                 if (mask == 0) {
                     // nothing being loaded, replace with undef value
@@ -802,7 +803,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                  callInst->getCalledFunction() == avxMaskedStore64) {
             // NOTE: mask is the 2nd parameter, not the 3rd one!!
             llvm::Value *factor = callInst->getArgOperand(1);
-            uint32_t mask;
+            uint64_t mask;
             if (lGetMask(factor, &mask) == true) {
                 if (mask == 0) {
                     // nothing actually being stored, just remove the inst
@@ -931,7 +932,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
             continue;
 
-        uint32_t mask;
+        uint64_t mask;
         if (lGetMask(callInst->getArgOperand(0), &mask) == true) {
 #if 0
             fprintf(stderr, "mask %d\n", mask);
@@ -939,7 +940,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             fprintf(stderr, "-----------\n");
 #endif
             llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
-                                       iter, LLVMInt32(mask));
+                                       iter, LLVMInt64(mask));
             modifiedAny = true;
             goto restart;
         }
