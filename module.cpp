@@ -613,6 +613,18 @@ Module::AddFunctionDeclaration(const std::string &name,
         for (unsigned int i = 0; i < overloadFuncs.size(); ++i) {
             Symbol *overloadFunc = overloadFuncs[i];
 
+            const FunctionType *overloadType = 
+                CastType<FunctionType>(overloadFunc->type);
+            if (overloadType == NULL) {
+                Assert(m->errorCount == 0);
+                continue;
+            }
+
+            if (functionType->isExported || overloadType->isExported)
+                Error(pos, "Illegal to have \"export\" function with same name "
+                      "as previously declared function (%s:%d).",
+                      overloadFunc->pos.name, overloadFunc->pos.first_line);
+
             // Check for a redeclaration of a function with the same
             // name and type
             if (Type::Equal(overloadFunc->type, functionType))
