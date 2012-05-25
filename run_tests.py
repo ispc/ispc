@@ -76,8 +76,11 @@ if is_generic_target and options.include_file == None:
         sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-16.h\n")
         options.include_file = "examples/intrinsics/generic-16.h"
     elif options.target == "generic-32":
-        sys.stderr.write("No generics #include specified and no default available for \"generic-32\" target.\n")
-        sys.exit(1)
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-32.h\n")
+        options.include_file = "examples/intrinsics/generic-32.h"
+    elif options.target == "generic-64":
+        sys.stderr.write("No generics #include specified; using examples/intrinsics/generic-64.h\n")
+        options.include_file = "examples/intrinsics/generic-64.h"
 
 if options.compiler_exe == None:
     if is_windows:
