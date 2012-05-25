@@ -1862,6 +1862,8 @@ function_definition
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
                 AssertPos(@1, m->errorCount > 0);
+            else if ($1->storageClass == SC_TYPEDEF)
+                Error(@1, "Illegal \"typedef\" provided with function definition.");
             else {
                 Stmt *code = $4;
                 if (code == NULL) code = new StmtList(@4);
