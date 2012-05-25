@@ -420,17 +420,40 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
 }
 
 
-void
-FatalError(const char *file, int line, const char *message) {
-    fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
+static void
+lPrintBugText() {
     fprintf(stderr, "***\n"
             "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
             "*** (Including as much information as you can about how to "
             "reproduce this error).\n"
             "*** You have apparently encountered a bug in the compiler that we'd "
             "like to fix!\n***\n");
+}
+
+
+void
+FatalError(const char *file, int line, const char *message) {
+    fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
+    lPrintBugText();
     abort();
 }
+
+
+void
+DoAssert(const char *file, int line, const char *expr) {
+    fprintf(stderr, "%s:%u: Assertion failed: \"%s\".\n", file, line, expr);
+    lPrintBugText();
+    abort();
+}
+
+
+void
+DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
+    Error(pos, "Assertion failed (%s:%u): \"%s\".", file, line, expr);
+    lPrintBugText();
+    abort();
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 

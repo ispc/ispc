@@ -140,7 +140,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     for (unsigned int i = 0; i < vars.size(); ++i) {
         Symbol *sym = vars[i].sym;
-        Assert(sym != NULL);
+        AssertPos(pos, sym != NULL);
         if (sym->type == NULL)
             continue;
         Expr *initExpr = vars[i].init;
@@ -191,7 +191,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         llvm::Type *llvmType = sym->type->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return;
         }
 
@@ -478,12 +478,12 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
         // under varying control flow,, returns can't stop instruction
         // emission, so this better be non-NULL...
-        Assert(ctx->GetCurrentBasicBlock()); 
+        AssertPos(ctx->GetDebugPos(), ctx->GetCurrentBasicBlock()); 
     }
     if (falseStmts) {
         ctx->SetInternalMaskAndNot(oldMask, test);
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
-        Assert(ctx->GetCurrentBasicBlock());
+        AssertPos(ctx->GetDebugPos(), ctx->GetCurrentBasicBlock());
     }
 }
 
@@ -564,7 +564,7 @@ IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
             (costIsAcceptable || g->opt.disableCoherentControlFlow)) {
             ctx->StartVaryingIf(oldMask);
             emitMaskedTrueAndFalse(ctx, oldMask, ltest);
-            Assert(ctx->GetCurrentBasicBlock());
+            AssertPos(pos, ctx->GetCurrentBasicBlock());
             ctx->EndIf();
         }
         else {
@@ -587,7 +587,7 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     // compiler see what's going on so that subsequent optimizations for
     // code emitted here can operate with the knowledge that the mask is
     // definitely all on (until it modifies the mask itself).
-    Assert(!g->opt.disableCoherentControlFlow);
+    AssertPos(pos, !g->opt.disableCoherentControlFlow);
     if (!g->opt.disableMaskAllOnOptimizations)
         ctx->SetInternalMask(LLVMMaskAllOn);
     llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
@@ -637,7 +637,7 @@ IfStmt::emitMaskAllOn(FunctionEmitContext *ctx, llvm::Value *ltest,
     emitMaskedTrueAndFalse(ctx, LLVMMaskAllOn, ltest);
     // In this case, return/break/continue isn't allowed to jump and end
     // emission.
-    Assert(ctx->GetCurrentBasicBlock());
+    AssertPos(pos, ctx->GetCurrentBasicBlock());
     ctx->EndIf();
     ctx->BranchInst(bDone);
 
@@ -666,7 +666,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
         // Emit statements for true
         ctx->SetCurrentBasicBlock(bRunTrue);
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
-        Assert(ctx->GetCurrentBasicBlock()); 
+        AssertPos(pos, ctx->GetCurrentBasicBlock()); 
         ctx->BranchInst(bNext);
         ctx->SetCurrentBasicBlock(bNext);
     }
@@ -683,7 +683,7 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
         // Emit code for false
         ctx->SetCurrentBasicBlock(bRunFalse);
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
-        Assert(ctx->GetCurrentBasicBlock());
+        AssertPos(pos, ctx->GetCurrentBasicBlock());
         ctx->BranchInst(bNext);
         ctx->SetCurrentBasicBlock(bNext);
     }
@@ -837,7 +837,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetFunctionMask(LLVMMaskAllOn);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
-        Assert(ctx->GetCurrentBasicBlock());
+        AssertPos(pos, ctx->GetCurrentBasicBlock());
         ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(btest);
 
@@ -845,7 +845,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bMixed);
         if (bodyStmts)
             bodyStmts->EmitCode(ctx);
-        Assert(ctx->GetCurrentBasicBlock());
+        AssertPos(pos, ctx->GetCurrentBasicBlock());
         ctx->BranchInst(btest);
     }
     else {
@@ -986,7 +986,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
     // it and then jump into the loop test code.  (Also start a new scope
     // since the initiailizer may be a declaration statement).
     if (init) {
-        Assert(dynamic_cast<StmtList *>(init) == NULL);
+        AssertPos(pos, dynamic_cast<StmtList *>(init) == NULL);
         ctx->StartScope();
         init->EmitCode(ctx);
     }
@@ -1015,7 +1015,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (doCoherentCheck)
             Warning(test->pos, "Uniform condition supplied to cfor/cwhile "
                     "statement.");
-        Assert(ltest->getType() == LLVMTypes::BoolType);
+        AssertPos(pos, ltest->getType() == LLVMTypes::BoolType);
         ctx->BranchInst(bloop, bexit, ltest);
     }
     else {
@@ -1051,7 +1051,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->SetFunctionMask(LLVMMaskAllOn);
         if (stmts)
             stmts->EmitCode(ctx);
-        Assert(ctx->GetCurrentBasicBlock());
+        AssertPos(pos, ctx->GetCurrentBasicBlock());
         ctx->SetFunctionMask(oldFunctionMask);
         ctx->BranchInst(bstep);
 
@@ -1364,8 +1364,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetFunctionMask(LLVMMaskAllOn);
 
     // This should be caught during typechecking
-    Assert(startExprs.size() == dimVariables.size() && 
-           endExprs.size() == dimVariables.size());
+    AssertPos(pos, startExprs.size() == dimVariables.size() && 
+              endExprs.size() == dimVariables.size());
     int nDims = (int)dimVariables.size();
 
     ///////////////////////////////////////////////////////////////////////
@@ -1704,7 +1704,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->SetContinueTarget(bbFullBodyContinue);
         ctx->AddInstrumentationPoint("foreach loop body (all on)");
         stmts->EmitCode(ctx);
-        Assert(ctx->GetCurrentBasicBlock() != NULL);
+        AssertPos(pos, ctx->GetCurrentBasicBlock() != NULL);
         ctx->BranchInst(bbFullBodyContinue);
     }
     ctx->SetCurrentBasicBlock(bbFullBodyContinue); {
@@ -2094,7 +2094,7 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     const Type *type;
     if (expr == NULL || ((type = expr->GetType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
@@ -2112,7 +2112,7 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
@@ -2342,7 +2342,7 @@ LabeledStmt::LabeledStmt(const char *n, Stmt *s, SourcePos p)
 void
 LabeledStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::BasicBlock *bblock = ctx->GetLabeledBasicBlock(name);
-    Assert(bblock != NULL);
+    AssertPos(pos, bblock != NULL);
 
     // End the current basic block with a jump to our basic block and then
     // set things up for emission to continue there.  Note that the current
@@ -2597,7 +2597,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // Now we can emit code to call __do_print()
     llvm::Function *printFunc = m->module->getFunction("__do_print");
-    Assert(printFunc);
+    AssertPos(pos, printFunc);
 
     llvm::Value *mask = ctx->GetFullMask();
     // Set up the rest of the parameters to it
@@ -2653,7 +2653,7 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Function *assertFunc = 
         isUniform ? m->module->getFunction("__do_assert_uniform") :
                     m->module->getFunction("__do_assert_varying");
-    Assert(assertFunc != NULL);
+    AssertPos(pos, assertFunc != NULL);
 
     char *errorString;
     if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s\n", 
@@ -2721,18 +2721,18 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     const Type *exprType;
     if (expr == NULL || ((exprType = expr->GetType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
     llvm::Value *exprValue = expr->GetValue(ctx);
     if (exprValue == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
     // Typechecking should catch this
-    Assert(CastType<PointerType>(exprType) != NULL);
+    AssertPos(pos, CastType<PointerType>(exprType) != NULL);
 
     if (exprType->IsUniformType()) {
         // For deletion of a uniform pointer, we just need to cast the
@@ -2741,7 +2741,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType,
                                      "ptr_to_void");
         llvm::Function *func = m->module->getFunction("__delete_uniform");
-        Assert(func != NULL);
+        AssertPos(pos, func != NULL);
 
         ctx->CallInst(func, NULL, exprValue, "");
     }
@@ -2751,7 +2751,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // only need to extend to 64-bit values on 32-bit targets before
         // calling it.
         llvm::Function *func = m->module->getFunction("__delete_varying");
-        Assert(func != NULL);
+        AssertPos(pos, func != NULL);
         if (g->target.is32Bit)
             exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType,
                                       "ptr_to_64");
@@ -2804,7 +2804,7 @@ DeleteStmt::EstimateCost() const {
 Stmt *
 CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
     if (iterSym == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -2831,11 +2831,11 @@ CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
     // First, call __movmsk(__mask)) to get the mask as a set of bits.
     // This should be hoisted out of the loop
     Symbol *maskSym = m->symbolTable->LookupVariable("__mask");
-    Assert(maskSym != NULL);
+    AssertPos(pos, maskSym != NULL);
     Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
     std::vector<Symbol *> mmFuns;
     m->symbolTable->LookupFunction("__movmsk", &mmFuns);
-    Assert(mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
+    AssertPos(pos, mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
     FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
                                                             pos);
     ExprList *movmskArgs = new ExprList(maskVecExpr, pos);

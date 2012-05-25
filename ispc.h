@@ -58,16 +58,6 @@
 #include <vector>
 #include <string>
 
-#define Assert(expr)                                            \
-    ((void)((expr) ? 0 : __Assert (#expr, __FILE__, __LINE__)))
-#define __Assert(expr, file, line)                                      \
-    ((void)fprintf(stderr, "%s:%u: Assertion failed: \"%s\"\n"          \
-                   "***\n*** Please file a bug report at "              \
-                   "https://github.com/ispc/ispc/issues\n*** (Including as much " \
-                   "information as you can about how to reproduce this error).\n" \
-                   "*** You have apparently encountered a bug in the compiler that " \
-                   "we'd like to fix!\n***\n", file, line, expr), abort(), 0)
-
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
@@ -145,9 +135,23 @@ struct SourcePos {
     bool operator==(const SourcePos &p2) const;
 };
 
+
 /** Returns a SourcePos that encompasses the extent of both of the given
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
+
+
+
+// Assert
+
+extern void DoAssert(const char *file, int line, const char *expr);
+extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
+
+#define Assert(expr)                                            \
+    ((void)((expr) ? 0 : ((void)DoAssert (__FILE__, __LINE__, #expr), 0)))
+
+#define AssertPos(pos, expr)                                     \
+    ((void)((expr) ? 0 : ((void)DoAssertPos (pos, __FILE__, __LINE__, #expr), 0)))
 
 
 /** @brief Structure that defines a compilation target 

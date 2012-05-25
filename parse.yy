@@ -391,7 +391,7 @@ argument_expression_list
       {
           ExprList *argList = dynamic_cast<ExprList *>($1);
           if (argList == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               argList = new ExprList(@3);
           }
           argList->exprs.push_back($3);
@@ -623,13 +623,13 @@ declaration_statement
     : declaration     
     {
         if ($1 == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(@1, m->errorCount > 0);
             $$ = NULL;
         }
         else if ($1->declSpecs->storageClass == SC_TYPEDEF) {
             for (unsigned int i = 0; i < $1->declarators.size(); ++i) {
                 if ($1->declarators[i] == NULL)
-                    Assert(m->errorCount > 0);
+                    AssertPos(@1, m->errorCount > 0);
                 else
                     m->AddTypeDef($1->declarators[i]->name,
                                   $1->declarators[i]->type,
@@ -789,7 +789,7 @@ init_declarator_list
       {
           std::vector<Declarator *> *dl = (std::vector<Declarator *> *)$1;
           if (dl == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               dl = new std::vector<Declarator *>;
           }
           if ($3 != NULL)
@@ -918,7 +918,7 @@ struct_declaration_list
       {
           std::vector<StructDeclaration *> *sdl = (std::vector<StructDeclaration *> *)$1;
           if (sdl == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               sdl = new std::vector<StructDeclaration *>;
           }
           if ($2 != NULL)
@@ -1013,7 +1013,7 @@ struct_declarator_list
       {
           std::vector<Declarator *> *sdl = (std::vector<Declarator *> *)$1;
           if (sdl == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               sdl = new std::vector<Declarator *>;
           }
           if ($3 != NULL)
@@ -1087,7 +1087,7 @@ enumerator_list
       {
           std::vector<Symbol *> *symList = $1;
           if (symList == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               symList = new std::vector<Symbol *>;
           }
           if ($3 != NULL)
@@ -1487,7 +1487,7 @@ initializer_list
       {
           ExprList *exprList = $1;
           if (exprList == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               exprList = new ExprList(@3);
           }
           exprList->exprs.push_back($3);
@@ -1558,7 +1558,7 @@ statement_list
       {
           StmtList *sl = (StmtList *)$1;
           if (sl == NULL) {
-              Assert(m->errorCount > 0);
+              AssertPos(@1, m->errorCount > 0);
               sl = new StmtList(@2);
           }
           sl->Add($2);
@@ -1670,7 +1670,7 @@ foreach_dimension_list
     {
         std::vector<ForeachDimension *> *dv = $1;
         if (dv == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(@1, m->errorCount > 0);
             dv = new std::vector<ForeachDimension *>;
         }
         if ($3 != NULL)
@@ -1708,7 +1708,7 @@ iteration_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             Assert(m->errorCount > 0);
+             AssertPos(@3, m->errorCount > 0);
              dims = new std::vector<ForeachDimension *>;
          }
          for (unsigned int i = 0; i < dims->size(); ++i)
@@ -1718,7 +1718,7 @@ iteration_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             Assert(m->errorCount > 0);
+             AssertPos(@3, m->errorCount > 0);
              dims = new std::vector<ForeachDimension *>;
          }
 
@@ -1736,7 +1736,7 @@ iteration_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             Assert(m->errorCount > 0);
+             AssertPos(@3, m->errorCount > 0);
              dims = new std::vector<ForeachDimension *>;
          }
 
@@ -1747,7 +1747,7 @@ iteration_statement
      {
          std::vector<ForeachDimension *> *dims = $3;
          if (dims == NULL) {
-             Assert(m->errorCount > 0);
+             AssertPos(@1, m->errorCount > 0);
              dims = new std::vector<ForeachDimension *>;
          }
 
@@ -1861,7 +1861,7 @@ function_definition
             $2->InitFromDeclSpecs($1);
             const FunctionType *funcType = CastType<FunctionType>($2->type);
             if (funcType == NULL)
-                Assert(m->errorCount > 0);
+                AssertPos(@1, m->errorCount > 0);
             else {
                 Stmt *code = $4;
                 if (code == NULL) code = new StmtList(@4);
@@ -2010,7 +2010,7 @@ lAddFunctionParams(Declarator *decl) {
     m->symbolTable->PushScope();
 
     if (decl == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(decl->pos, m->errorCount > 0);
         return;
     }
 
@@ -2018,7 +2018,7 @@ lAddFunctionParams(Declarator *decl) {
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
     if (decl->kind != DK_FUNCTION) {
-        Assert(m->errorCount > 0);
+        AssertPos(decl->pos, m->errorCount > 0);
         return;
     }
 
@@ -2028,14 +2028,14 @@ lAddFunctionParams(Declarator *decl) {
         Assert(pdecl != NULL && pdecl->declarators.size() == 1);
         Declarator *declarator = pdecl->declarators[0];
         if (declarator == NULL)
-            Assert(m->errorCount > 0);
+            AssertPos(decl->pos, m->errorCount > 0);
         else {
             Symbol *sym = new Symbol(declarator->name, declarator->pos,
                                      declarator->type, declarator->storageClass);
 #ifndef NDEBUG
             bool ok = m->symbolTable->AddVariable(sym);
             if (ok == false)
-                Assert(m->errorCount > 0);
+                AssertPos(decl->pos, m->errorCount > 0);
 #else
             m->symbolTable->AddVariable(sym);
 #endif
@@ -2189,7 +2189,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
         if (enums[i]->constValue != NULL) {
             /* Already has a value, so first update nextVal with it. */
             int count = enums[i]->constValue->AsUInt32(&nextVal);
-            Assert(count == 1);
+            AssertPos(enums[i]->pos, count == 1);
             ++nextVal;
 
             /* When the source file as being parsed, the ConstExpr for any
@@ -2202,7 +2202,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                               enums[i]->pos);
             castExpr = Optimize(castExpr);
             enums[i]->constValue = dynamic_cast<ConstExpr *>(castExpr);
-            Assert(enums[i]->constValue != NULL);
+            AssertPos(enums[i]->pos, enums[i]->constValue != NULL);
         }
         else {
             enums[i]->constValue = new ConstExpr(enumType, nextVal++, 

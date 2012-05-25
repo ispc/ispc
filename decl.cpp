@@ -231,7 +231,7 @@ Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     InitFromType(baseType, ds);
 
     if (type == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return;
     }
 
@@ -319,8 +319,8 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     if (kind == DK_BASE) {
         // All of the type qualifiers should be in the DeclSpecs for the
         // base declarator
-        Assert(typeQualifiers == 0);
-        Assert(child == NULL);
+        AssertPos(pos, typeQualifiers == 0);
+        AssertPos(pos, child == NULL);
         type = baseType;
     }
     else if (kind == DK_POINTER) {
@@ -398,7 +398,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Declaration *d = functionParams[i];
 
             if (d == NULL) {
-                Assert(m->errorCount > 0);
+                AssertPos(pos, m->errorCount > 0);
                 continue;
             }
             if (d->declarators.size() == 0) {
@@ -408,10 +408,10 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 d->declarators[0]->InitFromDeclSpecs(d->declSpecs);
             }
 
-            Assert(d->declarators.size() == 1);
+            AssertPos(pos, d->declarators.size() == 1);
             Declarator *decl = d->declarators[0];
             if (decl == NULL || decl->type == NULL) {
-                Assert(m->errorCount > 0);
+                AssertPos(pos, m->errorCount > 0);
                 continue;
             }
 
@@ -446,7 +446,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                 // significant problem.)
                 const Type *targetType = at->GetElementType();
                 if (targetType == NULL) {
-                    Assert(m->errorCount > 0);
+                    AssertPos(pos, m->errorCount > 0);
                     return;
                 }
 
@@ -525,7 +525,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         }
 
         if (child == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return;
         }
 

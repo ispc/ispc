@@ -148,7 +148,7 @@ lMaybeIssuePrecisionWarning(const AtomicType *toAtomicType,
 
 static Expr *
 lArrayToPointer(Expr *expr) {
-    Assert(expr && CastType<ArrayType>(expr->GetType()));
+    AssertPos(expr->pos, expr && CastType<ArrayType>(expr->GetType()));
 
     Expr *zero = new ConstExpr(AtomicType::UniformInt32, 0, expr->pos);
     Expr *index = new IndexExpr(expr, zero, expr->pos);
@@ -189,7 +189,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             bool failureOk, const char *errorMsgBase, SourcePos pos) {
     /* This function is way too long and complex.  Is type conversion stuff
        always this messy, or can this be cleaned up somehow? */
-    Assert(failureOk || errorMsgBase != NULL);
+    AssertPos(pos, failureOk || errorMsgBase != NULL);
 
     if (toType == NULL || fromType == NULL)
         return false;
@@ -465,7 +465,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
                         fromArrayType->GetElementType())) {
             // the case of different element counts should have returned
             // successfully earlier, yes??
-            Assert(toArrayType->GetElementCount() != fromArrayType->GetElementCount());
+            AssertPos(pos, toArrayType->GetElementCount() != fromArrayType->GetElementCount());
             goto typecast_ok;
         }
         else if (Type::Equal(toArrayType->GetElementType(), 
@@ -521,7 +521,7 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
 
     // enum -> atomic (integer, generally...) is always ok
     if (fromEnumType != NULL) {
-        Assert(toAtomicType != NULL || toVectorType != NULL);
+        AssertPos(pos, toAtomicType != NULL || toVectorType != NULL);
         goto typecast_ok;
     }
 
@@ -643,7 +643,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
         // pointer we have.
         llvm::Type *llvmType = symType->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return;
         }
 
@@ -757,7 +757,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                     collectionType ? collectionType->GetElementType(i) : 
                                      symType->GetAsUniformType();
                 if (elementType == NULL) {
-                    Assert(m->errorCount > 0);
+                    AssertPos(pos, m->errorCount > 0);
                     return;
                 }
 
@@ -776,7 +776,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                     // rest as zero.
                     llvm::Type *llvmType = elementType->LLVMType(g->ctx);
                     if (llvmType == NULL) {
-                        Assert(m->errorCount > 0);
+                        AssertPos(pos, m->errorCount > 0);
                         return;
                     }
 
@@ -1082,7 +1082,7 @@ lEmitNegate(Expr *arg, SourcePos pos, FunctionEmitContext *ctx) {
         return ctx->BinaryOperator(llvm::Instruction::FSub, zero, argVal,
                                    LLVMGetName(argVal, "_negate"));
     else {
-        Assert(type->IsIntType());
+        AssertPos(pos, type->IsIntType());
         return ctx->BinaryOperator(llvm::Instruction::Sub, zero, argVal,
                                    LLVMGetName(argVal, "_negate"));
     }
@@ -1217,7 +1217,7 @@ UnaryExpr::Optimize() {
             FATAL("unexpected type in UnaryExpr::Optimize() / BitNot case");
     }
     case LogicalNot: {
-        Assert(Type::EqualIgnoringConst(type, AtomicType::UniformBool) || 
+        AssertPos(pos, Type::EqualIgnoringConst(type, AtomicType::UniformBool) || 
                Type::EqualIgnoringConst(type, AtomicType::VaryingBool));
         bool v[ISPC_MAX_NVEC];
         int count = constExpr->AsBool(v);
@@ -1410,7 +1410,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
         break;
     case BinaryExpr::Sub: {
         if (CastType<PointerType>(type1) != NULL) {
-            Assert(Type::Equal(type0, type1));
+            AssertPos(pos, Type::Equal(type0, type1));
 
             if (ptrType->IsSlice()) {
                 llvm::Value *p0 = ctx->ExtractInst(value0, 0);
@@ -1421,7 +1421,7 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
                                             ctx, pos);
                
                 int soaWidth = ptrType->GetBaseType()->GetSOAWidth();
-                Assert(soaWidth > 0);
+                AssertPos(pos, soaWidth > 0);
                 llvm::Value *soaScale = LLVMIntAsType(soaWidth, 
                                                       majorDelta->getType());
 
@@ -1509,7 +1509,7 @@ lEmitBinaryArith(BinaryExpr::Op op, llvm::Value *value0, llvm::Value *value1,
         return lEmitBinaryPointerArith(op, value0, value1, type0, type1,
                                        ctx, pos);
     else {
-        Assert(Type::EqualIgnoringConst(type0, type1));
+        AssertPos(pos, Type::EqualIgnoringConst(type0, type1));
 
         llvm::Instruction::BinaryOps inst;
         bool isFloatOp = type0->IsFloatType();
@@ -1632,7 +1632,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
     const Type *type0 = arg0->GetType(), *type1 = arg1->GetType();
     if (type0 == NULL || type1 == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -1650,17 +1650,17 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
         // promote the uniform one to varying
         if (type0->IsUniformType() && type1->IsVaryingType()) {
             arg0 = TypeConvertExpr(arg0, AtomicType::VaryingBool, lOpString(op));
-            Assert(arg0 != NULL);
+            AssertPos(pos, arg0 != NULL);
         }
         if (type1->IsUniformType() && type0->IsVaryingType()) {
             arg1 = TypeConvertExpr(arg1, AtomicType::VaryingBool, lOpString(op));
-            Assert(arg1 != NULL);
+            AssertPos(pos, arg1 != NULL);
         }
 
         llvm::Value *value0 = arg0->GetValue(ctx);
         llvm::Value *value1 = arg1->GetValue(ctx);
         if (value0 == NULL || value1 == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -1668,7 +1668,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             return ctx->BinaryOperator(llvm::Instruction::And, value0, value1,
                                        "logical_and");
         else {
-            Assert(op == BinaryExpr::LogicalOr);
+            AssertPos(pos, op == BinaryExpr::LogicalOr);
             return ctx->BinaryOperator(llvm::Instruction::Or, value0, value1, 
                                        "logical_or");
         }
@@ -1686,7 +1686,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
     // Evaluate the first operand
     llvm::Value *value0 = arg0->GetValue(ctx);
     if (value0 == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -1710,7 +1710,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             ctx->BranchInst(bbLogicalDone);
         }
         else {
-            Assert(op == BinaryExpr::LogicalAnd);
+            AssertPos(pos, op == BinaryExpr::LogicalAnd);
 
             // Conversely, for &&, if value0 is false, we skip evaluating
             // value1.
@@ -1732,12 +1732,12 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
         ctx->SetCurrentBasicBlock(bbEvalValue1);
         if (type1->IsUniformType() && retType->IsVaryingType()) {
             arg1 = TypeConvertExpr(arg1, AtomicType::VaryingBool, "logical op");
-            Assert(arg1 != NULL);
+            AssertPos(pos, arg1 != NULL);
         }
 
         llvm::Value *value1 = arg1->GetValue(ctx);
         if (value1 == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
         ctx->StoreInst(value1, retPtr);
@@ -1759,7 +1759,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
         // perform logical vector ops with its value.
         if (type1->IsUniformType()) {
             arg1 = TypeConvertExpr(arg1, AtomicType::VaryingBool, "logical op");
-            Assert(arg1 != NULL);
+            AssertPos(pos, arg1 != NULL);
             type1 = arg1->GetType();
         }
 
@@ -1794,7 +1794,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
             llvm::Value *value1 = arg1->GetValue(ctx);
             if (value1 == NULL) {
-                Assert(m->errorCount > 0);
+                AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
 
@@ -1812,7 +1812,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             ctx->BranchInst(bbLogicalDone);
         }
         else {
-            Assert(op == BinaryExpr::LogicalAnd);
+            AssertPos(pos, op == BinaryExpr::LogicalAnd);
 
             // If value0 is false for all currently running lanes, the
             // overall result must be false: this corresponds to checking
@@ -1843,7 +1843,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 
             llvm::Value *value1 = arg1->GetValue(ctx);
             if (value1 == NULL) {
-                Assert(m->errorCount > 0);
+                AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
 
@@ -1875,7 +1875,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 llvm::Value *
 BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -1886,7 +1886,7 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *value0 = arg0->GetValue(ctx);
     llvm::Value *value1 = arg1->GetValue(ctx);
     if (value0 == NULL || value1 == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -1942,7 +1942,7 @@ BinaryExpr::GetType() const {
     // and will fail type checking and (int + ptr) should be canonicalized
     // into (ptr + int) by type checking.
     if (op == Add)
-        Assert(CastType<PointerType>(type1) == NULL);
+        AssertPos(pos, CastType<PointerType>(type1) == NULL);
 
     if (op == Comma)
         return arg1->GetType();
@@ -1967,14 +1967,14 @@ BinaryExpr::GetType() const {
         }
 
         // otherwise fall through for these...
-        Assert(op == Lt || op == Gt || op == Le || op == Ge ||
+        AssertPos(pos, op == Lt || op == Gt || op == Le || op == Ge ||
                op == Equal || op == NotEqual);
     }
 
     const Type *exprType = Type::MoreGeneralType(type0, type1, pos, lOpString(op));
     // I don't think that MoreGeneralType should be able to fail after the
     // checks done in BinaryExpr::TypeCheck().
-    Assert(exprType != NULL);
+    AssertPos(pos, exprType != NULL);
 
     switch (op) {
     case Add:
@@ -2159,7 +2159,7 @@ BinaryExpr::Optimize() {
                 std::vector<Symbol *> rcpFuns;
                 m->symbolTable->LookupFunction("rcp", &rcpFuns);
                 if (rcpFuns.size() > 0) {
-                    Assert(rcpFuns.size() == 2);
+                    AssertPos(pos, rcpFuns.size() == 2);
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
@@ -2189,7 +2189,7 @@ BinaryExpr::Optimize() {
     if (constArg0 == NULL || constArg1 == NULL)
         return this;
 
-    Assert(Type::EqualIgnoringConst(arg0->GetType(), arg1->GetType()));
+    AssertPos(pos, Type::EqualIgnoringConst(arg0->GetType(), arg1->GetType()));
     const Type *type = arg0->GetType()->GetAsNonConstType();
     if (Type::Equal(type, AtomicType::UniformFloat) || 
         Type::Equal(type, AtomicType::VaryingFloat)) {
@@ -2280,12 +2280,12 @@ BinaryExpr::TypeCheck() {
     if (CastType<ReferenceType>(type0) != NULL) {
         arg0 = new RefDerefExpr(arg0, arg0->pos);
         type0 = arg0->GetType();
-        Assert(type0 != NULL);
+        AssertPos(pos, type0 != NULL);
     }
     if (CastType<ReferenceType>(type1) != NULL) {
         arg1 = new RefDerefExpr(arg1, arg1->pos);
         type1 = arg1->GetType();
-        Assert(type1 != NULL);
+        AssertPos(pos, type1 != NULL);
     }
 
     // Convert arrays to pointers to their first elements
@@ -2362,7 +2362,7 @@ BinaryExpr::TypeCheck() {
             std::swap(pt0, pt1);
         }
 
-        Assert(pt0 != NULL);
+        AssertPos(pos, pt0 != NULL);
 
         if (PointerType::IsVoidPointer(pt0)) {
             Error(pos, "Illegal to perform pointer arithmetic "
@@ -2383,7 +2383,7 @@ BinaryExpr::TypeCheck() {
             arg0 = TypeConvertExpr(arg0, type0->GetAsVaryingType(), 
                                    "pointer addition");
             offsetType = offsetType->GetAsVaryingType();
-            Assert(arg0 != NULL);
+            AssertPos(pos, arg0 != NULL);
         }
 
         arg1 = TypeConvertExpr(arg1, offsetType, lOpString(op));
@@ -2721,13 +2721,13 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
         const Type *ptrType = lvalue->GetLValueType();
         const Type *valueType = rvalue->GetType();
         if (ptrType == NULL || valueType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
         llvm::Value *value = rvalue->GetValue(ctx);
         if (value == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -2748,7 +2748,7 @@ AssignExpr::GetValue(FunctionEmitContext *ctx) const {
     case XorAssign:
     case OrAssign: {
         // This should be caught during type checking
-        Assert(!CastType<ArrayType>(type) &&
+        AssertPos(pos, !CastType<ArrayType>(type) &&
                !CastType<StructType>(type));
         return lEmitOpAssign(op, lvalue, rvalue, type, baseSym, pos, ctx);
     }
@@ -2841,7 +2841,7 @@ AssignExpr::TypeCheck() {
 
     const Type *lhsType = lvalue->GetType();
     if (lhsType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -2992,7 +2992,7 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
 
     const Type *testType = test->GetType()->GetAsNonConstType();
     // This should be taken care of during typechecking
-    Assert(Type::Equal(testType->GetBaseType(), AtomicType::UniformBool) ||
+    AssertPos(pos, Type::Equal(testType->GetBaseType(), AtomicType::UniformBool) ||
            Type::Equal(testType->GetBaseType(), AtomicType::VaryingBool));
 
     const Type *type = expr1->GetType();
@@ -3032,7 +3032,7 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
     else if (CastType<VectorType>(testType) == NULL) {
         // the test is a varying bool type
         llvm::Value *testVal = test->GetValue(ctx);
-        Assert(testVal->getType() == LLVMTypes::MaskType);
+        AssertPos(pos, testVal->getType() == LLVMTypes::MaskType);
         llvm::Value *oldMask = ctx->GetInternalMask();
         llvm::Value *fullMask = ctx->GetFullMask();
 
@@ -3095,8 +3095,8 @@ SelectExpr::GetValue(FunctionEmitContext *ctx) const {
         ctx->SetDebugPos(pos);
         const VectorType *vt = CastType<VectorType>(type);
         // Things that typechecking should have caught
-        Assert(vt != NULL);
-        Assert(CastType<VectorType>(testType) != NULL &&
+        AssertPos(pos, vt != NULL);
+        AssertPos(pos, CastType<VectorType>(testType) != NULL &&
                (CastType<VectorType>(testType)->GetElementCount() == 
                 vt->GetElementCount()));
 
@@ -3137,7 +3137,7 @@ SelectExpr::GetType() const {
         CastType<VectorType>(testType)->GetElementCount() : 0;
     int expr1VecSize = CastType<VectorType>(expr1Type) != NULL ?
         CastType<VectorType>(expr1Type)->GetElementCount() : 0;
-    Assert(!(testVecSize != 0 && expr1VecSize != 0 && testVecSize != expr1VecSize));
+    AssertPos(pos, !(testVecSize != 0 && expr1VecSize != 0 && testVecSize != expr1VecSize));
     
     int vectorSize = std::max(testVecSize, expr1VecSize);
     return Type::MoreGeneralType(expr1Type, expr2Type, Union(expr1->pos, expr2->pos),
@@ -3182,9 +3182,9 @@ SelectExpr::Optimize() {
         if (constExpr1 == NULL || constExpr2 == NULL)
             return this;
 
-        Assert(Type::Equal(constExpr1->GetType(), constExpr2->GetType()));
+        AssertPos(pos, Type::Equal(constExpr1->GetType(), constExpr2->GetType()));
         const Type *exprType = constExpr1->GetType()->GetAsNonConstType();
-        Assert(exprType->IsVaryingType());
+        AssertPos(pos, exprType->IsVaryingType());
 
         // FIXME: it's annoying to have to have all of this replicated code.
         if (Type::Equal(exprType, AtomicType::VaryingInt32) ||
@@ -3348,12 +3348,12 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *callee = func->GetValue(ctx);
 
     if (callee == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     const FunctionType *ft = lGetFunctionType(func);
-    Assert(ft != NULL);
+    AssertPos(pos, ft != NULL);
     bool isVoidFunc = Type::Equal(ft->GetReturnType(), AtomicType::Void);
 
     // Automatically convert function call args to references if needed.
@@ -3366,7 +3366,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     // Specifically, this can happen if there's an error earlier during
     // overload resolution.
     if ((int)callargs.size() > ft->GetNumParameters()) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -3433,7 +3433,7 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
     if (ft->isTask) {
-        Assert(launchCountExpr != NULL);
+        AssertPos(pos, launchCountExpr != NULL);
         llvm::Value *launchCount = launchCountExpr->GetValue(ctx);
         if (launchCount != NULL)
             ctx->LaunchInst(callee, argVals, launchCount);
@@ -3527,7 +3527,7 @@ FunctionCallExpr::TypeCheck() {
             if (isLaunch)
                 Error(pos, "\"launch\" expression illegal with non-\"task\"-"
                       "qualified function.");
-            Assert(launchCountExpr == NULL);
+            AssertPos(pos, launchCountExpr == NULL);
         }
     }
     else {
@@ -3583,7 +3583,7 @@ FunctionCallExpr::TypeCheck() {
                 // Otherwise the parameter default saves us.  It should
                 // be there for sure, given the check right above the
                 // for loop.
-                Assert(funcType->GetParameterDefault(i) != NULL);
+                AssertPos(pos, funcType->GetParameterDefault(i) != NULL);
         }
 
         if (fptrType->IsVaryingType()) {
@@ -3715,7 +3715,7 @@ ExprList::GetConstant(const Type *type) const {
             // conversion machinery handle it.
             expr = TypeConvertExpr(exprs[i], elementType, "initializer list");
             if (expr == NULL) {
-                Assert(m->errorCount > 0);
+                AssertPos(pos, m->errorCount > 0);
                 return NULL;
             }
             // Re-establish const-ness if possible
@@ -3734,13 +3734,13 @@ ExprList::GetConstant(const Type *type) const {
     for (int i = (int)exprs.size(); i < collectionType->GetElementCount(); ++i) {
         const Type *elementType = collectionType->GetElementType(i);
         if (elementType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
         llvm::Type *llvmType = elementType->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -3751,7 +3751,7 @@ ExprList::GetConstant(const Type *type) const {
     if (CastType<StructType>(type) != NULL) {
         llvm::StructType *llvmStructType =
             llvm::dyn_cast<llvm::StructType>(collectionType->LLVMType(g->ctx));
-        Assert(llvmStructType != NULL);
+        AssertPos(pos, llvmStructType != NULL);
         return llvm::ConstantStruct::get(llvmStructType, cv);
     }
     else {
@@ -3762,11 +3762,11 @@ ExprList::GetConstant(const Type *type) const {
             return llvm::ConstantArray::get(lat, cv);
         else {
             // uniform short vector type
-            Assert(type->IsUniformType() &&
+            AssertPos(pos, type->IsUniformType() &&
                    CastType<VectorType>(type) != NULL);
             llvm::VectorType *lvt = 
                 llvm::dyn_cast<llvm::VectorType>(lt);
-            Assert(lvt != NULL);
+            AssertPos(pos, lvt != NULL);
 
             // Uniform short vectors are stored as vectors of length
             // rounded up to the native vector width.  So we add additional
@@ -3900,7 +3900,7 @@ lVaryingStructHasUniformMember(const Type *type, SourcePos pos) {
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const Type *eltType = st->GetElementType(i);
         if (eltType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             continue;
         }
 
@@ -3932,7 +3932,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     if (baseExpr == NULL || index == NULL || 
         ((indexType = index->GetType()) == NULL) ||
         ((returnType = GetType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -3955,7 +3955,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
         const Type *baseExprType = baseExpr->GetType();
         llvm::Value *val = baseExpr->GetValue(ctx);
         if (baseExprType == NULL || val == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -3965,7 +3965,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
-        Assert(st != NULL);
+        AssertPos(pos, st != NULL);
         lvType = PointerType::GetUniform(st->GetElementType());
 
         // And do the indexing calculation into the temporary array in memory
@@ -3977,7 +3977,7 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        Assert(baseSym != NULL);
+        AssertPos(pos, baseSym != NULL);
         mask = lMaskForSymbol(baseSym, ctx);
     }
 
@@ -4007,7 +4007,7 @@ IndexExpr::GetType() const {
         const SequentialType *sequentialType = 
             CastType<SequentialType>(baseExprType->GetReferenceTarget());
         // Typechecking should have caught this...
-        Assert(sequentialType != NULL);
+        AssertPos(pos, sequentialType != NULL);
         elementType = sequentialType->GetElementType();
     }
 
@@ -4120,14 +4120,14 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
     const Type *baseExprType;
     if (baseExpr == NULL || index == NULL || 
         ((baseExprType = baseExpr->GetType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     ctx->SetDebugPos(pos);
     llvm::Value *indexValue = index->GetValue(ctx);
     if (indexValue == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -4136,7 +4136,7 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         // We're indexing off of a pointer 
         llvm::Value *basePtrValue = baseExpr->GetValue(ctx);
         if (basePtrValue == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -4159,11 +4159,11 @@ IndexExpr::GetLValue(FunctionEmitContext *ctx) const {
         CastType<VectorType>(baseExprType)) {
         basePtr = baseExpr->GetLValue(ctx);
         basePtrType = CastType<PointerType>(baseExpr->GetLValueType());
-        if (baseExpr->GetLValueType()) Assert(basePtrType != NULL);
+        if (baseExpr->GetLValueType()) AssertPos(pos, basePtrType != NULL);
     }
     else {
         baseExprType = baseExprType->GetReferenceTarget();
-        Assert(CastType<ArrayType>(baseExprType) ||
+        AssertPos(pos, CastType<ArrayType>(baseExprType) ||
                CastType<VectorType>(baseExprType));
         basePtr = baseExpr->GetValue(ctx);
         basePtrType = PointerType::GetUniform(baseExprType);
@@ -4205,7 +4205,7 @@ IndexExpr::GetLValueType() const {
         const Type *refTarget = baseExprLValueType->GetReferenceTarget();
         baseExprLValueType = PointerType::GetUniform(refTarget);
     }
-    Assert(CastType<PointerType>(baseExprLValueType) != NULL);
+    AssertPos(pos, CastType<PointerType>(baseExprLValueType) != NULL);
 
     // Find the type of thing that we're indexing into
     const Type *elementType;
@@ -4216,7 +4216,7 @@ IndexExpr::GetLValueType() const {
     else {
         const PointerType *pt = 
             CastType<PointerType>(baseExprLValueType->GetBaseType());
-        Assert(pt != NULL);
+        AssertPos(pos, pt != NULL);
         elementType = pt->GetBaseType();
     }
 
@@ -4258,13 +4258,13 @@ IndexExpr::TypeCheck() {
     const Type *indexType;
     if (baseExpr == NULL || index == NULL || 
         ((indexType = index->GetType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     const Type *baseExprType = baseExpr->GetType();
     if (baseExprType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -4395,7 +4395,7 @@ StructMemberExpr::GetType() const {
         ((exprType = expr->GetType()) == NULL) ||
         ((structType = getStructType()) == NULL) ||
         ((lvalueType = GetLValueType()) == NULL)) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -4407,14 +4407,14 @@ StructMemberExpr::GetType() const {
               getCandidateNearMatches().c_str());
         return NULL;
     }
-    Assert(Type::Equal(lvalueType->GetBaseType(), elementType));
+    AssertPos(pos, Type::Equal(lvalueType->GetBaseType(), elementType));
 
     bool isSlice = (CastType<PointerType>(lvalueType) &&
                     CastType<PointerType>(lvalueType)->IsSlice());
     if (isSlice) {
         // FIXME: not true if we allow bound unif/varying for soa<>
         // structs?...
-        Assert(elementType->IsSOAType());
+        AssertPos(pos, elementType->IsSOAType());
 
         // If we're accessing a member of an soa structure via a uniform
         // slice pointer, then the result type is the uniform variant of
@@ -4440,14 +4440,14 @@ StructMemberExpr::GetLValueType() const {
         return lvalueType;
 
     if (expr == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     const Type *exprLValueType = dereferenceExpr ? expr->GetType() :
         expr->GetLValueType();
     if (exprLValueType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -4514,12 +4514,12 @@ StructMemberExpr::getStructType() const {
         structType = rt->GetReferenceTarget();
     else {
         const PointerType *pt = CastType<PointerType>(type);
-        Assert(pt != NULL);
+        AssertPos(pos, pt != NULL);
         structType = pt->GetBaseType();
     }
 
     const StructType *ret = CastType<StructType>(structType);
-    Assert(ret != NULL);
+    AssertPos(pos, ret != NULL);
     return ret;
 }
 
@@ -4557,11 +4557,11 @@ VectorMemberExpr::VectorMemberExpr(Expr *e, const char *id, SourcePos p,
         if (pt != NULL)
             exprVectorType = CastType<VectorType>(pt->GetBaseType());
         else {
-            Assert(CastType<ReferenceType>(exprType) != NULL);
+            AssertPos(pos, CastType<ReferenceType>(exprType) != NULL);
             exprVectorType = 
                 CastType<VectorType>(exprType->GetReferenceTarget());
         }
-        Assert(exprVectorType != NULL);
+        AssertPos(pos, exprVectorType != NULL);
     }
     memberType = new VectorType(exprVectorType->GetElementType(),
                                 identifier.length());
@@ -4586,7 +4586,7 @@ VectorMemberExpr::GetType() const {
         bool isSlice = (CastType<PointerType>(lvType) &&
                         CastType<PointerType>(lvType)->IsSlice());
         if (isSlice) {
-//CO            Assert(type->IsSOAType());
+//CO            AssertPos(pos, type->IsSOAType());
             if (lvType->IsUniformType())
                 type = type->GetAsUniformType();
         }
@@ -4616,7 +4616,7 @@ VectorMemberExpr::GetLValueType() const {
 
     if (identifier.length() == 1) {
         if (expr == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -4630,7 +4630,7 @@ VectorMemberExpr::GetLValueType() const {
             vt = CastType<VectorType>(exprLValueType->GetReferenceTarget());
         else
             vt = CastType<VectorType>(exprLValueType->GetBaseType());
-        Assert(vt != NULL);
+        AssertPos(pos, vt != NULL);
 
         // we don't want to report that it's e.g. a pointer to a float<1>,
         // but a pointer to a float, etc.
@@ -4683,7 +4683,7 @@ VectorMemberExpr::GetValue(FunctionEmitContext *ctx) const {
         }
 
         if (basePtr == NULL || basePtrType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -4825,7 +4825,7 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
         // so that we can index from there...
         llvm::Value *val = expr->GetValue(ctx);
         if (!val) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
         ctx->SetDebugPos(pos);
@@ -4845,7 +4845,7 @@ MemberExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        Assert(baseSym != NULL);
+        AssertPos(pos, baseSym != NULL);
         mask = lMaskForSymbol(baseSym, ctx);
     }
 
@@ -4897,7 +4897,7 @@ MemberExpr::GetLValue(FunctionEmitContext *ctx) const {
                                              exprLValueType, 
                                              basePtr->getName().str().c_str());
     if (ptr == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -4975,7 +4975,7 @@ ConstExpr::ConstExpr(const Type *t, int8_t i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()));
     int8Val[0] = i;
 }
 
@@ -4984,7 +4984,7 @@ ConstExpr::ConstExpr(const Type *t, int8_t *i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt8->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingInt8->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         int8Val[j] = i[j];
@@ -4995,7 +4995,7 @@ ConstExpr::ConstExpr(const Type *t, uint8_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()));
     uint8Val[0] = u;
 }
 
@@ -5004,7 +5004,7 @@ ConstExpr::ConstExpr(const Type *t, uint8_t *u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt8->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingUInt8->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         uint8Val[j] = u[j];
@@ -5015,7 +5015,7 @@ ConstExpr::ConstExpr(const Type *t, int16_t i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()));
     int16Val[0] = i;
 }
 
@@ -5024,7 +5024,7 @@ ConstExpr::ConstExpr(const Type *t, int16_t *i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt16->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingInt16->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         int16Val[j] = i[j];
@@ -5035,7 +5035,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()));
     uint16Val[0] = u;
 }
 
@@ -5044,7 +5044,7 @@ ConstExpr::ConstExpr(const Type *t, uint16_t *u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt16->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingUInt16->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         uint16Val[j] = u[j];
@@ -5055,7 +5055,7 @@ ConstExpr::ConstExpr(const Type *t, int32_t i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()));
     int32Val[0] = i;
 }
 
@@ -5064,7 +5064,7 @@ ConstExpr::ConstExpr(const Type *t, int32_t *i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt32->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingInt32->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         int32Val[j] = i[j];
@@ -5075,7 +5075,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) ||
            (CastType<EnumType>(type) != NULL &&
             type->IsUniformType()));
     uint32Val[0] = u;
@@ -5086,7 +5086,7 @@ ConstExpr::ConstExpr(const Type *t, uint32_t *u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt32->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingUInt32->GetAsConstType()) ||
            (CastType<EnumType>(type) != NULL));
     for (int j = 0; j < Count(); ++j)
@@ -5098,7 +5098,7 @@ ConstExpr::ConstExpr(const Type *t, float f, SourcePos p)
     : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()));
     floatVal[0] = f;
 }
 
@@ -5107,7 +5107,7 @@ ConstExpr::ConstExpr(const Type *t, float *f, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformFloat->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingFloat->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         floatVal[j] = f[j];
@@ -5118,7 +5118,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()));
     int64Val[0] = i;
 }
 
@@ -5127,7 +5127,7 @@ ConstExpr::ConstExpr(const Type *t, int64_t *i, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformInt64->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingInt64->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         int64Val[j] = i[j];
@@ -5138,7 +5138,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()));
     uint64Val[0] = u;
 }
 
@@ -5147,7 +5147,7 @@ ConstExpr::ConstExpr(const Type *t, uint64_t *u, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformUInt64->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingUInt64->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         uint64Val[j] = u[j];
@@ -5158,7 +5158,7 @@ ConstExpr::ConstExpr(const Type *t, double f, SourcePos p)
     : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()));
     doubleVal[0] = f;
 }
 
@@ -5167,7 +5167,7 @@ ConstExpr::ConstExpr(const Type *t, double *f, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformDouble->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingDouble->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         doubleVal[j] = f[j];
@@ -5178,7 +5178,7 @@ ConstExpr::ConstExpr(const Type *t, bool b, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformBool->GetAsConstType()));
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformBool->GetAsConstType()));
     boolVal[0] = b;
 }
 
@@ -5187,7 +5187,7 @@ ConstExpr::ConstExpr(const Type *t, bool *b, SourcePos p)
   : Expr(p) {
     type = t;
     type = type->GetAsConstType();
-    Assert(Type::Equal(type, AtomicType::UniformBool->GetAsConstType()) || 
+    AssertPos(pos, Type::Equal(type, AtomicType::UniformBool->GetAsConstType()) || 
            Type::Equal(type, AtomicType::VaryingBool->GetAsConstType()));
     for (int j = 0; j < Count(); ++j)
         boolVal[j] = b[j];
@@ -5301,7 +5301,7 @@ ConstExpr::getBasicType() const {
     if (at != NULL)
         return at->basicType;
     else {
-        Assert(CastType<EnumType>(type) != NULL);
+        AssertPos(pos, CastType<EnumType>(type) != NULL);
         return AtomicType::TYPE_UINT32;
     }
 }
@@ -5653,7 +5653,7 @@ ConstExpr::GetConstant(const Type *type) const {
     // Caller shouldn't be trying to stuff a varying value here into a
     // constant type.
     if (type->IsUniformType())
-        Assert(Count() == 1);
+        AssertPos(pos, Count() == 1);
 
     type = type->GetAsNonConstType();
     if (Type::Equal(type, AtomicType::UniformBool) || 
@@ -5762,7 +5762,7 @@ ConstExpr::GetConstant(const Type *type) const {
         // appropriate type.
         llvm::Type *llvmType = type->LLVMType(g->ctx);
         if (llvmType == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
 
@@ -6430,7 +6430,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     const Type *toType = GetType(), *fromType = expr->GetType();
     if (toType == NULL || fromType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -6481,11 +6481,11 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             }
             else {
                 // Uniform -> varying pointer conversion
-                Assert(fromType->IsUniformType() && toType->IsVaryingType());
+                AssertPos(pos, fromType->IsUniformType() && toType->IsVaryingType());
                 if (fromPointerType->IsSlice()) {
                     // For slice pointers, we need to smear out both the
                     // pointer and the offset vector
-                    Assert(toPointerType->IsSlice());
+                    AssertPos(pos, toPointerType->IsSlice());
                     llvm::Value *ptr = ctx->ExtractInst(value, 0);
                     llvm::Value *offset = ctx->ExtractInst(value, 1);
                     ptr = ctx->PtrToIntInst(ptr);
@@ -6502,7 +6502,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             }
         }
         else {
-            Assert(CastType<AtomicType>(toType) != NULL);
+            AssertPos(pos, CastType<AtomicType>(toType) != NULL);
             if (toType->IsBoolType()) {
                 // convert pointer to bool
                 llvm::Type *lfu = 
@@ -6554,21 +6554,21 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         // implicit array to pointer to first element
         Expr *arrayAsPtr = lArrayToPointer(expr);
         if (Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType) == false) {
-            Assert(PointerType::IsVoidPointer(toPointerType) ||
+            AssertPos(pos, PointerType::IsVoidPointer(toPointerType) ||
                    Type::EqualIgnoringConst(arrayAsPtr->GetType()->GetAsVaryingType(),
                                             toPointerType) == true);
             arrayAsPtr = new TypeCastExpr(toPointerType, arrayAsPtr, pos);
             arrayAsPtr = ::TypeCheck(arrayAsPtr);
-            Assert(arrayAsPtr != NULL);
+            AssertPos(pos, arrayAsPtr != NULL);
             arrayAsPtr = ::Optimize(arrayAsPtr);
-            Assert(arrayAsPtr != NULL);
+            AssertPos(pos, arrayAsPtr != NULL);
         }
-        Assert(Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType));
+        AssertPos(pos, Type::EqualIgnoringConst(arrayAsPtr->GetType(), toPointerType));
         return arrayAsPtr->GetValue(ctx);
     }
 
     // This also should be caught during typechecking
-    Assert(!(toType->IsUniformType() && fromType->IsVaryingType()));
+    AssertPos(pos, !(toType->IsUniformType() && fromType->IsVaryingType()));
 
     if (toArrayType != NULL && fromArrayType != NULL) {
         // cast array pointer from [n x foo] to [0 x foo] if needed to be able
@@ -6577,7 +6577,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             (toArrayType->GetElementCount() != fromArrayType->GetElementCount()))
             Warning(pos, "Type-converting array of length %d to length %d",
                     fromArrayType->GetElementCount(), toArrayType->GetElementCount());
-        Assert(Type::EqualIgnoringConst(toArrayType->GetBaseType(),
+        AssertPos(pos, Type::EqualIgnoringConst(toArrayType->GetBaseType(),
                                         fromArrayType->GetBaseType()));
         llvm::Value *v = expr->GetValue(ctx);
         llvm::Type *ptype = toType->LLVMType(g->ctx);
@@ -6599,14 +6599,14 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
                (toArray->GetElementCount() != fromArray->GetElementCount()))
                 Warning(pos, "Type-converting array of length %d to length %d",
                         fromArray->GetElementCount(), toArray->GetElementCount());
-            Assert(Type::EqualIgnoringConst(toArray->GetBaseType(),
+            AssertPos(pos, Type::EqualIgnoringConst(toArray->GetBaseType(),
                                             fromArray->GetBaseType()));
             llvm::Value *v = expr->GetValue(ctx);
             llvm::Type *ptype = toType->LLVMType(g->ctx);
             return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
         }
 
-        Assert(Type::Equal(toTarget, fromTarget) ||
+        AssertPos(pos, Type::Equal(toTarget, fromTarget) ||
                Type::Equal(toTarget, fromTarget->GetAsConstType()));
         return expr->GetValue(ctx);
     }
@@ -6616,7 +6616,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     if (toStruct && fromStruct) {
         // The only legal type conversions for structs are to go from a
         // uniform to a varying instance of the same struct type.
-        Assert(toStruct->IsVaryingType() && fromStruct->IsUniformType() &&
+        AssertPos(pos, toStruct->IsVaryingType() && fromStruct->IsUniformType() &&
                Type::EqualIgnoringConst(toStruct, 
                                         fromStruct->GetAsVaryingType()));
 
@@ -6630,7 +6630,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     const VectorType *fromVector = CastType<VectorType>(fromType);
     if (toVector && fromVector) {
         // this should be caught during typechecking
-        Assert(toVector->GetElementCount() == fromVector->GetElementCount());
+        AssertPos(pos, toVector->GetElementCount() == fromVector->GetElementCount());
 
         llvm::Value *exprVal = expr->GetValue(ctx);
         if (!exprVal)
@@ -6672,7 +6672,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
     const AtomicType *fromAtomic = CastType<AtomicType>(fromType);
     // at this point, coming from an atomic type is all that's left...
-    Assert(fromAtomic != NULL);
+    AssertPos(pos, fromAtomic != NULL);
 
     if (toVector) {
         // scalar -> short vector conversion
@@ -6700,7 +6700,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
     else {
         const AtomicType *toAtomic = CastType<AtomicType>(toType);
         // typechecking should ensure this is the case
-        Assert(toAtomic != NULL);
+        AssertPos(pos, toAtomic != NULL);
 
         return lTypeConvAtomic(ctx, exprVal, toAtomic, fromAtomic, pos);
     }
@@ -6709,7 +6709,7 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const { 
-    Assert(type->HasUnboundVariability() == false);
+    AssertPos(pos, type->HasUnboundVariability() == false);
     return type; 
 }
 
@@ -6972,7 +6972,7 @@ llvm::Value *
 ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     ctx->SetDebugPos(pos);
     if (expr == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
     
@@ -6986,13 +6986,13 @@ ReferenceExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Type *llvmType;
     if ((type = expr->GetType()) == NULL ||
         (llvmType = type->LLVMType(g->ctx)) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     value = expr->GetValue(ctx);
     if (value == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -7142,10 +7142,10 @@ const Type *
 PtrDerefExpr::GetType() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
-    Assert(CastType<PointerType>(type) != NULL);
+    AssertPos(pos, CastType<PointerType>(type) != NULL);
 
     if (type->IsUniformType())
         return type->GetBaseType();
@@ -7158,7 +7158,7 @@ Expr *
 PtrDerefExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -7176,7 +7176,7 @@ int
 PtrDerefExpr::EstimateCost() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return 0;
     }
 
@@ -7213,11 +7213,11 @@ const Type *
 RefDerefExpr::GetType() const {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
         
-    Assert(CastType<ReferenceType>(type) != NULL);
+    AssertPos(pos, CastType<ReferenceType>(type) != NULL);
     return type->GetReferenceTarget();
 }
 
@@ -7226,14 +7226,14 @@ Expr *
 RefDerefExpr::TypeCheck() {
     const Type *type;
     if (expr == NULL || (type = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
     // We only create RefDerefExprs internally for references in
     // expressions, so we should never create one with a non-reference
     // expression...
-    Assert(CastType<ReferenceType>(type) != NULL);
+    AssertPos(pos, CastType<ReferenceType>(type) != NULL);
 
     return this;
 }
@@ -7298,7 +7298,7 @@ AddressOfExpr::GetType() const {
     else {
         t = expr->GetType();
         if (t == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
         return PointerType::GetUniform(t);
@@ -7328,7 +7328,7 @@ Expr *
 AddressOfExpr::TypeCheck() {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -7361,7 +7361,7 @@ llvm::Constant *
 AddressOfExpr::GetConstant(const Type *type) const {
     const Type *exprType;
     if (expr == NULL || (exprType = expr->GetType()) == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -7518,7 +7518,7 @@ SymbolExpr::Optimize() {
     if (symbol == NULL)
         return NULL;
     else if (symbol->constValue != NULL) {
-        Assert(GetType()->IsConstType());
+        AssertPos(pos, GetType()->IsConstType());
         return new ConstExpr(symbol->constValue, pos);
     }
     else
@@ -7638,7 +7638,7 @@ lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs,
                          const std::vector<bool> *argCouldBeNULL) {
     for (unsigned int i = 0; i < funcs.size(); ++i) {
         const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
-        Assert(ft != NULL);
+        AssertPos(pos, ft != NULL);
         Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
     }
 
@@ -7751,7 +7751,7 @@ FunctionSymbolExpr::getCandidateFunctions(int argCount) const {
     for (int i = 0; i < (int)candidateFunctions.size(); ++i) {
         const FunctionType *ft = 
             CastType<FunctionType>(candidateFunctions[i]->type);
-        Assert(ft != NULL);
+        AssertPos(pos, ft != NULL);
 
         // There's no way to match if the caller is passing more arguments
         // than this function instance takes.
@@ -7896,7 +7896,7 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     for (int i = 0; i < (int)actualCandidates.size(); ++i) {
         const FunctionType *ft = 
             CastType<FunctionType>(actualCandidates[i]->type);
-        Assert(ft != NULL);
+        AssertPos(pos, ft != NULL);
         candidateCosts.push_back(computeOverloadCost(ft, argTypes,
                                                      argCouldBeNULL,
                                                      argIsConstant));
@@ -8025,7 +8025,7 @@ NullPointerExpr::GetConstant(const Type *type) const {
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
 
@@ -8090,7 +8090,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
     if (countExpr != NULL) {
         countValue = countExpr->GetValue(ctx);
         if (countValue == NULL) {
-            Assert(m->errorCount > 0);
+            AssertPos(pos, m->errorCount > 0);
             return NULL;
         }
     }
@@ -8130,7 +8130,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
                                       "alloc_size64");
         func = m->module->getFunction("__new_uniform");
     }
-    Assert(func != NULL);
+    AssertPos(pos, func != NULL);
 
     // Make the call for the the actual allocation.
     llvm::Value *ptrValue = ctx->CallInst(func, NULL, allocSize, "new");
@@ -8211,7 +8211,7 @@ Expr *
 NewExpr::TypeCheck() {
     // It's illegal to call new with an undefined struct type
     if (allocType == NULL) {
-        Assert(m->errorCount > 0);
+        AssertPos(pos, m->errorCount > 0);
         return NULL;
     }
     if (CastType<UndefinedStructType>(allocType) != NULL) {
