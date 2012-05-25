@@ -268,6 +268,15 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->hasHalf = true;
         t->hasTranscendentals = true;
     }
+    else if (!strcasecmp(isa, "generic-64")) {
+        t->isa = Target::GENERIC;
+        t->nativeVectorWidth = 64;
+        t->vectorWidth = 64;
+        t->maskingIsFree = true;
+        t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
+    }
     else if (!strcasecmp(isa, "generic-1")) {
         t->isa = Target::GENERIC;
         t->nativeVectorWidth = 1;

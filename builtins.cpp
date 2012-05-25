@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -852,6 +852,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             extern int builtins_bitcode_generic_32_length;
             AddBitcodeToModule(builtins_bitcode_generic_32, 
                                builtins_bitcode_generic_32_length, 
+                               module, symbolTable);
+            break;
+        case 64:
+            extern unsigned char builtins_bitcode_generic_64[];
+            extern int builtins_bitcode_generic_64_length;
+            AddBitcodeToModule(builtins_bitcode_generic_64, 
+                               builtins_bitcode_generic_64_length, 
                                module, symbolTable);
             break;
 	case 1:
