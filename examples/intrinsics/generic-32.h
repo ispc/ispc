@@ -336,7 +336,7 @@ static FORCEINLINE VTYPE __smear_##NAME(VTYPE retType, STYPE v) {  \
 static FORCEINLINE VTYPE __broadcast_##NAME(VTYPE v, int index) {   \
     VTYPE ret;                                        \
     for (int i = 0; i < 32; ++i)                      \
-        ret.v[i] = v.v[index & 0xff];                 \
+        ret.v[i] = v.v[index & 31];                   \
     return ret;                                       \
 }                                                     \
 
