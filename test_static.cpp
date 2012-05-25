@@ -102,15 +102,21 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 
 int main(int argc, char *argv[]) {
     int w = width();
-    assert(w <= 16);
+    assert(w <= 64);
 
-    float returned_result[16];
-    for (int i = 0; i < 16; ++i)
+    float returned_result[64];
+    float vfloat[64];
+    double vdouble[64];
+    int vint[64], vint2[64];
+
+    for (int i = 0; i < 64; ++i) {
         returned_result[i] = -1e20;
-    float vfloat[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    double vdouble[16] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-    int vint[16] = { 2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32 };
-    int vint2[16] = { 5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20};
+        vfloat[i] = i+1;
+        vdouble[i] = i+1;
+        vint[i] = 2*(i+1);
+        vint2[i] = i+5;
+    }
+
     float b = 5.;
 
 #if (TEST_SIG == 0)
@@ -131,8 +137,8 @@ int main(int argc, char *argv[]) {
 #error "Unknown or unset TEST_SIG value"
 #endif    
 
-    float expected_result[16];
-    memset(expected_result, 0, 16*sizeof(float));
+    float expected_result[64];
+    memset(expected_result, 0, 64*sizeof(float));
     result(expected_result);
 
     int errors = 0;
