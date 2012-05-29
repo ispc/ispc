@@ -2843,7 +2843,7 @@ CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
                                                         pos);
 
     // Compute the per lane mask to test the mask bits against: (1 << iter)
-    ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt64, 1ll,
+    ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt64, int64_t(1),
                                        iterSym->pos);
     Expr *shiftLaneExpr = new BinaryExpr(BinaryExpr::Shl, oneExpr, symExpr, 
                                          pos);
