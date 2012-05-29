@@ -13,5 +13,5 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 1234 + reduce_add(programIndex & 1 ? programIndex : 0);
+    RET[programIndex] = 1234 + reduce_add((programIndex & 1) ? programIndex : 0);
 }

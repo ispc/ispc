@@ -5,8 +5,17 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     RET[programIndex] = exclusive_scan_add(aFOO[programIndex]);
 }
 
+int es(int v) {
+    uniform int vv[programCount];
+    vv[programIndex] = v;
+
+    uniform int r[programCount];
+    r[0] = 0;
+    for (uniform int i = 1; i < programCount; ++i)
+        r[i] = r[i-1] + vv[i-1];
+    return r[programIndex];
+}
+
 export void result(uniform float RET[]) {
-    uniform int result[] = { 0, 1, 3, 6, 10, 15, 21, 28,
-                             36, 45, 55, 66, 78, 91, 105, 120, 136 };
-    RET[programIndex] = result[programIndex]; 
+    RET[programIndex] = es(programIndex+1); 
 }

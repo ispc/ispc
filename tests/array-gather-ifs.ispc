@@ -5,9 +5,9 @@ export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    uniform float x[45];
+    uniform float x[programCount+15];
     uniform int i;
-    for (i = 0; i < 45; ++i)
+    for (i = 0; i < programCount+15; ++i)
         x[i] = i;
 
     float ret;
