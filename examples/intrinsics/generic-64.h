@@ -388,7 +388,7 @@ static FORCEINLINE __vec64_i1 NAME(TYPE a, TYPE b) {                \
    __vec64_i1 ret;                                                  \
    ret.v = 0;                                                       \
    for (int i = 0; i < 64; ++i)                                     \
-       ret.v |= ((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;            \
+       ret.v |= uint64_t((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;    \
    return ret;                                                      \
 }
 
@@ -434,7 +434,7 @@ static FORCEINLINE TYPE NAME(VTYPE v) {                         \
 static FORCEINLINE TYPE __select(__vec64_i1 mask, TYPE a, TYPE b) { \
     TYPE ret;                                                       \
     for (int i = 0; i < 64; ++i)                                    \
-        ret.v[i] = (mask.v & (1<<i)) ? a.v[i] : b.v[i];             \
+        ret.v[i] = (mask.v & (1ull<<i)) ? a.v[i] : b.v[i];          \
     return ret;                                                     \
 }                                                                   \
 static FORCEINLINE TYPE __select(bool cond, TYPE a, TYPE b) {       \
@@ -559,15 +559,15 @@ static FORCEINLINE __vec64_i1 __select(bool cond, __vec64_i1 a, __vec64_i1 b) {
 }
 
 static FORCEINLINE bool __extract_element(__vec64_i1 vec, int index) {
-    return (vec.v & (1 << index)) ? true : false;
+    return (vec.v & (1ull << index)) ? true : false;
 }
 
 static FORCEINLINE void __insert_element(__vec64_i1 *vec, int index, 
                                          bool val) {
     if (val == false)
-        vec->v &= ~(1 << index);
+        vec->v &= ~(1ull << index);
     else
-        vec->v |= (1 << index);
+        vec->v |= (1ull << index);
 }
 
 static FORCEINLINE __vec64_i1 __load(__vec64_i1 *p, int align) {
@@ -999,7 +999,7 @@ CAST(__vec64_i16, uint16_t, __vec64_i8,  uint8_t,  __cast_zext)
 static FORCEINLINE TYPE __cast_zext(TYPE, __vec64_i1 v) {  \
     TYPE ret;                                         \
     for (int i = 0; i < 64; ++i)                      \
-        ret.v[i] = (v.v & (1 << i)) ? 1 : 0;          \
+        ret.v[i] = (v.v & (1ull << i)) ? 1 : 0;       \
     return ret;                                       \
 }
 
@@ -1039,7 +1039,7 @@ CAST(__vec64_d, double, __vec64_i64, uint64_t, __cast_uitofp)
 static FORCEINLINE __vec64_f __cast_uitofp(__vec64_f, __vec64_i1 v) {
     __vec64_f ret;
     for (int i = 0; i < 64; ++i)
-        ret.v[i] = (v.v & (1 << i)) ? 1. : 0.;
+        ret.v[i] = (v.v & (1ull << i)) ? 1. : 0.;
     return ret;
 }
 
