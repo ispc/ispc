@@ -6415,9 +6415,10 @@ lUniformValueToVarying(FunctionEmitContext *ctx, llvm::Value *value,
         return retValue;
     }
 
-    // Otherwise we must have a uniform AtomicType, so smear its value
-    // across the vector lanes.
-    Assert(CastType<AtomicType>(type) != NULL);
+    // Otherwise we must have a uniform atomic or pointer type, so smear
+    // its value across the vector lanes.
+    Assert(CastType<AtomicType>(type) != NULL ||
+           CastType<PointerType>(type) != NULL);
     return ctx->SmearUniform(value);
 }
 
