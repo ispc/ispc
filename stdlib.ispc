@@ -4026,60 +4026,13 @@ static inline uniform float frandom(uniform RNGState * uniform state)
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
-static inline uniform unsigned int __seed4(varying RNGState * uniform state, 
-                                           uniform int start,
-                                           uniform unsigned int seed) {
-    uniform unsigned int c1 = 0xf0f0f0f0;
-    uniform unsigned int c2 = 0x0f0f0f0f;
-
-    state->z1 = insert(state->z1, start + 0, seed);
-    state->z1 = insert(state->z1, start + 1, seed ^ c1);
-    state->z1 = insert(state->z1, start + 2, (seed << 3) ^ c1);
-    state->z1 = insert(state->z1, start + 3, (seed << 2) ^ c2);
-
-    seed += 131;
-    state->z2 = insert(state->z2, start + 0, seed);
-    state->z2 = insert(state->z2, start + 1, seed ^ c1);
-    state->z2 = insert(state->z2, start + 2, (seed << 3) ^ c1);
-    state->z2 = insert(state->z2, start + 3, (seed << 2) ^ c2);
-
-    seed ^= extract(state->z2, 2);
-    state->z3 = insert(state->z3, start + 0, seed);
-    state->z3 = insert(state->z3, start + 1, seed ^ c1);
-    state->z3 = insert(state->z3, start + 2, (seed << 3) ^ c1);
-    state->z3 = insert(state->z3, start + 3, (seed << 2) ^ c2);
-
-    seed <<= 4;
-    seed += 3;
-    seed ^= extract(state->z1, 3);
-    state->z4 = insert(state->z4, start + 0, seed);
-    state->z4 = insert(state->z4, start + 1, seed ^ c1);
-    state->z4 = insert(state->z4, start + 2, (seed << 3) ^ c1);
-    state->z4 = insert(state->z4, start + 3, (seed << 2) ^ c2);
-
-    return seed;
-}
-
 static inline void seed_rng(varying RNGState * uniform state, 
-                            uniform unsigned int seed) {
-    if (programCount == 1) {
-        state->z1 = seed;
-        state->z2 = seed ^ 0xbeeff00d;
-        state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
-        state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                     ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
-    }
-    else {
-        seed = __seed4(state, 0, seed);
-        if (programCount == 8)
-            __seed4(state, 4, seed ^ 0xbeeff00d);
-        if (programCount == 16) {
-            __seed4(state, 4,  seed ^ 0xbeeff00d);
-            __seed4(state, 8,  ((seed & 0xffff) << 16) | (seed >> 16));
-            __seed4(state, 12, (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                                ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24));
-        }
-    }
+                            unsigned int seed) {
+    state->z1 = seed;
+    state->z2 = seed ^ 0xbeeff00d;
+    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
 }
 
 static inline void seed_rng(uniform RNGState * uniform state, 

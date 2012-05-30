@@ -3147,7 +3147,7 @@ library.  State for the RNG is maintained in an instance of the
 ::
 
     struct RNGState;
-    void seed_rng(varying RNGState * uniform state, uniform int seed)
+    void seed_rng(varying RNGState * uniform state, int seed)
     void seed_rng(uniform RNGState * uniform state, uniform int seed)
 
 After the RNG is seeded, the ``random()`` function can be used to get a

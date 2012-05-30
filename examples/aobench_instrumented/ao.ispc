@@ -211,7 +211,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
         { { 1.0f, 0.0f, -2.2f }, 0.5f } };
     RNGState rngstate;
 
-    seed_rng(&rngstate, y0);
+    seed_rng(&rngstate, programIndex + (y0 << (programIndex & 15)));
 
     // Compute the mapping between the 'programCount'-wide program
     // instances running in parallel and samples in the image.  
