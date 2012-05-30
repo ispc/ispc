@@ -1136,6 +1136,9 @@ lGetExportedTypes(const Type *type,
             lGetExportedTypes(structType->GetElementType(i), exportedStructTypes,
                               exportedEnumTypes, exportedVectorTypes);
     }
+    else if (CastType<UndefinedStructType>(type) != NULL)
+        // do nothing
+        ;
     else if (CastType<EnumType>(type) != NULL)
         lAddTypeIfNew(type, exportedEnumTypes);
     else if (CastType<VectorType>(type) != NULL)
