@@ -18,6 +18,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     a *= -1;
     Point vp = { a, { 2*a, 3*a, 4*a }, {5*a} };
+    assert(programCount+2 < 80);
     pts[2+programIndex] = vp;
 
     RET[programIndex] = pts[programIndex].y[2];

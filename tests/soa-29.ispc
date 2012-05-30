@@ -6,9 +6,9 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 
-    soa<8> Point pts[10];
+    soa<8> Point pts[20];
 
-    for (int i = programIndex; i < 16*b; i += programCount) {
+    for (int i = programIndex; i < 32*b; i += programCount) {
         pts[i].x = b*i;
         pts[i].y = 2*b*i;
         pts[i].z = 3*b*i;
@@ -16,6 +16,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 
     uniform Point up = pts[4];
 
+    assert(2*programIndex < 160);
     RET[programIndex] = pts[2*programIndex].x;
 }
 

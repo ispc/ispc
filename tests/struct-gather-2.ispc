@@ -13,9 +13,9 @@ float func(Foo foo[], int offset) {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    Foo foo[17];
+    Foo foo[programCount+5];
     uniform int i;
-    for (i = 0; i < 17; ++i)
+    for (i = 0; i < programCount+5; ++i)
         foo[i].f = i*a;
     RET[programIndex] = func(foo, (int)a);
 }
