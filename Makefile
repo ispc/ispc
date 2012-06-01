@@ -2,6 +2,15 @@
 # ispc Makefile
 #
 
+# If you have your own special version of llvm and/or clang, change
+# these variables to match.
+LLVM_CONFIG=$(shell which llvm-config)
+CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
+
+# Add llvm bin to the path so any scripts run will go to the right llvm-config
+LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
+export PATH:=$(LLVM_BIN):$(PATH)
+
 ARCH_OS = $(shell uname)
 ifeq ($(ARCH_OS), Darwin)
 	ARCH_OS2 = "OSX"
@@ -10,10 +19,12 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-ifeq ($(shell llvm-config --version), 3.1svn)
+ifeq ($(shell $(LLVM_CONFIG) --version), 3.0)
+  LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
+else
   LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
 	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
-	-lLLVMBitWriter -lLLVMTableGen -lLLVMCBackendInfo			\
+	-lLLVMBitWriter -lLLVMTableGen 			                        \
 	-lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMSelectionDAG		\
 	-lLLVMAsmPrinter -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info		\
 	-lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCDisassembler	-lLLVMMCParser	\
@@ -21,19 +32,17 @@ ifeq ($(shell llvm-config --version), 3.1svn)
 	-lLLVMipa -lLLVMAnalysis -lLLVMMCJIT -lLLVMRuntimeDyld			\
 	-lLLVMExecutionEngine -lLLVMTarget -lLLVMMC -lLLVMObject -lLLVMCore 	\
 	-lLLVMSupport
-else
-  LLVM_LIBS=$(shell llvm-config --libs)
 endif
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
              -lclangAnalysis -lclangAST -lclangLex -lclangBasic
-ifeq ($(shell llvm-config --version), 3.1svn)
+ifneq ($(shell $(LLVM_CONFIG) --version), 3.0)
   CLANG_LIBS += -lclangEdit
 endif
 
-ISPC_LIBS=$(shell llvm-config --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
+ISPC_LIBS=$(shell $(LLVM_CONFIG) --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread
 
 ifeq ($(ARCH_OS),Linux)
@@ -44,8 +53,8 @@ ifeq ($(ARCH_OS2),Msys)
 	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
 endif
 
-LLVM_CXXFLAGS=$(shell llvm-config --cppflags)
-LLVM_VERSION=LLVM_$(shell llvm-config --version | sed s/\\./_/)
+LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
+LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 BUILD_DATE=$(shell date +%Y%m%d)
@@ -53,8 +62,9 @@ BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
 
 CXX=g++
 CPP=cpp
-OPT=-g3
-CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -Wall $(LLVM_VERSION_DEF) \
+OPT=-O2
+CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
+	-Wall $(LLVM_VERSION_DEF) \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
 
 LDFLAGS=
@@ -75,7 +85,7 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx1 avx1-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 generic-4 generic-8 \
-	generic-16 generic-1
+	generic-16 generic-32 generic-64 generic-1
 BUILTINS_SRC=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS))) \
 	builtins/dispatch.ll
 BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC:.ll=.o))) \
@@ -114,7 +124,7 @@ doxygen:
 
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
-	@$(CXX) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
+	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 objs/%.o: %.cpp
 	@echo Compiling $<

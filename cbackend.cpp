@@ -12,9 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef LLVM_2_9
-#warning "The C++ backend isn't supported when building with LLVM 2.9"
-#else
+#include <stdio.h>
 
 #ifndef _MSC_VER
 #include <inttypes.h>
@@ -339,8 +337,6 @@ namespace {
                            bool IsVolatile, unsigned Alignment);
 
   private :
-    std::string InterpretASMConstraint(InlineAsm::ConstraintInfo& c);
-
     void lowerIntrinsics(Function &F);
     /// Prints the definition of the intrinsic function F. Supports the 
     /// intrinsics which need to be explicitly defined in the CBackend.
@@ -363,7 +359,7 @@ namespace {
     bool printConstExprCast(const ConstantExpr *CE, bool Static);
     void printConstantArray(ConstantArray *CPA, bool Static);
     void printConstantVector(ConstantVector *CV, bool Static);
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     void printConstantDataSequential(ConstantDataSequential *CDS, bool Static);
 #endif
 
@@ -440,11 +436,11 @@ namespace {
     void visitInvokeInst(InvokeInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
-#if !defined(LLVM_3_1) && !defined(LLVM_3_1svn)
+#ifdef LLVM_3_0
     void visitUnwindInst(UnwindInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
-#endif // !LLVM_3_1svn
+#endif // LLVM_3_0
     void visitResumeInst(ResumeInst &I) {
       llvm_unreachable("DwarfEHPrepare pass didn't work!");
     }
@@ -804,7 +800,7 @@ raw_ostream &CWriter::printType(raw_ostream &Out, Type *Ty,
 }
 
 void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
-#ifndef LLVM_3_1svn
+#ifdef LLVM_3_0
   Type *ETy = CPA->getType()->getElementType();
   // MMP: this looks like a bug: both sides of the || are the same
   bool isString = ETy == Type::getInt8Ty(CPA->getContext());
@@ -857,7 +853,7 @@ void CWriter::printConstantArray(ConstantArray *CPA, bool Static) {
     Out << "\"";
     return;
   }
-#endif // !LLVM_3_1
+#endif // LLVM_3_0
 
   printConstant(cast<Constant>(CPA->getOperand(0)), Static);
   for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
@@ -874,7 +870,7 @@ void CWriter::printConstantVector(ConstantVector *CP, bool Static) {
   }
 }
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
 void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
                                           bool Static) {
   // As a special case, print the array as a string if it is an array of
@@ -931,7 +927,21 @@ void CWriter::printConstantDataSequential(ConstantDataSequential *CDS,
     }
   }
 }
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
+
+#ifndef LLVM_3_0
+static inline std::string ftostr(const APFloat& V) {
+  std::string Buf;
+  if (&V.getSemantics() == &APFloat::IEEEdouble) {
+    raw_string_ostream(Buf) << V.convertToDouble();
+    return Buf;
+  } else if (&V.getSemantics() == &APFloat::IEEEsingle) {
+    raw_string_ostream(Buf) << (double)V.convertToFloat();
+    return Buf;
+  }
+  return "<unknown format in ftostr>"; // error
+}
+#endif // !LLVM_3_0
 
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
@@ -1083,6 +1093,26 @@ bool CWriter::printCast(unsigned opc, Type *SrcTy, Type *DstTy) {
   }
   return false;
 }
+
+
+// FIXME: generalize this/make it not so hard-coded?
+static const char *lGetSmearFunc(Type *matchType) {
+    switch (matchType->getTypeID()) {
+    case Type::FloatTyID:  return "__smear_float";
+    case Type::DoubleTyID: return "__smear_double";
+    case Type::IntegerTyID: {
+        switch (cast<IntegerType>(matchType)->getBitWidth()) {
+        case 1:  return "__smear_i1";
+        case 8:  return "__smear_i8";
+        case 16: return "__smear_i16";
+        case 32: return "__smear_i32";
+        case 64: return "__smear_i64";
+        }
+    }
+    default: return NULL;
+    }
+}
+
 
 // printConstant - The LLVM Constant to C Constant converter.
 void CWriter::printConstant(Constant *CPV, bool Static) {
@@ -1400,11 +1430,11 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
     }
     if (ConstantArray *CA = dyn_cast<ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     } else if (ConstantDataSequential *CDS = 
                dyn_cast<ConstantDataSequential>(CPV)) {
       printConstantDataSequential(CDS, Static);
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
     } else {
       assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
       if (AT->getNumElements()) {
@@ -1423,30 +1453,68 @@ void CWriter::printConstant(Constant *CPV, bool Static) {
         Out << ")";
     break;
   }
-  case Type::VectorTyID:
-    printType(Out, CPV->getType());
-    Out << "(";
+  case Type::VectorTyID: {
+    VectorType *VT = dyn_cast<VectorType>(CPV->getType());
+    const char *smearFunc = lGetSmearFunc(VT->getElementType());
 
-    if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
-      printConstantVector(CV, Static);
-#ifdef LLVM_3_1svn
-    } else if (ConstantDataSequential *CDS = 
-               dyn_cast<ConstantDataSequential>(CPV)) {
-      printConstantDataSequential(CDS, Static);
-#endif
-    } else {
-      assert(isa<ConstantAggregateZero>(CPV) || isa<UndefValue>(CPV));
-      VectorType *VT = cast<VectorType>(CPV->getType());
+    if (isa<ConstantAggregateZero>(CPV)) {
+        assert(smearFunc != NULL);
+
+        Constant *CZ = Constant::getNullValue(VT->getElementType());
+        Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
+        printConstant(CZ, Static);
+        Out << ")";
+    }
+    else if (ConstantVector *CV = dyn_cast<ConstantVector>(CPV)) {
+      llvm::Constant *splatValue = CV->getSplatValue();
+      if (splatValue != NULL && smearFunc != NULL) {
+        Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
+        printConstant(splatValue, Static);
+        Out << ")";
+      }
+      else {
+        printType(Out, CPV->getType());
+        Out << "(";
+        printConstantVector(CV, Static);
+        Out << ")";
+      }
+    }
+#ifndef LLVM_3_0
+    else if (ConstantDataVector *CDV = dyn_cast<ConstantDataVector>(CPV)) {
+      llvm::Constant *splatValue = CDV->getSplatValue();
+      if (splatValue != NULL && smearFunc != NULL) {
+        Out << smearFunc << "(";
+        printType(Out, VT);
+        Out << "(), ";
+        printConstant(splatValue, Static);
+        Out << ")";
+      }
+      else {
+        printType(Out, CPV->getType());
+        Out << "(";
+        printConstantDataSequential(CDV, Static);
+        Out << ")";
+      }
+    }
+#endif // !LLVM_3_0
+    else {
+      assert(isa<UndefValue>(CPV));
       Constant *CZ = Constant::getNullValue(VT->getElementType());
+      printType(Out, CPV->getType());
+      Out << "(";
       printConstant(CZ, Static);
       for (unsigned i = 1, e = VT->getNumElements(); i != e; ++i) {
         Out << ", ";
         printConstant(CZ, Static);
       }
+      Out << ")";
     }
-    Out << ")";
     break;
-
+  }
   case Type::StructTyID:
     if (!Static) {
       // call init func...
@@ -1639,7 +1707,12 @@ std::string CWriter::GetValueName(const Value *Operand) {
       VarName += ch;
   }
 
-  return VarName + "_llvm_cbe";
+  if (isa<BasicBlock>(Operand))
+    VarName += "_label";
+  else
+    VarName += "_";
+
+  return VarName;
 }
 
 /// writeInstComputationInline - Emit the computation for the specified
@@ -2071,69 +2144,18 @@ bool CWriter::doInitialization(Module &M) {
 
   Out << "#include \"" << includeName << "\"\n";
 
-  generateCompilerSpecificCode(Out, TD);
-
-  // Function declarations
-  Out << "\n/* Function Declarations */\n";
+  Out << "\n/* Basic Library Function Declarations */\n";
   Out << "extern \"C\" {\n";
   Out << "int puts(unsigned char *);\n";
   Out << "unsigned int putchar(unsigned int);\n";
   Out << "int fflush(void *);\n";
   Out << "int printf(const unsigned char *, ...);\n";
   Out << "uint8_t *memcpy(uint8_t *, uint8_t *, uint64_t );\n";
+  Out << "uint8_t *memset(uint8_t *, uint8_t, uint64_t );\n";
+  Out << "void memset_pattern16(void *, const void *, uint64_t );\n";
+  Out << "}\n\n";
 
-  // Store the intrinsics which will be declared/defined below.
-  SmallVector<const Function*, 8> intrinsicsToDefine;
-
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    // Don't print declarations for intrinsic functions.
-    // Store the used intrinsics, which need to be explicitly defined.
-    if (I->isIntrinsic()) {
-      switch (I->getIntrinsicID()) {
-        default:
-          break;
-        case Intrinsic::uadd_with_overflow:
-        case Intrinsic::sadd_with_overflow:
-          intrinsicsToDefine.push_back(I);
-          break;
-      }
-      continue;
-    }
-
-    if (I->getName() == "setjmp" || I->getName() == "abort" ||
-        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
-        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
-        I->getName() == "puts" ||
-        I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" || I->getName() == "malloc" ||
-        I->getName() == "free")
-      continue;
-
-    // Don't redeclare ispc's own intrinsics
-    std::string name = I->getName();
-    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
-        continue;
-
-    if (I->hasExternalWeakLinkage())
-      Out << "extern ";
-    printFunctionSignature(I, true);
-    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
-      Out << " __ATTRIBUTE_WEAK__";
-    if (I->hasExternalWeakLinkage())
-      Out << " __EXTERNAL_WEAK__";
-    if (StaticCtors.count(I))
-      Out << " __ATTRIBUTE_CTOR__";
-    if (StaticDtors.count(I))
-      Out << " __ATTRIBUTE_DTOR__";
-    if (I->hasHiddenVisibility())
-      Out << " __HIDDEN__";
-
-    if (I->hasName() && I->getName()[0] == 1)
-      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
-
-    Out << ";\n";
-  }
-  Out << "}\n";
+  generateCompilerSpecificCode(Out, TD);
 
   // Provide a definition for `bool' if not compiling with a C++ compiler.
   Out << "\n"
@@ -2240,6 +2262,106 @@ bool CWriter::doInitialization(Module &M) {
       }
   }
 
+  // Function declarations
+  Out << "\n/* Function Declarations */\n";
+  Out << "extern \"C\" {\n";
+
+  // Store the intrinsics which will be declared/defined below.
+  SmallVector<const Function*, 8> intrinsicsToDefine;
+
+  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
+    // Don't print declarations for intrinsic functions.
+    // Store the used intrinsics, which need to be explicitly defined.
+    if (I->isIntrinsic()) {
+      switch (I->getIntrinsicID()) {
+        default:
+          break;
+        case Intrinsic::uadd_with_overflow:
+        case Intrinsic::sadd_with_overflow:
+          intrinsicsToDefine.push_back(I);
+          break;
+      }
+      continue;
+    }
+
+    if (I->getName() == "setjmp" || I->getName() == "abort" ||
+        I->getName() == "longjmp" || I->getName() == "_setjmp" ||
+        I->getName() == "memset" || I->getName() == "memset_pattern16" ||
+        I->getName() == "puts" ||
+        I->getName() == "printf" || I->getName() == "putchar" ||
+        I->getName() == "fflush" || I->getName() == "malloc" ||
+        I->getName() == "free")
+      continue;
+
+    // Don't redeclare ispc's own intrinsics
+    std::string name = I->getName();
+    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
+        continue;
+
+    if (I->hasExternalWeakLinkage())
+      Out << "extern ";
+    printFunctionSignature(I, true);
+    if (I->hasWeakLinkage() || I->hasLinkOnceLinkage())
+      Out << " __ATTRIBUTE_WEAK__";
+    if (I->hasExternalWeakLinkage())
+      Out << " __EXTERNAL_WEAK__";
+    if (StaticCtors.count(I))
+      Out << " __ATTRIBUTE_CTOR__";
+    if (StaticDtors.count(I))
+      Out << " __ATTRIBUTE_DTOR__";
+    if (I->hasHiddenVisibility())
+      Out << " __HIDDEN__";
+
+    if (I->hasName() && I->getName()[0] == 1)
+      Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
+
+    Out << ";\n";
+  }
+  Out << "}\n\n";
+
+  if (!M.empty())
+    Out << "\n\n/* Function Bodies */\n";
+
+  // Emit some helper functions for dealing with FCMP instruction's
+  // predicates
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ord(A X, B Y) { ";
+  Out << "return X == X && Y == Y; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_uno(A X, B Y) { ";
+  Out << "return X != X || Y != Y; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ueq(A X, B Y) { ";
+  Out << "return X == Y || llvm_fcmp_uno(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_une(A X, B Y) { ";
+  Out << "return X != Y; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ult(A X, B Y) { ";
+  Out << "return X <  Y || llvm_fcmp_uno(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ugt(A X, B Y) { ";
+  Out << "return X >  Y || llvm_fcmp_uno(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ule(A X, B Y) { ";
+  Out << "return X <= Y || llvm_fcmp_uno(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_uge(A X, B Y) { ";
+  Out << "return X >= Y || llvm_fcmp_uno(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_oeq(A X, B Y) { ";
+  Out << "return X == Y ; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_one(A X, B Y) { ";
+  Out << "return X != Y && llvm_fcmp_ord(X, Y); }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_olt(A X, B Y) { ";
+  Out << "return X <  Y ; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ogt(A X, B Y) { ";
+  Out << "return X >  Y ; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_ole(A X, B Y) { ";
+  Out << "return X <= Y ; }\n";
+  Out << "template <typename A, typename B> static inline int llvm_fcmp_oge(A X, B Y) { ";
+  Out << "return X >= Y ; }\n";
+  Out << "template <typename A> A *Memset(A *ptr, int count, size_t len) { ";
+  Out << "return (A *)memset(ptr, count, len); }\n";
+
+  // Emit definitions of the intrinsics.
+  for (SmallVector<const Function*, 8>::const_iterator
+       I = intrinsicsToDefine.begin(),
+       E = intrinsicsToDefine.end(); I != E; ++I) {
+    printIntrinsicDefinition(**I, Out);
+  }
+
   // Output the global variable definitions and contents...
   if (!M.global_empty()) {
     Out << "\n\n/* Global Variable Definitions and Initialization */\n";
@@ -2301,49 +2423,6 @@ bool CWriter::doInitialization(Module &M) {
         }
         Out << ";\n";
       }
-  }
-
-  if (!M.empty())
-    Out << "\n\n/* Function Bodies */\n";
-
-  // Emit some helper functions for dealing with FCMP instruction's
-  // predicates
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ord(A X, B Y) { ";
-  Out << "return X == X && Y == Y; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_uno(A X, B Y) { ";
-  Out << "return X != X || Y != Y; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ueq(A X, B Y) { ";
-  Out << "return X == Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_une(A X, B Y) { ";
-  Out << "return X != Y; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ult(A X, B Y) { ";
-  Out << "return X <  Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ugt(A X, B Y) { ";
-  Out << "return X >  Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ule(A X, B Y) { ";
-  Out << "return X <= Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_uge(A X, B Y) { ";
-  Out << "return X >= Y || llvm_fcmp_uno(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_oeq(A X, B Y) { ";
-  Out << "return X == Y ; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_one(A X, B Y) { ";
-  Out << "return X != Y && llvm_fcmp_ord(X, Y); }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_olt(A X, B Y) { ";
-  Out << "return X <  Y ; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ogt(A X, B Y) { ";
-  Out << "return X >  Y ; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_ole(A X, B Y) { ";
-  Out << "return X <= Y ; }\n";
-  Out << "template <typename A, typename B> static inline int llvm_fcmp_oge(A X, B Y) { ";
-  Out << "return X >= Y ; }\n";
-  Out << "template <typename A> A *Memset(A *ptr, int count, size_t len) { ";
-  Out << "return (A *)memset(ptr, count, len); }\n";
-
-  // Emit definitions of the intrinsics.
-  for (SmallVector<const Function*, 8>::const_iterator
-       I = intrinsicsToDefine.begin(),
-       E = intrinsicsToDefine.end(); I != E; ++I) {
-    printIntrinsicDefinition(**I, Out);
   }
 
   return false;
@@ -2823,17 +2902,17 @@ void CWriter::visitSwitchInst(SwitchInst &SI) {
   printBranchToBlock(SI.getParent(), SI.getDefaultDest(), 2);
   Out << ";\n";
 
-#ifdef LLVM_3_1svn
-  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
-    ConstantInt* CaseVal = i.getCaseValue();
-    BasicBlock* Succ = i.getCaseSuccessor();
-#else
+#ifdef LLVM_3_0
   // Skip the first item since that's the default case.
   unsigned NumCases = SI.getNumCases();
   for (unsigned i = 1; i < NumCases; ++i) {
     ConstantInt* CaseVal = SI.getCaseValue(i);
     BasicBlock* Succ = SI.getSuccessor(i);
-#endif // LLVM_3_1svn
+#else
+  for (SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
+    ConstantInt* CaseVal = i.getCaseValue();
+    BasicBlock* Succ = i.getCaseSuccessor();
+#endif // !LLVM_3_0
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";
@@ -3401,6 +3480,7 @@ void CWriter::lowerIntrinsics(Function &F) {
           case Intrinsic::ppc_altivec_lvsl:
           case Intrinsic::uadd_with_overflow:
           case Intrinsic::sadd_with_overflow:
+          case Intrinsic::trap:
               // We directly implement these intrinsics
             break;
           default:
@@ -3568,7 +3648,9 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
+#ifdef LLVM_3_0
     Function *F = I.getCalledFunction();
+#endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
 #include "llvm/Intrinsics.gen"
 #undef GET_GCC_BUILTIN_NAME
@@ -3711,184 +3793,17 @@ bool CWriter::visitBuiltinCall(CallInst &I, Intrinsic::ID ID,
     writeOperand(I.getArgOperand(1));
     Out << ")";
     return true;
+  case Intrinsic::trap:
+    Out << "abort()";
+    return true;
   }
 }
 
-//This converts the llvm constraint string to something gcc is expecting.
-//TODO: work out platform independent constraints and factor those out
-//      of the per target tables
-//      handle multiple constraint codes
-std::string CWriter::InterpretASMConstraint(InlineAsm::ConstraintInfo& c) {
-  assert(c.Codes.size() == 1 && "Too many asm constraint codes to handle");
-
-  // Grab the translation table from MCAsmInfo if it exists.
-  const MCAsmInfo *TargetAsm;
-  std::string Triple = TheModule->getTargetTriple();
-  if (Triple.empty())
-#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
-    Triple = llvm::sys::getDefaultTargetTriple();
-#else
-    Triple = llvm::sys::getHostTriple();
-#endif
-
-  std::string E;
-  if (const llvm::Target *Match = TargetRegistry::lookupTarget(Triple, E))
-    TargetAsm = Match->createMCAsmInfo(Triple);
-  else
-    return c.Codes[0];
-
-  const char *const *table = TargetAsm->getAsmCBE();
-
-  // Search the translation table if it exists.
-  for (int i = 0; table && table[i]; i += 2)
-    if (c.Codes[0] == table[i]) {
-      delete TargetAsm;
-      return table[i+1];
-    }
-
-  // Default is identity.
-  delete TargetAsm;
-  return c.Codes[0];
-}
-
-//TODO: import logic from AsmPrinter.cpp
-static std::string gccifyAsm(std::string asmstr) {
-  for (std::string::size_type i = 0; i != asmstr.size(); ++i)
-    if (asmstr[i] == '\n')
-      asmstr.replace(i, 1, "\\n");
-    else if (asmstr[i] == '\t')
-      asmstr.replace(i, 1, "\\t");
-    else if (asmstr[i] == '$') {
-      if (asmstr[i + 1] == '{') {
-        std::string::size_type a = asmstr.find_first_of(':', i + 1);
-        std::string::size_type b = asmstr.find_first_of('}', i + 1);
-        std::string n = "%" +
-          asmstr.substr(a + 1, b - a - 1) +
-          asmstr.substr(i + 2, a - i - 2);
-        asmstr.replace(i, b - i + 1, n);
-        i += n.size() - 1;
-      } else
-        asmstr.replace(i, 1, "%");
-    }
-    else if (asmstr[i] == '%')//grr
-      { asmstr.replace(i, 1, "%%"); ++i;}
-
-  return asmstr;
-}
 
 //TODO: assumptions about what consume arguments from the call are likely wrong
 //      handle communitivity
 void CWriter::visitInlineAsm(CallInst &CI) {
-  InlineAsm* as = cast<InlineAsm>(CI.getCalledValue());
-  InlineAsm::ConstraintInfoVector Constraints = as->ParseConstraints();
-
-  std::vector<std::pair<Value*, int> > ResultVals;
-  if (CI.getType() == Type::getVoidTy(CI.getContext()))
-    ;
-  else if (StructType *ST = dyn_cast<StructType>(CI.getType())) {
-    for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i)
-      ResultVals.push_back(std::make_pair(&CI, (int)i));
-  } else {
-    ResultVals.push_back(std::make_pair(&CI, -1));
-  }
-
-  // Fix up the asm string for gcc and emit it.
-  Out << "__asm__ volatile (\"" << gccifyAsm(as->getAsmString()) << "\"\n";
-  Out << "        :";
-
-  unsigned ValueCount = 0;
-  bool IsFirst = true;
-
-  // Convert over all the output constraints.
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
-
-    if (I->Type != InlineAsm::isOutput) {
-      ++ValueCount;
-      continue;  // Ignore non-output constraints.
-    }
-
-    assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
-    if (C.empty()) continue;
-
-    if (!IsFirst) {
-      Out << ", ";
-      IsFirst = false;
-    }
-
-    // Unpack the dest.
-    Value *DestVal;
-    int DestValNo = -1;
-
-    if (ValueCount < ResultVals.size()) {
-      DestVal = ResultVals[ValueCount].first;
-      DestValNo = ResultVals[ValueCount].second;
-    } else
-      DestVal = CI.getArgOperand(ValueCount-ResultVals.size());
-
-    if (I->isEarlyClobber)
-      C = "&"+C;
-
-    Out << "\"=" << C << "\"(" << GetValueName(DestVal);
-    if (DestValNo != -1)
-      Out << ".field" << DestValNo; // Multiple retvals.
-    Out << ")";
-    ++ValueCount;
-  }
-
-
-  // Convert over all the input constraints.
-  Out << "\n        :";
-  IsFirst = true;
-  ValueCount = 0;
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
-    if (I->Type != InlineAsm::isInput) {
-      ++ValueCount;
-      continue;  // Ignore non-input constraints.
-    }
-
-    assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
-    if (C.empty()) continue;
-
-    if (!IsFirst) {
-      Out << ", ";
-      IsFirst = false;
-    }
-
-    assert(ValueCount >= ResultVals.size() && "Input can't refer to result");
-    Value *SrcVal = CI.getArgOperand(ValueCount-ResultVals.size());
-
-    Out << "\"" << C << "\"(";
-    if (!I->isIndirect)
-      writeOperand(SrcVal);
-    else
-      writeOperandDeref(SrcVal);
-    Out << ")";
-  }
-
-  // Convert over the clobber constraints.
-  IsFirst = true;
-  for (InlineAsm::ConstraintInfoVector::iterator I = Constraints.begin(),
-       E = Constraints.end(); I != E; ++I) {
-    if (I->Type != InlineAsm::isClobber)
-      continue;  // Ignore non-input constraints.
-
-    assert(I->Codes.size() == 1 && "Too many asm constraint codes to handle");
-    std::string C = InterpretASMConstraint(*I);
-    if (C.empty()) continue;
-
-    if (!IsFirst) {
-      Out << ", ";
-      IsFirst = false;
-    }
-
-    Out << '\"' << C << '"';
-  }
-
-  Out << ")";
+  assert(!"Inline assembly not supported");
 }
 
 void CWriter::visitAllocaInst(AllocaInst &I) {
@@ -4240,14 +4155,14 @@ void CWriter::visitAtomicCmpXchgInst(AtomicCmpXchgInst &ACXI) {
 
 class SmearCleanupPass : public llvm::BasicBlockPass {
 public:
-    SmearCleanupPass(llvm::Module *m, int width)
+    SmearCleanupPass(Module *m, int width)
         : BasicBlockPass(ID) { module = m; vectorWidth = width; }
 
     const char *getPassName() const { return "Smear Cleanup Pass"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
-    llvm::Module *module;
+    Module *module;
     int vectorWidth;
 };
 
@@ -4303,41 +4218,28 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         assert(toMatch != NULL);
 
         {
-        // FIXME: generalize this/make it not so hard-coded?
         Type *matchType = toMatch->getType();
-        const char *smearFuncName = NULL;
-
-        switch (matchType->getTypeID()) {
-        case Type::FloatTyID:  smearFuncName = "__smear_float"; break;
-        case Type::DoubleTyID: smearFuncName = "__smear_double"; break;
-        case Type::IntegerTyID: {
-            switch (cast<IntegerType>(matchType)->getBitWidth()) {
-            case 8:  smearFuncName = "__smear_i8";  break;
-            case 16: smearFuncName = "__smear_i16"; break;
-            case 32: smearFuncName = "__smear_i32"; break;
-            case 64: smearFuncName = "__smear_i64"; break;
-            }
-        }
-        default: break;
-        }
+        const char *smearFuncName = lGetSmearFunc(matchType);
 
         if (smearFuncName != NULL) {
             Function *smearFunc = module->getFunction(smearFuncName);
             if (smearFunc == NULL) {
                 Constant *sf = 
                     module->getOrInsertFunction(smearFuncName, iter->getType(), 
-                                                matchType, NULL);
+                                                iter->getType(), matchType, NULL);
                 smearFunc = dyn_cast<Function>(sf);
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
             }
-                
+
+            llvm::Value *undefResult = llvm::UndefValue::get(vt);
             assert(smearFunc != NULL);
-            Value *args[1] = { toMatch };
-            ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
+            Value *args[2] = { undefResult, toMatch };
+            ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
             Instruction *smearCall = 
-                CallInst::Create(smearFunc, argArray, "smear", (Instruction *)NULL);
+                CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
+                                 (Instruction *)NULL);
 
             ReplaceInstWithInst(iter, smearCall);
 
@@ -4401,6 +4303,155 @@ BitcastCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     return modifiedAny;
 }
 
+///////////////////////////////////////////////////////////////////////////
+// MaskOpsCleanupPass
+
+/** This pass does various peephole improvements to mask modification
+    operations.  In particular, it converts mask XORs with "all true" to
+    calls to __not() and replaces operations like and(not(a), b) to
+    __and_not1(a, b) (and similarly if the second operand has not applied
+    to it...)
+ */
+class MaskOpsCleanupPass : public llvm::BasicBlockPass {
+public:
+    MaskOpsCleanupPass(Module *m)
+        : BasicBlockPass(ID) { 
+        Type *mt = LLVMTypes::MaskType;
+
+        // Declare the __not, __and_not1, and __and_not2 functions that we
+        // expect the target to end up providing.
+        notFunc = 
+            dyn_cast<Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
+        assert(notFunc != NULL);
+        notFunc->addFnAttr(Attribute::NoUnwind);
+        notFunc->addFnAttr(Attribute::ReadNone);
+
+        andNotFuncs[0] = 
+            dyn_cast<Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt,
+                                                      NULL));
+        assert(andNotFuncs[0] != NULL);
+        andNotFuncs[0]->addFnAttr(Attribute::NoUnwind);
+        andNotFuncs[0]->addFnAttr(Attribute::ReadNone);
+
+        andNotFuncs[1] = 
+            dyn_cast<Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt,
+                                                      NULL));
+        assert(andNotFuncs[1] != NULL);
+        andNotFuncs[1]->addFnAttr(Attribute::NoUnwind);
+        andNotFuncs[1]->addFnAttr(Attribute::ReadNone);
+    }
+
+    const char *getPassName() const { return "MaskOps Cleanup Pass"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+private:
+    Value *lGetNotOperand(Value *v) const;
+
+    Function *notFunc, *andNotFuncs[2];
+
+    static char ID;
+};
+
+char MaskOpsCleanupPass::ID = 0;
+
+
+/** Returns true if the given value is a compile-time constant vector of
+    i1s with all elements 'true'. 
+*/
+static bool
+lIsAllTrue(Value *v) {
+    if (ConstantVector *cv = dyn_cast<ConstantVector>(v)) {
+        ConstantInt *ci;
+        return (cv->getSplatValue() != NULL &&
+                (ci = dyn_cast<ConstantInt>(cv->getSplatValue())) != NULL &&
+                ci->isOne());
+    }
+                
+#ifndef LLVM_3_0
+    if (ConstantDataVector *cdv = dyn_cast<ConstantDataVector>(v)) {
+        ConstantInt *ci;
+        return (cdv->getSplatValue() != NULL &&
+                (ci = dyn_cast<ConstantInt>(cdv->getSplatValue())) != NULL &&
+                ci->isOne());
+    }
+#endif
+
+    return false;
+}
+
+
+/** Checks to see if the given value is the NOT of some other value.  If
+    so, it returns the operand of the NOT; otherwise returns NULL.
+ */
+Value *
+MaskOpsCleanupPass::lGetNotOperand(Value *v) const {
+    if (CallInst *ci = dyn_cast<CallInst>(v))
+        if (ci->getCalledFunction() == notFunc)
+            // Direct call to __not()
+            return ci->getArgOperand(0);
+
+    if (BinaryOperator *bop = dyn_cast<BinaryOperator>(v))
+        if (bop->getOpcode() == Instruction::Xor &&
+            lIsAllTrue(bop->getOperand(1)))
+            // XOR of all-true vector.
+            return bop->getOperand(0);
+
+    return NULL;
+}
+
+
+bool
+MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+ restart:
+    for (BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        BinaryOperator *bop = dyn_cast<BinaryOperator>(&*iter);
+        if (bop == NULL)
+            continue;
+
+        if (bop->getType() != LLVMTypes::MaskType)
+            continue;
+
+        if (bop->getOpcode() == Instruction::Xor) {
+            // Check for XOR with all-true values
+            if (lIsAllTrue(bop->getOperand(1))) {
+                ArrayRef<Value *> arg(bop->getOperand(0));
+                CallInst *notCall = CallInst::Create(notFunc, arg, 
+                                                     bop->getName());
+                ReplaceInstWithInst(iter, notCall);
+                modifiedAny = true;
+                goto restart;
+            }
+        }
+        else if (bop->getOpcode() == Instruction::And) {
+            // Check each of the operands to see if they have NOT applied
+            // to them.
+            for (int i = 0; i < 2; ++i) {
+                if (Value *notOp = lGetNotOperand(bop->getOperand(i))) {
+                    // In notOp we have the target of the NOT operation;
+                    // put it in its appropriate spot in the operand array.
+                    // Copy in the other operand directly.
+                    Value *args[2];
+                    args[i]     = notOp;
+                    args[i ^ 1] = bop->getOperand(i ^ 1);
+                    ArrayRef<Value *> argsRef(&args[0], 2);
+
+                    // Call the appropriate __and_not* function.
+                    CallInst *andNotCall = 
+                        CallInst::Create(andNotFuncs[i], argsRef, bop->getName());
+
+                    ReplaceInstWithInst(iter, andNotCall);
+                    modifiedAny = true;
+                    goto restart;
+                }
+            }
+        }
+    }
+
+    return modifiedAny;
+}
+
 
 //===----------------------------------------------------------------------===//
 //                       External Interface declaration
@@ -4432,6 +4483,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(createCFGSimplificationPass());   // clean up after lower invoke.
     pm.add(new SmearCleanupPass(module, vectorWidth));
     pm.add(new BitcastCleanupPass);
+    pm.add(new MaskOpsCleanupPass(module));
     pm.add(createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(createPrintModulePass(&fos));
     pm.add(new CWriter(fos, includeName, vectorWidth));
@@ -4442,5 +4494,3 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
 
     return true;
 }
-
-#endif // LLVM_2_9

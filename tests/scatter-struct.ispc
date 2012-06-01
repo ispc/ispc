@@ -17,8 +17,8 @@ void set(Foo f[], int offset, Foo val) {
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
-    Foo foo[35];
-    for (uniform int i = 0; i < 35; ++i) {
+    Foo foo[programCount+5];
+    for (uniform int i = 0; i < programCount+5; ++i) {
         foo[i].f = a;
         foo[i].a = i;
         foo[i].y = 2*a;

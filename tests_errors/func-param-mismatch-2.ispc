@@ -1,4 +1,4 @@
-// Unable to find matching overload for call to function
+// Unable to find any matching overload for call to function
 
 void foo(int x);
 

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2012, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,18 @@ declare i1 @__is_compile_time_constant_uniform_int32(i32)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
+define(`ALL_ON_MASK',
+`ifelse(WIDTH, `64', `-1', 
+        WIDTH, `32', `4294967295',
+                     `eval((1<<WIDTH)-1)')')
+
+define(`MASK_HIGH_BIT_ON',
+`ifelse(WIDTH, `64', `-9223372036854775808',
+        WIDTH, `32', `2147483648',
+                     `eval(1<<(WIDTH-1))')')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Helper macro for calling various SSE instructions for scalar values
 ;; but where the instruction takes a vector parameter.
@@ -1529,7 +1541,7 @@ declare i32 @__fast_masked_vload()
 declare i8* @ISPCAlloc(i8**, i64, i32) nounwind
 declare void @ISPCLaunch(i8**, i8*, i8*, i32) nounwind
 declare void @ISPCSync(i8*) nounwind
-declare void @ISPCInstrument(i8*, i8*, i32, i32) nounwind
+declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
@@ -1653,6 +1665,265 @@ declare void @__pseudo_scatter_base_offsets64_32(i8 * nocapture, <WIDTH x i64>, 
                                                  <WIDTH x i32>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter_base_offsets64_64(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i64>, <WIDTH x MASK>) nounwind
+
+declare float @__log_uniform_float(float) nounwind readnone
+declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
+declare float @__exp_uniform_float(float) nounwind readnone
+declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
+declare float @__pow_uniform_float(float, float) nounwind readnone
+declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+declare void @__use8(<WIDTH x i8>)
+declare void @__use16(<WIDTH x i16>)
+declare void @__use32(<WIDTH x i32>)
+declare void @__use64(<WIDTH x i64>)
+
+;; This is a temporary function that will be removed at the end of
+;; compilation--the idea is that it calls out to all of the various
+;; functions / pseudo-function declarations that we need to keep around
+;; so that they are available to the various optimization passes.  This
+;; then prevents those functions from being removed as dead code when
+;; we do early DCE...
+
+define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
+                               <WIDTH x i32> %v32, <WIDTH x i64> %v64,
+                               <WIDTH x MASK> %mask) {
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; loads
+  %ml8  = call <WIDTH x i8>  @__masked_load_8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %ml8)
+  %ml16 = call <WIDTH x i16> @__masked_load_16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %ml16)
+  %ml32 = call <WIDTH x i32> @__masked_load_32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %ml32)
+  %ml64 = call <WIDTH x i64> @__masked_load_64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %ml64)
+
+  %lb8   = call <WIDTH x i8>  @__load_and_broadcast_8(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %lb8)
+  %lb16  = call <WIDTH x i16> @__load_and_broadcast_16(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %lb16)
+  %lb32  = call <WIDTH x i32> @__load_and_broadcast_32(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %lb32)
+  %lb64  = call <WIDTH x i64> @__load_and_broadcast_64(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %lb64)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; stores
+  %pv8 = bitcast i8 * %ptr to <WIDTH x i8> *
+  call void @__pseudo_masked_store_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
+                                     <WIDTH x MASK> %mask)
+  %pv16 = bitcast i8 * %ptr to <WIDTH x i16> *
+  call void @__pseudo_masked_store_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
+                                      <WIDTH x MASK> %mask)
+  %pv32 = bitcast i8 * %ptr to <WIDTH x i32> *
+  call void @__pseudo_masked_store_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
+                                      <WIDTH x MASK> %mask)
+  %pv64 = bitcast i8 * %ptr to <WIDTH x i64> *
+  call void @__pseudo_masked_store_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
+                                      <WIDTH x MASK> %mask)
+
+  call void @__masked_store_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__masked_store_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__masked_store_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__masked_store_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__masked_store_blend_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
+                                    <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
+                                     <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
+                                     <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
+                                     <WIDTH x MASK> %mask)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; gathers
+
+  %pg32_8 = call <WIDTH x i8>  @__pseudo_gather32_8(<WIDTH x i32> %v32,
+                                                    <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %pg32_8)
+  %pg32_16 = call <WIDTH x i16>  @__pseudo_gather32_16(<WIDTH x i32> %v32,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %pg32_16)
+  %pg32_32 = call <WIDTH x i32>  @__pseudo_gather32_32(<WIDTH x i32> %v32,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %pg32_32)
+  %pg32_64 = call <WIDTH x i64>  @__pseudo_gather32_64(<WIDTH x i32> %v32,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %pg32_64)
+
+  %pg64_8 = call <WIDTH x i8>  @__pseudo_gather64_8(<WIDTH x i64> %v64,
+                                                    <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %pg64_8)
+  %pg64_16 = call <WIDTH x i16>  @__pseudo_gather64_16(<WIDTH x i64> %v64,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %pg64_16)
+  %pg64_32 = call <WIDTH x i32>  @__pseudo_gather64_32(<WIDTH x i64> %v64,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %pg64_32)
+  %pg64_64 = call <WIDTH x i64>  @__pseudo_gather64_64(<WIDTH x i64> %v64,
+                                                       <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %pg64_64)
+
+  %g32_8 = call <WIDTH x i8>  @__gather32_i8(<WIDTH x i32> %v32,
+                                            <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %g32_8)
+  %g32_16 = call <WIDTH x i16>  @__gather32_i16(<WIDTH x i32> %v32,
+                                               <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %g32_16)
+  %g32_32 = call <WIDTH x i32>  @__gather32_i32(<WIDTH x i32> %v32,
+                                               <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %g32_32)
+  %g32_64 = call <WIDTH x i64>  @__gather32_i64(<WIDTH x i32> %v32,
+                                               <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %g32_64)
+
+  %g64_8 = call <WIDTH x i8>  @__gather64_i8(<WIDTH x i64> %v64,
+                                            <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %g64_8)
+  %g64_16 = call <WIDTH x i16>  @__gather64_i16(<WIDTH x i64> %v64,
+                                               <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %g64_16)
+  %g64_32 = call <WIDTH x i32>  @__gather64_i32(<WIDTH x i64> %v64,
+                                               <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %g64_32)
+  %g64_64 = call <WIDTH x i64>  @__gather64_i64(<WIDTH x i64> %v64,
+                                                <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %g64_64)
+
+  %pgbo32_8 = call <WIDTH x i8>
+       @__pseudo_gather_base_offsets32_8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                         <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %pgbo32_8)
+  %pgbo32_16 = call <WIDTH x i16>
+       @__pseudo_gather_base_offsets32_16(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                          <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %pgbo32_16)
+  %pgbo32_32 = call <WIDTH x i32>
+       @__pseudo_gather_base_offsets32_32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                          <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %pgbo32_32)
+  %pgbo32_64 = call <WIDTH x i64>
+       @__pseudo_gather_base_offsets32_64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                          <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %pgbo32_64)
+
+  %gbo32_8 = call <WIDTH x i8>
+       @__gather_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                  <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %gbo32_8)
+  %gbo32_16 = call <WIDTH x i16>
+       @__gather_base_offsets32_i16(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                   <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %gbo32_16)
+  %gbo32_32 = call <WIDTH x i32>
+       @__gather_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                   <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %gbo32_32)
+  %gbo32_64 = call <WIDTH x i64>
+       @__gather_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                   <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %gbo32_64)
+
+
+  %pgbo64_8 = call <WIDTH x i8>
+       @__pseudo_gather_base_offsets64_8(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                         <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %pgbo64_8)
+  %pgbo64_16 = call <WIDTH x i16>
+       @__pseudo_gather_base_offsets64_16(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                          <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %pgbo64_16)
+  %pgbo64_32 = call <WIDTH x i32>
+       @__pseudo_gather_base_offsets64_32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                          <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %pgbo64_32)
+  %pgbo64_64 = call <WIDTH x i64>
+       @__pseudo_gather_base_offsets64_64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                          <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %pgbo64_64)
+
+  %gbo64_8 = call <WIDTH x i8>
+       @__gather_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                  <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use8(<WIDTH x i8> %gbo64_8)
+  %gbo64_16 = call <WIDTH x i16>
+       @__gather_base_offsets64_i16(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                   <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use16(<WIDTH x i16> %gbo64_16)
+  %gbo64_32 = call <WIDTH x i32>
+       @__gather_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                   <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use32(<WIDTH x i32> %gbo64_32)
+  %gbo64_64 = call <WIDTH x i64>
+       @__gather_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                   <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__use64(<WIDTH x i64> %gbo64_64)
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; scatters
+
+  call void @__pseudo_scatter32_8(<WIDTH x i32> %v32, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter32_16(<WIDTH x i32> %v32, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter32_32(<WIDTH x i32> %v32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter32_64(<WIDTH x i32> %v32, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_scatter64_8(<WIDTH x i64> %v64, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter64_16(<WIDTH x i64> %v64, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter64_32(<WIDTH x i64> %v64, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter64_64(<WIDTH x i64> %v64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__scatter32_i8(<WIDTH x i32> %v32, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter32_i16(<WIDTH x i32> %v32, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter32_i32(<WIDTH x i32> %v32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter32_i64(<WIDTH x i32> %v32, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__scatter64_i8(<WIDTH x i64> %v64, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter64_i16(<WIDTH x i64> %v64, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter64_i32(<WIDTH x i64> %v64, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter64_i64(<WIDTH x i64> %v64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_scatter_base_offsets32_8(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets32_16(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets32_32(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets32_64(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__pseudo_scatter_base_offsets64_8(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets64_16(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets64_32(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets64_64(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__scatter_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets32_i16(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  call void @__scatter_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets64_i16(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                 <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+
+  ret void
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; vector ops
@@ -1837,12 +2108,12 @@ ok:
 
 
 define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
-                                          <WIDTH x MASK> %mask) {
+                                 <WIDTH x MASK> %mask) {
   %nottest = xor <WIDTH x MASK> %test,
                  < forloop(i, 1, eval(WIDTH-1), `MASK -1, ') MASK -1 >
   %nottest_and_mask = and <WIDTH x MASK> %nottest, %mask
-  %mm = call i32 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
-  %all_ok = icmp eq i32 %mm, 0
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
+  %all_ok = icmp eq i64 %mm, 0
   br i1 %all_ok, label %ok, label %fail
 
 fail:
@@ -2244,14 +2515,18 @@ define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x MASK> %mask) nounwind alwa
 ;; $4: alignment for elements of type $2 (4, 8, ...)
 
 define(`masked_load', `
-define <$1 x $2> @__masked_load_$3(i8 *, <$1 x i32> %mask) nounwind alwaysinline {
+define <$1 x $2> @__masked_load_$3(i8 *, <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
-  %mm = call i32 @__movmsk(<$1 x i32> %mask)
+  %mm = call i64 @__movmsk(<$1 x MASK> %mask)
   
   ; if the first lane and the last lane are on, then it is safe to do a vector load
   ; of the whole thing--what the lanes in the middle want turns out to not matter...
-  %mm_and = and i32 %mm, eval(1 | (1<<($1-1)))
-  %can_vload = icmp eq i32 %mm_and, eval(1 | (1<<($1-1)))
+  %mm_and_low = and i64 %mm, 1
+  %mm_and_high = and i64 %mm, MASK_HIGH_BIT_ON
+  %mm_and_high_shift = lshr i64 %mm_and_high, eval(WIDTH-1)
+  %mm_and_low_i1 = trunc i64 %mm_and_low to i1
+  %mm_and_high_shift_i1 = trunc i64 %mm_and_high_shift to i1
+  %can_vload = and i1 %mm_and_low_i1, %mm_and_high_shift_i1
 
   %fast32 = call i32 @__fast_masked_vload()
   %fast_i1 = trunc i32 %fast32 to i1
@@ -2270,9 +2545,10 @@ load:
 loop:
   ; loop over the lanes and see if each one is on...
   %lane = phi i32 [ 0, %entry ], [ %next_lane, %lane_done ]
-  %lanemask = shl i32 1, %lane
-  %mask_and = and i32 %mm, %lanemask
-  %do_lane = icmp ne i32 %mask_and, 0
+  %lane64 = zext i32 %lane to i64
+  %lanemask = shl i64 1, %lane64
+  %mask_and = and i64 %mm, %lanemask
+  %do_lane = icmp ne i64 %mask_and, 0
   br i1 %do_lane, label %load_lane, label %lane_done
 
 load_lane:
@@ -2484,12 +2760,12 @@ define(`packed_load_and_store', `
 define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
                                  <WIDTH x i32> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i32 @__movmsk(<WIDTH x i32> %full_mask)
+  %mask = call i64 @__movmsk(<WIDTH x i32> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 
 known_mask:
-  %allon = icmp eq i32 %mask, eval((1 << WIDTH) -1)
+  %allon = icmp eq i64 %mask, ALL_ON_MASK
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
@@ -2505,12 +2781,12 @@ unknown_mask:
 
 loop:
   %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i32 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
+  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
   %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
 
   ; is the current lane on?
-  %and = and i32 %mask, %lanemask
-  %do_load = icmp eq i32 %and, %lanemask
+  %and = and i64 %mask, %lanemask
+  %do_load = icmp eq i64 %and, %lanemask
   br i1 %do_load, label %load, label %loopend 
 
 load:
@@ -2525,7 +2801,7 @@ load:
 loopend:
   %nextoffset = phi i32 [ %offset1, %load ], [ %offset, %loop ]
   %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i32 %lanemask, 2
+  %nextlanemask = mul i64 %lanemask, 2
 
   ; are we done yet?
   %test = icmp ne i32 %nextlane, WIDTH
@@ -2536,14 +2812,14 @@ done:
 }
 
 define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
-                                  <WIDTH x i32> %full_mask) nounwind alwaysinline {
+                                   <WIDTH x i32> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i32 @__movmsk(<WIDTH x i32> %full_mask)
+  %mask = call i64 @__movmsk(<WIDTH x i32> %full_mask)
   %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x i32> %full_mask)
   br i1 %mask_known, label %known_mask, label %unknown_mask
 
 known_mask:
-  %allon = icmp eq i32 %mask, eval((1 << WIDTH) -1)
+  %allon = icmp eq i64 %mask, ALL_ON_MASK
   br i1 %allon, label %all_on, label %unknown_mask
 
 all_on:
@@ -2556,12 +2832,12 @@ unknown_mask:
 
 loop:
   %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i32 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
+  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
   %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
 
   ; is the current lane on?
-  %and = and i32 %mask, %lanemask
-  %do_store = icmp eq i32 %and, %lanemask
+  %and = and i64 %mask, %lanemask
+  %do_store = icmp eq i64 %and, %lanemask
   br i1 %do_store, label %store, label %loopend 
 
 store:
@@ -2574,7 +2850,7 @@ store:
 loopend:
   %nextoffset = phi i32 [ %offset1, %store ], [ %offset, %loop ]
   %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i32 %lanemask, 2
+  %nextlanemask = mul i64 %lanemask, 2
 
   ; are we done yet?
   %test = icmp ne i32 %nextlane, WIDTH
@@ -2598,14 +2874,15 @@ define(`reduce_equal_aux', `
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
-   %mm = call i32 @__movmsk(<$1 x MASK> %mask)
-   %allon = icmp eq i32 %mm, eval((1<<$1)-1)
+   %mm = call i64 @__movmsk(<$1 x MASK> %mask)
+   %allon = icmp eq i64 %mm, ALL_ON_MASK
    br i1 %allon, label %check_neighbors, label %domixed
 
 domixed:
   ; First, figure out which lane is the first active one
-  %first = call i32 @llvm.cttz.i32(i32 %mm)
-  %baseval = extractelement <$1 x $2> %v, i32 %first
+  %first = call i64 @llvm.cttz.i64(i64 %mm)
+  %first32 = trunc i64 %first to i32
+  %baseval = extractelement <$1 x $2> %v, i32 %first32
   %basev1 = bitcast $2 %baseval to <1 x $2>
   ; get a vector that is that value smeared across all elements
   %basesmear = shufflevector <1 x $2> %basev1, <1 x $2> undef,
@@ -2636,9 +2913,9 @@ check_neighbors:
   %eq = $5 eq <$1 x $2> %vec, %vr
   ifelse(MASK,i32, `
     %eq32 = sext <$1 x i1> %eq to <$1 x i32>
-    %eqmm = call i32 @__movmsk(<$1 x i32> %eq32)', `
-    %eqmm = call i32 @__movmsk(<$1 x MASK> %eq)')
-  %alleq = icmp eq i32 %eqmm, eval((1<<$1)-1)
+    %eqmm = call i64 @__movmsk(<$1 x i32> %eq32)', `
+    %eqmm = call i64 @__movmsk(<$1 x MASK> %eq)')
+  %alleq = icmp eq i64 %eqmm, ALL_ON_MASK
   br i1 %alleq, label %all_equal, label %not_all_equal
   ', `
   ; But for 64-bit elements, it turns out to be more efficient to just
@@ -2751,14 +3028,14 @@ define(`per_lane', `
   br label %pl_entry
 
 pl_entry:
-  %pl_mask = call i32 @__movmsk($2)
+  %pl_mask = call i64 @__movmsk($2)
   %pl_mask_known = call i1 @__is_compile_time_constant_mask($2)
   br i1 %pl_mask_known, label %pl_known_mask, label %pl_unknown_mask
 
 pl_known_mask:
   ;; the mask is known at compile time; see if it is something we can
   ;; handle more efficiently
-  %pl_is_allon = icmp eq i32 %pl_mask, eval((1<<$1)-1)
+  %pl_is_allon = icmp eq i64 %pl_mask, ALL_ON_MASK
   br i1 %pl_is_allon, label %pl_all_on, label %pl_unknown_mask
 
 pl_all_on:
@@ -2780,11 +3057,11 @@ pl_unknown_mask:
 pl_loop:
   ;; Loop over each lane and see if we want to do the work for this lane
   %pl_lane = phi i32 [ 0, %pl_unknown_mask ], [ %pl_nextlane, %pl_loopend ]
-  %pl_lanemask = phi i32 [ 1, %pl_unknown_mask ], [ %pl_nextlanemask, %pl_loopend ]
+  %pl_lanemask = phi i64 [ 1, %pl_unknown_mask ], [ %pl_nextlanemask, %pl_loopend ]
 
   ; is the current lane on?  if so, goto do work, otherwise to end of loop
-  %pl_and = and i32 %pl_mask, %pl_lanemask
-  %pl_doit = icmp eq i32 %pl_and, %pl_lanemask
+  %pl_and = and i64 %pl_mask, %pl_lanemask
+  %pl_doit = icmp eq i64 %pl_and, %pl_lanemask
   br i1 %pl_doit, label %pl_dolane, label %pl_loopend 
 
 pl_dolane:
@@ -2795,7 +3072,7 @@ pl_dolane:
 
 pl_loopend:
   %pl_nextlane = add i32 %pl_lane, 1
-  %pl_nextlanemask = mul i32 %pl_lanemask, 2
+  %pl_nextlanemask = mul i64 %pl_lanemask, 2
 
   ; are we done yet?
   %pl_test = icmp ne i32 %pl_nextlane, $1
@@ -2880,11 +3157,11 @@ define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets, i32
   %newDelta = load <$1 x i32> * %deltaPtr
 
   %ret0 = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %newOffsets,
-                                            i32 %offset_scale, <$1 x i32> %offset_delta,
+                                            i32 %offset_scale, <$1 x i32> %newDelta,
                                             <$1 x $2> undef, i32 0)
   forloop(lane, 1, eval($1-1), 
           `patsubst(patsubst(`%retLANE = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, 
-                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x i32> %offset_delta,
+                                <$1 x i32> %newOffsets, i32 %offset_scale, <$1 x i32> %newDelta,
                                 <$1 x $2> %retPREV, i32 LANE)
                     ', `LANE', lane), `PREV', eval(lane-1))')
   ret <$1 x $2> %ret`'eval($1-1)

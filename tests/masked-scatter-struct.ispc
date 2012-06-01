@@ -5,8 +5,8 @@ struct Foo { float x; float y; };
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
-    uniform Foo foo[32];
-    for (uniform int i = 0; i < 32; ++i) {
+    uniform Foo foo[programCount];
+    for (uniform int i = 0; i < programCount; ++i) {
         foo[i].x = i;
         foo[i].y = -1234 + i;
     }

@@ -1,6 +1,6 @@
 // -*- mode: c++ -*-
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -355,7 +355,8 @@ static inline uniform bool all(bool v) {
 #else
     int32 match = __sext_varying_bool((__sext_varying_bool(v) & __mask) == __mask);
 #endif
-    return __movmsk(match) == (1 << programCount) - 1;
+    return __movmsk(match) == ((programCount == 64) ? ~0ull : 
+                               ((1ull << programCount) - 1));
 }
 
 __declspec(safe) 
@@ -388,14 +389,14 @@ __declspec(safe)
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
 #ifdef ISPC_TARGET_GENERIC
-    return __popcnt_int32(__movmsk(v & __mask));
+    return __popcnt_int64(__movmsk(v & __mask));
 #else
-    return __popcnt_int32(__movmsk(__sext_varying_bool(v) & __mask));
+    return __popcnt_int64(__movmsk(__sext_varying_bool(v) & __mask));
 #endif
 }
 
 __declspec(safe) 
-static inline uniform int lanemask() {
+static inline uniform unsigned int64 lanemask() {
     return __movmsk(__mask);
 }
 
@@ -744,6 +745,125 @@ static inline void prefetch_nt(const void * varying ptr) {
         const void * uniform p = ptrArray[i];
         prefetch_nt(p);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////
+// non-short-circuiting alternatives
+
+__declspec(safe,cost1)
+static inline bool and(bool a, bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool and(uniform bool a, uniform bool b) {
+    return a && b;
+}
+
+__declspec(safe,cost1)
+static inline bool or(bool a, bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool or(uniform bool a, uniform bool b) {
+    return a || b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int8 select(uniform bool c, int8 a, int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int8 select(uniform bool c, uniform int8 a,
+                                  uniform int8 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int16 select(uniform bool c, int16 a, int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int16 select(uniform bool c, uniform int16 a,
+                                   uniform int16 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int32 select(uniform bool c, int32 a, int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int32 select(uniform bool c, uniform int32 a,
+                                   uniform int32 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline int64 select(uniform bool c, int64 a, int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform int64 select(uniform bool c, uniform int64 a,
+                                   uniform int64 b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline float select(uniform bool c, float a, float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform float select(uniform bool c, uniform float a,
+                                   uniform float b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline double select(uniform bool c, double a, double b) {
+    return c ? a : b;
+}
+
+__declspec(safe,cost1)
+static inline uniform double select(uniform bool c, uniform double a,
+                                    uniform double b) {
+    return c ? a : b;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1469,22 +1589,17 @@ static inline void memory_barrier() {
 
 #define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE)                        \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
-    memory_barrier();                                                   \
     TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1492,23 +1607,21 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
 #define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
 static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
-    memory_barrier();                                                   \
     uniform int i = 0;                                                  \
     TA ret[programCount];                                               \
     TA memVal;                                                          \
     uniform int lastSwap;                                               \
-    uniform int mask = lanemask();                                      \
+    uniform unsigned int64 mask = lanemask();                           \
     /* First, have the first running program instance (if any) perform  \
        the swap with memory with its value of "value"; record the       \
        value returned. */                                               \
     for (; i < programCount; ++i) {                                     \
-        if ((mask & (1 << i)) == 0)                                     \
+        if ((mask & (1ull << i)) == 0)                                  \
             continue;                                                   \
         memVal = __atomic_swap_uniform_##TB##_global(ptr, extract(value, i)); \
         lastSwap = i;                                                   \
@@ -1520,7 +1633,7 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
        current instance had executed a hardware atomic swap right before \
        the last one that did a swap. */                                 \
     for (; i < programCount; ++i) {                                     \
-        if ((mask & (1 << i)) == 0)                                     \
+        if ((mask & (1ull << i)) == 0)                                  \
             continue;                                                   \
         ret[lastSwap] = extract(value, i);                              \
         lastSwap = i;                                                   \
@@ -1528,20 +1641,16 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
     /* And the last instance that wanted to swap gets the value we      \
        originally got back from memory... */                            \
     ret[lastSwap] = memVal;                                             \
-    memory_barrier();                                                   \
     return ret[programIndex];                                           \
 }                                                                       \
 static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
                                             uniform TA value) {         \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_swap_uniform_##TB##_global(ptr, value);   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1549,7 +1658,6 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
         uniform TA r = __atomic_swap_uniform_##TB##_global(p, v);       \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 
@@ -1557,25 +1665,19 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
-    if (lanemask() != 0) {                                              \
-        memory_barrier();                                               \
+    if (lanemask() != 0)                                                \
         ret = __atomic_##OPB##_uniform_##TB##_global(ptr, oneval);      \
-        memory_barrier();                                               \
-    }                                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
                                                uniform TA value) {      \
-    memory_barrier();                                                   \
     uniform TA ret = __atomic_##OPB##_uniform_##TB##_global(ptr, value); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
                                        TA value) {                      \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA * uniform p = ptrArray[i];                           \
@@ -1583,7 +1685,6 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
         uniform TA r = __atomic_##OPB##_uniform_##TB##_global(p, v);    \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }
 
@@ -1638,25 +1739,20 @@ DEFINE_ATOMIC_SWAP(double,double)
 #define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
 static inline uniform TA atomic_compare_exchange_global(               \
          uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
-    memory_barrier();                                                      \
     uniform TA ret =                                                    \
         __atomic_compare_exchange_uniform_##TB##_global(ptr, oldval, newval); \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_compare_exchange_global(                           \
          uniform TA * uniform ptr, TA oldval, TA newval) {                 \
-    memory_barrier();                                                      \
     TA ret = __atomic_compare_exchange_##TB##_global(ptr, oldval, newval,  \
                                                      (MASKTYPE)__mask);    \
-    memory_barrier();                                                      \
     return ret;                                                            \
 } \
 static inline TA atomic_compare_exchange_global(               \
          uniform TA * varying ptr, TA oldval, TA newval) { \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
-    memory_barrier();                                                   \
     TA ret;                                                             \
     __foreach_active (i) {                                              \
         uniform TA r =                                                  \
@@ -1665,7 +1761,6 @@ static inline TA atomic_compare_exchange_global(               \
                                                             extract(newval, i)); \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
-    memory_barrier();                                                   \
     return ret;                                                         \
 }
 
@@ -1677,6 +1772,49 @@ ATOMIC_DECL_CMPXCHG(unsigned int64, int64, UIntMaskType)
 ATOMIC_DECL_CMPXCHG(double, double, IntMaskType)
 
 #undef ATOMIC_DECL_CMPXCHG
+
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_global(void ** uniform ptr,
+                                       void * value) {
+    return (void *)atomic_swap_global((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_global(void ** uniform ptr,
+                                                void * uniform value) {
+    return (void * uniform)atomic_swap_global((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_global(void ** ptr, void * value) {
+    return (void *)atomic_swap_global((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_global(void ** uniform ptr, 
+                               void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_global(void ** uniform ptr, void * uniform oldval, 
+                               void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_global((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_global(void ** ptr, void * oldval,
+                               void * newval) {
+    return (void *)atomic_compare_exchange_global((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // local atomics
@@ -1848,6 +1986,49 @@ LOCAL_CMPXCHG(double)
 
 #undef LOCAL_ATOMIC
 #undef LOCAL_CMPXCHG
+
+// void * variants of swap and compare exchange
+
+static inline void *atomic_swap_local(void ** uniform ptr,
+                                      void * value) {
+    return (void *)atomic_swap_local((intptr_t * uniform)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * uniform atomic_swap_local(void ** uniform ptr,
+                                               void * uniform value) {
+    return (void * uniform)atomic_swap_local((intptr_t * uniform)ptr,
+                                              (uniform intptr_t)value);
+}
+
+static inline void *atomic_swap_local(void ** ptr, void * value) {
+    return (void *)atomic_swap_local((intptr_t *)ptr,
+                                      (intptr_t)value);
+}
+
+static inline void * 
+atomic_compare_exchange_local(void ** uniform ptr, 
+                              void * oldval, void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
+
+static inline void * uniform
+atomic_compare_exchange_local(void ** uniform ptr, void * uniform oldval, 
+                              void * uniform newval) { 
+    return (void * uniform)atomic_compare_exchange_local((intptr_t * uniform)ptr,
+                                                          (uniform intptr_t)oldval,
+                                                          (uniform intptr_t)newval);
+}
+
+static inline void *
+atomic_compare_exchange_local(void ** ptr, void * oldval,
+                              void * newval) {
+    return (void *)atomic_compare_exchange_local((intptr_t *)ptr,
+                                                  (intptr_t)oldval,
+                                                  (intptr_t)newval);
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // Transcendentals (float precision)
@@ -2735,7 +2916,10 @@ static inline uniform float atan2(uniform float y, uniform float x) {
 
 __declspec(safe)
 static inline float exp(float x_full) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __exp_varying_float(x_full);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_exp(x_full);
     }
     else if (__math_lib == __math_lib_system) {
@@ -2814,7 +2998,10 @@ static inline float exp(float x_full) {
 
 __declspec(safe)
 static inline uniform float exp(uniform float x_full) {
-    if (__math_lib == __math_lib_system ||
+    if (__have_native_transcendentals) {
+        return __exp_uniform_float(x_full);
+    }
+    else if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_expf(x_full);
     }
@@ -2936,7 +3123,10 @@ static inline void __range_reduce_log(uniform float input, uniform float * unifo
 
 __declspec(safe)
 static inline float log(float x_full) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __log_varying_float(x_full);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_log(x_full);
     }
     else if (__math_lib == __math_lib_system) {
@@ -3024,7 +3214,10 @@ static inline float log(float x_full) {
 
 __declspec(safe)
 static inline uniform float log(uniform float x_full) {
-    if (__math_lib == __math_lib_system ||
+    if (__have_native_transcendentals) {
+        return __log_uniform_float(x_full);
+    }
+    else if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_logf(x_full);
     }
@@ -3105,7 +3298,10 @@ static inline uniform float log(uniform float x_full) {
 
 __declspec(safe)
 static inline float pow(float a, float b) {
-    if (__math_lib == __math_lib_svml) {
+    if (__have_native_transcendentals) {
+        return __pow_varying_float(a, b);
+    }
+    else if (__math_lib == __math_lib_svml) {
         return __svml_pow(a, b);
     }
     else if (__math_lib == __math_lib_system) {
@@ -3124,6 +3320,9 @@ static inline float pow(float a, float b) {
 
 __declspec(safe)
 static inline uniform float pow(uniform float a, uniform float b) {
+    if (__have_native_transcendentals) {
+        return __pow_uniform_float(a, b);
+    }
     if (__math_lib == __math_lib_system ||
         __math_lib == __math_lib_svml) {
         return __stdlib_powf(a, b);
@@ -3551,8 +3750,9 @@ static inline int16 float_to_half(float f) {
         //   like recursive filters in DSP - not a typical half-float application. Whether
         //   FP16 denormals are rare in practice, I don't know. Whatever slow path your HW
         //   may or may not have for denormals, this may well hit it.
-        int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
-        fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+        float fscale = floatbits(fint & round_mask) * floatbits(magic);
+        fscale = min(fscale, floatbits((31 << 23) - 0x1000));
+        int32 fint2 = intbits(fscale) - round_mask;
 
         if (fint < f32infty)
             o = fint2 >> 13; // Take the bits!
@@ -3649,6 +3849,133 @@ static inline int16 float_to_half_fast(float f) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// float -> srgb8
+
+// https://gist.github.com/2246678, from Fabian "rygorous" Giesen.
+//
+// The basic ideas are still the same, only this time, we squeeze
+// everything into the table, even the linear part of the range; since we
+// are approximating the function as piecewise linear anyway, this is
+// fairly easy.
+//
+// In the exact version of the conversion, any value that produces an
+// output float less than 0.5 will be rounded to an integer of
+// zero. Inverting the linear part of the transform, we get:
+//
+//   log2(0.5 / (255 * 12.92)) =~ -12.686
+//
+// which in turn means that any value smaller than about 2^(-12.687) will
+// return 0.  What this means is that we can adapt the clamping code to
+// just clamp to [2^(-13), 1-eps] and we're covered. This means our table
+// needs to cover a range of 13 different exponents from -13 to -1.
+//
+// The table lookup, storage and interpolation works exactly the same way
+// as in the code above.
+//
+// Max error for the whole function (integer-rounded result minus "exact"
+// value, as computed in floats using the official formula): 0.544403 at
+// 0x3e9f8000
+
+__declspec(safe)
+static inline int
+float_to_srgb8(float in)
+{
+    static const uniform unsigned int table[104] = {
+        0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d,
+        0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d,
+        0x00a7001a, 0x00b4001a, 0x00c1001a, 0x00ce001a,
+        0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a,
+        0x010e0033, 0x01280033, 0x01410033, 0x015b0033,
+        0x01750033, 0x018f0033, 0x01a80033, 0x01c20033,
+        0x01dc0067, 0x020f0067, 0x02430067, 0x02760067,
+        0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067,
+        0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce,
+        0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5,
+        0x06970158, 0x07420142, 0x07e30130, 0x087b0120,
+        0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,
+        0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180,
+        0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,
+        0x11070264, 0x1238023e, 0x1357021d, 0x14660201,
+        0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,
+        0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad,
+        0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
+        0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392,
+        0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,
+        0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5,
+        0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,
+        0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d,
+        0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,
+        0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f,
+        0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
+    };
+
+    static const uniform unsigned int almost_one = 0x3f7fffff;
+    
+    // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
+    in = max(in, 0.0f);
+    in = min(in, floatbits(almost_one));
+
+    // Do the table lookup and unpack bias, scale
+    unsigned int tab = table[(intbits(in) - 0x39000000u) >> 20];
+    unsigned int bias = (tab >> 16) << 9;
+    unsigned int scale = tab & 0xffff;
+
+    // Grab next-highest mantissa bits and perform linear interpolation
+    unsigned int t = (intbits(in) >> 12) & 0xff;
+    return (bias + scale*t) >> 16;
+}
+
+
+__declspec(safe)
+static inline uniform int
+float_to_srgb8(uniform float in)
+{
+    static const uniform unsigned int table[104] = {
+        0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d,
+        0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d,
+        0x00a7001a, 0x00b4001a, 0x00c1001a, 0x00ce001a,
+        0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a,
+        0x010e0033, 0x01280033, 0x01410033, 0x015b0033,
+        0x01750033, 0x018f0033, 0x01a80033, 0x01c20033,
+        0x01dc0067, 0x020f0067, 0x02430067, 0x02760067,
+        0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067,
+        0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce,
+        0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5,
+        0x06970158, 0x07420142, 0x07e30130, 0x087b0120,
+        0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,
+        0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180,
+        0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,
+        0x11070264, 0x1238023e, 0x1357021d, 0x14660201,
+        0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,
+        0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad,
+        0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
+        0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392,
+        0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,
+        0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5,
+        0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,
+        0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d,
+        0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,
+        0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f,
+        0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
+    };
+
+    static const uniform unsigned int almost_one = 0x3f7fffff;
+    
+    // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
+    in = max(in, 0.0f);
+    in = min(in, floatbits(almost_one));
+
+    // Do the table lookup and unpack bias, scale
+    uniform unsigned int tab = table[(intbits(in) - 0x39000000u) >> 20];
+    uniform unsigned int bias = (tab >> 16) << 9;
+    uniform unsigned int scale = tab & 0xffff;
+
+    // Grab next-highest mantissa bits and perform linear interpolation
+    uniform unsigned int t = (intbits(in) >> 12) & 0xff;
+    return (bias + scale*t) >> 16;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // RNG stuff
 
 struct RNGState {
@@ -3699,60 +4026,13 @@ static inline uniform float frandom(uniform RNGState * uniform state)
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
-static inline uniform unsigned int __seed4(varying RNGState * uniform state, 
-                                           uniform int start,
-                                           uniform unsigned int seed) {
-    uniform unsigned int c1 = 0xf0f0f0f0;
-    uniform unsigned int c2 = 0x0f0f0f0f;
-
-    state->z1 = insert(state->z1, start + 0, seed);
-    state->z1 = insert(state->z1, start + 1, seed ^ c1);
-    state->z1 = insert(state->z1, start + 2, (seed << 3) ^ c1);
-    state->z1 = insert(state->z1, start + 3, (seed << 2) ^ c2);
-
-    seed += 131;
-    state->z2 = insert(state->z2, start + 0, seed);
-    state->z2 = insert(state->z2, start + 1, seed ^ c1);
-    state->z2 = insert(state->z2, start + 2, (seed << 3) ^ c1);
-    state->z2 = insert(state->z2, start + 3, (seed << 2) ^ c2);
-
-    seed ^= extract(state->z2, 2);
-    state->z3 = insert(state->z3, start + 0, seed);
-    state->z3 = insert(state->z3, start + 1, seed ^ c1);
-    state->z3 = insert(state->z3, start + 2, (seed << 3) ^ c1);
-    state->z3 = insert(state->z3, start + 3, (seed << 2) ^ c2);
-
-    seed <<= 4;
-    seed += 3;
-    seed ^= extract(state->z1, 3);
-    state->z4 = insert(state->z4, start + 0, seed);
-    state->z4 = insert(state->z4, start + 1, seed ^ c1);
-    state->z4 = insert(state->z4, start + 2, (seed << 3) ^ c1);
-    state->z4 = insert(state->z4, start + 3, (seed << 2) ^ c2);
-
-    return seed;
-}
-
 static inline void seed_rng(varying RNGState * uniform state, 
-                            uniform unsigned int seed) {
-    if (programCount == 1) {
-        state->z1 = seed;
-        state->z2 = seed ^ 0xbeeff00d;
-        state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
-        state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                     ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
-    }
-    else {
-        seed = __seed4(state, 0, seed);
-        if (programCount == 8)
-            __seed4(state, 4, seed ^ 0xbeeff00d);
-        if (programCount == 16) {
-            __seed4(state, 4,  seed ^ 0xbeeff00d);
-            __seed4(state, 8,  ((seed & 0xffff) << 16) | (seed >> 16));
-            __seed4(state, 12, (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                                ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24));
-        }
-    }
+                            unsigned int seed) {
+    state->z1 = seed;
+    state->z2 = seed ^ 0xbeeff00d;
+    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
+                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
 }
 
 static inline void seed_rng(uniform RNGState * uniform state, 

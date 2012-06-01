@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2012, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -239,10 +239,11 @@ define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
 
-define i32 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
+define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
   %floatmask = bitcast <4 x i32> %0 to <4 x float>
   %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
-  ret i32 %v
+  %v64 = zext i32 %v to i64
+  ret i64 %v64
 }
 
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {

@@ -6,8 +6,8 @@ export uniform int width() { return programCount; }
 float f(float);
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    float a = aFOO[programIndex];
-    RET[programIndex] = f(a);
+    int a = aFOO[programIndex];
+    RET[programIndex] = f(a % 16);
 }
 
 float f(float x) {
@@ -16,7 +16,7 @@ float f(float x) {
 }
 
 export void result(uniform float RET[]) { 
-    uniform float fib[16] = { 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 136 };
-    RET[programIndex] = fib[programIndex];
+    uniform float fib[16] = { 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, 78, 91, 105, 120, 0 };
+    RET[programIndex] = fib[programIndex % 16];
 }
 

@@ -90,6 +90,49 @@ lTerminalWidth() {
 }
 
 
+static bool
+lHaveANSIColors() {
+    static bool r = (getenv("TERM") != NULL &&
+                     strcmp(getenv("TERM"), "dumb") != 0);
+    return r;
+}
+
+
+static const char *
+lStartBold() {
+    if (lHaveANSIColors())
+        return "\033[1m";
+    else
+        return "";
+}
+
+
+static const char *
+lStartRed() {
+    if (lHaveANSIColors())
+        return "\033[31m";
+    else
+        return "";
+}
+
+
+static const char *
+lStartBlue() {
+    if (lHaveANSIColors())
+        return "\033[34m";
+    else
+        return "";
+}
+
+
+static const char *
+lResetColor() {
+    if (lHaveANSIColors())
+        return "\033[0m";
+    else
+        return "";
+}
+
 /** Given a pointer into a string, find the end of the current word and
     return a pointer to its last character. 
 */
@@ -140,17 +183,43 @@ lPrintFileLineContext(SourcePos p) {
     fclose(f);
 }
 
+
+/** Counts the number of characters into the buf at which the numColons
+    colon character is found.  Skips over ANSI escape sequences and doesn't
+    include their characters in the final count.
+ */
+static int
+lFindIndent(int numColons, const char *buf) {
+    int indent = 0;
+    while (*buf != '\0') {
+        if (*buf == '\033') {
+            while (*buf != '\0' && *buf != 'm')
+                ++buf;
+            if (*buf == 'm')
+                ++buf;
+        }
+        else {
+            if (*buf == ':') {
+                if (--numColons == 0)
+                    break;
+            }
+            ++indent;
+            ++buf;
+        }
+    }
+    return indent + 2;
+}
+
+
 /** Print the given string to the given FILE, assuming the given output
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
 static void
-lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
+lPrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #ifdef ISPC_IS_WINDOWS
     fputs(buf, out);
 #else
     int column = 0;
-    Assert(strchr(buf, ':') != NULL);
-    int indent = strchr(buf, ':') - buf + 2;
     int width = std::max(40, columnWidth - 2);
 
     // Collect everything into a string and print it all at once at the end
@@ -160,6 +229,29 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
 
     const char *msgPos = buf;
     while (true) {
+        if (*msgPos == '\033') {
+            // handle ANSI color escape: copy it to the output buffer
+            // without charging for the characters it uses
+            do {
+                outStr.push_back(*msgPos++);
+            } while (*msgPos != '\0' && *msgPos != 'm');
+            continue;
+        }
+        else if (*msgPos == '\n') {
+            // Handle newlines cleanly
+            column = indent;
+            outStr.push_back('\n');
+            for (int i = 0; i < indent; ++i)
+                outStr.push_back(' ');
+            // Respect spaces after newlines
+            ++msgPos;
+            while (*msgPos == ' ') {
+                outStr.push_back(' ');
+                ++msgPos;
+            }
+            continue;
+        }
+
         while (*msgPos != '\0' && isspace(*msgPos))
             ++msgPos;
         if (*msgPos == '\0')
@@ -171,8 +263,8 @@ lPrintWithWordBreaks(const char *buf, int columnWidth, FILE *out) {
             column = indent;
             outStr.push_back('\n');
             // Indent to the same column as the ":" at the start of the
-            // message, unless doing so would be too far in.
-            for (int i = 0; i < std::min(16, indent); ++i)
+            // message.
+            for (int i = 0; i < indent; ++i)
                 outStr.push_back(' ');
         }
 
@@ -225,26 +317,37 @@ asprintf(char **sptr, const char *fmt, ...)
     @param args   Arguments with values for format string % entries
 */
 static void
-lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
+lPrint(const char *type, bool isError, SourcePos p, const char *fmt, 
+       va_list args) {
     char *errorBuf, *formattedBuf;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
         fprintf(stderr, "vasprintf() unable to allocate memory!\n");
         abort();
     }
+
+    int indent = 0;
     if (p.first_line == 0) {
         // We don't have a valid SourcePos, so create a message without it
-        if (asprintf(&formattedBuf, "%s: %s\n", type, errorBuf) == -1) {
+        if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s", lStartBold(),
+                     isError ? lStartRed() : lStartBlue(), type,
+                     lResetColor(), lStartBold(), errorBuf, 
+                     lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
         }
+        indent = lFindIndent(1, formattedBuf);
     }
     else {
         // Create an error message that includes the file and line number
-        if (asprintf(&formattedBuf, "%s:%d:%d: %s: %s\n", p.name, 
-                     p.first_line, p.first_column, type, errorBuf) == -1) {
+        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s", 
+                     lStartBold(), p.name, p.first_line, p.first_column, 
+                     isError ? lStartRed() : lStartBlue(), type, 
+                     lResetColor(), lStartBold(), errorBuf, 
+                     lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
         }
+        indent = lFindIndent(3, formattedBuf);
     }
 
     // Now that we've done all that work, see if we've already printed the
@@ -255,7 +358,7 @@ lPrint(const char *type, SourcePos p, const char *fmt, va_list args) {
         return;
     printed.insert(formattedBuf);
 
-    lPrintWithWordBreaks(formattedBuf, lTerminalWidth(), stderr);
+    lPrintWithWordBreaks(formattedBuf, indent, lTerminalWidth(), stderr);
     lPrintFileLineContext(p);
 
     free(errorBuf);
@@ -271,7 +374,7 @@ Error(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint("Error", p, fmt, args);
+    lPrint("Error", true, p, fmt, args);
     va_end(args);
 }
 
@@ -283,7 +386,7 @@ Debug(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint("Debug", p, fmt, args);
+    lPrint("Debug", false, p, fmt, args);
     va_end(args);
 }
 
@@ -298,7 +401,8 @@ Warning(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint(g->warningsAsErrors ? "Error" : "Warning", p, fmt, args);
+    lPrint(g->warningsAsErrors ? "Error" : "Warning", g->warningsAsErrors,
+           p, fmt, args);
     va_end(args);
 }
 
@@ -311,22 +415,45 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
-    lPrint("Performance Warning", p, fmt, args);
+    lPrint("Performance Warning", false, p, fmt, args);
     va_end(args);
 }
 
 
-void
-FatalError(const char *file, int line, const char *message) {
-    fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
+static void
+lPrintBugText() {
     fprintf(stderr, "***\n"
             "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
             "*** (Including as much information as you can about how to "
             "reproduce this error).\n"
             "*** You have apparently encountered a bug in the compiler that we'd "
             "like to fix!\n***\n");
+}
+
+
+void
+FatalError(const char *file, int line, const char *message) {
+    fprintf(stderr, "%s(%d): FATAL ERROR: %s\n", file, line, message);
+    lPrintBugText();
     abort();
 }
+
+
+void
+DoAssert(const char *file, int line, const char *expr) {
+    fprintf(stderr, "%s:%u: Assertion failed: \"%s\".\n", file, line, expr);
+    lPrintBugText();
+    abort();
+}
+
+
+void
+DoAssertPos(SourcePos pos, const char *file, int line, const char *expr) {
+    Error(pos, "Assertion failed (%s:%u): \"%s\".", file, line, expr);
+    lPrintBugText();
+    abort();
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 

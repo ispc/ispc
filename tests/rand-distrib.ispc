@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     RNGState state;
-    seed_rng(&state, 1);
+    seed_rng(&state, programIndex);
     float sum = 0;
     uniform int iters = 40000;
     for (unsigned int i = 0; i < iters; ++i)

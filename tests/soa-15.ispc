@@ -15,10 +15,8 @@ static void p(uniform float *uniform ptr) {
 }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    soa<4> Point pts[10];
-//CO    uniform Point pts[40];
-//CO    foreach (i = 0 ... 40) {
-    for (uniform int i = 0; i < 40; ++i) {
+    soa<4> Point pts[30];
+    for (uniform int i = 0; i < 120; ++i) {
         pts[i].x = b*i;
         pts[i].y[0] = 2*b*i;
         pts[i].y[1] = 2*b*i+1;
@@ -26,14 +24,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         pts[i].z = 3*b*i;
     }
 
-//CO    p((uniform float * uniform)&pts[0]);
-
-//CO    print("delta %\n", ((uniform float * varying)(&pts[2+programIndex]) -
-//CO                        (uniform float * uniform)&pts[0]));
-
     float a = aFOO[programIndex]; 
     a *= -1;
     Point vp = { a, { 2*a, 3*a, 4*a }, {5*a} };
+    assert(programCount+2 < 120);
     pts[2+programIndex] = vp;
 
 //CO    p((uniform float * uniform)&pts[0]);

@@ -10,12 +10,13 @@ struct Foo {
 export void f_fi(uniform float RET[], uniform float aFOO[], uniform int bFOO[]) {
     float a = aFOO[programIndex];
     int b = bFOO[programIndex];
-    varying Foo myFoo[17];
+    varying Foo myFoo[128];
     uniform int i;
-    for (i = 0; i < 17; ++i) {
+    for (i = 0; i < 128; ++i) {
         myFoo[i].x = i;
         myFoo[i].f = 2*i;
     }
+    assert(b/2 < 128);
     RET[programIndex] = myFoo[b/2].f;
 }
 

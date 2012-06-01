@@ -42,6 +42,7 @@
 #include "util.h"
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
+#include <llvm/ADT/SmallVector.h>
 
 class ConstExpr;
 class StructType;
@@ -69,6 +70,21 @@ struct Variability {
     
     VarType type;
     int soaWidth;
+};
+
+
+/** Enumerant that records each of the types that inherit from the Type
+    baseclass. */
+enum TypeId {
+    ATOMIC_TYPE,
+    ENUM_TYPE,
+    POINTER_TYPE,
+    ARRAY_TYPE,
+    VECTOR_TYPE,
+    STRUCT_TYPE,
+    UNDEFINED_STRUCT_TYPE,
+    REFERENCE_TYPE,
+    FUNCTION_TYPE
 };
 
 
@@ -187,7 +203,7 @@ public:
     virtual std::string GetCDeclaration(const std::string &name) const = 0;
 
     /** Returns the LLVM type corresponding to this ispc type */
-    virtual LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
+    virtual llvm::Type *LLVMType(llvm::LLVMContext *ctx) const = 0;
 
     /** Returns the DIType (LLVM's debugging information structure),
         corresponding to this type. */
@@ -231,6 +247,14 @@ public:
         (i.e. not an aggregation of multiple instances of a type or
         types.) */
     static bool IsBasicType(const Type *type);
+
+    /** Indicates which Type implementation this type is.  This value can
+        be used to determine the actual type much more efficiently than
+        using dynamic_cast. */
+    const TypeId typeId;
+
+protected:
+    Type(TypeId id) : typeId(id) { }
 };
 
 
@@ -269,7 +293,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** This enumerator records the basic types that AtomicTypes can be 
@@ -309,6 +333,8 @@ private:
     const Variability variability;
     const bool isConst;
     AtomicType(BasicType basicType, Variability v, bool isConst);
+
+    mutable const AtomicType *asOtherConstType, *asUniformType, *asVaryingType;
 };
 
 
@@ -343,7 +369,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** Provides the enumerators defined in the enum definition. */
@@ -409,7 +435,6 @@ public:
     const PointerType *GetAsSlice() const;
     const PointerType *GetAsNonSlice() const;
     const PointerType *GetAsFrozenSlice() const;
-    const StructType *GetSliceStructType() const;
 
     const Type *GetBaseType() const;
     const PointerType *GetAsVaryingType() const;
@@ -425,7 +450,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     static PointerType *Void;
@@ -453,6 +478,9 @@ public:
         index must be between 0 and GetElementCount()-1.
      */
     virtual const Type *GetElementType(int index) const = 0;
+
+protected:
+    CollectionType(TypeId id) : Type(id) { }
 };
 
 
@@ -474,6 +502,9 @@ public:
         the same type.
      */
     const Type *GetElementType(int index) const;
+
+protected:
+    SequentialType(TypeId id) : CollectionType(id) { }
 };
 
 
@@ -523,7 +554,7 @@ public:
     std::string GetCDeclaration(const std::string &name) const;
 
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-    LLVM_TYPE_CONST llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::ArrayType *LLVMType(llvm::LLVMContext *ctx) const;
 
     /** This method returns the total number of elements in the array,
         including all dimensions if this is a multidimensional array. */
@@ -589,7 +620,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     int GetElementCount() const;
@@ -612,9 +643,9 @@ private:
  */
 class StructType : public CollectionType {
 public:
-    StructType(const std::string &name, const std::vector<const Type *> &elts, 
-               const std::vector<std::string> &eltNames, 
-               const std::vector<SourcePos> &eltPositions, bool isConst, 
+    StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts, 
+               const llvm::SmallVector<std::string, 8> &eltNames, 
+               const llvm::SmallVector<SourcePos, 8> &eltPositions, bool isConst, 
                Variability variability, SourcePos pos);
 
     Variability GetVariability() const;
@@ -639,7 +670,7 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     /** Returns the type of the structure element with the given name (if any).
@@ -655,12 +686,12 @@ public:
     int GetElementNumber(const std::string &name) const;
 
     /** Returns the name of the i'th element of the structure. */
-    const std::string GetElementName(int i) const { return elementNames[i]; }
+    const std::string &GetElementName(int i) const { return elementNames[i]; }
     
     /** Returns the total number of elements in the structure. */
     int GetElementCount() const { return int(elementTypes.size()); }
 
-    SourcePos GetElementPosition(int i) const { return elementPositions[i]; }
+    const SourcePos &GetElementPosition(int i) const { return elementPositions[i]; }
 
     /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
     const std::string &GetStructName() const { return name; }
@@ -668,7 +699,7 @@ public:
 private:
     static bool checkIfCanBeSOA(const StructType *st);
 
-    const std::string name;
+    /*const*/ std::string name;
     /** The types of the struct elements.  Note that we store these with
         uniform/varying exactly as they were declared in the source file.
         (In other words, even if this struct has a varying qualifier and
@@ -679,11 +710,61 @@ private:
         make a uniform version of the struct, we've maintained the original
         information about the member types.
      */
-    const std::vector<const Type *> elementTypes;
-    const std::vector<std::string> elementNames;
+    const llvm::SmallVector<const Type *, 8> elementTypes;
+    const llvm::SmallVector<std::string, 8> elementNames;
     /** Source file position at which each structure element declaration
         appeared. */
-    const std::vector<SourcePos> elementPositions;
+    const llvm::SmallVector<SourcePos, 8> elementPositions;
+    const Variability variability;
+    const bool isConst;
+    const SourcePos pos;
+
+    mutable llvm::SmallVector<const Type *, 8> finalElementTypes;
+
+    mutable const StructType *oppositeConstStructType;
+};
+
+
+/** Type implementation representing a struct name that has been declared
+    but where the struct members haven't been defined (i.e. "struct Foo;").
+    This class doesn't do much besides serve as a placeholder that other
+    code can use to detect the presence of such as truct.
+ */
+class UndefinedStructType : public Type {
+public:
+    UndefinedStructType(const std::string &name, const Variability variability,
+                        bool isConst, SourcePos pos);
+
+    Variability GetVariability() const;
+
+    bool IsBoolType() const;
+    bool IsFloatType() const;
+    bool IsIntType() const;
+    bool IsUnsignedType() const;
+    bool IsConstType() const;
+
+    const Type *GetBaseType() const;
+    const UndefinedStructType *GetAsVaryingType() const;
+    const UndefinedStructType *GetAsUniformType() const;
+    const UndefinedStructType *GetAsUnboundVariabilityType() const;
+    const UndefinedStructType *GetAsSOAType(int width) const;
+    const UndefinedStructType *ResolveUnboundVariability(Variability v) const;
+
+    const UndefinedStructType *GetAsConstType() const;
+    const UndefinedStructType *GetAsNonConstType() const;
+
+    std::string GetString() const;
+    std::string Mangle() const;
+    std::string GetCDeclaration(const std::string &name) const;
+
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
+
+    /** Returns the name of the structure type.  (e.g. struct Foo -> "Foo".) */
+    const std::string &GetStructName() const { return name; }
+
+private:
+    const std::string name;
     const Variability variability;
     const bool isConst;
     const SourcePos pos;
@@ -719,11 +800,12 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
 private:
     const Type * const targetType;
+    mutable const ReferenceType *asOtherConstType;
 };
 
 
@@ -741,12 +823,12 @@ private:
 class FunctionType : public Type {
 public:
     FunctionType(const Type *returnType, 
-                 const std::vector<const Type *> &argTypes, SourcePos pos);
+                 const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
     FunctionType(const Type *returnType, 
-                 const std::vector<const Type *> &argTypes,
-                 const std::vector<std::string> &argNames,
-                 const std::vector<ConstExpr *> &argDefaults,
-                 const std::vector<SourcePos> &argPos,
+                 const llvm::SmallVector<const Type *, 8> &argTypes,
+                 const llvm::SmallVector<std::string, 8> &argNames,
+                 const llvm::SmallVector<Expr *, 8> &argDefaults,
+                 const llvm::SmallVector<SourcePos, 8> &argPos,
                  bool isTask, bool isExported, bool isExternC);
 
     Variability GetVariability() const;
@@ -771,21 +853,23 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &fname) const;
 
-    LLVM_TYPE_CONST llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
+    llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
     const Type *GetReturnType() const { return returnType; }
+
+    const std::string GetReturnTypeString() const;
 
     /** This method returns the LLVM FunctionType that corresponds to this
         function type.  The \c includeMask parameter indicates whether the
         llvm::FunctionType should have a mask as the last argument in its
         function signature. */
-    LLVM_TYPE_CONST llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
+    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
                                                          bool includeMask = false) const;
 
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
-    ConstExpr * GetParameterDefault(int i) const;
+    Expr * GetParameterDefault(int i) const;
     const SourcePos &GetParameterSourcePos(int i) const;
     const std::string &GetParameterName(int i) const;
 
@@ -814,16 +898,131 @@ private:
 
     // The following four vectors should all have the same length (which is
     // in turn the length returned by GetNumParameters()).
-    const std::vector<const Type *> paramTypes;
-    const std::vector<std::string> paramNames;
+    const llvm::SmallVector<const Type *, 8> paramTypes;
+    const llvm::SmallVector<std::string, 8> paramNames;
     /** Default values of the function's arguments.  For arguments without
         default values provided, NULL is stored. */
-    mutable std::vector<ConstExpr *> paramDefaults;
+    mutable llvm::SmallVector<Expr *, 8> paramDefaults;
     /** The names provided (if any) with the function arguments in the
         function's signature.  These should only be used for error messages
         and the like and so not affect testing function types for equality,
         etc. */
-    const std::vector<SourcePos> paramPositions;
+    const llvm::SmallVector<SourcePos, 8> paramPositions;
 };
+
+
+/* Efficient dynamic casting of Types.  First, we specify a default
+   template function that returns NULL, indicating a failed cast, for
+   arbitrary types. */
+template <typename T> inline const T *
+CastType(const Type *type) {
+    return NULL;
+}
+
+
+/* Now we have template specializaitons for the Types implemented in this
+   file.  Each one checks the Type::typeId member and then performs the
+   corresponding static cast if it's safe as per the typeId.
+ */
+template <> inline const AtomicType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ATOMIC_TYPE)
+        return (const AtomicType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const EnumType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ENUM_TYPE)
+        return (const EnumType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const PointerType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == POINTER_TYPE)
+        return (const PointerType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const ArrayType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == ARRAY_TYPE)
+        return (const ArrayType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const VectorType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == VECTOR_TYPE)
+        return (const VectorType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const SequentialType *
+CastType(const Type *type) {
+    // Note that this function must be updated if other sequential type
+    // implementations are added.
+    if (type != NULL && 
+        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE))
+        return (const SequentialType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const CollectionType *
+CastType(const Type *type) {
+    // Similarly a new collection type implementation requires updating
+    // this function.
+    if (type != NULL && 
+        (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE ||
+         type->typeId == STRUCT_TYPE))
+        return (const CollectionType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const StructType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == STRUCT_TYPE)
+        return (const StructType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const UndefinedStructType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == UNDEFINED_STRUCT_TYPE)
+        return (const UndefinedStructType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const ReferenceType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == REFERENCE_TYPE)
+        return (const ReferenceType *)type;
+    else
+        return NULL;
+}
+
+template <> inline const FunctionType *
+CastType(const Type *type) {
+    if (type != NULL && type->typeId == FUNCTION_TYPE)
+        return (const FunctionType *)type;
+    else
+        return NULL;
+}
+
+
+inline bool IsReferenceType(const Type *t) {
+    return CastType<ReferenceType>(t) != NULL;
+}
+
 
 #endif // ISPC_TYPE_H

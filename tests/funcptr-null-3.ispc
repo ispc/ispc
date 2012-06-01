@@ -14,7 +14,7 @@ static float bar(float a, float b) {
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     float b = aFOO[0]-1;
-    FuncType func = foo;
+    FuncType func = &foo;
     if (a == 2)
         func = NULL;
     if (func != NULL)

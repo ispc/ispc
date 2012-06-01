@@ -44,16 +44,9 @@
 #ifdef ISPC_IS_WINDOWS
   #include <time.h>
 #endif // ISPC_IS_WINDOWS
-#include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Signals.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-  #include <llvm/Support/TargetRegistry.h>
-  #include <llvm/Support/TargetSelect.h>
-#else
-  #include <llvm/Target/TargetRegistry.h>
-  #include <llvm/Target/TargetSelect.h>
-  #include <llvm/Target/SubtargetFeature.h>
-#endif
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
 
 #ifdef ISPC_IS_WINDOWS
 #define strcasecmp stricmp
@@ -67,12 +60,12 @@ static void
 lPrintVersion() {
     printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", 
            ISPC_VERSION, BUILD_VERSION, BUILD_DATE, 
-#ifdef LLVM_2_9
-           "2.9"
-#elif defined(LLVM_3_0) || defined(LLVM_3_0svn)
+#if defined(LLVM_3_0)
            "3.0"
-#elif defined(LLVM_3_1) || defined(LLVM_3_1svn)
+#elif defined(LLVM_3_1)
            "3.1"
+#elif defined(LLVM_3_2)
+           "3.2"
 #else
 #error "Unhandled LLVM version"
 #endif 
@@ -91,12 +84,10 @@ usage(int ret) {
            Target::SupportedTargetArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
-    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs());
+    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs().c_str());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
-#ifndef LLVM_2_9
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
-#endif // !LLVM_2_9
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
@@ -202,17 +193,18 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
 }
 
 
+static void
+lSignal(void *) {
+    FATAL("Unhandled signal sent to process; terminating.");
+}
+
+
 int main(int Argc, char *Argv[]) {
     int argc;
     char *argv[128];
     lGetAllArgs(Argc, Argv, argc, argv);
 
-#if 0
-    // Use LLVM's little utility function to print out nice stack traces if
-    // we crash
-    llvm::sys::PrintStackTraceOnErrorSignal();
-    llvm::PrettyStackTraceProgram X(argc, argv);
-#endif
+    llvm::sys::AddSignalHandler(lSignal, NULL);
 
     // initialize available LLVM targets
     LLVMInitializeX86TargetInfo();
@@ -220,9 +212,7 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeX86AsmPrinter();
     LLVMInitializeX86AsmParser();
     LLVMInitializeX86Disassembler();
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     LLVMInitializeX86TargetMC();
-#endif
 
     char *file = NULL;
     const char *headerFileName = NULL;
@@ -279,10 +269,8 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
-#ifndef LLVM_2_9
         else if (!strcmp(argv[i], "--emit-c++"))
             ot = Module::CXX;
-#endif // !LLVM_2_9
         else if (!strcmp(argv[i], "--emit-llvm"))
             ot = Module::Bitcode;
         else if (!strcmp(argv[i], "--emit-obj"))

@@ -284,6 +284,10 @@ public:
     int EstimateCost() const;
 
     Expr *baseExpr, *index;
+
+private:
+    mutable const Type *type;
+    mutable const PointerType *lvalueType;
 };
 
 
@@ -320,6 +324,9 @@ public:
         member is found.  (i.e. this is true if the MemberExpr was a '->'
         operator, and is false if it was a '.' operator. */
     bool dereferenceExpr;
+
+protected:
+    mutable const Type *type, *lvalueType;
 };
 
 
@@ -584,6 +591,7 @@ public:
     Expr *TypeCheck();
     Expr *Optimize();
     int EstimateCost() const;
+    llvm::Constant *GetConstant(const Type *type) const;
 
     Expr *expr;
 };
@@ -651,20 +659,26 @@ public:
         function overloading, this method resolves which actual function
         the arguments match best.  If the argCouldBeNULL parameter is
         non-NULL, each element indicates whether the corresponding argument
-        is the number zero, indicating that it could be a NULL pointer.
-        This parameter may be NULL (for cases where overload resolution is
-        being done just given type information without the parameter
-        argument expressions being available.  It returns true on success.
+        is the number zero, indicating that it could be a NULL pointer, and
+        if argIsConstant is non-NULL, each element indicates whether the
+        corresponding argument is a compile-time constant value.  Both of
+        these parameters may be NULL (for cases where overload resolution
+        is being done just given type information without the parameter
+        argument expressions being available.  This function returns true
+        on success.
      */
     bool ResolveOverloads(SourcePos argPos,
                           const std::vector<const Type *> &argTypes,
-                          const std::vector<bool> *argCouldBeNULL = NULL);
+                          const std::vector<bool> *argCouldBeNULL = NULL,
+                          const std::vector<bool> *argIsConstant = NULL);
     Symbol *GetMatchingFunction();
 
 private:
-    bool tryResolve(int (*matchFunc)(const Type *, const Type *),
-                    SourcePos argPos, const std::vector<const Type *> &argTypes,
-                    const std::vector<bool> *argCouldBeNULL);
+    std::vector<Symbol *> getCandidateFunctions(int argCount) const;
+    static int computeOverloadCost(const FunctionType *ftype,
+                                   const std::vector<const Type *> &argTypes,
+                                   const std::vector<bool> *argCouldBeNULL,
+                            const std::vector<bool> *argIsConstant);
 
     /** Name of the function that is being called. */
     std::string name;

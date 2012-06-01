@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -66,9 +66,8 @@
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Assembly/PrintModulePass.h>
 
-Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
+Function::Function(Symbol *s, Stmt *c) {
     sym = s;
-    args = a;
     code = c;
 
     maskSymbol = m->symbolTable->LookupVariable("__mask");
@@ -101,12 +100,20 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
         printf("\n\n\n");
     }
 
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
 
-    for (unsigned int i = 0; i < args.size(); ++i)
-        if (dynamic_cast<const ReferenceType *>(args[i]->type) == NULL)
-            args[i]->parentFunction = this;
+    for (int i = 0; i < type->GetNumParameters(); ++i) {
+        const char *paramName = type->GetParameterName(i).c_str();
+        Symbol *sym = m->symbolTable->LookupVariable(paramName);
+        if (sym == NULL)
+            Assert(strncmp(paramName, "__anon_parameter_", 17) == 0);
+        args.push_back(sym);
+
+        const Type *t = type->GetParameterType(i);
+        if (sym != NULL && CastType<ReferenceType>(t) == NULL)
+            sym->parentFunction = this;
+    }
 
     if (type->isTask) {
         threadIndexSym = m->symbolTable->LookupVariable("threadIndex");
@@ -125,7 +132,7 @@ Function::Function(Symbol *s, const std::vector<Symbol *> &a, Stmt *c) {
 
 const Type *
 Function::GetReturnType() const {
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     return type->GetReturnType();
 }
@@ -133,7 +140,7 @@ Function::GetReturnType() const {
 
 const FunctionType *
 Function::GetType() const {
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     return type;
 }
@@ -145,7 +152,8 @@ Function::GetType() const {
     'mem2reg' pass will in turn promote to SSA registers..
  */
 static void
-lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol *> &args,
+lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const 
+                     std::vector<Symbol *> &args,
                      FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
@@ -157,8 +165,12 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
         llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
     // Get the type of the argument we're copying in and its Symbol pointer
-    LLVM_TYPE_CONST llvm::Type *argType = argStructType->getElementType(i);
+    llvm::Type *argType = argStructType->getElementType(i);
     Symbol *sym = args[i];
+
+    if (sym == NULL)
+        // anonymous parameter, so don't worry about it
+        return;
 
     // allocate space to copy the parameter in to
     sym->storagePtr = ctx->AllocaInst(argType, sym->name.c_str());
@@ -170,7 +182,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const std::vector<Symbol 
     // memory
     llvm::Value *ptrval = ctx->LoadInst(ptr, sym->name.c_str());
     ctx->StoreInst(ptrval, sym->storagePtr);
-    ctx->EmitFunctionParameterDebugInfo(sym);
+    ctx->EmitFunctionParameterDebugInfo(sym, i);
 }
 
 
@@ -186,14 +198,14 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     // value
     maskSymbol->storagePtr = ctx->GetFullMaskPointer();
 
-    // add debugging info for __mask, programIndex, ...
+    // add debugging info for __mask
     maskSymbol->pos = firstStmtPos;
     ctx->EmitVariableDebugInfo(maskSymbol);
 
 #if 0
     llvm::BasicBlock *entryBBlock = ctx->GetCurrentBasicBlock();
 #endif
-    const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+    const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     if (type->isTask == true) {
         // For tasks, we there should always be three parmeters: the
@@ -240,13 +252,17 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Function::arg_iterator argIter = function->arg_begin(); 
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *sym = args[i];
+            if (sym == NULL)
+                // anonymous function parameter
+                continue;
+
             argIter->setName(sym->name.c_str());
 
             // Allocate stack storage for the parameter and emit code
             // to store the its value there.
             sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
             ctx->StoreInst(argIter, sym->storagePtr);
-            ctx->EmitFunctionParameterDebugInfo(sym);
+            ctx->EmitFunctionParameterDebugInfo(sym, i);
         }
 
         // If the number of actual function arguments is equal to the
@@ -415,11 +431,11 @@ Function::GenerateIR() {
         // If the function is 'export'-qualified, emit a second version of
         // it without a mask parameter and without name mangling so that
         // the application can call it
-        const FunctionType *type = dynamic_cast<const FunctionType *>(sym->type);
+        const FunctionType *type = CastType<FunctionType>(sym->type);
         Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {
-                LLVM_TYPE_CONST llvm::FunctionType *ftype = 
+                llvm::FunctionType *ftype = 
                     type->LLVMFunctionType(g->ctx);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;

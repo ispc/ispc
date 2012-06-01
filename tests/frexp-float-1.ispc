@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    float a = (1<<programIndex) * 1.5;
+    float a = (1<< (programIndex%28)) * 1.5;
     if (programIndex & 1)
         a = -a;
     int exponent;
@@ -12,5 +12,5 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 1+programIndex;
+    RET[programIndex] = 1+(programIndex%28);
 }

@@ -10,8 +10,10 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
     // make sure we reset the func mask in the foreach loop...
     if ((int)aFOO[programIndex] & 1)
-        foreach (i = 0 ... programCount+3)
-            val[i] += aFOO[i] - 1;
+        foreach (i = 0 ... programCount+3) {
+            int ic = min(i, programCount-1);
+            val[i] += aFOO[ic] - 1 + i-ic;
+        }
 
     RET[programIndex] = val[3+programIndex]; 
 }

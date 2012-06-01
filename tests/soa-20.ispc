@@ -12,7 +12,8 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         pts[i].y = 2*b*i;
         pts[i].z = 3*b*i;
     }
-    
+
+    assert(6+programIndex < 80);
     soa<8> Point * ptr = &pts[6+programIndex];
     RET[programIndex] = ptr - pts;
 }

@@ -4,15 +4,15 @@ export uniform int width() { return programCount; }
 
 
 struct Foo {
-    uniform float udx[25][25];
+    uniform float udx[5][programCount+5];
 };
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
-    uniform Foo f[5];
-    for (uniform int i = 0; i < 5; ++i)
-        for (uniform int j = 0; j < 25; ++j)
-            for (uniform int k = 0; k < 25; ++k)
+    uniform Foo f[3];
+    for (uniform int i = 0; i < 3; ++i)
+        for (uniform int j = 0; j < 5; ++j)
+            for (uniform int k = 0; k < programCount+5; ++k)
                 f[i].udx[j][k] = 1000*i+100*j+k;
 
     int x = 1;

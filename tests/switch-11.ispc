@@ -27,7 +27,7 @@ int switchit(int a, uniform int b) {
         }
         return 42;
     }
-    case 32:
+    case 9999:
         *((int *)NULL) = 0;
     default:
         return 0;

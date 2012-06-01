@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -259,13 +259,13 @@ static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
    return ret;                                                      \
 }
 
-#define SMEAR(VTYPE, NAME, STYPE)               \
-static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {        \
-    VTYPE ret;                                  \
-    for (int i = 0; i < 16; ++i)                \
-        ret.v[i] = v;                           \
-    return ret;                                 \
-}                                               \
+#define SMEAR(VTYPE, NAME, STYPE)                                  \
+static FORCEINLINE VTYPE __smear_##NAME(VTYPE retType, STYPE v) {  \
+    VTYPE ret;                                                     \
+    for (int i = 0; i < 16; ++i)                                   \
+        ret.v[i] = v;                                              \
+    return ret;                                                    \
+}
 
 #define BROADCAST(VTYPE, NAME, STYPE)                 \
 static FORCEINLINE VTYPE __broadcast_##NAME(VTYPE v, int index) {   \
@@ -311,8 +311,8 @@ INSERT_EXTRACT(__vec1_d, double)
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
-static FORCEINLINE uint32_t __movmsk(__vec16_i1 mask) {
-    return mask.v;
+static FORCEINLINE uint64_t __movmsk(__vec16_i1 mask) {
+    return (uint64_t)mask.v;
 }
 
 static FORCEINLINE __vec16_i1 __equal(__vec16_i1 a, __vec16_i1 b) {
@@ -336,6 +336,24 @@ static FORCEINLINE __vec16_i1 __xor(__vec16_i1 a, __vec16_i1 b) {
 static FORCEINLINE __vec16_i1 __or(__vec16_i1 a, __vec16_i1 b) {
     __vec16_i1 r;
     r.v = a.v | b.v;
+    return r;
+}
+
+static FORCEINLINE __vec16_i1 __not(__vec16_i1 v) {
+    __vec16_i1 r;
+    r.v = ~v.v;
+    return r;
+}
+
+static FORCEINLINE __vec16_i1 __and_not1(__vec16_i1 a, __vec16_i1 b) {
+    __vec16_i1 r;
+    r.v = ~a.v & b.v;
+    return r;
+}
+
+static FORCEINLINE __vec16_i1 __and_not2(__vec16_i1 a, __vec16_i1 b) {
+    __vec16_i1 r;
+    r.v = a.v & ~b.v;
     return r;
 }
 
@@ -373,6 +391,12 @@ static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v, int align) {
     uint16_t *ptr = (uint16_t *)p;
     *ptr = v.v;
 }
+
+static FORCEINLINE __vec16_i1 __smear_i1(__vec16_i1, int v) {
+    return __vec16_i1(v, v, v, v, v, v, v, v, 
+                      v, v, v, v, v, v, v, v);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // int8
@@ -580,6 +604,121 @@ BROADCAST(__vec16_f, float, float)
 ROTATE(__vec16_f, float, float)
 SHUFFLES(__vec16_f, float, float)
 LOAD_STORE(__vec16_f, float)
+
+static FORCEINLINE float __exp_uniform_float(float v) {
+    return expf(v);
+}
+
+static FORCEINLINE __vec16_f __exp_varying_float(__vec16_f v) {
+    __vec16_f ret;
+    for (int i = 0; i < 16; ++i)
+        ret.v[i] = expf(v.v[i]);
+    return ret;
+}
+
+static FORCEINLINE float __log_uniform_float(float v) {
+    return logf(v);
+}
+
+static FORCEINLINE __vec16_f __log_varying_float(__vec16_f v) {
+    __vec16_f ret;
+    for (int i = 0; i < 16; ++i)
+        ret.v[i] = logf(v.v[i]);
+    return ret;
+}
+
+static FORCEINLINE float __pow_uniform_float(float a, float b) {
+    return powf(a, b);
+}
+
+static FORCEINLINE __vec16_f __pow_varying_float(__vec16_f a, __vec16_f b) {
+    __vec16_f ret;
+    for (int i = 0; i < 16; ++i)
+        ret.v[i] = powf(a.v[i], b.v[i]);
+    return ret;
+}
+
+static FORCEINLINE int __intbits(float v) {
+    union {
+        float f;
+        int i;
+    } u;
+    u.f = v;
+    return u.i;
+}
+
+static FORCEINLINE float __floatbits(int v) {
+    union {
+        float f;
+        int i;
+    } u;
+    u.i = v;
+    return u.f;
+}
+
+static FORCEINLINE float __half_to_float_uniform(int16_t h) {
+    static const uint32_t shifted_exp = 0x7c00 << 13; // exponent mask after shift
+
+    int32_t o = ((int32_t)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+    uint32_t exp = shifted_exp & o;   // just the exponent
+    o += (127 - 15) << 23;        // exponent adjust
+
+    // handle exponent special cases
+    if (exp == shifted_exp) // Inf/NaN?
+        o += (128 - 16) << 23;    // extra exp adjust
+    else if (exp == 0) { // Zero/Denormal?
+        o += 1 << 23;             // extra exp adjust
+        o = __intbits(__floatbits(o) - __floatbits(113 << 23)); // renormalize
+    }
+
+    o |= ((int32_t)(h & 0x8000)) << 16;    // sign bit
+    return __floatbits(o);
+}
+
+
+static FORCEINLINE __vec16_f __half_to_float_varying(__vec16_i16 v) {
+    __vec16_f ret;
+    for (int i = 0; i < 16; ++i)
+        ret.v[i] = __half_to_float_uniform(v.v[i]);
+    return ret;
+}
+
+
+static FORCEINLINE int16_t __float_to_half_uniform(float f) {
+    uint32_t sign_mask = 0x80000000u;
+    int32_t o;
+
+    int32_t fint = __intbits(f);
+    int32_t sign = fint & sign_mask;
+    fint ^= sign;
+
+    int32_t f32infty = 255 << 23;
+    o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+
+    // (De)normalized number or zero
+    // update fint unconditionally to save the blending; we don't need it
+    // anymore for the Inf/NaN case anyway.
+    const uint32_t round_mask = ~0xfffu; 
+    const int32_t magic = 15 << 23;
+    const int32_t f16infty = 31 << 23;
+
+    int32_t fint2 = __intbits(__floatbits(fint & round_mask) * __floatbits(magic)) - round_mask;
+    fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
+
+    if (fint < f32infty)
+        o = fint2 >> 13; // Take the bits!
+
+    return (o | (sign >> 16));
+}
+
+
+static FORCEINLINE __vec16_i16 __float_to_half_varying(__vec16_f v) {
+    __vec16_i16 ret;
+    for (int i = 0; i < 16; ++i)
+        ret.v[i] = __float_to_half_uniform(v.v[i]);
+    return ret;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // double

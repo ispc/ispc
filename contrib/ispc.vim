@@ -17,7 +17,7 @@ syn keyword	ispcStatement	cbreak ccontinue creturn launch print reference soa sy
 syn keyword	ispcConditional	cif
 syn keyword	ispcRepeat	cdo cfor cwhile
 syn keyword	ispcBuiltin	programCount programIndex	
-syn keyword	ispcType	export int8 int16 int32 int64
+syn keyword	ispcType	export uniform varying int8 int16 int32 int64
 
 " Default highlighting
 command -nargs=+ HiLink hi def link <args>

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -54,14 +54,8 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/Target/TargetData.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-  #include <llvm/Support/TargetRegistry.h>
-  #include <llvm/Support/TargetSelect.h>
-#else
-  #include <llvm/Target/TargetRegistry.h>
-  #include <llvm/Target/TargetSelect.h>
-  #include <llvm/Target/SubtargetFeature.h>
-#endif
+#include <llvm/Support/TargetRegistry.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/Host.h>
 
 Globals *g;
@@ -70,9 +64,82 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
+#ifndef ISPC_IS_WINDOWS
+static void __cpuid(int info[4], int infoType) {
+    __asm__ __volatile__ ("cpuid"
+                          : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
+                          : "0" (infoType));
+}
+
+/* Save %ebx in case it's the PIC register */
+static void __cpuidex(int info[4], int level, int count) {
+  __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
+                        "cpuid\n\t"
+                        "xchg{l}\t{%%}ebx, %1\n\t"
+                        : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
+                        : "0" (level), "2" (count));
+}
+#endif // ISPC_IS_WINDOWS
+
+
+static const char *
+lGetSystemISA() {
+    int info[4];
+    __cpuid(info, 1);
+
+    if ((info[2] & (1 << 28)) != 0) {
+        // AVX1 for sure. Do we have AVX2?
+        // Call cpuid with eax=7, ecx=0
+        __cpuidex(info, 7, 0);
+        if ((info[1] & (1 << 5)) != 0)
+            return "avx2";
+        else
+            return "avx";
+    }
+    else if ((info[2] & (1 << 19)) != 0)
+        return "sse4";
+    else if ((info[3] & (1 << 26)) != 0)
+        return "sse2";
+    else {
+        fprintf(stderr, "Unable to detect supported SSE/AVX ISA.  Exiting.\n");
+        exit(1);
+    }
+}
+
+
+static const char *supportedCPUs[] = { 
+    "atom", "penryn", "core2", "corei7", "corei7-avx"
+};
+
+
 bool
 Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                   bool pic, Target *t) {
+    if (isa == NULL) {
+        if (cpu != NULL) {
+            // If a CPU was specified explicitly, try to pick the best
+            // possible ISA based on that.
+            if (!strcmp(cpu, "sandybridge") ||
+                !strcmp(cpu, "corei7-avx"))
+                isa = "avx";
+            else if (!strcmp(cpu, "corei7") ||
+                     !strcmp(cpu, "penryn"))
+                isa = "sse4";
+            else
+                isa = "sse2";
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using ISA \"%s\" based on specified CPU \"%s\".\n", isa,
+                    cpu);
+        }
+        else {
+            // No CPU and no ISA, so use CPUID to figure out what this CPU
+            // supports.
+            isa = lGetSystemISA();
+            fprintf(stderr, "Notice: no --target specified on command-line.  "
+                    "Using system ISA \"%s\".\n", isa);
+        }
+    }
+
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
@@ -82,19 +149,24 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
             cpu = "generic";
         }
     }
+    else {
+        bool foundCPU = false;
+        for (int i = 0; i < int(sizeof(supportedCPUs) / sizeof(supportedCPUs[0])); 
+             ++i) {
+            if (!strcmp(cpu, supportedCPUs[i])) {
+                foundCPU = true;
+                break;
+            }
+        }
+        if (foundCPU == false) {
+            fprintf(stderr, "Error: CPU type \"%s\" unknown. Supported CPUs: "
+                    "%s.\n", cpu, SupportedTargetCPUs().c_str());
+            return false;
+        }
+    }
+
     t->cpu = cpu;
 
-    if (isa == NULL) {
-        if (!strcasecmp(cpu, "atom"))
-            isa = "sse2";
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        else if (!strcasecmp(cpu, "sandybridge") ||
-                 !strcasecmp(cpu, "corei7-avx"))
-            isa = "avx";
-#endif // LLVM_3_0
-        else
-            isa = "sse4";
-    }
     if (arch == NULL)
         arch = "x86-64";
 
@@ -125,13 +197,15 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->arch = arch;
     }
 
+    // This is the case for most of them
+    t->hasHalf = t->hasTranscendentals = false;
+
     if (!strcasecmp(isa, "sse2")) {
         t->isa = Target::SSE2;
         t->nativeVectorWidth = 4;
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse2-x2")) {
@@ -140,7 +214,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4")) {
@@ -149,7 +222,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 4;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2")) {
@@ -158,7 +230,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 8;
         t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "generic-4")) {
@@ -166,41 +237,59 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->nativeVectorWidth = 4;
         t->vectorWidth = 4;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-8")) {
         t->isa = Target::GENERIC;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-16")) {
         t->isa = Target::GENERIC;
         t->nativeVectorWidth = 16;
         t->vectorWidth = 16;
         t->maskingIsFree = true;
-        t->allOffMaskIsSafe = true;
         t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
+    }
+    else if (!strcasecmp(isa, "generic-32")) {
+        t->isa = Target::GENERIC;
+        t->nativeVectorWidth = 32;
+        t->vectorWidth = 32;
+        t->maskingIsFree = true;
+        t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
+    }
+    else if (!strcasecmp(isa, "generic-64")) {
+        t->isa = Target::GENERIC;
+        t->nativeVectorWidth = 64;
+        t->vectorWidth = 64;
+        t->maskingIsFree = true;
+        t->maskBitCount = 1;
+        t->hasHalf = true;
+        t->hasTranscendentals = true;
     }
     else if (!strcasecmp(isa, "generic-1")) {
         t->isa = Target::GENERIC;
         t->nativeVectorWidth = 1;
         t->vectorWidth = 1;
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
     else if (!strcasecmp(isa, "avx")) {
         t->isa = Target::AVX;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
         t->attributes = "+avx,+popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx-x2")) {
@@ -209,19 +298,17 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 16;
         t->attributes = "+avx,+popcnt,+cmov";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
     }
-#endif // LLVM 3.0+
-#if defined(LLVM_3_1svn)
+#ifndef LLVM_3_0
     else if (!strcasecmp(isa, "avx2")) {
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
         t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
+        t->hasHalf = true;
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
         t->isa = Target::AVX2;
@@ -229,10 +316,10 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->vectorWidth = 16;
         t->attributes = "+avx2,+popcnt,+cmov,+f16c";
         t->maskingIsFree = false;
-        t->allOffMaskIsSafe = false;
         t->maskBitCount = 32;
+        t->hasHalf = true;
     }
-#endif // LLVM 3.1
+#endif // !LLVM_3_0
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n", 
                 isa, SupportedTargetISAs());
@@ -243,23 +330,23 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         llvm::TargetMachine *targetMachine = t->GetTargetMachine();
         const llvm::TargetData *targetData = targetMachine->getTargetData();
         t->is32Bit = (targetData->getPointerSize() == 4);
+        Assert(t->vectorWidth <= ISPC_MAX_NVEC);
     }
 
     return !error;
 }
 
 
-const char *
+std::string
 Target::SupportedTargetCPUs() {
-    return "atom, barcelona, core2, corei7, "
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
-        "corei7-avx, "
-#endif
-        "istanbul, nocona, penryn, "
-#ifdef LLVM_2_9
-        "sandybridge, "
-#endif
-        "westmere";
+    std::string ret;
+    int count = sizeof(supportedCPUs) / sizeof(supportedCPUs[0]);
+    for (int i = 0; i < count; ++i) {
+        ret += supportedCPUs[i];
+        if (i != count - 1)
+            ret += ", ";
+    }
+    return ret;
 }
 
 
@@ -271,14 +358,11 @@ Target::SupportedTargetArchs() {
 
 const char *
 Target::SupportedTargetISAs() {
-    return "sse2, sse2-x2, sse4, sse4-x2"
-#ifndef LLVM_2_9
-        ", avx, avx-x2"
-#endif // !LLVM_2_9
-#ifdef LLVM_3_1svn
+    return "sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
+#ifndef LLVM_3_0
         ", avx2, avx2-x2"
-#endif // LLVM_3_1svn
-        ", generic-4, generic-8, generic-16, generic-1";
+#endif // !LLVM_3_0
+        ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
 
 
@@ -286,10 +370,10 @@ std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
     // Start with the host triple as the default
-#if defined(LLVM_3_1) || defined(LLVM_3_1svn)
-    triple.setTriple(llvm::sys::getDefaultTargetTriple());
-#else
+#ifdef LLVM_3_0
     triple.setTriple(llvm::sys::getHostTriple());
+#else
+    triple.setTriple(llvm::sys::getDefaultTargetTriple());
 #endif
 
     // And override the arch in the host triple based on what the user
@@ -315,30 +399,17 @@ Target::GetTargetMachine() const {
 
     llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
                                                   llvm::Reloc::Default;
-#if defined(LLVM_3_1svn)
-    std::string featuresString = attributes;
-    llvm::TargetOptions options;
-    if (g->opt.fastMath == true)
-        options.UnsafeFPMath = 1;
-    llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple, cpu, featuresString, options,
-                                    relocModel);
-#elif defined(LLVM_3_0)
+#ifdef LLVM_3_0
     std::string featuresString = attributes;
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, relocModel);
-#else // LLVM 2.9
-#ifdef ISPC_IS_APPLE
-    relocModel = llvm::Reloc::PIC_;
-#endif // ISPC_IS_APPLE
-    std::string featuresString = cpu + std::string(",") + attributes;
+#else
+    std::string featuresString = attributes;
+    llvm::TargetOptions options;
     llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple, featuresString);
-#ifndef ISPC_IS_WINDOWS
-    targetMachine->setRelocationModel(relocModel);
-#endif // !ISPC_IS_WINDOWS
-#endif // LLVM_2_9
-
+        target->createTargetMachine(triple, cpu, featuresString, options,
+                                    relocModel);
+#endif // !LLVM_3_0
     Assert(targetMachine != NULL);
 
     targetMachine->setAsmVerbosityDefault(true);
@@ -367,7 +438,7 @@ Target::GetISAString() const {
 
 
 static bool
-lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
+lGenericTypeLayoutIndeterminate(llvm::Type *type) {
     if (type->isPrimitiveType() || type->isIntegerTy())
         return false;
 
@@ -376,18 +447,18 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         type == LLVMTypes::Int1VectorType)
         return true;
 
-    LLVM_TYPE_CONST llvm::ArrayType *at = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::ArrayType>(type);
+    llvm::ArrayType *at = 
+        llvm::dyn_cast<llvm::ArrayType>(type);
     if (at != NULL)
         return lGenericTypeLayoutIndeterminate(at->getElementType());
 
-    LLVM_TYPE_CONST llvm::PointerType *pt = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::PointerType>(type);
+    llvm::PointerType *pt = 
+        llvm::dyn_cast<llvm::PointerType>(type);
     if (pt != NULL)
         return false;
 
-    LLVM_TYPE_CONST llvm::StructType *st =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
+    llvm::StructType *st =
+        llvm::dyn_cast<llvm::StructType>(type);
     if (st != NULL) {
         for (int i = 0; i < (int)st->getNumElements(); ++i)
             if (lGenericTypeLayoutIndeterminate(st->getElementType(i)))
@@ -395,29 +466,24 @@ lGenericTypeLayoutIndeterminate(LLVM_TYPE_CONST llvm::Type *type) {
         return false;
     }
 
-    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(type));
+    Assert(llvm::isa<llvm::VectorType>(type));
     return true;
 }
 
 
 llvm::Value *
-Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type, 
+Target::SizeOf(llvm::Type *type, 
                llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = { LLVMInt32(1) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
         llvm::Instruction *gep = 
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
                                             insertAtEnd);
-#else
-        llvm::Instruction *gep =
-            llvm::GetElementPtrInst::Create(voidPtr, &index[0], &index[1],
-                                            "sizeof_gep", insertAtEnd);
-#endif
+
         if (is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
                                           "sizeof_int", insertAtEnd);
@@ -428,7 +494,9 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    uint64_t byteSize = td->getTypeSizeInBits(type) / 8;
+    uint64_t bitSize = td->getTypeSizeInBits(type);
+    Assert((bitSize % 8) == 0);
+    uint64_t byteSize = bitSize / 8;
     if (is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
     else
@@ -437,23 +505,18 @@ Target::SizeOf(LLVM_TYPE_CONST llvm::Type *type,
 
 
 llvm::Value *
-Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
+Target::StructOffset(llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC && 
         lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
-        LLVM_TYPE_CONST llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
+        llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
-#if defined(LLVM_3_0) || defined(LLVM_3_0svn) || defined(LLVM_3_1svn)
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
         llvm::Instruction *gep = 
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
                                             insertAtEnd);
-#else
-        llvm::Instruction *gep =
-            llvm::GetElementPtrInst::Create(voidPtr, &indices[0], &indices[2],
-                                            "offset_gep", insertAtEnd);
-#endif
+
         if (is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
                                           "offset_int", insertAtEnd);
@@ -464,9 +527,12 @@ Target::StructOffset(LLVM_TYPE_CONST llvm::Type *type, int element,
 
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
-    LLVM_TYPE_CONST llvm::StructType *structType = 
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::StructType>(type);
-    Assert(structType != NULL);
+    llvm::StructType *structType = 
+        llvm::dyn_cast<llvm::StructType>(type);
+    if (structType == NULL || structType->isSized() == false) {
+        Assert(m->errorCount > 0);
+        return NULL;
+    }
     const llvm::StructLayout *sl = td->getStructLayout(structType);
     Assert(sl != NULL);
 
@@ -552,7 +618,9 @@ llvm::DIFile
 SourcePos::GetDIFile() const {
     std::string directory, filename;
     GetDirectoryAndFileName(g->currentDirectory, name, &directory, &filename);
-    return m->diBuilder->createFile(filename, directory);
+    llvm::DIFile ret = m->diBuilder->createFile(filename, directory);
+    Assert(ret.Verify());
+    return ret;
 }
 
 

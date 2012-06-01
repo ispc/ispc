@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011, Intel Corporation
+  Copyright (c) 2011-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -32,8 +32,10 @@
 */
 
 /** @file ast.cpp
-    @brief 
-*/
+
+    @brief General functionality related to abstract syntax trees and
+    traversal of them.
+ */
 
 #include "ast.h"
 #include "expr.h"
@@ -53,10 +55,10 @@ ASTNode::~ASTNode() {
 // AST
 
 void
-AST::AddFunction(Symbol *sym, const std::vector<Symbol *> &args, Stmt *code) {
+AST::AddFunction(Symbol *sym, Stmt *code) {
     if (sym == NULL)
         return;
-    functions.push_back(new Function(sym, args, code));
+    functions.push_back(new Function(sym, code));
 }
 
 
@@ -151,7 +153,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         else if ((ls = dynamic_cast<LabeledStmt *>(node)) != NULL)
             ls->stmt = (Stmt *)WalkAST(ls->stmt, preFunc, postFunc, data);
         else if ((rs = dynamic_cast<ReturnStmt *>(node)) != NULL)
-            rs->val = (Expr *)WalkAST(rs->val, preFunc, postFunc, data);
+            rs->expr = (Expr *)WalkAST(rs->expr, preFunc, postFunc, data);
         else if ((sl = dynamic_cast<StmtList *>(node)) != NULL) {
             std::vector<Stmt *> &sls = sl->stmts;
             for (unsigned int i = 0; i < sls.size(); ++i)
@@ -305,19 +307,39 @@ TypeCheck(Stmt *stmt) {
 }
 
 
+struct CostData {
+    CostData() { cost = foreachDepth = 0; }
+
+    int cost;
+    int foreachDepth;
+};
+
+
 static bool
-lCostCallback(ASTNode *node, void *c) {
-    int *cost = (int *)c;
-    *cost += node->EstimateCost();
+lCostCallbackPre(ASTNode *node, void *d) {
+    CostData *data = (CostData *)d;
+    if (dynamic_cast<ForeachStmt *>(node) != NULL)
+        ++data->foreachDepth;
+    if (data->foreachDepth == 0)
+        data->cost += node->EstimateCost();
     return true;
+}
+
+
+static ASTNode *
+lCostCallbackPost(ASTNode *node, void *d) {
+    CostData *data = (CostData *)d;
+    if (dynamic_cast<ForeachStmt *>(node) != NULL)
+        --data->foreachDepth;
+    return node;
 }
 
 
 int
 EstimateCost(ASTNode *root) {
-    int cost = 0;
-    WalkAST(root, lCostCallback, NULL, &cost);
-    return cost;
+    CostData data;
+    WalkAST(root, lCostCallbackPre, lCostCallbackPost, &data);
+    return data.cost;
 }
 
 
@@ -334,10 +356,10 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
             return false;
 
         const Type *type = fce->func->GetType();
-        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        const PointerType *pt = CastType<PointerType>(type);
         if (pt != NULL)
             type = pt->GetBaseType();
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+        const FunctionType *ftype = CastType<FunctionType>(type);
         Assert(ftype != NULL);
 
         if (ftype->isSafe == false) {
@@ -363,17 +385,22 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (g->target.allOffMaskIsSafe == true)
-        // Don't worry about memory accesses if we have a target that can
-        // safely run them with the mask all off
-        return true;
+    if (dynamic_cast<ForeachStmt *>(node) != NULL) {
+        // foreach() statements also shouldn't be run with an all-off mask.
+        // Since they re-establish an 'all on' mask, this would be pretty
+        // unintuitive.  (More generally, it's possibly a little strange to
+        // allow foreach() in the presence of any non-uniform control
+        // flow...)
+        *okPtr = false;
+        return false;
+    }
 
     IndexExpr *ie;
     if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {
         const Type *type = ie->baseExpr->GetType();
         if (type == NULL)
             return true;
-        if (dynamic_cast<const ReferenceType *>(type) != NULL)
+        if (CastType<ReferenceType>(type) != NULL)
             type = type->GetReferenceTarget();
 
         ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
@@ -383,16 +410,14 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
             return false;
         }
 
-        const PointerType *pointerType = 
-            dynamic_cast<const PointerType *>(type);
+        const PointerType *pointerType = CastType<PointerType>(type);
         if (pointerType != NULL) {
             // pointer[index] -> can't be sure -> not safe
             *okPtr = false;
             return false;
         }
 
-        const SequentialType *seqType = 
-            dynamic_cast<const SequentialType *>(type);
+        const SequentialType *seqType = CastType<SequentialType>(type);
         Assert(seqType != NULL);
         int nElements = seqType->GetElementCount();
         if (nElements == 0) {

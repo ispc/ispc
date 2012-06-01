@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -265,7 +265,7 @@ public:
     statement in the program. */
 class ReturnStmt : public Stmt {
 public:
-    ReturnStmt(Expr *v, bool cc, SourcePos p);
+    ReturnStmt(Expr *e, bool cc, SourcePos p);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -273,7 +273,7 @@ public:
     Stmt *TypeCheck();
     int EstimateCost() const;
 
-    Expr *val;
+    Expr *expr;
     /** This indicates whether the generated code will check to see if no
         more program instances are currently running after the return, in
         which case the code can possibly jump to the end of the current

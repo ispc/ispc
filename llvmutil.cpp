@@ -43,44 +43,44 @@
 #include <set>
 #include <map>
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::VoidType = NULL;
-LLVM_TYPE_CONST llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::PointerIntType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::BoolType = NULL;
+llvm::Type *LLVMTypes::VoidType = NULL;
+llvm::PointerType *LLVMTypes::VoidPointerType = NULL;
+llvm::Type *LLVMTypes::PointerIntType = NULL;
+llvm::Type *LLVMTypes::BoolType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64Type = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoubleType = NULL;
+llvm::Type *LLVMTypes::Int8Type = NULL;
+llvm::Type *LLVMTypes::Int16Type = NULL;
+llvm::Type *LLVMTypes::Int32Type = NULL;
+llvm::Type *LLVMTypes::Int64Type = NULL;
+llvm::Type *LLVMTypes::FloatType = NULL;
+llvm::Type *LLVMTypes::DoubleType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64PointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoublePointerType = NULL;
+llvm::Type *LLVMTypes::Int8PointerType = NULL;
+llvm::Type *LLVMTypes::Int16PointerType = NULL;
+llvm::Type *LLVMTypes::Int32PointerType = NULL;
+llvm::Type *LLVMTypes::Int64PointerType = NULL;
+llvm::Type *LLVMTypes::FloatPointerType = NULL;
+llvm::Type *LLVMTypes::DoublePointerType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::MaskType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
+llvm::VectorType *LLVMTypes::MaskType = NULL;
+llvm::VectorType *LLVMTypes::BoolVectorType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int1VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int16VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int32VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::Int64VectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
+llvm::VectorType *LLVMTypes::Int1VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int8VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int16VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int32VectorType = NULL;
+llvm::VectorType *LLVMTypes::Int64VectorType = NULL;
+llvm::VectorType *LLVMTypes::FloatVectorType = NULL;
+llvm::VectorType *LLVMTypes::DoubleVectorType = NULL;
 
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int8VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int16VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int32VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
-LLVM_TYPE_CONST llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int8VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int16VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int32VectorPointerType = NULL;
+llvm::Type *LLVMTypes::Int64VectorPointerType = NULL;
+llvm::Type *LLVMTypes::FloatVectorPointerType = NULL;
+llvm::Type *LLVMTypes::DoubleVectorPointerType = NULL;
 
-LLVM_TYPE_CONST llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
+llvm::VectorType *LLVMTypes::VoidPointerVectorType = NULL;
 
 llvm::Constant *LLVMTrue = NULL;
 llvm::Constant *LLVMFalse = NULL;
@@ -473,9 +473,9 @@ LLVMBoolVector(const bool *bvec) {
 
 
 llvm::Constant *
-LLVMIntAsType(int64_t val, LLVM_TYPE_CONST llvm::Type *type) {
-    LLVM_TYPE_CONST llvm::VectorType *vecType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+LLVMIntAsType(int64_t val, llvm::Type *type) {
+    llvm::VectorType *vecType =
+        llvm::dyn_cast<llvm::VectorType>(type);
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
@@ -491,9 +491,9 @@ LLVMIntAsType(int64_t val, LLVM_TYPE_CONST llvm::Type *type) {
 
 
 llvm::Constant *
-LLVMUIntAsType(uint64_t val, LLVM_TYPE_CONST llvm::Type *type) {
-    LLVM_TYPE_CONST llvm::VectorType *vecType =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(type);
+LLVMUIntAsType(uint64_t val, llvm::Type *type) {
+    llvm::VectorType *vecType =
+        llvm::dyn_cast<llvm::VectorType>(type);
 
     if (vecType != NULL) {
         llvm::Constant *v = llvm::ConstantInt::get(vecType->getElementType(),
@@ -642,8 +642,8 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 bool
 LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
     // Make sure we do in fact have a vector of integer values here
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     Assert(llvm::isa<llvm::IntegerType>(vt->getElementType()));
 
@@ -657,7 +657,7 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
 
     // Deal with the fact that LLVM3.1 and previous versions have different
     // representations for vectors of constant ints...
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cv == NULL)
         return false;
@@ -678,7 +678,7 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
          ret[i] = ci->getSExtValue();
      }
      return true;
-#endif // LLVM_3_1svn
+#endif // !LLVM_3_0
 }
 
 
@@ -696,7 +696,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 static bool
 lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
                  std::vector<llvm::PHINode *> &seenPhis) {
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()) == false) {
+    if (llvm::isa<llvm::VectorType>(val->getType()) == false) {
         // If we've worked down to a constant int, then the moment of truth
         // has arrived...
         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(val);
@@ -780,7 +780,7 @@ static bool
 lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
                  std::vector<llvm::PHINode *> &seenPhis,
                  bool &canAdd) {
-    Assert(llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()));
+    Assert(llvm::isa<llvm::VectorType>(val->getType()));
     // Make sure the base value is a positive power of 2
     Assert(baseValue > 0 && (baseValue & (baseValue-1)) == 0);
 
@@ -790,7 +790,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
 
     int64_t vecVals[ISPC_MAX_NVEC];
     int nElts;
-    if (llvm::isa<LLVM_TYPE_CONST llvm::VectorType>(val->getType()) &&
+    if (llvm::isa<llvm::VectorType>(val->getType()) &&
         LLVMExtractVectorInts(val, vecVals, &nElts)) {
         // If we have a vector of compile-time constant integer values,
         // then go ahead and check them directly..
@@ -880,7 +880,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
         // the addConstants[], mod baseValue.  If we round that up to the
         // next power of 2, we'll have a value that will be no greater than
         // baseValue and sometimes less.
-        int maxMod = addConstants[0] % baseValue;
+        int maxMod = int(addConstants[0] % baseValue);
         for (int i = 1; i < vectorLength; ++i)
             maxMod = std::max(maxMod, int(addConstants[i] % baseValue));
         int requiredAlignment = lRoundUpPow2(maxMod);
@@ -947,7 +947,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     if (cv != NULL)
         return (cv->getSplatValue() != NULL);
 
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cdv != NULL)
         return (cdv->getSplatValue() != NULL);
@@ -1074,8 +1074,8 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 */
 bool
 LLVMVectorValuesAllEqual(llvm::Value *v) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1102,7 +1102,7 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
  */
 static bool
 lVectorIsLinearConstantInts(
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
                             llvm::ConstantDataVector *cv, 
 #else
                             llvm::ConstantVector *cv, 
@@ -1111,7 +1111,7 @@ lVectorIsLinearConstantInts(
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     for (int i = 0; i < (int)cv->getNumElements(); ++i)
         elements.push_back(cv->getElementAsConstant(i));
 #else
@@ -1152,7 +1152,7 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
 #else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
@@ -1226,7 +1226,7 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 std::vector<llvm::PHINode *> &seenPhis) {
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
-#ifdef LLVM_3_1svn
+#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
 #else
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
@@ -1344,8 +1344,8 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
 */
 bool
 LLVMVectorIsLinear(llvm::Value *v, int stride) {
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
     int vectorLength = vt->getNumElements();
 
@@ -1390,18 +1390,37 @@ LLVMDumpValue(llvm::Value *v) {
 
 
 static llvm::Value *
-lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
+lExtractFirstVectorElement(llvm::Value *v, 
                            std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
-    // If it's not an instruction (i.e. is a constant), then we can just
-    // emit an extractelement instruction and let the regular optimizer do
-    // the rest.
-    if (llvm::isa<llvm::Instruction>(v) == false)
-        return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
-                                                insertBefore);
-
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v->getType());
     Assert(vt != NULL);
+
+    // First, handle various constant types; do the extraction manually, as
+    // appropriate.
+    if (llvm::isa<llvm::ConstantAggregateZero>(v) == true) {
+        Assert(vt->getElementType()->isIntegerTy());
+        return llvm::ConstantInt::get(vt->getElementType(), 0);
+    }
+    if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
+#ifndef LLVM_3_0
+        return cv->getOperand(0);
+#else
+        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
+        cv->getVectorElements(elements);
+        return elements[0];
+#endif // !LLVM_3_0
+    }
+#ifndef LLVM_3_0
+    if (llvm::ConstantDataVector *cdv = 
+        llvm::dyn_cast<llvm::ConstantDataVector>(v))
+        return cdv->getElementAsConstant(0);
+#endif  // !LLVM_3_0
+
+    // Otherwise, all that we should have at this point is an instruction
+    // of some sort
+    Assert(llvm::isa<llvm::Constant>(v) == false);
+    Assert(llvm::isa<llvm::Instruction>(v) == true);
 
     std::string newName = v->getName().str() + std::string(".elt0");
 
@@ -1410,20 +1429,24 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
         llvm::Value *v0 = lExtractFirstVectorElement(bop->getOperand(0),
-                                                     insertBefore, phiMap);
+                                                     phiMap);
         llvm::Value *v1 = lExtractFirstVectorElement(bop->getOperand(1),
-                                                     insertBefore, phiMap);
+                                                     phiMap);
+        // Note that the new binary operator is inserted immediately before
+        // the previous vector one
         return llvm::BinaryOperator::Create(bop->getOpcode(), v0, v1,
-                                            newName, insertBefore);
+                                            newName, bop);
     }
 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(v);
     if (cast != NULL) {
         llvm::Value *v = lExtractFirstVectorElement(cast->getOperand(0),
-                                                    insertBefore, phiMap);
+                                                    phiMap);
+        // Similarly, the equivalent scalar cast instruction goes right
+        // before the vector cast
         return llvm::CastInst::Create(cast->getOpcode(), v,
                                       vt->getElementType(), newName,
-                                      insertBefore);
+                                      cast);
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
@@ -1438,18 +1461,17 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
         // return the pointer and not get stuck in an infinite loop.
         //
         // The insertion point for the new phi node also has to be the
-        // start of the bblock of the original phi node, which isn't
-        // necessarily the same bblock as insertBefore is in!
+        // start of the bblock of the original phi node.
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
         llvm::PHINode *scalarPhi = 
             llvm::PHINode::Create(vt->getElementType(), 
-                                  phi->getNumIncomingValues(), newName,
-                                  phiInsertPos);
+                                  phi->getNumIncomingValues(), 
+                                  newName, phiInsertPos);
         phiMap[phi] = scalarPhi;
 
         for (unsigned i = 0; i < phi->getNumIncomingValues(); ++i) {
             llvm::Value *v = lExtractFirstVectorElement(phi->getIncomingValue(i),
-                                                        insertBefore, phiMap);
+                                                        phiMap);
             scalarPhi->addIncoming(v, phi->getIncomingBlock(i));
         }
 
@@ -1466,15 +1488,22 @@ lExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore,
     }
 
     // Worst case, for everything else, just do a regular extract element
-    return llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
-                                            insertBefore);
+    // instruction, which we insert immediately after the instruction we
+    // have here.
+    llvm::Instruction *insertAfter = llvm::dyn_cast<llvm::Instruction>(v);
+    Assert(insertAfter != NULL);
+    llvm::Instruction *ee = 
+        llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
+                                         (llvm::Instruction *)NULL);
+    ee->insertAfter(insertAfter);
+    return ee;
 }
 
 
 llvm::Value *
-LLVMExtractFirstVectorElement(llvm::Value *v, llvm::Instruction *insertBefore) {
+LLVMExtractFirstVectorElement(llvm::Value *v) {
     std::map<llvm::PHINode *, llvm::PHINode *> phiMap;
-    llvm::Value *ret = lExtractFirstVectorElement(v, insertBefore, phiMap);
+    llvm::Value *ret = lExtractFirstVectorElement(v, phiMap);
     return ret;
 }
 
@@ -1489,8 +1518,8 @@ LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
                   llvm::Instruction *insertBefore) {
     Assert(v1->getType() == v2->getType());
 
-    LLVM_TYPE_CONST llvm::VectorType *vt =
-        llvm::dyn_cast<LLVM_TYPE_CONST llvm::VectorType>(v1->getType());
+    llvm::VectorType *vt =
+        llvm::dyn_cast<llvm::VectorType>(v1->getType());
     Assert(vt != NULL);
 
     int32_t identity[ISPC_MAX_NVEC];
@@ -1518,12 +1547,29 @@ LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2, int32_t shuf[],
             shufVec.push_back(LLVMInt32(shuf[i]));
     }
 
-#ifndef LLVM_2_9
     llvm::ArrayRef<llvm::Constant *> aref(&shufVec[0], &shufVec[shufSize]);
     llvm::Value *vec = llvm::ConstantVector::get(aref);
-#else // LLVM_2_9
-    llvm::Value *vec = llvm::ConstantVector::get(shufVec);
-#endif
 
     return new llvm::ShuffleVectorInst(v1, v2, vec, "shuffle", insertBefore);
 }
+
+
+const char *
+LLVMGetName(llvm::Value *v, const char *s) {
+    if (v == NULL) return s;
+    std::string ret = v->getName();
+    ret += s;
+    return strdup(ret.c_str());
+}
+
+
+const char *
+LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2) {
+    std::string r = op;
+    r += "_";
+    r += v1->getName().str();
+    r += "_";
+    r += v2->getName().str();
+    return strdup(r.c_str());
+}
+
