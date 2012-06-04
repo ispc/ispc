@@ -407,6 +407,10 @@ struct Globals {
     /** Indicates whether all printed output should be surpressed. */
     bool quiet;
 
+    /** Always use ANSI escape sequences to colorize warning and error
+        messages, even if piping output to a file, etc. */
+    bool forceColoredOutput;
+
     /** Indicates whether calls should be emitted in the program to an
         externally-defined program instrumentation function. (See the
         "Instrumenting your ispc programs" section in the user's

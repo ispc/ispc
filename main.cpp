@@ -83,6 +83,9 @@ usage(int ret) {
     printf("    [--arch={%s}]\t\tSelect target architecture\n", 
            Target::SupportedTargetArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
+#ifndef ISPC_IS_WINDOWS
+    printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages.\n");
+#endif
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs().c_str());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
@@ -401,6 +404,8 @@ int main(int Argc, char *Argv[]) {
 #ifndef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--pic"))
             generatePIC = true;
+        else if (!strcmp(argv[i], "--colored-output"))
+            g->forceColoredOutput = true;
 #endif // !ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--quiet"))
             g->quiet = true;

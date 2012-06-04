@@ -578,6 +578,7 @@ Globals::Globals() {
     disableWarnings = false;
     warningsAsErrors = false;
     quiet = false;
+    forceColoredOutput = false;
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;

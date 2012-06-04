@@ -44,6 +44,7 @@
 #endif
 #else
 #include <alloca.h>
+#include <unistd.h>
 #endif
 #include <stdio.h>
 
@@ -94,6 +95,10 @@ static bool
 lHaveANSIColors() {
     static bool r = (getenv("TERM") != NULL &&
                      strcmp(getenv("TERM"), "dumb") != 0);
+#ifndef ISPC_IS_WINDOWS
+    r &= isatty(2);
+#endif // !ISPC_IS_WINDOWS
+    r |= g->forceColoredOutput;
     return r;
 }
 
