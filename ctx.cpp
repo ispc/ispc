@@ -2653,10 +2653,14 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         // individually with what turns into a recursive call to
         // makedStore()
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
+            const Type *eltType = collectionType->GetElementType(i);
+            if (eltType == NULL) {
+                Assert(m->errorCount > 0);
+                continue;
+            }
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
             llvm::Value *eltPtr = 
                 AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
-            const Type *eltType = collectionType->GetElementType(i);
             const Type *eltPtrType = PointerType::GetUniform(eltType);
             StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }

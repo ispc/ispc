@@ -1820,6 +1820,7 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
             else if (CastType<FunctionType>(type) != NULL) {
                 Error(elementPositions[i], "Method declarations are not "
                       "supported.");
+                return;
             }
             else
                 elementTypes.push_back(type->LLVMType(g->ctx));
@@ -2904,7 +2905,11 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
         return NULL;
     }
 
-    return llvm::FunctionType::get(returnType->LLVMType(g->ctx), callTypes, false);
+    llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
+    if (llvmReturnType == NULL)
+        return NULL;
+
+    return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
 
