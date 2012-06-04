@@ -1817,7 +1817,12 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
                 Assert(m->errorCount > 0);
                 return;
             }
-            elementTypes.push_back(type->LLVMType(g->ctx));
+            else if (CastType<FunctionType>(type) != NULL) {
+                Error(elementPositions[i], "Method declarations are not "
+                      "supported.");
+            }
+            else
+                elementTypes.push_back(type->LLVMType(g->ctx));
         }
 
         if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
