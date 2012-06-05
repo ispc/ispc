@@ -151,6 +151,7 @@ struct ForeachDimension {
     Expr *expr;
     ExprList *exprList;
     const Type *type;
+    std::vector<std::pair<const Type *, SourcePos> > *typeList;
     const AtomicType *atomicType;
     int typeQualifier;
     StorageClass storageClass;
@@ -232,6 +233,7 @@ struct ForeachDimension {
 %type <type> specifier_qualifier_list struct_or_union_specifier
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
+%type <typeList> type_specifier_list
 %type <atomicType> atomic_var_type_specifier
 
 %type <typeQualifier> type_qualifier type_qualifier_list
@@ -824,6 +826,28 @@ type_specifier
     }
     | struct_or_union_specifier { $$ = $1; }
     | enum_specifier { $$ = $1; }
+    ;
+
+type_specifier_list
+    : type_specifier      
+    {
+        if ($1 == NULL)
+            $$ = NULL;
+        else {
+            std::vector<std::pair<const Type *, SourcePos> > *vec =
+                new std::vector<std::pair<const Type *, SourcePos> >;
+            vec->push_back(std::make_pair($1, @1));
+            $$ = vec;
+        }
+    }
+    | type_specifier_list ',' type_specifier
+    {
+        $$ = $1;
+        if ($1 == NULL)
+            Assert(m->errorCount > 0);
+        else
+            $$->push_back(std::make_pair($3, @3));
+    }
     ;
 
 atomic_var_type_specifier
@@ -1837,6 +1861,11 @@ translation_unit
 external_declaration
     : function_definition
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
+    | TOKEN_EXPORT '{' type_specifier_list '}' ';'
+    {
+        if ($3 != NULL)
+            m->AddExportedTypes(*$3);
+    }
     | declaration 
     { 
         if ($1 != NULL)

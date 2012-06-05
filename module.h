@@ -80,6 +80,11 @@ public:
     void AddFunctionDefinition(const std::string &name,
                                const FunctionType *ftype, Stmt *code);
 
+    /** Adds the given type to the set of types that have their definitions
+        included in automatically generated header files. */
+    void AddExportedTypes(const std::vector<std::pair<const Type *, 
+                                                      SourcePos> > &types);
+
     /** After a source file has been compiled, output can be generated in a
         number of different formats. */
     enum OutputType { Asm,      /** Generate text assembly language output */
@@ -144,6 +149,8 @@ public:
 private:
     const char *filename;
     AST *ast;
+
+    std::vector<std::pair<const Type *, SourcePos> > exportedTypes;
 
     /** Write the corresponding output type to the given file.  Returns
         true on success, false if there has been an error.  The given

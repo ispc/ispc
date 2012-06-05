@@ -824,6 +824,22 @@ Module::AddFunctionDefinition(const std::string &name, const FunctionType *type,
 }
 
 
+void
+Module::AddExportedTypes(const std::vector<std::pair<const Type *, 
+                                                     SourcePos> > &types) {
+    for (int i = 0; i < (int)types.size(); ++i) {
+        if (CastType<StructType>(types[i].first) == NULL &&
+            CastType<VectorType>(types[i].first) == NULL &&
+            CastType<EnumType>(types[i].first) == NULL)
+            Error(types[i].second, "Only struct, vector, and enum types, "
+                  "not \"%s\", are allowed in type export lists.", 
+                  types[i].first->GetString().c_str());
+        else
+            exportedTypes.push_back(types[i]);
+    }
+}
+
+
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
@@ -1250,6 +1266,18 @@ Module::writeHeader(const char *fn) {
                            &exportedEnumTypes, &exportedVectorTypes);
     lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
                            &exportedEnumTypes, &exportedVectorTypes);
+
+    // Go through the explicitly exported types
+    for (int i = 0; i < (int)exportedTypes.size(); ++i) {
+        if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
+            exportedStructTypes.push_back(st->GetAsUniformType());
+        else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
+            exportedEnumTypes.push_back(et->GetAsUniformType());
+        else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
+            exportedVectorTypes.push_back(vt->GetAsUniformType());
+        else
+            FATAL("Unexpected type in export list");
+    }
 
     // And print them
     lEmitVectorTypedefs(exportedVectorTypes, f);
