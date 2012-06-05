@@ -2512,7 +2512,11 @@ void CWriter::printModuleTypes() {
 
   // Get all of the struct types used in the module.
   std::vector<StructType*> StructTypes;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
   TheModule->findUsedStructTypes(StructTypes);
+#else
+  TheModule->findUsedStructTypes(StructTypes, false);
+#endif
 
   // Get all of the array types used in the module
   std::vector<ArrayType*> ArrayTypes;

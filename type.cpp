@@ -791,7 +791,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
                                             32 /* align in bits */,
                                             elementArray
 #if !defined(LLVM_3_0) && !defined(LLVM_3_1)
-                                            , llvm::DIType()
+                                            , llvm::DIType(), 0
 #endif
                                             );
 
