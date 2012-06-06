@@ -380,8 +380,8 @@ namespace {
     static bool isInlinableInst(const Instruction &I) {
       // Always inline cmp instructions, even if they are shared by multiple
       // expressions.  GCC generates horrible code if we don't.
-      if (isa<CmpInst>(I))
-        return true;
+        if (isa<CmpInst>(I) && isa<VectorType>(I.getType()) == false)
+          return true;
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
