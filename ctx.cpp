@@ -381,13 +381,8 @@ FunctionEmitContext::GetInternalMask() {
 
 llvm::Value *
 FunctionEmitContext::GetFullMask() {
-    llvm::Value *internalMask = GetInternalMask();
-    if (internalMask == LLVMMaskAllOn && functionMaskValue == LLVMMaskAllOn &&
-        !g->opt.disableMaskAllOnOptimizations)
-        return LLVMMaskAllOn;
-    else
-        return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
-                              functionMaskValue, "internal_mask&function_mask");
+    return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
+                          functionMaskValue, "internal_mask&function_mask");
 }
 
 
@@ -673,9 +668,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     // If all of the enclosing 'if' tests in the loop have uniform control
     // flow or if we can tell that the mask is all on, then we can just
     // jump to the break location.
-    if (inSwitchStatement() == false && 
-        (ifsInCFAllUniform(CFInfo::Loop) || 
-         GetInternalMask() == LLVMMaskAllOn)) {
+    if (inSwitchStatement() == false && ifsInCFAllUniform(CFInfo::Loop)) {
         BranchInst(breakTarget);
         if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
             Warning(currentPos, "Coherent break statement not necessary in "
@@ -730,7 +723,7 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
     }
     AssertPos(currentPos, controlFlowInfo.size() > 0);
 
-    if (ifsInCFAllUniform(CFInfo::Loop) || GetInternalMask() == LLVMMaskAllOn) {
+    if (ifsInCFAllUniform(CFInfo::Loop)) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
         // loop or if we can tell that the mask is all on.

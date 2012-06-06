@@ -494,16 +494,7 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 void
 IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetInternalMask();
-    if (ctx->GetFullMask() == LLVMMaskAllOn && 
-        !g->opt.disableCoherentControlFlow &&
-        !g->opt.disableMaskAllOnOptimizations) {
-        // We can tell that the mask is on statically at compile time; just
-        // emit code for the 'if test with the mask all on' path
-        llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
-        emitMaskAllOn(ctx, ltest, bDone);
-        ctx->SetCurrentBasicBlock(bDone);
-    }
-    else if (doAllCheck) {
+    if (doAllCheck) {
         // We can't tell if the mask going into the if is all on at the
         // compile time.  Emit code to check for this and then either run
         // the code for the 'all on' or the 'mixed' case depending on the
