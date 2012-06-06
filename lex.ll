@@ -724,7 +724,7 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
     std::string str;
     p = strchr(yytext, '"') + 1;
     while (*p != '\"') {
-       char cval;
+       char cval = '\0';
        p = lEscapeChar(p, &cval, pos);
        str.push_back(cval);
     } 
