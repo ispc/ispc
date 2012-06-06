@@ -362,6 +362,28 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
 }
 
 
+/** Returns true if the "true" block for the if statement consists of a
+    single 'break' statement, and the "false" block is empty. */
+static bool
+lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
+    if (falseStmts != NULL) {
+        if (StmtList *sl = dynamic_cast<StmtList *>(falseStmts)) {
+            return (sl->stmts.size() == 0);
+        }
+        else
+            return false;
+    }
+
+    if (dynamic_cast<BreakStmt *>(trueStmts))
+        return true;
+    else if (StmtList *sl = dynamic_cast<StmtList *>(trueStmts))
+        return (sl->stmts.size() == 1 &&
+                dynamic_cast<BreakStmt *>(sl->stmts[0]) != NULL);
+    else
+        return false;
+}
+
+
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     // First check all of the things that might happen due to errors
@@ -414,6 +436,15 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         // so that subsequent emitted code starts there.
         ctx->SetCurrentBasicBlock(bexit);
         ctx->EndIf();
+    }
+    else if (lCanApplyBreakOptimization(trueStmts, falseStmts)) {
+        // If we have a simple break statement inside the 'if' and are
+        // under varying control flow, just update the execution mask
+        // directly and don't emit code for the statements.  This leads to
+        // better code for this case--this is surprising and should be
+        // root-caused further, but for now this gives us performance
+        // benefit in this case.
+        ctx->SetInternalMaskAndNot(ctx->GetInternalMask(), testValue);
     }
     else
         emitVaryingIf(ctx, testValue);
