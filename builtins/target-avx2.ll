@@ -104,7 +104,7 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 
-gen_gather(8, i8)
-gen_gather(8, i16)
-gen_gather(8, i32)
-gen_gather(8, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(i64)

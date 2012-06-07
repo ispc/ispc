@@ -492,10 +492,10 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scatter
 
-gen_scatter(8, i8)
-gen_scatter(8, i16)
-gen_scatter(8, i32)
-gen_scatter(8, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt

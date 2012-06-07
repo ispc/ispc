@@ -446,15 +446,15 @@ masked_load(i64, 8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
-gen_gather(8, i8)
-gen_gather(8, i16)
-gen_gather(8, i32)
-gen_gather(8, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(i64)
 
-gen_scatter(8, i8)
-gen_scatter(8, i16)
-gen_scatter(8, i32)
-gen_scatter(8, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float rounding

@@ -1218,8 +1218,8 @@ static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
 }
     
 
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_base_offsets32_i8)
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_base_offsets64_i8)
+GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __gather_base_offsets32_i8)
+GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __gather_base_offsets64_i8)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
 GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __gather_base_offsets32_i32)
@@ -1238,8 +1238,8 @@ static FORCEINLINE VTYPE FUNC(PTRTYPE ptrs, __vec16_i1 mask) {   \
     return ret;                                             \
 }
 
-GATHER_GENERAL(__vec16_i8, int8_t, __vec16_i32, __gather32_i8)
-GATHER_GENERAL(__vec16_i8, int8_t, __vec16_i64, __gather64_i8)
+GATHER_GENERAL(__vec16_i8,  int8_t,  __vec16_i32, __gather32_i8)
+GATHER_GENERAL(__vec16_i8,  int8_t,  __vec16_i64, __gather64_i8)
 GATHER_GENERAL(__vec16_i16, int16_t, __vec16_i32, __gather32_i16)
 GATHER_GENERAL(__vec16_i16, int16_t, __vec16_i64, __gather64_i16)
 GATHER_GENERAL(__vec16_i32, int32_t, __vec16_i32, __gather32_i32)
@@ -1263,8 +1263,8 @@ static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
 }
     
 
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_base_offsets32_i8)
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_base_offsets64_i8)
+SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __scatter_base_offsets32_i8)
+SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __scatter_base_offsets64_i8)
 SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_base_offsets32_i16)
 SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64_i16)
 SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __scatter_base_offsets32_i32)
@@ -1282,8 +1282,8 @@ static FORCEINLINE void FUNC(PTRTYPE ptrs, VTYPE val, __vec16_i1 mask) {  \
         }                                                            \
 }
 
-SCATTER_GENERAL(__vec16_i8, int8_t, __vec16_i32, __scatter32_i8)
-SCATTER_GENERAL(__vec16_i8, int8_t, __vec16_i64, __scatter64_i8)
+SCATTER_GENERAL(__vec16_i8,  int8_t,  __vec16_i32, __scatter32_i8)
+SCATTER_GENERAL(__vec16_i8,  int8_t,  __vec16_i64, __scatter64_i8)
 SCATTER_GENERAL(__vec16_i16, int16_t, __vec16_i32, __scatter32_i16)
 SCATTER_GENERAL(__vec16_i16, int16_t, __vec16_i64, __scatter64_i16)
 SCATTER_GENERAL(__vec16_i32, int32_t, __vec16_i32, __scatter32_i32)

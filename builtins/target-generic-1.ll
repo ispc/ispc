@@ -36,15 +36,15 @@ masked_load(i64, 8)
 
 ; define these with the macros from stdlib.m4
 
-gen_gather(1, i8)
-gen_gather(1, i16)
-gen_gather(1, i32)
-gen_gather(1, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(i64)
 
-gen_scatter(1, i8)
-gen_scatter(1, i16)
-gen_scatter(1, i32)
-gen_scatter(1, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(i64)
 
 
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,

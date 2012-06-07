@@ -474,12 +474,12 @@ masked_load(i64, 8)
 
 ; define these with the macros from stdlib.m4
 
-gen_gather(4, i8)
-gen_gather(4, i16)
-gen_gather(4, i32)
-gen_gather(4, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(i64)
 
-gen_scatter(4, i8)
-gen_scatter(4, i16)
-gen_scatter(4, i32)
-gen_scatter(4, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(i64)
