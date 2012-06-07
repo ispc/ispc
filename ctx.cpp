@@ -2691,9 +2691,9 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         }
 
         if (g->target.is32Bit)
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
+            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
         else
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
+            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingBool) &&
              g->target.maskBitCount == 1) {
@@ -2712,35 +2712,31 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
     else if (Type::Equal(valueType, AtomicType::VaryingDouble) || 
              Type::Equal(valueType, AtomicType::VaryingInt64) ||
              Type::Equal(valueType, AtomicType::VaryingUInt64)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
         ptr = BitCastInst(ptr, LLVMTypes::Int64VectorPointerType, 
                           LLVMGetName(ptr, "_to_int64vecptr"));
         value = BitCastInst(value, LLVMTypes::Int64VectorType, 
                             LLVMGetName(value, "_to_int64"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingFloat) ||
              Type::Equal(valueType, AtomicType::VaryingBool) ||
              Type::Equal(valueType, AtomicType::VaryingInt32) ||
              Type::Equal(valueType, AtomicType::VaryingUInt32) ||
              CastType<EnumType>(valueType) != NULL) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
         ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
                           LLVMGetName(ptr, "_to_int32vecptr"));
         if (Type::Equal(valueType, AtomicType::VaryingFloat))
             value = BitCastInst(value, LLVMTypes::Int32VectorType, 
                                 LLVMGetName(value, "_to_int32"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingInt16) ||
              Type::Equal(valueType, AtomicType::VaryingUInt16)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_16");
-        ptr = BitCastInst(ptr, LLVMTypes::Int16VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int16vecptr"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingInt8) ||
              Type::Equal(valueType, AtomicType::VaryingUInt8)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_8");
-        ptr = BitCastInst(ptr, LLVMTypes::Int8VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int8vecptr"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 

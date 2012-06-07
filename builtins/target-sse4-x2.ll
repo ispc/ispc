@@ -360,15 +360,14 @@ reduce_equal(8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-
-masked_load(8, i8,  8,  1)
-masked_load(8, i16, 16, 2)
-masked_load(8, i32, 32, 4)
-masked_load(8, i64, 64, 8)
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
 load_and_broadcast(i64)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(i64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -444,18 +443,18 @@ define float @__reduce_add_float(<8 x float>) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(8, i8, 8)
-gen_masked_store(8, i16, 16)
-gen_masked_store(8, i32, 32)
-gen_masked_store(8, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 masked_store_blend_8_16_by_8()
 
 declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
                                              <4 x float>) nounwind readnone
 
-define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>, 
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
+                                      <8 x i32> %mask) nounwind alwaysinline {
   ; do two 4-wide blends with blendvps
   %mask_as_float = bitcast <8 x i32> %mask to <8 x float>
   %mask_a = shufflevector <8 x float> %mask_as_float, <8 x float> undef,
@@ -484,8 +483,8 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
   ret void
 }
 
-define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
+                                      <8 x i32> %mask) nounwind alwaysinline {
   ; implement this as 4 blends of <4 x i32>s, which are actually bitcast
   ; <2 x i64>s...
 

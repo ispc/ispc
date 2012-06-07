@@ -434,14 +434,14 @@ reduce_equal(8)
 ;; unaligned loads/loads+broadcasts
 
 
-masked_load(8, i8,  8,  1)
-masked_load(8, i16, 16, 2)
-masked_load(8, i32, 32, 4)
-masked_load(8, i64, 64, 8)
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
 load_and_broadcast(i64)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(i64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -558,23 +558,23 @@ define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alway
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(8, i8, 8)
-gen_masked_store(8, i16, 16)
-gen_masked_store(8, i32, 32)
-gen_masked_store(8, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 masked_store_blend_8_16_by_8()
 
-define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>, 
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
+                                      <8 x i32> %mask) nounwind alwaysinline {
   %val = load <8 x i32> * %0, align 4
   %newval = call <8 x i32> @__vselect_i32(<8 x i32> %val, <8 x i32> %1, <8 x i32> %mask) 
   store <8 x i32> %newval, <8 x i32> * %0, align 4
   ret void
 }
 
-define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
+                                      <8 x i32> %mask) nounwind alwaysinline {
   %oldValue = load <8 x i64>* %ptr, align 8
 
   ; Do 8x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values

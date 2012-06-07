@@ -359,13 +359,13 @@ load_and_broadcast(i32)
 load_and_broadcast(i64)
 
 ; no masked load instruction for i8 and i16 types??
-masked_load(16, i8,  8,  1)
-masked_load(16, i16, 16, 2)
+masked_load(i8,  1)
+masked_load(i16, 2)
 
 declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8 *, <8 x float> %mask)
 declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x double> %mask)
  
-define <16 x i32> @__masked_load_32(i8 *, <16 x i32> %mask) nounwind alwaysinline {
+define <16 x i32> @__masked_load_i32(i8 *, <16 x i32> %mask) nounwind alwaysinline {
   %floatmask = bitcast <16 x i32> %mask to <16 x float>
   %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
      <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -383,7 +383,7 @@ define <16 x i32> @__masked_load_32(i8 *, <16 x i32> %mask) nounwind alwaysinlin
 }
 
 
-define <16 x i64> @__masked_load_64(i8 *, <16 x i32> %mask) nounwind alwaysinline {
+define <16 x i64> @__masked_load_i64(i8 *, <16 x i32> %mask) nounwind alwaysinline {
   ; double up masks, bitcast to doubles
   %mask0 = shufflevector <16 x i32> %mask, <16 x i32> undef,
      <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
@@ -424,15 +424,15 @@ define <16 x i64> @__masked_load_64(i8 *, <16 x i32> %mask) nounwind alwaysinlin
 ; FIXME: there is no AVX instruction for these, but we could be clever
 ; by packing the bits down and setting the last 3/4 or half, respectively,
 ; of the mask to zero...  Not sure if this would be a win in the end
-gen_masked_store(16, i8, 8)
-gen_masked_store(16, i16, 16)
+gen_masked_store(i8)
+gen_masked_store(i16)
 
 ; note that mask is the 2nd parameter, not the 3rd one!!
 declare void @llvm.x86.avx.maskstore.ps.256(i8 *, <8 x float>, <8 x float>)
 declare void @llvm.x86.avx.maskstore.pd.256(i8 *, <4 x double>, <4 x double>)
 
-define void @__masked_store_32(<16 x i32>* nocapture, <16 x i32>, 
-                               <16 x i32>) nounwind alwaysinline {
+define void @__masked_store_i32(<16 x i32>* nocapture, <16 x i32>, 
+                                <16 x i32>) nounwind alwaysinline {
   %ptr = bitcast <16 x i32> * %0 to i8 *
   %val = bitcast <16 x i32> %1 to <16 x float>
   %mask = bitcast <16 x i32> %2 to <16 x float>
@@ -454,8 +454,8 @@ define void @__masked_store_32(<16 x i32>* nocapture, <16 x i32>,
   ret void
 }
 
-define void @__masked_store_64(<16 x i64>* nocapture, <16 x i64>,
-                               <16 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_i64(<16 x i64>* nocapture, <16 x i64>,
+                                <16 x i32> %mask) nounwind alwaysinline {
   %ptr = bitcast <16 x i64> * %0 to i8 *
   %val = bitcast <16 x i64> %1 to <16 x double>
 
@@ -499,8 +499,8 @@ masked_store_blend_8_16_by_16()
 declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
                                                 <8 x float>) nounwind readnone
 
-define void @__masked_store_blend_32(<16 x i32>* nocapture, <16 x i32>, 
-                                     <16 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<16 x i32>* nocapture, <16 x i32>, 
+                                      <16 x i32>) nounwind alwaysinline {
   %maskAsFloat = bitcast <16 x i32> %2 to <16 x float>
   %oldValue = load <16 x i32>* %0, align 4
   %oldAsFloat = bitcast <16 x i32> %oldValue to <16 x float>
@@ -537,8 +537,8 @@ define void @__masked_store_blend_32(<16 x i32>* nocapture, <16 x i32>,
 declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
                                                  <4 x double>) nounwind readnone
 
-define void @__masked_store_blend_64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
-                                     <16 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %newi64, 
+                                      <16 x i32> %mask) nounwind alwaysinline {
   %oldValue = load <16 x i64>* %ptr, align 8
   %old = bitcast <16 x i64> %oldValue to <16 x double>
   %old0d = shufflevector <16 x double> %old, <16 x double> undef,

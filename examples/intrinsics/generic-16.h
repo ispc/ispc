@@ -1101,8 +1101,8 @@ REDUCE_MINMAX(uint64_t, __vec16_i64, __reduce_max_uint64, >)
 ///////////////////////////////////////////////////////////////////////////
 // masked load/store
 
-static FORCEINLINE __vec16_i8 __masked_load_8(void *p,
-                                              __vec16_i1 mask) {
+static FORCEINLINE __vec16_i8 __masked_load_i8(void *p,
+                                               __vec16_i1 mask) {
     __vec16_i8 ret;
     int8_t *ptr = (int8_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1111,8 +1111,8 @@ static FORCEINLINE __vec16_i8 __masked_load_8(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i16 __masked_load_16(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_i16 __masked_load_i16(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i16 ret;
     int16_t *ptr = (int16_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1121,8 +1121,8 @@ static FORCEINLINE __vec16_i16 __masked_load_16(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i32 __masked_load_32(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_i32 __masked_load_i32(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i32 ret;
     int32_t *ptr = (int32_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1131,8 +1131,8 @@ static FORCEINLINE __vec16_i32 __masked_load_32(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i64 __masked_load_64(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_i64 __masked_load_i64(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i64 ret;
     int64_t *ptr = (int64_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1141,31 +1141,31 @@ static FORCEINLINE __vec16_i64 __masked_load_64(void *p,
     return ret;
 }
 
-static FORCEINLINE void __masked_store_8(void *p, __vec16_i8 val,
-                                         __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_i8(void *p, __vec16_i8 val,
+                                          __vec16_i1 mask) {
     int8_t *ptr = (int8_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_16(void *p, __vec16_i16 val,
-                                          __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_i16(void *p, __vec16_i16 val,
+                                           __vec16_i1 mask) {
     int16_t *ptr = (int16_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_32(void *p, __vec16_i32 val,
-                                          __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val,
+                                           __vec16_i1 mask) {
     int32_t *ptr = (int32_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
+static FORCEINLINE void __masked_store_i64(void *p, __vec16_i64 val,
                                           __vec16_i1 mask) {
     int64_t *ptr = (int64_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1173,24 +1173,28 @@ static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_blend_8(void *p, __vec16_i8 val,
-                                               __vec16_i1 mask) {
-    __masked_store_8(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_16(void *p, __vec16_i16 val,
+static FORCEINLINE void __masked_store_blend_i8(void *p, __vec16_i8 val,
                                                 __vec16_i1 mask) {
-    __masked_store_16(p, val, mask);
+    __masked_store_i8(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_32(void *p, __vec16_i32 val,
-                                                __vec16_i1 mask) {
-    __masked_store_32(p, val, mask);
+static FORCEINLINE void __masked_store_blend_i16(void *p, __vec16_i16 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i16(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_64(void *p, __vec16_i64 val,
-                                                __vec16_i1 mask) {
-    __masked_store_64(p, val, mask);
+static FORCEINLINE void __masked_store_blend_i32(void *p, __vec16_i32 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i32(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_i64(void *p, __vec16_i64 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i64(p, val, mask);
+}
+
 }
 
 ///////////////////////////////////////////////////////////////////////////

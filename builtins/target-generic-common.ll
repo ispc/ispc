@@ -231,36 +231,36 @@ declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone
 ;; unaligned loads/loads+broadcasts
 
 
-declare <WIDTH x i8> @__masked_load_8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i16> @__masked_load_16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i32> @__masked_load_32(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
-declare <WIDTH x i64> @__masked_load_64(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
 load_and_broadcast(i64)
 
-declare void @__masked_store_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                               <WIDTH x i1>) nounwind 
-declare void @__masked_store_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+declare <WIDTH x i8> @__masked_load_i8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i16> @__masked_load_i16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i32> @__masked_load_i32(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare <WIDTH x i64> @__masked_load_i64(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
+declare void @__masked_store_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                 <WIDTH x i1>) nounwind 
-declare void @__masked_store_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                <WIDTH x i1>) nounwind 
-declare void @__masked_store_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                <WIDTH x i1> %mask) nounwind 
+declare void @__masked_store_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+                                 <WIDTH x i1>) nounwind 
+declare void @__masked_store_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
+                                 <WIDTH x i1>) nounwind 
+declare void @__masked_store_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
+                                 <WIDTH x i1> %mask) nounwind 
 
 ifelse(LLVM_VERSION, `LLVM_3_0', `
-declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                     <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+declare void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                       <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                      <WIDTH x i1> %mask) nounwind 
+declare void @__masked_store_blend_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+                                       <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
+                                       <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_i64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
+                                       <WIDTH x i1> %mask) nounwind 
 ', `
-define void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
+define void @__masked_store_blend_i8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i8> * %0
   %v1 = select <WIDTH x i1> %2, <WIDTH x i8> %1, <WIDTH x i8> %v
@@ -268,23 +268,23 @@ define void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>,
   ret void
 }
 
-define void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                     <WIDTH x i1>) nounwind alwaysinline {
+define void @__masked_store_blend_i16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i16> * %0
   %v1 = select <WIDTH x i1> %2, <WIDTH x i16> %1, <WIDTH x i16> %v
   store <WIDTH x i16> %v1, <WIDTH x i16> * %0
   ret void
 }
 
-define void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                     <WIDTH x i1>) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
+                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i32> * %0
   %v1 = select <WIDTH x i1> %2, <WIDTH x i32> %1, <WIDTH x i32> %v
   store <WIDTH x i32> %v1, <WIDTH x i32> * %0
   ret void
 }
 
-define void @__masked_store_blend_64(<WIDTH x i64>* nocapture,
+define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture,
                             <WIDTH x i64>, <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i64> * %0
   %v1 = select <WIDTH x i1> %2, <WIDTH x i64> %1, <WIDTH x i64> %v

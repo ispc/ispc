@@ -1549,19 +1549,19 @@ declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 ; This function declares placeholder masked store functions for the
 ;  front-end to use.
 ;
-;  void __pseudo_masked_store_8 (uniform int8 *ptr, varying int8 values, mask)
-;  void __pseudo_masked_store_16(uniform int16 *ptr, varying int16 values, mask)
-;  void __pseudo_masked_store_32(uniform int32 *ptr, varying int32 values, mask)
-;  void __pseudo_masked_store_64(uniform int64 *ptr, varying int64 values, mask)
+;  void __pseudo_masked_store_i8 (uniform int8 *ptr, varying int8 values, mask)
+;  void __pseudo_masked_store_i16(uniform int16 *ptr, varying int16 values, mask)
+;  void __pseudo_masked_store_i32(uniform int32 *ptr, varying int32 values, mask)
+;  void __pseudo_masked_store_i64(uniform int64 *ptr, varying int64 values, mask)
 ;
 ;  These in turn are converted to native masked stores or to regular
 ;  stores (if the mask is all on) by the MaskedStoreOptPass optimization
 ;  pass.
 
-declare void @__pseudo_masked_store_8(<WIDTH x i8> * nocapture, <WIDTH x i8>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_16(<WIDTH x i16> * nocapture, <WIDTH x i16>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_32(<WIDTH x i32> * nocapture, <WIDTH x i32>, <WIDTH x MASK>)
-declare void @__pseudo_masked_store_64(<WIDTH x i64> * nocapture, <WIDTH x i64>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_i8(<WIDTH x i8> * nocapture, <WIDTH x i8>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_i16(<WIDTH x i16> * nocapture, <WIDTH x i16>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_i32(<WIDTH x i32> * nocapture, <WIDTH x i32>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_i64(<WIDTH x i64> * nocapture, <WIDTH x i64>, <WIDTH x MASK>)
 
 ; Declare the pseudo-gather functions.  When the ispc front-end needs
 ; to perform a gather, it generates a call to one of these functions,
@@ -1692,13 +1692,13 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                <WIDTH x MASK> %mask) {
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; loads
-  %ml8  = call <WIDTH x i8>  @__masked_load_8(i8 * %ptr, <WIDTH x MASK> %mask)
+  %ml8  = call <WIDTH x i8>  @__masked_load_i8(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use8(<WIDTH x i8> %ml8)
-  %ml16 = call <WIDTH x i16> @__masked_load_16(i8 * %ptr, <WIDTH x MASK> %mask)
+  %ml16 = call <WIDTH x i16> @__masked_load_i16(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use16(<WIDTH x i16> %ml16)
-  %ml32 = call <WIDTH x i32> @__masked_load_32(i8 * %ptr, <WIDTH x MASK> %mask)
+  %ml32 = call <WIDTH x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %ml32)
-  %ml64 = call <WIDTH x i64> @__masked_load_64(i8 * %ptr, <WIDTH x MASK> %mask)
+  %ml64 = call <WIDTH x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %ml64)
 
   %lb8   = call <WIDTH x i8>  @__load_and_broadcast_i8(i8 * %ptr, <WIDTH x MASK> %mask)
@@ -1713,31 +1713,29 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
   %pv8 = bitcast i8 * %ptr to <WIDTH x i8> *
-  call void @__pseudo_masked_store_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
-                                     <WIDTH x MASK> %mask)
+  call void @__pseudo_masked_store_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
+                                      <WIDTH x MASK> %mask)
   %pv16 = bitcast i8 * %ptr to <WIDTH x i16> *
-  call void @__pseudo_masked_store_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
-                                      <WIDTH x MASK> %mask)
+  call void @__pseudo_masked_store_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
+                                       <WIDTH x MASK> %mask)
   %pv32 = bitcast i8 * %ptr to <WIDTH x i32> *
-  call void @__pseudo_masked_store_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
-                                      <WIDTH x MASK> %mask)
+  call void @__pseudo_masked_store_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
+                                       <WIDTH x MASK> %mask)
   %pv64 = bitcast i8 * %ptr to <WIDTH x i64> *
-  call void @__pseudo_masked_store_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
+  call void @__pseudo_masked_store_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
+                                       <WIDTH x MASK> %mask)
+  call void @__masked_store_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
+  call void @__masked_store_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
+  call void @__masked_store_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__masked_store_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
+                                     <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
                                       <WIDTH x MASK> %mask)
-
-  call void @__masked_store_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
-  call void @__masked_store_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
-  call void @__masked_store_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
-  call void @__masked_store_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
-
-  call void @__masked_store_blend_8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
-                                    <WIDTH x MASK> %mask)
-  call void @__masked_store_blend_16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
-                                     <WIDTH x MASK> %mask)
-  call void @__masked_store_blend_32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
-                                     <WIDTH x MASK> %mask)
-  call void @__masked_store_blend_64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
-                                     <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
+                                      <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
+                                      <WIDTH x MASK> %mask)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; gathers
@@ -2507,15 +2505,13 @@ define <WIDTH x $1> @__load_and_broadcast_$1(i8 *, <WIDTH x MASK> %mask) nounwin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emit general-purpose code to do a masked load for targets that dont have
 ;; an instruction to do that.  Parameters:
-;; $1: target vector width
-;; $2: element type for which to emit the function (i32, i64, ...)
-;; $3: suffix for function name (32, 64, ...)
-;; $4: alignment for elements of type $2 (4, 8, ...)
+;; $1: element type for which to emit the function (i32, i64, ...) (and suffix for function name)
+;; $2: alignment for elements of type $1 (4, 8, ...)
 
 define(`masked_load', `
-define <$1 x $2> @__masked_load_$3(i8 *, <$1 x MASK> %mask) nounwind alwaysinline {
+define <WIDTH x $1> @__masked_load_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
 entry:
-  %mm = call i64 @__movmsk(<$1 x MASK> %mask)
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %mask)
   
   ; if the first lane and the last lane are on, then it is safe to do a vector load
   ; of the whole thing--what the lanes in the middle want turns out to not matter...
@@ -2531,14 +2527,14 @@ entry:
   %can_vload_maybe_fast = or i1 %fast_i1, %can_vload
 
   ; if we are not able to do a singe vload, we will accumulate lanes in this memory..
-  %retptr = alloca <$1 x $2>
-  %retptr32 = bitcast <$1 x $2> * %retptr to $2 *
+  %retptr = alloca <WIDTH x $1>
+  %retptr32 = bitcast <WIDTH x $1> * %retptr to $1 *
   br i1 %can_vload_maybe_fast, label %load, label %loop
 
 load: 
-  %ptr = bitcast i8 * %0 to <$1 x $2> *
-  %valall = load <$1 x $2> * %ptr, align $4
-  ret <$1 x $2> %valall
+  %ptr = bitcast i8 * %0 to <WIDTH x $1> *
+  %valall = load <WIDTH x $1> * %ptr, align $2
+  ret <WIDTH x $1> %valall
 
 loop:
   ; loop over the lanes and see if each one is on...
@@ -2552,21 +2548,21 @@ loop:
 load_lane:
   ; yes!  do the load and store the result into the appropriate place in the
   ; allocaed memory above
-  %ptr32 = bitcast i8 * %0 to $2 *
-  %lane_ptr = getelementptr $2 * %ptr32, i32 %lane
-  %val = load $2 * %lane_ptr
-  %store_ptr = getelementptr $2 * %retptr32, i32 %lane
-  store $2 %val, $2 * %store_ptr
+  %ptr32 = bitcast i8 * %0 to $1 *
+  %lane_ptr = getelementptr $1 * %ptr32, i32 %lane
+  %val = load $1 * %lane_ptr
+  %store_ptr = getelementptr $1 * %retptr32, i32 %lane
+  store $1 %val, $1 * %store_ptr
   br label %lane_done
 
 lane_done:
   %next_lane = add i32 %lane, 1
-  %done = icmp eq i32 %lane, eval($1-1)
+  %done = icmp eq i32 %lane, eval(WIDTH-1)
   br i1 %done, label %return, label %loop
 
 return:
-  %r = load <$1 x $2> * %retptr
-  ret <$1 x $2> %r
+  %r = load <WIDTH x $1> * %retptr
+  ret <WIDTH x $1> %r
 }
 ')
 
@@ -2574,23 +2570,21 @@ return:
 ;; masked store
 ;; emit code to do masked store as a set of per-lane scalar stores
 ;; parameters:
-;; $1: target vector width
-;; $2: llvm type of elements
-;; $3: suffix for function name
+;; $1: llvm type of elements (and suffix for function name)
 
 define(`gen_masked_store', `
-define void @__masked_store_$3(<$1 x $2>* nocapture, <$1 x $2>, <$1 x i32>) nounwind alwaysinline {
-  per_lane($1, <$1 x i32> %2, `
-      %ptr_LANE_ID = getelementptr <$1 x $2> * %0, i32 0, i32 LANE
-      %storeval_LANE_ID = extractelement <$1 x $2> %1, i32 LANE
-      store $2 %storeval_LANE_ID, $2 * %ptr_LANE_ID')
+define void @__masked_store_$1(<WIDTH x $1>* nocapture, <WIDTH x $1>, <WIDTH x i32>) nounwind alwaysinline {
+  per_lane(WIDTH, <WIDTH x i32> %2, `
+      %ptr_LANE_ID = getelementptr <WIDTH x $1> * %0, i32 0, i32 LANE
+      %storeval_LANE_ID = extractelement <WIDTH x $1> %1, i32 LANE
+      store $1 %storeval_LANE_ID, $1 * %ptr_LANE_ID')
   ret void
 }
 ')
 
 define(`masked_store_blend_8_16_by_4', `
-define void @__masked_store_blend_8(<4 x i8>* nocapture, <4 x i8>,
-                                    <4 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
+                                     <4 x i32>) nounwind alwaysinline {
   %old = load <4 x i8> * %0, align 1
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <4 x i32> %2 to <4 x i1>
@@ -2613,8 +2607,8 @@ define void @__masked_store_blend_8(<4 x i8>* nocapture, <4 x i8>,
   ret void
 }
 
-define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
-                                     <4 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
+                                      <4 x i32>) nounwind alwaysinline {
   %old = load <4 x i16> * %0, align 2
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <4 x i32> %2 to <4 x i1>
@@ -2639,8 +2633,8 @@ define void @__masked_store_blend_16(<4 x i16>* nocapture, <4 x i16>,
 ')
 
 define(`masked_store_blend_8_16_by_8', `
-define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>,
-                                    <8 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
+                                     <8 x i32>) nounwind alwaysinline {
   %old = load <8 x i8> * %0, align 1
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <8 x i32> %2 to <8 x i1>
@@ -2663,8 +2657,8 @@ define void @__masked_store_blend_8(<8 x i8>* nocapture, <8 x i8>,
   ret void
 }
 
-define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
-                                     <8 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
+                                      <8 x i32>) nounwind alwaysinline {
   %old = load <8 x i16> * %0, align 2
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <8 x i32> %2 to <8 x i1>
@@ -2690,8 +2684,8 @@ define void @__masked_store_blend_16(<8 x i16>* nocapture, <8 x i16>,
 
 
 define(`masked_store_blend_8_16_by_16', `
-define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
-                                    <16 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
+                                     <16 x i32>) nounwind alwaysinline {
   %old = load <16 x i8> * %0, align 1
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <16 x i32> %2 to <16 x i1>
@@ -2714,8 +2708,8 @@ define void @__masked_store_blend_8(<16 x i8>* nocapture, <16 x i8>,
   ret void
 }
 
-define void @__masked_store_blend_16(<16 x i16>* nocapture, <16 x i16>,
-                                     <16 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
+                                      <16 x i32>) nounwind alwaysinline {
   %old = load <16 x i16> * %0, align 2
   ifelse(LLVM_VERSION,LLVM_3_1svn,`
     %m = trunc <16 x i32> %2 to <16 x i1>
@@ -2895,7 +2889,7 @@ domixed:
   store <$1 x $2> %basesmear, <$1 x $2> * %ptr
   %castptr = bitcast <$1 x $2> * %ptr to <$1 x $4> *
   %castv = bitcast <$1 x $2> %v to <$1 x $4>
-  call void @__masked_store_blend_$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x MASK> %mask)
+  call void @__masked_store_blend_i$6(<$1 x $4> * %castptr, <$1 x $4> %castv, <$1 x MASK> %mask)
   %blendvec = load <$1 x $2> * %ptr
   br label %check_neighbors
 
@@ -2970,8 +2964,8 @@ define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
   store <$1 x $2> %idvec, <$1 x $2> * %ptr
   %ptr`'$3 = bitcast <$1 x $2> * %ptr to <$1 x i`'$3> *
   %vi = bitcast <$1 x $2> %v to <$1 x i`'$3>
-  call void @__masked_store_blend_$3(<$1 x i`'$3> * %ptr`'$3, <$1 x i`'$3> %vi,
-                                     <$1 x MASK> %mask)
+  call void @__masked_store_blend_i$3(<$1 x i`'$3> * %ptr`'$3, <$1 x i`'$3> %vi,
+                                      <$1 x MASK> %mask)
   %v_id = load <$1 x $2> * %ptr
 
   ; extract elements of the vector to use in computing the scan
@@ -3144,14 +3138,14 @@ define <$1 x $2> @__gather_base_offsets32_$2(i8 * %ptr, <$1 x i32> %offsets, i32
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <$1 x i32>
   store <$1 x i32> zeroinitializer, <$1 x i32> * %offsetsPtr
-  call void @__masked_store_blend_32(<$1 x i32> * %offsetsPtr, <$1 x i32> %offsets, 
-                                     <$1 x i32> %vecmask)
+  call void @__masked_store_blend_i32(<$1 x i32> * %offsetsPtr, <$1 x i32> %offsets, 
+                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i32> * %offsetsPtr
 
   %deltaPtr = alloca <$1 x i32>
   store <$1 x i32> zeroinitializer, <$1 x i32> * %deltaPtr
-  call void @__masked_store_blend_32(<$1 x i32> * %deltaPtr, <$1 x i32> %offset_delta, 
-                                     <$1 x i32> %vecmask)
+  call void @__masked_store_blend_i32(<$1 x i32> * %deltaPtr, <$1 x i32> %offset_delta, 
+                                      <$1 x i32> %vecmask)
   %newDelta = load <$1 x i32> * %deltaPtr
 
   %ret0 = call <$1 x $2> @__gather_elt32_$2(i8 * %ptr, <$1 x i32> %newOffsets,
@@ -3175,14 +3169,14 @@ define <$1 x $2> @__gather_base_offsets64_$2(i8 * %ptr, <$1 x i64> %offsets, i32
   ; Set the offset to zero for lanes that are off
   %offsetsPtr = alloca <$1 x i64>
   store <$1 x i64> zeroinitializer, <$1 x i64> * %offsetsPtr
-  call void @__masked_store_blend_64(<$1 x i64> * %offsetsPtr, <$1 x i64> %offsets, 
-                                     <$1 x i32> %vecmask)
+  call void @__masked_store_blend_i64(<$1 x i64> * %offsetsPtr, <$1 x i64> %offsets, 
+                                      <$1 x i32> %vecmask)
   %newOffsets = load <$1 x i64> * %offsetsPtr
 
   %deltaPtr = alloca <$1 x i64>
   store <$1 x i64> zeroinitializer, <$1 x i64> * %deltaPtr
-  call void @__masked_store_blend_64(<$1 x i64> * %deltaPtr, <$1 x i64> %offset_delta, 
-                                     <$1 x i32> %vecmask)
+  call void @__masked_store_blend_i64(<$1 x i64> * %deltaPtr, <$1 x i64> %offset_delta, 
+                                      <$1 x i32> %vecmask)
   %newDelta = load <$1 x i64> * %deltaPtr
 
   %ret0 = call <$1 x $2> @__gather_elt64_$2(i8 * %ptr, <$1 x i64> %newOffsets,

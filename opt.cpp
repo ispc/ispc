@@ -1877,18 +1877,18 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("MaskedStoreOpt");
 
     MSInfo msInfo[] = {
-        MSInfo("__pseudo_masked_store_8",  1),
-        MSInfo("__pseudo_masked_store_16", 2),
-        MSInfo("__pseudo_masked_store_32", 4),
-        MSInfo("__pseudo_masked_store_64", 8),
-        MSInfo("__masked_store_blend_8",  1),
-        MSInfo("__masked_store_blend_16", 2),
-        MSInfo("__masked_store_blend_32", 4),
-        MSInfo("__masked_store_blend_64", 8),
-        MSInfo("__masked_store_8",  1),
-        MSInfo("__masked_store_16", 2),
-        MSInfo("__masked_store_32", 4),
-        MSInfo("__masked_store_64", 8)
+        MSInfo("__pseudo_masked_store_i8",  1),
+        MSInfo("__pseudo_masked_store_i16", 2),
+        MSInfo("__pseudo_masked_store_i32", 4),
+        MSInfo("__pseudo_masked_store_i64", 8),
+        MSInfo("__masked_store_blend_i8",  1),
+        MSInfo("__masked_store_blend_i16", 2),
+        MSInfo("__masked_store_blend_i32", 4),
+        MSInfo("__masked_store_blend_i64", 8),
+        MSInfo("__masked_store_i8",  1),
+        MSInfo("__masked_store_i16", 2),
+        MSInfo("__masked_store_i32", 4),
+        MSInfo("__masked_store_i64", 8),
     };
 
     bool modifiedAny = false;
@@ -1992,10 +1992,10 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("MaskedLoadOpt");
 
     MLInfo mlInfo[] = {
-        MLInfo("__masked_load_8",  1),
-        MLInfo("__masked_load_16", 2),
-        MLInfo("__masked_load_32", 4),
-        MLInfo("__masked_load_64", 8)
+        MLInfo("__masked_load_i8",  1),
+        MLInfo("__masked_load_i16", 2),
+        MLInfo("__masked_load_i32", 4),
+        MLInfo("__masked_load_i64", 8),
     };
 
     bool modifiedAny = false;
@@ -2141,14 +2141,14 @@ PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("PseudoMaskedStorePass");
 
     LMSInfo msInfo[] = {
-        LMSInfo("__pseudo_masked_store_8", "__masked_store_blend_8", 
-                "__masked_store_8"),
-        LMSInfo("__pseudo_masked_store_16", "__masked_store_blend_16", 
-                "__masked_store_16"),
-        LMSInfo("__pseudo_masked_store_32", "__masked_store_blend_32", 
-                "__masked_store_32"),
-        LMSInfo("__pseudo_masked_store_64", "__masked_store_blend_64", 
-                "__masked_store_64")
+        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", 
+                "__masked_store_i8"),
+        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", 
+                "__masked_store_i16"),
+        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", 
+                "__masked_store_i32"),
+        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", 
+                "__masked_store_i64"),
     };
 
     bool modifiedAny = false;
@@ -2282,38 +2282,38 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
     GatherImpInfo gInfo[] = {
         GatherImpInfo("__pseudo_gather_base_offsets32_8", "__load_and_broadcast_i8",
-                      "__masked_load_8", 1),
+                      "__masked_load_i8", 1),
         GatherImpInfo("__pseudo_gather_base_offsets32_16", "__load_and_broadcast_i16",
-                      "__masked_load_16", 2),
+                      "__masked_load_i16", 2),
         GatherImpInfo("__pseudo_gather_base_offsets32_32", "__load_and_broadcast_i32",
-                      "__masked_load_32", 4),
+                      "__masked_load_i32", 4),
         GatherImpInfo("__pseudo_gather_base_offsets32_64", "__load_and_broadcast_i64",
-                      "__masked_load_64", 8),
+                      "__masked_load_i64", 8),
         GatherImpInfo("__pseudo_gather_base_offsets64_8", "__load_and_broadcast_i8",
-                      "__masked_load_8", 1),
+                      "__masked_load_i8", 1),
         GatherImpInfo("__pseudo_gather_base_offsets64_16", "__load_and_broadcast_i16",
-                      "__masked_load_16", 2),
+                      "__masked_load_i16", 2),
         GatherImpInfo("__pseudo_gather_base_offsets64_32", "__load_and_broadcast_i32",
-                      "__masked_load_32", 4),
+                      "__masked_load_i32", 4),
         GatherImpInfo("__pseudo_gather_base_offsets64_64", "__load_and_broadcast_i64",
-                      "__masked_load_64", 8)
+                      "__masked_load_i64", 8)
     };
     ScatterImpInfo sInfo[] = {
-        ScatterImpInfo("__pseudo_scatter_base_offsets32_8",  "__pseudo_masked_store_8", 
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_8",  "__pseudo_masked_store_i8", 
                        LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo("__pseudo_scatter_base_offsets32_16", "__pseudo_masked_store_16",
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_16", "__pseudo_masked_store_i16",
                        LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo("__pseudo_scatter_base_offsets32_32", "__pseudo_masked_store_32",
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_32", "__pseudo_masked_store_i32",
                        LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo("__pseudo_scatter_base_offsets32_64", "__pseudo_masked_store_64",
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_64", "__pseudo_masked_store_i64",
                        LLVMTypes::Int64VectorPointerType, 8),
-        ScatterImpInfo("__pseudo_scatter_base_offsets64_8",  "__pseudo_masked_store_8", 
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_8",  "__pseudo_masked_store_i8", 
                        LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo("__pseudo_scatter_base_offsets64_16", "__pseudo_masked_store_16",
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_16", "__pseudo_masked_store_i16",
                        LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo("__pseudo_scatter_base_offsets64_32", "__pseudo_masked_store_32",
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_32", "__pseudo_masked_store_i32",
                        LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo("__pseudo_scatter_base_offsets64_64", "__pseudo_masked_store_64",
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_64", "__pseudo_masked_store_i64",
                        LLVMTypes::Int64VectorPointerType, 8)
     };
 
@@ -3815,14 +3815,14 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__gather_elt32_i32", "__gather_elt32_i64", 
         "__gather_elt64_i8", "__gather_elt64_i16", 
         "__gather_elt64_i32", "__gather_elt64_i64", 
-        "__masked_load_8", "__masked_load_16",
-        "__masked_load_32", "__masked_load_64",
-        "__masked_store_8", "__masked_store_16",
-        "__masked_store_32", "__masked_store_64",
-        "__masked_store_blend_8", "__masked_store_blend_16",
-        "__masked_store_blend_32", "__masked_store_blend_64",
         "__load_and_broadcast_i8", "__load_and_broadcast_i16",
         "__load_and_broadcast_i32", "__load_and_broadcast_i64",
+        "__masked_load_i8", "__masked_load_i16",
+        "__masked_load_i32", "__masked_load_i64",
+        "__masked_store_i8", "__masked_store_i16",
+        "__masked_store_i32", "__masked_store_i64",
+        "__masked_store_blend_i8", "__masked_store_blend_i16",
+        "__masked_store_blend_i32", "__masked_store_blend_i64",
         "__scatter_base_offsets32_i8", "__scatter_base_offsets32_i16",
         "__scatter_base_offsets32_i32", "__scatter_base_offsets32_i64",
         "__scatter_base_offsets64_i8", "__scatter_base_offsets64_i16",

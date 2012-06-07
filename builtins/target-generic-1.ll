@@ -13,10 +13,10 @@ aossoa()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(1, i8, 8)
-gen_masked_store(1, i16, 16)
-gen_masked_store(1, i32, 32)
-gen_masked_store(1, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
@@ -26,10 +26,10 @@ load_and_broadcast(i16)
 load_and_broadcast(i32)
 load_and_broadcast(i64)
 
-masked_load(1, i8,  8,  1)
-masked_load(1, i16, 16, 2)
-masked_load(1, i32, 32, 4)
-masked_load(1, i64, 64, 8)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(i64, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -155,23 +155,23 @@ define  <1 x float> @__vselect_float(<1 x float>, <1 x float>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-define void @__masked_store_blend_8(<1 x i8>* nocapture, <1 x i8>, 
+define void @__masked_store_blend_i8(<1 x i8>* nocapture, <1 x i8>,
                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i8> * %0, align 4
   %newval = call <1 x i8> @__vselect_i8(<1 x i8> %val, <1 x i8> %1, <1 x i32> %mask) 
   store <1 x i8> %newval, <1 x i8> * %0, align 4
   ret void
 }
-define void @__masked_store_blend_16(<1 x i16>* nocapture, <1 x i16>, 
-                                     <1 x i32> %mask) nounwind alwaysinline {
+
+define void @__masked_store_blend_i16(<1 x i16>* nocapture, <1 x i16>, 
+                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i16> * %0, align 4
   %newval = call <1 x i16> @__vselect_i16(<1 x i16> %val, <1 x i16> %1, <1 x i32> %mask) 
   store <1 x i16> %newval, <1 x i16> * %0, align 4
   ret void
 }
 
-
-define void @__masked_store_blend_32(<1 x i32>* nocapture, <1 x i32>, 
+define void @__masked_store_blend_i32(<1 x i32>* nocapture, <1 x i32>, 
                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i32> * %0, align 4
   %newval = call <1 x i32> @__vselect_i32(<1 x i32> %val, <1 x i32> %1, <1 x i32> %mask) 
@@ -179,8 +179,8 @@ define void @__masked_store_blend_32(<1 x i32>* nocapture, <1 x i32>,
   ret void
 }
 
-define void @__masked_store_blend_64(<1 x i64>* nocapture, <1 x i64>,
-                                     <1 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<1 x i64>* nocapture, <1 x i64>,
+                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i64> * %0, align 4
   %newval = call <1 x i64> @__vselect_i64(<1 x i64> %val, <1 x i64> %1, <1 x i32> %mask) 
   store <1 x i64> %newval, <1 x i64> * %0, align 4
