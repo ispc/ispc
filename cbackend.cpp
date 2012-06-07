@@ -16,6 +16,8 @@
 
 #ifndef _MSC_VER
 #include <inttypes.h>
+#define HAVE_PRINTF_A  1
+#define ENABLE_CBE_PRINTF_A 1
 #endif
 
 #ifndef PRIx64
