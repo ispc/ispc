@@ -24,12 +24,16 @@ gen_masked_store(i64)
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
+load_and_broadcast(float)
 load_and_broadcast(i64)
+load_and_broadcast(double)
 
 masked_load(i8,  1)
 masked_load(i16, 2)
 masked_load(i32, 4)
+masked_load(float, 4)
 masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -39,12 +43,16 @@ masked_load(i64, 8)
 gen_gather(i8)
 gen_gather(i16)
 gen_gather(i32)
+gen_gather(float)
 gen_gather(i64)
+gen_gather(double)
 
 gen_scatter(i8)
 gen_scatter(i16)
 gen_scatter(i32)
+gen_scatter(float)
 gen_scatter(i64)
+gen_scatter(double)
 
 
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
@@ -186,6 +194,8 @@ define void @__masked_store_blend_i64(<1 x i64>* nocapture, <1 x i64>,
   store <1 x i64> %newval, <1 x i64> * %0, align 4
   ret void
 }
+
+masked_store_float_double()
 
 define  i64 @__movmsk(<1 x i32>) nounwind readnone alwaysinline {
   %item = extractelement <1 x i32> %0, i32 0
@@ -933,4 +943,3 @@ declare float @__half_to_float_uniform(i16 %v) nounwind readnone
 declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
 declare i16 @__float_to_half_uniform(float %v) nounwind readnone
 declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
-

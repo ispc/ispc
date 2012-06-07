@@ -2518,12 +2518,16 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     if (pt != NULL)
         funcName = g->target.is32Bit ? "__pseudo_gather32_i32" : 
             "__pseudo_gather64_i64";
-    else if (llvmReturnType == LLVMTypes::DoubleVectorType || 
-             llvmReturnType == LLVMTypes::Int64VectorType)
+    else if (llvmReturnType == LLVMTypes::DoubleVectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_double" :
+            "__pseudo_gather64_double";
+    else if (llvmReturnType == LLVMTypes::Int64VectorType)
         funcName = g->target.is32Bit ? "__pseudo_gather32_i64" : 
             "__pseudo_gather64_i64";
-    else if (llvmReturnType == LLVMTypes::FloatVectorType || 
-             llvmReturnType == LLVMTypes::Int32VectorType)
+    else if (llvmReturnType == LLVMTypes::FloatVectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_float" : 
+            "__pseudo_gather64_float";
+    else if (llvmReturnType == LLVMTypes::Int32VectorType)
         funcName = g->target.is32Bit ? "__pseudo_gather32_i32" : 
             "__pseudo_gather64_i32";
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
@@ -2538,15 +2542,15 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, gatherFunc != NULL);
 
-    llvm::Value *call = CallInst(gatherFunc, NULL, ptr, mask, name);
+    llvm::Value *gatherCall = CallInst(gatherFunc, NULL, ptr, mask, name);
 
     // Add metadata about the source file location so that the
     // optimization passes can print useful performance warnings if we
     // can't optimize out this gather
     if (disableGSWarningCount == 0)
-        addGSMetadata(call, currentPos);
+        addGSMetadata(gatherCall, currentPos);
 
-    return BitCastInst(call, llvmReturnType, LLVMGetName(call, "_gather_bitcast"));
+    return gatherCall;
 }
 
 
@@ -2709,25 +2713,20 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         StoreInst(final, ptr);
         return;
     }
-    else if (Type::Equal(valueType, AtomicType::VaryingDouble) || 
-             Type::Equal(valueType, AtomicType::VaryingInt64) ||
+    else if (Type::Equal(valueType, AtomicType::VaryingDouble)) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
+    }
+    else if (Type::Equal(valueType, AtomicType::VaryingInt64) ||
              Type::Equal(valueType, AtomicType::VaryingUInt64)) {
-        ptr = BitCastInst(ptr, LLVMTypes::Int64VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int64vecptr"));
-        value = BitCastInst(value, LLVMTypes::Int64VectorType, 
-                            LLVMGetName(value, "_to_int64"));
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     }
-    else if (Type::Equal(valueType, AtomicType::VaryingFloat) ||
-             Type::Equal(valueType, AtomicType::VaryingBool) ||
+    else if (Type::Equal(valueType, AtomicType::VaryingFloat)) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
+    }
+    else if (Type::Equal(valueType, AtomicType::VaryingBool) ||
              Type::Equal(valueType, AtomicType::VaryingInt32) ||
              Type::Equal(valueType, AtomicType::VaryingUInt32) ||
              CastType<EnumType>(valueType) != NULL) {
-        ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int32vecptr"));
-        if (Type::Equal(valueType, AtomicType::VaryingFloat))
-            value = BitCastInst(value, LLVMTypes::Int32VectorType, 
-                                LLVMGetName(value, "_to_int32"));
         maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingInt16) ||
@@ -2827,27 +2826,34 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
 
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
-    if (pt != NULL)
+    if (pt != NULL) {
         funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
             "__pseudo_scatter64_i64";
-    else if (type == LLVMTypes::DoubleVectorType || 
-             type == LLVMTypes::Int64VectorType) {
+    }
+    else if (type == LLVMTypes::DoubleVectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_double" :
+            "__pseudo_scatter64_double";
+    }
+    else if (type == LLVMTypes::Int64VectorType) {
         funcName = g->target.is32Bit ? "__pseudo_scatter32_i64" :
             "__pseudo_scatter64_i64";
-        value = BitCastInst(value, LLVMTypes::Int64VectorType, "value2int");
     }
-    else if (type == LLVMTypes::FloatVectorType || 
-             type == LLVMTypes::Int32VectorType) {
+    else if (type == LLVMTypes::FloatVectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_float" :
+            "__pseudo_scatter64_float";
+    }
+    else if (type == LLVMTypes::Int32VectorType) {
         funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
             "__pseudo_scatter64_i32";
-        value = BitCastInst(value, LLVMTypes::Int32VectorType, "value2int");
     }
-    else if (type == LLVMTypes::Int16VectorType)
+    else if (type == LLVMTypes::Int16VectorType) {
         funcName = g->target.is32Bit ? "__pseudo_scatter32_i16" :
             "__pseudo_scatter64_i16";
-    else if (type == LLVMTypes::Int8VectorType)
+    }
+    else if (type == LLVMTypes::Int8VectorType) {
         funcName = g->target.is32Bit ? "__pseudo_scatter32_i8" :
             "__pseudo_scatter64_i8";
+    }
 
     llvm::Function *scatterFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, scatterFunc != NULL);

@@ -356,7 +356,9 @@ define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
+load_and_broadcast(float)
 load_and_broadcast(i64)
+load_and_broadcast(double)
 
 ; no masked load instruction for i8 and i16 types??
 masked_load(i8,  1)
@@ -417,6 +419,7 @@ define <16 x i64> @__masked_load_i64(i8 *, <16 x i32> %mask) nounwind alwaysinli
   ret <16 x i64> %val
 }
 
+masked_load_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
@@ -493,6 +496,7 @@ define void @__masked_store_i64(<16 x i64>* nocapture, <16 x i64>,
   ret void
 }
 
+masked_store_float_double()
 
 masked_store_blend_8_16_by_16()
 
@@ -601,7 +605,9 @@ define void @__masked_store_blend_i64(<16 x i64>* nocapture %ptr, <16 x i64> %ne
 gen_scatter(i8)
 gen_scatter(i16)
 gen_scatter(i32)
+gen_scatter(float)
 gen_scatter(i64)
+gen_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt

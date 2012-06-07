@@ -1695,8 +1695,12 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                "__pseudo_gather_base_offsets32_i16", true),
         GSInfo("__pseudo_gather32_i32", "__pseudo_gather_base_offsets32_i32", 
                "__pseudo_gather_base_offsets32_i32", true),
+        GSInfo("__pseudo_gather32_float", "__pseudo_gather_base_offsets32_float", 
+               "__pseudo_gather_base_offsets32_float", true),
         GSInfo("__pseudo_gather32_i64", "__pseudo_gather_base_offsets32_i64", 
                "__pseudo_gather_base_offsets32_i64", true),
+        GSInfo("__pseudo_gather32_double", "__pseudo_gather_base_offsets32_double", 
+               "__pseudo_gather_base_offsets32_double", true),
 
         GSInfo("__pseudo_scatter32_i8",  "__pseudo_scatter_base_offsets32_i8", 
                "__pseudo_scatter_base_offsets32_i8", false),
@@ -1704,8 +1708,12 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                "__pseudo_scatter_base_offsets32_i16", false),
         GSInfo("__pseudo_scatter32_i32", "__pseudo_scatter_base_offsets32_i32", 
                "__pseudo_scatter_base_offsets32_i32", false),
+        GSInfo("__pseudo_scatter32_float", "__pseudo_scatter_base_offsets32_float", 
+               "__pseudo_scatter_base_offsets32_float", false),
         GSInfo("__pseudo_scatter32_i64", "__pseudo_scatter_base_offsets32_i64", 
                "__pseudo_scatter_base_offsets32_i64", false),
+        GSInfo("__pseudo_scatter32_double", "__pseudo_scatter_base_offsets32_double", 
+               "__pseudo_scatter_base_offsets32_double", false),
 
         GSInfo("__pseudo_gather64_i8",  "__pseudo_gather_base_offsets64_i8", 
                "__pseudo_gather_base_offsets32_i8", true),
@@ -1713,8 +1721,12 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                "__pseudo_gather_base_offsets32_i16", true),
         GSInfo("__pseudo_gather64_i32", "__pseudo_gather_base_offsets64_i32", 
                "__pseudo_gather_base_offsets32_i32", true),
+        GSInfo("__pseudo_gather64_float", "__pseudo_gather_base_offsets64_float", 
+               "__pseudo_gather_base_offsets32_float", true),
         GSInfo("__pseudo_gather64_i64", "__pseudo_gather_base_offsets64_i64", 
                "__pseudo_gather_base_offsets32_i64", true),
+        GSInfo("__pseudo_gather64_double", "__pseudo_gather_base_offsets64_double", 
+               "__pseudo_gather_base_offsets32_double", true),
 
         GSInfo("__pseudo_scatter64_i8",  "__pseudo_scatter_base_offsets64_i8", 
                "__pseudo_scatter_base_offsets32_i8", false),
@@ -1722,8 +1734,12 @@ DetectGSBaseOffsetsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                "__pseudo_scatter_base_offsets32_i16", false),
         GSInfo("__pseudo_scatter64_i32", "__pseudo_scatter_base_offsets64_i32", 
                "__pseudo_scatter_base_offsets32_i32", false),
+        GSInfo("__pseudo_scatter64_float", "__pseudo_scatter_base_offsets64_float", 
+               "__pseudo_scatter_base_offsets32_float", false),
         GSInfo("__pseudo_scatter64_i64", "__pseudo_scatter_base_offsets64_i64", 
                "__pseudo_scatter_base_offsets32_i64", false),
+        GSInfo("__pseudo_scatter64_double", "__pseudo_scatter_base_offsets64_double", 
+               "__pseudo_scatter_base_offsets32_double", false),
     };
     int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
     for (int i = 0; i < numGSFuncs; ++i)
@@ -1883,15 +1899,21 @@ MaskedStoreOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         MSInfo("__pseudo_masked_store_i8",  1),
         MSInfo("__pseudo_masked_store_i16", 2),
         MSInfo("__pseudo_masked_store_i32", 4),
+        MSInfo("__pseudo_masked_store_float", 4),
         MSInfo("__pseudo_masked_store_i64", 8),
+        MSInfo("__pseudo_masked_store_double", 8),
         MSInfo("__masked_store_blend_i8",  1),
         MSInfo("__masked_store_blend_i16", 2),
         MSInfo("__masked_store_blend_i32", 4),
+        MSInfo("__masked_store_blend_float", 4),
         MSInfo("__masked_store_blend_i64", 8),
+        MSInfo("__masked_store_blend_double", 8),
         MSInfo("__masked_store_i8",  1),
         MSInfo("__masked_store_i16", 2),
         MSInfo("__masked_store_i32", 4),
+        MSInfo("__masked_store_float", 4),
         MSInfo("__masked_store_i64", 8),
+        MSInfo("__masked_store_double", 8)
     };
 
     bool modifiedAny = false;
@@ -1998,7 +2020,9 @@ MaskedLoadOptPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         MLInfo("__masked_load_i8",  1),
         MLInfo("__masked_load_i16", 2),
         MLInfo("__masked_load_i32", 4),
+        MLInfo("__masked_load_float", 4),
         MLInfo("__masked_load_i64", 8),
+        MLInfo("__masked_load_double", 8)
     };
 
     bool modifiedAny = false;
@@ -2150,8 +2174,12 @@ PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 "__masked_store_i16"),
         LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", 
                 "__masked_store_i32"),
+        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", 
+                "__masked_store_float"),
         LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", 
                 "__masked_store_i64"),
+        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", 
+                "__masked_store_double")
     };
 
     bool modifiedAny = false;
@@ -2290,16 +2318,24 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                       "__masked_load_i16", 2),
         GatherImpInfo("__pseudo_gather_base_offsets32_i32", "__load_and_broadcast_i32",
                       "__masked_load_i32", 4),
+        GatherImpInfo("__pseudo_gather_base_offsets32_float", "__load_and_broadcast_float",
+                      "__masked_load_float", 4),
         GatherImpInfo("__pseudo_gather_base_offsets32_i64", "__load_and_broadcast_i64",
                       "__masked_load_i64", 8),
+        GatherImpInfo("__pseudo_gather_base_offsets32_double", "__load_and_broadcast_double",
+                      "__masked_load_double", 8),
         GatherImpInfo("__pseudo_gather_base_offsets64_i8", "__load_and_broadcast_i8",
                       "__masked_load_i8", 1),
         GatherImpInfo("__pseudo_gather_base_offsets64_i16", "__load_and_broadcast_i16",
                       "__masked_load_i16", 2),
         GatherImpInfo("__pseudo_gather_base_offsets64_i32", "__load_and_broadcast_i32",
                       "__masked_load_i32", 4),
+        GatherImpInfo("__pseudo_gather_base_offsets64_float", "__load_and_broadcast_float",
+                      "__masked_load_float", 4),
         GatherImpInfo("__pseudo_gather_base_offsets64_i64", "__load_and_broadcast_i64",
                       "__masked_load_i64", 8),
+        GatherImpInfo("__pseudo_gather_base_offsets64_double", "__load_and_broadcast_double",
+                      "__masked_load_double", 8)
     };
     ScatterImpInfo sInfo[] = {
         ScatterImpInfo("__pseudo_scatter_base_offsets32_i8",  "__pseudo_masked_store_i8", 
@@ -2308,16 +2344,24 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
                        LLVMTypes::Int16VectorPointerType, 2),
         ScatterImpInfo("__pseudo_scatter_base_offsets32_i32", "__pseudo_masked_store_i32",
                        LLVMTypes::Int32VectorPointerType, 4),
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_float", "__pseudo_masked_store_float",
+                       LLVMTypes::FloatVectorPointerType, 4),
         ScatterImpInfo("__pseudo_scatter_base_offsets32_i64", "__pseudo_masked_store_i64",
                        LLVMTypes::Int64VectorPointerType, 8),
+        ScatterImpInfo("__pseudo_scatter_base_offsets32_double", "__pseudo_masked_store_double",
+                       LLVMTypes::DoubleVectorPointerType, 8),
         ScatterImpInfo("__pseudo_scatter_base_offsets64_i8",  "__pseudo_masked_store_i8", 
                        LLVMTypes::Int8VectorPointerType, 1),
         ScatterImpInfo("__pseudo_scatter_base_offsets64_i16", "__pseudo_masked_store_i16",
                        LLVMTypes::Int16VectorPointerType, 2),
         ScatterImpInfo("__pseudo_scatter_base_offsets64_i32", "__pseudo_masked_store_i32",
                        LLVMTypes::Int32VectorPointerType, 4),
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_float", "__pseudo_masked_store_float",
+                       LLVMTypes::FloatVectorPointerType, 4),
         ScatterImpInfo("__pseudo_scatter_base_offsets64_i64", "__pseudo_masked_store_i64",
                        LLVMTypes::Int64VectorPointerType, 8),
+        ScatterImpInfo("__pseudo_scatter_base_offsets64_double", "__pseudo_masked_store_double",
+                       LLVMTypes::DoubleVectorPointerType, 8)
     };
 
     bool modifiedAny = false;
@@ -3297,9 +3341,11 @@ lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
     llvm::Value *basePtr = lComputeBasePtr(coalesceGroup[0], insertBefore);
 
     int elementSize = 0;
-    if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType)
+    if (coalesceGroup[0]->getType() == LLVMTypes::Int32VectorType ||
+        coalesceGroup[0]->getType() == LLVMTypes::FloatVectorType)
         elementSize = 4;
-    else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType)
+    else if (coalesceGroup[0]->getType() == LLVMTypes::Int64VectorType ||
+             coalesceGroup[0]->getType() == LLVMTypes::DoubleVectorType)
         elementSize = 8;
     else
         FATAL("Unexpected gather type in lCoalesceGathers");
@@ -3336,14 +3382,20 @@ lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
     // that gives the value from the coalescing process.
     Assert(results.size() == coalesceGroup.size());
     for (int i = 0; i < (int)results.size(); ++i) {
+        llvm::Instruction *ir = llvm::dyn_cast<llvm::Instruction>(results[i]);
+        Assert(ir != NULL);
+
+        llvm::Type *origType = coalesceGroup[i]->getType();
+        if (origType != ir->getType())
+            ir = new llvm::BitCastInst(ir, origType, ir->getName(), 
+                                       coalesceGroup[i]);
+
         // Previously, all of the instructions to compute the final result
         // were into the basic block here; here we remove the very last one
         // of them (that holds the final result) from the basic block.
         // This way, the following ReplaceInstWithInst() call will operate
         // successfully. (It expects that the second argument not be in any
         // basic block.)
-        llvm::Instruction *ir = llvm::dyn_cast<llvm::Instruction>(results[i]);
-        Assert(ir != NULL);
         ir->removeFromParent();
 
         llvm::ReplaceInstWithInst(coalesceGroup[i], ir);
@@ -3391,7 +3443,9 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
     llvm::Function *gatherFuncs[] = {
         m->module->getFunction("__pseudo_gather_base_offsets32_i32"),
+        m->module->getFunction("__pseudo_gather_base_offsets32_float"),
         m->module->getFunction("__pseudo_gather_base_offsets64_i32"),
+        m->module->getFunction("__pseudo_gather_base_offsets64_float"),
     };
     int nGatherFuncs = sizeof(gatherFuncs) / sizeof(gatherFuncs[0]);
 
@@ -3401,7 +3455,7 @@ GatherCoalescePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e;
          ++iter) {
         // Iterate over all of the instructions and look for calls to
-        // __pseudo_*_base_offsets*_32 calls.
+        // __pseudo_gather_base_offsets{32,64}_{i32,float} calls.
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
         if (callInst == NULL)
             continue;
@@ -3576,42 +3630,58 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         LowerGSInfo("__pseudo_gather_base_offsets32_i8",  "__gather_base_offsets32_i8",  true),
         LowerGSInfo("__pseudo_gather_base_offsets32_i16", "__gather_base_offsets32_i16", true),
         LowerGSInfo("__pseudo_gather_base_offsets32_i32", "__gather_base_offsets32_i32", true),
+        LowerGSInfo("__pseudo_gather_base_offsets32_float", "__gather_base_offsets32_float", true),
         LowerGSInfo("__pseudo_gather_base_offsets32_i64", "__gather_base_offsets32_i64", true),
+        LowerGSInfo("__pseudo_gather_base_offsets32_double", "__gather_base_offsets32_double", true),
 
         LowerGSInfo("__pseudo_gather_base_offsets64_i8",  "__gather_base_offsets64_i8",  true),
         LowerGSInfo("__pseudo_gather_base_offsets64_i16", "__gather_base_offsets64_i16", true),
         LowerGSInfo("__pseudo_gather_base_offsets64_i32", "__gather_base_offsets64_i32", true),
+        LowerGSInfo("__pseudo_gather_base_offsets64_float", "__gather_base_offsets64_float", true),
         LowerGSInfo("__pseudo_gather_base_offsets64_i64", "__gather_base_offsets64_i64", true),
+        LowerGSInfo("__pseudo_gather_base_offsets64_double", "__gather_base_offsets64_double", true),
 
         LowerGSInfo("__pseudo_gather32_i8",  "__gather32_i8",  true),
         LowerGSInfo("__pseudo_gather32_i16", "__gather32_i16", true),
         LowerGSInfo("__pseudo_gather32_i32", "__gather32_i32", true),
+        LowerGSInfo("__pseudo_gather32_float", "__gather32_float", true),
         LowerGSInfo("__pseudo_gather32_i64", "__gather32_i64", true),
+        LowerGSInfo("__pseudo_gather32_double", "__gather32_double", true),
 
         LowerGSInfo("__pseudo_gather64_i8",  "__gather64_i8",  true),
         LowerGSInfo("__pseudo_gather64_i16", "__gather64_i16", true),
         LowerGSInfo("__pseudo_gather64_i32", "__gather64_i32", true),
+        LowerGSInfo("__pseudo_gather64_float", "__gather64_float", true),
         LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true),
+        LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true),
 
         LowerGSInfo("__pseudo_scatter_base_offsets32_i8",  "__scatter_base_offsets32_i8",  false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i16", "__scatter_base_offsets32_i16", false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i32", "__scatter_base_offsets32_i32", false),
+        LowerGSInfo("__pseudo_scatter_base_offsets32_float", "__scatter_base_offsets32_float", false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_i64", "__scatter_base_offsets32_i64", false),
+        LowerGSInfo("__pseudo_scatter_base_offsets32_double", "__scatter_base_offsets32_double", false),
 
         LowerGSInfo("__pseudo_scatter_base_offsets64_i8",  "__scatter_base_offsets64_i8",  false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i16", "__scatter_base_offsets64_i16", false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i32", "__scatter_base_offsets64_i32", false),
+        LowerGSInfo("__pseudo_scatter_base_offsets64_float", "__scatter_base_offsets64_float", false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_i64", "__scatter_base_offsets64_i64", false),
+        LowerGSInfo("__pseudo_scatter_base_offsets64_double", "__scatter_base_offsets64_double", false),
 
         LowerGSInfo("__pseudo_scatter32_i8",  "__scatter32_i8",  false),
         LowerGSInfo("__pseudo_scatter32_i16", "__scatter32_i16", false),
         LowerGSInfo("__pseudo_scatter32_i32", "__scatter32_i32", false),
+        LowerGSInfo("__pseudo_scatter32_float", "__scatter32_float", false),
         LowerGSInfo("__pseudo_scatter32_i64", "__scatter32_i64", false),
+        LowerGSInfo("__pseudo_scatter32_double", "__scatter32_double", false),
 
         LowerGSInfo("__pseudo_scatter64_i8",  "__scatter64_i8",  false),
         LowerGSInfo("__pseudo_scatter64_i16", "__scatter64_i16", false),
         LowerGSInfo("__pseudo_scatter64_i32", "__scatter64_i32", false),
+        LowerGSInfo("__pseudo_scatter64_float", "__scatter64_float", false),
         LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false),
+        LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false),
     };
 
     bool modifiedAny = false;
@@ -3808,36 +3878,52 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__fast_masked_vload", 
         "__gather_base_offsets32_i8", "__gather_base_offsets32_i16",
         "__gather_base_offsets32_i32", "__gather_base_offsets32_i64",
+        "__gather_base_offsets32_float", "__gather_base_offsets32_double",
         "__gather_base_offsets64_i8", "__gather_base_offsets64_i16",
         "__gather_base_offsets64_i32", "__gather_base_offsets64_i64",
+        "__gather_base_offsets64_float", "__gather_base_offsets64_double",
         "__gather32_i8", "__gather32_i16",
         "__gather32_i32", "__gather32_i64",
+        "__gather32_float", "__gather32_double",
         "__gather64_i8", "__gather64_i16",
         "__gather64_i32", "__gather64_i64",
+        "__gather64_float", "__gather64_double",
         "__gather_elt32_i8", "__gather_elt32_i16", 
         "__gather_elt32_i32", "__gather_elt32_i64", 
+        "__gather_elt32_float", "__gather_elt32_double", 
         "__gather_elt64_i8", "__gather_elt64_i16", 
         "__gather_elt64_i32", "__gather_elt64_i64", 
+        "__gather_elt64_float", "__gather_elt64_double", 
         "__load_and_broadcast_i8", "__load_and_broadcast_i16",
         "__load_and_broadcast_i32", "__load_and_broadcast_i64",
+        "__load_and_broadcast_float", "__load_and_broadcast_double",
         "__masked_load_i8", "__masked_load_i16",
         "__masked_load_i32", "__masked_load_i64",
+        "__masked_load_float", "__masked_load_double",
         "__masked_store_i8", "__masked_store_i16",
         "__masked_store_i32", "__masked_store_i64",
+        "__masked_store_float", "__masked_store_double",
         "__masked_store_blend_i8", "__masked_store_blend_i16",
         "__masked_store_blend_i32", "__masked_store_blend_i64",
+        "__masked_store_blend_float", "__masked_store_blend_double",
         "__scatter_base_offsets32_i8", "__scatter_base_offsets32_i16",
         "__scatter_base_offsets32_i32", "__scatter_base_offsets32_i64",
+        "__scatter_base_offsets32_float", "__scatter_base_offsets32_double",
         "__scatter_base_offsets64_i8", "__scatter_base_offsets64_i16",
         "__scatter_base_offsets64_i32", "__scatter_base_offsets64_i64",
+        "__scatter_base_offsets64_float", "__scatter_base_offsets64_double",
         "__scatter_elt32_i8", "__scatter_elt32_i16", 
         "__scatter_elt32_i32", "__scatter_elt32_i64", 
+        "__scatter_elt32_float", "__scatter_elt32_double", 
         "__scatter_elt64_i8", "__scatter_elt64_i16", 
         "__scatter_elt64_i32", "__scatter_elt64_i64", 
+        "__scatter_elt64_float", "__scatter_elt64_double", 
         "__scatter32_i8", "__scatter32_i16",
         "__scatter32_i32", "__scatter32_i64",
+        "__scatter32_float", "__scatter32_double",
         "__scatter64_i8", "__scatter64_i16",
         "__scatter64_i32", "__scatter64_i64",
+        "__scatter64_float", "__scatter64_double",
         "__keep_funcs_live",
     };
 

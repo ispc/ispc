@@ -401,6 +401,8 @@ define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
 }
 
 
+masked_store_float_double()
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
@@ -563,12 +565,16 @@ gen_masked_store(i64)
 load_and_broadcast(i8)
 load_and_broadcast(i16)
 load_and_broadcast(i32)
+load_and_broadcast(float)
 load_and_broadcast(i64)
+load_and_broadcast(double)
 
 masked_load(i8,  1)
 masked_load(i16, 2)
 masked_load(i32, 4)
+masked_load(float, 4)
 masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
@@ -578,9 +584,13 @@ masked_load(i64, 8)
 gen_gather(i8)
 gen_gather(i16)
 gen_gather(i32)
+gen_gather(float)
 gen_gather(i64)
+gen_gather(double)
 
 gen_scatter(i8)
 gen_scatter(i16)
 gen_scatter(i32)
+gen_scatter(float)
 gen_scatter(i64)
+gen_scatter(double)

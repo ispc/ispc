@@ -1533,6 +1533,63 @@ define void
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+define(`masked_load_float_double', `
+define <WIDTH x float> @__masked_load_float(i8 * %ptr,
+                                             <WIDTH x MASK> %mask) readonly alwaysinline {
+  %v32 = call <WIDTH x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask)
+  %vf = bitcast <WIDTH x i32> %v32 to <WIDTH x float>
+  ret <WIDTH x float> %vf
+}
+
+define <WIDTH x double> @__masked_load_double(i8 * %ptr,
+                                             <WIDTH x MASK> %mask) readonly alwaysinline {
+  %v64 = call <WIDTH x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask)
+  %vd = bitcast <WIDTH x i64> %v64 to <WIDTH x double>
+  ret <WIDTH x double> %vd
+}
+
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+define(`masked_store_float_double', `
+define void @__masked_store_float(<WIDTH x float> * nocapture, <WIDTH x float>,
+                                  <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
+  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
+  call void @__masked_store_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
+  ret void
+}
+
+
+define void @__masked_store_double(<WIDTH x double> * nocapture, <WIDTH x double>,
+                                   <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
+  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
+  call void @__masked_store_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
+  ret void
+}
+
+define void @__masked_store_blend_float(<WIDTH x float> * nocapture, <WIDTH x float>,
+                                        <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x float> * %0 to <WIDTH x i32> *
+  %val = bitcast <WIDTH x float> %1 to <WIDTH x i32>
+  call void @__masked_store_blend_i32(<WIDTH x i32> * %ptr, <WIDTH x i32> %val, <WIDTH x MASK> %2)
+  ret void
+}
+
+
+define void @__masked_store_blend_double(<WIDTH x double> * nocapture, <WIDTH x double>,
+                                         <WIDTH x MASK>) nounwind alwaysinline {
+  %ptr = bitcast <WIDTH x double> * %0 to <WIDTH x i64> *
+  %val = bitcast <WIDTH x double> %1 to <WIDTH x i64>
+  call void @__masked_store_blend_i64(<WIDTH x i64> * %ptr, <WIDTH x i64> %val, <WIDTH x MASK> %2)
+  ret void
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 define(`stdlib_core', `
 
@@ -1552,7 +1609,9 @@ declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 ;  void __pseudo_masked_store_i8 (uniform int8 *ptr, varying int8 values, mask)
 ;  void __pseudo_masked_store_i16(uniform int16 *ptr, varying int16 values, mask)
 ;  void __pseudo_masked_store_i32(uniform int32 *ptr, varying int32 values, mask)
+;  void __pseudo_masked_store_float(uniform float *ptr, varying float values, mask)
 ;  void __pseudo_masked_store_i64(uniform int64 *ptr, varying int64 values, mask)
+;  void __pseudo_masked_store_double(uniform double *ptr, varying double values, mask)
 ;
 ;  These in turn are converted to native masked stores or to regular
 ;  stores (if the mask is all on) by the MaskedStoreOptPass optimization
@@ -1561,7 +1620,9 @@ declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 declare void @__pseudo_masked_store_i8(<WIDTH x i8> * nocapture, <WIDTH x i8>, <WIDTH x MASK>)
 declare void @__pseudo_masked_store_i16(<WIDTH x i16> * nocapture, <WIDTH x i16>, <WIDTH x MASK>)
 declare void @__pseudo_masked_store_i32(<WIDTH x i32> * nocapture, <WIDTH x i32>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_float(<WIDTH x float> * nocapture, <WIDTH x float>, <WIDTH x MASK>)
 declare void @__pseudo_masked_store_i64(<WIDTH x i64> * nocapture, <WIDTH x i64>, <WIDTH x MASK>)
+declare void @__pseudo_masked_store_double(<WIDTH x double> * nocapture, <WIDTH x double>, <WIDTH x MASK>)
 
 ; Declare the pseudo-gather functions.  When the ispc front-end needs
 ; to perform a gather, it generates a call to one of these functions,
@@ -1570,7 +1631,9 @@ declare void @__pseudo_masked_store_i64(<WIDTH x i64> * nocapture, <WIDTH x i64>
 ; varying int8  __pseudo_gather_i8(varying int8 *, mask)
 ; varying int16 __pseudo_gather_i16(varying int16 *, mask)
 ; varying int32 __pseudo_gather_i32(varying int32 *, mask)
+; varying float __pseudo_gather_float(varying float *, mask)
 ; varying int64 __pseudo_gather_i64(varying int64 *, mask)
+; varying double __pseudo_gather_double(varying double *, mask)
 ;
 ; The GatherScatterFlattenOpt optimization pass finds these calls and then 
 ; converts them to make calls to the following functions (when appropriate); 
@@ -1582,8 +1645,8 @@ declare void @__pseudo_masked_store_i64(<WIDTH x i64> * nocapture, <WIDTH x i64>
 ; that use the free 2/4/8 scaling available in x86 addressing calculations, and
 ; offset_delta feeds into the free offset calculation. 
 ;
-; varying int{8,16,32,64}
-; __pseudo_gather_base_offsets{32,64}_{8,16,32,64}(uniform int8 *base,
+; varying int{8,16,32,float,64,double}
+; __pseudo_gather_base_offsets{32,64}_{i8,i16,i32,float,i64,double}(uniform int8 *base,
 ;                                    int{32,64} offsets, uniform int32 offset_scale, 
 ;                                    int{32,64} offset_delta, mask)
 ;
@@ -1594,12 +1657,16 @@ declare void @__pseudo_masked_store_i64(<WIDTH x i64> * nocapture, <WIDTH x i64>
 declare <WIDTH x i8>  @__pseudo_gather32_i8(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i16> @__pseudo_gather32_i16(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i32> @__pseudo_gather32_i32(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x float> @__pseudo_gather32_float(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i64> @__pseudo_gather32_i64(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x double> @__pseudo_gather32_double(<WIDTH x i32>, <WIDTH x MASK>) nounwind readonly
 
 declare <WIDTH x i8>  @__pseudo_gather64_i8(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i16> @__pseudo_gather64_i16(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i32> @__pseudo_gather64_i32(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x float> @__pseudo_gather64_float(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i64> @__pseudo_gather64_i64(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x double> @__pseudo_gather64_double(<WIDTH x i64>, <WIDTH x MASK>) nounwind readonly
 
 declare <WIDTH x i8>  @__pseudo_gather_base_offsets32_i8(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                         <WIDTH x MASK>) nounwind readonly
@@ -1607,7 +1674,11 @@ declare <WIDTH x i16> @__pseudo_gather_base_offsets32_i16(i8 *, <WIDTH x i32>, i
                                                          <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i32> @__pseudo_gather_base_offsets32_i32(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                           <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x float> @__pseudo_gather_base_offsets32_float(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
+                                                          <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i64> @__pseudo_gather_base_offsets32_i64(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
+                                                          <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x double> @__pseudo_gather_base_offsets32_double(i8 *, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                           <WIDTH x MASK>) nounwind readonly
 
 declare <WIDTH x i8>  @__pseudo_gather_base_offsets64_i8(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
@@ -1616,8 +1687,12 @@ declare <WIDTH x i16> @__pseudo_gather_base_offsets64_i16(i8 *, <WIDTH x i64>, i
                                                           <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i32> @__pseudo_gather_base_offsets64_i32(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                           <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x float> @__pseudo_gather_base_offsets64_float(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
+                                                          <WIDTH x MASK>) nounwind readonly
 declare <WIDTH x i64> @__pseudo_gather_base_offsets64_i64(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                           <WIDTH x MASK>) nounwind readonly
+declare <WIDTH x double> @__pseudo_gather_base_offsets64_double(i8 *, <WIDTH x i64>, i32, <WIDTH x i64>,
+                                                                <WIDTH x MASK>) nounwind readonly
 
 ; Similarly to the pseudo-gathers defined above, we also declare undefined
 ; pseudo-scatter instructions with signatures:
@@ -1625,7 +1700,9 @@ declare <WIDTH x i64> @__pseudo_gather_base_offsets64_i64(i8 *, <WIDTH x i64>, i
 ; void __pseudo_scatter_i8 (varying int8 *, varying int8 values, mask)
 ; void __pseudo_scatter_i16(varying int16 *, varying int16 values, mask)
 ; void __pseudo_scatter_i32(varying int32 *, varying int32 values, mask)
+; void __pseudo_scatter_float(varying float *, varying float values, mask)
 ; void __pseudo_scatter_i64(varying int64 *, varying int64 values, mask)
+; void __pseudo_scatter_double(varying double *, varying double values, mask)
 ;
 ; The GatherScatterFlattenOpt optimization pass also finds these and
 ; transforms them to scatters like:
@@ -1641,12 +1718,16 @@ declare <WIDTH x i64> @__pseudo_gather_base_offsets64_i64(i8 *, <WIDTH x i64>, i
 declare void @__pseudo_scatter32_i8(<WIDTH x i32>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter32_i16(<WIDTH x i32>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter32_i32(<WIDTH x i32>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter32_float(<WIDTH x i32>, <WIDTH x float>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter32_i64(<WIDTH x i32>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter32_double(<WIDTH x i32>, <WIDTH x double>, <WIDTH x MASK>) nounwind
 
 declare void @__pseudo_scatter64_i8(<WIDTH x i64>, <WIDTH x i8>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter64_i16(<WIDTH x i64>, <WIDTH x i16>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter64_i32(<WIDTH x i64>, <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter64_float(<WIDTH x i64>, <WIDTH x float>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter64_i64(<WIDTH x i64>, <WIDTH x i64>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter64_double(<WIDTH x i64>, <WIDTH x double>, <WIDTH x MASK>) nounwind
 
 declare void @__pseudo_scatter_base_offsets32_i8(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                  <WIDTH x i8>, <WIDTH x MASK>) nounwind
@@ -1654,8 +1735,12 @@ declare void @__pseudo_scatter_base_offsets32_i16(i8 * nocapture, <WIDTH x i32>,
                                                   <WIDTH x i16>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter_base_offsets32_i32(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                   <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets32_float(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
+                                                  <WIDTH x float>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter_base_offsets32_i64(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
                                                   <WIDTH x i64>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets32_double(i8 * nocapture, <WIDTH x i32>, i32, <WIDTH x i32>,
+                                                   <WIDTH x double>, <WIDTH x MASK>) nounwind
 
 declare void @__pseudo_scatter_base_offsets64_i8(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                  <WIDTH x i8>, <WIDTH x MASK>) nounwind
@@ -1663,8 +1748,12 @@ declare void @__pseudo_scatter_base_offsets64_i16(i8 * nocapture, <WIDTH x i64>,
                                                   <WIDTH x i16>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter_base_offsets64_i32(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                   <WIDTH x i32>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets64_float(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
+                                                  <WIDTH x float>, <WIDTH x MASK>) nounwind
 declare void @__pseudo_scatter_base_offsets64_i64(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
                                                   <WIDTH x i64>, <WIDTH x MASK>) nounwind
+declare void @__pseudo_scatter_base_offsets64_double(i8 * nocapture, <WIDTH x i64>, i32, <WIDTH x i64>,
+                                                     <WIDTH x double>, <WIDTH x MASK>) nounwind
 
 declare float @__log_uniform_float(float) nounwind readnone
 declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
@@ -1678,7 +1767,9 @@ declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) n
 declare void @__use8(<WIDTH x i8>)
 declare void @__use16(<WIDTH x i16>)
 declare void @__use32(<WIDTH x i32>)
+declare void @__usefloat(<WIDTH x float>)
 declare void @__use64(<WIDTH x i64>)
+declare void @__usedouble(<WIDTH x double>)
 
 ;; This is a temporary function that will be removed at the end of
 ;; compilation--the idea is that it calls out to all of the various
@@ -1698,8 +1789,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   call void @__use16(<WIDTH x i16> %ml16)
   %ml32 = call <WIDTH x i32> @__masked_load_i32(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %ml32)
+  %mlf = call <WIDTH x float> @__masked_load_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %mlf)
   %ml64 = call <WIDTH x i64> @__masked_load_i64(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %ml64)
+  %mld = call <WIDTH x double> @__masked_load_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %mld)
 
   %lb8   = call <WIDTH x i8>  @__load_and_broadcast_i8(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use8(<WIDTH x i8> %lb8)
@@ -1707,8 +1802,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   call void @__use16(<WIDTH x i16> %lb16)
   %lb32  = call <WIDTH x i32> @__load_and_broadcast_i32(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %lb32)
+  %lbf  = call <WIDTH x float> @__load_and_broadcast_float(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %lbf)
   %lb64  = call <WIDTH x i64> @__load_and_broadcast_i64(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %lb64)
+  %lbd  = call <WIDTH x double> @__load_and_broadcast_double(i8 * %ptr, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %lbd)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; stores
@@ -1721,21 +1820,37 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %pv32 = bitcast i8 * %ptr to <WIDTH x i32> *
   call void @__pseudo_masked_store_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
                                        <WIDTH x MASK> %mask)
+  %vf = bitcast <WIDTH x i32> %v32 to <WIDTH x float>
+  %pvf = bitcast i8 * %ptr to <WIDTH x float> *
+  call void @__pseudo_masked_store_float(<WIDTH x float> * %pvf, <WIDTH x float> %vf,
+                                         <WIDTH x MASK> %mask)
   %pv64 = bitcast i8 * %ptr to <WIDTH x i64> *
   call void @__pseudo_masked_store_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
                                        <WIDTH x MASK> %mask)
+  %vd = bitcast <WIDTH x i64> %v64 to <WIDTH x double>
+  %pvd = bitcast i8 * %ptr to <WIDTH x double> *
+  call void @__pseudo_masked_store_double(<WIDTH x double> * %pvd, <WIDTH x double> %vd,
+                                         <WIDTH x MASK> %mask)
+
   call void @__masked_store_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__masked_store_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__masked_store_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__masked_store_float(<WIDTH x float> * %pvf, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__masked_store_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__masked_store_double(<WIDTH x double> * %pvd, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
+
   call void @__masked_store_blend_i8(<WIDTH x i8> * %pv8, <WIDTH x i8> %v8,
                                      <WIDTH x MASK> %mask)
   call void @__masked_store_blend_i16(<WIDTH x i16> * %pv16, <WIDTH x i16> %v16,
                                       <WIDTH x MASK> %mask)
   call void @__masked_store_blend_i32(<WIDTH x i32> * %pv32, <WIDTH x i32> %v32,
                                       <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_float(<WIDTH x float> * %pvf, <WIDTH x float> %vf,
+                                        <WIDTH x MASK> %mask)
   call void @__masked_store_blend_i64(<WIDTH x i64> * %pv64, <WIDTH x i64> %v64,
                                       <WIDTH x MASK> %mask)
+  call void @__masked_store_blend_double(<WIDTH x double> * %pvd, <WIDTH x double> %vd,
+                                         <WIDTH x MASK> %mask)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; gathers
@@ -1749,9 +1864,15 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %pg32_32 = call <WIDTH x i32>  @__pseudo_gather32_i32(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %pg32_32)
+  %pg32_f = call <WIDTH x float>  @__pseudo_gather32_float(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %pg32_f)
   %pg32_64 = call <WIDTH x i64>  @__pseudo_gather32_i64(<WIDTH x i32> %v32,
                                                         <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %pg32_64)
+  %pg32_d = call <WIDTH x double>  @__pseudo_gather32_double(<WIDTH x i32> %v32,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %pg32_d)
 
   %pg64_8 = call <WIDTH x i8>  @__pseudo_gather64_i8(<WIDTH x i64> %v64,
                                                      <WIDTH x MASK> %mask)
@@ -1762,9 +1883,15 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %pg64_32 = call <WIDTH x i32>  @__pseudo_gather64_i32(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %pg64_32)
+  %pg64_f = call <WIDTH x float>  @__pseudo_gather64_float(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %pg64_f)
   %pg64_64 = call <WIDTH x i64>  @__pseudo_gather64_i64(<WIDTH x i64> %v64,
                                                         <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %pg64_64)
+  %pg64_d = call <WIDTH x double>  @__pseudo_gather64_double(<WIDTH x i64> %v64,
+                                                        <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %pg64_d)
 
   %g32_8 = call <WIDTH x i8>  @__gather32_i8(<WIDTH x i32> %v32,
                                              <WIDTH x MASK> %mask)
@@ -1775,9 +1902,15 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %g32_32 = call <WIDTH x i32>  @__gather32_i32(<WIDTH x i32> %v32,
                                                 <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %g32_32)
+  %g32_f = call <WIDTH x float>  @__gather32_float(<WIDTH x i32> %v32,
+                                                <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %g32_f)
   %g32_64 = call <WIDTH x i64>  @__gather32_i64(<WIDTH x i32> %v32,
                                                 <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %g32_64)
+  %g32_d = call <WIDTH x double>  @__gather32_double(<WIDTH x i32> %v32,
+                                                <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %g32_d)
 
   %g64_8 = call <WIDTH x i8>  @__gather64_i8(<WIDTH x i64> %v64,
                                              <WIDTH x MASK> %mask)
@@ -1788,9 +1921,15 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %g64_32 = call <WIDTH x i32>  @__gather64_i32(<WIDTH x i64> %v64,
                                                 <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %g64_32)
+  %g64_f = call <WIDTH x float>  @__gather64_float(<WIDTH x i64> %v64,
+                                                <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %g64_f)
   %g64_64 = call <WIDTH x i64>  @__gather64_i64(<WIDTH x i64> %v64,
                                                 <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %g64_64)
+  %g64_d = call <WIDTH x double>  @__gather64_double(<WIDTH x i64> %v64,
+                                                    <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %g64_d)
 
   %pgbo32_8 = call <WIDTH x i8>
        @__pseudo_gather_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
@@ -1804,10 +1943,18 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
        @__pseudo_gather_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %pgbo32_32)
+  %pgbo32_f = call <WIDTH x float>
+       @__pseudo_gather_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %pgbo32_f)
   %pgbo32_64 = call <WIDTH x i64>
        @__pseudo_gather_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                            <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %pgbo32_64)
+  %pgbo32_d = call <WIDTH x double>
+       @__pseudo_gather_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %pgbo32_d)
 
   %gbo32_8 = call <WIDTH x i8>
        @__gather_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
@@ -1821,10 +1968,18 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
        @__gather_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                    <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %gbo32_32)
+  %gbo32_f = call <WIDTH x float>
+       @__gather_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                   <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %gbo32_f)
   %gbo32_64 = call <WIDTH x i64>
        @__gather_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
                                    <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %gbo32_64)
+  %gbo32_d = call <WIDTH x double>
+       @__gather_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0,
+                                   <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %gbo32_d)
 
 
   %pgbo64_8 = call <WIDTH x i8>
@@ -1839,10 +1994,18 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
        @__pseudo_gather_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %pgbo64_32)
+  %pgbo64_f = call <WIDTH x float>
+       @__pseudo_gather_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %pgbo64_f)
   %pgbo64_64 = call <WIDTH x i64>
        @__pseudo_gather_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                            <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %pgbo64_64)
+  %pgbo64_d = call <WIDTH x double>
+       @__pseudo_gather_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %pgbo64_d)
 
   %gbo64_8 = call <WIDTH x i8>
        @__gather_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
@@ -1856,10 +2019,18 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
        @__gather_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                    <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %gbo64_32)
+  %gbo64_f = call <WIDTH x float>
+       @__gather_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                   <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__usefloat(<WIDTH x float> %gbo64_f)
   %gbo64_64 = call <WIDTH x i64>
        @__gather_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
                                    <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %gbo64_64)
+  %gbo64_d = call <WIDTH x double>
+       @__gather_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0,
+                                   <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__usedouble(<WIDTH x double> %gbo64_d)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; scatters
@@ -1867,22 +2038,30 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   call void @__pseudo_scatter32_i8(<WIDTH x i32> %v32, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter32_i16(<WIDTH x i32> %v32, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter32_i32(<WIDTH x i32> %v32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter32_float(<WIDTH x i32> %v32, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter32_i64(<WIDTH x i32> %v32, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter32_double(<WIDTH x i32> %v32, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__pseudo_scatter64_i8(<WIDTH x i64> %v64, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter64_i16(<WIDTH x i64> %v64, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter64_i32(<WIDTH x i64> %v64, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter64_float(<WIDTH x i64> %v64, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter64_i64(<WIDTH x i64> %v64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter64_double(<WIDTH x i64> %v64, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__scatter32_i8(<WIDTH x i32> %v32, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__scatter32_i16(<WIDTH x i32> %v32, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__scatter32_i32(<WIDTH x i32> %v32, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter32_float(<WIDTH x i32> %v32, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__scatter32_i64(<WIDTH x i32> %v32, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter32_double(<WIDTH x i32> %v32, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__scatter64_i8(<WIDTH x i64> %v64, <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
   call void @__scatter64_i16(<WIDTH x i64> %v64, <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__scatter64_i32(<WIDTH x i64> %v64, <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter64_float(<WIDTH x i64> %v64, <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__scatter64_i64(<WIDTH x i64> %v64, <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter64_double(<WIDTH x i64> %v64, <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__pseudo_scatter_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                                 <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
@@ -1890,8 +2069,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                                  <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                                  <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                 <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                                  <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                                    <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__pseudo_scatter_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                                 <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
@@ -1899,8 +2082,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                                  <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                                  <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                   <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__pseudo_scatter_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                                  <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__pseudo_scatter_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                                    <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__scatter_base_offsets32_i8(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                          <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
@@ -1908,8 +2095,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                           <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__scatter_base_offsets32_i32(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets32_float(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                            <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__scatter_base_offsets32_i64(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets32_double(i8 * %ptr, <WIDTH x i32> %v32, i32 0, <WIDTH x i32> %v32,
+                                             <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   call void @__scatter_base_offsets64_i8(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                          <WIDTH x i8> %v8, <WIDTH x MASK> %mask)
@@ -1917,8 +2108,12 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
                                           <WIDTH x i16> %v16, <WIDTH x MASK> %mask)
   call void @__scatter_base_offsets64_i32(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                           <WIDTH x i32> %v32, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets64_float(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                            <WIDTH x float> %vf, <WIDTH x MASK> %mask)
   call void @__scatter_base_offsets64_i64(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
                                           <WIDTH x i64> %v64, <WIDTH x MASK> %mask)
+  call void @__scatter_base_offsets64_double(i8 * %ptr, <WIDTH x i64> %v64, i32 0, <WIDTH x i64> %v64,
+                                             <WIDTH x double> %vd, <WIDTH x MASK> %mask)
 
   ret void
 }

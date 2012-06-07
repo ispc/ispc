@@ -2479,6 +2479,12 @@ static FORCEINLINE __vec4_i32 __masked_load_i32(void *p, __vec4_i1 mask) {
     return r;
 }
 
+static FORCEINLINE __vec4_f __masked_load_float(void *p, __vec4_i1 mask) {
+    __vec4_i32 v32 = __masked_load_i32(p, mask);
+    return __vec4_f(v32);
+}
+
+
 static FORCEINLINE __vec4_i64 __masked_load_i64(void *p, __vec4_i1 mask) {
     uint64_t r[4];
     uint64_t *ptr = (uint64_t *)p;
@@ -2499,6 +2505,11 @@ static FORCEINLINE __vec4_i64 __masked_load_i64(void *p, __vec4_i1 mask) {
         r[3] = ptr[3];
 
     return __vec4_i64(r[0], r[1], r[2], r[3]);
+}
+
+static FORCEINLINE __vec4_d __masked_load_double(void *p, __vec4_i1 mask) {
+    __vec4_i64 v64 = __masked_load_i64(p, mask);
+    return __vec4_d(v64);
 }
 
 static FORCEINLINE void __masked_store_i8(void *p, __vec4_i8 val, 
@@ -2563,6 +2574,11 @@ static FORCEINLINE void __masked_store_i32(void *p, __vec4_i32 val,
         ptr[3] = _mm_extract_epi32(val.v, 3);
 }
 
+static FORCEINLINE void __masked_store_float(void *p, __vec4_f val,
+                                             __vec4_i1 mask) {
+    __masked_store_i32(p, __vec4_i32(val), mask);
+}
+
 static FORCEINLINE void __masked_store_i64(void *p, __vec4_i64 val, 
                                            __vec4_i1 mask) {
     int64_t *ptr = (int64_t *)p;
@@ -2583,6 +2599,9 @@ static FORCEINLINE void __masked_store_i64(void *p, __vec4_i64 val,
         ptr[3] = _mm_extract_epi64(val.v[1], 1);
 }
 
+static FORCEINLINE void __masked_store_double(void *p, __vec4_d val,
+                                             __vec4_i1 mask) {
+    __masked_store_i64(p, __vec4_i64(val), mask);
 }
 
 static FORCEINLINE void __masked_store_blend_i8(void *p, __vec4_i8 val, 
@@ -2600,6 +2619,10 @@ static FORCEINLINE void __masked_store_blend_i32(void *p, __vec4_i32 val,
     // FIXME: do a load, blendvps, store here...
     __masked_store_i32(p, val, mask);
 }
+
+static FORCEINLINE void __masked_store_blend_float(void *p, __vec4_f val, 
+                                                   __vec4_i1 mask) {
+    __masked_store_i32(p, __vec4_i32(val), mask);
 }
 
 static FORCEINLINE void __masked_store_blend_i64(void *p, __vec4_i64 val, 
@@ -2607,6 +2630,12 @@ static FORCEINLINE void __masked_store_blend_i64(void *p, __vec4_i64 val,
     // FIXME: do a 2x (load, blendvps, store) here...
     __masked_store_i64(p, val, mask);
 }
+
+static FORCEINLINE void __masked_store_blend_double(void *p, __vec4_d val, 
+                                                    __vec4_i1 mask) {
+    __masked_store_i64(p, __vec4_i64(val), mask);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // gather/scatter
@@ -2827,6 +2856,20 @@ __gather_base_offsets64_i32(unsigned char *p, __vec4_i64 offsets,
                                 delta, mask);
 }
 
+static FORCEINLINE __vec4_f
+__gather_base_offsets32_float(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
+                              __vec4_i32 constOffset, __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_f(), float(), p, offsets, scale, 
+                                delta, mask);
+}
+
+static FORCEINLINE __vec4_f
+__gather_base_offsets64_float(unsigned char *p, __vec4_i64 offsets,
+                              uint32_t scale, __vec4_i64 delta, __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_f(), float(), p, offsets, scale, 
+                                delta, mask);
+}
+
 static FORCEINLINE __vec4_i64
 __gather_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets,
                             uint32_t scale, __vec4_i32 delta, __vec4_i1 mask) {
@@ -2838,6 +2881,20 @@ static FORCEINLINE __vec4_i64
 __gather_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
                             uint32_t scale, __vec4_i64 delta, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_i64(), uint64_t(), p, offsets, scale, 
+                                delta, mask);
+}
+
+static FORCEINLINE __vec4_d
+__gather_base_offsets32_double(unsigned char *p, __vec4_i32 offsets,
+                               uint32_t scale, __vec4_i32 delta, __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_d(), double(), p, offsets, scale, 
+                                delta, mask);
+}
+
+static FORCEINLINE __vec4_d
+__gather_base_offsets64_double(unsigned char *p, __vec4_i64 offsets,
+                               uint32_t scale, __vec4_i64 delta, __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_d(), double(), p, offsets, scale, 
                                 delta, mask);
 }
 
@@ -2975,12 +3032,28 @@ static FORCEINLINE __vec4_i32 __gather64_i32(__vec4_i64 ptrs, __vec4_i1 mask) {
     return r;
 }
 
+static FORCEINLINE __vec4_f __gather32_float(__vec4_i32 ptrs, __vec4_i1 mask) {
+    return __vec4_f(__gather32_i32(ptrs, mask);
+}
+
+static FORCEINLINE __vec4_f __gather64_float(__vec4_i32 ptrs, __vec4_i1 mask) {
+    return __vec4_f(__gather64_i32(ptrs, mask);
+}
+
 static FORCEINLINE __vec4_i64 __gather32_i64(__vec4_i32 ptrs, __vec4_i1 mask) {
     return lGather32(__vec4_i64(), uint64_t(), ptrs, mask);
 }
 
 static FORCEINLINE __vec4_i64 __gather64_i64(__vec4_i64 ptrs, __vec4_i1 mask) {
     return lGather64(__vec4_i64(), uint64_t(), ptrs, mask);
+}
+
+static FORCEINLINE __vec4_d __gather32_double(__vec4_i32 ptrs, __vec4_i1 mask) {
+    return lGather32(__vec4_d(), double(), ptrs, mask);
+}
+
+static FORCEINLINE __vec4_d __gather64_double(__vec4_i64 ptrs, __vec4_i1 mask) {
+    return lGather64(__vec4_d(), double(), ptrs, mask);
 }
 
 // scatter
@@ -3050,9 +3123,10 @@ __scatter_base_offsets64_##SUFFIX(unsigned char *p, __vec4_i64 offsets, \
 }
 
 
-SCATTER32_64(i8, int8_t, _mm_extract_epi8)
+SCATTER32_64(i8,  int8_t,  _mm_extract_epi8)
 SCATTER32_64(i16, int16_t, _mm_extract_epi16)
 SCATTER32_64(i32, int32_t, _mm_extract_epi32)
+SCATTER32_64(f,   float,   _mm_extract_epi32)
 
 
 static FORCEINLINE void
@@ -3128,6 +3202,21 @@ __scatter_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
         *ptr = _mm_extract_epi64(val.v[1], 1);
     }
 }
+
+static FORCEINLINE void
+__scatter_base_offsets32_double(unsigned char *p, __vec4_i32 offsets, 
+                                uint32_t scale, __vec4_i32 constOffset, __vec4_d val, 
+                                __vec4_i1 mask) {
+    __scatter_base_offsets32_i64(p, offsets, scale, constOffset, val, mask);
+}
+
+static FORCEINLINE void
+__scatter_base_offsets64_double(unsigned char *p, __vec4_i64 offsets, 
+                                uint32_t scale, __vec4_i64 constOffset, __vec4_d val, 
+                                __vec4_i1 mask) {
+    __scatter_base_offsets64_i64(p, offsets, scale, constOffset, val, mask);
+}
+
 
 static FORCEINLINE void __scatter32_i8(__vec4_i32 ptrs, __vec4_i8 val,
                                        __vec4_i1 mask) {
@@ -3291,6 +3380,16 @@ static FORCEINLINE void __scatter64_i32(__vec4_i64 ptrs, __vec4_i32 val,
     }
 }
 
+static FORCEINLINE void __scatter32_float(__vec4_i32 ptrs, __vec4_f val,
+                                          __vec4_i1 mask) {
+    __scatter32_i32(ptrs, __vec4_i32(val), mask);
+}
+
+static FORCEINLINE void __scatter64_float(__vec4_i64 ptrs, __vec4_f val,
+                                          __vec4_i1 mask) {
+    __scatter64_i32(ptrs, __vec4_i32(val), mask);
+}
+
 static FORCEINLINE void __scatter32_i64(__vec4_i32 ptrs, __vec4_i64 val, 
                                         __vec4_i1 mask) {
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -3343,6 +3442,16 @@ static FORCEINLINE void __scatter64_i64(__vec4_i64 ptrs, __vec4_i64 val,
         uint64_t *ptr = (uint64_t *)_mm_extract_epi64(ptrs.v[1], 1);
         *ptr = _mm_extract_epi64(val.v[1], 1);
     }
+}
+
+static FORCEINLINE void __scatter32_double(__vec4_i32 ptrs, __vec4_d val, 
+                                           __vec4_i1 mask) {
+    __scatter32_i64(ptrs, __vec4_i64(val), mask);
+}
+
+static FORCEINLINE void __scatter64_double(__vec4_i64 ptrs, __vec4_d val, 
+                                           __vec4_i1 mask) {
+    __scatter64_i64(ptrs, __vec4_i64(val), mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
