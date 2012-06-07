@@ -1701,13 +1701,13 @@ define void @__keep_funcs_live(i8 * %ptr, <WIDTH x i8> %v8, <WIDTH x i16> %v16,
   %ml64 = call <WIDTH x i64> @__masked_load_64(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %ml64)
 
-  %lb8   = call <WIDTH x i8>  @__load_and_broadcast_8(i8 * %ptr, <WIDTH x MASK> %mask)
+  %lb8   = call <WIDTH x i8>  @__load_and_broadcast_i8(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use8(<WIDTH x i8> %lb8)
-  %lb16  = call <WIDTH x i16> @__load_and_broadcast_16(i8 * %ptr, <WIDTH x MASK> %mask)
+  %lb16  = call <WIDTH x i16> @__load_and_broadcast_i16(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use16(<WIDTH x i16> %lb16)
-  %lb32  = call <WIDTH x i32> @__load_and_broadcast_32(i8 * %ptr, <WIDTH x MASK> %mask)
+  %lb32  = call <WIDTH x i32> @__load_and_broadcast_i32(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use32(<WIDTH x i32> %lb32)
-  %lb64  = call <WIDTH x i64> @__load_and_broadcast_64(i8 * %ptr, <WIDTH x MASK> %mask)
+  %lb64  = call <WIDTH x i64> @__load_and_broadcast_i64(i8 * %ptr, <WIDTH x MASK> %mask)
   call void @__use64(<WIDTH x i64> %lb64)
 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2489,20 +2489,18 @@ i64minmax(WIDTH,max,uint64,ugt)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Emit code to safely load a scalar value and broadcast it across the
-;; elements of a vector.  Parameters:
-;; $1: target vector width
-;; $2: element type for which to emit the function (i32, i64, ...)
-;; $3: suffix for function name (32, 64, ...)
+;; elements of a vector.  Parameter:
+;; $1: element type for which to emit the function (i32, i64, ...)
 
 define(`load_and_broadcast', `
-define <$1 x $2> @__load_and_broadcast_$3(i8 *, <$1 x MASK> %mask) nounwind alwaysinline {
-  %ptr = bitcast i8 * %0 to $2 *
-  %val = load $2 * %ptr
+define <WIDTH x $1> @__load_and_broadcast_$1(i8 *, <WIDTH x MASK> %mask) nounwind alwaysinline {
+  %ptr = bitcast i8 * %0 to $1 *
+  %val = load $1 * %ptr
 
-  %ret0 = insertelement <$1 x $2> undef, $2 %val, i32 0
-  forloop(i, 1, eval($1-1), `
-  %ret`'i = insertelement <$1 x $2> %ret`'eval(i-1), $2 %val, i32 i')
-  ret <$1 x $2> %ret`'eval($1-1)
+  %ret0 = insertelement <WIDTH x $1> undef, $1 %val, i32 0
+  forloop(i, 1, eval(WIDTH-1), `
+  %ret`'i = insertelement <WIDTH x $1> %ret`'eval(i-1), $1 %val, i32 i')
+  ret <WIDTH x $1> %ret`'eval(WIDTH-1)
 }
 ')
 

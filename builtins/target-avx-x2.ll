@@ -353,10 +353,10 @@ define i64 @__reduce_max_uint64(<16 x i64>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(16, i8, 8)
-load_and_broadcast(16, i16, 16)
-load_and_broadcast(16, i32, 32)
-load_and_broadcast(16, i64, 64)
+load_and_broadcast(i8)
+load_and_broadcast(i16)
+load_and_broadcast(i32)
+load_and_broadcast(i64)
 
 ; no masked load instruction for i8 and i16 types??
 masked_load(16, i8,  8,  1)

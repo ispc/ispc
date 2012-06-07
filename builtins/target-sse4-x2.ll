@@ -360,15 +360,15 @@ reduce_equal(8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(8, i8, 8)
-load_and_broadcast(8, i16, 16)
-load_and_broadcast(8, i32, 32)
-load_and_broadcast(8, i64, 64)
 
 masked_load(8, i8,  8,  1)
 masked_load(8, i16, 16, 2)
 masked_load(8, i32, 32, 4)
 masked_load(8, i64, 64, 8)
+load_and_broadcast(i8)
+load_and_broadcast(i16)
+load_and_broadcast(i32)
+load_and_broadcast(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter

@@ -459,10 +459,10 @@ gen_masked_store(4, i64, 64)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(4, i8, 8)
-load_and_broadcast(4, i16, 16)
-load_and_broadcast(4, i32, 32)
-load_and_broadcast(4, i64, 64)
+load_and_broadcast(i8)
+load_and_broadcast(i16)
+load_and_broadcast(i32)
+load_and_broadcast(i64)
 
 masked_load(4, i8,  8,  1)
 masked_load(4, i16, 16, 2)
