@@ -398,7 +398,7 @@ define double @__reduce_max_double(<8 x double>) nounwind readnone {
 }
 
 define <4 x i64> @__add_varying_int64(<4 x i64>,
-                                               <4 x i64>) nounwind readnone alwaysinline {
+                                      <4 x i64>) nounwind readnone alwaysinline {
   %r = add <4 x i64> %0, %1
   ret <4 x i64> %r
 }

@@ -48,7 +48,7 @@ gen_scatter(1, i64)
 
 
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                               <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %mv = trunc <1 x i32> %mask to <1 x i8>
 ;  %notmask = xor <1 x i8> %mv, <i8 -1>
 ;  %cleared_old = and <1 x i8> %0, %notmask
@@ -69,7 +69,7 @@ define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
 }
 
 define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %mv = trunc <1 x i32> %mask to <1 x i16>
 ;  %notmask = xor <1 x i16> %mv, <i16 -1>
 ;  %cleared_old = and <1 x i16> %0, %notmask
@@ -91,7 +91,7 @@ define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
 
 
 define  <1 x i32> @__vselect_i32(<1 x i32>, <1 x i32> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %notmask = xor <1 x i32> %mask, <i32 -1>
 ;  %cleared_old = and <1 x i32> %0, %notmask
 ;  %masked_new = and <1 x i32> %1, %mask
@@ -109,8 +109,9 @@ define  <1 x i32> @__vselect_i32(<1 x i32>, <1 x i32> ,
    ret <1 x i32> %r
 
 }
+
 define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %newmask = zext <1 x i32> %mask to <1 x i64>
 ;  %notmask = xor <1 x i64> %newmask, <i64 -1>
 ;  %cleared_old = and <1 x i64> %0, %notmask
@@ -131,7 +132,7 @@ define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
 }
 
 define  <1 x float> @__vselect_float(<1 x float>, <1 x float>,
-                                             <1 x i32> %mask) nounwind readnone alwaysinline {
+                                     <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %v0 = bitcast <1 x float> %0 to <1 x i32>
 ;  %v1 = bitcast <1 x float> %1 to <1 x i32>
 ;  %r = call <1 x i32> @__vselect_i32(<1 x i32> %v0, <1 x i32> %v1, <1 x i32> %mask)

@@ -221,13 +221,13 @@ define <8 x i32> @__max_varying_int32(<8 x i32>, <8 x i32>) nounwind readonly al
 ; unsigned int min/max
 
 define <8 x i32> @__min_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
+                                       <8 x i32>) nounwind readonly alwaysinline {
   binary4to8(call, i32, @llvm.x86.sse41.pminud, %0, %1)
   ret <8 x i32> %call
 }
 
 define <8 x i32> @__max_varying_uint32(<8 x i32>,
-                                                <8 x i32>) nounwind readonly alwaysinline {
+                                       <8 x i32>) nounwind readonly alwaysinline {
   binary4to8(call, i32, @llvm.x86.sse41.pmaxud, %0, %1)
   ret <8 x i32> %call
 }
@@ -325,7 +325,7 @@ define double @__reduce_max_double(<8 x double>) nounwind readnone {
 }
 
 define <4 x i64> @__add_varying_int64(<4 x i64>,
-                                               <4 x i64>) nounwind readnone alwaysinline {
+                                      <4 x i64>) nounwind readnone alwaysinline {
   %r = add <4 x i64> %0, %1
   ret <4 x i64> %r
 }

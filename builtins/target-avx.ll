@@ -158,13 +158,13 @@ declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind 
 declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
 define <8 x float> @__max_varying_float(<8 x float>,
-                                                 <8 x float>) nounwind readonly alwaysinline {
+                                        <8 x float>) nounwind readonly alwaysinline {
   %call = call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }
 
 define <8 x float> @__min_varying_float(<8 x float>,
-                                                 <8 x float>) nounwind readonly alwaysinline {
+                                        <8 x float>) nounwind readonly alwaysinline {
   %call = call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }

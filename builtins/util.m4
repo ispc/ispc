@@ -1934,7 +1934,7 @@ define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
 }
 
 define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
-                                           i8) nounwind readnone alwaysinline {
+                                   i8) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
   ret <WIDTH x i8> %insert
 }
@@ -1945,7 +1945,7 @@ define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
 }
 
 define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
-                                           i16) nounwind readnone alwaysinline {
+                                     i16) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
   ret <WIDTH x i16> %insert
 }
@@ -1956,7 +1956,7 @@ define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
 }
 
 define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
-                                           i32) nounwind readnone alwaysinline {
+                                     i32) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
   ret <WIDTH x i32> %insert
 }
@@ -1967,7 +1967,7 @@ define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
 }
 
 define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
-                                           i64) nounwind readnone alwaysinline {
+                                     i64) nounwind readnone alwaysinline {
   %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
   ret <WIDTH x i64> %insert
 }
