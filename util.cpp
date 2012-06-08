@@ -429,6 +429,11 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
 
 static void
 lPrintBugText() {
+    static bool printed = false;
+    if (printed)
+        return;
+
+    printed = true;
     fprintf(stderr, "***\n"
             "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
             "*** (Including as much information as you can about how to "
