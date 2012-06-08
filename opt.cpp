@@ -3717,9 +3717,9 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         callInst->setCalledFunction(info->actualFunc);
         if (gotPosition && g->target.vectorWidth > 1) {
             if (info->isGather)
-                PerformanceWarning(pos, "Gather required to compute value in expression.");
+                PerformanceWarning(pos, "Gather required to load value.");
             else
-                PerformanceWarning(pos, "Scatter required for storing value.");
+                PerformanceWarning(pos, "Scatter required to store value.");
         }
         modifiedAny = true;
         goto restart;
