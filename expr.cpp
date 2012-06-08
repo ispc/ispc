@@ -2639,9 +2639,10 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     // Get the value on the right-hand side of the assignment+operation
     // operator and load the current value on the left-hand side.
     llvm::Value *rvalue = arg1->GetValue(ctx);
-    ctx->SetDebugPos(pos);
     llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
+    ctx->SetDebugPos(arg0->pos);
     llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType);
+    ctx->SetDebugPos(pos);
 
     // Map the operator to the corresponding BinaryExpr::Op operator
     BinaryExpr::Op basicop;
