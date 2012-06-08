@@ -29,6 +29,8 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
+define(`NO_HALF_DECLARES', `1')
+
 include(`target-avx1.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -68,4 +70,3 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %r = extractelement <8 x i16> %rv, i32 0
   ret i16 %r
 }
-
