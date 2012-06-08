@@ -48,8 +48,8 @@ declare void @abort() noreturn
 ;; corresponding to one of the Target::ISA enumerant values that gives the
 ;; most capable ISA that the curremt system can run.
 ;;
-;; Note: clang from LLVM 2.9 should be used if this is updated, for maximum
-;; backwards compatibility for anyone building ispc with LLVM 2.9.
+;; Note: clang from LLVM 3.0 should be used if this is updated, for maximum
+;; backwards compatibility for anyone building ispc with LLVM 3.0
 ;;
 ;; #include <stdint.h>
 ;; #include <stdlib.h>
@@ -80,9 +80,14 @@ declare void @abort() noreturn
 ;;         // Call cpuid with eax=7, ecx=0
 ;;         __cpuid_count(info, 7, 0);
 ;;         if ((info[1] & (1 << 5)) != 0)
-;;             return 3; // AVX2
-;;         else
-;;             return 2; // AVX1
+;;             return 4; // AVX2
+;;         else {
+;;             if ((info[2] & (1 << 29)) != 0 &&  // F16C
+;;                 (info[2] & (1 << 30)) != 0)    // RDRAND
+;;                 return 3; // AVX1 on IVB
+;;             else
+;;                 return 2; // AVX1
+;;         }
 ;;     }
 ;;     else if ((info[2] & (1 << 19)) != 0)
 ;;         return 1; // SSE4
@@ -92,41 +97,47 @@ declare void @abort() noreturn
 ;;         abort();
 ;; }
 
-%0 = type { i32, i32, i32, i32 }
-
-define i32 @__get_system_isa() nounwind ssp {
+define i32 @__get_system_isa() nounwind uwtable ssp {
 entry:
-  %0 = tail call %0 asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
-  %asmresult9.i = extractvalue %0 %0, 2
-  %asmresult10.i = extractvalue %0 %0, 3
-  %and = and i32 %asmresult9.i, 268435456
+  %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
+  %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
+  %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
+  %and = and i32 %asmresult5.i, 268435456
   %cmp = icmp eq i32 %and, 0
-  br i1 %cmp, label %if.else7, label %if.then
+  br i1 %cmp, label %if.else14, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = tail call %0 asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult9.i24 = extractvalue %0 %1, 1
-  %and4 = lshr i32 %asmresult9.i24, 5
-  %2 = and i32 %and4, 1
-  %3 = or i32 %2, 2
+  %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %asmresult4.i29 = extractvalue { i32, i32, i32, i32 } %1, 1
+  %and3 = and i32 %asmresult4.i29, 32
+  %cmp4 = icmp eq i32 %and3, 0
+  br i1 %cmp4, label %if.else, label %return
+
+if.else:                                          ; preds = %if.then
+  %asmresult5.i30 = extractvalue { i32, i32, i32, i32 } %1, 2
+  %2 = and i32 %asmresult5.i30, 1610612736
+  %3 = icmp eq i32 %2, 1610612736
+  br i1 %3, label %return, label %if.else13
+
+if.else13:                                        ; preds = %if.else
   br label %return
 
-if.else7:                                         ; preds = %entry
-  %and10 = and i32 %asmresult9.i, 524288
-  %cmp11 = icmp eq i32 %and10, 0
-  br i1 %cmp11, label %if.else13, label %return
-
-if.else13:                                        ; preds = %if.else7
-  %and16 = and i32 %asmresult10.i, 67108864
+if.else14:                                        ; preds = %entry
+  %and16 = and i32 %asmresult5.i, 524288
   %cmp17 = icmp eq i32 %and16, 0
   br i1 %cmp17, label %if.else19, label %return
 
-if.else19:                                        ; preds = %if.else13
+if.else19:                                        ; preds = %if.else14
+  %and21 = and i32 %asmresult6.i, 67108864
+  %cmp22 = icmp eq i32 %and21, 0
+  br i1 %cmp22, label %if.else24, label %return
+
+if.else24:                                        ; preds = %if.else19
   tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                           ; preds = %if.else13, %if.else7, %if.then
-  %retval.0 = phi i32 [ %3, %if.then ], [ 1, %if.else7 ], [ 0, %if.else13 ]
+return:                                           ; preds = %if.else19, %if.else14, %if.else13, %if.else, %if.then
+  %retval.0 = phi i32 [ 2, %if.else13 ], [ 4, %if.then ], [ 3, %if.else ], [ 1, %if.else14 ], [ 0, %if.else19 ]
   ret i32 %retval.0
 }
 

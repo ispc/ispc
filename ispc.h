@@ -207,7 +207,7 @@ struct Target {
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { SSE2, SSE4, AVX, AVX2, GENERIC, NUM_ISAS };
+    enum ISA { SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
 
     /** Instruction set being compiled to. */
     ISA isa;
@@ -251,6 +251,9 @@ struct Target {
     /** Indicates whether the target has native support for float/half
         conversions. */
     bool hasHalf;
+
+    /** Indicates whether there is an ISA random number instruciton. */
+    bool hasRand;
 
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */

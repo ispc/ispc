@@ -804,6 +804,26 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             FATAL("logic error in DefineStdlib");
         }
         break;
+    case Target::AVX11:
+        switch (g->target.vectorWidth) {
+        case 8:
+            extern unsigned char builtins_bitcode_avx11[];
+            extern int builtins_bitcode_avx11_length;
+            AddBitcodeToModule(builtins_bitcode_avx11, 
+                               builtins_bitcode_avx11_length, 
+                               module, symbolTable);
+            break;
+        case 16:
+            extern unsigned char builtins_bitcode_avx11_x2[];
+            extern int builtins_bitcode_avx11_x2_length;
+            AddBitcodeToModule(builtins_bitcode_avx11_x2, 
+                               builtins_bitcode_avx11_x2_length,
+                               module,  symbolTable);
+            break;
+        default:
+            FATAL("logic error in DefineStdlib");
+        }
+        break;
     case Target::AVX2:
         switch (g->target.vectorWidth) {
         case 8:
@@ -897,6 +917,8 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                            module, symbolTable);
 
     lDefineConstantInt("__have_native_half", g->target.hasHalf, module, 
+                       symbolTable);
+    lDefineConstantInt("__have_native_rand", g->target.hasRand, module, 
                        symbolTable);
     lDefineConstantInt("__have_native_transcendentals", g->target.hasTranscendentals,
                        module, symbolTable);
