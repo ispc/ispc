@@ -2892,10 +2892,18 @@ AssignExpr::TypeCheck() {
             return NULL;
     }
 
-    // Make sure we're not assigning to a struct that has a constant member
     const StructType *st = CastType<StructType>(lhsType);
-    if (st != NULL && lCheckForConstStructMember(pos, st, st))
-        return NULL;
+    if (st != NULL) {
+        // Make sure we're not assigning to a struct that has a constant member
+        if (lCheckForConstStructMember(pos, st, st))
+            return NULL;
+        
+        if (op != Assign) {
+            Error(lvalue->pos,  "Assignment operator \"%s\" is illegal with struct "
+                  "type \"%s\".", lOpString(op), st->GetString().c_str());
+            return NULL;
+        }
+    }
 
     return this;
 }
