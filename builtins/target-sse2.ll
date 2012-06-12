@@ -562,12 +562,6 @@ gen_masked_store(i64)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(i8)
-load_and_broadcast(i16)
-load_and_broadcast(i32)
-load_and_broadcast(float)
-load_and_broadcast(i64)
-load_and_broadcast(double)
 
 masked_load(i8,  1)
 masked_load(i16, 2)

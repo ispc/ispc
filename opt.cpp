@@ -2266,19 +2266,18 @@ char GSToLoadStorePass::ID = 0;
 
 
 struct GatherImpInfo {
-    GatherImpInfo(const char *pName, const char *lbName, const char *lmName,
+    GatherImpInfo(const char *pName, const char *lmName, llvm::Type *st,
                   int a) 
         : align(a) {
         pseudoFunc = m->module->getFunction(pName);
-        loadBroadcastFunc = m->module->getFunction(lbName);
         loadMaskedFunc = m->module->getFunction(lmName);
-
-        Assert(pseudoFunc != NULL && loadBroadcastFunc != NULL &&
-               loadMaskedFunc != NULL);
+        Assert(pseudoFunc != NULL && loadMaskedFunc != NULL);
+        scalarType = st;
     }
+
     llvm::Function *pseudoFunc;
-    llvm::Function *loadBroadcastFunc;
     llvm::Function *loadMaskedFunc;
+    llvm::Type *scalarType;
     const int align;
 };
 
@@ -2312,30 +2311,30 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("GSToLoadStorePass");
 
     GatherImpInfo gInfo[] = {
-        GatherImpInfo("__pseudo_gather_base_offsets32_i8", "__load_and_broadcast_i8",
-                      "__masked_load_i8", 1),
-        GatherImpInfo("__pseudo_gather_base_offsets32_i16", "__load_and_broadcast_i16",
-                      "__masked_load_i16", 2),
-        GatherImpInfo("__pseudo_gather_base_offsets32_i32", "__load_and_broadcast_i32",
-                      "__masked_load_i32", 4),
-        GatherImpInfo("__pseudo_gather_base_offsets32_float", "__load_and_broadcast_float",
-                      "__masked_load_float", 4),
-        GatherImpInfo("__pseudo_gather_base_offsets32_i64", "__load_and_broadcast_i64",
-                      "__masked_load_i64", 8),
-        GatherImpInfo("__pseudo_gather_base_offsets32_double", "__load_and_broadcast_double",
-                      "__masked_load_double", 8),
-        GatherImpInfo("__pseudo_gather_base_offsets64_i8", "__load_and_broadcast_i8",
-                      "__masked_load_i8", 1),
-        GatherImpInfo("__pseudo_gather_base_offsets64_i16", "__load_and_broadcast_i16",
-                      "__masked_load_i16", 2),
-        GatherImpInfo("__pseudo_gather_base_offsets64_i32", "__load_and_broadcast_i32",
-                      "__masked_load_i32", 4),
-        GatherImpInfo("__pseudo_gather_base_offsets64_float", "__load_and_broadcast_float",
-                      "__masked_load_float", 4),
-        GatherImpInfo("__pseudo_gather_base_offsets64_i64", "__load_and_broadcast_i64",
-                      "__masked_load_i64", 8),
-        GatherImpInfo("__pseudo_gather_base_offsets64_double", "__load_and_broadcast_double",
-                      "__masked_load_double", 8)
+        GatherImpInfo("__pseudo_gather_base_offsets32_i8",     "__masked_load_i8",     
+                      LLVMTypes::Int8Type, 1),
+        GatherImpInfo("__pseudo_gather_base_offsets32_i16",    "__masked_load_i16",    
+                      LLVMTypes::Int16Type, 2),
+        GatherImpInfo("__pseudo_gather_base_offsets32_i32",    "__masked_load_i32",    
+                      LLVMTypes::Int32Type, 4),
+        GatherImpInfo("__pseudo_gather_base_offsets32_float",  "__masked_load_float",  
+                      LLVMTypes::FloatType, 4),
+        GatherImpInfo("__pseudo_gather_base_offsets32_i64",    "__masked_load_i64",    
+                      LLVMTypes::Int64Type, 8),
+        GatherImpInfo("__pseudo_gather_base_offsets32_double", "__masked_load_double", 
+                      LLVMTypes::DoubleType, 8),
+        GatherImpInfo("__pseudo_gather_base_offsets64_i8",     "__masked_load_i8",     
+                      LLVMTypes::Int8Type, 1),
+        GatherImpInfo("__pseudo_gather_base_offsets64_i16",    "__masked_load_i16",    
+                      LLVMTypes::Int16Type, 2),
+        GatherImpInfo("__pseudo_gather_base_offsets64_i32",    "__masked_load_i32",    
+                      LLVMTypes::Int32Type, 4),
+        GatherImpInfo("__pseudo_gather_base_offsets64_float",  "__masked_load_float",  
+                      LLVMTypes::FloatType, 4),
+        GatherImpInfo("__pseudo_gather_base_offsets64_i64",    "__masked_load_i64",    
+                      LLVMTypes::Int64Type, 8),
+        GatherImpInfo("__pseudo_gather_base_offsets64_double", "__masked_load_double", 
+                      LLVMTypes::DoubleType, 8)
     };
     ScatterImpInfo sInfo[] = {
         ScatterImpInfo("__pseudo_scatter_base_offsets32_i8",  "__pseudo_masked_store_i8", 
@@ -2443,17 +2442,23 @@ GSToLoadStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
             if (gatherInfo != NULL) {
                 // A gather with everyone going to the same location is
                 // handled as a scalar load and broadcast across the lanes.
-                // Note that we do still have to pass the mask to the
-                // __load_and_broadcast_* functions, since they shouldn't
-                // access memory if the mask is all off (the location may
-                // be invalid in that case).
                 Debug(pos, "Transformed gather to scalar load and broadcast!");
-                llvm::Instruction *newCall = 
-                    lCallInst(gatherInfo->loadBroadcastFunc, ptr, mask, 
-                              LLVMGetName(callInst, "_broadcast"));
-                lCopyMetadata(newCall, callInst);
-                llvm::ReplaceInstWithInst(callInst, newCall);
 
+                ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(gatherInfo->scalarType, 0),
+                                            ptr->getName(), callInst);
+                llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
+                llvm::Value *vecValue = llvm::UndefValue::get(callInst->getType());
+                for (int i = 0; i < g->target.vectorWidth; ++i) {
+                    if (i < g->target.vectorWidth - 1)
+                        vecValue = llvm::InsertElementInst::Create(vecValue, scalarValue, LLVMInt32(i),
+                                                                   callInst->getName(), callInst);
+                    else
+                        vecValue = llvm::InsertElementInst::Create(vecValue, scalarValue, LLVMInt32(i),
+                                                                   callInst->getName());
+                }
+                lCopyMetadata(vecValue, callInst);
+                llvm::ReplaceInstWithInst(callInst, 
+                                          llvm::dyn_cast<llvm::Instruction>(vecValue));
                 modifiedAny = true;
                 goto restart;
             }
@@ -3894,9 +3899,6 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__gather_elt64_i8", "__gather_elt64_i16", 
         "__gather_elt64_i32", "__gather_elt64_i64", 
         "__gather_elt64_float", "__gather_elt64_double", 
-        "__load_and_broadcast_i8", "__load_and_broadcast_i16",
-        "__load_and_broadcast_i32", "__load_and_broadcast_i64",
-        "__load_and_broadcast_float", "__load_and_broadcast_double",
         "__masked_load_i8", "__masked_load_i16",
         "__masked_load_i32", "__masked_load_i64",
         "__masked_load_float", "__masked_load_double",

@@ -230,12 +230,6 @@ declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(i8)
-load_and_broadcast(i16)
-load_and_broadcast(i32)
-load_and_broadcast(float)
-load_and_broadcast(i64)
-load_and_broadcast(double)
 
 declare <WIDTH x i8> @__masked_load_i8(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
 declare <WIDTH x i16> @__masked_load_i16(i8 * nocapture, <WIDTH x i1> %mask) nounwind readonly
