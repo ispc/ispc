@@ -56,6 +56,8 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <set>
+#include <sstream>
+#include <iostream>
 #ifdef ISPC_IS_WINDOWS
 #include <windows.h>
 #include <io.h>
@@ -87,6 +89,18 @@
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
+
+/*! list of files encountered by the parser. this allows emitting of
+    the module file's dependencies via the -MMM option */
+std::set<std::string> registeredDependencies;
+
+/*! this is where the parser tells us that it has seen the given file
+    name in the CPP hash */
+void RegisterDependency(const std::string &fileName)
+{
+  if (fileName[0] != '<' && fileName != "stdlib.ispc")
+    registeredDependencies.insert(fileName);
+}
 
 static void
 lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
@@ -880,6 +894,23 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
                 strcasecmp(suffix, "hpp"))
                 fileType = "header";
             break;
+        case Deps:
+          break;
+        case DevStub:
+          if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+              strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+              strcasecmp(suffix, "cpp"))
+            fileType = "dev-side offload stub";
+            break;
+        case HostStub:
+          if (strcasecmp(suffix, "c") && strcasecmp(suffix, "cc") &&
+              strcasecmp(suffix, "c++") && strcasecmp(suffix, "cxx") &&
+              strcasecmp(suffix, "cpp"))
+            fileType = "host-side offload stub";
+            break;
+        default:
+          Assert(0 /* swtich case not handled */);
+          return 1;
         }
         if (fileType != NULL)
             fprintf(stderr, "Warning: emitting %s file, but filename \"%s\" "
@@ -887,7 +918,13 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     }
 
     if (outputType == Header)
-        return writeHeader(outFileName);
+      return writeHeader(outFileName);
+    else if (outputType == Deps)
+      return writeDeps(outFileName);
+    else if (outputType == HostStub)
+      return writeHostStub(outFileName);
+    else if (outputType == DevStub)
+      return writeDevStub(outFileName);
     else if (outputType == Bitcode)
         return writeBitcode(module, outFileName);
     else if (outputType == CXX) {
@@ -1187,16 +1224,26 @@ lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
 
 
 static void
-lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs) {
-    fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
-    for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
-        Assert(ftype);
-        std::string decl = ftype->GetCDeclaration(funcs[i]->name);
-        fprintf(file, "    extern %s;\n", decl.c_str());
-    }
-    fprintf(file, "#ifdef __cplusplus\n}\n#endif // __cplusplus\n");
+lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs,
+                           bool useExternC=1) {
+  if (useExternC)
+    fprintf(file, "#if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)\nextern \"C\" {\n#endif // __cplusplus\n");
+    // fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
+  for (unsigned int i = 0; i < funcs.size(); ++i) {
+    const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
+    Assert(ftype);
+    std::string decl = ftype->GetCDeclaration(funcs[i]->name);
+    fprintf(file, "    extern %s;\n", decl.c_str());
+  }
+  if (useExternC)
+
+    fprintf(file, "#if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)\n} /* end extern C */\n#endif // __cplusplus\n");
+    // fprintf(file, "#ifdef __cplusplus\n} /* end extern C */\n#endif // __cplusplus\n");
 }
+
+
+
+
 
 
 static bool
@@ -1212,6 +1259,312 @@ lIsExternC(const Symbol *sym) {
     const FunctionType *ft = CastType<FunctionType>(sym->type);
     Assert(ft);
     return ft->isExternC;
+}
+
+
+bool
+Module::writeDeps(const char *fn) {
+  std::cout << "writing dependencies to file " << fn << std::endl;
+  FILE *file = fopen(fn,"w");
+  if (!file) {
+    perror("fopen");
+    return false;
+  }
+
+  for (std::set<std::string>::const_iterator it=registeredDependencies.begin();
+       it != registeredDependencies.end();
+       ++it)
+    fprintf(file,"%s\n",it->c_str());
+  return true;
+}
+
+
+std::string emitOffloadParamStruct(const std::string &paramStructName,
+                                   const Symbol *sym,
+                                   const FunctionType *fct)
+{
+  std::stringstream out;
+  out << "struct " << paramStructName << " {" << std::endl;
+  
+  for (int i=0;i<fct->GetNumParameters();i++) {
+    const Type *orgParamType = fct->GetParameterType(i);
+    if (orgParamType->IsPointerType() || orgParamType->IsArrayType()) {
+      /* we're passing pointers separately -- no pointers in that struct... */
+      continue;
+    }
+
+    // const reference parameters can be passed as copies.
+    const Type *paramType;
+    if (orgParamType->IsReferenceType()) {
+      if (!orgParamType->IsConstType()) {
+        Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
+      }
+      const ReferenceType *refType
+        = dynamic_cast<const ReferenceType*>(orgParamType);
+      paramType = refType->GetReferenceTarget()->GetAsNonConstType();
+    } else {
+      paramType = orgParamType->GetAsNonConstType();
+    }
+    std::string paramName = fct->GetParameterName(i);
+    std::string paramTypeName = paramType->GetString();
+    
+    std::string tmpArgDecl = paramType->GetCDeclaration(paramName);
+    out << "   " << tmpArgDecl << ";" << std::endl;
+  }
+
+  out << "};" << std::endl;
+  return out.str();
+}
+
+bool
+Module::writeDevStub(const char *fn) 
+{
+  FILE *file = fopen(fn, "w");
+  if (!file) {
+    perror("fopen");
+    return false;
+  }
+  fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n", fn);
+  fprintf(file, "// DO NOT EDIT THIS FILE.\n//\n\n");
+  fprintf(file,"#include \"ispc/dev/offload.h\"\n\n");
+
+  fprintf(file, "#include <stdint.h>\n\n");
+  
+  // Collect single linear arrays of the *exported* functions (we'll
+  // treat those as "__kernel"s in IVL -- "extern" functions will only
+  // be used for dev-dev function calls; only "export" functions will
+  // get exported to the host
+  std::vector<Symbol *> exportedFuncs;
+  m->symbolTable->GetMatchingFunctions(lIsExported, &exportedFuncs);
+  
+  // Get all of the struct, vector, and enumerant types used as function
+  // parameters.  These vectors may have repeats.
+  std::vector<const StructType *> exportedStructTypes;
+  std::vector<const EnumType *> exportedEnumTypes;
+  std::vector<const VectorType *> exportedVectorTypes;
+  lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
+                         &exportedEnumTypes, &exportedVectorTypes);
+  
+  // And print them
+  lEmitVectorTypedefs(exportedVectorTypes, file);
+  lEmitEnumDecls(exportedEnumTypes, file);
+  lEmitStructDecls(exportedStructTypes, file);
+  
+  fprintf(file, "#ifdef __cplusplus\n");
+  fprintf(file, "namespace ispc {\n");
+  fprintf(file, "#endif // __cplusplus\n");
+
+  fprintf(file, "\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+  fprintf(file, "// Functions exported from ispc code\n");
+  fprintf(file, "// (so the dev stub knows what to call)\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+  lPrintFunctionDeclarations(file, exportedFuncs, true);
+
+  fprintf(file, "#ifdef __cplusplus\n");
+  fprintf(file, "}/* end namespace */\n");
+  fprintf(file, "#endif // __cplusplus\n");
+
+  fprintf(file, "\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+  fprintf(file, "// actual dev stubs\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+
+  fprintf(file, "// note(iw): due to some linking issues offload stubs *only* work under C++\n");
+  fprintf(file, "extern \"C\" {\n\n");
+  for (unsigned int i = 0; i < exportedFuncs.size(); ++i) {
+    const Symbol *sym = exportedFuncs[i];
+    Assert(sym);
+    const FunctionType *fct = CastType<FunctionType>(sym->type);
+    Assert(fct);
+    
+    if (!fct->GetReturnType()->IsVoidType()) {
+      Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-void return types.\n");
+    }
+
+    // -------------------------------------------------------
+    // first, emit a struct that holds the parameters
+    // -------------------------------------------------------
+    std::string paramStructName = std::string("__ispc_dev_stub_")+sym->name;
+    std::string paramStruct = emitOffloadParamStruct(paramStructName,sym,fct);
+    fprintf(file,"%s\n",paramStruct.c_str());
+    // -------------------------------------------------------
+    // then, emit a fct stub that unpacks the parameters and pointers
+    // -------------------------------------------------------
+    fprintf(file,"void __ispc_dev_stub_%s(\n"
+            "            uint32_t         in_BufferCount,\n"
+            "            void**           in_ppBufferPointers,\n"
+            "            uint64_t*        in_pBufferLengths,\n"
+            "            void*            in_pMiscData,\n"
+            "            uint16_t         in_MiscDataLength,\n"
+            "            void*            in_pReturnValue,\n"
+            "            uint16_t         in_ReturnValueLength)\n",
+            sym->name.c_str()
+            );
+    fprintf(file,"{\n");
+    fprintf(file,"  struct %s args;\n  memcpy(&args,in_pMiscData,sizeof(args));\n",
+            paramStructName.c_str());
+    std::stringstream funcall;
+    
+    funcall << "ispc::" << sym->name << "(";
+    for (int i=0;i<fct->GetNumParameters();i++) {
+      // get param type and make it non-const, so we can write while unpacking
+      // const Type *paramType = fct->GetParameterType(i)->GetAsNonConstType();
+      const Type *paramType;// = fct->GetParameterType(i)->GetAsNonConstType();
+      const Type *orgParamType = fct->GetParameterType(i);
+      if (orgParamType->IsReferenceType()) {
+        if (!orgParamType->IsConstType()) {
+          Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-const reference-type parameters.\n");
+        }
+        const ReferenceType *refType
+          = dynamic_cast<const ReferenceType*>(orgParamType);
+        paramType = refType->GetReferenceTarget()->GetAsNonConstType();
+      } else {
+        paramType = orgParamType->GetAsNonConstType();
+      }
+      
+      std::string paramName = fct->GetParameterName(i);
+      std::string paramTypeName = paramType->GetString();
+
+      if (i) funcall << ", ";
+      std::string tmpArgName = std::string("_")+paramName;
+      if (paramType->IsPointerType() || paramType->IsArrayType()) {
+        std::string tmpArgDecl = paramType->GetCDeclaration(tmpArgName);
+        fprintf(file,"  %s;\n",
+                tmpArgDecl.c_str());
+        fprintf(file,"  (void *&)%s = ispc_dev_translate_pointer(*in_ppBufferPointers++);\n",
+                tmpArgName.c_str());
+        funcall << tmpArgName;
+      } else {
+        funcall << "args." << paramName;
+      }
+    }
+    funcall << ");";
+    fprintf(file,"  %s\n",funcall.str().c_str());
+    fprintf(file,"}\n\n");
+  }
+
+  // end extern "C"
+  fprintf(file, "}/* end extern C */\n");
+
+  fclose(file);
+  return true;
+}
+
+
+
+bool
+Module::writeHostStub(const char *fn) 
+{
+  FILE *file = fopen(fn, "w");
+  if (!file) {
+    perror("fopen");
+    return false;
+  }
+  fprintf(file, "//\n// %s\n// (device stubs automatically generated by the ispc compiler.)\n", fn);
+  fprintf(file, "// DO NOT EDIT THIS FILE.\n//\n\n");
+  fprintf(file,"#include \"ispc/host/offload.h\"\n\n");
+  fprintf(file,"// note(iw): Host stubs do not get extern C linkage -- dev-side already uses that for the same symbols.\n\n");
+  //fprintf(file,"#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
+
+  fprintf(file, "#ifdef __cplusplus\nnamespace ispc {\n#endif // __cplusplus\n\n");
+  
+  // Collect single linear arrays of the *exported* functions (we'll
+  // treat those as "__kernel"s in IVL -- "extern" functions will only
+  // be used for dev-dev function calls; only "export" functions will
+  // get exported to the host
+  std::vector<Symbol *> exportedFuncs;
+  m->symbolTable->GetMatchingFunctions(lIsExported, &exportedFuncs);
+  
+  // Get all of the struct, vector, and enumerant types used as function
+  // parameters.  These vectors may have repeats.
+  std::vector<const StructType *> exportedStructTypes;
+  std::vector<const EnumType *> exportedEnumTypes;
+  std::vector<const VectorType *> exportedVectorTypes;
+  lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
+                         &exportedEnumTypes, &exportedVectorTypes);
+  
+  // And print them
+  lEmitVectorTypedefs(exportedVectorTypes, file);
+  lEmitEnumDecls(exportedEnumTypes, file);
+  lEmitStructDecls(exportedStructTypes, file);
+  
+  fprintf(file, "\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+  fprintf(file, "// host-side stubs for dev-side ISPC fucntion(s)\n");
+  fprintf(file, "///////////////////////////////////////////////////////////////////////////\n");
+  for (unsigned int i = 0; i < exportedFuncs.size(); ++i) {
+    const Symbol *sym = exportedFuncs[i];
+    Assert(sym);
+    const FunctionType *fct = CastType<FunctionType>(sym->type);
+    Assert(fct);
+
+    // -------------------------------------------------------
+    // first, emit a struct that holds the parameters
+    // -------------------------------------------------------
+    std::string paramStructName = std::string("__ispc_dev_stub_")+sym->name;
+    std::string paramStruct = emitOffloadParamStruct(paramStructName,sym,fct);
+    fprintf(file,"%s\n",paramStruct.c_str());
+    // -------------------------------------------------------
+    // then, emit a fct stub that unpacks the parameters and pointers
+    // -------------------------------------------------------
+    
+    std::string decl = fct->GetCDeclaration(sym->name);
+    fprintf(file, "extern %s {\n", decl.c_str());
+    int numPointers = 0;
+    fprintf(file, "  %s __args;\n",paramStructName.c_str());
+
+    // ------------------------------------------------------------------
+    // write args, and save pointers for later
+    // ------------------------------------------------------------------
+    std::stringstream pointerArgs;
+    for (int i=0;i<fct->GetNumParameters();i++) {
+      const Type *orgParamType = fct->GetParameterType(i);
+      std::string paramName = fct->GetParameterName(i);
+      if (orgParamType->IsPointerType() || orgParamType->IsArrayType()) {
+        /* we're passing pointers separately -- no pointers in that struct... */
+        if (numPointers)
+          pointerArgs << ",";
+        pointerArgs << "(void*)" << paramName;
+        numPointers++;
+        continue;
+      }
+
+      fprintf(file,"  __args.%s = %s;\n",
+              paramName.c_str(),paramName.c_str());
+    }
+    // ------------------------------------------------------------------
+    // writer pointer list
+    // ------------------------------------------------------------------
+    if (numPointers == 0)
+      pointerArgs << "NULL";
+    fprintf(file,"  void *ptr_args[] = { %s };\n" ,pointerArgs.str().c_str());
+
+    // ------------------------------------------------------------------
+    // ... and call the kernel with those args
+    // ------------------------------------------------------------------
+    fprintf(file,"  static ispc_kernel_handle_t kernel_handle = NULL;\n");
+    fprintf(file,"  if (!kernel_handle) kernel_handle = ispc_host_get_kernel_handle(\"__ispc_dev_stub_%s\");\n",
+            sym->name.c_str());
+    fprintf(file,"  assert(kernel_handle);\n");
+    fprintf(file,
+            "  ispc_host_call_kernel(kernel_handle,\n"
+            "                        &__args, sizeof(__args),\n"
+            "                        ptr_args,%i);\n",
+            numPointers);
+    fprintf(file,"}\n\n");
+  }
+  
+  // end extern "C"
+  fprintf(file, "#ifdef __cplusplus\n");
+  fprintf(file, "}/* namespace */\n");
+  fprintf(file, "#endif // __cplusplus\n");
+  // fprintf(file, "#ifdef __cplusplus\n");
+  // fprintf(file, "}/* end extern C */\n");
+  // fprintf(file, "#endif // __cplusplus\n");
+  
+  fclose(file);
+  return true;
 }
 
 
@@ -1242,14 +1595,17 @@ Module::writeHeader(const char *fn) {
 
     fprintf(f, "#include <stdint.h>\n\n");
 
-    fprintf(f, "#ifdef __cplusplus\nnamespace ispc {\n#endif // __cplusplus\n\n");
-
     if (g->emitInstrumentation) {
         fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");
         fprintf(f, "extern \"C\" {\n");
         fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);\n");
         fprintf(f, "}\n");
     }
+
+    // end namespace
+    fprintf(f, "\n");
+    fprintf(f, "\n#ifdef __cplusplus\nnamespace ispc { /* namespace */\n#endif // __cplusplus\n");
+
 
     // Collect single linear arrays of the exported and extern "C"
     // functions
@@ -1303,7 +1659,8 @@ Module::writeHeader(const char *fn) {
 #endif
 
     // end namespace
-    fprintf(f, "\n#ifdef __cplusplus\n}\n#endif // __cplusplus\n");
+    fprintf(f, "\n");
+    fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
 
     // end guard
     fprintf(f, "\n#endif // %s\n", guard.c_str());
@@ -1775,10 +2132,19 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
 
 
 int
-Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu, 
-                         const char *target, bool generatePIC, OutputType outputType, 
-                         const char *outFileName, const char *headerFileName,
-                         const char *includeFileName) {
+Module::CompileAndOutput(const char *srcFile, 
+                         const char *arch, 
+                         const char *cpu, 
+                         const char *target, 
+                         bool generatePIC, 
+                         OutputType outputType, 
+                         const char *outFileName, 
+                         const char *headerFileName,
+                         const char *includeFileName,
+                         const char *depsFileName,
+                         const char *hostStubFileName,
+                         const char *devStubFileName) 
+{
     if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
@@ -1792,6 +2158,15 @@ Module::CompileAndOutput(const char *srcFile, const char *arch, const char *cpu,
             if (headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, headerFileName))
                     return 1;
+            if (depsFileName != NULL)
+              if (!m->writeOutput(Module::Deps,depsFileName))
+                return 1;
+            if (hostStubFileName != NULL)
+              if (!m->writeOutput(Module::HostStub,hostStubFileName))
+                return 1;
+            if (devStubFileName != NULL)
+              if (!m->writeOutput(Module::DevStub,devStubFileName))
+                return 1;
         }
         else
             ++m->errorCount;

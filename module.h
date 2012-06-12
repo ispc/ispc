@@ -91,9 +91,12 @@ public:
                       Bitcode,  /** Generate LLVM IR bitcode output */
                       Object,   /** Generate a native object file */
                       CXX,      /** Generate a C++ file */
-                      Header    /** Generate a C/C++ header file with 
+                      Header,   /** Generate a C/C++ header file with 
                                     declarations of 'export'ed functions, global
                                     variables, and the types used by them. */
+                      Deps,     /** generate dependencies */
+                      DevStub,  /** generate device-side offload stubs */
+                      HostStub  /** generate host-side offload stubs */
     };
 
     /** Compile the given source file, generating assembly, object file, or
@@ -128,10 +131,14 @@ public:
      */
     static int CompileAndOutput(const char *srcFile, const char *arch, 
                                 const char *cpu, const char *targets, 
-                                bool generatePIC, OutputType outputType, 
+                                bool generatePIC, 
+                                OutputType outputType, 
                                 const char *outFileName, 
-                                const char *headerFileName, 
-                                const char *includeFileName);
+                                const char *headerFileName,
+                                const char *includeFileName,
+                                const char *depsFileName,
+                                const char *hostStubFileName,
+                                const char *devStubFileName);
 
     /** Total number of errors encountered during compilation. */
     int errorCount;
@@ -159,6 +166,9 @@ private:
     bool writeOutput(OutputType ot, const char *filename,
                      const char *includeFileName = NULL);
     bool writeHeader(const char *filename);
+    bool writeDeps(const char *filename);
+    bool writeDevStub(const char *filename);
+    bool writeHostStub(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
                                           llvm::Module *module, OutputType outputType, 

@@ -115,6 +115,18 @@ public:
         integer types. */
     virtual bool IsUnsignedType() const = 0;
 
+    /** Returns true if the underlying type is either a pointer type */
+    bool IsPointerType() const;
+  
+    /** Returns true if the underlying type is a array type */
+    bool IsArrayType() const;
+  
+    /** Returns true if the underlying type is a array type */
+    bool IsReferenceType() const;
+  
+    /** Returns true if the underlying type is either a pointer or an array */
+    bool IsVoidType() const;
+
     /** Returns true if this type is 'const'-qualified. */
     virtual bool IsConstType() const = 0;
     

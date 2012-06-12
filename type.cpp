@@ -197,10 +197,30 @@ AtomicType::GetVariability() const {
 
 
 bool
+Type::IsPointerType() const {
+    return (CastType<const PointerType*>(this) != NULL);
+}
+
+
+bool
+Type::IsArrayType() const {
+    return (CastType<const ArrayType*>(this) != NULL);
+}
+
+bool
+Type::IsReferenceType() const {
+    return (CastType<ReferenceType>(this) != NULL);
+}
+
+bool
+Type::IsVoidType() const {
+    return this == AtomicType::Void;
+}
+
+bool
 AtomicType::IsFloatType() const {
     return (basicType == TYPE_FLOAT || basicType == TYPE_DOUBLE);
 }
-
 
 bool
 AtomicType::IsIntType() const {
