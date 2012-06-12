@@ -92,10 +92,11 @@ static llvm::Pass *CreateVSelMovmskOptPass();
 static llvm::Pass *CreateDetectGSBaseOffsetsPass();
 static llvm::Pass *CreateGSToLoadStorePass();
 static llvm::Pass *CreateGatherCoalescePass();
-static llvm::Pass *CreatePseudoGSToGSPass();
-static llvm::Pass *CreatePseudoMaskedStorePass();
 static llvm::Pass *CreateMaskedStoreOptPass();
 static llvm::Pass *CreateMaskedLoadOptPass();
+
+static llvm::Pass *CreateReplacePseudoMemoryOpsPass();
+
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
@@ -414,10 +415,9 @@ Optimize(llvm::Module *module, int optLevel) {
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
         optPM.add(CreateDetectGSBaseOffsetsPass());
-        if (g->opt.disableHandlePseudoMemoryOps == false) {
-            optPM.add(CreatePseudoGSToGSPass());
-            optPM.add(CreatePseudoMaskedStorePass());
-        }
+        if (g->opt.disableHandlePseudoMemoryOps == false)
+            optPM.add(CreateReplacePseudoMemoryOpsPass());
+
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
@@ -488,8 +488,7 @@ Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
-        if (g->opt.disableHandlePseudoMemoryOps == false)
-            optPM.add(CreatePseudoMaskedStorePass());
+
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target.vectorWidth > 1) {
             optPM.add(CreateGSToLoadStorePass());
@@ -502,14 +501,15 @@ Optimize(llvm::Module *module, int optLevel) {
                 optPM.add(CreateGatherCoalescePass());
             }
         }
-        if (g->opt.disableHandlePseudoMemoryOps == false) {
-            optPM.add(CreatePseudoMaskedStorePass());
-            optPM.add(CreatePseudoGSToGSPass());
-        }
+
+        if (g->opt.disableHandlePseudoMemoryOps == false)
+            optPM.add(CreateReplacePseudoMemoryOpsPass());
+
         if (!g->opt.disableMaskAllOnOptimizations) {
             optPM.add(CreateMaskedStoreOptPass());
             optPM.add(CreateMaskedLoadOptPass());
         }
+
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
@@ -2089,152 +2089,6 @@ CreateMaskedLoadOptPass() {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// PseudoMaskedStorePass
-
-/** When the front-end needs to do a masked store, it emits a
-    __pseudo_masked_store* call as a placeholder.  This pass lowers these
-    calls to either __masked_store* or __masked_store_blend* calls.  
-*/
-class PseudoMaskedStorePass : public llvm::BasicBlockPass {
-public:
-    static char ID;
-    PseudoMaskedStorePass() : BasicBlockPass(ID) { }
-
-    const char *getPassName() const { return "Lower Masked Stores"; }
-    bool runOnBasicBlock(llvm::BasicBlock &BB);
-};
-
-
-char PseudoMaskedStorePass::ID = 0;
-
-
-/** This routine attempts to determine if the given pointer in lvalue is
-    pointing to stack-allocated memory.  It's conservative in that it
-    should never return true for non-stack allocated memory, but may return
-    false for memory that actually is stack allocated.  The basic strategy
-    is to traverse through the operands and see if the pointer originally
-    comes from an AllocaInst.
-*/
-static bool
-lIsSafeToBlend(llvm::Value *lvalue) {
-    llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
-    if (bc != NULL)
-        return lIsSafeToBlend(bc->getOperand(0));
-    else {
-        llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
-        if (ai) {
-            llvm::Type *type = ai->getType();
-            llvm::PointerType *pt = 
-                llvm::dyn_cast<llvm::PointerType>(type);
-            assert(pt != NULL);
-            type = pt->getElementType();
-            llvm::ArrayType *at;
-            while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
-                type = at->getElementType();
-            }
-            llvm::VectorType *vt = 
-                llvm::dyn_cast<llvm::VectorType>(type);
-            return (vt != NULL && 
-                    (int)vt->getNumElements() == g->target.vectorWidth);
-        }
-        else {
-            llvm::GetElementPtrInst *gep = 
-                llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
-            if (gep != NULL)
-                return lIsSafeToBlend(gep->getOperand(0));
-            else
-                return false;
-        }
-    }
-}
-
-
-struct LMSInfo {
-    LMSInfo(const char *pname, const char *bname, const char *msname) {
-        pseudoFunc = m->module->getFunction(pname);
-        blendFunc = m->module->getFunction(bname);
-        maskedStoreFunc = m->module->getFunction(msname);
-        Assert(pseudoFunc != NULL && blendFunc != NULL && 
-               maskedStoreFunc != NULL);
-    }
-    llvm::Function *pseudoFunc;
-    llvm::Function *blendFunc;
-    llvm::Function *maskedStoreFunc;
-};
-
-
-bool
-PseudoMaskedStorePass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("PseudoMaskedStorePass");
-
-    LMSInfo msInfo[] = {
-        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", 
-                "__masked_store_i8"),
-        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", 
-                "__masked_store_i16"),
-        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", 
-                "__masked_store_i32"),
-        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", 
-                "__masked_store_float"),
-        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", 
-                "__masked_store_i64"),
-        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", 
-                "__masked_store_double")
-    };
-
-    bool modifiedAny = false;
- restart:
-    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        // Iterate through all of the instructions and look for
-        // __pseudo_masked_store_* calls.
-        llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst == NULL)
-            continue;
-        LMSInfo *info = NULL;
-        for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
-            if (msInfo[i].pseudoFunc != NULL &&
-                callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
-                info = &msInfo[i];
-                break;
-            }
-        }
-        if (info == NULL)
-            continue;
-
-        llvm::Value *lvalue = callInst->getArgOperand(0);
-        llvm::Value *rvalue  = callInst->getArgOperand(1);
-        llvm::Value *mask = callInst->getArgOperand(2);
-
-        // We need to choose between doing the load + blend + store trick,
-        // or serializing the masked store.  Even on targets with a native
-        // masked store instruction, this is preferable since it lets us
-        // keep values in registers rather than going out to the stack.
-        bool doBlend = (!g->opt.disableBlendedMaskedStores &&
-                        lIsSafeToBlend(lvalue));
-
-        // Generate the call to the appropriate masked store function and
-        // replace the __pseudo_* one with it.
-        llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
-        llvm::Instruction *inst = lCallInst(fms, lvalue, rvalue, mask, "", callInst);
-        lCopyMetadata(inst, callInst);
-
-        callInst->eraseFromParent();
-        modifiedAny = true;
-        goto restart;
-    }
-
-    DEBUG_END_PASS("PseudoMaskedStorePass");
-
-    return modifiedAny;
-}
-
-
-static llvm::Pass *
-CreatePseudoMaskedStorePass() {
-    return new PseudoMaskedStorePass;
-}
-
-///////////////////////////////////////////////////////////////////////////
 // GSToLoadStorePass
 
 /** After earlier optimization passes have run, we are sometimes able to
@@ -3595,41 +3449,141 @@ CreateGatherCoalescePass() {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// PseudoGSToGSPass
+// ReplacePseudoMemoryOpsPass
 
 /** For any gathers and scatters remaining after the GSToLoadStorePass
     runs, we need to turn them into actual native gathers and scatters.
-    This task is handled by the PseudoGSToGSPass here.
+    This task is handled by the ReplacePseudoMemoryOpsPass here.
  */
-class PseudoGSToGSPass : public llvm::BasicBlockPass {
+class ReplacePseudoMemoryOpsPass : public llvm::BasicBlockPass {
 public:
     static char ID;
-    PseudoGSToGSPass() : BasicBlockPass(ID) { }
+    ReplacePseudoMemoryOpsPass() : BasicBlockPass(ID) { }
 
-    const char *getPassName() const { return "Gather/Scatter Improvements"; }
+    const char *getPassName() const { return "Replace Pseudo Memory Ops"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 };
 
 
-char PseudoGSToGSPass::ID = 0;
+char ReplacePseudoMemoryOpsPass::ID = 0;
 
-
-struct LowerGSInfo {
-    LowerGSInfo(const char *pName, const char *aName, bool ig)
-        : isGather(ig) {
-        pseudoFunc = m->module->getFunction(pName);
-        actualFunc = m->module->getFunction(aName);
-        Assert(pseudoFunc != NULL && actualFunc != NULL);
+/** This routine attempts to determine if the given pointer in lvalue is
+    pointing to stack-allocated memory.  It's conservative in that it
+    should never return true for non-stack allocated memory, but may return
+    false for memory that actually is stack allocated.  The basic strategy
+    is to traverse through the operands and see if the pointer originally
+    comes from an AllocaInst.
+*/
+static bool
+lIsSafeToBlend(llvm::Value *lvalue) {
+    llvm::BitCastInst *bc = llvm::dyn_cast<llvm::BitCastInst>(lvalue);
+    if (bc != NULL)
+        return lIsSafeToBlend(bc->getOperand(0));
+    else {
+        llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
+        if (ai) {
+            llvm::Type *type = ai->getType();
+            llvm::PointerType *pt = 
+                llvm::dyn_cast<llvm::PointerType>(type);
+            assert(pt != NULL);
+            type = pt->getElementType();
+            llvm::ArrayType *at;
+            while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
+                type = at->getElementType();
+            }
+            llvm::VectorType *vt = 
+                llvm::dyn_cast<llvm::VectorType>(type);
+            return (vt != NULL && 
+                    (int)vt->getNumElements() == g->target.vectorWidth);
+        }
+        else {
+            llvm::GetElementPtrInst *gep = 
+                llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
+            if (gep != NULL)
+                return lIsSafeToBlend(gep->getOperand(0));
+            else
+                return false;
+        }
     }
-    llvm::Function *pseudoFunc;
-    llvm::Function *actualFunc;
-    const bool isGather;
-};
+}
 
 
-bool
-PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("PseudoGSToGSPass");
+static bool
+lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
+    struct LMSInfo {
+        LMSInfo(const char *pname, const char *bname, const char *msname) {
+            pseudoFunc = m->module->getFunction(pname);
+            blendFunc = m->module->getFunction(bname);
+            maskedStoreFunc = m->module->getFunction(msname);
+            Assert(pseudoFunc != NULL && blendFunc != NULL && 
+                   maskedStoreFunc != NULL);
+        }
+        llvm::Function *pseudoFunc;
+        llvm::Function *blendFunc;
+        llvm::Function *maskedStoreFunc;
+    };
+
+    LMSInfo msInfo[] = {
+        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", 
+                "__masked_store_i8"),
+        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", 
+                "__masked_store_i16"),
+        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", 
+                "__masked_store_i32"),
+        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", 
+                "__masked_store_float"),
+        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", 
+                "__masked_store_i64"),
+        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", 
+                "__masked_store_double")
+    };
+
+    LMSInfo *info = NULL;
+    for (unsigned int i = 0; i < sizeof(msInfo) / sizeof(msInfo[0]); ++i) {
+        if (msInfo[i].pseudoFunc != NULL &&
+            callInst->getCalledFunction() == msInfo[i].pseudoFunc) {
+            info = &msInfo[i];
+            break;
+        }
+    }
+    if (info == NULL)
+        return false;
+
+    llvm::Value *lvalue = callInst->getArgOperand(0);
+    llvm::Value *rvalue  = callInst->getArgOperand(1);
+    llvm::Value *mask = callInst->getArgOperand(2);
+
+    // We need to choose between doing the load + blend + store trick,
+    // or serializing the masked store.  Even on targets with a native
+    // masked store instruction, this is preferable since it lets us
+    // keep values in registers rather than going out to the stack.
+    bool doBlend = (!g->opt.disableBlendedMaskedStores &&
+                    lIsSafeToBlend(lvalue));
+
+    // Generate the call to the appropriate masked store function and
+    // replace the __pseudo_* one with it.
+    llvm::Function *fms = doBlend ? info->blendFunc : info->maskedStoreFunc;
+    llvm::Instruction *inst = lCallInst(fms, lvalue, rvalue, mask, "", callInst);
+    lCopyMetadata(inst, callInst);
+
+    callInst->eraseFromParent();
+    return true;
+}
+
+
+static bool 
+lReplacePseudoGS(llvm::CallInst *callInst) {
+    struct LowerGSInfo {
+        LowerGSInfo(const char *pName, const char *aName, bool ig)
+            : isGather(ig) {
+            pseudoFunc = m->module->getFunction(pName);
+            actualFunc = m->module->getFunction(aName);
+            Assert(pseudoFunc != NULL && actualFunc != NULL);
+        }
+        llvm::Function *pseudoFunc;
+        llvm::Function *actualFunc;
+        const bool isGather;
+    };
 
     LowerGSInfo lgsInfo[] = {
         LowerGSInfo("__pseudo_gather_base_offsets32_i8",  "__gather_base_offsets32_i8",  true),
@@ -3689,56 +3643,68 @@ PseudoGSToGSPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false),
     };
 
+    llvm::Function *calledFunc = callInst->getCalledFunction();
+
+    LowerGSInfo *info = NULL;
+    for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
+        if (lgsInfo[i].pseudoFunc != NULL &&
+            calledFunc == lgsInfo[i].pseudoFunc) {
+            info = &lgsInfo[i];
+            break;
+        }
+    }
+    if (info == NULL)
+        return false;
+
+
+    // Get the source position from the metadata attached to the call
+    // instruction so that we can issue PerformanceWarning()s below.
+    SourcePos pos;
+    bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
+
+    callInst->setCalledFunction(info->actualFunc);
+    if (gotPosition && g->target.vectorWidth > 1) {
+        if (info->isGather)
+            PerformanceWarning(pos, "Gather required to load value.");
+        else
+            PerformanceWarning(pos, "Scatter required to store value.");
+    }
+    return true;
+}
+
+
+bool
+ReplacePseudoMemoryOpsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("ReplacePseudoMemoryOpsPass");
+
     bool modifiedAny = false;
 
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        // Loop over the instructions and find calls to the
-        // __pseudo_*_base_offsets_* functions.
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst == NULL)
+        if (callInst == NULL ||
+            callInst->getCalledFunction() == NULL)
             continue;
 
-        llvm::Function *calledFunc = callInst->getCalledFunction();
-        if (calledFunc == NULL)
-            continue;
-
-        LowerGSInfo *info = NULL;
-        for (unsigned int i = 0; i < sizeof(lgsInfo) / sizeof(lgsInfo[0]); ++i) {
-            if (lgsInfo[i].pseudoFunc != NULL &&
-                calledFunc == lgsInfo[i].pseudoFunc) {
-                info = &lgsInfo[i];
-                break;
-            }
+        if (lReplacePseudoGS(callInst)) {
+            modifiedAny = true;
+            goto restart;
         }
-        if (info == NULL)
-            continue;
-
-        // Get the source position from the metadata attached to the call
-        // instruction so that we can issue PerformanceWarning()s below.
-        SourcePos pos;
-        bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
-
-        callInst->setCalledFunction(info->actualFunc);
-        if (gotPosition && g->target.vectorWidth > 1) {
-            if (info->isGather)
-                PerformanceWarning(pos, "Gather required to load value.");
-            else
-                PerformanceWarning(pos, "Scatter required to store value.");
+        else if (lReplacePseudoMaskedStore(callInst)) {
+            modifiedAny = true;
+            goto restart;
         }
-        modifiedAny = true;
-        goto restart;
     }
 
-    DEBUG_END_PASS("PseudoGSToGSPass");
+    DEBUG_END_PASS("ReplacePseudoMemoryOpsPass");
 
     return modifiedAny;
 }
 
 
 static llvm::Pass *
-CreatePseudoGSToGSPass() {
-    return new PseudoGSToGSPass;
+CreateReplacePseudoMemoryOpsPass() {
+    return new ReplacePseudoMemoryOpsPass;
 }
 
 
@@ -3845,7 +3811,6 @@ static llvm::Pass *
 CreateIsCompileTimeConstantPass(bool isLastTry) {
     return new IsCompileTimeConstantPass(isLastTry);
 }
-
 
 ///////////////////////////////////////////////////////////////////////////
 // MakeInternalFuncsStaticPass
