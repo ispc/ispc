@@ -1835,6 +1835,150 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 }
 
 
+/** Try to improve the decomposition between compile-time constant and
+    compile-time unknown offsets in calls to the __pseudo_*_base_offsets*
+    functions.  Other other optimizations have run, we will sometimes be
+    able to pull more terms out of the unknown part and add them into the
+    compile-time-known part.
+ */
+static bool
+lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
+    struct GSBOInfo {
+        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig) 
+            : isGather(ig) {
+            baseOffsetsFunc = m->module->getFunction(pgboFuncName);
+            baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
+        }
+        llvm::Function *baseOffsetsFunc, *baseOffsets32Func;
+        const bool isGather;
+    };
+
+    GSBOInfo gsFuncs[] = {
+        GSBOInfo("__pseudo_gather_base_offsets32_i8", 
+               "__pseudo_gather_base_offsets32_i8", true),
+        GSBOInfo("__pseudo_gather_base_offsets32_i16", 
+               "__pseudo_gather_base_offsets32_i16", true),
+        GSBOInfo("__pseudo_gather_base_offsets32_i32", 
+               "__pseudo_gather_base_offsets32_i32", true),
+        GSBOInfo("__pseudo_gather_base_offsets32_float", 
+               "__pseudo_gather_base_offsets32_float", true),
+        GSBOInfo("__pseudo_gather_base_offsets32_i64", 
+               "__pseudo_gather_base_offsets32_i64", true),
+        GSBOInfo("__pseudo_gather_base_offsets32_double", 
+               "__pseudo_gather_base_offsets32_double", true),
+
+        GSBOInfo( "__pseudo_scatter_base_offsets32_i8", 
+               "__pseudo_scatter_base_offsets32_i8", false),
+        GSBOInfo("__pseudo_scatter_base_offsets32_i16", 
+               "__pseudo_scatter_base_offsets32_i16", false),
+        GSBOInfo("__pseudo_scatter_base_offsets32_i32", 
+               "__pseudo_scatter_base_offsets32_i32", false),
+        GSBOInfo("__pseudo_scatter_base_offsets32_float", 
+               "__pseudo_scatter_base_offsets32_float", false),
+        GSBOInfo("__pseudo_scatter_base_offsets32_i64", 
+               "__pseudo_scatter_base_offsets32_i64", false),
+        GSBOInfo("__pseudo_scatter_base_offsets32_double", 
+               "__pseudo_scatter_base_offsets32_double", false),
+
+        GSBOInfo( "__pseudo_gather_base_offsets64_i8", 
+               "__pseudo_gather_base_offsets32_i8", true),
+        GSBOInfo("__pseudo_gather_base_offsets64_i16", 
+               "__pseudo_gather_base_offsets32_i16", true),
+        GSBOInfo("__pseudo_gather_base_offsets64_i32", 
+               "__pseudo_gather_base_offsets32_i32", true),
+        GSBOInfo("__pseudo_gather_base_offsets64_float", 
+               "__pseudo_gather_base_offsets32_float", true),
+        GSBOInfo("__pseudo_gather_base_offsets64_i64", 
+               "__pseudo_gather_base_offsets32_i64", true),
+        GSBOInfo("__pseudo_gather_base_offsets64_double", 
+               "__pseudo_gather_base_offsets32_double", true),
+
+        GSBOInfo( "__pseudo_scatter_base_offsets64_i8", 
+               "__pseudo_scatter_base_offsets32_i8", false),
+        GSBOInfo("__pseudo_scatter_base_offsets64_i16", 
+               "__pseudo_scatter_base_offsets32_i16", false),
+        GSBOInfo("__pseudo_scatter_base_offsets64_i32", 
+               "__pseudo_scatter_base_offsets32_i32", false),
+        GSBOInfo("__pseudo_scatter_base_offsets64_float", 
+               "__pseudo_scatter_base_offsets32_float", false),
+        GSBOInfo("__pseudo_scatter_base_offsets64_i64", 
+               "__pseudo_scatter_base_offsets32_i64", false),
+        GSBOInfo("__pseudo_scatter_base_offsets64_double", 
+               "__pseudo_scatter_base_offsets32_double", false),
+    };
+
+    int numGSFuncs = sizeof(gsFuncs) / sizeof(gsFuncs[0]);
+    for (int i = 0; i < numGSFuncs; ++i)
+        Assert(gsFuncs[i].baseOffsetsFunc != NULL &&
+               gsFuncs[i].baseOffsets32Func != NULL);
+
+    llvm::Function *calledFunc = callInst->getCalledFunction();
+    Assert(calledFunc != NULL);
+
+    // Is one of the gather/scatter functins that decompose into
+    // base+offsets being called?
+    GSBOInfo *info = NULL;
+    for (int i = 0; i < numGSFuncs; ++i)
+        if (calledFunc == gsFuncs[i].baseOffsetsFunc ||
+            calledFunc == gsFuncs[i].baseOffsets32Func) {
+            info = &gsFuncs[i];
+            break;
+        }
+    if (info == NULL)
+        return false;
+
+    // Grab the old variable offset
+    llvm::Value *origVariableOffset = callInst->getArgOperand(1);
+
+    // If it's zero, we're done.  Don't go and think that we're clever by
+    // adding these zeros to the constant offsets.
+    if (llvm::isa<llvm::ConstantAggregateZero>(origVariableOffset))
+        return false;
+
+    // Try to decompose the old variable offset
+    llvm::Value *constOffset, *variableOffset;
+    lExtractConstantOffset(origVariableOffset, &constOffset, &variableOffset, 
+                           callInst);
+
+    // No luck
+    if (constOffset == NULL)
+        return false;
+
+    // Total luck: everything could be moved to the constant offset
+    if (variableOffset == NULL)
+        variableOffset = LLVMIntAsType(0, origVariableOffset->getType());
+
+    // We need to scale the value we add to the constant offset by the
+    // 2/4/8 scale for the variable offset, if present.
+    llvm::ConstantInt *varScale = 
+        llvm::dyn_cast<llvm::ConstantInt>(callInst->getArgOperand(2));
+    Assert(varScale != NULL);
+
+    llvm::Value *scaleSmear;
+    if (origVariableOffset->getType() == LLVMTypes::Int64VectorType)
+        scaleSmear = LLVMInt64Vector((int64_t)varScale->getZExtValue());
+    else
+        scaleSmear = LLVMInt32Vector((int32_t)varScale->getZExtValue());
+
+    constOffset = llvm::BinaryOperator::Create(llvm::Instruction::Mul, constOffset,
+                                               scaleSmear, constOffset->getName(),
+                                               callInst);
+
+    // And add the additional offset to the original constant offset
+    constOffset = llvm::BinaryOperator::Create(llvm::Instruction::Add, constOffset,
+                                               callInst->getArgOperand(3),
+                                               callInst->getArgOperand(3)->getName(),
+                                               callInst);
+
+    // Finally, update the values of the operands to the gather/scatter
+    // function.
+    callInst->setArgOperand(1, variableOffset);
+    callInst->setArgOperand(3, constOffset);
+
+    return true;
+}
+
+
 static llvm::Value *
 lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
                       llvm::Instruction *insertBefore) {
@@ -2253,6 +2397,10 @@ ImproveMemoryOpsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             continue;
 
         if (lGSToGSBaseOffsets(callInst)) {
+            modifiedAny = true;
+            goto restart;
+        }
+        if (lGSBaseOffsetsGetMoreConst(callInst)) {
             modifiedAny = true;
             goto restart;
         }
