@@ -299,7 +299,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx-x2") || !strcasecmp(isa, "avx1-x2")) {
-        t->isa = Target::AVX11;
+        t->isa = Target::AVX;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 16;
         t->attributes = "+avx,+popcnt,+cmov";
