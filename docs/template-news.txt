@@ -31,6 +31,7 @@
           <li><a href="downloads.html">Downloads</a></li>
           <li><a href="documentation.html">Documentation</a></li>
           <li><a href="perf.html">Performance</a></li>
+          <li><a href="contrib.html">Contributors</a></li>
         </ul>
       </div>
     </div>
