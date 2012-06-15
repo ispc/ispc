@@ -304,12 +304,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             llvm::Value *mask = ctx->GetFunctionMask();
             llvm::Value *allOn = ctx->All(mask);
             llvm::BasicBlock *bbAllOn = ctx->CreateBasicBlock("all_on");
-            llvm::BasicBlock *bbNotAll = ctx->CreateBasicBlock("not_all_on");
+            llvm::BasicBlock *bbSomeOn = ctx->CreateBasicBlock("some_on");
 
             // Set up basic blocks for goto targets
             ctx->InitializeLabelMap(code);
 
-            ctx->BranchInst(bbAllOn, bbNotAll, allOn);
+            ctx->BranchInst(bbAllOn, bbSomeOn, allOn);
             // all on: we've determined dynamically that the mask is all
             // on.  Set the current mask to "all on" explicitly so that
             // codegen for this path can be improved with this knowledge in
@@ -321,23 +321,11 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             if (ctx->GetCurrentBasicBlock())
                 ctx->ReturnInst();
 
-            // not all on: figure out if no instances are running, or if
-            // some of them are
-            ctx->SetCurrentBasicBlock(bbNotAll);
-            ctx->SetFunctionMask(mask);
-            llvm::BasicBlock *bbNoneOn = ctx->CreateBasicBlock("none_on");
-            llvm::BasicBlock *bbSomeOn = ctx->CreateBasicBlock("some_on");
-            llvm::Value *anyOn = ctx->Any(mask);
-            ctx->BranchInst(bbSomeOn, bbNoneOn, anyOn);
-            
-            // Everyone is off; get out of here.
-            ctx->SetCurrentBasicBlock(bbNoneOn);
-            ctx->ReturnInst();
-
-            // some on: reset the mask to the value it had at function
-            // entry and emit the code.  Resetting the mask here is
-            // important, due to the "all on" setting of it for the path
-            // above
+            // not all on: however, at least one lane must be running,
+            // since we should never run with all off...  some on: reset
+            // the mask to the value it had at function entry and emit the
+            // code.  Resetting the mask here is important, due to the "all
+            // on" setting of it for the path above.
             ctx->SetCurrentBasicBlock(bbSomeOn);
             ctx->SetFunctionMask(mask);
 
