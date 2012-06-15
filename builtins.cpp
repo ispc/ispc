@@ -646,8 +646,9 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
     // Use WeakODRLinkage rather than InternalLinkage so that a definition
     // survives even if it's not used in the module, so that the symbol is
     // there in the debugger.
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                               llvm::GlobalValue::WeakODRLinkage,
+    llvm::GlobalValue::LinkageTypes linkage = g->generateDebuggingSymbols ?
+        llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
                                                linit, name);
     symbolTable->AddVariable(sym);
 
@@ -704,10 +705,10 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
     llvm::Type *ltype = LLVMTypes::Int32VectorType;
     llvm::Constant *linit = LLVMInt32Vector(pi);
     // See comment in lDefineConstantInt() for why WeakODRLinkage is used here
-    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, 
-                                               llvm::GlobalValue::WeakODRLinkage,
-                                               linit, 
-                                               sym->name.c_str());
+    llvm::GlobalValue::LinkageTypes linkage = g->generateDebuggingSymbols ?
+        llvm::GlobalValue::WeakODRLinkage : llvm::GlobalValue::InternalLinkage;
+    sym->storagePtr = new llvm::GlobalVariable(*module, ltype, true, linkage,
+                                               linit, sym->name.c_str());
     symbolTable->AddVariable(sym);
 
     if (m->diBuilder != NULL) {
