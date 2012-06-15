@@ -1,4 +1,4 @@
-// Illegal to have "export" function with same name as previously declared function
+// Illegal to provide "export" qualifier for functions with the same name but different types
 
 export void foo() { }
 

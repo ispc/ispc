@@ -634,15 +634,17 @@ Module::AddFunctionDeclaration(const std::string &name,
                 continue;
             }
 
-            if (functionType->isExported || overloadType->isExported)
-                Error(pos, "Illegal to have \"export\" function with same name "
-                      "as previously declared function (%s:%d).",
-                      overloadFunc->pos.name, overloadFunc->pos.first_line);
-
-            // Check for a redeclaration of a function with the same
-            // name and type
+            // Check for a redeclaration of a function with the same name
+            // and type.  This also hits when we have previously declared
+            // the function and are about to define it.
             if (Type::Equal(overloadFunc->type, functionType))
                 return;
+
+            if (functionType->isExported || overloadType->isExported)
+                Error(pos, "Illegal to provide \"export\" qualifier for "
+                      "functions with the same name but different types. "
+                      "(Previous function declaration (%s:%d).)",
+                      overloadFunc->pos.name, overloadFunc->pos.first_line);
 
             // If all of the parameter types match but the return type is
             // different, return an error--overloading by return type isn't
