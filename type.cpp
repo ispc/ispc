@@ -198,13 +198,13 @@ AtomicType::GetVariability() const {
 
 bool
 Type::IsPointerType() const {
-    return (CastType<const PointerType*>(this) != NULL);
+    return (CastType<PointerType>(this) != NULL);
 }
 
 
 bool
 Type::IsArrayType() const {
-    return (CastType<const ArrayType*>(this) != NULL);
+    return (CastType<ArrayType>(this) != NULL);
 }
 
 bool
