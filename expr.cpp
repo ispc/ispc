@@ -4277,11 +4277,19 @@ IndexExpr::TypeCheck() {
         return NULL;
     }
 
-    if (!CastType<SequentialType>(baseExprType->GetReferenceTarget()) &&
-        !CastType<PointerType>(baseExprType)) {
-        Error(pos, "Trying to index into non-array, vector, or pointer "
+    if (!CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
+        if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
+            if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+                Error(pos, "Illegal to dereference void pointer type \"%s\".",
+                      baseExprType->GetString().c_str());
+                return NULL;
+            }
+        }
+        else {
+            Error(pos, "Trying to index into non-array, vector, or pointer "
               "type \"%s\".", baseExprType->GetString().c_str());
-        return NULL;
+            return NULL;
+        }
     }
 
     bool isUniform = (index->GetType()->IsUniformType() && 
@@ -7172,7 +7180,14 @@ PtrDerefExpr::TypeCheck() {
         return NULL;
     }
 
-    if (CastType<PointerType>(type) == NULL) {
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+            Error(pos, "Illegal to dereference void pointer type \"%s\".",
+                  type->GetString().c_str());
+            return NULL;
+        }
+    }
+    else {
         Error(pos, "Illegal to dereference non-pointer type \"%s\".", 
               type->GetString().c_str());
         return NULL;
