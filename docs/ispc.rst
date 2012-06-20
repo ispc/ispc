@@ -106,6 +106,7 @@ Contents:
     * `Conditional Statements: "if"`_
     * `Conditional Statements: "switch"`_
     * `Basic Iteration Statements: "for", "while", and "do"`_
+    * `Iteration over unique elements: "foreach_unique"`_
     * `Unstructured Control Flow: "goto"`_
     * `"Coherent" Control Flow Statements: "cif" and Friends`_
     * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
@@ -2371,6 +2372,44 @@ independently for each of the program instances in a gang; for example, if
 one of them executes a ``continue`` statement, other program instances
 executing code in the loop body that didn't execute the ``continue`` will
 be unaffected by it.
+
+
+Iteration over unique elements: "foreach_unique"
+------------------------------------------------
+
+It can be useful to iterate over the elements of a varying variable,
+processing the subsets of of them that have the same value together.  For
+example, consider a varying variable ``x`` that has the values ``{1, 2, 2,
+1, 1, 0, 0, 0}``, where the program is running on a target with a gang size
+of 8 program instances.  Here, ``x`` has three unique values across the
+program instances: ``0``, ``1``, and ``2``.
+
+The ``foreach_unique`` looping construct allows us to iterate over these
+unique values.  In the code below, the ``foreach_unique`` loop body
+executes once for each of the three unique values, with execution mask set
+to match the program instances where the varying value matches the current
+unique value being processed.  
+
+::
+
+    int x = ...; // assume {1, 2, 2, 1, 1, 0, 0, 0}
+    foreach_unique (val in x) {
+        extern void func(uniform int v);
+        func(val);
+    }
+
+In the above, ``func()`` will be called three times, once with value 0,
+once with value 1, and once with value 2.  When it is called for value 0,
+only the last three program instances will be executing, and so forth.  The
+order in which the loop executes for the unique values isn't defined.
+
+The varying expression that provides the values to be iterated over is only
+evaluated once, and it must be of an atomic type (``float``, ``int``,
+etc.), an ``enum`` type, or a pointer type.  The iteration variable ``val``
+is a variable of ``const uniform`` type of the iteration type; it can't be
+modified within the loop.  Finally, ``break`` and ``return`` statements are
+illegal within the loop body, but ``continue`` statemetns are allowed.
+
 
 Unstructured Control Flow: "goto"
 ---------------------------------

@@ -260,6 +260,25 @@ public:
 };
 
 
+/** Parallel iteration over each unique value in the given (varying)
+    expression.
+ */
+class ForeachUniqueStmt : public Stmt {
+public:
+    ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts,
+                      SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Symbol *sym;
+    Expr *expr;
+    Stmt *stmts;
+};
+
 
 /** @brief Statement implementation for a 'return' or 'coherent' return
     statement in the program. */

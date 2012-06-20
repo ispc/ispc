@@ -117,7 +117,8 @@ static const char *lBuiltinTokens[] = {
     "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo",
     "cfor", "cif", "cwhile", "const", "continue", "creturn", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
-    "float", "for", "foreach", "foreach_tiled", "goto", "if", "inline",
+    "float", "for", "foreach", "foreach_tiled", "foreach_unique",
+    "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unsigned", "varying",
@@ -185,7 +186,7 @@ struct ForeachDimension {
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
 %token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN 
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
-%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE
+%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
@@ -195,7 +196,7 @@ struct ForeachDimension {
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
-%token TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
+%token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
@@ -241,7 +242,9 @@ struct ForeachDimension {
 %type <declSpecs> declaration_specifiers 
 
 %type <stringVal> string_constant 
-%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
+%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier 
+%type <constCharPtr> foreach_unique_identifier
+
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
 
 %type <foreachDimension> foreach_dimension_specifier
@@ -1703,6 +1706,14 @@ foreach_dimension_list
     }
     ;
 
+foreach_unique_scope
+    : TOKEN_FOREACH_UNIQUE { m->symbolTable->PushScope(); }
+    ;
+   
+foreach_unique_identifier
+    : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
+    ;
+
 iteration_statement
     : TOKEN_WHILE '(' expression ')' statement
       { $$ = new ForStmt(NULL, $3, NULL, $5, false, @1); }
@@ -1793,6 +1804,24 @@ iteration_statement
      statement
      {
          $$ = CreateForeachActiveStmt($3, $6, Union(@1, @4));
+         m->symbolTable->PopScope();
+     }
+    | foreach_unique_scope '(' foreach_unique_identifier TOKEN_IN
+         expression ')' 
+     {
+         Expr *expr = $5;
+         const Type *type;
+         if (expr != NULL &&
+             (expr = TypeCheck(expr)) != NULL &&
+             (type = expr->GetType()) != NULL) {
+             const Type *iterType = type->GetAsUniformType()->GetAsConstType();
+             Symbol *sym = new Symbol($3, @3, iterType);
+             m->symbolTable->AddVariable(sym);
+         }
+     }
+     statement
+     {
+         $$ = new ForeachUniqueStmt($3, $5, $8, @1);
          m->symbolTable->PopScope();
      }
     ;

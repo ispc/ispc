@@ -92,6 +92,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         DoStmt *dos;
         ForStmt *fs;
         ForeachStmt *fes;
+        ForeachUniqueStmt *fus;
         CaseStmt *cs;
         DefaultStmt *defs;
         SwitchStmt *ss;
@@ -136,6 +137,10 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
                 fes->endExprs[i] = (Expr *)WalkAST(fes->endExprs[i], preFunc, 
                                                    postFunc, data);
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
+        }
+        else if ((fus = dynamic_cast<ForeachUniqueStmt *>(node)) != NULL) {
+            fus->expr = (Expr *)WalkAST(fus->expr, preFunc, postFunc, data);
+            fus->stmts = (Stmt *)WalkAST(fus->stmts, preFunc, postFunc, data);
         }
         else if ((cs = dynamic_cast<CaseStmt *>(node)) != NULL)
             cs->stmts = (Stmt *)WalkAST(cs->stmts, preFunc, postFunc, data);
@@ -385,12 +390,17 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (dynamic_cast<ForeachStmt *>(node) != NULL) {
+    if (dynamic_cast<ForeachStmt *>(node) != NULL ||
+        dynamic_cast<ForeachUniqueStmt *>(node) != NULL) {
         // foreach() statements also shouldn't be run with an all-off mask.
         // Since they re-establish an 'all on' mask, this would be pretty
         // unintuitive.  (More generally, it's possibly a little strange to
         // allow foreach() in the presence of any non-uniform control
         // flow...)
+        //
+        // Similarly, the implementation foreach_unique assumes as a
+        // precondition that the mask won't be all off going into it, so
+        // we'll enforce that here...
         *okPtr = false;
         return false;
     }
