@@ -707,9 +707,9 @@ Module::AddFunctionDeclaration(const std::string &name,
     }
 
     // Get the LLVM FunctionType
-    bool includeMask = (storageClass != SC_EXTERN_C);
+    bool disableMask = (storageClass == SC_EXTERN_C);
     llvm::FunctionType *llvmFunctionType = 
-        functionType->LLVMFunctionType(g->ctx, includeMask);
+        functionType->LLVMFunctionType(g->ctx, disableMask);
     if (llvmFunctionType == NULL)
         return;
 

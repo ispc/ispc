@@ -57,6 +57,7 @@ lPrintTypeQualifiers(int typeQualifiers) {
     if (typeQualifiers & TYPEQUAL_SIGNED)    printf("signed ");
     if (typeQualifiers & TYPEQUAL_UNSIGNED)  printf("unsigned ");
     if (typeQualifiers & TYPEQUAL_EXPORT)    printf("export ");
+    if (typeQualifiers & TYPEQUAL_UNMASKED)  printf("unmasked ");
 }
 
 
@@ -296,6 +297,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
     bool isTask =         ((typeQualifiers & TYPEQUAL_TASK) != 0);
     bool isExported =     ((typeQualifiers & TYPEQUAL_EXPORT) != 0);
     bool isConst =        ((typeQualifiers & TYPEQUAL_CONST) != 0);
+    bool isUnmasked =     ((typeQualifiers & TYPEQUAL_UNMASKED) != 0);
 
     if (hasUniformQual && hasVaryingQual) {
         Error(pos, "Can't provide both \"uniform\" and \"varying\" qualifiers.");
@@ -305,11 +307,15 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         Error(pos, "\"task\" qualifier illegal in variable declaration.");
         return;
     }
+    if (kind != DK_FUNCTION && isUnmasked) {
+        Error(pos, "\"unmasked\" qualifier illegal in variable declaration.");
+        return;
+    }
     if (kind != DK_FUNCTION && isExported) {
         Error(pos, "\"export\" qualifier illegal in variable declaration.");
         return;
     }
-
+    
     Variability variability(Variability::Unbound);
     if (hasUniformQual)
         variability = Variability::Uniform;
@@ -507,7 +513,8 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
-
+        bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
+        
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
                   "qualifiers");
@@ -523,6 +530,9 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                   "qualifiers");
             return;
         }
+        if (isUnmasked && isExported)
+            Warning(pos, "\"unmasked\" qualifier is redundant for exported "
+                    "functions.");
 
         if (child == NULL) {
             AssertPos(pos, m->errorCount > 0);
@@ -531,7 +541,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         const FunctionType *functionType = 
             new FunctionType(returnType, args, argNames, argDefaults,
-                             argPos, isTask, isExported, isExternC);
+                             argPos, isTask, isExported, isExternC, isUnmasked);
 
         // handle any explicit __declspecs on the function
         if (ds != NULL) {

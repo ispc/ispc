@@ -3235,11 +3235,9 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             SetInternalMask(callMask);
 
             // bitcast the i32/64 function pointer to the actual function
-            // pointer type (the variant that includes a mask).
-            llvm::Type *llvmFuncType =
-                funcType->LLVMFunctionType(g->ctx, true);
-            llvm::Type *llvmFPtrType = 
-                llvm::PointerType::get(llvmFuncType, 0);
+            // pointer type.
+            llvm::Type *llvmFuncType = funcType->LLVMFunctionType(g->ctx);
+            llvm::Type *llvmFPtrType = llvm::PointerType::get(llvmFuncType, 0);
             llvm::Value *fptrCast = IntToPtrInst(fptr, llvmFPtrType);
 
             // Call the function: callResult = call ftpr(args, args, call mask)
@@ -3344,7 +3342,6 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
     llvm::StructType *argStructType = 
         static_cast<llvm::StructType *>(pt->getElementType());
-    AssertPos(currentPos, argStructType->getNumElements() == argVals.size() + 1);
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);
@@ -3371,11 +3368,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         StoreInst(argVals[i], ptr);
     }
 
-    // copy in the mask
-    llvm::Value *mask = GetFullMask();
-    llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-                                        "funarg_mask");
-    StoreInst(mask, ptr);
+    if (argStructType->getNumElements() == argVals.size() + 1) {
+        // copy in the mask
+        llvm::Value *mask = GetFullMask();
+        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
+                                            "funarg_mask");
+        StoreInst(mask, ptr);
+    }
 
     // And emit the call to the user-supplied task launch function, passing
     // a pointer to the task function being called and a pointer to the

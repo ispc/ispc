@@ -121,8 +121,8 @@ static const char *lBuiltinTokens[] = {
     "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
-    "sync", "task", "true", "typedef", "uniform", "unsigned", "varying",
-    "void", "while", NULL 
+    "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned", 
+    "varying", "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
@@ -189,7 +189,7 @@ struct ForeachDimension {
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
-%token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
+%token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
@@ -1011,6 +1011,11 @@ specifier_qualifier_list
                       "function declarations.");
                 $$ = $2;
             }
+            else if ($1 == TYPEQUAL_UNMASKED) {
+                Error(@1, "\"unmasked\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
             else if ($1 == TYPEQUAL_EXPORT) {
                 Error(@1, "\"export\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1148,6 +1153,7 @@ type_qualifier
     | TOKEN_UNIFORM    { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
+    | TOKEN_UNMASKED   { $$ = TYPEQUAL_UNMASKED; }
     | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }

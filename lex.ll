@@ -71,9 +71,9 @@ static int allTokens[] = {
   TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
-  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNSIGNED,
-  TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE, TOKEN_STRING_C_LITERAL,
-  TOKEN_DOTDOTDOT, 
+  TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
+  TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE, 
+  TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT, 
   TOKEN_FLOAT_CONSTANT,
   TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT, 
   TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT, 
@@ -142,6 +142,7 @@ void ParserInit() {
     tokenToName[TOKEN_TRUE] = "true";
     tokenToName[TOKEN_TYPEDEF] = "typedef";
     tokenToName[TOKEN_UNIFORM] = "uniform";
+    tokenToName[TOKEN_UNMASKED] = "unmasked";
     tokenToName[TOKEN_UNSIGNED] = "unsigned";
     tokenToName[TOKEN_VARYING] = "varying";
     tokenToName[TOKEN_VOID] = "void";
@@ -253,6 +254,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_TRUE"] = "\'true\'";
     tokenNameRemap["TOKEN_TYPEDEF"] = "\'typedef\'";
     tokenNameRemap["TOKEN_UNIFORM"] = "\'uniform\'";
+    tokenNameRemap["TOKEN_UNMASKED"] = "\'unmasked\'";
     tokenNameRemap["TOKEN_UNSIGNED"] = "\'unsigned\'";
     tokenNameRemap["TOKEN_VARYING"] = "\'varying\'";
     tokenNameRemap["TOKEN_VOID"] = "\'void\'";
@@ -396,6 +398,7 @@ task { RT; return TOKEN_TASK; }
 true { RT; return TOKEN_TRUE; }
 typedef { RT; return TOKEN_TYPEDEF; }
 uniform { RT; return TOKEN_UNIFORM; }
+unmasked { RT; return TOKEN_UNMASKED; }
 unsigned { RT; return TOKEN_UNSIGNED; }
 varying { RT; return TOKEN_VARYING; }
 void { RT; return TOKEN_VOID; }

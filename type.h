@@ -841,7 +841,7 @@ public:
                  const llvm::SmallVector<std::string, 8> &argNames,
                  const llvm::SmallVector<Expr *, 8> &argDefaults,
                  const llvm::SmallVector<SourcePos, 8> &argPos,
-                 bool isTask, bool isExported, bool isExternC);
+                 bool isTask, bool isExported, bool isExternC, bool isUnmasked);
 
     Variability GetVariability() const;
 
@@ -873,11 +873,11 @@ public:
     const std::string GetReturnTypeString() const;
 
     /** This method returns the LLVM FunctionType that corresponds to this
-        function type.  The \c includeMask parameter indicates whether the
-        llvm::FunctionType should have a mask as the last argument in its
-        function signature. */
+        function type.  The \c disableMask parameter indicates whether the
+        llvm::FunctionType should have the trailing mask parameter, if
+        present, removed from the return function signature. */
     llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
-                                                         bool includeMask = false) const;
+                                         bool disableMask = false) const;
 
     int GetNumParameters() const { return (int)paramTypes.size(); }
     const Type *GetParameterType(int i) const;
@@ -896,6 +896,11 @@ public:
     /** This value is true if the function was declared as an 'extern "C"'
         function in the source program. */
     const bool isExternC;
+
+    /** Indicates whether the function doesn't take an implicit mask
+        parameter (and thus should start execution with an "all on"
+        mask). */
+    const bool isUnmasked;
 
     /** Indicates whether this function has been declared to be safe to run
         with an all-off mask. */

@@ -223,13 +223,15 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         for (unsigned int i = 0; i < args.size(); ++i)
             lCopyInTaskParameter(i, structParamPtr, args, ctx);
 
-        // Copy in the mask as well.
-        int nArgs = (int)args.size();
-        // The mask is the last parameter in the argument structure
-        llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL,
-                                                  "task_struct_mask");
-        llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
-        ctx->SetFunctionMask(ptrval);
+        if (type->isUnmasked == false) {
+            // Copy in the mask as well.
+            int nArgs = (int)args.size();
+            // The mask is the last parameter in the argument structure
+            llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL,
+                                                     "task_struct_mask");
+            llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
+            ctx->SetFunctionMask(ptrval);
+        }
 
         // Copy threadIndex and threadCount into stack-allocated storage so
         // that their symbols point to something reasonable.
@@ -270,9 +272,13 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // don't have a mask parameter, so set it to be all on.  This
         // happens for exmaple with 'export'ed functions that the app
         // calls.
-        if (argIter == function->arg_end())
+        if (argIter == function->arg_end()) {
+            Assert(type->isUnmasked || type->isExported);
             ctx->SetFunctionMask(LLVMMaskAllOn);
+        }
         else {
+            Assert(type->isUnmasked == false);
+
             // Otherwise use the mask to set the entry mask value
             argIter->setName("__mask");
             Assert(argIter->getType() == LLVMTypes::MaskType);
@@ -297,9 +303,10 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         bool checkMask = (type->isTask == true) || 
             ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
+        checkMask &= (type->isUnmasked == false);
         checkMask &= (g->target.maskingIsFree == false);
         checkMask &= (g->opt.disableCoherentControlFlow == false);
-
+        
         if (checkMask) {
             llvm::Value *mask = ctx->GetFunctionMask();
             llvm::Value *allOn = ctx->All(mask);
@@ -423,8 +430,7 @@ Function::GenerateIR() {
         Assert(type != NULL);
         if (type->isExported) {
             if (!type->isTask) {
-                llvm::FunctionType *ftype = 
-                    type->LLVMFunctionType(g->ctx);
+                llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
                 if (g->mangleFunctionsWithTarget)
