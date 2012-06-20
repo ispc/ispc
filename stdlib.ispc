@@ -3878,7 +3878,7 @@ static inline int16 float_to_half_fast(float f) {
 
 __declspec(safe)
 static inline int
-float_to_srgb8(float in)
+float_to_srgb8(float inval)
 {
     static const uniform unsigned int table[104] = {
         0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d,
@@ -3912,23 +3912,23 @@ float_to_srgb8(float in)
     static const uniform unsigned int almost_one = 0x3f7fffff;
     
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
-    in = max(in, 0.0f);
-    in = min(in, floatbits(almost_one));
+    inval = max(inval, 0.0f);
+    inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
-    unsigned int tab = table[(intbits(in) - 0x39000000u) >> 20];
+    unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
     unsigned int bias = (tab >> 16) << 9;
     unsigned int scale = tab & 0xffff;
 
     // Grab next-highest mantissa bits and perform linear interpolation
-    unsigned int t = (intbits(in) >> 12) & 0xff;
+    unsigned int t = (intbits(inval) >> 12) & 0xff;
     return (bias + scale*t) >> 16;
 }
 
 
 __declspec(safe)
 static inline uniform int
-float_to_srgb8(uniform float in)
+float_to_srgb8(uniform float inval)
 {
     static const uniform unsigned int table[104] = {
         0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d,
@@ -3962,16 +3962,16 @@ float_to_srgb8(uniform float in)
     static const uniform unsigned int almost_one = 0x3f7fffff;
     
     // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
-    in = max(in, 0.0f);
-    in = min(in, floatbits(almost_one));
+    inval = max(inval, 0.0f);
+    inval = min(inval, floatbits(almost_one));
 
     // Do the table lookup and unpack bias, scale
-    uniform unsigned int tab = table[(intbits(in) - 0x39000000u) >> 20];
+    uniform unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
     uniform unsigned int bias = (tab >> 16) << 9;
     uniform unsigned int scale = tab & 0xffff;
 
     // Grab next-highest mantissa bits and perform linear interpolation
-    uniform unsigned int t = (intbits(in) >> 12) & 0xff;
+    uniform unsigned int t = (intbits(inval) >> 12) & 0xff;
     return (bias + scale*t) >> 16;
 }
 
