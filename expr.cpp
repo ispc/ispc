@@ -1569,31 +1569,31 @@ lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::Value *e1Val,
     switch (op) {
     case BinaryExpr::Lt:
         opName = "less";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLT : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_ULT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULT : llvm::CmpInst::ICMP_SLT);
         break;
     case BinaryExpr::Gt:
         opName = "greater";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGT : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UGT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGT : llvm::CmpInst::ICMP_SGT);
         break;
     case BinaryExpr::Le:
         opName = "lessequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLE : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_ULE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULE : llvm::CmpInst::ICMP_SLE);
         break;
     case BinaryExpr::Ge:
         opName = "greaterequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGE : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UGE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGE : llvm::CmpInst::ICMP_SGE);
         break;
     case BinaryExpr::Equal:
         opName = "equal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OEQ : llvm::CmpInst::ICMP_EQ;
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UEQ : llvm::CmpInst::ICMP_EQ;
         break;
     case BinaryExpr::NotEqual:
         opName = "notequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_ONE : llvm::CmpInst::ICMP_NE;
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UNE : llvm::CmpInst::ICMP_NE;
         break;
     default:
         FATAL("error in lEmitBinaryCmp()");

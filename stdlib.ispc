@@ -1120,6 +1120,26 @@ static inline uniform int64 clock() {
 ///////////////////////////////////////////////////////////////////////////
 // Floating-Point Math
 
+__declspec(safe,cost1)
+static inline uniform bool isnan(uniform float v) {
+    return v != v;
+}
+
+__declspec(safe,cost1)
+static inline bool isnan(float v) {
+    return v != v;
+}
+
+__declspec(safe,cost1)
+static inline uniform bool isnan(uniform double v) {
+    return v != v;
+}
+
+__declspec(safe,cost1)
+static inline bool isnan(double v) {
+    return v != v;
+}
+
 __declspec(safe,cost1) 
 static inline float abs(float a) {
     // Floating-point hack: zeroing the high bit clears the sign

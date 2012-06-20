@@ -3099,6 +3099,17 @@ quite efficient.)
                                uniform unsigned int low,
                                uniform unsigned int high)
 
+The ``isnan()`` functions test whether the given value is a floating-point
+"not a number" value:
+
+::
+
+    bool isnan(float v)
+    uniform bool isnan(uniform float v)
+    bool isnan(double v)
+    uniform bool isnan(uniform double v)
+
+
 Transcendental Functions
 ------------------------
 
