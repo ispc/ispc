@@ -114,7 +114,7 @@ lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
     symbolTable->AddType("ptrdiff_t", ptrIntType, SourcePos());
 
     const Type *sizeType = (g->target.is32Bit || g->opt.force32BitAddressing) ?
-        AtomicType::VaryingInt32 : AtomicType::VaryingInt64;
+        AtomicType::VaryingUInt32 : AtomicType::VaryingUInt64;
     sizeType = sizeType->GetAsUnboundVariabilityType();
     symbolTable->AddType("size_t", sizeType, SourcePos());
 }
