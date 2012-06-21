@@ -240,6 +240,13 @@ Module::Module(const char *fn) {
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target.GetTripleString());
 
+    if (g->target.isa == Target::GENERIC) {
+        // <16 x i1> vectors only need 16 bit / 2 byte alignment
+        std::string datalayout = module->getDataLayout();
+        datalayout += "v16:16:16";
+        module->setDataLayout(datalayout);
+    }
+
     if (g->generateDebuggingSymbols) {
         diBuilder = new llvm::DIBuilder(*module);
 
