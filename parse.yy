@@ -232,6 +232,7 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
+%type <type> struct_or_union_and_name
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
 %type <typeList> type_specifier_list
@@ -876,18 +877,44 @@ struct_or_union_name
     | TOKEN_TYPE_NAME  { $$ = strdup(yytext); }
     ;
 
+struct_or_union_and_name
+    : struct_or_union struct_or_union_name
+      { 
+          const Type *st = m->symbolTable->LookupType($2); 
+          if (st == NULL) {
+              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, st, @2);
+              $$ = st;
+          }
+          else {
+              if (CastType<StructType>(st) == NULL &&
+                  CastType<UndefinedStructType>(st) == NULL) {
+                  Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
+                        st->GetString().c_str());
+                  $$ = NULL;
+              }
+              else
+                  $$ = st;
+         }
+      }
+    ;
+
 struct_or_union_specifier
-    : struct_or_union struct_or_union_name '{' struct_declaration_list '}' 
+    : struct_or_union_and_name
+    | struct_or_union_and_name '{' struct_declaration_list '}' 
       {
-          if ($4 != NULL) {
+          if ($3 != NULL) {
               llvm::SmallVector<const Type *, 8> elementTypes;
               llvm::SmallVector<std::string, 8> elementNames;
               llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
+              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
-              StructType *st = new StructType($2, elementTypes, elementNames,
-                                              elementPositions, false, Variability::Unbound, @2);
-              m->symbolTable->AddType($2, st, @2);
+              const std::string &name = CastType<StructType>($1) ?
+                  CastType<StructType>($1)->GetStructName() :
+                  CastType<UndefinedStructType>($1)->GetStructName();
+              StructType *st = new StructType(name, elementTypes, elementNames,
+                                              elementPositions, false, Variability::Unbound, @1);
+              m->symbolTable->AddType(name.c_str(), st, @1);
               $$ = st;
           }
           else
@@ -915,26 +942,18 @@ struct_or_union_specifier
           $$ = new StructType("", elementTypes, elementNames, elementPositions,
                               false, Variability::Unbound, @1);
       }
-    | struct_or_union struct_or_union_name '{' '}' 
+    | struct_or_union_and_name '{' '}' 
       {
           llvm::SmallVector<const Type *, 8> elementTypes;
           llvm::SmallVector<std::string, 8> elementNames;
           llvm::SmallVector<SourcePos, 8> elementPositions;
-          StructType *st = new StructType($2, elementTypes, elementNames, elementPositions,
+          const std::string &name = CastType<StructType>($1) ?
+              CastType<StructType>($1)->GetStructName() :
+              CastType<UndefinedStructType>($1)->GetStructName();
+          StructType *st = new StructType(name, elementTypes,
+                                          elementNames, elementPositions,
                                           false, Variability::Unbound, @1);
-          m->symbolTable->AddType($2, st, @2);
-          $$ = st;
-      }
-    | struct_or_union struct_or_union_name
-      { 
-          const Type *st = m->symbolTable->LookupType($2); 
-          if (st == NULL) {
-              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, st, @2);
-          }
-          else if (CastType<StructType>(st) == NULL)
-              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
-                    st->GetString().c_str());
+          m->symbolTable->AddType(name.c_str(), st, @2);
           $$ = st;
       }
     ;
