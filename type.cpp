@@ -1828,19 +1828,25 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
 
         // Actually make the LLVM struct
         std::vector<llvm::Type *> elementTypes;
-        for (int i = 0; i < GetElementCount(); ++i) {
-            const Type *type = GetElementType(i);
-            if (type == NULL) {
-                Assert(m->errorCount > 0);
-                return;
+        int nElements = GetElementCount();
+        if (nElements == 0) {
+            elementTypes.push_back(LLVMTypes::Int8Type);
+        }
+        else {
+            for (int i = 0; i < nElements; ++i) {
+                const Type *type = GetElementType(i);
+                if (type == NULL) {
+                    Assert(m->errorCount > 0);
+                    return;
+                }
+                else if (CastType<FunctionType>(type) != NULL) {
+                    Error(elementPositions[i], "Method declarations are not "
+                          "supported.");
+                    return;
+                }
+                else
+                    elementTypes.push_back(type->LLVMType(g->ctx));
             }
-            else if (CastType<FunctionType>(type) != NULL) {
-                Error(elementPositions[i], "Method declarations are not "
-                      "supported.");
-                return;
-            }
-            else
-                elementTypes.push_back(type->LLVMType(g->ctx));
         }
 
         if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {

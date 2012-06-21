@@ -909,11 +909,21 @@ struct_or_union_specifier
       }
     | struct_or_union '{' '}' 
       {
-          Error(@1, "Empty struct definitions not allowed."); 
+          llvm::SmallVector<const Type *, 8> elementTypes;
+          llvm::SmallVector<std::string, 8> elementNames;
+          llvm::SmallVector<SourcePos, 8> elementPositions;
+          $$ = new StructType("", elementTypes, elementNames, elementPositions,
+                              false, Variability::Unbound, @1);
       }
     | struct_or_union struct_or_union_name '{' '}' 
       {
-          Error(@1, "Empty struct definitions not allowed."); 
+          llvm::SmallVector<const Type *, 8> elementTypes;
+          llvm::SmallVector<std::string, 8> elementNames;
+          llvm::SmallVector<SourcePos, 8> elementPositions;
+          StructType *st = new StructType($2, elementTypes, elementNames, elementPositions,
+                                          false, Variability::Unbound, @1);
+          m->symbolTable->AddType($2, st, @2);
+          $$ = st;
       }
     | struct_or_union struct_or_union_name
       { 
