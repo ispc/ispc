@@ -584,6 +584,18 @@ FunctionEmitContext::EndLoop() {
 
 void
 FunctionEmitContext::StartForeach() {
+    // Issue an error if we're in a nested foreach...
+    for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
+        if (controlFlowInfo[i]->type == CFInfo::Foreach) {
+            Error(currentPos, "Nested \"foreach\" statements are currently illegal.");
+            break;
+            // Don't return here, however, and in turn allow the caller to
+            // do the rest of its codegen and then call EndForeach()
+            // normally--the idea being that this gives a chance to find
+            // any other errors inside the body of the foreach loop...
+        }
+    }
+
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
