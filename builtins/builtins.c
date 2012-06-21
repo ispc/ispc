@@ -59,22 +59,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 typedef int Bool;
 
-#define PRINT_SCALAR(fmt, type)  \
-    printf(fmt, *((type *)ptr)); \
+#define PRINT_BUF_SIZE 4096
+
+#define APPEND(str)                                        \
+    do {                                                   \
+        int offset = bufp - &printString[0];               \
+        *bufp = '\0';                                      \
+        strncat(bufp, str, PRINT_BUF_SIZE-offset);         \
+        bufp += strlen(str);                               \
+        if (bufp >= &printString[PRINT_BUF_SIZE])          \
+            goto done;                                     \
+    } while (0) /* eat semicolon */
+
+
+#define PRINT_SCALAR(fmt, type)                  \
+    sprintf(tmpBuf, fmt, *((type *)ptr));        \
+    APPEND(tmpBuf);                              \
     break
 
 #define PRINT_VECTOR(fmt, type)                                         \
-    putchar('[');                                                       \
+    *bufp++ = '[';                                                      \
+    if (bufp == &printString[PRINT_BUF_SIZE]) break;                    \
     for (int i = 0; i < width; ++i) {                                   \
         /* only print the value if the current lane is executing */     \
         if (mask & (1ull<<i))                                           \
-            printf(fmt, ((type *)ptr)[i]);                              \
+            sprintf(tmpBuf, fmt, ((type *)ptr)[i]);                     \
         else                                                            \
-            printf("((" fmt "))", ((type *)ptr)[i]);                    \
-        putchar(i != width-1 ? ',' : ']');                              \
+            sprintf(tmpBuf, "((" fmt "))", ((type *)ptr)[i]);           \
+        APPEND(tmpBuf);                                                 \
+        *bufp++ = (i != width-1 ? ',' : ']');                           \
     }                                                                   \
     break
 
@@ -91,14 +108,16 @@ typedef int Bool;
  */
 void __do_print(const char *format, const char *types, int width, uint64_t mask, 
                 void **args) {
-    if (mask == 0) 
-        return;
+    char printString[PRINT_BUF_SIZE+1]; // +1 for trailing NUL
+    char *bufp = &printString[0];
+    char tmpBuf[256];
 
     int argCount = 0;
-    while (*format) {
+    while (*format && bufp < &printString[PRINT_BUF_SIZE]) {
         // Format strings are just single percent signs.
-        if (*format != '%')
-            putchar(*format);
+        if (*format != '%') {
+            *bufp++ = *format;
+        }
         else {
             if (*types) {
                 void *ptr = args[argCount++];
@@ -107,17 +126,22 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
                 // printf() formatting string.
                 switch (*types) {
                 case 'b': {
-                    printf("%s", *((Bool *)ptr) ? "true" : "false");
+                    sprintf(tmpBuf, "%s", *((Bool *)ptr) ? "true" : "false");
+                    APPEND(tmpBuf);
                     break;
                 }
                 case 'B': {
-                    putchar('[');
+                    *bufp++ = '[';
+                    if (bufp == &printString[PRINT_BUF_SIZE])
+                        break;
                     for (int i = 0; i < width; ++i) {
-                        if (mask & (1ull << i))
-                            printf("%s", ((Bool *)ptr)[i] ? "true" : "false");
+                        if (mask & (1ull << i)) {
+                            sprintf(tmpBuf, "%s", ((Bool *)ptr)[i] ? "true" : "false");
+                            APPEND(tmpBuf);
+                        }
                         else
-                            printf("_________");
-                        putchar(i != width-1 ? ',' : ']');
+                            APPEND("_________");
+                        *bufp++ = (i != width-1) ? ',' : ']';
                     }
                     break;
                 }
@@ -136,14 +160,18 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
                 case 'p': PRINT_SCALAR("%p", void *);
                 case 'P': PRINT_VECTOR("%p", void *);
                 default:
-                    printf("UNKNOWN TYPE ");
-                    putchar(*types);
+                    APPEND("UNKNOWN TYPE ");
+                    *bufp++ = *types;
                 }
                 ++types;
             }
         }
         ++format;
     }
+
+ done:
+    *bufp = '\0';
+    puts(printString);
     fflush(stdout);
 }
 
