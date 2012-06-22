@@ -160,9 +160,9 @@ public:
         finished. */
     void EndLoop();
 
-    /** Indicates that code generation for a 'foreach', 'foreach_tiled', or
-        'foreach_unique' loop is about to start. */
-    enum ForeachType { FOREACH_REGULAR, FOREACH_UNIQUE };
+    /** Indicates that code generation for a 'foreach', 'foreach_tiled',
+        'foreach_active', or 'foreach_unique' loop is about to start. */
+    enum ForeachType { FOREACH_REGULAR, FOREACH_ACTIVE, FOREACH_UNIQUE };
     void StartForeach(ForeachType ft);
     void EndForeach();
 

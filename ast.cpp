@@ -92,6 +92,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         DoStmt *dos;
         ForStmt *fs;
         ForeachStmt *fes;
+        ForeachActiveStmt *fas;
         ForeachUniqueStmt *fus;
         CaseStmt *cs;
         DefaultStmt *defs;
@@ -137,6 +138,9 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
                 fes->endExprs[i] = (Expr *)WalkAST(fes->endExprs[i], preFunc, 
                                                    postFunc, data);
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
+        }
+        else if ((fas = dynamic_cast<ForeachActiveStmt *>(node)) != NULL) {
+            fas->stmts = (Stmt *)WalkAST(fas->stmts, preFunc, postFunc, data);
         }
         else if ((fus = dynamic_cast<ForeachUniqueStmt *>(node)) != NULL) {
             fus->expr = (Expr *)WalkAST(fus->expr, preFunc, postFunc, data);
@@ -391,14 +395,15 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
     }
 
     if (dynamic_cast<ForeachStmt *>(node) != NULL ||
+        dynamic_cast<ForeachActiveStmt *>(node) != NULL ||
         dynamic_cast<ForeachUniqueStmt *>(node) != NULL) {
-        // foreach() statements also shouldn't be run with an all-off mask.
-        // Since they re-establish an 'all on' mask, this would be pretty
-        // unintuitive.  (More generally, it's possibly a little strange to
-        // allow foreach() in the presence of any non-uniform control
-        // flow...)
+        // The various foreach statements also shouldn't be run with an
+        // all-off mask.  Since they can re-establish an 'all on' mask,
+        // this would be pretty unintuitive.  (More generally, it's
+        // possibly a little strange to allow foreach in the presence of
+        // any non-uniform control flow...)
         //
-        // Similarly, the implementation foreach_unique assumes as a
+        // Similarly, the implementation of foreach_unique assumes as a
         // precondition that the mask won't be all off going into it, so
         // we'll enforce that here...
         *okPtr = false;

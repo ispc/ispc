@@ -66,8 +66,8 @@ static int allTokens[] = {
   TOKEN_CONST, TOKEN_CONTINUE, TOKEN_CRETURN, TOKEN_DEFAULT, TOKEN_DO,
   TOKEN_DELETE, TOKEN_DOUBLE, TOKEN_ELSE, TOKEN_ENUM,
   TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FOR,
-  TOKEN_FOREACH, TOKEN_FOREACH_TILED, TOKEN_FOREACH_UNIQUE,
-  TOKEN_GOTO, TOKEN_IF, TOKEN_IN, TOKEN_INLINE,
+  TOKEN_FOREACH, TOKEN_FOREACH_ACTIVE, TOKEN_FOREACH_TILED,
+  TOKEN_FOREACH_UNIQUE, TOKEN_GOTO, TOKEN_IF, TOKEN_IN, TOKEN_INLINE,
   TOKEN_INT, TOKEN_INT8, TOKEN_INT16, TOKEN_INT, TOKEN_INT64, TOKEN_LAUNCH,
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
@@ -115,6 +115,7 @@ void ParserInit() {
     tokenToName[TOKEN_FLOAT] = "float";
     tokenToName[TOKEN_FOR] = "for";
     tokenToName[TOKEN_FOREACH] = "foreach";
+    tokenToName[TOKEN_FOREACH_ACTIVE] = "foreach_active";
     tokenToName[TOKEN_FOREACH_TILED] = "foreach_tiled";
     tokenToName[TOKEN_FOREACH_UNIQUE] = "foreach_unique";
     tokenToName[TOKEN_GOTO] = "goto";
@@ -226,6 +227,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_FLOAT"] = "\'float\'";
     tokenNameRemap["TOKEN_FOR"] = "\'for\'";
     tokenNameRemap["TOKEN_FOREACH"] = "\'foreach\'";
+    tokenNameRemap["TOKEN_FOREACH_ACTIVE"] = "\'foreach_active\'";
     tokenNameRemap["TOKEN_FOREACH_TILED"] = "\'foreach_tiled\'";
     tokenNameRemap["TOKEN_FOREACH_UNIQUE"] = "\'foreach_unique\'";
     tokenNameRemap["TOKEN_GOTO"] = "\'goto\'";
@@ -369,8 +371,8 @@ extern { RT; return TOKEN_EXTERN; }
 false { RT; return TOKEN_FALSE; }
 float { RT; return TOKEN_FLOAT; }
 for { RT; return TOKEN_FOR; }
-__foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
 foreach { RT; return TOKEN_FOREACH; }
+foreach_active { RT; return TOKEN_FOREACH_ACTIVE; }
 foreach_tiled { RT; return TOKEN_FOREACH_TILED; }
 foreach_unique { RT; return TOKEN_FOREACH_UNIQUE; }
 goto { RT; return TOKEN_GOTO; }

@@ -105,12 +105,16 @@ Contents:
 
     * `Conditional Statements: "if"`_
     * `Conditional Statements: "switch"`_
-    * `Basic Iteration Statements: "for", "while", and "do"`_
-    * `Iteration over unique elements: "foreach_unique"`_
+    * `Iteration Statements`_
+
+      + `Basic Iteration Statements: "for", "while", and "do"`_
+      + `Iteration over active program instances: "foreach_active"`_
+      + `Iteration over unique elements: "foreach_unique"`_
+      + `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
+      + `Parallel Iteration with "programIndex" and "programCount"`_
+
     * `Unstructured Control Flow: "goto"`_
     * `"Coherent" Control Flow Statements: "cif" and Friends`_
-    * `Parallel Iteration Statements: "foreach" and "foreach_tiled"`_
-    * `Parallel Iteration with "programIndex" and "programCount"`_
     * `Functions and Function Calls`_
 
       + `Function Overloading`_
@@ -1984,7 +1988,7 @@ format in memory; the benefits from SOA layout are discussed in more detail
 in the `Use "Structure of Arrays" Layout When Possible`_ section in the
 ispc Performance Guide.
 
-.. _Use "Structure of Arrays" Layout When Possible: perf.html#use-structure-of-arrays-layout-when-possible
+.. _Use "Structure of Arrays" Layout When Possible: perfguide.html#use-structure-of-arrays-layout-when-possible
 
 ``ispc`` provides two key language-level capabilities for laying out and
 accessing data in SOA format:
@@ -2348,11 +2352,19 @@ code below.
         x *= x;
     }
 
+
+Iteration Statements
+--------------------
+
+In addition to the standard iteration statements ``for``, ``while``, and
+``do``, inherited from C/C++, ``ispc`` provides a number of additional
+specialized ways to iterate over data.
+
 Basic Iteration Statements: "for", "while", and "do"
 ----------------------------------------------------
 
 ``ispc`` supports ``for``, ``while``, and ``do`` loops, with the same
-specification as in C.  Like C++, variables can be declared in the ``for``
+specification as in C.  As in C++, variables can be declared in the ``for``
 statement itself:
 
 ::
@@ -2372,6 +2384,58 @@ independently for each of the program instances in a gang; for example, if
 one of them executes a ``continue`` statement, other program instances
 executing code in the loop body that didn't execute the ``continue`` will
 be unaffected by it.
+
+
+Iteration over active program instances: "foreach_active"
+---------------------------------------------------------
+
+The ``foreach_active`` construct specifies a loop that serializes over the
+active program instances: the loop body executes once for each active
+program instance, and with only that program instance executing.  
+
+As an example of the use of this construct, consider an application where
+each program instance independently computes an offset into a shared array
+that is being updated:
+
+::
+
+    uniform float array[...] = { ... };    
+    int index = ...;
+    ++array[index];
+
+If more than one active program instance computes the same value for
+``index``, the above code has undefined behavior (see the section `Data
+Races Within a Gang`_ for details.)  The increment of ``array[index]``
+could instead be written inside a ``foreach_active`` statement:
+
+::
+
+    foreach_active (i) {
+        ++array[index];
+    }  
+
+
+The variable name provided in parenthesis after the ``foreach_active``
+keyword (here, ``index``), causes a ``const uniform int64`` local variable
+of that name to be declared, where the variable takes the ``programIndex``
+value of the program instance executing at each loop iteraton.  
+
+In the code above, because only one program instance is executing at a time
+when the loop body executes, the update to ``array`` is well-defined.
+Note that for this particular example, the "local atomic" operations in
+the standard library could be used instead to safely update ``array``.
+However, local atomics functions aren't always available or appropriate for
+more complex cases.)
+
+``continue`` statements may be used inside ``foreach_active`` loops, though
+``break`` and ``return`` are prohibited.  The order in which the active
+program instances are processed in the loop is not defined.
+
+See the `Using "foreach_active" Effectively`_ Section in the ispc
+Performance Guide for more details about ``foreach_active``.
+
+.. _Using "foreach_active" Effectively: perfguide.html#using-foreach-active-effectively
+
 
 
 Iteration over unique elements: "foreach_unique"
@@ -2408,7 +2472,144 @@ evaluated once, and it must be of an atomic type (``float``, ``int``,
 etc.), an ``enum`` type, or a pointer type.  The iteration variable ``val``
 is a variable of ``const uniform`` type of the iteration type; it can't be
 modified within the loop.  Finally, ``break`` and ``return`` statements are
-illegal within the loop body, but ``continue`` statemetns are allowed.
+illegal within the loop body, but ``continue`` statements are allowed.
+
+
+Parallel Iteration Statements: "foreach" and "foreach_tiled"
+------------------------------------------------------------
+
+The ``foreach`` and ``foreach_tiled`` constructs specify loops over a
+possibly multi-dimensional domain of integer ranges.  Their role goes
+beyond "syntactic sugar"; they provides one of the two key ways of
+expressing parallel computation in ``ispc``.
+
+In general, a ``foreach`` or ``foreach_tiled`` statement takes one or more
+dimension specifiers separated by commas, where each dimension is specified
+by ``identifier = start ... end``, where ``start`` is a signed integer
+value less than or equal to ``end``, specifying iteration over all integer
+values from ``start`` up to and including ``end-1``.  An arbitrary number
+of iteration dimensions may be specified, with each one spanning a
+different range of values.  Within the ``foreach`` loop, the given
+identifiers are available as ``const varying int32`` variables.  The
+execution mask starts out "all on" at the start of each ``foreach`` loop
+iteration, but may be changed by control flow constructs within the loop.
+
+It is illegal to have a ``break`` statement or a ``return`` statement
+within a ``foreach`` loop; a compile-time error will be issued in this
+case.  (It is legal to have a ``break`` in a regular ``for`` loop that's
+nested inside a ``foreach`` loop.)  ``continue`` statements are legal in
+``foreach`` loops; they have the same effect as in regular ``for`` loops:
+a program instances that executes a ``continue`` statement effectively
+skips over the rest of the loop body for the current iteration.
+
+It is also currently illegal to have nested ``foreach`` statements; this
+limitation will be removed in a future release of ``ispc``.
+
+As a specific example, consider the following ``foreach`` statement:
+
+::
+
+    foreach (j = 0 ... height, i = 0 ... width) {
+        // loop body--process data element (i,j)
+    }
+
+It specifies a loop over a 2D domain, where the ``j`` variable goes from 0
+to ``height-1`` and ``i`` goes from 0 to ``width-1``.  Within the loop, the
+variables ``i`` and ``j`` are available and initialized accordingly.
+
+``foreach`` loops actually cause the given iteration domain to be
+automatically mapped to the program instances in the gang, so that all of
+the data can be processed, in gang-sized chunks.  As a specific example,
+consider a simple ``foreach`` loop like the following, on a target where
+the gang size is 8:
+
+::
+
+    foreach (i = 0 ... 16) {
+        // perform computation on element i
+    }
+
+One possible valid execution path of this loop would be for the program
+counter the step through the statements of this loop just ``16/8==2``
+times; the first time through, with the ``varying int32`` variable ``i``
+having the values (0,1,2,3,4,5,6,7) over the program instances, and the
+second time through, having the values (8,9,10,11,12,13,14,15), thus
+mapping the available program instances to all of the data by the end of
+the loop's execution.  
+
+In general, however, you shouldn't make any assumptions about the order in
+which elements of the iteration domain will be processed by a ``foreach``
+loop.  For example, the following code exhibits undefined behavior:
+
+::
+
+    uniform float a[10][100];
+    foreach (i = 0 ... 10, j = 0 ... 100) {
+        if (i == 0)
+            a[i][j] = j;
+        else
+            // Error: can't assume that a[i-1][j] has been set yet
+            a[i][j] = a[i-1][j];
+
+The ``foreach`` statement generally subdivides the iteration domain by
+selecting sets of contiguous elements in the inner-most dimension of the
+iteration domain.  This decomposition approach generally leads to coherent
+memory reads and writes, but may lead to worse control flow coherence than
+other decompositions.
+
+Therefore, ``foreach_tiled`` decomposes the iteration domain in a way that
+tries to map locations in the domain to program instances in a way that is
+compact across all of the dimensions.  For example, on a target with an
+8-wide gang size, the following ``foreach_tiled`` statement might process
+the iteration domain in chunks of 2 elements in ``j`` and 4 elements in
+``i`` each time.  (The trade-offs between these two constructs are
+discussed in more detail in the `ispc Performance Guide`_.)
+
+.. _ispc Performance Guide: perfguide.html#improving-control-flow-coherence-with-foreach-tiled
+
+::
+
+    foreach_tiled (j = 0 ... height, i = 0 ... width) {
+        // loop body--process data element (i,j)
+    }
+
+
+Parallel Iteration with "programIndex" and "programCount"
+---------------------------------------------------------
+
+In addition to ``foreach`` and ``foreach_tiled``, ``ispc`` provides a
+lower-level mechanism for mapping SPMD program instances to data to operate
+on via the built-in ``programIndex`` and ``programCount`` variables.
+
+``programIndex`` gives the index of the SIMD-lane being used for running
+each program instance.  (In other words, it's a varying integer value that
+has value zero for the first program instance, and so forth.)  The
+``programCount`` builtin gives the total number of instances in the gang.
+Together, these can be used to uniquely map executing program instances to
+input data. [#]_
+
+.. [#] ``programIndex`` is analogous to ``get_global_id()`` in OpenCL* and
+       ``threadIdx`` in CUDA*.
+
+As a specific example, consider an ``ispc`` function that needs to perform
+some computation on an array of data.
+
+::
+
+    for (uniform int i = 0; i < count; i += programCount) {
+        float d = data[i + programIndex];
+        float r = ....
+        result[i + programIndex] = r;
+    }
+
+Here, we've written a loop that explicitly loops over the data in chunks of
+``programCount`` elements.  In each loop iteration, the running program
+instances effectively collude amongst themselves using ``programIndex`` to
+determine which elements to work on in a way that ensures that all of the
+data elements will be processed.  In this particular case, a ``foreach``
+loop would be preferable, as ``foreach`` naturally handles the case where
+``programCount`` doesn't evenly divide the number of elements to be
+processed, while the loop above assumes that case implicitly. 
 
 
 Unstructured Control Flow: "goto"
@@ -2478,139 +2679,6 @@ on" execution mask case.  It is already the case for the regular looping
 constructs in ``ispc`` that a loop will never be executed with an "all off"
 execution mask.
 
-
-Parallel Iteration Statements: "foreach" and "foreach_tiled"
-------------------------------------------------------------
-
-The ``foreach`` and ``foreach_tiled`` constructs specify loops over a
-possibly multi-dimensional domain of integer ranges.  Their role goes
-beyond "syntactic sugar"; they provides one of the two key ways of
-expressing parallel computation in ``ispc``.
-
-In general, a ``foreach`` or ``foreach_tiled`` statement takes one or more
-dimension specifiers separated by commas, where each dimension is specified
-by ``identifier = start ... end``, where ``start`` is a signed integer
-value less than or equal to ``end``, specifying iteration over all integer
-values from ``start`` up to and including ``end-1``.  An arbitrary number
-of iteration dimensions may be specified, with each one spanning a
-different range of values.  Within the ``foreach`` loop, the given
-identifiers are available as ``const varying int32`` variables.  The
-execution mask starts out "all on" at the start of each ``foreach`` loop
-iteration, but may be changed by control flow constructs within the loop.
-
-It is illegal to have a ``break`` statement or a ``return`` statement
-within a ``foreach`` loop; a compile-time error will be issued in this
-case.  (It is legal to have a ``break`` in a regular ``for`` loop that's
-nested inside a ``foreach`` loop.)  ``continue`` statements are legal in
-``foreach`` loops; they have the same effect as in regular ``for`` loops:
-a program instances that executes a ``continue`` statement effectively
-skips over the rest of the loop body for the current iteration.
-
-As a specific example, consider the following ``foreach`` statement:
-
-::
-
-    foreach (j = 0 ... height, i = 0 ... width) {
-        // loop body--process data element (i,j)
-    }
-
-It specifies a loop over a 2D domain, where the ``j`` variable goes from 0
-to ``height-1`` and ``i`` goes from 0 to ``width-1``.  Within the loop, the
-variables ``i`` and ``j`` are available and initialized accordingly.
-
-``foreach`` loops actually cause the given iteration domain to be
-automatically mapped to the program instances in the gang, so that all of
-the data can be processed, in gang-sized chunks.  As a specific example,
-consider a simple ``foreach`` loop like the following, on a target where
-the gang size is 8:
-
-::
-
-    foreach (i = 0 ... 16) {
-        // perform computation on element i
-    }
-
-One possible valid execution path of this loop would be for the program
-counter the step through the statements of this loop just ``16/8==2``
-times; the first time through, with the ``varying int32`` variable ``i``
-having the values (0,1,2,3,4,5,6,7) over the program instances, and the
-second time through, having the values (8,9,10,11,12,13,14,15), thus
-mapping the available program instances to all of the data by the end of
-the loop's execution.  
-
-In general, however, you shouldn't make any assumptions about the order in
-which elements of the iteration domain will be processed by a ``foreach``
-loop.  For example, the following code exhibits undefined behavior:
-
-::
-
-    uniform float a[10][100];
-    foreach (i = 0 ... 10, j = 0 ... 100) {
-        if (i == 0)
-            a[i][j] = j;
-        else
-            // Error: can't assume that a[i-1][j] has been set yet
-            a[i][j] = a[i-1][j];
-
-The ``foreach`` statement generally subdivides the iteration domain by
-selecting sets of contiguous elements in the inner-most dimension of the
-iteration domain.  This decomposition approach generally leads to coherent
-memory reads and writes, but may lead to worse control flow coherence than
-other decompositions.
-
-Therefore, ``foreach_tiled`` decomposes the iteration domain in a way that
-tries to map locations in the domain to program instances in a way that is
-compact across all of the dimensions.  For example, on a target with an
-8-wide gang size, the following ``foreach_tiled`` statement might process
-the iteration domain in chunks of 2 elements in ``j`` and 4 elements in
-``i`` each time.  (The trade-offs between these two constructs are
-discussed in more detail in the `ispc Performance Guide`_.)
-
-.. _ispc Performance Guide: perf.html#improving-control-flow-coherence-with-foreach-tiled
-
-::
-
-    foreach_tiled (j = 0 ... height, i = 0 ... width) {
-        // loop body--process data element (i,j)
-    }
-
-
-Parallel Iteration with "programIndex" and "programCount"
----------------------------------------------------------
-
-In addition to ``foreach`` and ``foreach_tiled``, ``ispc`` provides a
-lower-level mechanism for mapping SPMD program instances to data to operate
-on via the built-in ``programIndex`` and ``programCount`` variables.
-
-``programIndex`` gives the index of the SIMD-lane being used for running
-each program instance.  (In other words, it's a varying integer value that
-has value zero for the first program instance, and so forth.)  The
-``programCount`` builtin gives the total number of instances in the gang.
-Together, these can be used to uniquely map executing program instances to
-input data. [#]_
-
-.. [#] ``programIndex`` is analogous to ``get_global_id()`` in OpenCL* and
-       ``threadIdx`` in CUDA*.
-
-As a specific example, consider an ``ispc`` function that needs to perform
-some computation on an array of data.
-
-::
-
-    for (uniform int i = 0; i < count; i += programCount) {
-        float d = data[i + programIndex];
-        float r = ....
-        result[i + programIndex] = r;
-    }
-
-Here, we've written a loop that explicitly loops over the data in chunks of
-``programCount`` elements.  In each loop iteration, the running program
-instances effectively collude amongst themselves using ``programIndex`` to
-determine which elements to work on in a way that ensures that all of the
-data elements will be processed.  In this particular case, a ``foreach``
-loop would be preferable, as ``foreach`` naturally handles the case where
-``programCount`` doesn't evenly divide the number of elements to be
-processed, while the loop above assumes that case implicitly. 
 
 Functions and Function Calls
 ----------------------------
@@ -3452,7 +3520,7 @@ There are also variants of these functions that return the value as a
 discussion of an application of this variant to improve memory access
 performance in the `Performance Guide`_.
 
-.. _Performance Guide: perf.html#understanding-gather-and-scatter
+.. _Performance Guide: perfguide.html#understanding-gather-and-scatter
 
 ::
 
@@ -4130,8 +4198,10 @@ from ``ispc`` must be declared as follows:
 It is illegal to overload functions declared with ``extern "C"`` linkage;
 ``ispc`` issues an error in this case.
 
-Function calls back to C/C++ are not made if none of the program instances
-want to make the call.  For example, given code like:
+**Only a single function call is made back to C++ for the entire gang of
+runing program instances**.  Furthermore, function calls back to C/C++ are not
+made if none of the program instances want to make the call.  For example,
+given code like:
 
 ::
 
@@ -4174,6 +4244,24 @@ Application code can thus be written as:
             }
     }
 
+In some cases, it can be desirable to generate a single call for each
+executing program instance, rather than one call for a gang.  For example,
+the code below shows how one might call an existing math library routine
+that takes a scalar parameter.
+
+::
+
+    extern "C" uniform double erf(uniform double);
+    double v = ...;
+    double result;
+    foreach_active (instance) {
+        uniform double r = erf(extract(v, instance));
+        result = insert(result, instance, r);
+    }
+
+This code calls ``erf()`` once for each active program instance, passing it
+the program instance's value of ``v`` and storing the result in the
+instance's ``result`` value.
 
 Data Layout
 -----------
@@ -4309,7 +4397,7 @@ can also have a significant effect on performance; in general, creating
 groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
-.. _ispc Performance Tuning Guide: http://ispc.github.com/perf.html
+.. _ispc Performance Tuning Guide: http://ispc.github.com/perfguide.html
 
 
 Disclaimer and Legal Information

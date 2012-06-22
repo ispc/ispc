@@ -260,6 +260,23 @@ public:
 };
 
 
+/** Iteration over each executing program instance.
+ */
+class ForeachActiveStmt : public Stmt {
+public:
+    ForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Symbol *sym;
+    Stmt *stmts;
+};
+
+
 /** Parallel iteration over each unique value in the given (varying)
     expression.
  */

@@ -117,8 +117,8 @@ static const char *lBuiltinTokens[] = {
     "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo",
     "cfor", "cif", "cwhile", "const", "continue", "creturn", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
-    "float", "for", "foreach", "foreach_tiled", "foreach_unique",
-    "goto", "if", "in", "inline",
+    "float", "for", "foreach", "foreach_active", "foreach_tiled",
+     "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
     "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned", 
@@ -1688,7 +1688,7 @@ foreach_active_scope
 foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::UniformInt32);
+        $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
     }
     ;
 
@@ -1838,7 +1838,7 @@ iteration_statement
      }
      statement
      {
-         $$ = CreateForeachActiveStmt($3, $6, Union(@1, @4));
+         $$ = new ForeachActiveStmt($3, $6, Union(@1, @4));
          m->symbolTable->PopScope();
      }
     | foreach_unique_scope '(' foreach_unique_identifier TOKEN_IN

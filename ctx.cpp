@@ -89,12 +89,14 @@ struct CFInfo {
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
     bool IsForeach() { return (type == ForeachRegular ||
+                               type == ForeachActive ||
                                type == ForeachUnique); }
     bool IsSwitch() { return type == Switch; }
     bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop, ForeachRegular, ForeachUnique, Switch };
+    enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique, 
+                  Switch };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
@@ -143,7 +145,7 @@ private:
     CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
            llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
            llvm::Value *lm) {
-        Assert(t == ForeachRegular || t == ForeachUnique);
+        Assert(t == ForeachRegular || t == ForeachActive || t == ForeachUnique);
         type = t;
         isUniform = false;
         savedBreakTarget = bt;
@@ -189,6 +191,9 @@ CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
     switch (ft) {
     case FunctionEmitContext::FOREACH_REGULAR:
         cfType = ForeachRegular;
+        break;
+    case FunctionEmitContext::FOREACH_ACTIVE:
+        cfType = ForeachActive;
         break;
     case FunctionEmitContext::FOREACH_UNIQUE:
         cfType = ForeachUnique;
@@ -744,6 +749,16 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
 }
 
 
+static bool
+lEnclosingLoopIsForeachActive(const std::vector<CFInfo *> &controlFlowInfo) {
+    for (int i = (int)controlFlowInfo.size() - 1; i >= 0; --i) {
+        if (controlFlowInfo[i]->type == CFInfo::ForeachActive)
+            return true;
+    }
+    return false;
+}
+
+
 void
 FunctionEmitContext::Continue(bool doCoherenceCheck) {
     if (!continueTarget) {
@@ -753,12 +768,16 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
     }
     AssertPos(currentPos, controlFlowInfo.size() > 0);
 
-    if (ifsInCFAllUniform(CFInfo::Loop)) {
+    if (ifsInCFAllUniform(CFInfo::Loop) ||
+        lEnclosingLoopIsForeachActive(controlFlowInfo)) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
-        // loop or if we can tell that the mask is all on.
+        // loop or if we can tell that the mask is all on.  Here, we can
+        // also jump if the enclosing loop is a 'foreach_active' loop, in
+        // which case we know that only a single program instance is
+        // executing.
         AddInstrumentationPoint("continue: uniform CF, jumped");
-        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
+        if (doCoherenceCheck)
             Warning(currentPos, "Coherent continue statement not necessary in "
                     "fully uniform control flow.");
         BranchInst(continueTarget);
