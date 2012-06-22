@@ -35,6 +35,7 @@ distribution.
   + `Is it possible to use ispc for explicit vector programming?`_
   + `How can I debug my ispc programs using Valgrind?`_
   + `foreach statements generate more complex assembly than I'd expect; what's going on?`_
+  + `How do I launch an individual task for each active program instance?`_
 
 Understanding ispc's Output
 ===========================
@@ -770,3 +771,55 @@ able to eliminate the code for the additional array elements.
 
 With this new version of ``foo()``, only the code for the first loop above
 is generated.
+
+
+How do I launch an individual task for each active program instance?
+--------------------------------------------------------------------
+
+Recall from the `discussion of "launch" in the ispc User's Guide`_ that a
+``launch`` statement launches a single task corresponding to a single gang
+of executing program instances, where the indices of the active program
+instances are the same as were active when the ``launch`` statement
+executed.
+
+.. _discussion of "launch" in the ispc User's Guide: ispc.html#task-parallelism-launch-and-sync-statements
+
+In some situations, it's desirable to be able to launch an individual task
+for each executing program instance.  For example, we might be performing
+an iterative computation where a subset of the program instances determine
+that an item they are responsible for requires additional processing.
+
+::
+
+    bool itemNeedsMoreProcessing(int);
+    int itemNum = ...;
+    if (itemNeedsMoreProcessing(itemNum)) {
+        // do additional work 
+    }
+
+For performance reasons, it may be desirable to apply an entire gang's
+worth of comptuation to each item that needs additional processing; 
+there may be available parallelism in this computation such that we'd like
+to process each of the items with SPMD computation.
+
+In this case, the ``foreach_active`` and ``unmasked`` constructs can be
+applied together to accomplish this goal.
+
+::
+
+    // do additional work 
+    task void doWork(uniform int index);
+    foreach_active (index) {
+        unmasked {
+            launch doWork(extract(itemNum, index)); 
+        }
+    }
+
+Recall that the body of the ``foreach_active`` loop runs once for each
+active program instance, with each active program instance's
+``programIndex`` value available in ``index`` in the above.  In the loop,
+we can re-establish an "all on" execution mask, enabling execution in all
+of the program instances in the gang, such that execution in ``doWork()``
+starts with all instances running.  (Alternatively, the ``unmasked`` block
+could be in the definition of ``doWork()``.)
+
