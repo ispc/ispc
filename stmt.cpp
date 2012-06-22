@@ -1458,7 +1458,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
 
-    ctx->StartForeach();
+    ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR);
 
     // On to the outermost loop's test
     ctx->BranchInst(bbTest[0]);
@@ -1970,10 +1970,8 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
     ctx->StoreInst(movmsk, maskBitsPtr);
 
-    // Officially start the loop; as far as the FunctionEmitContext is
-    // concerned, this can be handled the same way as a regular foreach
-    // loop (continue allowed but not break and return, etc.)
-    ctx->StartForeach();
+    // Officially start the loop.
+    ctx->StartForeach(FunctionEmitContext::FOREACH_UNIQUE);
     ctx->SetContinueTarget(bbCheckForMore);
 
     // Evaluate the varying expression we're iterating over just once.

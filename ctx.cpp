@@ -68,7 +68,8 @@ struct CFInfo {
                            llvm::Value *savedContinueLanesPtr,
                            llvm::Value *savedMask, llvm::Value *savedLoopMask);
 
-    static CFInfo *GetForeach(llvm::BasicBlock *breakTarget,
+    static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft,
+                              llvm::BasicBlock *breakTarget,
                               llvm::BasicBlock *continueTarget, 
                               llvm::Value *savedBreakLanesPtr,
                               llvm::Value *savedContinueLanesPtr,
@@ -87,12 +88,13 @@ struct CFInfo {
     
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
-    bool IsForeach() { return type == Foreach; }
+    bool IsForeach() { return (type == ForeachRegular ||
+                               type == ForeachUnique); }
     bool IsSwitch() { return type == Switch; }
     bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop, Foreach, Switch };
+    enum CFType { If, Loop, ForeachRegular, ForeachUnique, Switch };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
@@ -141,7 +143,7 @@ private:
     CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
            llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
            llvm::Value *lm) {
-        Assert(t == Foreach);
+        Assert(t == ForeachRegular || t == ForeachUnique);
         type = t;
         isUniform = false;
         savedBreakTarget = bt;
@@ -177,12 +179,25 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
 
 
 CFInfo *
-CFInfo::GetForeach(llvm::BasicBlock *breakTarget,
+CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
+                   llvm::BasicBlock *breakTarget,
                    llvm::BasicBlock *continueTarget, 
                    llvm::Value *savedBreakLanesPtr,
                    llvm::Value *savedContinueLanesPtr,
                    llvm::Value *savedMask, llvm::Value *savedForeachMask) {
-    return new CFInfo(Foreach, breakTarget, continueTarget,
+    CFType cfType;
+    switch (ft) {
+    case FunctionEmitContext::FOREACH_REGULAR:
+        cfType = ForeachRegular;
+        break;
+    case FunctionEmitContext::FOREACH_UNIQUE:
+        cfType = ForeachUnique;
+        break;
+    default:
+        FATAL("Unhandled foreach type");
+    }
+
+    return new CFInfo(cfType, breakTarget, continueTarget,
                       savedBreakLanesPtr, savedContinueLanesPtr,
                       savedMask, savedForeachMask);
 }
@@ -583,23 +598,26 @@ FunctionEmitContext::EndLoop() {
 
 
 void
-FunctionEmitContext::StartForeach() {
+FunctionEmitContext::StartForeach(ForeachType ft) {
     // Issue an error if we're in a nested foreach...
-    for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
-        if (controlFlowInfo[i]->type == CFInfo::Foreach) {
-            Error(currentPos, "Nested \"foreach\" statements are currently illegal.");
-            break;
-            // Don't return here, however, and in turn allow the caller to
-            // do the rest of its codegen and then call EndForeach()
-            // normally--the idea being that this gives a chance to find
-            // any other errors inside the body of the foreach loop...
+    if (ft == FOREACH_REGULAR) {
+        for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
+            if (controlFlowInfo[i]->type == CFInfo::ForeachRegular) {
+                Error(currentPos, "Nested \"foreach\" statements are currently "
+                      "illegal.");
+                break;
+                // Don't return here, however, and in turn allow the caller to
+                // do the rest of its codegen and then call EndForeach()
+                // normally--the idea being that this gives a chance to find
+                // any other errors inside the body of the foreach loop...
+            }
         }
     }
 
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetForeach(breakTarget, continueTarget, 
+    controlFlowInfo.push_back(CFInfo::GetForeach(ft, breakTarget, continueTarget, 
                                                  breakLanesPtr, continueLanesPtr,
                                                  oldMask, loopMask));
     breakLanesPtr = NULL;
