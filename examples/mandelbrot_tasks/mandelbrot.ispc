@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -41,8 +41,10 @@ mandel(float c_re, float c_im, int count) {
 
         float new_re = z_re*z_re - z_im*z_im;
         float new_im = 2.f * z_re * z_im;
-        z_re = c_re + new_re;
-        z_im = c_im + new_im;
+        unmasked {
+            z_re = c_re + new_re;
+            z_im = c_im + new_im;
+        }
     }
 
     return i;

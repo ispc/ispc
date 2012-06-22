@@ -214,7 +214,7 @@ struct ForeachDimension {
 %type <stmt> statement labeled_statement compound_statement for_init_statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
-%type <stmt> assert_statement sync_statement delete_statement
+%type <stmt> assert_statement sync_statement delete_statement unmasked_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
@@ -1570,6 +1570,7 @@ statement
     | assert_statement
     | sync_statement
     | delete_statement
+    | unmasked_statement
     | error ';'
     {
         lSuggestBuiltinAlternates();
@@ -1895,6 +1896,13 @@ delete_statement
     : TOKEN_DELETE expression ';'
     {
         $$ = new DeleteStmt($2, Union(@1, @2));
+    }
+    ;
+
+unmasked_statement
+    : TOKEN_UNMASKED '{' statement_list '}'
+    {
+        $$ = new UnmaskedStmt($3, @1);
     }
     ;
 

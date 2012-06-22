@@ -297,6 +297,23 @@ public:
 };
 
 
+/** 
+ */
+class UnmaskedStmt : public Stmt {
+public:
+    UnmaskedStmt(Stmt *stmt, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Stmt *stmts;
+};
+
+
+
 /** @brief Statement implementation for a 'return' or 'coherent' return
     statement in the program. */
 class ReturnStmt : public Stmt {

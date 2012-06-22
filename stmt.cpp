@@ -2625,6 +2625,60 @@ SwitchStmt::EstimateCost() const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// UnmaskedStmt
+
+UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos)
+    : Stmt(pos) {
+    stmts = s;
+}
+
+
+void
+UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock() || !stmts)
+        return;
+
+    llvm::Value *oldInternalMask = ctx->GetInternalMask();
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    ctx->SetFunctionMask(LLVMMaskAllOn);
+
+    stmts->EmitCode(ctx);
+
+    ctx->SetInternalMask(oldInternalMask);
+    ctx->SetFunctionMask(oldFunctionMask);
+}
+
+
+void
+UnmaskedStmt::Print(int indent) const {
+    printf("%*cUnmasked Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+
+    printf("%*cStmts:\n", indent+4, ' ');
+    if (stmts != NULL)
+        stmts->Print(indent+8);
+    else
+        printf("NULL");
+    printf("\n");
+}
+
+
+Stmt *
+UnmaskedStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+UnmaskedStmt::EstimateCost() const {
+    return COST_ASSIGN;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
 ReturnStmt::ReturnStmt(Expr *e, bool cc, SourcePos p) 

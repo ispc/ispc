@@ -119,6 +119,7 @@ Contents:
 
       + `Function Overloading`_
 
+    * `Re-establishing The Execution Mask`_
     * `Task Parallel Execution`_
 
       + `Task Parallelism: "launch" and "sync" Statements`_
@@ -2712,6 +2713,15 @@ Any function that can be launched with the ``launch`` construct in ``ispc``
 must have a ``task`` qualifier; see `Task Parallelism: "launch" and "sync"
 Statements`_ for more discussion of launching tasks in ``ispc``.
 
+A function can also be given the ``unmasked`` qualifier; this qualifier
+indicates that all program instances should be made active at the start of
+the function execution (or, equivalently, that the current execution mask
+shouldn't be passed to the function from the function call site.)  If it is
+known that a function will always be called when all program instances are
+executing, adding this qualifier can slightly improve performance.  See the
+Section `Re-establishing The Execution Mask`_ for more discussion of
+``unmasked`` program code.
+
 Functions that are intended to be called from C/C++ application code must
 have the ``export`` qualifier.  This causes them to have regular C linkage
 and to have their declarations included in header files, if the ``ispc``
@@ -2754,6 +2764,95 @@ of a given type are found, an error is issued.
   variability from ``uniform`` to ``varying`` as needed.
 
 
+Re-establishing The Execution Mask
+----------------------------------
+
+As discussed in `Functions and Function Calls`_, a function that is
+declared with an ``unmasked`` qualifier starts execution with all program
+instances running, regardless of the execution mask at the site of the
+function call.  A block of statements can also be enclosed with
+``unmasked`` to have the same effect within a function:
+
+::
+
+    int a = ..., b = ...;
+    if (a < b) {
+        // only program instances where a < b are executing here
+        unmasked {
+            // now all program instances are executing
+        }
+        // and again only the a < b instances
+    }
+
+``unmasked`` can be useful in cases where the programmer wants to "change
+the axis of parallelism" or use nested parallelism, as shown in the
+following code:
+
+::
+
+    uniform WorkItem items[...] = ...;
+    foreach (itemNum = 0 ... numItems) {
+        // do computation on items[itemNum] to determine if it needs
+        // further processing...
+        if (/* itemNum needs processing */) {
+            foreach_active (i) {
+                unmasked {
+                    uniform int uItemNum = extract(itemNum, i);
+                    // apply entire gang of program instances to uItemNum
+                }
+            }
+        }
+    }
+
+The general idea is that we are first using SPMD parallelism to determine
+which of the items requires further processing, checking a gang's worth of
+them concurrently inside the ``foreach`` loop.  Assuming that only a subset
+of them need further processing, would be wasteful to do this work within
+the ``foreach`` loop in the same program instance that made the initial
+determination of whether more work as needed; in this case, all of the
+program instances corresponding to items that didn't need further
+processing would be inactive, with corresponding unused computational
+capability in the system.
+
+In the above code, this issue is avoided by working on each of the items
+requiring more processing in turn with ``foreach_active`` and then using
+``unmasked`` to re-establish execution of all of the program instances.
+The entire gang can in turn be applied to the computation to be done for
+each ``items[itemNum]``.
+
+The ``unmasked`` statement should be used with care; it can lead to a
+number of surprising cases of undefined program behavior.  For example,
+consider the following code:
+
+::
+
+    void func(float);
+    float a = ...;
+    float b;
+    if (a < 0) {
+        b = 0;
+        unmasked {
+            if (b == 0)
+                func(a);
+        }
+    }
+
+The variable ``a`` is initialized to some value and ``b`` is declared but
+not initialized, and thus has an undefined value.  Within the ``if`` test,
+we have assigned zero to ``b``, though only for the program instances
+currently executing--i.e. those where ``a < 0``.  After re-establishing the
+executing mask with ``unmasked``, we then compare ``b`` to zero--this
+comparison is well-defined (and "true") for the program instances where ``a
+< 0``, but it is undefed for any program instances where that isn't the
+case, since the value of ``b`` is undefined for those program instances.
+Similar surprising cases can arise when writing to ``varying`` variables
+within ``unmasked`` code.
+
+As a general rule, code within an ``unmasked`` block, or a function with
+the ``unmasked`` qualifier should use great care when accessing ``varying``
+variables that were declared in an outer scope.
+
+
 Task Parallel Execution
 -----------------------
 
@@ -2789,17 +2888,46 @@ Any function that is launched as a task must be declared with the
 Tasks must return ``void``; a compile time error is issued if a
 non-``void`` task is defined.
 
-Given a task definitions, there are two ways to write code that launches
-tasks, using the ``launch`` construct.  First, one task can be launched at
-a time, with parameters passed to the task to help it determine what part
-of the overall computation it's responsible for:
+Given a task declaration, a task can be launched with ``launch``:
+
+::
+
+    uniform float a[...] = ...;
+    launch func(a, 1);
+
+Program execution continues asynchronously after a ``launch`` statement in
+a function; thus, a function shouldn't access values written by a task it
+has launched within the function without synchronization.  A function can
+use a ``sync`` statement to wait for all launched tasks to finish:
+
+::
+
+    launch func(a, 1);
+    sync;
+    // now safe to use computed values in a[]...
+
+Alternatively, any function that launches tasks has an automatically-added
+implicit ``sync`` statement before it returns, so that functions that call
+a function that launches tasks don't have to worry about outstanding
+asynchronous computation from that function.
+
+The task generated by a ``launch`` statement is a single gang's worth of
+work.  The same program instances are respectively active and inactive at
+the start of the task as were active and inactive when their ``launch``
+statement executed.  To make all program instances in the launched gang be
+active, the ``unmasked`` construct can be used (see `Re-establishing The
+Execution Mask`_.)
+
+There are two ways to write code that launches a group multiple tasks.
+First, one task can be launched at a time, with parameters passed to the
+task to help it determine what part of the overall computation it's
+responsible for:
 
 ::
 
     for (uniform int i = 0; i < 100; ++i)
         launch func(a, i);
 
-Note the ``launch`` keyword before the function call expression.
 This code launches 100 tasks, each of which presumably does some
 computation that is keyed off of given the value ``i``.  In general, one
 should launch many more tasks than there are processors in the system to
@@ -2829,23 +2957,6 @@ implementation of ``func2`` to determine which array element to process.
         ...
         a[taskIndex] = ...
     }
-
-Program execution continues asynchronously after a ``launch`` statement in
-a function; thus, a function shouldn't access values being generated by the
-tasks it has launched within the function without synchronization.  If
-results are needed before function return, a function can use a ``sync``
-statement to wait for all launched tasks to finish:
-
-::
-
-    launch[100] func2(a);
-    sync;
-    // now safe to use computed values in a[]...
-
-Alternatively, any function that launches tasks has an automatically-added
-``sync`` statement before it returns, so that functions that call a
-function that launches tasks don't have to worry about outstanding
-asynchronous computation from that function.
 
 Inside functions with the ``task`` qualifier, two additional built-in
 variables are provided in addition to ``taskIndex`` and ``taskCount``:
