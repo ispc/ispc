@@ -2586,9 +2586,12 @@ SwitchStmt::Print(int indent) const {
 
 Stmt *
 SwitchStmt::TypeCheck() {
-    const Type *exprType = expr->GetType();
-    if (exprType == NULL)
+    const Type *exprType;
+    if (expr == NULL ||
+        (exprType = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
 
     const Type *toType = NULL;
     exprType = exprType->GetAsConstType();
