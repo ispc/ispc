@@ -780,7 +780,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                         return;
                     }
 
-                    llvm::Constant *zeroInit = llvm::ConstantAggregateZero::get(llvmType);
+                    llvm::Constant *zeroInit = llvm::Constant::getNullValue(llvmType);
                     ctx->StoreInst(zeroInit, ep);
                 }
             }
