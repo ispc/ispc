@@ -384,8 +384,8 @@ declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
                                              <4 x float>) nounwind readnone
 
 
-define void @__masked_store_blend_32(<4 x i32>* nocapture, <4 x i32>, 
-                                     <4 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
+                                      <4 x i32> %mask) nounwind alwaysinline {
   %mask_as_float = bitcast <4 x i32> %mask to <4 x float>
   %oldValue = load <4 x i32>* %0, align 4
   %oldAsFloat = bitcast <4 x i32> %oldValue to <4 x float>
@@ -399,8 +399,8 @@ define void @__masked_store_blend_32(<4 x i32>* nocapture, <4 x i32>,
 }
 
 
-define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
-                                     <4 x i32> %i32mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
+                                      <4 x i32> %i32mask) nounwind alwaysinline {
   %oldValue = load <4 x i64>* %ptr, align 8
   %mask = bitcast <4 x i32> %i32mask to <4 x float>
 
@@ -451,35 +451,39 @@ define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
 
 masked_store_blend_8_16_by_4()
 
-gen_masked_store(4, i8, 8)
-gen_masked_store(4, i16, 16)
-gen_masked_store(4, i32, 32)
-gen_masked_store(4, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
+
+masked_store_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(4, i8, 8)
-load_and_broadcast(4, i16, 16)
-load_and_broadcast(4, i32, 32)
-load_and_broadcast(4, i64, 64)
 
-masked_load(4, i8,  8,  1)
-masked_load(4, i16, 16, 2)
-masked_load(4, i32, 32, 4)
-masked_load(4, i64, 64, 8)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(float, 4)
+masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
 ; define these with the macros from stdlib.m4
 
-gen_gather(4, i8)
-gen_gather(4, i16)
-gen_gather(4, i32)
-gen_gather(4, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)
 
-gen_scatter(4, i8)
-gen_scatter(4, i16)
-gen_scatter(4, i32)
-gen_scatter(4, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(float)
+gen_scatter(i64)
+gen_scatter(double)

@@ -197,10 +197,30 @@ AtomicType::GetVariability() const {
 
 
 bool
+Type::IsPointerType() const {
+    return (CastType<PointerType>(this) != NULL);
+}
+
+
+bool
+Type::IsArrayType() const {
+    return (CastType<ArrayType>(this) != NULL);
+}
+
+bool
+Type::IsReferenceType() const {
+    return (CastType<ReferenceType>(this) != NULL);
+}
+
+bool
+Type::IsVoidType() const {
+    return this == AtomicType::Void;
+}
+
+bool
 AtomicType::IsFloatType() const {
     return (basicType == TYPE_FLOAT || basicType == TYPE_DOUBLE);
 }
-
 
 bool
 AtomicType::IsIntType() const {
@@ -791,7 +811,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
                                             32 /* align in bits */,
                                             elementArray
 #if !defined(LLVM_3_0) && !defined(LLVM_3_1)
-                                            , llvm::DIType()
+                                            , llvm::DIType(), 0
 #endif
                                             );
 
@@ -1111,10 +1131,7 @@ PointerType::LLVMType(llvm::LLVMContext *ctx) const {
         llvm::Type *ptype = NULL;
         const FunctionType *ftype = CastType<FunctionType>(baseType);
         if (ftype != NULL) 
-            // Get the type of the function variant that takes the mask as the
-            // last parameter--i.e. we don't allow taking function pointers of
-            // exported functions.
-            ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx, true), 0);
+            ptype = llvm::PointerType::get(ftype->LLVMFunctionType(ctx), 0);
         else {
             if (baseType == AtomicType::Void)
                 ptype = LLVMTypes::VoidPointerType;
@@ -1811,13 +1828,25 @@ StructType::StructType(const std::string &n, const llvm::SmallVector<const Type 
 
         // Actually make the LLVM struct
         std::vector<llvm::Type *> elementTypes;
-        for (int i = 0; i < GetElementCount(); ++i) {
-            const Type *type = GetElementType(i);
-            if (type == NULL) {
-                Assert(m->errorCount > 0);
-                return;
+        int nElements = GetElementCount();
+        if (nElements == 0) {
+            elementTypes.push_back(LLVMTypes::Int8Type);
+        }
+        else {
+            for (int i = 0; i < nElements; ++i) {
+                const Type *type = GetElementType(i);
+                if (type == NULL) {
+                    Assert(m->errorCount > 0);
+                    return;
+                }
+                else if (CastType<FunctionType>(type) != NULL) {
+                    Error(elementPositions[i], "Method declarations are not "
+                          "supported.");
+                    return;
+                }
+                else
+                    elementTypes.push_back(type->LLVMType(g->ctx));
             }
-            elementTypes.push_back(type->LLVMType(g->ctx));
         }
 
         if (lStructTypeMap.find(mname) == lStructTypeMap.end()) {
@@ -2599,10 +2628,12 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
 ///////////////////////////////////////////////////////////////////////////
 // FunctionType
 
-FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
+FunctionType::FunctionType(const Type *r, 
+                           const llvm::SmallVector<const Type *, 8> &a, 
                            SourcePos p)
     : Type(FUNCTION_TYPE), isTask(false), isExported(false), isExternC(false), 
-      returnType(r), paramTypes(a), paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
+      isUnmasked(false), returnType(r), paramTypes(a), 
+      paramNames(llvm::SmallVector<std::string, 8>(a.size(), "")),
       paramDefaults(llvm::SmallVector<Expr *, 8>(a.size(), NULL)),
       paramPositions(llvm::SmallVector<SourcePos, 8>(a.size(), p)) {
     Assert(returnType != NULL);
@@ -2611,13 +2642,15 @@ FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 
 }
 
 
-FunctionType::FunctionType(const Type *r, const llvm::SmallVector<const Type *, 8> &a, 
+FunctionType::FunctionType(const Type *r,
+                           const llvm::SmallVector<const Type *, 8> &a, 
                            const llvm::SmallVector<std::string, 8> &an, 
                            const llvm::SmallVector<Expr *, 8> &ad,
                            const llvm::SmallVector<SourcePos, 8> &ap,
-                           bool it, bool is, bool ec) 
-    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), returnType(r), 
-      paramTypes(a), paramNames(an), paramDefaults(ad), paramPositions(ap) {
+                           bool it, bool is, bool ec, bool ium)
+    : Type(FUNCTION_TYPE), isTask(it), isExported(is), isExternC(ec), 
+      isUnmasked(ium), returnType(r), paramTypes(a), paramNames(an), 
+      paramDefaults(ad), paramPositions(ap) {
     Assert(paramTypes.size() == paramNames.size() && 
            paramNames.size() == paramDefaults.size() &&
            paramDefaults.size() == paramPositions.size());
@@ -2717,7 +2750,7 @@ FunctionType::ResolveUnboundVariability(Variability v) const {
 
     FunctionType *ret = new FunctionType(rt, pt, paramNames, paramDefaults,
                                          paramPositions, isTask, isExported,
-                                         isExternC);
+                                         isExternC, isUnmasked);
     ret->isSafe = isSafe;
     ret->costOverride = costOverride;
 
@@ -2758,6 +2791,9 @@ FunctionType::GetString() const {
 std::string
 FunctionType::Mangle() const {
     std::string ret = "___";
+    if (isUnmasked)
+        ret += "UM_";
+
     for (unsigned int i = 0; i < paramTypes.size(); ++i)
         if (paramTypes[i] == NULL)
             Assert(m->errorCount > 0);
@@ -2839,6 +2875,8 @@ FunctionType::GetReturnTypeString() const {
         ret += "export ";
     if (isExternC)
         ret += "extern \"C\" ";
+    if (isUnmasked)
+        ret += "unmasked ";
     if (isSafe) 
         ret += "/*safe*/ ";
     if (costOverride > 0) {
@@ -2846,14 +2884,15 @@ FunctionType::GetReturnTypeString() const {
         sprintf(buf, "/*cost=%d*/ ", costOverride);
         ret += buf;
     }
+
     return ret + returnType->GetString();
 }
 
 
 llvm::FunctionType *
-FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
+FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
     if (isTask == true) 
-        Assert(includeMask == true);
+        Assert(removeMask == false);
 
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
@@ -2873,7 +2912,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
     }
 
     // And add the function mask, if asked for
-    if (includeMask)
+    if (!(removeMask || isUnmasked))
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
@@ -2899,7 +2938,11 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool includeMask) const {
         return NULL;
     }
 
-    return llvm::FunctionType::get(returnType->LLVMType(g->ctx), callTypes, false);
+    llvm::Type *llvmReturnType = returnType->LLVMType(g->ctx);
+    if (llvmReturnType == NULL)
+        return NULL;
+
+    return llvm::FunctionType::get(llvmReturnType, callTypes, false);
 }
 
 
@@ -3233,7 +3276,8 @@ lCheckTypeEquality(const Type *a, const Type *b, bool ignoreConst) {
 
         if (fta->isTask != ftb->isTask ||
             fta->isExported != ftb->isExported ||
-            fta->isExternC != ftb->isExternC)
+            fta->isExternC != ftb->isExternC ||
+            fta->isUnmasked != ftb->isUnmasked)
             return false;
 
         if (fta->GetNumParameters() != ftb->GetNumParameters())

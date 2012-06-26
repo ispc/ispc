@@ -362,6 +362,28 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
 }
 
 
+/** Returns true if the "true" block for the if statement consists of a
+    single 'break' statement, and the "false" block is empty. */
+static bool
+lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
+    if (falseStmts != NULL) {
+        if (StmtList *sl = dynamic_cast<StmtList *>(falseStmts)) {
+            return (sl->stmts.size() == 0);
+        }
+        else
+            return false;
+    }
+
+    if (dynamic_cast<BreakStmt *>(trueStmts))
+        return true;
+    else if (StmtList *sl = dynamic_cast<StmtList *>(trueStmts))
+        return (sl->stmts.size() == 1 &&
+                dynamic_cast<BreakStmt *>(sl->stmts[0]) != NULL);
+    else
+        return false;
+}
+
+
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     // First check all of the things that might happen due to errors
@@ -414,6 +436,15 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         // so that subsequent emitted code starts there.
         ctx->SetCurrentBasicBlock(bexit);
         ctx->EndIf();
+    }
+    else if (lCanApplyBreakOptimization(trueStmts, falseStmts)) {
+        // If we have a simple break statement inside the 'if' and are
+        // under varying control flow, just update the execution mask
+        // directly and don't emit code for the statements.  This leads to
+        // better code for this case--this is surprising and should be
+        // root-caused further, but for now this gives us performance
+        // benefit in this case.
+        ctx->SetInternalMaskAndNot(ctx->GetInternalMask(), testValue);
     }
     else
         emitVaryingIf(ctx, testValue);
@@ -494,16 +525,7 @@ IfStmt::emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
 void
 IfStmt::emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *ltest) const {
     llvm::Value *oldMask = ctx->GetInternalMask();
-    if (ctx->GetFullMask() == LLVMMaskAllOn && 
-        !g->opt.disableCoherentControlFlow &&
-        !g->opt.disableMaskAllOnOptimizations) {
-        // We can tell that the mask is on statically at compile time; just
-        // emit code for the 'if test with the mask all on' path
-        llvm::BasicBlock *bDone = ctx->CreateBasicBlock("cif_done");
-        emitMaskAllOn(ctx, ltest, bDone);
-        ctx->SetCurrentBasicBlock(bDone);
-    }
-    else if (doAllCheck) {
+    if (doAllCheck) {
         // We can't tell if the mask going into the if is all on at the
         // compile time.  Emit code to check for this and then either run
         // the code for the 'all on' or the 'mixed' case depending on the
@@ -1436,7 +1458,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->StoreInst(LLVMMaskAllOn, extrasMaskPtrs[i]);
     }
 
-    ctx->StartForeach();
+    ctx->StartForeach(FunctionEmitContext::FOREACH_REGULAR);
 
     // On to the outermost loop's test
     ctx->BranchInst(bbTest[0]);
@@ -1627,11 +1649,12 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     // width.  Set the mask and jump to the masked loop body.
     ctx->SetCurrentBasicBlock(bbAllInnerPartialOuter); {
         llvm::Value *mask;
-        if (extrasMaskPtrs.size() == 0)
+        if (nDims == 1)
             // 1D loop; we shouldn't ever get here anyway
             mask = LLVMMaskAllOff;
         else
-            mask = ctx->LoadInst(extrasMaskPtrs.back());
+            mask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
+
         ctx->SetInternalMask(mask);
 
         ctx->StoreInst(LLVMTrue, stepIndexAfterMaskedBodyPtr);
@@ -1893,6 +1916,422 @@ ForeachStmt::Print(int indent) const {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// ForeachActiveStmt
+
+ForeachActiveStmt::ForeachActiveStmt(Symbol *s, Stmt *st, SourcePos pos) 
+    : Stmt(pos) {
+    sym = s;
+    stmts = st;
+}
+
+
+void
+ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
+    // Allocate storage for the symbol that we'll use for the uniform
+    // variable that holds the current program instance in each loop
+    // iteration.
+    if (sym->type == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+    Assert(Type::Equal(sym->type, 
+                       AtomicType::UniformInt64->GetAsConstType()));
+    sym->storagePtr = ctx->AllocaInst(LLVMTypes::Int64Type, sym->name.c_str());
+
+    ctx->SetDebugPos(pos);
+    ctx->EmitVariableDebugInfo(sym);
+
+    // The various basic blocks that we'll need in the below
+    llvm::BasicBlock *bbFindNext = 
+        ctx->CreateBasicBlock("foreach_active_find_next");
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_active_body");
+    llvm::BasicBlock *bbCheckForMore = 
+        ctx->CreateBasicBlock("foreach_active_check_for_more");
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_active_done");
+
+    // Save the old mask so that we can restore it at the end
+    llvm::Value *oldInternalMask = ctx->GetInternalMask();
+    
+    // Now, *maskBitsPtr will maintain a bitmask for the lanes that remain
+    // to be processed by a pass through the loop body.  It starts out with
+    // the current execution mask (which should never be all off going in
+    // to this)...
+    llvm::Value *oldFullMask = ctx->GetFullMask();
+    llvm::Value *maskBitsPtr = 
+        ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
+    llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
+    ctx->StoreInst(movmsk, maskBitsPtr);
+
+    // Officially start the loop.
+    ctx->StartScope();
+    ctx->StartForeach(FunctionEmitContext::FOREACH_ACTIVE);
+    ctx->SetContinueTarget(bbCheckForMore);
+
+    // Onward to find the first set of program instance to run the loop for
+    ctx->BranchInst(bbFindNext);
+    
+    ctx->SetCurrentBasicBlock(bbFindNext); {
+        // Load the bitmask of the lanes left to be processed
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
+
+        // Find the index of the first set bit in the mask
+        llvm::Function *ctlzFunc = 
+            m->module->getFunction("__count_trailing_zeros_i64");
+        Assert(ctlzFunc != NULL);
+        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits,
+                                              "first_set");
+
+        // Store that value into the storage allocated for the iteration
+        // variable.
+        ctx->StoreInst(firstSet, sym->storagePtr);
+
+        // Now set the execution mask to be only on for the current program
+        // instance.  (TODO: is there a more efficient way to do this? e.g.
+        // for AVX1, we might want to do this as float rather than int
+        // math...)
+
+        // Get the "program index" vector value
+        llvm::Value *programIndex = 
+            llvm::UndefValue::get(LLVMTypes::Int32VectorType);
+        for (int i = 0; i < g->target.vectorWidth; ++i)
+            programIndex = ctx->InsertInst(programIndex, LLVMInt32(i), i,
+                                           "prog_index");
+
+        // And smear the current lane out to a vector
+        llvm::Value *firstSet32 = 
+            ctx->TruncInst(firstSet, LLVMTypes::Int32Type, "first_set32");
+        llvm::Value *firstSet32Smear = ctx->SmearUniform(firstSet32);
+
+        // Now set the execution mask based on doing a vector compare of
+        // these two
+        llvm::Value *iterMask = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
+                         firstSet32Smear, programIndex);
+        iterMask = ctx->I1VecToBoolVec(iterMask);
+
+        ctx->SetInternalMask(iterMask);
+
+        // Also update the bitvector of lanes left to turn off the bit for
+        // the lane we're about to run.
+        llvm::Value *setMask = 
+            ctx->BinaryOperator(llvm::Instruction::Shl, LLVMInt64(1),
+                                firstSet, "set_mask");
+        llvm::Value *notSetMask = ctx->NotOperator(setMask);
+        llvm::Value *newRemaining = 
+            ctx->BinaryOperator(llvm::Instruction::And, remainingBits, 
+                                notSetMask, "new_remaining");
+        ctx->StoreInst(newRemaining, maskBitsPtr);
+
+        // and onward to run the loop body...
+        ctx->BranchInst(bbBody);
+    }
+
+    ctx->SetCurrentBasicBlock(bbBody); {
+        // Run the code in the body of the loop.  This is easy now.
+        if (stmts)
+            stmts->EmitCode(ctx);
+
+        Assert(ctx->GetCurrentBasicBlock() != NULL);
+        ctx->BranchInst(bbCheckForMore);
+    }
+
+    ctx->SetCurrentBasicBlock(bbCheckForMore); {
+        // At the end of the loop body (either due to running the
+        // statements normally, or a continue statement in the middle of
+        // the loop that jumps to the end, see if there are any lanes left
+        // to be processed.
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
+        llvm::Value *nonZero = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
+                         remainingBits, LLVMInt64(0), "remaining_ne_zero");
+        ctx->BranchInst(bbFindNext, bbDone, nonZero);
+    }
+
+    ctx->SetCurrentBasicBlock(bbDone);
+    ctx->SetInternalMask(oldInternalMask);
+    ctx->EndForeach();
+    ctx->EndScope();
+}
+
+
+void
+ForeachActiveStmt::Print(int indent) const {
+    printf("%*cForeach_active Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+
+    printf("%*cIter symbol: ", indent+4, ' ');
+    if (sym != NULL) {
+        printf("%s", sym->name.c_str());
+        if (sym->type != NULL)
+            printf(" %s", sym->type->GetString().c_str());
+    }
+    else
+        printf("NULL");
+    printf("\n");
+
+    printf("%*cStmts:\n", indent+4, ' ');
+    if (stmts != NULL)
+        stmts->Print(indent+8);
+    else
+        printf("NULL");
+    printf("\n");
+}
+
+
+Stmt *
+ForeachActiveStmt::TypeCheck() {
+    if (sym == NULL)
+        return NULL;
+
+    return this;
+}
+
+
+int
+ForeachActiveStmt::EstimateCost() const {
+    return COST_VARYING_LOOP;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// ForeachUniqueStmt
+
+ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e, 
+                                     Stmt *s, SourcePos pos) 
+    : Stmt(pos) {
+    sym = m->symbolTable->LookupVariable(iterName);
+    expr = e;
+    stmts = s;
+}
+
+
+void
+ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock()) 
+        return;
+
+    // First, allocate local storage for the symbol that we'll use for the
+    // uniform variable that holds the current unique value through each
+    // loop.
+    if (sym->type == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+    llvm::Type *symType = sym->type->LLVMType(g->ctx);
+    if (symType == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+    sym->storagePtr = ctx->AllocaInst(symType, sym->name.c_str());
+
+    ctx->SetDebugPos(pos);
+    ctx->EmitVariableDebugInfo(sym);
+
+    // The various basic blocks that we'll need in the below
+    llvm::BasicBlock *bbFindNext = ctx->CreateBasicBlock("foreach_find_next");
+    llvm::BasicBlock *bbBody = ctx->CreateBasicBlock("foreach_body");
+    llvm::BasicBlock *bbCheckForMore = ctx->CreateBasicBlock("foreach_check_for_more");
+    llvm::BasicBlock *bbDone = ctx->CreateBasicBlock("foreach_done");
+
+    // Prepare the FunctionEmitContext
+    ctx->StartScope();
+
+    // Save the old internal mask so that we can restore it at the end
+    llvm::Value *oldMask = ctx->GetInternalMask();
+
+    // Now, *maskBitsPtr will maintain a bitmask for the lanes that remain
+    // to be processed by a pass through the foreach_unique loop body.  It
+    // starts out with the full execution mask (which should never be all
+    // off going in to this)...
+    llvm::Value *oldFullMask = ctx->GetFullMask();
+    llvm::Value *maskBitsPtr = ctx->AllocaInst(LLVMTypes::Int64Type, "mask_bits");
+    llvm::Value *movmsk = ctx->LaneMask(oldFullMask);
+    ctx->StoreInst(movmsk, maskBitsPtr);
+
+    // Officially start the loop.
+    ctx->StartForeach(FunctionEmitContext::FOREACH_UNIQUE);
+    ctx->SetContinueTarget(bbCheckForMore);
+
+    // Evaluate the varying expression we're iterating over just once.
+    llvm::Value *exprValue = expr->GetValue(ctx);
+
+    // And we'll store its value into locally-allocated storage, for ease
+    // of indexing over it with non-compile-time-constant indices.
+    const Type *exprType;
+    llvm::VectorType *llvmExprType;
+    if (exprValue == NULL ||
+        (exprType = expr->GetType()) == NULL ||
+        (llvmExprType = 
+         llvm::dyn_cast<llvm::VectorType>(exprValue->getType())) == NULL) {
+        Assert(m->errorCount > 0);
+        return;
+    }
+    ctx->SetDebugPos(pos);
+    const Type *exprPtrType = PointerType::GetUniform(exprType);
+    llvm::Value *exprMem = ctx->AllocaInst(llvmExprType, "expr_mem");
+    ctx->StoreInst(exprValue, exprMem);
+
+    // Onward to find the first set of lanes to run the loop for
+    ctx->BranchInst(bbFindNext);
+    
+    ctx->SetCurrentBasicBlock(bbFindNext); {
+        // Load the bitmask of the lanes left to be processed
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
+
+        // Find the index of the first set bit in the mask
+        llvm::Function *ctlzFunc = 
+            m->module->getFunction("__count_trailing_zeros_i64");
+        Assert(ctlzFunc != NULL);
+        llvm::Value *firstSet = ctx->CallInst(ctlzFunc, NULL, remainingBits,
+                                              "first_set");
+
+        // And load the corresponding element value from the temporary
+        // memory storing the value of the varying expr.
+        llvm::Value *uniqueValuePtr = 
+            ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType,
+                                   "unique_index_ptr");
+        llvm::Value *uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
+
+        // If it's a varying pointer type, need to convert from the int
+        // type we store in the vector to the actual pointer type
+        if (llvm::dyn_cast<llvm::PointerType>(symType) != NULL)
+            uniqueValue = ctx->IntToPtrInst(uniqueValue, symType);
+
+        // Store that value in sym's storage so that the iteration variable
+        // has the right value inside the loop body
+        ctx->StoreInst(uniqueValue, sym->storagePtr);
+
+        // Set the execution mask so that it's on for any lane that a) was
+        // running at the start of the foreach loop, and b) where that
+        // lane's value of the varying expression is the same as the value
+        // we've selected to process this time through--i.e.:
+        // oldMask & (smear(element) == exprValue)
+        llvm::Value *uniqueSmear = ctx->SmearUniform(uniqueValue, "unique_semar");
+        llvm::Value *matchingLanes = NULL;
+        if (uniqueValue->getType()->isFloatingPointTy())
+            matchingLanes = 
+                ctx->CmpInst(llvm::Instruction::FCmp, llvm::CmpInst::FCMP_OEQ,
+                             uniqueSmear, exprValue, "matching_lanes");
+        else
+            matchingLanes = 
+                ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
+                             uniqueSmear, exprValue, "matching_lanes");
+        matchingLanes = ctx->I1VecToBoolVec(matchingLanes);
+
+        llvm::Value *loopMask = 
+            ctx->BinaryOperator(llvm::Instruction::And, oldMask, matchingLanes,
+                                "foreach_unique_loop_mask");
+        ctx->SetInternalMask(loopMask);
+
+        // Also update the bitvector of lanes left to process in subsequent
+        // loop iterations:
+        // remainingBits &= ~movmsk(current mask)
+        llvm::Value *loopMaskMM = ctx->LaneMask(loopMask);
+        llvm::Value *notLoopMaskMM = ctx->NotOperator(loopMaskMM);
+        llvm::Value *newRemaining = 
+            ctx->BinaryOperator(llvm::Instruction::And, remainingBits, 
+                                notLoopMaskMM, "new_remaining");
+        ctx->StoreInst(newRemaining, maskBitsPtr);
+
+        // and onward...
+        ctx->BranchInst(bbBody);
+    }
+
+    ctx->SetCurrentBasicBlock(bbBody); {
+        // Run the code in the body of the loop.  This is easy now.
+        if (stmts)
+            stmts->EmitCode(ctx);
+
+        Assert(ctx->GetCurrentBasicBlock() != NULL);
+        ctx->BranchInst(bbCheckForMore);
+    }
+
+    ctx->SetCurrentBasicBlock(bbCheckForMore); {
+        // At the end of the loop body (either due to running the
+        // statements normally, or a continue statement in the middle of
+        // the loop that jumps to the end, see if there are any lanes left
+        // to be processed.
+        llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
+        llvm::Value *nonZero = 
+            ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
+                         remainingBits, LLVMInt64(0), "remaining_ne_zero");
+        ctx->BranchInst(bbFindNext, bbDone, nonZero);
+    }
+
+    ctx->SetCurrentBasicBlock(bbDone);
+    ctx->SetInternalMask(oldMask);
+    ctx->EndForeach();
+    ctx->EndScope();
+}
+
+
+void
+ForeachUniqueStmt::Print(int indent) const {
+    printf("%*cForeach_unique Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+
+    printf("%*cIter symbol: ", indent+4, ' ');
+    if (sym != NULL) {
+        printf("%s", sym->name.c_str());
+        if (sym->type != NULL)
+            printf(" %s", sym->type->GetString().c_str());
+    }
+    else
+        printf("NULL");
+    printf("\n");
+
+    printf("%*cIter expr: ", indent+4, ' ');
+    if (expr != NULL)
+        expr->Print();
+    else
+        printf("NULL");
+    printf("\n");
+
+    printf("%*cStmts:\n", indent+4, ' ');
+    if (stmts != NULL)
+        stmts->Print(indent+8);
+    else
+        printf("NULL");
+    printf("\n");
+}
+
+
+Stmt *
+ForeachUniqueStmt::TypeCheck() {
+    const Type *type;
+    if (sym == NULL || expr == NULL || (type = expr->GetType()) == NULL)
+        return NULL;
+
+    if (type->IsVaryingType() == false) {
+        Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
+              "must be \"varying\" type, not \"%s\".",
+              type->GetString().c_str());
+        return false;
+    }
+
+    if (Type::IsBasicType(type) == false) {
+        Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
+              "must be an atomic, pointer, or enum type, not \"%s\".",
+              type->GetString().c_str());
+        return false;
+    }
+
+    return this;
+}
+
+
+int
+ForeachUniqueStmt::EstimateCost() const {
+    return COST_VARYING_LOOP;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
 // CaseStmt
 
 /** Given the statements following a 'case' or 'default' label, this
@@ -2147,9 +2586,12 @@ SwitchStmt::Print(int indent) const {
 
 Stmt *
 SwitchStmt::TypeCheck() {
-    const Type *exprType = expr->GetType();
-    if (exprType == NULL)
+    const Type *exprType;
+    if (expr == NULL ||
+        (exprType = expr->GetType()) == NULL) {
+        Assert(m->errorCount > 0);
         return NULL;
+    }
 
     const Type *toType = NULL;
     exprType = exprType->GetAsConstType();
@@ -2182,6 +2624,60 @@ SwitchStmt::EstimateCost() const {
         return COST_VARYING_SWITCH;
     else
         return COST_UNIFORM_SWITCH;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// UnmaskedStmt
+
+UnmaskedStmt::UnmaskedStmt(Stmt *s, SourcePos pos)
+    : Stmt(pos) {
+    stmts = s;
+}
+
+
+void
+UnmaskedStmt::EmitCode(FunctionEmitContext *ctx) const {
+    if (!ctx->GetCurrentBasicBlock() || !stmts)
+        return;
+
+    llvm::Value *oldInternalMask = ctx->GetInternalMask();
+    llvm::Value *oldFunctionMask = ctx->GetFunctionMask();
+
+    ctx->SetInternalMask(LLVMMaskAllOn);
+    ctx->SetFunctionMask(LLVMMaskAllOn);
+
+    stmts->EmitCode(ctx);
+
+    ctx->SetInternalMask(oldInternalMask);
+    ctx->SetFunctionMask(oldFunctionMask);
+}
+
+
+void
+UnmaskedStmt::Print(int indent) const {
+    printf("%*cUnmasked Stmt", indent, ' ');
+    pos.Print();
+    printf("\n");
+
+    printf("%*cStmts:\n", indent+4, ' ');
+    if (stmts != NULL)
+        stmts->Print(indent+8);
+    else
+        printf("NULL");
+    printf("\n");
+}
+
+
+Stmt *
+UnmaskedStmt::TypeCheck() {
+    return this;
+}
+
+
+int
+UnmaskedStmt::EstimateCost() const {
+    return COST_ASSIGN;
 }
 
 
@@ -2641,11 +3137,12 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) 
         return;
 
-    if (expr == NULL)
+    const Type *type;
+    if (expr == NULL ||
+        (type = expr->GetType()) == NULL) {
+        AssertPos(pos, m->errorCount > 0);
         return;
-    const Type *type = expr->GetType();
-    if (type == NULL)
-        return;
+    }
     bool isUniform = type->IsUniformType();
 
     // The actual functionality to do the check and then handle falure is
@@ -2666,7 +3163,12 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     std::vector<llvm::Value *> args;
     args.push_back(ctx->GetStringPtr(errorString));
-    args.push_back(expr->GetValue(ctx));
+    llvm::Value *exprValue = expr->GetValue(ctx);
+    if (exprValue == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
+    args.push_back(exprValue);
     args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, NULL, args, "");
 
@@ -2785,81 +3287,4 @@ DeleteStmt::TypeCheck() {
 int
 DeleteStmt::EstimateCost() const {
     return COST_DELETE;
-}
-
-///////////////////////////////////////////////////////////////////////////
-
-/** This generates AST nodes for an __foreach_active statement.  This
-    construct can be synthesized ouf of the existing ForStmt (and other AST
-    nodes), so here we just build up the AST that we need rather than
-    having a new Stmt implementation for __foreach_active.
-
-    @param iterSym  Symbol for the iteration variable (e.g. "i" in
-                    __foreach_active (i) { .. .}
-    @param stmts    Statements to execute each time through the loop, for
-                    each active program instance.
-    @param pos      Position of the __foreach_active statement in the source 
-                    file.
- */
-Stmt *
-CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos) {
-    if (iterSym == NULL) {
-        AssertPos(pos, m->errorCount > 0);
-        return NULL;
-    }
-
-    // loop initializer: set iter = 0
-    std::vector<VariableDeclaration> var;
-    ConstExpr *zeroExpr = new ConstExpr(AtomicType::UniformInt32, 0,
-                                        iterSym->pos);
-    var.push_back(VariableDeclaration(iterSym, zeroExpr));
-    Stmt *initStmt = new DeclStmt(var, iterSym->pos);
-
-    // loop test: (iter < programCount)
-    ConstExpr *progCountExpr = 
-        new ConstExpr(AtomicType::UniformInt32, g->target.vectorWidth,
-                      pos);
-    SymbolExpr *symExpr = new SymbolExpr(iterSym, iterSym->pos);
-    Expr *testExpr = new BinaryExpr(BinaryExpr::Lt, symExpr, progCountExpr,
-                                    pos);
-    
-    // loop step: ++iterSym
-    UnaryExpr *incExpr = new UnaryExpr(UnaryExpr::PreInc, symExpr, pos);
-    Stmt *stepStmt = new ExprStmt(incExpr, pos);
-
-    // loop body
-    // First, call __movmsk(__mask)) to get the mask as a set of bits.
-    // This should be hoisted out of the loop
-    Symbol *maskSym = m->symbolTable->LookupVariable("__mask");
-    AssertPos(pos, maskSym != NULL);
-    Expr *maskVecExpr = new SymbolExpr(maskSym, pos);
-    std::vector<Symbol *> mmFuns;
-    m->symbolTable->LookupFunction("__movmsk", &mmFuns);
-    AssertPos(pos, mmFuns.size() == (g->target.maskBitCount == 32 ? 2 : 1));
-    FunctionSymbolExpr *movmskFunc = new FunctionSymbolExpr("__movmsk", mmFuns,
-                                                            pos);
-    ExprList *movmskArgs = new ExprList(maskVecExpr, pos);
-    FunctionCallExpr *movmskExpr = new FunctionCallExpr(movmskFunc, movmskArgs,
-                                                        pos);
-
-    // Compute the per lane mask to test the mask bits against: (1 << iter)
-    ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt64, int64_t(1),
-                                       iterSym->pos);
-    Expr *shiftLaneExpr = new BinaryExpr(BinaryExpr::Shl, oneExpr, symExpr, 
-                                         pos);
-
-    // Compute the AND: movmsk & (1 << iter)
-    Expr *maskAndLaneExpr = new BinaryExpr(BinaryExpr::BitAnd, movmskExpr,
-                                           shiftLaneExpr, pos);
-    // Test to see if it's non-zero: (mask & (1 << iter)) != 0
-    Expr *ifTestExpr = new BinaryExpr(BinaryExpr::NotEqual, maskAndLaneExpr,
-                                      zeroExpr, pos);
-
-    // Now, enclose the provided statements in an if test such that they
-    // only run if the mask is non-zero for the lane we're currently
-    // handling in the loop.
-    IfStmt *laneCheckIf = new IfStmt(ifTestExpr, stmts, NULL, false, pos);
-
-    // And return a for loop that wires it all together.
-    return new ForStmt(initStmt, testExpr, stepStmt, laneCheckIf, false, pos);
 }

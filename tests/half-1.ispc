@@ -10,7 +10,7 @@ export void f_v(uniform float RET[]) {
         h = float_to_half(f);
 
         // may return a different value back for NaNs..
-        if (f == f && i != h)
+        if (!isnan(f) && i != h)
             ++errors;
     }
     RET[programIndex] = errors;

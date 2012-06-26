@@ -16,6 +16,8 @@
 
 #ifndef _MSC_VER
 #include <inttypes.h>
+#define HAVE_PRINTF_A  1
+#define ENABLE_CBE_PRINTF_A 1
 #endif
 
 #ifndef PRIx64
@@ -380,8 +382,8 @@ namespace {
     static bool isInlinableInst(const Instruction &I) {
       // Always inline cmp instructions, even if they are shared by multiple
       // expressions.  GCC generates horrible code if we don't.
-      if (isa<CmpInst>(I))
-        return true;
+        if (isa<CmpInst>(I) && isa<VectorType>(I.getType()) == false)
+          return true;
 
       // Must be an expression, must be used exactly once.  If it is dead, we
       // emit it inline where it would go.
@@ -2512,7 +2514,11 @@ void CWriter::printModuleTypes() {
 
   // Get all of the struct types used in the module.
   std::vector<StructType*> StructTypes;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
   TheModule->findUsedStructTypes(StructTypes);
+#else
+  TheModule->findUsedStructTypes(StructTypes, false);
+#endif
 
   // Get all of the array types used in the module
   std::vector<ArrayType*> ArrayTypes;
@@ -3227,17 +3233,22 @@ void CWriter::visitFCmpInst(FCmpInst &I) {
     return;
   }
 
+  // Note that we always generate calls to the ordered functions here,
+  // since the regular C++ comparison ops should give us what we
+  // originally wanted when we generated the unordered ones from the
+  // ispc source.
+
   if (isVector) {
       switch (I.getPredicate()) {
       default: llvm_unreachable("Illegal FCmp predicate");
       case FCmpInst::FCMP_ORD: Out << "__ordered("; break;
       case FCmpInst::FCMP_UNO: Out << "__cmpunord("; break;
-      case FCmpInst::FCMP_UEQ: Out << "__ucomeq("; break;
-      case FCmpInst::FCMP_UNE: Out << "__ucomneq("; break;
-      case FCmpInst::FCMP_ULT: Out << "__ucomlt("; break;
-      case FCmpInst::FCMP_ULE: Out << "__ucomle("; break;
-      case FCmpInst::FCMP_UGT: Out << "__ucomgt("; break;
-      case FCmpInst::FCMP_UGE: Out << "__ucomge("; break;
+      case FCmpInst::FCMP_UEQ: Out << "__equal("; break;
+      case FCmpInst::FCMP_UNE: Out << "__not_equal("; break;
+      case FCmpInst::FCMP_ULT: Out << "__less_than("; break;
+      case FCmpInst::FCMP_ULE: Out << "__less_equal("; break;
+      case FCmpInst::FCMP_UGT: Out << "__greater_than("; break;
+      case FCmpInst::FCMP_UGE: Out << "__greater_equal("; break;
       case FCmpInst::FCMP_OEQ: Out << "__equal("; break;
       case FCmpInst::FCMP_ONE: Out << "__not_equal("; break;
       case FCmpInst::FCMP_OLT: Out << "__less_than("; break;
@@ -3252,12 +3263,14 @@ void CWriter::visitFCmpInst(FCmpInst &I) {
   default: llvm_unreachable("Illegal FCmp predicate");
   case FCmpInst::FCMP_ORD: op = "ord"; break;
   case FCmpInst::FCMP_UNO: op = "uno"; break;
-  case FCmpInst::FCMP_UEQ: op = "ueq"; break;
-  case FCmpInst::FCMP_UNE: op = "une"; break;
-  case FCmpInst::FCMP_ULT: op = "ult"; break;
-  case FCmpInst::FCMP_ULE: op = "ule"; break;
-  case FCmpInst::FCMP_UGT: op = "ugt"; break;
-  case FCmpInst::FCMP_UGE: op = "uge"; break;
+
+  case FCmpInst::FCMP_UEQ: op = "oeq"; break;
+  case FCmpInst::FCMP_UNE: op = "one"; break;
+  case FCmpInst::FCMP_ULT: op = "olt"; break;
+  case FCmpInst::FCMP_ULE: op = "ole"; break;
+  case FCmpInst::FCMP_UGT: op = "ogt"; break;
+  case FCmpInst::FCMP_UGE: op = "oge"; break;
+
   case FCmpInst::FCMP_OEQ: op = "oeq"; break;
   case FCmpInst::FCMP_ONE: op = "one"; break;
   case FCmpInst::FCMP_OLT: op = "olt"; break;

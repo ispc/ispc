@@ -1101,8 +1101,8 @@ REDUCE_MINMAX(uint64_t, __vec16_i64, __reduce_max_uint64, >)
 ///////////////////////////////////////////////////////////////////////////
 // masked load/store
 
-static FORCEINLINE __vec16_i8 __masked_load_8(void *p,
-                                              __vec16_i1 mask) {
+static FORCEINLINE __vec16_i8 __masked_load_i8(void *p,
+                                               __vec16_i1 mask) {
     __vec16_i8 ret;
     int8_t *ptr = (int8_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1111,8 +1111,8 @@ static FORCEINLINE __vec16_i8 __masked_load_8(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i16 __masked_load_16(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_i16 __masked_load_i16(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i16 ret;
     int16_t *ptr = (int16_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1121,8 +1121,8 @@ static FORCEINLINE __vec16_i16 __masked_load_16(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i32 __masked_load_32(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_i32 __masked_load_i32(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i32 ret;
     int32_t *ptr = (int32_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1131,8 +1131,18 @@ static FORCEINLINE __vec16_i32 __masked_load_32(void *p,
     return ret;
 }
 
-static FORCEINLINE __vec16_i64 __masked_load_64(void *p,
-                                                __vec16_i1 mask) {
+static FORCEINLINE __vec16_f __masked_load_float(void *p,
+                                                 __vec16_i1 mask) {
+    __vec16_f ret;
+    float *ptr = (float *)p;
+    for (int i = 0; i < 16; ++i)
+        if ((mask.v & (1 << i)) != 0)
+            ret.v[i] = ptr[i];
+    return ret;
+}
+
+static FORCEINLINE __vec16_i64 __masked_load_i64(void *p,
+                                                 __vec16_i1 mask) {
     __vec16_i64 ret;
     int64_t *ptr = (int64_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1141,31 +1151,49 @@ static FORCEINLINE __vec16_i64 __masked_load_64(void *p,
     return ret;
 }
 
-static FORCEINLINE void __masked_store_8(void *p, __vec16_i8 val,
-                                         __vec16_i1 mask) {
+static FORCEINLINE __vec16_d __masked_load_double(void *p,
+                                                  __vec16_i1 mask) {
+    __vec16_d ret;
+    double *ptr = (double *)p;
+    for (int i = 0; i < 16; ++i)
+        if ((mask.v & (1 << i)) != 0)
+            ret.v[i] = ptr[i];
+    return ret;
+}
+
+static FORCEINLINE void __masked_store_i8(void *p, __vec16_i8 val,
+                                          __vec16_i1 mask) {
     int8_t *ptr = (int8_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_16(void *p, __vec16_i16 val,
-                                          __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_i16(void *p, __vec16_i16 val,
+                                           __vec16_i1 mask) {
     int16_t *ptr = (int16_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_32(void *p, __vec16_i32 val,
-                                          __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val,
+                                           __vec16_i1 mask) {
     int32_t *ptr = (int32_t *)p;
     for (int i = 0; i < 16; ++i)
         if ((mask.v & (1 << i)) != 0)
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
+static FORCEINLINE void __masked_store_float(void *p, __vec16_f val,
+                                             __vec16_i1 mask) {
+    float *ptr = (float *)p;
+    for (int i = 0; i < 16; ++i)
+        if ((mask.v & (1 << i)) != 0)
+            ptr[i] = val.v[i];
+}
+
+static FORCEINLINE void __masked_store_i64(void *p, __vec16_i64 val,
                                           __vec16_i1 mask) {
     int64_t *ptr = (int64_t *)p;
     for (int i = 0; i < 16; ++i)
@@ -1173,24 +1201,42 @@ static FORCEINLINE void __masked_store_64(void *p, __vec16_i64 val,
             ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_blend_8(void *p, __vec16_i8 val,
-                                               __vec16_i1 mask) {
-    __masked_store_8(p, val, mask);
+static FORCEINLINE void __masked_store_double(void *p, __vec16_d val,
+                                              __vec16_i1 mask) {
+    double *ptr = (double *)p;
+    for (int i = 0; i < 16; ++i)
+        if ((mask.v & (1 << i)) != 0)
+            ptr[i] = val.v[i];
 }
 
-static FORCEINLINE void __masked_store_blend_16(void *p, __vec16_i16 val,
+static FORCEINLINE void __masked_store_blend_i8(void *p, __vec16_i8 val,
                                                 __vec16_i1 mask) {
-    __masked_store_16(p, val, mask);
+    __masked_store_i8(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_32(void *p, __vec16_i32 val,
-                                                __vec16_i1 mask) {
-    __masked_store_32(p, val, mask);
+static FORCEINLINE void __masked_store_blend_i16(void *p, __vec16_i16 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i16(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_64(void *p, __vec16_i64 val,
-                                                __vec16_i1 mask) {
-    __masked_store_64(p, val, mask);
+static FORCEINLINE void __masked_store_blend_i32(void *p, __vec16_i32 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i32(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
+                                                   __vec16_i1 mask) {
+    __masked_store_float(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_i64(void *p, __vec16_i64 val,
+                                                 __vec16_i1 mask) {
+    __masked_store_i64(p, val, mask);
+}
+
+static FORCEINLINE void __masked_store_blend_double(void *p, __vec16_d val,
+                                                    __vec16_i1 mask) {
+    __masked_store_double(p, val, mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1214,14 +1260,18 @@ static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
 }
     
 
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_base_offsets32_i8)
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_base_offsets64_i8)
+GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __gather_base_offsets32_i8)
+GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __gather_base_offsets64_i8)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
 GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __gather_base_offsets32_i32)
 GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
+GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __gather_base_offsets32_float)
+GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __gather_base_offsets64_float)
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
+GATHER_BASE_OFFSETS(__vec16_d,   double,  __vec16_i32, __gather_base_offsets32_double)
+GATHER_BASE_OFFSETS(__vec16_d,   double,  __vec16_i64, __gather_base_offsets64_double)
 
 #define GATHER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)         \
 static FORCEINLINE VTYPE FUNC(PTRTYPE ptrs, __vec16_i1 mask) {   \
@@ -1234,14 +1284,18 @@ static FORCEINLINE VTYPE FUNC(PTRTYPE ptrs, __vec16_i1 mask) {   \
     return ret;                                             \
 }
 
-GATHER_GENERAL(__vec16_i8, int8_t, __vec16_i32, __gather32_i8)
-GATHER_GENERAL(__vec16_i8, int8_t, __vec16_i64, __gather64_i8)
+GATHER_GENERAL(__vec16_i8,  int8_t,  __vec16_i32, __gather32_i8)
+GATHER_GENERAL(__vec16_i8,  int8_t,  __vec16_i64, __gather64_i8)
 GATHER_GENERAL(__vec16_i16, int16_t, __vec16_i32, __gather32_i16)
 GATHER_GENERAL(__vec16_i16, int16_t, __vec16_i64, __gather64_i16)
 GATHER_GENERAL(__vec16_i32, int32_t, __vec16_i32, __gather32_i32)
 GATHER_GENERAL(__vec16_i32, int32_t, __vec16_i64, __gather64_i32)
+GATHER_GENERAL(__vec16_f,   float,   __vec16_i32, __gather32_float)
+GATHER_GENERAL(__vec16_f,   float,   __vec16_i64, __gather64_float)
 GATHER_GENERAL(__vec16_i64, int64_t, __vec16_i32, __gather32_i64)
 GATHER_GENERAL(__vec16_i64, int64_t, __vec16_i64, __gather64_i64)
+GATHER_GENERAL(__vec16_d,   double,  __vec16_i32, __gather32_double)
+GATHER_GENERAL(__vec16_d,   double,  __vec16_i64, __gather64_double)
 
 // scatter
 
@@ -1259,14 +1313,18 @@ static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
 }
     
 
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_base_offsets32_i8)
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_base_offsets64_i8)
+SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i32, __scatter_base_offsets32_i8)
+SCATTER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __scatter_base_offsets64_i8)
 SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_base_offsets32_i16)
 SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64_i16)
 SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __scatter_base_offsets32_i32)
 SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
+SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __scatter_base_offsets32_float)
+SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __scatter_base_offsets64_float)
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
+SCATTER_BASE_OFFSETS(__vec16_d,   double,  __vec16_i32, __scatter_base_offsets32_double)
+SCATTER_BASE_OFFSETS(__vec16_d,   double,  __vec16_i64, __scatter_base_offsets64_double)
 
 #define SCATTER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)                 \
 static FORCEINLINE void FUNC(PTRTYPE ptrs, VTYPE val, __vec16_i1 mask) {  \
@@ -1278,14 +1336,18 @@ static FORCEINLINE void FUNC(PTRTYPE ptrs, VTYPE val, __vec16_i1 mask) {  \
         }                                                            \
 }
 
-SCATTER_GENERAL(__vec16_i8, int8_t, __vec16_i32, __scatter32_i8)
-SCATTER_GENERAL(__vec16_i8, int8_t, __vec16_i64, __scatter64_i8)
+SCATTER_GENERAL(__vec16_i8,  int8_t,  __vec16_i32, __scatter32_i8)
+SCATTER_GENERAL(__vec16_i8,  int8_t,  __vec16_i64, __scatter64_i8)
 SCATTER_GENERAL(__vec16_i16, int16_t, __vec16_i32, __scatter32_i16)
 SCATTER_GENERAL(__vec16_i16, int16_t, __vec16_i64, __scatter64_i16)
 SCATTER_GENERAL(__vec16_i32, int32_t, __vec16_i32, __scatter32_i32)
 SCATTER_GENERAL(__vec16_i32, int32_t, __vec16_i64, __scatter64_i32)
+SCATTER_GENERAL(__vec16_f,   float,   __vec16_i32, __scatter32_float)
+SCATTER_GENERAL(__vec16_f,   float,   __vec16_i64, __scatter64_float)
 SCATTER_GENERAL(__vec16_i64, int64_t, __vec16_i32, __scatter32_i64)
 SCATTER_GENERAL(__vec16_i64, int64_t, __vec16_i64, __scatter64_i64)
+SCATTER_GENERAL(__vec16_d,   double,  __vec16_i32, __scatter32_double)
+SCATTER_GENERAL(__vec16_d,   double,  __vec16_i64, __scatter64_double)
 
 ///////////////////////////////////////////////////////////////////////////
 // packed load/store

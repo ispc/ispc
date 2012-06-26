@@ -92,6 +92,8 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         DoStmt *dos;
         ForStmt *fs;
         ForeachStmt *fes;
+        ForeachActiveStmt *fas;
+        ForeachUniqueStmt *fus;
         CaseStmt *cs;
         DefaultStmt *defs;
         SwitchStmt *ss;
@@ -101,6 +103,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         PrintStmt *ps;
         AssertStmt *as;
         DeleteStmt *dels;
+        UnmaskedStmt *ums;
 
         if ((es = dynamic_cast<ExprStmt *>(node)) != NULL)
             es->expr = (Expr *)WalkAST(es->expr, preFunc, postFunc, data);
@@ -137,6 +140,13 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
                                                    postFunc, data);
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
         }
+        else if ((fas = dynamic_cast<ForeachActiveStmt *>(node)) != NULL) {
+            fas->stmts = (Stmt *)WalkAST(fas->stmts, preFunc, postFunc, data);
+        }
+        else if ((fus = dynamic_cast<ForeachUniqueStmt *>(node)) != NULL) {
+            fus->expr = (Expr *)WalkAST(fus->expr, preFunc, postFunc, data);
+            fus->stmts = (Stmt *)WalkAST(fus->stmts, preFunc, postFunc, data);
+        }
         else if ((cs = dynamic_cast<CaseStmt *>(node)) != NULL)
             cs->stmts = (Stmt *)WalkAST(cs->stmts, preFunc, postFunc, data);
         else if ((defs = dynamic_cast<DefaultStmt *>(node)) != NULL)
@@ -165,6 +175,8 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             as->expr = (Expr *)WalkAST(as->expr, preFunc, postFunc, data);
         else if ((dels = dynamic_cast<DeleteStmt *>(node)) != NULL)
             dels->expr = (Expr *)WalkAST(dels->expr, preFunc, postFunc, data);
+        else if ((ums = dynamic_cast<UnmaskedStmt *>(node)) != NULL)
+            ums->stmts = (Stmt *)WalkAST(ums->stmts, preFunc, postFunc, data);
         else
             FATAL("Unhandled statement type in WalkAST()");
     }
@@ -385,12 +397,19 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (dynamic_cast<ForeachStmt *>(node) != NULL) {
-        // foreach() statements also shouldn't be run with an all-off mask.
-        // Since they re-establish an 'all on' mask, this would be pretty
-        // unintuitive.  (More generally, it's possibly a little strange to
-        // allow foreach() in the presence of any non-uniform control
-        // flow...)
+    if (dynamic_cast<ForeachStmt *>(node) != NULL ||
+        dynamic_cast<ForeachActiveStmt *>(node) != NULL ||
+        dynamic_cast<ForeachUniqueStmt *>(node) != NULL ||
+        dynamic_cast<UnmaskedStmt *>(node) != NULL) {
+        // The various foreach statements also shouldn't be run with an
+        // all-off mask.  Since they can re-establish an 'all on' mask,
+        // this would be pretty unintuitive.  (More generally, it's
+        // possibly a little strange to allow foreach in the presence of
+        // any non-uniform control flow...)
+        //
+        // Similarly, the implementation of foreach_unique assumes as a
+        // precondition that the mask won't be all off going into it, so
+        // we'll enforce that here...
         *okPtr = false;
         return false;
     }

@@ -350,16 +350,16 @@ reduce_equal(4)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-define void @__masked_store_blend_32(<4 x i32>* nocapture, <4 x i32>, 
-                                     <4 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
+                                      <4 x i32> %mask) nounwind alwaysinline {
   %val = load <4 x i32> * %0, align 4
   %newval = call <4 x i32> @__vselect_i32(<4 x i32> %val, <4 x i32> %1, <4 x i32> %mask) 
   store <4 x i32> %newval, <4 x i32> * %0, align 4
   ret void
 }
 
-define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
-                                     <4 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
+                                      <4 x i32> %mask) nounwind alwaysinline {
   %oldValue = load <4 x i64>* %ptr, align 8
 
   ; Do 4x64-bit blends by doing two <4 x i32> blends, where the <4 x i32> values
@@ -400,6 +400,8 @@ define void @__masked_store_blend_64(<4 x i64>* nocapture %ptr, <4 x i64> %new,
   ret void
 }
 
+
+masked_store_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
@@ -552,35 +554,37 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
 
 masked_store_blend_8_16_by_4()
 
-gen_masked_store(4, i8, 8)
-gen_masked_store(4, i16, 16)
-gen_masked_store(4, i32, 32)
-gen_masked_store(4, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(4, i8, 8)
-load_and_broadcast(4, i16, 16)
-load_and_broadcast(4, i32, 32)
-load_and_broadcast(4, i64, 64)
 
-masked_load(4, i8,  8,  1)
-masked_load(4, i16, 16, 2)
-masked_load(4, i32, 32, 4)
-masked_load(4, i64, 64, 8)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(float, 4)
+masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
 ; define these with the macros from stdlib.m4
 
-gen_gather(4, i8)
-gen_gather(4, i16)
-gen_gather(4, i32)
-gen_gather(4, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)
 
-gen_scatter(4, i8)
-gen_scatter(4, i16)
-gen_scatter(4, i32)
-gen_scatter(4, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(float)
+gen_scatter(i64)
+gen_scatter(double)

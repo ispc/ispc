@@ -93,8 +93,14 @@ lGetSystemISA() {
         __cpuidex(info, 7, 0);
         if ((info[1] & (1 << 5)) != 0)
             return "avx2";
-        else
-            return "avx";
+        else {
+            // ivybridge?
+            if ((info[2] & (1 << 29)) != 0 &&  // F16C
+                (info[2] & (1 << 30)) != 0)    // RDRAND
+                return "avx1.1";
+            else
+                return "avx";
+        }
     }
     else if ((info[2] & (1 << 19)) != 0)
         return "sse4";
@@ -198,7 +204,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     }
 
     // This is the case for most of them
-    t->hasHalf = t->hasTranscendentals = false;
+    t->hasHalf = t->hasRand = t->hasTranscendentals = false;
 
     if (!strcasecmp(isa, "sse2")) {
         t->isa = Target::SSE2;
@@ -284,7 +290,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avx")) {
+    else if (!strcasecmp(isa, "avx") || !strcasecmp(isa, "avx1")) {
         t->isa = Target::AVX;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
@@ -292,32 +298,54 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avx-x2")) {
+    else if (!strcasecmp(isa, "avx-x2") || !strcasecmp(isa, "avx1-x2")) {
         t->isa = Target::AVX;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 16;
         t->attributes = "+avx,+popcnt,+cmov";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
+    }
+    else if (!strcasecmp(isa, "avx1.1")) {
+        t->isa = Target::AVX11;
+        t->nativeVectorWidth = 8;
+        t->vectorWidth = 8;
+        t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        t->maskingIsFree = false;
+        t->maskBitCount = 32;
+        t->hasHalf = true;
+        t->hasRand = true;
+    }
+    else if (!strcasecmp(isa, "avx1.1-x2")) {
+        t->isa = Target::AVX11;
+        t->nativeVectorWidth = 8;
+        t->vectorWidth = 16;
+        t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        t->maskingIsFree = false;
+        t->maskBitCount = 32;
+        t->hasHalf = true;
+        t->hasRand = true;
     }
 #ifndef LLVM_3_0
     else if (!strcasecmp(isa, "avx2")) {
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
+        t->hasRand = true;
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 16;
         t->vectorWidth = 16;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
+        t->hasRand = true;
     }
 #endif // !LLVM_3_0
     else {
@@ -360,7 +388,7 @@ const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
 #ifndef LLVM_3_0
-        ", avx2, avx2-x2"
+        ", avx1.1, avx1.1-x2, avx2, avx2-x2"
 #endif // !LLVM_3_0
         ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
@@ -426,6 +454,8 @@ Target::GetISAString() const {
         return "sse4";
     case Target::AVX:
         return "avx";
+    case Target::AVX11:
+        return "avx11";
     case Target::AVX2:
         return "avx2";
     case Target::GENERIC:
@@ -578,6 +608,7 @@ Globals::Globals() {
     disableWarnings = false;
     warningsAsErrors = false;
     quiet = false;
+    forceColoredOutput = false;
     disableLineWrap = false;
     emitPerfWarnings = true;
     emitInstrumentation = false;

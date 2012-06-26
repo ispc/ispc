@@ -160,9 +160,10 @@ public:
         finished. */
     void EndLoop();
 
-    /** Indicates that code generation for a 'foreach' or 'foreach_tiled'
-        loop is about to start. */
-    void StartForeach();
+    /** Indicates that code generation for a 'foreach', 'foreach_tiled',
+        'foreach_active', or 'foreach_unique' loop is about to start. */
+    enum ForeachType { FOREACH_REGULAR, FOREACH_ACTIVE, FOREACH_UNIQUE };
+    void StartForeach(ForeachType ft);
     void EndForeach();
 
     /** Emit code for a 'break' statement in a loop.  If doCoherenceCheck

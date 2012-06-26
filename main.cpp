@@ -83,9 +83,13 @@ usage(int ret) {
     printf("    [--arch={%s}]\t\tSelect target architecture\n", 
            Target::SupportedTargetArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
+#ifndef ISPC_IS_WINDOWS
+    printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages.\n");
+#endif
     printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
     printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs().c_str());
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
+    printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
@@ -93,6 +97,7 @@ usage(int ret) {
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
+    printf("    [--host-stub <filename>]\t\tEmit host-side offload stub functions to file\n");
     printf("    [-h <name>/--header-outfile=<name>]\tOutput filename for header\n");
     printf("    [-I <path>]\t\t\t\tAdd <path> to #include file search path\n");
     printf("    [--instrument]\t\t\tEmit instrumentation to gather performance data\n");
@@ -101,6 +106,7 @@ usage(int ret) {
     printf("        fast\t\t\t\tUse high-performance but lower-accuracy math functions\n");
     printf("        svml\t\t\t\tUse the Intel(r) SVML math libraries\n");
     printf("        system\t\t\t\tUse the system's math library (*may be quite slow*)\n");
+    printf("    [-MMM <filename>\t\t\t\tWrite #include dependencies to given file.\n");
     printf("    [--nostdlib]\t\t\tDon't make the ispc standard library available\n");
     printf("    [--nocpp]\t\t\t\tDon't run the C preprocessor\n");
     printf("    [-o <name>/--outfile=<name>]\tOutput filename (may be \"-\" for standard output)\n");
@@ -218,7 +224,9 @@ int main(int Argc, char *Argv[]) {
     const char *headerFileName = NULL;
     const char *outFileName = NULL;
     const char *includeFileName = NULL;
-
+    const char *depsFileName = NULL;
+    const char *hostStubFileName = NULL;
+    const char *devStubFileName = NULL;
     // Initiailize globals early so that we can set various option values
     // as we're parsing below
     g = new Globals;
@@ -401,12 +409,35 @@ int main(int Argc, char *Argv[]) {
 #ifndef ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--pic"))
             generatePIC = true;
+        else if (!strcmp(argv[i], "--colored-output"))
+            g->forceColoredOutput = true;
 #endif // !ISPC_IS_WINDOWS
         else if (!strcmp(argv[i], "--quiet"))
             g->quiet = true;
         else if (!strcmp(argv[i], "--yydebug")) {
             extern int yydebug;
             yydebug = 1;
+        }
+        else if (!strcmp(argv[i], "-MMM")) {
+          if (++i == argc) {
+            fprintf(stderr, "No output file name specified after -MMM option.\n");
+            usage(1);
+          }
+          depsFileName = argv[i];
+        }
+        else if (!strcmp(argv[i], "--dev-stub")) {
+          if (++i == argc) {
+            fprintf(stderr, "No output file name specified after --dev-stub option.\n");
+            usage(1);
+          }
+          devStubFileName = argv[i];
+        }
+        else if (!strcmp(argv[i], "--host-stub")) {
+          if (++i == argc) {
+            fprintf(stderr, "No output file name specified after --host-stub option.\n");
+            usage(1);
+          }
+          hostStubFileName = argv[i];
         }
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
@@ -451,12 +482,21 @@ int main(int Argc, char *Argv[]) {
 #endif
     }
 
-    if (outFileName == NULL && headerFileName == NULL)
-        Warning(SourcePos(), "No output file or header file name specified. "
-                "Program will be compiled and warnings/errors will "
-                "be issued, but no output will be generated.");
+    if (outFileName == NULL && 
+        headerFileName == NULL &&
+        depsFileName == NULL &&
+        hostStubFileName == NULL &&
+        devStubFileName == NULL)
+      Warning(SourcePos(), "No output file or header file name specified. "
+              "Program will be compiled and warnings/errors will "
+              "be issued, but no output will be generated.");
 
     return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
-                                    ot, outFileName, headerFileName, 
-                                    includeFileName);
+                                    ot, 
+                                    outFileName, 
+                                    headerFileName, 
+                                    includeFileName,
+                                    depsFileName,
+                                    hostStubFileName,
+                                    devStubFileName);
 }

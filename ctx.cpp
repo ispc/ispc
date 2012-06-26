@@ -68,7 +68,8 @@ struct CFInfo {
                            llvm::Value *savedContinueLanesPtr,
                            llvm::Value *savedMask, llvm::Value *savedLoopMask);
 
-    static CFInfo *GetForeach(llvm::BasicBlock *breakTarget,
+    static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft,
+                              llvm::BasicBlock *breakTarget,
                               llvm::BasicBlock *continueTarget, 
                               llvm::Value *savedBreakLanesPtr,
                               llvm::Value *savedContinueLanesPtr,
@@ -87,12 +88,15 @@ struct CFInfo {
     
     bool IsIf() { return type == If; }
     bool IsLoop() { return type == Loop; }
-    bool IsForeach() { return type == Foreach; }
+    bool IsForeach() { return (type == ForeachRegular ||
+                               type == ForeachActive ||
+                               type == ForeachUnique); }
     bool IsSwitch() { return type == Switch; }
     bool IsVarying() { return !isUniform; }
     bool IsUniform() { return isUniform; }
 
-    enum CFType { If, Loop, Foreach, Switch };
+    enum CFType { If, Loop, ForeachRegular, ForeachActive, ForeachUnique, 
+                  Switch };
     CFType type;
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
@@ -141,7 +145,7 @@ private:
     CFInfo(CFType t, llvm::BasicBlock *bt, llvm::BasicBlock *ct,
            llvm::Value *sb, llvm::Value *sc, llvm::Value *sm,
            llvm::Value *lm) {
-        Assert(t == Foreach);
+        Assert(t == ForeachRegular || t == ForeachActive || t == ForeachUnique);
         type = t;
         isUniform = false;
         savedBreakTarget = bt;
@@ -177,12 +181,28 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
 
 
 CFInfo *
-CFInfo::GetForeach(llvm::BasicBlock *breakTarget,
+CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
+                   llvm::BasicBlock *breakTarget,
                    llvm::BasicBlock *continueTarget, 
                    llvm::Value *savedBreakLanesPtr,
                    llvm::Value *savedContinueLanesPtr,
                    llvm::Value *savedMask, llvm::Value *savedForeachMask) {
-    return new CFInfo(Foreach, breakTarget, continueTarget,
+    CFType cfType;
+    switch (ft) {
+    case FunctionEmitContext::FOREACH_REGULAR:
+        cfType = ForeachRegular;
+        break;
+    case FunctionEmitContext::FOREACH_ACTIVE:
+        cfType = ForeachActive;
+        break;
+    case FunctionEmitContext::FOREACH_UNIQUE:
+        cfType = ForeachUnique;
+        break;
+    default:
+        FATAL("Unhandled foreach type");
+    }
+
+    return new CFInfo(cfType, breakTarget, continueTarget,
                       savedBreakLanesPtr, savedContinueLanesPtr,
                       savedMask, savedForeachMask);
 }
@@ -381,13 +401,8 @@ FunctionEmitContext::GetInternalMask() {
 
 llvm::Value *
 FunctionEmitContext::GetFullMask() {
-    llvm::Value *internalMask = GetInternalMask();
-    if (internalMask == LLVMMaskAllOn && functionMaskValue == LLVMMaskAllOn &&
-        !g->opt.disableMaskAllOnOptimizations)
-        return LLVMMaskAllOn;
-    else
-        return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
-                              functionMaskValue, "internal_mask&function_mask");
+    return BinaryOperator(llvm::Instruction::And, GetInternalMask(), 
+                          functionMaskValue, "internal_mask&function_mask");
 }
 
 
@@ -588,11 +603,26 @@ FunctionEmitContext::EndLoop() {
 
 
 void
-FunctionEmitContext::StartForeach() {
+FunctionEmitContext::StartForeach(ForeachType ft) {
+    // Issue an error if we're in a nested foreach...
+    if (ft == FOREACH_REGULAR) {
+        for (int i = 0; i < (int)controlFlowInfo.size(); ++i) {
+            if (controlFlowInfo[i]->type == CFInfo::ForeachRegular) {
+                Error(currentPos, "Nested \"foreach\" statements are currently "
+                      "illegal.");
+                break;
+                // Don't return here, however, and in turn allow the caller to
+                // do the rest of its codegen and then call EndForeach()
+                // normally--the idea being that this gives a chance to find
+                // any other errors inside the body of the foreach loop...
+            }
+        }
+    }
+
     // Store the current values of various loop-related state so that we
     // can restore it when we exit this loop.
     llvm::Value *oldMask = GetInternalMask();
-    controlFlowInfo.push_back(CFInfo::GetForeach(breakTarget, continueTarget, 
+    controlFlowInfo.push_back(CFInfo::GetForeach(ft, breakTarget, continueTarget, 
                                                  breakLanesPtr, continueLanesPtr,
                                                  oldMask, loopMask));
     breakLanesPtr = NULL;
@@ -673,9 +703,7 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     // If all of the enclosing 'if' tests in the loop have uniform control
     // flow or if we can tell that the mask is all on, then we can just
     // jump to the break location.
-    if (inSwitchStatement() == false && 
-        (ifsInCFAllUniform(CFInfo::Loop) || 
-         GetInternalMask() == LLVMMaskAllOn)) {
+    if (inSwitchStatement() == false && ifsInCFAllUniform(CFInfo::Loop)) {
         BranchInst(breakTarget);
         if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
             Warning(currentPos, "Coherent break statement not necessary in "
@@ -721,6 +749,16 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
 }
 
 
+static bool
+lEnclosingLoopIsForeachActive(const std::vector<CFInfo *> &controlFlowInfo) {
+    for (int i = (int)controlFlowInfo.size() - 1; i >= 0; --i) {
+        if (controlFlowInfo[i]->type == CFInfo::ForeachActive)
+            return true;
+    }
+    return false;
+}
+
+
 void
 FunctionEmitContext::Continue(bool doCoherenceCheck) {
     if (!continueTarget) {
@@ -730,12 +768,16 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
     }
     AssertPos(currentPos, controlFlowInfo.size() > 0);
 
-    if (ifsInCFAllUniform(CFInfo::Loop) || GetInternalMask() == LLVMMaskAllOn) {
+    if (ifsInCFAllUniform(CFInfo::Loop) ||
+        lEnclosingLoopIsForeachActive(controlFlowInfo)) {
         // Similarly to 'break' statements, we can immediately jump to the
         // continue target if we're only in 'uniform' control flow within
-        // loop or if we can tell that the mask is all on.
+        // loop or if we can tell that the mask is all on.  Here, we can
+        // also jump if the enclosing loop is a 'foreach_active' loop, in
+        // which case we know that only a single program instance is
+        // executing.
         AddInstrumentationPoint("continue: uniform CF, jumped");
-        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
+        if (doCoherenceCheck)
             Warning(currentPos, "Coherent continue statement not necessary in "
                     "fully uniform control flow.");
         BranchInst(continueTarget);
@@ -2523,37 +2565,41 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = NULL;
     if (pt != NULL)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_32" : 
-            "__pseudo_gather64_64";
-    else if (llvmReturnType == LLVMTypes::DoubleVectorType || 
-             llvmReturnType == LLVMTypes::Int64VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_64" : 
-            "__pseudo_gather64_64";
-    else if (llvmReturnType == LLVMTypes::FloatVectorType || 
-             llvmReturnType == LLVMTypes::Int32VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_32" : 
-            "__pseudo_gather64_32";
+        funcName = g->target.is32Bit ? "__pseudo_gather32_i32" : 
+            "__pseudo_gather64_i64";
+    else if (llvmReturnType == LLVMTypes::DoubleVectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_double" :
+            "__pseudo_gather64_double";
+    else if (llvmReturnType == LLVMTypes::Int64VectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_i64" : 
+            "__pseudo_gather64_i64";
+    else if (llvmReturnType == LLVMTypes::FloatVectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_float" : 
+            "__pseudo_gather64_float";
+    else if (llvmReturnType == LLVMTypes::Int32VectorType)
+        funcName = g->target.is32Bit ? "__pseudo_gather32_i32" : 
+            "__pseudo_gather64_i32";
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_16" : 
-            "__pseudo_gather64_16";
+        funcName = g->target.is32Bit ? "__pseudo_gather32_i16" : 
+            "__pseudo_gather64_i16";
     else {
         AssertPos(currentPos, llvmReturnType == LLVMTypes::Int8VectorType);
-        funcName = g->target.is32Bit ? "__pseudo_gather32_8" : 
-            "__pseudo_gather64_8";
+        funcName = g->target.is32Bit ? "__pseudo_gather32_i8" : 
+            "__pseudo_gather64_i8";
     }
 
     llvm::Function *gatherFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, gatherFunc != NULL);
 
-    llvm::Value *call = CallInst(gatherFunc, NULL, ptr, mask, name);
+    llvm::Value *gatherCall = CallInst(gatherFunc, NULL, ptr, mask, name);
 
     // Add metadata about the source file location so that the
     // optimization passes can print useful performance warnings if we
     // can't optimize out this gather
     if (disableGSWarningCount == 0)
-        addGSMetadata(call, currentPos);
+        addGSMetadata(gatherCall, currentPos);
 
-    return BitCastInst(call, llvmReturnType, LLVMGetName(call, "_gather_bitcast"));
+    return gatherCall;
 }
 
 
@@ -2653,10 +2699,14 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         // individually with what turns into a recursive call to
         // makedStore()
         for (int i = 0; i < collectionType->GetElementCount(); ++i) {
+            const Type *eltType = collectionType->GetElementType(i);
+            if (eltType == NULL) {
+                Assert(m->errorCount > 0);
+                continue;
+            }
             llvm::Value *eltValue = ExtractInst(value, i, "value_member");
             llvm::Value *eltPtr = 
                 AddElementOffset(ptr, i, ptrType, "struct_ptr_ptr");
-            const Type *eltType = collectionType->GetElementType(i);
             const Type *eltPtrType = PointerType::GetUniform(eltType);
             StoreInst(eltValue, eltPtr, mask, eltType, eltPtrType);
         }
@@ -2694,9 +2744,9 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         }
 
         if (g->target.is32Bit)
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
+            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
         else
-            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
+            maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingBool) &&
              g->target.maskBitCount == 1) {
@@ -2712,38 +2762,29 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
         StoreInst(final, ptr);
         return;
     }
-    else if (Type::Equal(valueType, AtomicType::VaryingDouble) || 
-             Type::Equal(valueType, AtomicType::VaryingInt64) ||
-             Type::Equal(valueType, AtomicType::VaryingUInt64)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_64");
-        ptr = BitCastInst(ptr, LLVMTypes::Int64VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int64vecptr"));
-        value = BitCastInst(value, LLVMTypes::Int64VectorType, 
-                            LLVMGetName(value, "_to_int64"));
+    else if (Type::Equal(valueType, AtomicType::VaryingDouble)) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_double");
     }
-    else if (Type::Equal(valueType, AtomicType::VaryingFloat) ||
-             Type::Equal(valueType, AtomicType::VaryingBool) ||
+    else if (Type::Equal(valueType, AtomicType::VaryingInt64) ||
+             Type::Equal(valueType, AtomicType::VaryingUInt64)) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
+    }
+    else if (Type::Equal(valueType, AtomicType::VaryingFloat)) {
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_float");
+    }
+    else if (Type::Equal(valueType, AtomicType::VaryingBool) ||
              Type::Equal(valueType, AtomicType::VaryingInt32) ||
              Type::Equal(valueType, AtomicType::VaryingUInt32) ||
              CastType<EnumType>(valueType) != NULL) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_32");
-        ptr = BitCastInst(ptr, LLVMTypes::Int32VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int32vecptr"));
-        if (Type::Equal(valueType, AtomicType::VaryingFloat))
-            value = BitCastInst(value, LLVMTypes::Int32VectorType, 
-                                LLVMGetName(value, "_to_int32"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingInt16) ||
              Type::Equal(valueType, AtomicType::VaryingUInt16)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_16");
-        ptr = BitCastInst(ptr, LLVMTypes::Int16VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int16vecptr"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i16");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingInt8) ||
              Type::Equal(valueType, AtomicType::VaryingUInt8)) {
-        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_8");
-        ptr = BitCastInst(ptr, LLVMTypes::Int8VectorPointerType, 
-                          LLVMGetName(ptr, "_to_int8vecptr"));
+        maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i8");
     }
     AssertPos(currentPos, maskedStoreFunc != NULL);
 
@@ -2834,27 +2875,34 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
 
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
-    if (pt != NULL)
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_32" :
-            "__pseudo_scatter64_64";
-    else if (type == LLVMTypes::DoubleVectorType || 
-             type == LLVMTypes::Int64VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_64" :
-            "__pseudo_scatter64_64";
-        value = BitCastInst(value, LLVMTypes::Int64VectorType, "value2int");
+    if (pt != NULL) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
+            "__pseudo_scatter64_i64";
     }
-    else if (type == LLVMTypes::FloatVectorType || 
-             type == LLVMTypes::Int32VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_32" :
-            "__pseudo_scatter64_32";
-        value = BitCastInst(value, LLVMTypes::Int32VectorType, "value2int");
+    else if (type == LLVMTypes::DoubleVectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_double" :
+            "__pseudo_scatter64_double";
     }
-    else if (type == LLVMTypes::Int16VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_16" :
-            "__pseudo_scatter64_16";
-    else if (type == LLVMTypes::Int8VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_8" :
-            "__pseudo_scatter64_8";
+    else if (type == LLVMTypes::Int64VectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_i64" :
+            "__pseudo_scatter64_i64";
+    }
+    else if (type == LLVMTypes::FloatVectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_float" :
+            "__pseudo_scatter64_float";
+    }
+    else if (type == LLVMTypes::Int32VectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
+            "__pseudo_scatter64_i32";
+    }
+    else if (type == LLVMTypes::Int16VectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_i16" :
+            "__pseudo_scatter64_i16";
+    }
+    else if (type == LLVMTypes::Int8VectorType) {
+        funcName = g->target.is32Bit ? "__pseudo_scatter32_i8" :
+            "__pseudo_scatter64_i8";
+    }
 
     llvm::Function *scatterFunc = m->module->getFunction(funcName);
     AssertPos(currentPos, scatterFunc != NULL);
@@ -3236,11 +3284,9 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
             SetInternalMask(callMask);
 
             // bitcast the i32/64 function pointer to the actual function
-            // pointer type (the variant that includes a mask).
-            llvm::Type *llvmFuncType =
-                funcType->LLVMFunctionType(g->ctx, true);
-            llvm::Type *llvmFPtrType = 
-                llvm::PointerType::get(llvmFuncType, 0);
+            // pointer type.
+            llvm::Type *llvmFuncType = funcType->LLVMFunctionType(g->ctx);
+            llvm::Type *llvmFPtrType = llvm::PointerType::get(llvmFuncType, 0);
             llvm::Value *fptrCast = IntToPtrInst(fptr, llvmFPtrType);
 
             // Call the function: callResult = call ftpr(args, args, call mask)
@@ -3345,7 +3391,6 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
     llvm::StructType *argStructType = 
         static_cast<llvm::StructType *>(pt->getElementType());
-    AssertPos(currentPos, argStructType->getNumElements() == argVals.size() + 1);
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);
@@ -3372,11 +3417,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         StoreInst(argVals[i], ptr);
     }
 
-    // copy in the mask
-    llvm::Value *mask = GetFullMask();
-    llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-                                        "funarg_mask");
-    StoreInst(mask, ptr);
+    if (argStructType->getNumElements() == argVals.size() + 1) {
+        // copy in the mask
+        llvm::Value *mask = GetFullMask();
+        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
+                                            "funarg_mask");
+        StoreInst(mask, ptr);
+    }
 
     // And emit the call to the user-supplied task launch function, passing
     // a pointer to the task function being called and a pointer to the

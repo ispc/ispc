@@ -117,11 +117,12 @@ static const char *lBuiltinTokens[] = {
     "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo",
     "cfor", "cif", "cwhile", "const", "continue", "creturn", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
-    "float", "for", "foreach", "foreach_tiled", "goto", "if", "inline",
+    "float", "for", "foreach", "foreach_active", "foreach_tiled",
+     "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
-    "sync", "task", "true", "typedef", "uniform", "unsigned", "varying",
-    "void", "while", NULL 
+    "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned", 
+    "varying", "void", "while", NULL 
 };
 
 static const char *lParamListTokens[] = {
@@ -151,6 +152,7 @@ struct ForeachDimension {
     Expr *expr;
     ExprList *exprList;
     const Type *type;
+    std::vector<std::pair<const Type *, SourcePos> > *typeList;
     const AtomicType *atomicType;
     int typeQualifier;
     StorageClass storageClass;
@@ -184,17 +186,17 @@ struct ForeachDimension {
 %token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
 %token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN 
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
-%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE
+%token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
-%token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA
+%token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
 %token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
-%token TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
+%token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
 %token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
@@ -212,7 +214,7 @@ struct ForeachDimension {
 %type <stmt> statement labeled_statement compound_statement for_init_statement
 %type <stmt> expression_statement selection_statement iteration_statement
 %type <stmt> jump_statement statement_list declaration_statement print_statement
-%type <stmt> assert_statement sync_statement delete_statement
+%type <stmt> assert_statement sync_statement delete_statement unmasked_statement
 
 %type <declaration> declaration parameter_declaration
 %type <declarators> init_declarator_list 
@@ -230,8 +232,10 @@ struct ForeachDimension {
 %type <enumType> enum_specifier
 
 %type <type> specifier_qualifier_list struct_or_union_specifier
+%type <type> struct_or_union_and_name
 %type <type> type_specifier type_name rate_qualified_type_specifier
 %type <type> short_vec_specifier
+%type <typeList> type_specifier_list
 %type <atomicType> atomic_var_type_specifier
 
 %type <typeQualifier> type_qualifier type_qualifier_list
@@ -239,7 +243,9 @@ struct ForeachDimension {
 %type <declSpecs> declaration_specifiers 
 
 %type <stringVal> string_constant 
-%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
+%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier 
+%type <constCharPtr> foreach_unique_identifier
+
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
 
 %type <foreachDimension> foreach_dimension_specifier
@@ -826,6 +832,28 @@ type_specifier
     | enum_specifier { $$ = $1; }
     ;
 
+type_specifier_list
+    : type_specifier      
+    {
+        if ($1 == NULL)
+            $$ = NULL;
+        else {
+            std::vector<std::pair<const Type *, SourcePos> > *vec =
+                new std::vector<std::pair<const Type *, SourcePos> >;
+            vec->push_back(std::make_pair($1, @1));
+            $$ = vec;
+        }
+    }
+    | type_specifier_list ',' type_specifier
+    {
+        $$ = $1;
+        if ($1 == NULL)
+            Assert(m->errorCount > 0);
+        else
+            $$->push_back(std::make_pair($3, @3));
+    }
+    ;
+
 atomic_var_type_specifier
     : TOKEN_VOID { $$ = AtomicType::Void; }
     | TOKEN_BOOL { $$ = AtomicType::UniformBool->GetAsUnboundVariabilityType(); }
@@ -849,18 +877,44 @@ struct_or_union_name
     | TOKEN_TYPE_NAME  { $$ = strdup(yytext); }
     ;
 
+struct_or_union_and_name
+    : struct_or_union struct_or_union_name
+      { 
+          const Type *st = m->symbolTable->LookupType($2); 
+          if (st == NULL) {
+              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
+              m->symbolTable->AddType($2, st, @2);
+              $$ = st;
+          }
+          else {
+              if (CastType<StructType>(st) == NULL &&
+                  CastType<UndefinedStructType>(st) == NULL) {
+                  Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
+                        st->GetString().c_str());
+                  $$ = NULL;
+              }
+              else
+                  $$ = st;
+         }
+      }
+    ;
+
 struct_or_union_specifier
-    : struct_or_union struct_or_union_name '{' struct_declaration_list '}' 
+    : struct_or_union_and_name
+    | struct_or_union_and_name '{' struct_declaration_list '}' 
       {
-          if ($4 != NULL) {
+          if ($3 != NULL) {
               llvm::SmallVector<const Type *, 8> elementTypes;
               llvm::SmallVector<std::string, 8> elementNames;
               llvm::SmallVector<SourcePos, 8> elementPositions;
-              GetStructTypesNamesPositions(*$4, &elementTypes, &elementNames,
+              GetStructTypesNamesPositions(*$3, &elementTypes, &elementNames,
                                            &elementPositions);
-              StructType *st = new StructType($2, elementTypes, elementNames,
-                                              elementPositions, false, Variability::Unbound, @2);
-              m->symbolTable->AddType($2, st, @2);
+              const std::string &name = CastType<StructType>($1) ?
+                  CastType<StructType>($1)->GetStructName() :
+                  CastType<UndefinedStructType>($1)->GetStructName();
+              StructType *st = new StructType(name, elementTypes, elementNames,
+                                              elementPositions, false, Variability::Unbound, @1);
+              m->symbolTable->AddType(name.c_str(), st, @1);
               $$ = st;
           }
           else
@@ -882,22 +936,24 @@ struct_or_union_specifier
       }
     | struct_or_union '{' '}' 
       {
-          Error(@1, "Empty struct definitions not allowed."); 
+          llvm::SmallVector<const Type *, 8> elementTypes;
+          llvm::SmallVector<std::string, 8> elementNames;
+          llvm::SmallVector<SourcePos, 8> elementPositions;
+          $$ = new StructType("", elementTypes, elementNames, elementPositions,
+                              false, Variability::Unbound, @1);
       }
-    | struct_or_union struct_or_union_name '{' '}' 
+    | struct_or_union_and_name '{' '}' 
       {
-          Error(@1, "Empty struct definitions not allowed."); 
-      }
-    | struct_or_union struct_or_union_name
-      { 
-          const Type *st = m->symbolTable->LookupType($2); 
-          if (st == NULL) {
-              st = new UndefinedStructType($2, Variability::Unbound, false, @2);
-              m->symbolTable->AddType($2, st, @2);
-          }
-          else if (CastType<StructType>(st) == NULL)
-              Error(@2, "Type \"%s\" is not a struct type! (%s)", $2,
-                    st->GetString().c_str());
+          llvm::SmallVector<const Type *, 8> elementTypes;
+          llvm::SmallVector<std::string, 8> elementNames;
+          llvm::SmallVector<SourcePos, 8> elementPositions;
+          const std::string &name = CastType<StructType>($1) ?
+              CastType<StructType>($1)->GetStructName() :
+              CastType<UndefinedStructType>($1)->GetStructName();
+          StructType *st = new StructType(name, elementTypes,
+                                          elementNames, elementPositions,
+                                          false, Variability::Unbound, @1);
+          m->symbolTable->AddType(name.c_str(), st, @2);
           $$ = st;
       }
     ;
@@ -981,6 +1037,11 @@ specifier_qualifier_list
             }
             else if ($1 == TYPEQUAL_TASK) {
                 Error(@1, "\"task\" qualifier is illegal outside of "
+                      "function declarations.");
+                $$ = $2;
+            }
+            else if ($1 == TYPEQUAL_UNMASKED) {
+                Error(@1, "\"unmasked\" qualifier is illegal outside of "
                       "function declarations.");
                 $$ = $2;
             }
@@ -1121,6 +1182,7 @@ type_qualifier
     | TOKEN_UNIFORM    { $$ = TYPEQUAL_UNIFORM; }
     | TOKEN_VARYING    { $$ = TYPEQUAL_VARYING; }
     | TOKEN_TASK       { $$ = TYPEQUAL_TASK; }
+    | TOKEN_UNMASKED   { $$ = TYPEQUAL_UNMASKED; }
     | TOKEN_EXPORT     { $$ = TYPEQUAL_EXPORT; }
     | TOKEN_INLINE     { $$ = TYPEQUAL_INLINE; }
     | TOKEN_SIGNED     { $$ = TYPEQUAL_SIGNED; }
@@ -1508,6 +1570,7 @@ statement
     | assert_statement
     | sync_statement
     | delete_statement
+    | unmasked_statement
     | error ';'
     {
         lSuggestBuiltinAlternates();
@@ -1626,7 +1689,7 @@ foreach_active_scope
 foreach_active_identifier
     : TOKEN_IDENTIFIER
     {
-        $$ = new Symbol(yytext, @1, AtomicType::UniformInt32);
+        $$ = new Symbol(yytext, @1, AtomicType::UniformInt64->GetAsConstType());
     }
     ;
 
@@ -1677,6 +1740,14 @@ foreach_dimension_list
             dv->push_back($3);
         $$ = dv;
     }
+    ;
+
+foreach_unique_scope
+    : TOKEN_FOREACH_UNIQUE { m->symbolTable->PushScope(); }
+    ;
+   
+foreach_unique_identifier
+    : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
     ;
 
 iteration_statement
@@ -1768,7 +1839,25 @@ iteration_statement
      }
      statement
      {
-         $$ = CreateForeachActiveStmt($3, $6, Union(@1, @4));
+         $$ = new ForeachActiveStmt($3, $6, Union(@1, @4));
+         m->symbolTable->PopScope();
+     }
+    | foreach_unique_scope '(' foreach_unique_identifier TOKEN_IN
+         expression ')' 
+     {
+         Expr *expr = $5;
+         const Type *type;
+         if (expr != NULL &&
+             (expr = TypeCheck(expr)) != NULL &&
+             (type = expr->GetType()) != NULL) {
+             const Type *iterType = type->GetAsUniformType()->GetAsConstType();
+             Symbol *sym = new Symbol($3, @3, iterType);
+             m->symbolTable->AddVariable(sym);
+         }
+     }
+     statement
+     {
+         $$ = new ForeachUniqueStmt($3, $5, $8, @1);
          m->symbolTable->PopScope();
      }
     ;
@@ -1810,6 +1899,13 @@ delete_statement
     }
     ;
 
+unmasked_statement
+    : TOKEN_UNMASKED '{' statement_list '}'
+    {
+        $$ = new UnmaskedStmt($3, @1);
+    }
+    ;
+
 print_statement
     : TOKEN_PRINT '(' string_constant ')' ';'
       {
@@ -1837,6 +1933,11 @@ translation_unit
 external_declaration
     : function_definition
     | TOKEN_EXTERN TOKEN_STRING_C_LITERAL '{' declaration '}'
+    | TOKEN_EXPORT '{' type_specifier_list '}' ';'
+    {
+        if ($3 != NULL)
+            m->AddExportedTypes(*$3);
+    }
     | declaration 
     { 
         if ($1 != NULL)

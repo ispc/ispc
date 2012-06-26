@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@
 #endif
 #else
 #include <alloca.h>
+#include <unistd.h>
 #endif
 #include <stdio.h>
 
@@ -94,6 +95,10 @@ static bool
 lHaveANSIColors() {
     static bool r = (getenv("TERM") != NULL &&
                      strcmp(getenv("TERM"), "dumb") != 0);
+#ifndef ISPC_IS_WINDOWS
+    r &= isatty(2);
+#endif // !ISPC_IS_WINDOWS
+    r |= g->forceColoredOutput;
     return r;
 }
 
@@ -349,6 +354,8 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
         }
         indent = lFindIndent(3, formattedBuf);
     }
+    // Don't indent too much with long filenames
+    indent = std::min(indent, 8);
 
     // Now that we've done all that work, see if we've already printed the
     // exact same error message.  If so, return, so we don't redundantly
@@ -422,6 +429,11 @@ PerformanceWarning(SourcePos p, const char *fmt, ...) {
 
 static void
 lPrintBugText() {
+    static bool printed = false;
+    if (printed)
+        return;
+
+    printed = true;
     fprintf(stderr, "***\n"
             "*** Please file a bug report at https://github.com/ispc/ispc/issues\n"
             "*** (Including as much information as you can about how to "

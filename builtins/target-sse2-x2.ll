@@ -398,7 +398,7 @@ define double @__reduce_max_double(<8 x double>) nounwind readnone {
 }
 
 define <4 x i64> @__add_varying_int64(<4 x i64>,
-                                               <4 x i64>) nounwind readnone alwaysinline {
+                                      <4 x i64>) nounwind readnone alwaysinline {
   %r = add <4 x i64> %0, %1
   ret <4 x i64> %r
 }
@@ -433,28 +433,30 @@ reduce_equal(8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(8, i8, 8)
-load_and_broadcast(8, i16, 16)
-load_and_broadcast(8, i32, 32)
-load_and_broadcast(8, i64, 64)
 
-masked_load(8, i8,  8,  1)
-masked_load(8, i16, 16, 2)
-masked_load(8, i32, 32, 4)
-masked_load(8, i64, 64, 8)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(float, 4)
+masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
-gen_gather(8, i8)
-gen_gather(8, i16)
-gen_gather(8, i32)
-gen_gather(8, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)
 
-gen_scatter(8, i8)
-gen_scatter(8, i16)
-gen_scatter(8, i32)
-gen_scatter(8, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(float)
+gen_scatter(i64)
+gen_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float rounding
@@ -558,23 +560,23 @@ define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alway
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(8, i8, 8)
-gen_masked_store(8, i16, 16)
-gen_masked_store(8, i32, 32)
-gen_masked_store(8, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 masked_store_blend_8_16_by_8()
 
-define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>, 
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
+                                      <8 x i32> %mask) nounwind alwaysinline {
   %val = load <8 x i32> * %0, align 4
   %newval = call <8 x i32> @__vselect_i32(<8 x i32> %val, <8 x i32> %1, <8 x i32> %mask) 
   store <8 x i32> %newval, <8 x i32> * %0, align 4
   ret void
 }
 
-define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
-                                     <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
+                                      <8 x i32> %mask) nounwind alwaysinline {
   %oldValue = load <8 x i64>* %ptr, align 8
 
   ; Do 8x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values
@@ -616,6 +618,8 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   store <8 x i64> %final, <8 x i64> * %ptr, align 8
   ret void
 }
+
+masked_store_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt

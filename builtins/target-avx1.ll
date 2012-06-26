@@ -61,15 +61,19 @@ define <8 x i32> @__max_varying_uint32(<8 x i32>, <8 x i32>) nounwind readonly a
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
 
+ifelse(NO_HALF_DECLARES, `1', `', `
 declare float @__half_to_float_uniform(i16 %v) nounwind readnone
 declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
 declare i16 @__float_to_half_uniform(float %v) nounwind readnone
 declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 
-gen_gather(8, i8)
-gen_gather(8, i16)
-gen_gather(8, i32)
-gen_gather(8, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)

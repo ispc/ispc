@@ -780,7 +780,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                         return;
                     }
 
-                    llvm::Constant *zeroInit = llvm::ConstantAggregateZero::get(llvmType);
+                    llvm::Constant *zeroInit = llvm::Constant::getNullValue(llvmType);
                     ctx->StoreInst(zeroInit, ep);
                 }
             }
@@ -1569,31 +1569,31 @@ lEmitBinaryCmp(BinaryExpr::Op op, llvm::Value *e0Val, llvm::Value *e1Val,
     switch (op) {
     case BinaryExpr::Lt:
         opName = "less";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLT : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_ULT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULT : llvm::CmpInst::ICMP_SLT);
         break;
     case BinaryExpr::Gt:
         opName = "greater";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGT : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UGT : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGT : llvm::CmpInst::ICMP_SGT);
         break;
     case BinaryExpr::Le:
         opName = "lessequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OLE : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_ULE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_ULE : llvm::CmpInst::ICMP_SLE);
         break;
     case BinaryExpr::Ge:
         opName = "greaterequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OGE : 
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UGE : 
             (isUnsignedOp ? llvm::CmpInst::ICMP_UGE : llvm::CmpInst::ICMP_SGE);
         break;
     case BinaryExpr::Equal:
         opName = "equal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_OEQ : llvm::CmpInst::ICMP_EQ;
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UEQ : llvm::CmpInst::ICMP_EQ;
         break;
     case BinaryExpr::NotEqual:
         opName = "notequal";
-        pred = isFloatOp ? llvm::CmpInst::FCMP_ONE : llvm::CmpInst::ICMP_NE;
+        pred = isFloatOp ? llvm::CmpInst::FCMP_UNE : llvm::CmpInst::ICMP_NE;
         break;
     default:
         FATAL("error in lEmitBinaryCmp()");
@@ -2639,9 +2639,10 @@ lEmitOpAssign(AssignExpr::Op op, Expr *arg0, Expr *arg1, const Type *type,
     // Get the value on the right-hand side of the assignment+operation
     // operator and load the current value on the left-hand side.
     llvm::Value *rvalue = arg1->GetValue(ctx);
-    ctx->SetDebugPos(pos);
     llvm::Value *mask = lMaskForSymbol(baseSym, ctx);
+    ctx->SetDebugPos(arg0->pos);
     llvm::Value *oldLHS = ctx->LoadInst(lv, mask, lvalueType);
+    ctx->SetDebugPos(pos);
 
     // Map the operator to the corresponding BinaryExpr::Op operator
     BinaryExpr::Op basicop;
@@ -2892,10 +2893,18 @@ AssignExpr::TypeCheck() {
             return NULL;
     }
 
-    // Make sure we're not assigning to a struct that has a constant member
     const StructType *st = CastType<StructType>(lhsType);
-    if (st != NULL && lCheckForConstStructMember(pos, st, st))
-        return NULL;
+    if (st != NULL) {
+        // Make sure we're not assigning to a struct that has a constant member
+        if (lCheckForConstStructMember(pos, st, st))
+            return NULL;
+        
+        if (op != Assign) {
+            Error(lvalue->pos,  "Assignment operator \"%s\" is illegal with struct "
+                  "type \"%s\".", lOpString(op), st->GetString().c_str());
+            return NULL;
+        }
+    }
 
     return this;
 }
@@ -4268,11 +4277,19 @@ IndexExpr::TypeCheck() {
         return NULL;
     }
 
-    if (!CastType<SequentialType>(baseExprType->GetReferenceTarget()) &&
-        !CastType<PointerType>(baseExprType)) {
-        Error(pos, "Trying to index into non-array, vector, or pointer "
+    if (!CastType<SequentialType>(baseExprType->GetReferenceTarget())) {
+        if (const PointerType *pt = CastType<PointerType>(baseExprType)) {
+            if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+                Error(pos, "Illegal to dereference void pointer type \"%s\".",
+                      baseExprType->GetString().c_str());
+                return NULL;
+            }
+        }
+        else {
+            Error(pos, "Trying to index into non-array, vector, or pointer "
               "type \"%s\".", baseExprType->GetString().c_str());
-        return NULL;
+            return NULL;
+        }
     }
 
     bool isUniform = (index->GetType()->IsUniformType() && 
@@ -7163,7 +7180,14 @@ PtrDerefExpr::TypeCheck() {
         return NULL;
     }
 
-    if (CastType<PointerType>(type) == NULL) {
+    if (const PointerType *pt = CastType<PointerType>(type)) {
+        if (Type::Equal(AtomicType::Void, pt->GetBaseType())) {
+            Error(pos, "Illegal to dereference void pointer type \"%s\".",
+                  type->GetString().c_str());
+            return NULL;
+        }
+    }
+    else {
         Error(pos, "Illegal to dereference non-pointer type \"%s\".", 
               type->GetString().c_str());
         return NULL;

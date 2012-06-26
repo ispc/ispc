@@ -260,6 +260,59 @@ public:
 };
 
 
+/** Iteration over each executing program instance.
+ */
+class ForeachActiveStmt : public Stmt {
+public:
+    ForeachActiveStmt(Symbol *iterSym, Stmt *stmts, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Symbol *sym;
+    Stmt *stmts;
+};
+
+
+/** Parallel iteration over each unique value in the given (varying)
+    expression.
+ */
+class ForeachUniqueStmt : public Stmt {
+public:
+    ForeachUniqueStmt(const char *iterName, Expr *expr, Stmt *stmts,
+                      SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Symbol *sym;
+    Expr *expr;
+    Stmt *stmts;
+};
+
+
+/** 
+ */
+class UnmaskedStmt : public Stmt {
+public:
+    UnmaskedStmt(Stmt *stmt, SourcePos pos);
+
+    void EmitCode(FunctionEmitContext *ctx) const;
+    void Print(int indent) const;
+
+    Stmt *TypeCheck();
+    int EstimateCost() const;
+
+    Stmt *stmts;
+};
+
+
 
 /** @brief Statement implementation for a 'return' or 'coherent' return
     statement in the program. */

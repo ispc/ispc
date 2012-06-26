@@ -158,13 +158,13 @@ declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind 
 declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
 define <8 x float> @__max_varying_float(<8 x float>,
-                                                 <8 x float>) nounwind readonly alwaysinline {
+                                        <8 x float>) nounwind readonly alwaysinline {
   %call = call <8 x float> @llvm.x86.avx.max.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }
 
 define <8 x float> @__min_varying_float(<8 x float>,
-                                                 <8 x float>) nounwind readonly alwaysinline {
+                                        <8 x float>) nounwind readonly alwaysinline {
   %call = call <8 x float> @llvm.x86.avx.min.ps.256(<8 x float> %0, <8 x float> %1)
   ret <8 x float> %call
 }
@@ -334,19 +334,15 @@ define i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(8, i8, 8)
-load_and_broadcast(8, i16, 16)
-load_and_broadcast(8, i32, 32)
-load_and_broadcast(8, i64, 64)
 
 ; no masked load instruction for i8 and i16 types??
-masked_load(8, i8,  8,  1)
-masked_load(8, i16, 16, 2)
+masked_load(i8,  1)
+masked_load(i16, 2)
 
 declare <8 x float> @llvm.x86.avx.maskload.ps.256(i8 *, <8 x float> %mask)
 declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x double> %mask)
  
-define <8 x i32> @__masked_load_32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
+define <8 x i32> @__masked_load_i32(i8 *, <8 x i32> %mask) nounwind alwaysinline {
   %floatmask = bitcast <8 x i32> %mask to <8 x float>
   %floatval = call <8 x float> @llvm.x86.avx.maskload.ps.256(i8 * %0, <8 x float> %floatmask)
   %retval = bitcast <8 x float> %floatval to <8 x i32>
@@ -354,7 +350,7 @@ define <8 x i32> @__masked_load_32(i8 *, <8 x i32> %mask) nounwind alwaysinline 
 }
 
 
-define <8 x i64> @__masked_load_64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
+define <8 x i64> @__masked_load_i64(i8 *, <8 x i32> %mask) nounwind alwaysinline {
   ; double up masks, bitcast to doubles
   %mask0 = shufflevector <8 x i32> %mask, <8 x i32> undef,
      <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
@@ -373,19 +369,20 @@ define <8 x i64> @__masked_load_64(i8 *, <8 x i32> %mask) nounwind alwaysinline 
   ret <8 x i64> %val
 }
 
+masked_load_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(8, i8, 8)
-gen_masked_store(8, i16, 16)
+gen_masked_store(i8)
+gen_masked_store(i16)
 
 ; note that mask is the 2nd parameter, not the 3rd one!!
 declare void @llvm.x86.avx.maskstore.ps.256(i8 *, <8 x float>, <8 x float>)
 declare void @llvm.x86.avx.maskstore.pd.256(i8 *, <4 x double>, <4 x double>)
 
-define void @__masked_store_32(<8 x i32>* nocapture, <8 x i32>, 
-                               <8 x i32>) nounwind alwaysinline {
+define void @__masked_store_i32(<8 x i32>* nocapture, <8 x i32>, 
+                                <8 x i32>) nounwind alwaysinline {
   %ptr = bitcast <8 x i32> * %0 to i8 *
   %val = bitcast <8 x i32> %1 to <8 x float>
   %mask = bitcast <8 x i32> %2 to <8 x float>
@@ -393,8 +390,8 @@ define void @__masked_store_32(<8 x i32>* nocapture, <8 x i32>,
   ret void
 }
 
-define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
-                               <8 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_i64(<8 x i64>* nocapture, <8 x i64>,
+                                <8 x i32> %mask) nounwind alwaysinline {
   %ptr = bitcast <8 x i64> * %0 to i8 *
   %val = bitcast <8 x i64> %1 to <8 x double>
 
@@ -418,14 +415,13 @@ define void @__masked_store_64(<8 x i64>* nocapture, <8 x i64>,
 }
 
 
-
 masked_store_blend_8_16_by_8()
 
 declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
                                                 <8 x float>) nounwind readnone
 
-define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>, 
-                                     <8 x i32>) nounwind alwaysinline {
+define void @__masked_store_blend_i32(<8 x i32>* nocapture, <8 x i32>, 
+                                      <8 x i32>) nounwind alwaysinline {
   %mask_as_float = bitcast <8 x i32> %2 to <8 x float>
   %oldValue = load <8 x i32>* %0, align 4
   %oldAsFloat = bitcast <8 x i32> %oldValue to <8 x float>
@@ -439,8 +435,8 @@ define void @__masked_store_blend_32(<8 x i32>* nocapture, <8 x i32>,
 }
 
 
-define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new, 
-                                     <8 x i32> %i32mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new, 
+                                      <8 x i32> %i32mask) nounwind alwaysinline {
   %oldValue = load <8 x i64>* %ptr, align 8
   %mask = bitcast <8 x i32> %i32mask to <8 x float>
 
@@ -489,14 +485,17 @@ define void @__masked_store_blend_64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   ret void
 }
 
+masked_store_float_double()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scatter
 
-gen_scatter(8, i8)
-gen_scatter(8, i16)
-gen_scatter(8, i32)
-gen_scatter(8, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(float)
+gen_scatter(i64)
+gen_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt

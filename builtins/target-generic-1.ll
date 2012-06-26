@@ -13,42 +13,44 @@ aossoa()
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-gen_masked_store(1, i8, 8)
-gen_masked_store(1, i16, 16)
-gen_masked_store(1, i32, 32)
-gen_masked_store(1, i64, 64)
+gen_masked_store(i8)
+gen_masked_store(i16)
+gen_masked_store(i32)
+gen_masked_store(i64)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
-load_and_broadcast(1, i8, 8)
-load_and_broadcast(1, i16, 16)
-load_and_broadcast(1, i32, 32)
-load_and_broadcast(1, i64, 64)
 
-masked_load(1, i8,  8,  1)
-masked_load(1, i16, 16, 2)
-masked_load(1, i32, 32, 4)
-masked_load(1, i64, 64, 8)
+masked_load(i8,  1)
+masked_load(i16, 2)
+masked_load(i32, 4)
+masked_load(float, 4)
+masked_load(i64, 8)
+masked_load(double, 8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
 ; define these with the macros from stdlib.m4
 
-gen_gather(1, i8)
-gen_gather(1, i16)
-gen_gather(1, i32)
-gen_gather(1, i64)
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)
 
-gen_scatter(1, i8)
-gen_scatter(1, i16)
-gen_scatter(1, i32)
-gen_scatter(1, i64)
+gen_scatter(i8)
+gen_scatter(i16)
+gen_scatter(i32)
+gen_scatter(float)
+gen_scatter(i64)
+gen_scatter(double)
 
 
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                               <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %mv = trunc <1 x i32> %mask to <1 x i8>
 ;  %notmask = xor <1 x i8> %mv, <i8 -1>
 ;  %cleared_old = and <1 x i8> %0, %notmask
@@ -69,7 +71,7 @@ define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
 }
 
 define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %mv = trunc <1 x i32> %mask to <1 x i16>
 ;  %notmask = xor <1 x i16> %mv, <i16 -1>
 ;  %cleared_old = and <1 x i16> %0, %notmask
@@ -91,7 +93,7 @@ define  <1 x i16> @__vselect_i16(<1 x i16>, <1 x i16> ,
 
 
 define  <1 x i32> @__vselect_i32(<1 x i32>, <1 x i32> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %notmask = xor <1 x i32> %mask, <i32 -1>
 ;  %cleared_old = and <1 x i32> %0, %notmask
 ;  %masked_new = and <1 x i32> %1, %mask
@@ -109,8 +111,9 @@ define  <1 x i32> @__vselect_i32(<1 x i32>, <1 x i32> ,
    ret <1 x i32> %r
 
 }
+
 define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
-                                         <1 x i32> %mask) nounwind readnone alwaysinline {
+                                 <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %newmask = zext <1 x i32> %mask to <1 x i64>
 ;  %notmask = xor <1 x i64> %newmask, <i64 -1>
 ;  %cleared_old = and <1 x i64> %0, %notmask
@@ -131,7 +134,7 @@ define  <1 x i64> @__vselect_i64(<1 x i64>, <1 x i64> ,
 }
 
 define  <1 x float> @__vselect_float(<1 x float>, <1 x float>,
-                                             <1 x i32> %mask) nounwind readnone alwaysinline {
+                                     <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %v0 = bitcast <1 x float> %0 to <1 x i32>
 ;  %v1 = bitcast <1 x float> %1 to <1 x i32>
 ;  %r = call <1 x i32> @__vselect_i32(<1 x i32> %v0, <1 x i32> %v1, <1 x i32> %mask)
@@ -154,23 +157,23 @@ define  <1 x float> @__vselect_float(<1 x float>, <1 x float>,
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
 
-define void @__masked_store_blend_8(<1 x i8>* nocapture, <1 x i8>, 
+define void @__masked_store_blend_i8(<1 x i8>* nocapture, <1 x i8>,
                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i8> * %0, align 4
   %newval = call <1 x i8> @__vselect_i8(<1 x i8> %val, <1 x i8> %1, <1 x i32> %mask) 
   store <1 x i8> %newval, <1 x i8> * %0, align 4
   ret void
 }
-define void @__masked_store_blend_16(<1 x i16>* nocapture, <1 x i16>, 
-                                     <1 x i32> %mask) nounwind alwaysinline {
+
+define void @__masked_store_blend_i16(<1 x i16>* nocapture, <1 x i16>, 
+                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i16> * %0, align 4
   %newval = call <1 x i16> @__vselect_i16(<1 x i16> %val, <1 x i16> %1, <1 x i32> %mask) 
   store <1 x i16> %newval, <1 x i16> * %0, align 4
   ret void
 }
 
-
-define void @__masked_store_blend_32(<1 x i32>* nocapture, <1 x i32>, 
+define void @__masked_store_blend_i32(<1 x i32>* nocapture, <1 x i32>, 
                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i32> * %0, align 4
   %newval = call <1 x i32> @__vselect_i32(<1 x i32> %val, <1 x i32> %1, <1 x i32> %mask) 
@@ -178,13 +181,15 @@ define void @__masked_store_blend_32(<1 x i32>* nocapture, <1 x i32>,
   ret void
 }
 
-define void @__masked_store_blend_64(<1 x i64>* nocapture, <1 x i64>,
-                                     <1 x i32> %mask) nounwind alwaysinline {
+define void @__masked_store_blend_i64(<1 x i64>* nocapture, <1 x i64>,
+                                      <1 x i32> %mask) nounwind alwaysinline {
   %val = load <1 x i64> * %0, align 4
   %newval = call <1 x i64> @__vselect_i64(<1 x i64> %val, <1 x i64> %1, <1 x i32> %mask) 
   store <1 x i64> %newval, <1 x i64> * %0, align 4
   ret void
 }
+
+masked_store_float_double()
 
 define  i64 @__movmsk(<1 x i32>) nounwind readnone alwaysinline {
   %item = extractelement <1 x i32> %0, i32 0
@@ -932,4 +937,3 @@ declare float @__half_to_float_uniform(i16 %v) nounwind readnone
 declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
 declare i16 @__float_to_half_uniform(float %v) nounwind readnone
 declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
-

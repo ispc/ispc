@@ -20,6 +20,8 @@
     <ClCompile Include="func.cpp" />
     <ClCompile Include="gen-bitcode-avx1.cpp" />
     <ClCompile Include="gen-bitcode-avx1-x2.cpp" />
+    <ClCompile Include="gen-bitcode-avx11.cpp" />
+    <ClCompile Include="gen-bitcode-avx11-x2.cpp" />
     <ClCompile Include="gen-bitcode-avx2.cpp" />
     <ClCompile Include="gen-bitcode-avx2-x2.cpp" />
     <ClCompile Include="gen-bitcode-c-32.cpp" />
@@ -186,6 +188,32 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\targets-avx-x2.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx1-x2.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx1-x2.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx11.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-avx11.ll | python bitcode2cpp.py builtins\target-avx11.ll &gt; gen-bitcode-avx11.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-avx11.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-avx11.ll | python bitcode2cpp.py builtins\target-avx11.ll &gt; gen-bitcode-avx11.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-avx11.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx11.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx11.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx11-x2.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-avx11-x2.ll | python bitcode2cpp.py builtins\target-avx11-x2.ll &gt; gen-bitcode-avx11-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-avx11-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-avx11-x2.ll | python bitcode2cpp.py builtins\target-avx11-x2.ll &gt; gen-bitcode-avx11-x2.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-avx11-x2.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-avx-common.ll;builtins\targets-avx-x2.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-avx11-x2.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-avx11-x2.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
