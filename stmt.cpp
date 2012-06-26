@@ -3137,11 +3137,12 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (!ctx->GetCurrentBasicBlock()) 
         return;
 
-    if (expr == NULL)
+    const Type *type;
+    if (expr == NULL ||
+        (type = expr->GetType()) == NULL) {
+        AssertPos(pos, m->errorCount > 0);
         return;
-    const Type *type = expr->GetType();
-    if (type == NULL)
-        return;
+    }
     bool isUniform = type->IsUniformType();
 
     // The actual functionality to do the check and then handle falure is
@@ -3162,7 +3163,12 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     std::vector<llvm::Value *> args;
     args.push_back(ctx->GetStringPtr(errorString));
-    args.push_back(expr->GetValue(ctx));
+    llvm::Value *exprValue = expr->GetValue(ctx);
+    if (exprValue == NULL) {
+        AssertPos(pos, m->errorCount > 0);
+        return;
+    }
+    args.push_back(exprValue);
     args.push_back(ctx->GetFullMask());
     ctx->CallInst(assertFunc, NULL, args, "");
 
