@@ -17,6 +17,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     uniform Point up = { b, 3, 170 };
     pts[(int64)1] = up;
 
+    assert(programCount < 80);
     RET[programIndex] = pts[(int64)programIndex].z;
 }
 

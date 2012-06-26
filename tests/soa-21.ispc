@@ -12,8 +12,8 @@ export uniform int width() { return programCount; }
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 
-    soa<8> Foo * uniform pts = uniform new soa<8> Foo[4];
-    foreach (i = 0 ... 32) {
+    soa<8> Foo * uniform pts = uniform new soa<8> Foo[11];
+    foreach (i = 0 ... 88) {
         pts[i].x = b*i;
         pts[i].z = -b*i;
         for (uniform int j = 0; j < 10; ++j) {
@@ -23,6 +23,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         }
     }
     
+    assert(7+programCount < 88);
     soa<8> Foo * ptr = &pts[7+programIndex];
     RET[programIndex] = ptr->pts[3].z;
 }

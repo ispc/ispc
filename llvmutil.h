@@ -274,8 +274,7 @@ extern void LLVMDumpValue(llvm::Value *v);
     worth of values just to extract the first element, in cases where only
     the first element's value is needed.
   */
-extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v, 
-                                              llvm::Instruction *insertBefore);
+extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v);
 
 /** This function takes two vectors, expected to be the same length, and
     returns a new vector of twice the length that represents concatenating
@@ -290,5 +289,11 @@ extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
 extern llvm::Value *LLVMShuffleVectors(llvm::Value *v1, llvm::Value *v2,
                                        int32_t shuf[], int shufSize,
                                        llvm::Instruction *insertBefore);
+
+/** Utility routines to concat strings with the names of existing values to
+    create meaningful new names for instruction values.
+*/
+extern const char *LLVMGetName(llvm::Value *v, const char *);
+extern const char *LLVMGetName(const char *op, llvm::Value *v1, llvm::Value *v2);
 
 #endif // ISPC_LLVMUTIL_H

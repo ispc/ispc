@@ -8,12 +8,13 @@ struct Foo {
 };
 export void f_fi(uniform float RET[], uniform float a[], uniform int bFOO[]) {
     int b = bFOO[programIndex];
-    uniform struct Foo myFoo[17];
+    uniform struct Foo myFoo[256];
     uniform int i;
-    for (i = 0; i < 17; ++i) {
+    for (i = 0; i < 256; ++i) {
         myFoo[i].x = i;
         myFoo[i].f = 17+2*i;
     }
+    assert(b/2 < 256);
     RET[programIndex] = myFoo[b/2].f;
 }
 

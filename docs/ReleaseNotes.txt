@@ -1,3 +1,37 @@
+=== v1.2.2 === (20 April 2012)
+
+This release includes a number of small additions to functionality and a
+number of bugfixes.  New functionality includes:
+
+* It's now possible to forward declare structures as in C/C++: "struct
+  Foo;".  After such a declaration, structs with pointers to "Foo" and
+  functions that take pointers or references to Foo structs can be declared
+  without the entire definition of Foo being available.
+
+* New built-in types size_t, ptrdiff_t, and [u]intptr_t are now available,
+  corresponding to the equivalent types in C.
+
+* The standard library now provides atomic_swap*() and
+  atomic_compare_exchange*() functions for void * types.
+
+* The C++ backend has seen a number of improvements to the quality and
+  readability of generated code.
+
+A number of bugs have been fixed in this release as well.  The most
+significant are:
+
+* Fixed a bug where nested loops could cause a compiler crash in some
+  circumstances (issues #240, and #229)
+
+* Gathers could access invlaid mamory (and cause the program to crash) in
+  some circumstances (#235)
+
+* References to temporary values are now handled properly when passed to a
+  function that takes a reference typed parameter.
+
+* A case where incorrect code could be generated for compile-time-constant
+  initializers has been fixed (#234).
+
 === v1.2.1 === (6 April 2012)
 
 This release contains only minor new functionality and is mostly for many

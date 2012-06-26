@@ -12,7 +12,7 @@ int switchit(int a, uniform int b) {
         if (a & 1)
             break;
         return 2;
-    case 32:
+    case 9999:
         *((int *)NULL) = 0;
     default:
     case 1:

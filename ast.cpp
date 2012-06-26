@@ -356,10 +356,10 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
             return false;
 
         const Type *type = fce->func->GetType();
-        const PointerType *pt = dynamic_cast<const PointerType *>(type);
+        const PointerType *pt = CastType<PointerType>(type);
         if (pt != NULL)
             type = pt->GetBaseType();
-        const FunctionType *ftype = dynamic_cast<const FunctionType *>(type);
+        const FunctionType *ftype = CastType<FunctionType>(type);
         Assert(ftype != NULL);
 
         if (ftype->isSafe == false) {
@@ -395,17 +395,12 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         return false;
     }
 
-    if (g->target.allOffMaskIsSafe == true)
-        // Don't worry about memory accesses if we have a target that can
-        // safely run them with the mask all off
-        return true;
-
     IndexExpr *ie;
     if ((ie = dynamic_cast<IndexExpr *>(node)) != NULL && ie->baseExpr != NULL) {
         const Type *type = ie->baseExpr->GetType();
         if (type == NULL)
             return true;
-        if (dynamic_cast<const ReferenceType *>(type) != NULL)
+        if (CastType<ReferenceType>(type) != NULL)
             type = type->GetReferenceTarget();
 
         ConstExpr *ce = dynamic_cast<ConstExpr *>(ie->index);
@@ -415,16 +410,14 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
             return false;
         }
 
-        const PointerType *pointerType = 
-            dynamic_cast<const PointerType *>(type);
+        const PointerType *pointerType = CastType<PointerType>(type);
         if (pointerType != NULL) {
             // pointer[index] -> can't be sure -> not safe
             *okPtr = false;
             return false;
         }
 
-        const SequentialType *seqType = 
-            dynamic_cast<const SequentialType *>(type);
+        const SequentialType *seqType = CastType<SequentialType>(type);
         Assert(seqType != NULL);
         int nElements = seqType->GetElementCount();
         if (nElements == 0) {

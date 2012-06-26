@@ -9,12 +9,20 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
 }
 
+int es(int v) {
+    uniform int vv[programCount];
+    vv[programIndex] = v;
+
+    uniform int r[programCount];
+    r[0] = 0;
+    for (uniform int i = 1; i < programCount; ++i)
+        r[i] = r[i-1] + vv[i-1];
+    return r[programIndex];
+}
+
 
 export void result(uniform float RET[]) {
-    uniform int result[16] = { 0, 0, 0, 2, 0, 6, 0, 12, 
-                               0, 20, 0, 30, 0, 42, 0, 56 };
-    if (programIndex & 1)
-        RET[programIndex] = result[programIndex]; 
-    else
+    RET[programIndex] = es((programIndex & 1) ? (programIndex+1) : 0);
+    if ((programIndex & 1) == 0)
         RET[programIndex] = -1;
 }

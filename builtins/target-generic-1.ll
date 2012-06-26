@@ -186,12 +186,12 @@ define void @__masked_store_blend_64(<1 x i64>* nocapture, <1 x i64>,
   ret void
 }
 
-define  i32 @__movmsk(<1 x i32>) nounwind readnone alwaysinline {
+define  i64 @__movmsk(<1 x i32>) nounwind readnone alwaysinline {
   %item = extractelement <1 x i32> %0, i32 0
   %v = lshr i32 %item, 31
-  ret i32 %v
+  %v64 = zext i32 %v to i64
+  ret i64 %v64
 }
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

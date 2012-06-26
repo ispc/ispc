@@ -12,8 +12,10 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
 }
 
 export void result(uniform float RET[]) { 
-    RET[0] = 1; RET[4] = 5; RET[8] = 9; RET[12] = 13;
-    RET[1] = RET[5] = RET[9] = RET[13] = 0;
-    RET[2] = 6; RET[6] = 14; RET[10] = 22; RET[14] = 30;
-    RET[3] = RET[7] = RET[11] = RET[15] = 3;
+    for (uniform int i = 0; i < programCount; i += 4) {
+        RET[i] = i+1;
+        RET[i+1] = 0;
+        RET[i+2] = 2 * (i+3);
+        RET[i+3] = 3;
+    }
 }

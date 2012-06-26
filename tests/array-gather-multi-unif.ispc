@@ -10,7 +10,8 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     for (uniform int i = 0; i < 29+b; ++i)
         for (uniform int j = 0; j < 29+b; ++j)
             x[i][j] = 0;
-    x[a][a] = a;
+    if (a < 34)
+        x[a][a] = a;
     RET[programIndex] = x[4][4] + x[1][1] + x[b][b] + x[0][0];
 }
 

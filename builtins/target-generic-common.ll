@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2012, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -39,12 +39,12 @@ reduce_equal(WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shuffle
 
-declare <WIDTH x float> @__smear_float(float) nounwind readnone
-declare <WIDTH x double> @__smear_double(double) nounwind readnone
-declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
-declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
-declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
-declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
+declare <WIDTH x float> @__smear_float(<WIDTH x float>, float) nounwind readnone
+declare <WIDTH x double> @__smear_double(<WIDTH x double>, double) nounwind readnone
+declare <WIDTH x i8> @__smear_i8(<WIDTH x i8>, i8) nounwind readnone
+declare <WIDTH x i16> @__smear_i16(<WIDTH x i16>, i16) nounwind readnone
+declare <WIDTH x i32> @__smear_i32(<WIDTH x i32>, i32) nounwind readnone
+declare <WIDTH x i64> @__smear_i64(<WIDTH x i64>, i64) nounwind readnone
 
 declare <WIDTH x float> @__broadcast_float(<WIDTH x float>, i32) nounwind readnone
 declare <WIDTH x double> @__broadcast_double(<WIDTH x double>, i32) nounwind readnone
@@ -201,7 +201,7 @@ declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
 
-declare i32 @__movmsk(<WIDTH x i1>) nounwind readnone 
+declare i64 @__movmsk(<WIDTH x i1>) nounwind readnone 
 
 declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
 declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone 
@@ -249,7 +249,16 @@ declare void @__masked_store_32(<WIDTH x i32>* nocapture, <WIDTH x i32>,
 declare void @__masked_store_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
                                 <WIDTH x i1> %mask) nounwind 
 
-ifelse(LLVM_VERSION, `LLVM_3_1svn',`
+ifelse(LLVM_VERSION, `LLVM_3_0', `
+declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
+                                     <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
+                                      <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
+                                      <WIDTH x i1>) nounwind 
+declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
+                                      <WIDTH x i1> %mask) nounwind 
+', `
 define void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
                                      <WIDTH x i1>) nounwind alwaysinline {
   %v = load <WIDTH x i8> * %0
@@ -281,15 +290,6 @@ define void @__masked_store_blend_64(<WIDTH x i64>* nocapture,
   store <WIDTH x i64> %v1, <WIDTH x i64> * %0
   ret void
 }
-',`
-declare void @__masked_store_blend_8(<WIDTH x i8>* nocapture, <WIDTH x i8>, 
-                                     <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_16(<WIDTH x i16>* nocapture, <WIDTH x i16>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_32(<WIDTH x i32>* nocapture, <WIDTH x i32>, 
-                                      <WIDTH x i1>) nounwind 
-declare void @__masked_store_blend_64(<WIDTH x i64>* nocapture, <WIDTH x i64>,
-                                      <WIDTH x i1> %mask) nounwind 
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

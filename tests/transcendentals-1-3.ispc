@@ -13,7 +13,13 @@ static float float4(uniform float a, uniform float b, uniform float c,
 export uniform int width() { return programCount; }
 
 
-bool ok(float x, float ref) { return (abs(x - ref) < 1e-6) || abs((x-ref)/ref) < 1e-5; }
+bool ok(float x, float ref) { 
+    bool r = (abs(x - ref) < 1e-5) || abs((x-ref)/ref) < 1e-5;
+    if (any(r == false))
+        print("mismatch got %, expected %\n", x, ref);
+    return r;
+}
+
 
 export void f_v(uniform float RET[]) {
     float v = float4((14.300000190734863),(-6.699999809265137),(-21.200000762939453),(9.000000000000000));

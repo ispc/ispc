@@ -5,8 +5,8 @@ struct Foo { float x; float y; };
 
 export void f_fu(uniform float ret[], uniform float aa[], uniform float b) {
     float a = aa[programIndex];
-    Foo foo[32];
-    for (uniform int i = 0; i < 32; ++i)
+    Foo foo[programCount+1];
+    for (uniform int i = 0; i < programCount+1; ++i)
         foo[i].x = i;
     varying Foo fv = foo[a];
     fv.x += 1000;

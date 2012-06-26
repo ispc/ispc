@@ -17,6 +17,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     ++ptr;
     ptr->y = -programIndex;
 
+    assert(1+programCount < 80);
     RET[programIndex] = pts[1+programIndex].y;
 }
 

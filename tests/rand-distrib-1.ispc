@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     RNGState state;
-    seed_rng(&state, 1);
+    seed_rng(&state, programIndex);
     int count[32];
     for (uniform int i = 0; i < 32; ++i)
         count[i] = (b == 5.) ? 0 : 1;

@@ -624,7 +624,7 @@ gathers happen.)
 
     extern "C" {
         void ISPCInstrument(const char *fn, const char *note, 
-                            int line, int mask);
+                            int line, uint64_t mask);
     }
 
 This function is passed the file name of the ``ispc`` file running, a short
@@ -637,7 +637,7 @@ as follows:
 
 ::
 
-   ISPCInstrument("foo.ispc", "function entry", 55, 0xf);
+   ISPCInstrument("foo.ispc", "function entry", 55, 0xfull);
 
 This call indicates that at the currently executing program has just
 entered the function defined at line 55 of the file ``foo.ispc``, with a

@@ -11,8 +11,8 @@ void f(Foo foo[], float a) {
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex];
-    Foo foo[17];
-    for (uniform int i = 0; i < 17; ++i)
+    Foo foo[programCount+5];
+    for (uniform int i = 0; i < programCount+5; ++i)
         foo[i].f = a;
     f(foo, a);
     RET[programIndex] = foo[a].f;

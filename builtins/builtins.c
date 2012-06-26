@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2011, Intel Corporation
+  Copyright (c) 2010-2012, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -70,7 +70,7 @@ typedef int Bool;
     putchar('[');                                                       \
     for (int i = 0; i < width; ++i) {                                   \
         /* only print the value if the current lane is executing */     \
-        if (mask & (1<<i))                                              \
+        if (mask & (1ull<<i))                                           \
             printf(fmt, ((type *)ptr)[i]);                              \
         else                                                            \
             printf("((" fmt "))", ((type *)ptr)[i]);                    \
@@ -89,7 +89,7 @@ typedef int Bool;
     @param mask    Current lane mask when the print statemnt is called
     @param args    Array of pointers to the values to be printed
  */
-void __do_print(const char *format, const char *types, int width, int mask, 
+void __do_print(const char *format, const char *types, int width, uint64_t mask, 
                 void **args) {
     if (mask == 0) 
         return;
@@ -113,7 +113,7 @@ void __do_print(const char *format, const char *types, int width, int mask,
                 case 'B': {
                     putchar('[');
                     for (int i = 0; i < width; ++i) {
-                        if (mask & (1<<i))
+                        if (mask & (1ull << i))
                             printf("%s", ((Bool *)ptr)[i] ? "true" : "false");
                         else
                             printf("_________");

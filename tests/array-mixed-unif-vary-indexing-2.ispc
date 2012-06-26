@@ -15,6 +15,9 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         x[a][b-1] = 0;
     else
         x[a][b-1] = 1;
+
+    a = min(a, 46);
+
     RET[programIndex] = x[3][a];
 }
 

@@ -5,8 +5,10 @@ export uniform int width() { return programCount; }
 // make sure we reset the func mask in the foreach loop...
 
 void update(uniform float val[], const uniform float a[]) {
-    foreach (i = 0 ... programCount+3)
-        val[i] += a[i] - 1;
+    foreach (i = 0 ... programCount+3) {
+        int ic = min(i, programCount-1);
+        val[i] += a[ic] - 1 + i-ic;
+    }
 }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {

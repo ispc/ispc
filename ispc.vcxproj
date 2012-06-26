@@ -29,6 +29,8 @@
     <ClCompile Include="gen-bitcode-generic-4.cpp" />
     <ClCompile Include="gen-bitcode-generic-8.cpp" />
     <ClCompile Include="gen-bitcode-generic-16.cpp" />
+    <ClCompile Include="gen-bitcode-generic-32.cpp" />
+    <ClCompile Include="gen-bitcode-generic-64.cpp" />
     <ClCompile Include="gen-bitcode-sse2.cpp" />
     <ClCompile Include="gen-bitcode-sse2-x2.cpp" />
     <ClCompile Include="gen-bitcode-sse4.cpp" />
@@ -262,6 +264,32 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-generic-16.cpp</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-generic-16.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-generic-32.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-32.ll | python bitcode2cpp.py builtins\target-generic-32.ll &gt; gen-bitcode-generic-32.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-generic-32.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-32.ll | python bitcode2cpp.py builtins\target-generic-32.ll &gt; gen-bitcode-generic-32.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-generic-32.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-generic-32.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-generic-32.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-generic-64.ll">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-64.ll | python bitcode2cpp.py builtins\target-generic-64.ll &gt; gen-bitcode-generic-64.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-generic-64.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-generic-64.ll | python bitcode2cpp.py builtins\target-generic-64.ll &gt; gen-bitcode-generic-64.cpp</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-generic-64.cpp</Outputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-generic-64.cpp</Message>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-generic-64.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

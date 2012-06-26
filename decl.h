@@ -55,6 +55,7 @@
 #define ISPC_DECL_H
 
 #include "ispc.h"
+#include <llvm/ADT/SmallVector.h>
 
 struct VariableDeclaration;
 
@@ -219,8 +220,8 @@ struct StructDeclaration {
 /** Given a set of StructDeclaration instances, this returns the types of
     the elements of the corresponding struct and their names. */
 extern void GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
-                                         std::vector<const Type *> *elementTypes,
-                                         std::vector<std::string> *elementNames,
-                                         std::vector<SourcePos> *elementPositions);
+                                         llvm::SmallVector<const Type *, 8> *elementTypes,
+                                         llvm::SmallVector<std::string, 8> *elementNames,
+                                         llvm::SmallVector<SourcePos, 8> *elementPositions);
 
 #endif // ISPC_DECL_H

@@ -210,7 +210,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
         { { 1.0f, 0.0f, -2.2f }, 0.5f } };
     RNGState rngstate;
 
-    seed_rng(&rngstate, y0);
+    seed_rng(&rngstate, programIndex + (y0 << (programIndex & 15)));
     float invSamples = 1.f / nsubsamples;
 
     foreach_tiled(y = y0 ... y1, x = 0 ... w, 

@@ -38,10 +38,10 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.2.2dev"
+#define ISPC_VERSION "1.2.3dev"
 
-#if !defined(LLVM_3_0) && !defined(LLVM_3_0svn) && !defined(LLVM_3_1svn)
-#error "Only LLVM 3.0, and the 3.1 development branch are supported"
+#if !defined(LLVM_3_0) && !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#error "Only LLVM 3.0, 3.1, and the 3.2 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -58,20 +58,10 @@
 #include <vector>
 #include <string>
 
-#define Assert(expr)                                            \
-    ((void)((expr) ? 0 : __Assert (#expr, __FILE__, __LINE__)))
-#define __Assert(expr, file, line)                                      \
-    ((void)fprintf(stderr, "%s:%u: Assertion failed: \"%s\"\n"          \
-                   "***\n*** Please file a bug report at "              \
-                   "https://github.com/ispc/ispc/issues\n*** (Including as much " \
-                   "information as you can about how to reproduce this error).\n" \
-                   "*** You have apparently encountered a bug in the compiler that " \
-                   "we'd like to fix!\n***\n", file, line, expr), abort(), 0)
-
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
-#define ISPC_MAX_NVEC 16
+#define ISPC_MAX_NVEC 64
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
@@ -145,9 +135,23 @@ struct SourcePos {
     bool operator==(const SourcePos &p2) const;
 };
 
+
 /** Returns a SourcePos that encompasses the extent of both of the given
     extents. */
 SourcePos Union(const SourcePos &p1, const SourcePos &p2);
+
+
+
+// Assert
+
+extern void DoAssert(const char *file, int line, const char *expr);
+extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *expr);
+
+#define Assert(expr)                                            \
+    ((void)((expr) ? 0 : ((void)DoAssert (__FILE__, __LINE__, #expr), 0)))
+
+#define AssertPos(pos, expr)                                     \
+    ((void)((expr) ? 0 : ((void)DoAssertPos (pos, __FILE__, __LINE__, #expr), 0)))
 
 
 /** @brief Structure that defines a compilation target 
@@ -239,16 +243,18 @@ struct Target {
         natively. */
     bool maskingIsFree;
 
-    /** Is it safe to run code with the mask all if: e.g. on SSE, the fast
-        gather trick assumes that at least one program instance is running
-        (so that it can safely assume that the array base pointer is
-        valid). */
-    bool allOffMaskIsSafe;
-
     /** How many bits are used to store each element of the mask: e.g. this
         is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
         the generic target. */
     int maskBitCount;
+
+    /** Indicates whether the target has native support for float/half
+        conversions. */
+    bool hasHalf;
+
+    /** Indicates whether the target has support for transcendentals (beyond
+        sqrt, which we assume that all of them handle). */
+    bool hasTranscendentals;
 };
 
 

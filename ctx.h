@@ -248,6 +248,10 @@ public:
         new basic block that it starts. */
     llvm::BasicBlock *GetLabeledBasicBlock(const std::string &label);
 
+    /** Returns a vector of all labels in the context. This is
+        simply the key set of the labelMap */
+    std::vector<std::string> GetLabels();
+
     /** Called to generate code for 'return' statement; value is the
         expression in the return statement (if non-NULL), and
         doCoherenceCheck indicates whether instructions should be generated
@@ -272,7 +276,7 @@ public:
     llvm::Value *None(llvm::Value *mask);
 
     /** Given a boolean mask value of type LLVMTypes::MaskType, return an
-        i32 value wherein the i'th bit is on if and only if the i'th lane
+        i64 value wherein the i'th bit is on if and only if the i'th lane
         of the mask is on. */
     llvm::Value *LaneMask(llvm::Value *mask);
 
@@ -338,7 +342,7 @@ public:
 
     /** Emits debugging information for the function parameter represented
         by sym.  */
-    void EmitFunctionParameterDebugInfo(Symbol *sym);
+    void EmitFunctionParameterDebugInfo(Symbol *sym, int parameterNum);
     /** @} */
 
     /** @name IR instruction emission
@@ -637,7 +641,7 @@ private:
 
     /** DISubprogram corresponding to this function (used for debugging
         info). */
-    llvm::DISubprogram diFunction;
+    llvm::DISubprogram diSubprogram;
 
     /** These correspond to the current set of nested scopes in the
         function. */

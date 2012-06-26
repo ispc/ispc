@@ -12,7 +12,6 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 
     soa<8> Foo * uniform pts = uniform new soa<8> Foo[4];
-//CO    uniform Foo pts[32];
     for (uniform int i = 0; i < 32; ++i) {
         pts[i].vec.x = b*i;
         pts[i].vec.y = -b*i;
