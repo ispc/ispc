@@ -287,12 +287,12 @@ static FORCEINLINE void __insert_element(__vec4_i1 *v, int index, bool val) {
     ((int32_t *)v)[index] = val ? -1 : 0;
 }
 
-static FORCEINLINE __vec4_i1 __load(__vec4_i1 *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_i1 __load(__vec4_i1 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
 
-static FORCEINLINE void __store(__vec4_i1 *p, __vec4_i1 value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_i1 *p, __vec4_i1 value) {
     // FIXME: handle align
     _mm_storeu_ps((float *)(&p->v), value.v);
 }
@@ -556,12 +556,12 @@ static FORCEINLINE __vec4_i8 __shuffle2_i8(__vec4_i8 v0, __vec4_i8 v1,
     return __vec4_i8(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i8 __load(__vec4_i8 *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_i8 __load(__vec4_i8 *v) {
     uint8_t *ptr = (uint8_t *)(&v->v);
     return __vec4_i8(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
-static FORCEINLINE void __store(__vec4_i8 *p, __vec4_i8 value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_i8 *p, __vec4_i8 value) {
     uint8_t *ptr = (uint8_t *)(&p->v);
     ptr[0] = _mm_extract_epi8(value.v, 0);
     ptr[1] = _mm_extract_epi8(value.v, 1);
@@ -815,12 +815,12 @@ static FORCEINLINE __vec4_i16 __shuffle2_i16(__vec4_i16 v0, __vec4_i16 v1,
     return __vec4_i16(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i16 __load(__vec4_i16 *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_i16 __load(__vec4_i16 *v) {
     uint16_t *ptr = (uint16_t *)(&v->v);
     return __vec4_i16(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
 
-static FORCEINLINE void __store(__vec4_i16 *p, __vec4_i16 value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_i16 *p, __vec4_i16 value) {
     uint16_t *ptr = (uint16_t *)(&p->v);
     ptr[0] = _mm_extract_epi16(value.v, 0);
     ptr[1] = _mm_extract_epi16(value.v, 1);
@@ -1060,12 +1060,12 @@ static FORCEINLINE __vec4_i32 __shuffle2_i32(__vec4_i32 v0, __vec4_i32 v1,
     return __vec4_i32(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i32 __load(__vec4_i32 *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_i32 __load(__vec4_i32 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_si128((__m128i *)(&v->v));
 }
 
-static void __store(__vec4_i32 *p, __vec4_i32 value, int align) {
+template <int ALIGN> static void __store(__vec4_i32 *p, __vec4_i32 value) {
     // FIXME: handle align
     _mm_storeu_si128((__m128i *)(&p->v), value.v);
 }
@@ -1322,13 +1322,13 @@ static FORCEINLINE __vec4_i64 __shuffle2_i64(__vec4_i64 v0, __vec4_i64 v1,
     return __vec4_i64(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_i64 __load(__vec4_i64 *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_i64 __load(__vec4_i64 *v) {
     // FIXME: handle align of 16...
     return __vec4_i64(_mm_loadu_si128((__m128i *)(&v->v[0])),
                       _mm_loadu_si128((__m128i *)(&v->v[1])));
 }
 
-static FORCEINLINE void __store(__vec4_i64 *p, __vec4_i64 value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_i64 *p, __vec4_i64 value) {
     // FIXME: handle align
     _mm_storeu_si128((__m128i *)(&p->v[0]), value.v[0]);
     _mm_storeu_si128((__m128i *)(&p->v[1]), value.v[1]);
@@ -1425,12 +1425,12 @@ static FORCEINLINE __vec4_f __shuffle2_float(__vec4_f v0, __vec4_f v1,
     return __vec4_f(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_f __load(__vec4_f *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_f __load(__vec4_f *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
 
-static FORCEINLINE void __store(__vec4_f *p, __vec4_f value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_f *p, __vec4_f value) {
     // FIXME: handle align
     _mm_storeu_ps((float *)(&p->v), value.v);
 }
@@ -1558,13 +1558,13 @@ static FORCEINLINE __vec4_d __shuffle2_double(__vec4_d v0, __vec4_d v1,
     return __vec4_d(r[0], r[1], r[2], r[3]);
 }
 
-static FORCEINLINE __vec4_d __load(__vec4_d *v, int align) {
+template <int ALIGN> static FORCEINLINE __vec4_d __load(__vec4_d *v) {
     // FIXME: handle align of 16...
     return __vec4_d(_mm_loadu_pd((double *)(&v->v[0])),
                     _mm_loadu_pd((double *)(&v->v[1])));
 }
 
-static FORCEINLINE void __store(__vec4_d *p, __vec4_d value, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec4_d *p, __vec4_d value) {
     // FIXME: handle align
     _mm_storeu_pd((double *)(&p->v[0]), value.v[0]);
     _mm_storeu_pd((double *)(&p->v[1]), value.v[1]);

@@ -211,14 +211,16 @@ static FORCEINLINE void __insert_element(VTYPE *v, int index, STYPE val) { \
 }
 
 #define LOAD_STORE(VTYPE, STYPE)                       \
-static FORCEINLINE VTYPE __load(VTYPE *p, int align) { \
+template <int ALIGN>                                   \
+static FORCEINLINE VTYPE __load(VTYPE *p) {            \
     STYPE *ptr = (STYPE *)p;                           \
     VTYPE ret;                                         \
     for (int i = 0; i < 16; ++i)                       \
         ret.v[i] = ptr[i];                             \
     return ret;                                        \
 }                                                      \
-static FORCEINLINE void __store(VTYPE *p, VTYPE v, int align) {    \
+template <int ALIGN>                                   \
+static FORCEINLINE void __store(VTYPE *p, VTYPE v) {   \
     STYPE *ptr = (STYPE *)p;                           \
     for (int i = 0; i < 16; ++i)                       \
         ptr[i] = v.v[i];                               \
@@ -380,14 +382,14 @@ static FORCEINLINE void __insert_element(__vec16_i1 *vec, int index,
         vec->v |= (1 << index);
 }
 
-static FORCEINLINE __vec16_i1 __load(__vec16_i1 *p, int align) {
+template <int ALIGN> static FORCEINLINE __vec16_i1 __load(__vec16_i1 *p) {
     uint16_t *ptr = (uint16_t *)p;
     __vec16_i1 r;
     r.v = *ptr;
     return r;
 }
 
-static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v, int align) {
+template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v) {
     uint16_t *ptr = (uint16_t *)p;
     *ptr = v.v;
 }
