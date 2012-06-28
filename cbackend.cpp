@@ -3950,9 +3950,8 @@ void CWriter::writeMemoryAccess(llvm::Value *Operand, llvm::Type *OperandType,
 void CWriter::visitLoadInst(llvm::LoadInst &I) {
   llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(I.getType());
   if (VT != NULL) {
-      Out << "__load(";
+      Out << "__load<" << I.getAlignment() << ">(";
       writeOperand(I.getOperand(0));
-      Out << ", " << I.getAlignment();
       Out << ")";
       return;
   }
@@ -3964,11 +3963,11 @@ void CWriter::visitLoadInst(llvm::LoadInst &I) {
 void CWriter::visitStoreInst(llvm::StoreInst &I) {
   llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(I.getOperand(0)->getType());
   if (VT != NULL) {
-      Out << "__store(";
+      Out << "__store<" << I.getAlignment() << ">(";
       writeOperand(I.getOperand(1));
       Out << ", ";
       writeOperand(I.getOperand(0));
-      Out << ", " << I.getAlignment() << ")";
+      Out << ")";
       return;
   }
 
