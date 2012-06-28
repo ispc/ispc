@@ -2147,9 +2147,9 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "#endif\n\n";
 
   if (g->opt.fastMath) {
-      Out << "#define ISPC_FAST_MATH 1\n"
+      Out << "#define ISPC_FAST_MATH 1\n";
   } else {
-      Out << "#undef ISPC_FAST_MATH\n"
+      Out << "#undef ISPC_FAST_MATH\n";
   }
 
   Out << "#include \"" << includeName << "\"\n";
