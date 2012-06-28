@@ -79,7 +79,6 @@
 #undef setjmp
 #endif
 
-
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetData.h"
 
@@ -811,7 +810,7 @@ void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
 
   // Make sure the last character is a null char, as automatically added by C
   if (isString && (CPA->getNumOperands() == 0 ||
-                   !cast<llvm::Constant>(*(CPA->op_end()-1))->isNullValue()))
+                   !llvm::cast<llvm::Constant>(*(CPA->op_end()-1))->isNullValue()))
     isString = false;
 
   if (isString) {
@@ -821,7 +820,7 @@ void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
 
     // Do not include the last character, which we know is null
     for (unsigned i = 0, e = CPA->getNumOperands()-1; i != e; ++i) {
-      unsigned char C = (unsigned char)(cast<llvm::ConstantInt>(CPA->getOperand(i))->getZExtValue());
+      unsigned char C = (unsigned char)(llvm::cast<llvm::ConstantInt>(CPA->getOperand(i))->getZExtValue());
 
       // Print it out literally if it is a printable character.  The only thing
       // to be careful about is when the last letter output was a hex escape
@@ -3509,7 +3508,9 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             // builtin, we handle it.
             const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
+#define Intrinsic llvm::Intrinsic
 #include "llvm/Intrinsics.gen"
+#undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
             // If we handle it, don't lower it.
             if (BuiltinName[0]) break;
@@ -3673,7 +3674,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     llvm::Function *F = I.getCalledFunction();
 #endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
+#define Intrinsic llvm::Intrinsic
 #include "llvm/Intrinsics.gen"
+#undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
     assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
 
