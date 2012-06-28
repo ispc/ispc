@@ -401,14 +401,16 @@ static FORCEINLINE void __insert_element(VTYPE *v, int index, STYPE val) { \
 }
 
 #define LOAD_STORE(VTYPE, STYPE)                       \
-static FORCEINLINE VTYPE __load(VTYPE *p, int align) { \
+template <int ALIGN>                                   \
+static FORCEINLINE VTYPE __load(VTYPE *p) {            \
     STYPE *ptr = (STYPE *)p;                           \
     VTYPE ret;                                         \
     for (int i = 0; i < 64; ++i)                       \
         ret.v[i] = ptr[i];                             \
     return ret;                                        \
 }                                                      \
-static FORCEINLINE void __store(VTYPE *p, VTYPE v, int align) {    \
+template <int ALIGN>                                   \
+static FORCEINLINE void __store(VTYPE *p, VTYPE v) {   \
     STYPE *ptr = (STYPE *)p;                           \
     for (int i = 0; i < 64; ++i)                       \
         ptr[i] = v.v[i];                               \
@@ -1349,7 +1351,7 @@ static FORCEINLINE __vec64_f __masked_load_float(void *p,
 
 static FORCEINLINE __vec64_d __masked_load_double(void *p,
                                                   __vec64_i1 mask) {
-    __ve64_d ret;
+    __vec64_d ret;
     double *ptr = (double *)p;
     for (int i = 0; i < 64; ++i)
         if ((mask.v & (1 << i)) != 0)
@@ -1425,13 +1427,13 @@ static FORCEINLINE void __masked_store_blend_64(void *p, __vec64_i64 val,
     __masked_store_i64(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_float(void *p, __vec32_f val,
-                                                   __vec32_i1 mask) {
+static FORCEINLINE void __masked_store_blend_float(void *p, __vec64_f val,
+                                                   __vec64_i1 mask) {
     __masked_store_float(p, val, mask);
 }
 
-static FORCEINLINE void __masked_store_blend_double(void *p, __vec32_d val,
-                                                    __vec32_i1 mask) {
+static FORCEINLINE void __masked_store_blend_double(void *p, __vec64_d val,
+                                                    __vec64_i1 mask) {
     __masked_store_double(p, val, mask);
 }
 
