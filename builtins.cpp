@@ -467,6 +467,7 @@ lSetInternalFunctions(llvm::Module *module) {
         "__num_cores",
         "__packed_load_active",
         "__packed_store_active",
+        "__pause",
         "__popcnt_int32",
         "__popcnt_int64",
         "__prefetch_read_uniform_1",
