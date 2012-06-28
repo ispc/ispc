@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ispc.h"
+
 #include <stdio.h>
 
 #ifndef _MSC_VER
@@ -2143,6 +2145,12 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "#else\n";
   Out << "  #include <alloca.h>\n";
   Out << "#endif\n\n";
+
+  if (g->opt.fastMath) {
+      Out << "#define ISPC_FAST_MATH 1\n"
+  } else {
+      Out << "#undef ISPC_FAST_MATH\n"
+  }
 
   Out << "#include \"" << includeName << "\"\n";
 
