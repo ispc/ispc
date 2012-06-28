@@ -200,6 +200,7 @@ CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
         break;
     default:
         FATAL("Unhandled foreach type");
+        return NULL;
     }
 
     return new CFInfo(cfType, breakTarget, continueTarget,
