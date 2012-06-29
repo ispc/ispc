@@ -1,3 +1,63 @@
+=== v1.3.0 === (29 June 2012)
+
+This is a major new release of ispc, with support for more compilation
+targets and a number of additions to the language.  As usual, the quality
+of generated code has also been improved in a number of cases and a number
+of small bugs have been fixed.
+
+New targets:
+
+* This release provides "beta" support for compiling to Intel Xeon Phi (the
+  "Many Integrated Core" arthiecture).  See
+  http://ispc.github.com/ispc.html#compiling-for-the-intel-xeon-phi-architecture
+  for more details on this support.
+
+* This release also has an "avx1.1" target, which provides support for the
+  new instructions in the Intel Ivy Bridge microarchitecutre. 
+
+New language features:
+
+* The foreach_active statement allows iteration over the active program
+  instances in a gang.  (See
+  http://ispc.github.com/ispc.html#iteration-over-active-program-instances-foreach-active)
+
+* foreach_unique allows iterating over subsets of program instances in a
+  gang that share the same value of a variable.  (See
+  http://ispc.github.com/ispc.html#iteration-over-unique-elements-foreach-unique)
+
+* An "unmasked" function qualifier and statement in the language allow
+  re-activating execution of all program instances in a gang.  (See
+  http://ispc.github.com/ispc.html#re-establishing-the-execution-mask
+
+Standard library updates:
+
+* The seed_rng() function has been modified to take a "varying" seed value
+  when a varying RNGState is being initialized.
+
+* An isnan() function has been added, to check for floating-point "not a
+  number" values.
+
+* The float_to_srgb8() routine does high performance conversion of
+  floating-point color values to SRGB8 format.
+
+Other changes:
+
+* A number of bugfixes have been made for compiler crashes with malformed
+  programs.
+
+* Floating-point comparisons are now "unordered", so that any comparison
+  where one of the operands is a "not a number" value returns false.  (This
+  matches standard IEEE floating-point behavior.)
+
+* The code generated for 'break' statements in "varying" loops has been
+  improved for some common cases. 
+
+* Compile time and compiler memory use have both been improved,
+  particularly for large input programs.
+
+* A nubmer of bugs have been fixed in the debugging information generated
+  by the compiler when the "-g" command-line flag is used.
+
 === v1.2.2 === (20 April 2012)
 
 This release includes a number of small additions to functionality and a
