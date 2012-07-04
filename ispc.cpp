@@ -44,6 +44,8 @@
 #include <windows.h>
 #include <direct.h>
 #define strcasecmp stricmp
+#else
+#include <unistd.h>
 #endif
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>

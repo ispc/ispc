@@ -58,6 +58,8 @@ extern void RegisterDependency(const std::string &fileName);
 
 #ifdef ISPC_IS_WINDOWS
 inline int isatty(int) { return 0; }
+#else
+#include <unistd.h>
 #endif // ISPC_IS_WINDOWS
 
 static int allTokens[] = { 
