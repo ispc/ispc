@@ -43,6 +43,8 @@
 #include <stdlib.h>
 #ifdef ISPC_IS_WINDOWS
   #include <time.h>
+#else
+  #include <unistd.h>
 #endif // ISPC_IS_WINDOWS
 #include <llvm/Support/Signals.h>
 #include <llvm/Support/TargetRegistry.h>
