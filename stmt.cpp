@@ -56,7 +56,6 @@
 #include <llvm/Metadata.h>
 #include <llvm/Instructions.h>
 #include <llvm/CallingConv.h>
-#include <llvm/Support/IRBuilder.h>
 #include <llvm/Support/raw_ostream.h>
 
 ///////////////////////////////////////////////////////////////////////////

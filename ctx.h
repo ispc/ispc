@@ -42,11 +42,12 @@
 #include <map>
 #include <llvm/InstrTypes.h>
 #include <llvm/Instructions.h>
-#include <llvm/Analysis/DIBuilder.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
+  #include <llvm/Analysis/DIBuilder.h>
 #else
   #include <llvm/DebugInfo.h>
+  #include <llvm/DIBuilder.h>
 #endif
 
 struct CFInfo;

@@ -49,11 +49,12 @@
 #endif
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
-#include <llvm/Analysis/DIBuilder.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
+  #include <llvm/Analysis/DIBuilder.h>
 #else
   #include <llvm/DebugInfo.h>
+  #include <llvm/DIBuilder.h>
 #endif
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Instructions.h>

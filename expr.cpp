@@ -64,7 +64,6 @@
 #include <llvm/Instructions.h>
 #include <llvm/CallingConv.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/Support/IRBuilder.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/InstIterator.h>
 
