@@ -7674,7 +7674,8 @@ lGetOverloadCandidateMessage(const std::vector<Symbol *> &funcs,
         Assert(ft != NULL);
         message += "Candidate: ";
         message += ft->GetString();
-        message += "\n";
+        if (i < funcs.size() - 1)
+            message += "\n";
     }
     return message;
 }
