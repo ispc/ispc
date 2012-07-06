@@ -1098,22 +1098,31 @@ bool CWriter::printCast(unsigned opc, llvm::Type *SrcTy, llvm::Type *DstTy) {
 }
 
 
-// FIXME: generalize this/make it not so hard-coded?
-static const char *lGetSmearFunc(llvm::Type *matchType) {
+/** Construct the name of a function with the given base and returning a
+    vector of a given type.  For example, if base is "foo" and matchType is
+    i16, this will return the string "__foo_i16".
+ */
+static const char *
+lGetTypedFunc(const char *base, llvm::Type *matchType) {
+    char buf[64];
+    sprintf(buf, "__%s_", base);
     switch (matchType->getTypeID()) {
-    case llvm::Type::FloatTyID:  return "__smear_float";
-    case llvm::Type::DoubleTyID: return "__smear_double";
+    case llvm::Type::FloatTyID:  strcat(buf, "float");  break;
+    case llvm::Type::DoubleTyID: strcat(buf, "double"); break;
     case llvm::Type::IntegerTyID: {
         switch (llvm::cast<llvm::IntegerType>(matchType)->getBitWidth()) {
-        case 1:  return "__smear_i1";
-        case 8:  return "__smear_i8";
-        case 16: return "__smear_i16";
-        case 32: return "__smear_i32";
-        case 64: return "__smear_i64";
+        case 1:  strcat(buf, "i1");  break;
+        case 8:  strcat(buf, "i8");  break;
+        case 16: strcat(buf, "i16"); break;
+        case 32: strcat(buf, "i32"); break;
+        case 64: strcat(buf, "i64"); break;
+        default: return NULL;
         }
+        break;
     }
     default: return NULL;
     }
+    return strdup(buf);
 }
 
 
@@ -1458,64 +1467,63 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
   }
   case llvm::Type::VectorTyID: {
     llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(CPV->getType());
-    const char *smearFunc = lGetSmearFunc(VT->getElementType());
 
     if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
-        assert(smearFunc != NULL);
-
-        llvm::Constant *CZ = llvm::Constant::getNullValue(VT->getElementType());
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(CZ, Static);
-        Out << ")";
+        // All zeros; call the __setzero_* function.
+        const char *setZeroFunc = lGetTypedFunc("setzero", VT->getElementType());
+        assert(setZeroFunc != NULL);
+        Out << setZeroFunc << "()";
     }
-    else if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(CPV)) {
-      llvm::Constant *splatValue = CV->getSplatValue();
-      if (splatValue != NULL && smearFunc != NULL) {
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(splatValue, Static);
-        Out << ")";
-      }
-      else {
-        printType(Out, CPV->getType());
-        Out << "(";
-        printConstantVector(CV, Static);
-        Out << ")";
-      }
+    else if (llvm::isa<llvm::UndefValue>(CPV)) {
+        // Undefined value; call __undef_* so that we can potentially pass
+        // this information along..
+        const char *undefFunc = lGetTypedFunc("undef", VT->getElementType());
+        assert(undefFunc != NULL);
+        Out << undefFunc << "()";
     }
-#ifndef LLVM_3_0
-    else if (llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(CPV)) {
-      llvm::Constant *splatValue = CDV->getSplatValue();
-      if (splatValue != NULL && smearFunc != NULL) {
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(splatValue, Static);
-        Out << ")";
-      }
-      else {
-        printType(Out, CPV->getType());
-        Out << "(";
-        printConstantDataSequential(CDV, Static);
-        Out << ")";
-      }
-    }
-#endif // !LLVM_3_0
     else {
-      assert(llvm::isa<llvm::UndefValue>(CPV));
-      llvm::Constant *CZ = llvm::Constant::getNullValue(VT->getElementType());
-      printType(Out, CPV->getType());
-      Out << "(";
-      printConstant(CZ, Static);
-      for (unsigned i = 1, e = VT->getNumElements(); i != e; ++i) {
-        Out << ", ";
-        printConstant(CZ, Static);
-      }
-      Out << ")";
+        const char *smearFunc = lGetTypedFunc("smear", VT->getElementType());
+
+        if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(CPV)) {
+            llvm::Constant *splatValue = CV->getSplatValue();
+            if (splatValue != NULL && smearFunc != NULL) {
+                // If it's a basic type and has a __smear_* function, then
+                // call that.
+                Out << smearFunc << "(";
+                printConstant(splatValue, Static);
+                Out << ")";
+            }
+            else {
+                // Otherwise call the constructor for the type
+                printType(Out, CPV->getType());
+                Out << "(";
+                printConstantVector(CV, Static);
+                Out << ")";
+            }
+        }
+#ifndef LLVM_3_0
+        // LLVM 3.1 and beyond have a different representation of constant vectors..
+        else if (llvm::ConstantDataVector *CDV =
+                 llvm::dyn_cast<llvm::ConstantDataVector>(CPV)) {
+            llvm::Constant *splatValue = CDV->getSplatValue();
+            if (splatValue != NULL && smearFunc != NULL) {
+                Out << smearFunc << "(";
+                printConstant(splatValue, Static);
+                Out << ")";
+            }
+            else {
+                printType(Out, CPV->getType());
+                Out << "(";
+                printConstantDataSequential(CDV, Static);
+                Out << ")";
+            }
+        }
+#endif // !LLVM_3_0
+        else {
+            llvm::report_fatal_error("Unexpected vector type");
+        }
     }
+    
     break;
   }
   case llvm::Type::StructTyID:
@@ -4194,7 +4202,7 @@ char SmearCleanupPass::ID = 0;
 
 
 static int
-  lChainLength(llvm::InsertElementInst *inst) {
+lChainLength(llvm::InsertElementInst *inst) {
     int length = 0;
     while (inst != NULL) {
         ++length;
@@ -4242,24 +4250,26 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         {
         llvm::Type *matchType = toMatch->getType();
-        const char *smearFuncName = lGetSmearFunc(matchType);
+        const char *smearFuncName = lGetTypedFunc("smear", matchType);
 
         if (smearFuncName != NULL) {
             llvm::Function *smearFunc = module->getFunction(smearFuncName);
             if (smearFunc == NULL) {
+                // Declare the smar function if needed; it takes a single
+                // scalar parameter and returns a vector of the same
+                // parameter type.
                 llvm::Constant *sf = 
                     module->getOrInsertFunction(smearFuncName, iter->getType(), 
-                                                iter->getType(), matchType, NULL);
+                                                matchType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
             }
 
-            llvm::Value *undefResult = llvm::UndefValue::get(vt);
             assert(smearFunc != NULL);
-            llvm::Value *args[2] = { undefResult, toMatch };
-            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
+            llvm::Value *args[1] = { toMatch };
+            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
             llvm::Instruction *smearCall = 
                 llvm::CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
                                  (llvm::Instruction *)NULL);

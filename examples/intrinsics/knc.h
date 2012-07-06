@@ -477,8 +477,16 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v
     *ptr = v.m;
 }
 
-static FORCEINLINE __vec16_i1 __smear_i1(__vec16_i1, int i) {
+static FORCEINLINE __vec16_i1 __smear_i1(int i) {
     return i?0xFFFF:0x0;
+}
+
+static FORCEINLINE __vec16_i1 __setzero_i1() {
+    return 0;
+}
+
+static FORCEINLINE __vec16_i1 __undef_i1() {
+    return __vec16_i1(); // FIXME? __mm512_undef_mask();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -686,8 +694,16 @@ static FORCEINLINE __vec16_i32 __select(bool cond, __vec16_i32 a, __vec16_i32 b)
 static FORCEINLINE int32_t __extract_element(__vec16_i32 v, int index) { return ((int32_t *)&v)[index]; }
 static FORCEINLINE void __insert_element(__vec16_i32 *v, int index, int32_t val) { ((int32_t *)v)[index] = val; }
 
-static FORCEINLINE __vec16_i32 __smear_i32(__vec16_i32, int32_t i) {
+static FORCEINLINE __vec16_i32 __smear_i32(int32_t i) {
     return _mm512_set_1to16_epi32(i);
+}
+
+static FORCEINLINE __vec16_i32 __setzero_i32() {
+    return _mm512_setzero_epi32();
+}
+
+static FORCEINLINE __vec16_i32 __undef_i32() {
+    return _mm512_undefined_epi32();
 }
 
 static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
@@ -966,8 +982,16 @@ static FORCEINLINE void  __insert_element(__vec16_f *v, int index, float val) {
     ((float *)v)[index] = val;
 }
 
-static FORCEINLINE __vec16_f __smear_float(__vec16_f, float f) {
+static FORCEINLINE __vec16_f __smear_float(float f) {
     return _mm512_set_1to16_ps(f);
+}
+
+static FORCEINLINE __vec16_f __setzero_float() {
+    return _mm512_setzero_ps();
+}
+
+static FORCEINLINE __vec16_f __undef_float() {
+    return _mm512_undefined_ps();
 }
 
 static FORCEINLINE __vec16_f __broadcast_float(__vec16_f v, int index) {
@@ -1116,9 +1140,23 @@ static FORCEINLINE void  __insert_element(__vec16_d *v, int index, double val) {
     ((double *)v)[index] = val;
 }
 
-static FORCEINLINE __vec16_d __smear_double(__vec16_d, double d) {
+static FORCEINLINE __vec16_d __smear_double(double d) {
     __vec16_d ret;
     ret.v1 = _mm512_extload_pd(&d, _MM_UPCONV_PD_NONE, _MM_BROADCAST_1X8, _MM_HINT_NONE);
+    ret.v2 = ret.v1;
+    return ret;
+}
+
+static FORCEINLINE __vec16_d __setzero_double() {
+    __vec16_d ret;
+    ret.v1 = _mm512_setzero_pd();
+    ret.v2 = ret.v1;
+    return ret;
+}
+
+static FORCEINLINE __vec16_d __undef_double() {
+    __vec16_d ret;
+    ret.v1 = _mm512_undefined_pd();
     ret.v2 = ret.v1;
     return ret;
 }

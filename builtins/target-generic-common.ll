@@ -39,12 +39,26 @@ reduce_equal(WIDTH)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shuffle
 
-declare <WIDTH x float> @__smear_float(<WIDTH x float>, float) nounwind readnone
-declare <WIDTH x double> @__smear_double(<WIDTH x double>, double) nounwind readnone
-declare <WIDTH x i8> @__smear_i8(<WIDTH x i8>, i8) nounwind readnone
-declare <WIDTH x i16> @__smear_i16(<WIDTH x i16>, i16) nounwind readnone
-declare <WIDTH x i32> @__smear_i32(<WIDTH x i32>, i32) nounwind readnone
-declare <WIDTH x i64> @__smear_i64(<WIDTH x i64>, i64) nounwind readnone
+declare <WIDTH x float> @__smear_float(float) nounwind readnone
+declare <WIDTH x double> @__smear_double(double) nounwind readnone
+declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
+declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
+declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
+declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
+
+declare <WIDTH x float> @__setzero_float() nounwind readnone
+declare <WIDTH x double> @__setzero_double() nounwind readnone
+declare <WIDTH x i8> @__setzero_i8() nounwind readnone
+declare <WIDTH x i16> @__setzero_i16() nounwind readnone
+declare <WIDTH x i32> @__setzero_i32() nounwind readnone
+declare <WIDTH x i64> @__setzero_i64() nounwind readnone
+
+declare <WIDTH x float> @__undef_float() nounwind readnone
+declare <WIDTH x double> @__undef_double() nounwind readnone
+declare <WIDTH x i8> @__undef_i8() nounwind readnone
+declare <WIDTH x i16> @__undef_i16() nounwind readnone
+declare <WIDTH x i32> @__undef_i32() nounwind readnone
+declare <WIDTH x i64> @__undef_i64() nounwind readnone
 
 declare <WIDTH x float> @__broadcast_float(<WIDTH x float>, i32) nounwind readnone
 declare <WIDTH x double> @__broadcast_double(<WIDTH x double>, i32) nounwind readnone
