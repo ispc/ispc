@@ -3165,23 +3165,46 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
   }
 }
 
+
+static const char *
+lPredicateToString(llvm::CmpInst::Predicate p) {
+    switch (p) {
+    case llvm::ICmpInst::ICMP_EQ:  return "__equal";
+    case llvm::ICmpInst::ICMP_NE:  return "__not_equal";
+    case llvm::ICmpInst::ICMP_ULE: return "__unsigned_less_equal";
+    case llvm::ICmpInst::ICMP_SLE: return "__signed_less_equal";
+    case llvm::ICmpInst::ICMP_UGE: return "__unsigned_greater_equal";
+    case llvm::ICmpInst::ICMP_SGE: return "__signed_greater_equal";
+    case llvm::ICmpInst::ICMP_ULT: return "__unsigned_less_than";
+    case llvm::ICmpInst::ICMP_SLT: return "__signed_less_than";
+    case llvm::ICmpInst::ICMP_UGT: return "__unsigned_greater_than";
+    case llvm::ICmpInst::ICMP_SGT: return "__signed_greater_than";
+
+    case llvm::FCmpInst::FCMP_ORD: return "__ordered";
+    case llvm::FCmpInst::FCMP_UNO: return "__cmpunord";
+    case llvm::FCmpInst::FCMP_UEQ: return "__equal";
+    case llvm::FCmpInst::FCMP_UNE: return "__not_equal";
+    case llvm::FCmpInst::FCMP_ULT: return "__less_than";
+    case llvm::FCmpInst::FCMP_ULE: return "__less_equal";
+    case llvm::FCmpInst::FCMP_UGT: return "__greater_than";
+    case llvm::FCmpInst::FCMP_UGE: return "__greater_equal";
+    case llvm::FCmpInst::FCMP_OEQ: return "__equal";
+    case llvm::FCmpInst::FCMP_ONE: return "__not_equal";
+    case llvm::FCmpInst::FCMP_OLT: return "__less_than";
+    case llvm::FCmpInst::FCMP_OLE: return "__less_equal";
+    case llvm::FCmpInst::FCMP_OGT: return "__greater_than";
+    case llvm::FCmpInst::FCMP_OGE: return "__greater_equal";
+
+    default: llvm_unreachable(0); return NULL;
+    }
+}
+
+
 void CWriter::visitICmpInst(llvm::ICmpInst &I) {
   bool isVector = llvm::isa<llvm::VectorType>(I.getOperand(0)->getType());
 
   if (isVector) {
-      switch (I.getPredicate()) {
-      case llvm::ICmpInst::ICMP_EQ:  Out << "__equal"; break;
-      case llvm::ICmpInst::ICMP_NE:  Out << "__not_equal"; break;
-      case llvm::ICmpInst::ICMP_ULE: Out << "__unsigned_less_equal"; break;
-      case llvm::ICmpInst::ICMP_SLE: Out << "__signed_less_equal"; break;
-      case llvm::ICmpInst::ICMP_UGE: Out << "__unsigned_greater_equal"; break;
-      case llvm::ICmpInst::ICMP_SGE: Out << "__signed_greater_equal"; break;
-      case llvm::ICmpInst::ICMP_ULT: Out << "__unsigned_less_than"; break;
-      case llvm::ICmpInst::ICMP_SLT: Out << "__signed_less_than"; break;
-      case llvm::ICmpInst::ICMP_UGT: Out << "__unsigned_greater_than"; break;
-      case llvm::ICmpInst::ICMP_SGT: Out << "__signed_greater_than"; break;
-      default: llvm_unreachable(0);
-      }
+      Out << lPredicateToString(I.getPredicate());
       Out << "(";
       writeOperand(I.getOperand(0));
       Out << ", ";
@@ -3246,23 +3269,8 @@ void CWriter::visitFCmpInst(llvm::FCmpInst &I) {
   // ispc source.
 
   if (isVector) {
-      switch (I.getPredicate()) {
-      default: llvm_unreachable("Illegal FCmp predicate");
-      case llvm::FCmpInst::FCMP_ORD: Out << "__ordered("; break;
-      case llvm::FCmpInst::FCMP_UNO: Out << "__cmpunord("; break;
-      case llvm::FCmpInst::FCMP_UEQ: Out << "__equal("; break;
-      case llvm::FCmpInst::FCMP_UNE: Out << "__not_equal("; break;
-      case llvm::FCmpInst::FCMP_ULT: Out << "__less_than("; break;
-      case llvm::FCmpInst::FCMP_ULE: Out << "__less_equal("; break;
-      case llvm::FCmpInst::FCMP_UGT: Out << "__greater_than("; break;
-      case llvm::FCmpInst::FCMP_UGE: Out << "__greater_equal("; break;
-      case llvm::FCmpInst::FCMP_OEQ: Out << "__equal("; break;
-      case llvm::FCmpInst::FCMP_ONE: Out << "__not_equal("; break;
-      case llvm::FCmpInst::FCMP_OLT: Out << "__less_than("; break;
-      case llvm::FCmpInst::FCMP_OLE: Out << "__less_equal("; break;
-      case llvm::FCmpInst::FCMP_OGT: Out << "__greater_than("; break;
-      case llvm::FCmpInst::FCMP_OGE: Out << "__greater_equal("; break;
-      }
+      Out << lPredicateToString(I.getPredicate());
+      Out << "(";
   }
   else {
   const char* op = 0;
