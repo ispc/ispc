@@ -939,6 +939,11 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     else if (outputType == Bitcode)
         return writeBitcode(module, outFileName);
     else if (outputType == CXX) {
+        if (g->target.isa != Target::GENERIC) {
+            Error(SourcePos(), "Only \"generic-*\" targets can be used with "
+                  "C++ emission.");
+            return false;
+        }
         extern bool WriteCXXFile(llvm::Module *module, const char *fn, 
                                  int vectorWidth, const char *includeName);
         return WriteCXXFile(module, outFileName, g->target.vectorWidth,
