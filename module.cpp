@@ -2199,6 +2199,12 @@ Module::CompileAndOutput(const char *srcFile,
                   "compiling C++ output.");
             return 1;
         }
+        if (srcFile == NULL || !strcmp(srcFile, "-")) {
+            Error(SourcePos(), "Compiling programs from standard input isn't "
+                  "supported when compiling for multiple targets.  Please use "
+                  "an intermediate temporary file.");
+            return 1;
+        }
 
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
