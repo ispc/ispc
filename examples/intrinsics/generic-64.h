@@ -402,7 +402,7 @@ static FORCEINLINE void __insert_element(VTYPE *v, int index, STYPE val) { \
 
 #define LOAD_STORE(VTYPE, STYPE)                       \
 template <int ALIGN>                                   \
-static FORCEINLINE VTYPE __load(VTYPE *p) {            \
+static FORCEINLINE VTYPE __load(const VTYPE *p) {      \
     STYPE *ptr = (STYPE *)p;                           \
     VTYPE ret;                                         \
     for (int i = 0; i < 64; ++i)                       \
@@ -585,7 +585,7 @@ static FORCEINLINE void __insert_element(__vec64_i1 *vec, int index,
         vec->v |= (1ull << index);
 }
 
-template <int ALIGN> static FORCEINLINE __vec64_i1 __load(__vec64_i1 *p) {
+template <int ALIGN> static FORCEINLINE __vec64_i1 __load(const __vec64_i1 *p) {
     uint16_t *ptr = (uint16_t *)p;
     __vec64_i1 r;
     r.v = *ptr;

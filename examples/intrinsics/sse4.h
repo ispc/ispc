@@ -287,7 +287,7 @@ static FORCEINLINE void __insert_element(__vec4_i1 *v, int index, bool val) {
     ((int32_t *)v)[index] = val ? -1 : 0;
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i1 __load(__vec4_i1 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i1 __load(const __vec4_i1 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
@@ -572,7 +572,7 @@ static FORCEINLINE __vec4_i8 __shuffle2_i8(__vec4_i8 v0, __vec4_i8 v1,
     return __vec4_i8(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i8 __load(__vec4_i8 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i8 __load(const __vec4_i8 *v) {
     uint8_t *ptr = (uint8_t *)(&v->v);
     return __vec4_i8(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -839,7 +839,7 @@ static FORCEINLINE __vec4_i16 __shuffle2_i16(__vec4_i16 v0, __vec4_i16 v1,
     return __vec4_i16(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i16 __load(__vec4_i16 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i16 __load(const __vec4_i16 *v) {
     uint16_t *ptr = (uint16_t *)(&v->v);
     return __vec4_i16(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -1092,7 +1092,7 @@ static FORCEINLINE __vec4_i32 __shuffle2_i32(__vec4_i32 v0, __vec4_i32 v1,
     return __vec4_i32(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i32 __load(__vec4_i32 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i32 __load(const __vec4_i32 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_si128((__m128i *)(&v->v));
 }
@@ -1362,7 +1362,7 @@ static FORCEINLINE __vec4_i64 __shuffle2_i64(__vec4_i64 v0, __vec4_i64 v1,
     return __vec4_i64(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i64 __load(__vec4_i64 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i64 __load(const __vec4_i64 *v) {
     // FIXME: handle align of 16...
     return __vec4_i64(_mm_loadu_si128((__m128i *)(&v->v[0])),
                       _mm_loadu_si128((__m128i *)(&v->v[1])));
@@ -1473,7 +1473,7 @@ static FORCEINLINE __vec4_f __shuffle2_float(__vec4_f v0, __vec4_f v1,
     return __vec4_f(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_f __load(__vec4_f *v) {
+template <int ALIGN> static FORCEINLINE __vec4_f __load(const __vec4_f *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
@@ -1614,7 +1614,7 @@ static FORCEINLINE __vec4_d __shuffle2_double(__vec4_d v0, __vec4_d v1,
     return __vec4_d(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_d __load(__vec4_d *v) {
+template <int ALIGN> static FORCEINLINE __vec4_d __load(const __vec4_d *v) {
     // FIXME: handle align of 16...
     return __vec4_d(_mm_loadu_pd((double *)(&v->v[0])),
                     _mm_loadu_pd((double *)(&v->v[1])));
