@@ -7656,25 +7656,27 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
 }
 
 
-static void
-lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
-                         const std::vector<const Type *> &argTypes, 
-                         const std::vector<bool> *argCouldBeNULL) {
-    for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
-        AssertPos(pos, ft != NULL);
-        Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
-    }
-
-    std::string passedTypes = "Passed types: (";
+static std::string
+lGetOverloadCandidateMessage(const std::vector<Symbol *> &funcs, 
+                             const std::vector<const Type *> &argTypes, 
+                             const std::vector<bool> *argCouldBeNULL) {
+    std::string message = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
         if (argTypes[i] != NULL)
-            passedTypes += argTypes[i]->GetString();
+            message += argTypes[i]->GetString();
         else
-            passedTypes += "(unknown type)";
-        passedTypes += (i < argTypes.size()-1) ? ", " : ")\n\n";
+            message += "(unknown type)";
+        message += (i < argTypes.size()-1) ? ", " : ")\n";
     }
-    Error(pos, "%s", passedTypes.c_str());
+
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
+        Assert(ft != NULL);
+        message += "Candidate: ";
+        message += ft->GetString();
+        message += "\n";
+    }
+    return message;
 }
 
 
@@ -7947,20 +7949,23 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     }
     else if (matches.size() > 1) {
         // Multiple matches: ambiguous
+        std::string candidateMessage = 
+            lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
         Error(pos, "Multiple overloaded functions matched call to function "
-              "\"%s\"%s.", funName, 
-              exactMatchOnly ? " only considering exact matches" : "");
-        lPrintOverloadCandidates(argPos, matches, argTypes, argCouldBeNULL);
+              "\"%s\"%s.\n%s", funName, 
+              exactMatchOnly ? " only considering exact matches" : "",
+              candidateMessage.c_str());
         return false;
     }
     else {
         // No matches at all
  failure:
+        std::string candidateMessage = 
+            lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
         Error(pos, "Unable to find any matching overload for call to function "
-              "\"%s\"%s.", funName, 
-              exactMatchOnly ? " only considering exact matches" : "");
-        lPrintOverloadCandidates(argPos, candidateFunctions, argTypes, 
-                                 argCouldBeNULL);
+              "\"%s\"%s.\n%s", funName, 
+              exactMatchOnly ? " only considering exact matches" : "",
+              candidateMessage.c_str());
         return false;
     }
 }
