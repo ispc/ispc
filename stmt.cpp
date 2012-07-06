@@ -1178,8 +1178,8 @@ ForStmt::Print(int indent) const {
 ///////////////////////////////////////////////////////////////////////////
 // BreakStmt
 
-BreakStmt::BreakStmt(bool cc, SourcePos p) 
-    : Stmt(p), doCoherenceCheck(cc && !g->opt.disableCoherentControlFlow) {
+BreakStmt::BreakStmt(SourcePos p) 
+    : Stmt(p) {
 }
 
 
@@ -1189,7 +1189,7 @@ BreakStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     ctx->SetDebugPos(pos);
-    ctx->Break(doCoherenceCheck);
+    ctx->Break(true);
 }
 
 
@@ -1201,14 +1201,13 @@ BreakStmt::TypeCheck() {
 
 int
 BreakStmt::EstimateCost() const {
-    return doCoherenceCheck ? COST_COHERENT_BREAK_CONTINE : 
-        COST_REGULAR_BREAK_CONTINUE;
+    return COST_BREAK_CONTINUE;
 }
 
 
 void
 BreakStmt::Print(int indent) const {
-    printf("%*c%sBreak Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
+    printf("%*cBreak Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 }
@@ -1217,8 +1216,8 @@ BreakStmt::Print(int indent) const {
 ///////////////////////////////////////////////////////////////////////////
 // ContinueStmt
 
-ContinueStmt::ContinueStmt(bool cc, SourcePos p) 
-    : Stmt(p), doCoherenceCheck(cc && !g->opt.disableCoherentControlFlow) {
+ContinueStmt::ContinueStmt(SourcePos p) 
+    : Stmt(p) {
 }
 
 
@@ -1228,7 +1227,7 @@ ContinueStmt::EmitCode(FunctionEmitContext *ctx) const {
         return;
 
     ctx->SetDebugPos(pos);
-    ctx->Continue(doCoherenceCheck);
+    ctx->Continue(true);
 }
 
 
@@ -1240,14 +1239,13 @@ ContinueStmt::TypeCheck() {
 
 int
 ContinueStmt::EstimateCost() const {
-    return doCoherenceCheck ? COST_COHERENT_BREAK_CONTINE : 
-        COST_REGULAR_BREAK_CONTINUE;
+    return COST_BREAK_CONTINUE;
 }
 
 
 void
 ContinueStmt::Print(int indent) const {
-    printf("%*c%sContinue Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
+    printf("%*cContinue Stmt", indent, ' ');
     pos.Print();
     printf("\n");
 }
@@ -2684,9 +2682,8 @@ UnmaskedStmt::EstimateCost() const {
 ///////////////////////////////////////////////////////////////////////////
 // ReturnStmt
 
-ReturnStmt::ReturnStmt(Expr *e, bool cc, SourcePos p) 
-    : Stmt(p), expr(e), 
-      doCoherenceCheck(cc && !g->opt.disableCoherentControlFlow) {
+ReturnStmt::ReturnStmt(Expr *e, SourcePos p) 
+    : Stmt(p), expr(e) {
 }
 
 
@@ -2722,7 +2719,7 @@ ReturnStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetDebugPos(pos);
-    ctx->CurrentLanesReturned(expr, doCoherenceCheck);
+    ctx->CurrentLanesReturned(expr, true);
 }
 
 
@@ -2740,7 +2737,7 @@ ReturnStmt::EstimateCost() const {
 
 void
 ReturnStmt::Print(int indent) const {
-    printf("%*c%sReturn Stmt", indent, ' ', doCoherenceCheck ? "Coherent " : "");
+    printf("%*cReturn Stmt", indent, ' ');
     pos.Print();
     if (expr)
         expr->Print();

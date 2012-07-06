@@ -706,9 +706,6 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     // jump to the break location.
     if (inSwitchStatement() == false && ifsInCFAllUniform(CFInfo::Loop)) {
         BranchInst(breakTarget);
-        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
-            Warning(currentPos, "Coherent break statement not necessary in "
-                    "fully uniform control flow.");
         // Set bblock to NULL since the jump has terminated the basic block
         bblock = NULL;
     }
@@ -778,9 +775,6 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         // which case we know that only a single program instance is
         // executing.
         AddInstrumentationPoint("continue: uniform CF, jumped");
-        if (doCoherenceCheck)
-            Warning(currentPos, "Coherent continue statement not necessary in "
-                    "fully uniform control flow.");
         BranchInst(continueTarget);
         bblock = NULL;
     }

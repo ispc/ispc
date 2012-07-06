@@ -63,9 +63,9 @@ inline int isatty(int) { return 0; }
 #endif // ISPC_IS_WINDOWS
 
 static int allTokens[] = { 
-  TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE, TOKEN_CBREAK,
-  TOKEN_CCONTINUE, TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
-  TOKEN_CONST, TOKEN_CONTINUE, TOKEN_CRETURN, TOKEN_DEFAULT, TOKEN_DO,
+  TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE,
+  TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
+  TOKEN_CONST, TOKEN_CONTINUE, TOKEN_DEFAULT, TOKEN_DO,
   TOKEN_DELETE, TOKEN_DOUBLE, TOKEN_ELSE, TOKEN_ENUM,
   TOKEN_EXPORT, TOKEN_EXTERN, TOKEN_FALSE, TOKEN_FLOAT, TOKEN_FOR,
   TOKEN_FOREACH, TOKEN_FOREACH_ACTIVE, TOKEN_FOREACH_TILED,
@@ -96,15 +96,12 @@ void ParserInit() {
     tokenToName[TOKEN_BOOL] = "bool";
     tokenToName[TOKEN_BREAK] = "break";
     tokenToName[TOKEN_CASE] = "case";
-    tokenToName[TOKEN_CBREAK] = "cbreak";
-    tokenToName[TOKEN_CCONTINUE] = "ccontinue";
     tokenToName[TOKEN_CDO] = "cdo";
     tokenToName[TOKEN_CFOR] = "cfor";
     tokenToName[TOKEN_CIF] = "cif";
     tokenToName[TOKEN_CWHILE] = "cwhile";
     tokenToName[TOKEN_CONST] = "const";
     tokenToName[TOKEN_CONTINUE] = "continue";
-    tokenToName[TOKEN_CRETURN] = "creturn";
     tokenToName[TOKEN_DEFAULT] = "default";
     tokenToName[TOKEN_DO] = "do";
     tokenToName[TOKEN_DELETE] = "delete";
@@ -208,15 +205,12 @@ void ParserInit() {
     tokenNameRemap["TOKEN_BOOL"] = "\'bool\'";
     tokenNameRemap["TOKEN_BREAK"] = "\'break\'";
     tokenNameRemap["TOKEN_CASE"] = "\'case\'";
-    tokenNameRemap["TOKEN_CBREAK"] = "\'cbreak\'";
-    tokenNameRemap["TOKEN_CCONTINUE"] = "\'ccontinue\'";
     tokenNameRemap["TOKEN_CDO"] = "\'cdo\'";
     tokenNameRemap["TOKEN_CFOR"] = "\'cfor\'";
     tokenNameRemap["TOKEN_CIF"] = "\'cif\'";
     tokenNameRemap["TOKEN_CWHILE"] = "\'cwhile\'";
     tokenNameRemap["TOKEN_CONST"] = "\'const\'";
     tokenNameRemap["TOKEN_CONTINUE"] = "\'continue\'";
-    tokenNameRemap["TOKEN_CRETURN"] = "\'creturn\'";
     tokenNameRemap["TOKEN_DEFAULT"] = "\'default\'";
     tokenNameRemap["TOKEN_DO"] = "\'do\'";
     tokenNameRemap["TOKEN_DELETE"] = "\'delete\'";
@@ -351,15 +345,15 @@ __assert { RT; return TOKEN_ASSERT; }
 bool { RT; return TOKEN_BOOL; }
 break { RT; return TOKEN_BREAK; }
 case { RT; return TOKEN_CASE; }
-cbreak { RT; return TOKEN_CBREAK; }
-ccontinue { RT; return TOKEN_CCONTINUE; }
+cbreak { RT; Warning(yylloc, "\"cbreak\" is deprecated. Use \"break\"."); return TOKEN_BREAK; }
+ccontinue { RT; Warning(yylloc, "\"ccontinue\" is deprecated. Use \"continue\"."); return TOKEN_CONTINUE; }
 cdo { RT; return TOKEN_CDO; }
 cfor { RT; return TOKEN_CFOR; }
 cif { RT; return TOKEN_CIF; }
 cwhile { RT; return TOKEN_CWHILE; }
 const { RT; return TOKEN_CONST; }
 continue { RT; return TOKEN_CONTINUE; }
-creturn { RT; return TOKEN_CRETURN; }
+creturn { RT; Warning(yylloc, "\"creturn\" is deprecated. Use \"return\"."); return TOKEN_RETURN; }
 __declspec { RT; return TOKEN_DECLSPEC; }
 default { RT; return TOKEN_DEFAULT; }
 do { RT; return TOKEN_DO; }
