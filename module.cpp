@@ -924,8 +924,8 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
           return 1;
         }
         if (fileType != NULL)
-            fprintf(stderr, "Warning: emitting %s file, but filename \"%s\" "
-                    "has suffix \"%s\"?\n", fileType, outFileName, suffix);
+            Warning(SourcePos(), "Warning: emitting %s file, but filename \"%s\" "
+                    "has suffix \"%s\"?", fileType, outFileName, suffix);
     }
 
     if (outputType == Header)

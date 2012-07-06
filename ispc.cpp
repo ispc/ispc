@@ -140,16 +140,16 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
                 isa = "sse4";
             else
                 isa = "sse2";
-            fprintf(stderr, "Notice: no --target specified on command-line.  "
-                    "Using ISA \"%s\" based on specified CPU \"%s\".\n", isa,
+            Warning(SourcePos(), "No --target specified on command-line.  "
+                    "Using ISA \"%s\" based on specified CPU \"%s\".", isa,
                     cpu);
         }
         else {
             // No CPU and no ISA, so use CPUID to figure out what this CPU
             // supports.
             isa = lGetSystemISA();
-            fprintf(stderr, "Notice: no --target specified on command-line.  "
-                    "Using system ISA \"%s\".\n", isa);
+            Warning(SourcePos(), "No --target specified on command-line.  "
+                    "Using system ISA \"%s\".", isa);
         }
     }
 
@@ -158,7 +158,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         if (hostCPU.size() > 0)
             cpu = strdup(hostCPU.c_str());
         else {
-            fprintf(stderr, "Warning: unable to determine host CPU!\n");
+            Warning(SourcePos(), "Unable to determine host CPU!\n");
             cpu = "generic";
         }
     }
