@@ -3501,6 +3501,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::uadd_with_overflow:
           case llvm::Intrinsic::sadd_with_overflow:
           case llvm::Intrinsic::trap:
+          case llvm::Intrinsic::objectsize:
               // We directly implement these intrinsics
             break;
           default:
@@ -3819,6 +3820,8 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     return true;
   case llvm::Intrinsic::trap:
     Out << "abort()";
+    return true;
+  case llvm::Intrinsic::objectsize:
     return true;
   }
 }
