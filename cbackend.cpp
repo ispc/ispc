@@ -3200,11 +3200,37 @@ lPredicateToString(llvm::CmpInst::Predicate p) {
 }
 
 
+static const char *
+lTypeToSuffix(llvm::Type *t) {
+    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t);
+    Assert(vt != NULL);
+    t = vt->getElementType();
+
+    switch (t->getTypeID()) {
+    case llvm::Type::FloatTyID:  return "float";
+    case llvm::Type::DoubleTyID: return "double";
+    case llvm::Type::IntegerTyID: {
+        switch (llvm::cast<llvm::IntegerType>(t)->getBitWidth()) {
+        case 1:  return "i1";
+        case 8:  return "i8";
+        case 16: return "i16";
+        case 32: return "i32";
+        case 64: return "i64";
+        }
+    }
+    default: llvm_unreachable(0); return NULL;
+    }
+    return NULL;
+}
+
+
 void CWriter::visitICmpInst(llvm::ICmpInst &I) {
   bool isVector = llvm::isa<llvm::VectorType>(I.getOperand(0)->getType());
 
   if (isVector) {
       Out << lPredicateToString(I.getPredicate());
+      Out << "_";
+      Out << lTypeToSuffix(I.getOperand(0)->getType());
       Out << "(";
       writeOperand(I.getOperand(0));
       Out << ", ";
@@ -3270,6 +3296,8 @@ void CWriter::visitFCmpInst(llvm::FCmpInst &I) {
 
   if (isVector) {
       Out << lPredicateToString(I.getPredicate());
+      Out << "_";
+      Out << lTypeToSuffix(I.getOperand(0)->getType());
       Out << "(";
   }
   else {

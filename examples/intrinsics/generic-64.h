@@ -383,8 +383,8 @@ static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                      \
    return ret;                                                      \
 }
 
-#define CMP_OP(TYPE, CAST, NAME, OP)                                \
-static FORCEINLINE __vec64_i1 NAME(TYPE a, TYPE b) {                \
+#define CMP_OP(TYPE, SUFFIX, CAST, NAME, OP)                        \
+static FORCEINLINE __vec64_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {     \
    __vec64_i1 ret;                                                  \
    ret.v = 0;                                                       \
    for (int i = 0; i < 64; ++i)                                     \
@@ -507,7 +507,7 @@ static FORCEINLINE uint64_t __movmsk(__vec64_i1 mask) {
     return (uint64_t)mask.v;
 }
 
-static FORCEINLINE __vec64_i1 __equal(__vec64_i1 a, __vec64_i1 b) {
+static FORCEINLINE __vec64_i1 __equal_i1(__vec64_i1 a, __vec64_i1 b) {
     __vec64_i1 r;
     r.v = (a.v & b.v) | (~a.v & ~b.v);
     return r;
@@ -620,16 +620,16 @@ SHIFT_UNIFORM(__vec64_i8, uint8_t, __lshr, >>)
 SHIFT_UNIFORM(__vec64_i8, int8_t, __ashr, >>)
 SHIFT_UNIFORM(__vec64_i8, int8_t, __shl, <<)
 
-CMP_OP(__vec64_i8, int8_t,  __equal, ==)
-CMP_OP(__vec64_i8, int8_t,  __not_equal, !=)
-CMP_OP(__vec64_i8, uint8_t, __unsigned_less_equal, <=)
-CMP_OP(__vec64_i8, int8_t,  __signed_less_equal, <=)
-CMP_OP(__vec64_i8, uint8_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec64_i8, int8_t,  __signed_greater_equal, >=)
-CMP_OP(__vec64_i8, uint8_t, __unsigned_less_than, <)
-CMP_OP(__vec64_i8, int8_t,  __signed_less_than, <)
-CMP_OP(__vec64_i8, uint8_t, __unsigned_greater_than, >)
-CMP_OP(__vec64_i8, int8_t,  __signed_greater_than, >)
+CMP_OP(__vec64_i8, i8, int8_t,  __equal, ==)
+CMP_OP(__vec64_i8, i8, int8_t,  __not_equal, !=)
+CMP_OP(__vec64_i8, i8, uint8_t, __unsigned_less_equal, <=)
+CMP_OP(__vec64_i8, i8, int8_t,  __signed_less_equal, <=)
+CMP_OP(__vec64_i8, i8, uint8_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec64_i8, i8, int8_t,  __signed_greater_equal, >=)
+CMP_OP(__vec64_i8, i8, uint8_t, __unsigned_less_than, <)
+CMP_OP(__vec64_i8, i8, int8_t,  __signed_less_than, <)
+CMP_OP(__vec64_i8, i8, uint8_t, __unsigned_greater_than, >)
+CMP_OP(__vec64_i8, i8, int8_t,  __signed_greater_than, >)
 
 SELECT(__vec64_i8)
 INSERT_EXTRACT(__vec64_i8, int8_t)
@@ -663,16 +663,16 @@ SHIFT_UNIFORM(__vec64_i16, uint16_t, __lshr, >>)
 SHIFT_UNIFORM(__vec64_i16, int16_t, __ashr, >>)
 SHIFT_UNIFORM(__vec64_i16, int16_t, __shl, <<)
 
-CMP_OP(__vec64_i16, int16_t,  __equal, ==)
-CMP_OP(__vec64_i16, int16_t,  __not_equal, !=)
-CMP_OP(__vec64_i16, uint16_t, __unsigned_less_equal, <=)
-CMP_OP(__vec64_i16, int16_t,  __signed_less_equal, <=)
-CMP_OP(__vec64_i16, uint16_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec64_i16, int16_t,  __signed_greater_equal, >=)
-CMP_OP(__vec64_i16, uint16_t, __unsigned_less_than, <)
-CMP_OP(__vec64_i16, int16_t,  __signed_less_than, <)
-CMP_OP(__vec64_i16, uint16_t, __unsigned_greater_than, >)
-CMP_OP(__vec64_i16, int16_t,  __signed_greater_than, >)
+CMP_OP(__vec64_i16, i16, int16_t,  __equal, ==)
+CMP_OP(__vec64_i16, i16, int16_t,  __not_equal, !=)
+CMP_OP(__vec64_i16, i16, uint16_t, __unsigned_less_equal, <=)
+CMP_OP(__vec64_i16, i16, int16_t,  __signed_less_equal, <=)
+CMP_OP(__vec64_i16, i16, uint16_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec64_i16, i16, int16_t,  __signed_greater_equal, >=)
+CMP_OP(__vec64_i16, i16, uint16_t, __unsigned_less_than, <)
+CMP_OP(__vec64_i16, i16, int16_t,  __signed_less_than, <)
+CMP_OP(__vec64_i16, i16, uint16_t, __unsigned_greater_than, >)
+CMP_OP(__vec64_i16, i16, int16_t,  __signed_greater_than, >)
 
 SELECT(__vec64_i16)
 INSERT_EXTRACT(__vec64_i16, int16_t)
@@ -706,16 +706,16 @@ SHIFT_UNIFORM(__vec64_i32, uint32_t, __lshr, >>)
 SHIFT_UNIFORM(__vec64_i32, int32_t, __ashr, >>)
 SHIFT_UNIFORM(__vec64_i32, int32_t, __shl, <<)
 
-CMP_OP(__vec64_i32, int32_t,  __equal, ==)
-CMP_OP(__vec64_i32, int32_t,  __not_equal, !=)
-CMP_OP(__vec64_i32, uint32_t, __unsigned_less_equal, <=)
-CMP_OP(__vec64_i32, int32_t,  __signed_less_equal, <=)
-CMP_OP(__vec64_i32, uint32_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec64_i32, int32_t,  __signed_greater_equal, >=)
-CMP_OP(__vec64_i32, uint32_t, __unsigned_less_than, <)
-CMP_OP(__vec64_i32, int32_t,  __signed_less_than, <)
-CMP_OP(__vec64_i32, uint32_t, __unsigned_greater_than, >)
-CMP_OP(__vec64_i32, int32_t,  __signed_greater_than, >)
+CMP_OP(__vec64_i32, i32, int32_t,  __equal, ==)
+CMP_OP(__vec64_i32, i32, int32_t,  __not_equal, !=)
+CMP_OP(__vec64_i32, i32, uint32_t, __unsigned_less_equal, <=)
+CMP_OP(__vec64_i32, i32, int32_t,  __signed_less_equal, <=)
+CMP_OP(__vec64_i32, i32, uint32_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec64_i32, i32, int32_t,  __signed_greater_equal, >=)
+CMP_OP(__vec64_i32, i32, uint32_t, __unsigned_less_than, <)
+CMP_OP(__vec64_i32, i32, int32_t,  __signed_less_than, <)
+CMP_OP(__vec64_i32, i32, uint32_t, __unsigned_greater_than, >)
+CMP_OP(__vec64_i32, i32, int32_t,  __signed_greater_than, >)
 
 SELECT(__vec64_i32)
 INSERT_EXTRACT(__vec64_i32, int32_t)
@@ -749,16 +749,16 @@ SHIFT_UNIFORM(__vec64_i64, uint64_t, __lshr, >>)
 SHIFT_UNIFORM(__vec64_i64, int64_t, __ashr, >>)
 SHIFT_UNIFORM(__vec64_i64, int64_t, __shl, <<)
 
-CMP_OP(__vec64_i64, int64_t,  __equal, ==)
-CMP_OP(__vec64_i64, int64_t,  __not_equal, !=)
-CMP_OP(__vec64_i64, uint64_t, __unsigned_less_equal, <=)
-CMP_OP(__vec64_i64, int64_t,  __signed_less_equal, <=)
-CMP_OP(__vec64_i64, uint64_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec64_i64, int64_t,  __signed_greater_equal, >=)
-CMP_OP(__vec64_i64, uint64_t, __unsigned_less_than, <)
-CMP_OP(__vec64_i64, int64_t,  __signed_less_than, <)
-CMP_OP(__vec64_i64, uint64_t, __unsigned_greater_than, >)
-CMP_OP(__vec64_i64, int64_t,  __signed_greater_than, >)
+CMP_OP(__vec64_i64, i64, int64_t,  __equal, ==)
+CMP_OP(__vec64_i64, i64, int64_t,  __not_equal, !=)
+CMP_OP(__vec64_i64, i64, uint64_t, __unsigned_less_equal, <=)
+CMP_OP(__vec64_i64, i64, int64_t,  __signed_less_equal, <=)
+CMP_OP(__vec64_i64, i64, uint64_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec64_i64, i64, int64_t,  __signed_greater_equal, >=)
+CMP_OP(__vec64_i64, i64, uint64_t, __unsigned_less_than, <)
+CMP_OP(__vec64_i64, i64, int64_t,  __signed_less_than, <)
+CMP_OP(__vec64_i64, i64, uint64_t, __unsigned_greater_than, >)
+CMP_OP(__vec64_i64, i64, int64_t,  __signed_greater_than, >)
 
 SELECT(__vec64_i64)
 INSERT_EXTRACT(__vec64_i64, int64_t)
@@ -776,12 +776,12 @@ BINARY_OP(__vec64_f, __sub, -)
 BINARY_OP(__vec64_f, __mul, *)
 BINARY_OP(__vec64_f, __div, /)
 
-CMP_OP(__vec64_f, float, __equal, ==)
-CMP_OP(__vec64_f, float, __not_equal, !=)
-CMP_OP(__vec64_f, float, __less_than, <)
-CMP_OP(__vec64_f, float, __less_equal, <=)
-CMP_OP(__vec64_f, float, __greater_than, >)
-CMP_OP(__vec64_f, float, __greater_equal, >=)
+CMP_OP(__vec64_f, float, float, __equal, ==)
+CMP_OP(__vec64_f, float, float, __not_equal, !=)
+CMP_OP(__vec64_f, float, float, __less_than, <)
+CMP_OP(__vec64_f, float, float, __less_equal, <=)
+CMP_OP(__vec64_f, float, float, __greater_than, >)
+CMP_OP(__vec64_f, float, float, __greater_equal, >=)
 
 static FORCEINLINE __vec64_i1 __ordered(__vec64_f a, __vec64_f b) {
     __vec64_i1 ret;
@@ -926,12 +926,12 @@ BINARY_OP(__vec64_d, __sub, -)
 BINARY_OP(__vec64_d, __mul, *)
 BINARY_OP(__vec64_d, __div, /)
 
-CMP_OP(__vec64_d, double, __equal, ==)
-CMP_OP(__vec64_d, double, __not_equal, !=)
-CMP_OP(__vec64_d, double, __less_than, <)
-CMP_OP(__vec64_d, double, __less_equal, <=)
-CMP_OP(__vec64_d, double, __greater_than, >)
-CMP_OP(__vec64_d, double, __greater_equal, >=)
+CMP_OP(__vec64_d, double, double, __equal, ==)
+CMP_OP(__vec64_d, double, double, __not_equal, !=)
+CMP_OP(__vec64_d, double, double, __less_than, <)
+CMP_OP(__vec64_d, double, double, __less_equal, <=)
+CMP_OP(__vec64_d, double, double, __greater_than, >)
+CMP_OP(__vec64_d, double, double, __greater_equal, >=)
 
 static FORCEINLINE __vec64_i1 __ordered(__vec64_d a, __vec64_d b) {
     __vec64_i1 ret;
