@@ -625,7 +625,8 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // targets having a layout with 16-bit alignment for 16xi1 vectors.
         // As long as builtins-c.c doesn't have any 16xi1 vector types
         // (which it shouldn't!), then this override is safe.
-        bcModule->setDataLayout(module->getDataLayout());
+        if (g->target.isa == Target::GENERIC)
+            bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, 
