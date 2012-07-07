@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ispc.h"
+#include "module.h"
 
 #include <stdio.h>
 
@@ -4366,6 +4367,104 @@ BitcastCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// AndCmpCleanupPass
+
+class AndCmpCleanupPass : public llvm::BasicBlockPass {
+public:
+    AndCmpCleanupPass()
+        : BasicBlockPass(ID) { }
+
+    const char *getPassName() const { return "AndCmp Cleanup Pass"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    static char ID;
+};
+
+char AndCmpCleanupPass::ID = 0;
+
+// Look for ANDs of masks where one of the operands is a vector compare; we
+// can turn these into specialized calls to masked vector compares and
+// thence eliminate the AND.  For example, rather than emitting
+// __and(__less(a, b), c), we will emit __less_and_mask(a, b, c).
+bool
+AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+ restart:
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        // See if we have an AND instruction
+        llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(&*iter);
+        if (bop == NULL || bop->getOpcode() != llvm::Instruction::And)
+            continue;
+
+        // Make sure it's a vector AND
+        if (llvm::isa<llvm::VectorType>(bop->getType()) == false)
+            continue;
+
+        // We only care about ANDs of the mask type, not, e.g. ANDs of
+        // int32s vectors.
+        if (bop->getType() != LLVMTypes::MaskType)
+            continue;
+
+        // Now see if either of the operands to the AND is a comparison
+        for (int i = 0; i < 2; ++i) {
+            llvm::Value *op = bop->getOperand(i);
+            llvm::CmpInst *opCmp = llvm::dyn_cast<llvm::CmpInst>(op);
+            if (opCmp == NULL)
+                continue;
+
+            // We have a comparison.  However, we also need to make sure
+            // that it's not comparing two mask values; those can't be
+            // simplified to something simpler.
+            if (opCmp->getOperand(0)->getType() == LLVMTypes::MaskType)
+                break;
+
+            // Success!  Go ahead and replace the AND with a call to the
+            // "__and_mask" variant of the comparison function for this
+            // operand.
+            std::string funcName = lPredicateToString(opCmp->getPredicate());
+            funcName += "_";
+            funcName += lTypeToSuffix(opCmp->getOperand(0)->getType());
+            funcName += "_and_mask";
+
+            llvm::Function *andCmpFunc = m->module->getFunction(funcName);
+            if (andCmpFunc == NULL) {
+                // Declare the function if needed; the first two arguments
+                // are the same as the two arguments to the compare we're
+                // replacing and the third argument is the mask type.
+                llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
+                llvm::Constant *acf = 
+                    m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType,
+                                                   cmpOpType, cmpOpType, 
+                                                   LLVMTypes::MaskType, NULL);
+                andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
+                Assert(andCmpFunc != NULL);
+                andCmpFunc->setDoesNotThrow(true);
+                andCmpFunc->setDoesNotAccessMemory(true);
+            }
+
+            // Set up the function call to the *_and_mask function; the
+            // mask value passed in is the other operand to the AND.
+            llvm::Value *args[3] = { opCmp->getOperand(0), opCmp->getOperand(1), 
+                                     bop->getOperand(i ^ 1) };
+            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
+            llvm::Instruction *cmpCall = 
+                llvm::CallInst::Create(andCmpFunc, argArray, 
+                                       LLVMGetName(bop, "_and_mask"),
+                                       (llvm::Instruction *)NULL);
+
+            // And replace the original AND instruction with it.
+            llvm::ReplaceInstWithInst(iter, cmpCall);
+
+            modifiedAny = true;
+            goto restart;
+        }
+    }
+
+    return modifiedAny;
+}
+
+///////////////////////////////////////////////////////////////////////////
 // MaskOpsCleanupPass
 
 /** This pass does various peephole improvements to mask modification
@@ -4545,6 +4644,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(llvm::createCFGSimplificationPass());   // clean up after lower invoke.
     pm.add(new SmearCleanupPass(module, vectorWidth));
     pm.add(new BitcastCleanupPass());
+    pm.add(new AndCmpCleanupPass());
     pm.add(new MaskOpsCleanupPass(module));
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(llvm::createPrintModulePass(&fos));
