@@ -3195,8 +3195,9 @@ SelectExpr::Optimize() {
         AssertPos(pos, exprType->IsVaryingType());
 
         // FIXME: it's annoying to have to have all of this replicated code.
-        if (Type::Equal(exprType, AtomicType::VaryingInt32) ||
-            Type::Equal(exprType, AtomicType::VaryingUInt32)) {
+        // FIXME: for completeness, it would also be nice to handle 8 and
+        // 16 bit types...
+        if (Type::Equal(exprType, AtomicType::VaryingInt32)) {
             int32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
             int32_t result[ISPC_MAX_NVEC];
             constExpr1->AsInt32(v1);
@@ -3205,12 +3206,29 @@ SelectExpr::Optimize() {
                 result[i] = bv[i] ? v1[i] : v2[i];
             return new ConstExpr(exprType, result, pos);
         }
-        else if (Type::Equal(exprType, AtomicType::VaryingInt64) ||
-                 Type::Equal(exprType, AtomicType::VaryingUInt64)) {
+        if (Type::Equal(exprType, AtomicType::VaryingUInt32)) {
+            uint32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
+            uint32_t result[ISPC_MAX_NVEC];
+            constExpr1->AsUInt32(v1);
+            constExpr2->AsUInt32(v2);
+            for (int i = 0; i < count; ++i)
+                result[i] = bv[i] ? v1[i] : v2[i];
+            return new ConstExpr(exprType, result, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingInt64)) {
             int64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
             int64_t result[ISPC_MAX_NVEC];
             constExpr1->AsInt64(v1);
             constExpr2->AsInt64(v2);
+            for (int i = 0; i < count; ++i)
+                result[i] = bv[i] ? v1[i] : v2[i];
+            return new ConstExpr(exprType, result, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingUInt64)) {
+            uint64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
+            uint64_t result[ISPC_MAX_NVEC];
+            constExpr1->AsUInt64(v1);
+            constExpr2->AsUInt64(v2);
             for (int i = 0; i < count; ++i)
                 result[i] = bv[i] ? v1[i] : v2[i];
             return new ConstExpr(exprType, result, pos);
