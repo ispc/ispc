@@ -144,7 +144,7 @@ struct ForeachDimension {
 %}
 
 %union {
-    int64_t intVal;
+    uint64_t intVal;
     float floatVal;
     std::string *stringVal;
     const char *constCharPtr;

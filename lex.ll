@@ -590,12 +590,25 @@ lParseInteger(bool dotdotdot) {
             return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
         else if (ls == 1)
             return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
-
-        // See if we can fit this into a 32-bit integer...
-        if ((yylval.intVal & 0xffffffff) == yylval.intVal)
-            return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
-        else
-            return us ? TOKEN_UINT64_CONSTANT : TOKEN_INT64_CONSTANT;
+        else if (us) {
+            // u suffix only
+            if (yylval.intVal <= 0xfffffffL)
+                return TOKEN_UINT32_CONSTANT;
+            else
+                return TOKEN_UINT64_CONSTANT;
+        }
+        else {
+            // No u or l suffix           
+            // First, see if we can fit this into a 32-bit integer...
+            if (yylval.intVal <= 0x7fffffffLLU)
+                return TOKEN_INT32_CONSTANT;
+            else if (yylval.intVal <= 0xffffffffLLU)
+                return TOKEN_UINT32_CONSTANT;
+            else if (yylval.intVal <= 0x7fffffffffffffffLLU)
+                return TOKEN_INT64_CONSTANT;
+            else
+                return TOKEN_UINT64_CONSTANT;
+        }
     }
 }
 
