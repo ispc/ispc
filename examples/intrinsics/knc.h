@@ -465,8 +465,8 @@ static FORCEINLINE void __insert_element(__vec16_i1 *vec, int index,
 }
 */
 
-template <int ALIGN> static FORCEINLINE __vec16_i1 __load(__vec16_i1 *p) {
-    uint16_t *ptr = (uint16_t *)p;
+template <int ALIGN> static FORCEINLINE __vec16_i1 __load(const __vec16_i1 *p) {
+    const uint16_t *ptr = (const uint16_t *)p;
     __vec16_i1 r;
     r.m = *ptr;
     return r;
@@ -729,14 +729,14 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 }
 */
 
-template <int ALIGN> static FORCEINLINE __vec16_i32 __load(__vec16_i32 *p) {
+template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
     __vec16_i32 v;
     v = _mm512_extloadunpackhi_epi32(v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     v = _mm512_extloadunpacklo_epi32(v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     return v;
 }
 
-template <> static FORCEINLINE __vec16_i32 __load<64>(__vec16_i32 *p) {
+template <> static FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
     return _mm512_load_epi32(p);
 }
 
@@ -827,7 +827,7 @@ SHUFFLES(__vec16_i64, i64, int64_t)
 LOAD_STORE(__vec16_i64, int64_t)
 
 
-template <int ALIGN> static FORCEINLINE __vec16_i64 __load(__vec16_i64 *p) {
+template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
     __m512i v1;
     __m512i v2;
     v2 = _mm512_extloadunpackhi_epi32(v1, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
@@ -851,7 +851,7 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(__vec16_i64 *p) {
     return ret;    
 }
 
-template <> static FORCEINLINE __vec16_i64 __load<64>(__vec16_i64 *p) {
+template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) {
     __m512i v2 = _mm512_load_epi32(p);
     __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
     __vec16_i64 ret;
@@ -1015,14 +1015,14 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f v0, __vec16_f v1, __vec1
 }
 */
 
-template <int ALIGN> static FORCEINLINE __vec16_f __load(__vec16_f *p) {
+template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
     __vec16_f v;
     v = _mm512_extloadunpackhi_ps(v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
     v = _mm512_extloadunpacklo_ps(v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
     return v;
 }
 
-template <> static FORCEINLINE __vec16_f __load<64>(__vec16_f *p) {
+template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
     return _mm512_load_ps(p);
 }
 
@@ -1184,7 +1184,7 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_d v0, __vec16_d v1, __vec1
 }
 */
 
-template <int ALIGN> static FORCEINLINE __vec16_d __load(__vec16_d *p) {
+template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
     __vec16_d ret;
     ret.v1 = _mm512_extloadunpackhi_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
     ret.v1 = _mm512_extloadunpacklo_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
@@ -1193,7 +1193,7 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(__vec16_d *p) {
     return ret;
 }
 
-template <> static FORCEINLINE __vec16_d __load<64>(__vec16_d *p) {
+template <> static FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) {
     __vec16_d ret;
     ret.v1 = _mm512_load_pd(p);
     ret.v2 = _mm512_load_pd(((uint8_t*)p)+64);
