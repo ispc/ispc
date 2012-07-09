@@ -227,6 +227,8 @@ namespace {
     const llvm::TargetData* TD;
     
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
+    std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
+    unsigned VectorConstantIndex;
     std::set<llvm::Function*> intrinsicPrototypesAlreadyGenerated;
     std::set<const llvm::Argument*> ByValParams;
     unsigned FPCounter;
@@ -253,6 +255,7 @@ namespace {
         vectorWidth(vecwidth) {
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
       FPCounter = 0;
+      VectorConstantIndex = 0;
     }
 
     virtual const char *getPassName() const { return "C backend"; }
@@ -278,6 +281,10 @@ namespace {
       // Output all floating point constants that cannot be printed accurately.
       printFloatingPointConstants(F);
 
+      // Output all vector constants so they can be accessed with single
+      // vector loads
+      printVectorConstants(F);
+
       printFunction(F);
       return false;
     }
@@ -292,6 +299,7 @@ namespace {
       delete MRI;
       delete MOFI;
       FPConstantMap.clear();
+      VectorConstantMap.clear();
       ByValParams.clear();
       intrinsicPrototypesAlreadyGenerated.clear();
       UnnamedStructIDs.clear();
@@ -350,6 +358,7 @@ namespace {
     void printContainedArrays(llvm::ArrayType *ATy, llvm::SmallPtrSet<llvm::Type *, 16> &);
     void printFloatingPointConstants(llvm::Function &F);
     void printFloatingPointConstants(const llvm::Constant *C);
+    void printVectorConstants(llvm::Function &F);
     void printFunctionSignature(const llvm::Function *F, bool Prototype);
 
     void printFunction(llvm::Function &);
@@ -1511,6 +1520,22 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 printConstant(splatValue, Static);
                 Out << ")";
             }
+            else if (VectorConstantMap.find(CDV) != VectorConstantMap.end()) {
+                // If we have emitted an static const array with the
+                // vector's values, just load from it.
+                unsigned index = VectorConstantMap[CDV];
+                int alignment = 4 * std::min(vectorWidth, 16);
+
+                Out << "__load<" << alignment << ">(";
+
+                // Cast the pointer to the array of element values to a
+                // pointer to the vector type.
+                Out << "(const ";
+                printSimpleType(Out, CDV->getType(), true, "");
+                Out << " *)";
+
+                Out << "(VectorConstant" << index << "))";
+            }
             else {
                 printType(Out, CPV->getType());
                 Out << "(";
@@ -2514,6 +2539,47 @@ void CWriter::printFloatingPointConstants(const llvm::Constant *C) {
   }
 }
 
+
+// For any vector constants, generate code to declare static const arrays
+// with their element values.  Doing so allows us to emit aligned vector
+// loads to get their values, rather than tediously inserting the
+// individual values into the vector.
+void CWriter::printVectorConstants(llvm::Function &F) {
+    // LLVM 3.1 and beyond have a different representation of constant
+    // vectors than before--here we will only do this for 3.1 and later, as
+    // the separate code path isn't worth the trouble.  This will hurt
+    // performance with 3.0 builds, though they should still generate
+    // correct code.
+#ifndef LLVM_3_0
+    for (llvm::constant_iterator I = constant_begin(&F), E = constant_end(&F);
+         I != E; ++I) {
+        const llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(*I);
+        if (CDV == NULL)
+            continue;
+
+        // Don't bother if this is a splat of the same value; a (more
+        // efficient?) __splat_* call will be generated for these.
+        if (CDV->getSplatValue() != NULL)
+            continue;
+
+        // Don't align to anything more than 64 bytes
+        int alignment = 4 * std::min(vectorWidth, 16);
+
+        Out << "static const ";
+        printSimpleType(Out, CDV->getElementType(), true, "");
+        Out << "__attribute__ ((aligned(" << alignment << "))) ";
+        Out << "VectorConstant" << VectorConstantIndex << "[] = { ";
+        for (int i = 0; i < (int)CDV->getNumElements(); ++i) {
+            printConstant(CDV->getElementAsConstant(i), false);
+            Out << ", ";
+        }
+        Out << " };\n";
+
+        VectorConstantMap[CDV] = VectorConstantIndex++;
+    }
+    Out << "\n";
+#endif // !LLVM_3_0
+}
 
 /// printSymbolTable - Run through symbol table looking for type names.  If a
 /// type name is found, emit its declaration...
