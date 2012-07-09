@@ -262,11 +262,24 @@ static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
 }
 
 #define SMEAR(VTYPE, NAME, STYPE)                                  \
-static FORCEINLINE VTYPE __smear_##NAME(VTYPE retType, STYPE v) {  \
+static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {                 \
     VTYPE ret;                                                     \
     for (int i = 0; i < 16; ++i)                                   \
         ret.v[i] = v;                                              \
     return ret;                                                    \
+}
+
+#define SETZERO(VTYPE, NAME)                                       \
+static FORCEINLINE VTYPE __setzero_##NAME() {                      \
+    VTYPE ret;                                                     \
+    for (int i = 0; i < 16; ++i)                                   \
+        ret.v[i] = 0;                                              \
+    return ret;                                                    \
+}
+
+#define UNDEF(VTYPE, NAME)                                         \
+static FORCEINLINE VTYPE __undef_##NAME() {                        \
+    return VTYPE();                                                \
 }
 
 #define BROADCAST(VTYPE, NAME, STYPE)                 \
@@ -394,9 +407,19 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i1 *p, __vec16_i1 v
     *ptr = v.v;
 }
 
-static FORCEINLINE __vec16_i1 __smear_i1(__vec16_i1, int v) {
+static FORCEINLINE __vec16_i1 __smear_i1(int v) {
     return __vec16_i1(v, v, v, v, v, v, v, v, 
                       v, v, v, v, v, v, v, v);
+}
+
+static FORCEINLINE __vec16_i1 __setzero_i1() {
+    return __vec16_i1(0, 0, 0, 0, 0, 0, 0, 0, 
+                      0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+
+static FORCEINLINE __vec16_i1 __undef_i1() {
+    return __vec16_i1();
 }
 
 
@@ -438,6 +461,8 @@ CMP_OP(__vec16_i8, i8, int8_t,  __signed_greater_than, >)
 SELECT(__vec16_i8)
 INSERT_EXTRACT(__vec16_i8, int8_t)
 SMEAR(__vec16_i8, i8, int8_t)
+SETZERO(__vec16_i8, i8)
+UNDEF(__vec16_i8, i8)
 BROADCAST(__vec16_i8, i8, int8_t)
 ROTATE(__vec16_i8, i8, int8_t)
 SHUFFLES(__vec16_i8, i8, int8_t)
@@ -481,6 +506,8 @@ CMP_OP(__vec16_i16, i16, int16_t,  __signed_greater_than, >)
 SELECT(__vec16_i16)
 INSERT_EXTRACT(__vec16_i16, int16_t)
 SMEAR(__vec16_i16, i16, int16_t)
+SETZERO(__vec16_i16, i16)
+UNDEF(__vec16_i16, i16)
 BROADCAST(__vec16_i16, i16, int16_t)
 ROTATE(__vec16_i16, i16, int16_t)
 SHUFFLES(__vec16_i16, i16, int16_t)
@@ -524,6 +551,8 @@ CMP_OP(__vec16_i32, i32, int32_t,  __signed_greater_than, >)
 SELECT(__vec16_i32)
 INSERT_EXTRACT(__vec16_i32, int32_t)
 SMEAR(__vec16_i32, i32, int32_t)
+SETZERO(__vec16_i32, i32)
+UNDEF(__vec16_i32, i32)
 BROADCAST(__vec16_i32, i32, int32_t)
 ROTATE(__vec16_i32, i32, int32_t)
 SHUFFLES(__vec16_i32, i32, int32_t)
@@ -567,6 +596,8 @@ CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_than, >)
 SELECT(__vec16_i64)
 INSERT_EXTRACT(__vec16_i64, int64_t)
 SMEAR(__vec16_i64, i64, int64_t)
+SETZERO(__vec16_i64, i64)
+UNDEF(__vec16_i64, i64)
 BROADCAST(__vec16_i64, i64, int64_t)
 ROTATE(__vec16_i64, i64, int64_t)
 SHUFFLES(__vec16_i64, i64, int64_t)
@@ -602,6 +633,8 @@ static FORCEINLINE __vec16_i1 __ordered(__vec16_f a, __vec16_f b) {
 SELECT(__vec16_f)
 INSERT_EXTRACT(__vec16_f, float)
 SMEAR(__vec16_f, float, float)
+SETZERO(__vec16_f, float)
+UNDEF(__vec16_f, float)
 BROADCAST(__vec16_f, float, float)
 ROTATE(__vec16_f, float, float)
 SHUFFLES(__vec16_f, float, float)
@@ -752,6 +785,8 @@ static FORCEINLINE __vec16_i1 __ordered(__vec16_d a, __vec16_d b) {
 SELECT(__vec16_d)
 INSERT_EXTRACT(__vec16_d, double)
 SMEAR(__vec16_d, double, double)
+SETZERO(__vec16_d, double)
+UNDEF(__vec16_d, double)
 BROADCAST(__vec16_d, double, double)
 ROTATE(__vec16_d, double, double)
 SHUFFLES(__vec16_d, double, double)
