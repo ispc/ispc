@@ -227,8 +227,10 @@ namespace {
     const llvm::TargetData* TD;
     
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
+#ifndef LLVM_3_0
     std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
     unsigned VectorConstantIndex;
+#endif // !LLVM_3_0
     std::set<llvm::Function*> intrinsicPrototypesAlreadyGenerated;
     std::set<const llvm::Argument*> ByValParams;
     unsigned FPCounter;
@@ -255,7 +257,9 @@ namespace {
         vectorWidth(vecwidth) {
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
       FPCounter = 0;
+#ifndef LLVM_3_0
       VectorConstantIndex = 0;
+#endif // !LLVM_3_0
     }
 
     virtual const char *getPassName() const { return "C backend"; }
@@ -299,7 +303,9 @@ namespace {
       delete MRI;
       delete MOFI;
       FPConstantMap.clear();
+#ifndef LLVM_3_0
       VectorConstantMap.clear();
+#endif // !LLVM_3_0
       ByValParams.clear();
       intrinsicPrototypesAlreadyGenerated.clear();
       UnnamedStructIDs.clear();
