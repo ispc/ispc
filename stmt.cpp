@@ -830,7 +830,7 @@ void DoStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // And now emit code for the loop body
     ctx->SetCurrentBasicBlock(bloop);
-    ctx->SetBlockEntryMask(ctx->GetInternalMask());
+    ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->SetDebugPos(pos);
     // FIXME: in the StmtList::EmitCode() method takes starts/stops a new
     // scope around the statements in the list.  So if the body is just a
@@ -1047,7 +1047,7 @@ ForStmt::EmitCode(FunctionEmitContext *ctx) const {
 
     // On to emitting the code for the loop body.
     ctx->SetCurrentBasicBlock(bloop);
-    ctx->SetBlockEntryMask(ctx->GetInternalMask());
+    ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->AddInstrumentationPoint("for loop body");
     if (!dynamic_cast<StmtList *>(stmts))
         ctx->StartScope();
@@ -2555,7 +2555,7 @@ SwitchStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool isUniformCF = (type->IsUniformType() &&
                         lHasVaryingBreakOrContinue(stmts) == false);
     ctx->StartSwitch(isUniformCF, bbDone);
-    ctx->SetBlockEntryMask(ctx->GetInternalMask());
+    ctx->SetBlockEntryMask(ctx->GetFullMask());
     ctx->SwitchInst(exprValue, svi.defaultBlock ? svi.defaultBlock : bbDone,
                     svi.caseBlocks, svi.nextBlock);
 
