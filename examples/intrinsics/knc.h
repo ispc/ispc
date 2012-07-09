@@ -955,16 +955,13 @@ static FORCEINLINE __vec16_i1 __greater_equal_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpnlt_ps_mask(a, b);
 }
 
-/*
-static FORCEINLINE __vec16_i1 __ordered(__vec16_f a, __vec16_f b) {
-    __vec16_i1 ret;
-    ret.v = 0;
-    for (int i = 0; i < 16; ++i)
-        ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
-    return ret;
+static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
+    return _mm512_cmpord_ps_mask(a, b);
 }
-*/
 
+static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
+    return _mm512_cmpunord_ps_mask(a, b);
+}
 
 static FORCEINLINE __vec16_f __select(__vec16_i1 mask, __vec16_f a, __vec16_f b) {
     return _mm512_mask_mov_ps(b, mask, a);
@@ -1109,16 +1106,19 @@ static FORCEINLINE __vec16_i1 __greater_equal_double(__vec16_d a, __vec16_d b) {
     return ret;
 }
 
-
-/*
-static FORCEINLINE __vec16_i1 __ordered(__vec16_d a, __vec16_d b) {
+static FORCEINLINE __vec16_i1 __ordered_double(__vec16_d a, __vec16_d b) {
     __vec16_i1 ret;
-    ret.v = 0;
-    for (int i = 0; i < 16; ++i)
-        ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
+    ret.m8.m1 = _mm512_cmpord_pd_mask(a.v1, b.v1);
+    ret.m8.m2 = _mm512_cmpord_pd_mask(a.v2, b.v2);
     return ret;
 }
-*/
+
+static FORCEINLINE __vec16_i1 __unordered_double(__vec16_d a, __vec16_d b) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_cmpunord_pd_mask(a.v1, b.v1);
+    ret.m8.m2 = _mm512_cmpunord_pd_mask(a.v2, b.v2);
+    return ret;
+}
 
 static FORCEINLINE __vec16_d __select(__vec16_i1 mask, __vec16_d a, __vec16_d b) {
     __vec16_d ret;

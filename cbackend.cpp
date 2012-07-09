@@ -3261,7 +3261,7 @@ lPredicateToString(llvm::CmpInst::Predicate p) {
     case llvm::ICmpInst::ICMP_SGT: return "__signed_greater_than";
 
     case llvm::FCmpInst::FCMP_ORD: return "__ordered";
-    case llvm::FCmpInst::FCMP_UNO: return "__cmpunord";
+    case llvm::FCmpInst::FCMP_UNO: return "__unordered";
     case llvm::FCmpInst::FCMP_UEQ: return "__equal";
     case llvm::FCmpInst::FCMP_UNE: return "__not_equal";
     case llvm::FCmpInst::FCMP_ULT: return "__less_than";

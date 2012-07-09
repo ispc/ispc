@@ -1422,6 +1422,10 @@ static FORCEINLINE __vec4_i1 __ordered_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpord_ps(a.v, b.v);
 }
 
+static FORCEINLINE __vec4_i1 __unordered_float(__vec4_f a, __vec4_f b) {
+    return _mm_cmpunord_ps(a.v, b.v);
+}
+
 static FORCEINLINE __vec4_f __select(__vec4_i1 mask, __vec4_f a, __vec4_f b) {
     return _mm_blendv_ps(b.v, a.v, mask.v);
 }
@@ -1552,6 +1556,13 @@ static FORCEINLINE __vec4_i1 __greater_equal_double(__vec4_d a, __vec4_d b) {
 static FORCEINLINE __vec4_i1 __ordered_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpord_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpord_pd(a.v[1], b.v[1]);
+    return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
+                          _MM_SHUFFLE(2, 0, 2, 0));
+}
+
+static FORCEINLINE __vec4_i1 __unordered_double(__vec4_d a, __vec4_d b) {
+    __m128d cmp0 = _mm_cmpunord_pd(a.v[0], b.v[0]);
+    __m128d cmp1 = _mm_cmpunord_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }

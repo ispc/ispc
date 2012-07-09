@@ -819,11 +819,19 @@ CMP_OP(__vec64_f, float, float, __less_equal, <=)
 CMP_OP(__vec64_f, float, float, __greater_than, >)
 CMP_OP(__vec64_f, float, float, __greater_equal, >=)
 
-static FORCEINLINE __vec64_i1 __ordered(__vec64_f a, __vec64_f b) {
+static FORCEINLINE __vec64_i1 __ordered_float(__vec64_f a, __vec64_f b) {
     __vec64_i1 ret;
     ret.v = 0;
     for (int i = 0; i < 64; ++i)
         ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1ull << i) : 0;
+    return ret;
+}
+
+static FORCEINLINE __vec64_i1 __unordered_float(__vec64_f a, __vec64_f b) {
+    __vec64_i1 ret;
+    ret.v = 0;
+    for (int i = 0; i < 64; ++i)
+        ret.v |= ((a.v[i] != a.v[i]) || (b.v[i] != b.v[i])) ? (1ull << i) : 0;
     return ret;
 }
 
@@ -971,11 +979,19 @@ CMP_OP(__vec64_d, double, double, __less_equal, <=)
 CMP_OP(__vec64_d, double, double, __greater_than, >)
 CMP_OP(__vec64_d, double, double, __greater_equal, >=)
 
-static FORCEINLINE __vec64_i1 __ordered(__vec64_d a, __vec64_d b) {
+static FORCEINLINE __vec64_i1 __ordered_double(__vec64_d a, __vec64_d b) {
     __vec64_i1 ret;
     ret.v = 0;
     for (int i = 0; i < 64; ++i)
         ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1ull << i) : 0;
+    return ret;
+}
+
+static FORCEINLINE __vec64_i1 __unordered_double(__vec64_d a, __vec64_d b) {
+    __vec64_i1 ret;
+    ret.v = 0;
+    for (int i = 0; i < 64; ++i)
+        ret.v |= ((a.v[i] != a.v[i]) || (b.v[i] != b.v[i])) ? (1ull << i) : 0;
     return ret;
 }
 
