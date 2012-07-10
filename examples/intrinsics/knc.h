@@ -646,40 +646,90 @@ static FORCEINLINE __vec16_i1 __equal_i32(const __vec16_i32 &a, const __vec16_i3
     return _mm512_cmpeq_epi32_mask((__m512i)a, (__m512i)b);
 }
 
+static FORCEINLINE __vec16_i1 __equal_i32_and_mask(const __vec16_i32 &a, const __vec16_i32 &b,
+                                                   __vec16_i1 m) {
+    return _mm512_mask_cmpeq_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
+}
+
 static FORCEINLINE __vec16_i1 __not_equal_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmpneq_epi32_mask((__m512i)a, (__m512i)b);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                       __vec16_i1 m) {
+    return _mm512_mask_cmpneq_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_less_equal_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmple_epu32_mask((__m512i)a, (__m512i)b);
 }
 
+static FORCEINLINE __vec16_i1 __unsigned_less_equal_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                 __vec16_i1 m) {
+    return _mm512_mask_cmple_epu32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
+}
+
 static FORCEINLINE __vec16_i1 __signed_less_equal_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmple_epi32_mask((__m512i)a, (__m512i)b);
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_equal_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                               __vec16_i1 m) {
+    return _mm512_mask_cmple_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmpge_epu32_mask((__m512i)a, (__m512i)b);
 }
 
+static FORCEINLINE __vec16_i1 __unsigned_greater_equal_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                    __vec16_i1 m) {
+    return _mm512_mask_cmpge_epu32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
+}
+
 static FORCEINLINE __vec16_i1 __signed_greater_equal_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmpge_epi32_mask((__m512i)a, (__m512i)b);
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_equal_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                  __vec16_i1 m) {
+    return _mm512_mask_cmpge_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_less_than_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmplt_epu32_mask((__m512i)a, (__m512i)b);
 }
 
+static FORCEINLINE __vec16_i1 __unsigned_less_than_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                __vec16_i1 m) {
+    return _mm512_mask_cmplt_epu32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
+}
+
 static FORCEINLINE __vec16_i1 __signed_less_than_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmplt_epi32_mask((__m512i)a, (__m512i)b);
+}
+
+static FORCEINLINE __vec16_i1 __signed_less_than_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                              __vec16_i1 m) {
+    return _mm512_mask_cmplt_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
 }
 
 static FORCEINLINE __vec16_i1 __unsigned_greater_than_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmpgt_epu32_mask((__m512i)a, (__m512i)b);
 }
 
+static FORCEINLINE __vec16_i1 __unsigned_greater_than_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                   __vec16_i1 m) {
+    return _mm512_mask_cmpgt_epu32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
+}
+
 static FORCEINLINE __vec16_i1 __signed_greater_than_i32(__vec16_i32 a, __vec16_i32 b) {
     return _mm512_cmpgt_epi32_mask((__m512i)a, (__m512i)b);
+}
+
+static FORCEINLINE __vec16_i1 __signed_greater_than_i32_and_mask(__vec16_i32 a, __vec16_i32 b,
+                                                                 __vec16_i1 m) {
+    return _mm512_mask_cmpgt_epi32_mask((__mmask16)m, (__m512i)a, (__m512i)b);
 }
 
 static FORCEINLINE __vec16_i32 __select(__vec16_i1 mask,
@@ -794,18 +844,30 @@ static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &a, const __vec16_i6
     return _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
 }
 
+static FORCEINLINE __vec16_i1 __equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
+                                                   __vec16_i1 mask) {
+    __mmask16 lo_match = _mm512_cmpeq_epi32_mask(a.v_lo,b.v_lo);
+    __mmask16 full_match = _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
+    return _mm512_kand(full_match, (__mmask16)mask);
+}
+
 static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
     return __not(__equal_i64(a,b));
 }
 
-CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_equal, <=)
-CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_equal, <=)
-CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_equal, >=)
-CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_than, <)
-CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_than, <)
-CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_than, >)
-CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_than, >)
+static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
+                                                       __vec16_i1 mask) {
+    return __and(__not(__equal(a,b)), mask);
+}
+
+CMP_OP(__vec16_i64, uint64_t, __unsigned_less_equal, <=)
+CMP_OP(__vec16_i64, int64_t,  __signed_less_equal, <=)
+CMP_OP(__vec16_i64, uint64_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec16_i64, int64_t,  __signed_greater_equal, >=)
+CMP_OP(__vec16_i64, uint64_t, __unsigned_less_than, <)
+CMP_OP(__vec16_i64, int64_t,  __signed_less_than, <)
+CMP_OP(__vec16_i64, uint64_t, __unsigned_greater_than, >)
+CMP_OP(__vec16_i64, int64_t,  __signed_greater_than, >)
 
 SELECT(__vec16_i64)
 INSERT_EXTRACT(__vec16_i64, int64_t)
@@ -935,28 +997,69 @@ static FORCEINLINE __vec16_i1 __equal_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpeq_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __equal_float_and_mask(__vec16_f a, __vec16_f b,
+                                                     __vec16_i1 m) {
+    return _mm512_mask_cmpeq_ps_mask(m, a, b);
+}
+
 static FORCEINLINE __vec16_i1 __not_equal_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpneq_ps_mask(a, b);
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_float_and_mask(__vec16_f a, __vec16_f b,
+                                                         __vec16_i1 m) {
+    return _mm512_mask_cmpneq_ps_mask(m, a, b);
 }
 
 static FORCEINLINE __vec16_i1 __less_than_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmplt_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __less_than_float_and_mask(__vec16_f a, __vec16_f b,
+                                                         __vec16_i1 m) {
+    return _mm512_mask_cmplt_ps_mask(m, a, b);
+}
+
 static FORCEINLINE __vec16_i1 __less_equal_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmple_ps_mask(a, b);
+}
+
+static FORCEINLINE __vec16_i1 __less_equal_float_and_mask(__vec16_f a, __vec16_f b,
+                                                          __vec16_i1 m) {
+    return _mm512_mask_cmple_ps_mask(m, a, b);
 }
 
 static FORCEINLINE __vec16_i1 __greater_than_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpnle_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __greater_than_float_and_mask(__vec16_f a, __vec16_f b,
+                                                            __vec16_i1 m) {
+    return _mm512_mask_cmpnle_ps_mask(m, a, b);
+}
+
 static FORCEINLINE __vec16_i1 __greater_equal_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpnlt_ps_mask(a, b);
 }
 
+static FORCEINLINE __vec16_i1 __greater_equal_float_and_mask(__vec16_f a, __vec16_f b,
+                                                             __vec16_i1 m) {
+    return _mm512_mask_cmpnlt_ps_mask(m, a, b);
+}
+
 static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpord_ps_mask(a, b);
+}
+
+
+/*
+static FORCEINLINE __vec16_i1 __ordered(__vec16_f a, __vec16_f b) {
+    __vec16_i1 ret;
+    ret.v = 0;
+    for (int i = 0; i < 16; ++i)
+        ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
+    return ret;
+>>>>>>> 8ef6bc16364d4c08aa5972141748110160613087
 }
 
 static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
@@ -1071,10 +1174,26 @@ static FORCEINLINE __vec16_i1 __equal_double(__vec16_d a, __vec16_d b) {
     return ret;
 }
 
+static FORCEINLINE __vec16_i1 __equal_double_and_mask(__vec16_d a, __vec16_d b,
+                                                      __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmpeq_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmpeq_pd_mask(m.m8.m2, a.v2, b.v2);
+    return ret;
+}
+
 static FORCEINLINE __vec16_i1 __not_equal_double(__vec16_d a, __vec16_d b) {
     __vec16_i1 ret;
     ret.m8.m1 = _mm512_cmpneq_pd_mask(a.v1, b.v1);
     ret.m8.m2 = _mm512_cmpneq_pd_mask(a.v2, b.v2);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i1 __not_equal_double_and_mask(__vec16_d a, __vec16_d b,
+                                                          __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmpneq_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmpneq_pd_mask(m.m8.m2, a.v2, b.v2);
     return ret;
 }
 
@@ -1085,10 +1204,26 @@ static FORCEINLINE __vec16_i1 __less_than_double(__vec16_d a, __vec16_d b) {
     return ret;
 }
 
+static FORCEINLINE __vec16_i1 __less_than_double_and_mask(__vec16_d a, __vec16_d b,
+                                                          __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmplt_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmplt_pd_mask(m.m8.m2, a.v2, b.v2);
+    return ret;
+}
+
 static FORCEINLINE __vec16_i1 __less_equal_double(__vec16_d a, __vec16_d b) {
     __vec16_i1 ret;
     ret.m8.m1 = _mm512_cmple_pd_mask(a.v1, b.v1);
     ret.m8.m2 = _mm512_cmple_pd_mask(a.v2, b.v2);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i1 __less_equal_double_and_mask(__vec16_d a, __vec16_d b,
+                                                           __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmple_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmple_pd_mask(m.m8.m2, a.v2, b.v2);
     return ret;
 }
 
@@ -1099,10 +1234,26 @@ static FORCEINLINE __vec16_i1 __greater_than_double(__vec16_d a, __vec16_d b) {
     return ret;
 }
 
+static FORCEINLINE __vec16_i1 __greater_than_double_and_mask(__vec16_d a, __vec16_d b,
+                                                             __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmpnle_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmpnle_pd_mask(m.m8.m2, a.v2, b.v2);
+    return ret;
+}
+
 static FORCEINLINE __vec16_i1 __greater_equal_double(__vec16_d a, __vec16_d b) {
     __vec16_i1 ret;
     ret.m8.m1 = _mm512_cmpnlt_pd_mask(a.v1, b.v1);
     ret.m8.m2 = _mm512_cmpnlt_pd_mask(a.v2, b.v2);
+    return ret;
+}
+
+static FORCEINLINE __vec16_i1 __greater_equal_double_and_mask(__vec16_d a, __vec16_d b,
+                                                              __vec16_i1 m) {
+    __vec16_i1 ret;
+    ret.m8.m1 = _mm512_mask_cmpnlt_pd_mask(m.m8.m1, a.v1, b.v1);
+    ret.m8.m2 = _mm512_mask_cmpnlt_pd_mask(m.m8.m2, a.v2, b.v2);
     return ret;
 }
 

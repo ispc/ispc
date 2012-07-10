@@ -237,6 +237,31 @@ CAST_BITS_SCALAR(int64_t, double)
 CAST_BITS_SCALAR(double, uint64_t)
 CAST_BITS_SCALAR(double, int64_t)
 
+#define CMP_AND_MASK_ONE(FUNC, TYPE)                                        \
+static FORCEINLINE __vec4_i1 FUNC##_and_mask(TYPE a, TYPE b, __vec4_i1 m) { \
+    return __and(FUNC(a, b), m);                                        \
+}
+
+#define CMP_AND_MASK_INT(TYPE, SUFFIX)           \
+CMP_AND_MASK_ONE(__equal_##SUFFIX, TYPE)         \
+CMP_AND_MASK_ONE(__not_equal_##SUFFIX, TYPE)              \
+CMP_AND_MASK_ONE(__unsigned_less_equal_##SUFFIX, TYPE)    \
+CMP_AND_MASK_ONE(__unsigned_greater_equal_##SUFFIX, TYPE) \
+CMP_AND_MASK_ONE(__unsigned_less_than_##SUFFIX, TYPE)     \
+CMP_AND_MASK_ONE(__unsigned_greater_than_##SUFFIX, TYPE)  \
+CMP_AND_MASK_ONE(__signed_less_equal_##SUFFIX, TYPE)      \
+CMP_AND_MASK_ONE(__signed_greater_equal_##SUFFIX, TYPE)   \
+CMP_AND_MASK_ONE(__signed_less_than_##SUFFIX, TYPE)       \
+CMP_AND_MASK_ONE(__signed_greater_than_##SUFFIX, TYPE)
+
+#define CMP_AND_MASK_FLOAT(TYPE, SUFFIX)           \
+CMP_AND_MASK_ONE(__equal_##SUFFIX, TYPE)         \
+CMP_AND_MASK_ONE(__not_equal_##SUFFIX, TYPE)              \
+CMP_AND_MASK_ONE(__less_equal_##SUFFIX, TYPE)      \
+CMP_AND_MASK_ONE(__greater_equal_##SUFFIX, TYPE)   \
+CMP_AND_MASK_ONE(__less_than_##SUFFIX, TYPE)       \
+CMP_AND_MASK_ONE(__greater_than_##SUFFIX, TYPE)
+
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
@@ -514,6 +539,8 @@ static FORCEINLINE __vec4_i1  __signed_greater_equal_i8(__vec4_i8 a, __vec4_i8 b
     return __or(__signed_greater_than_i8(a, b), __equal_i8(a, b));
 }
 
+CMP_AND_MASK_INT(__vec4_i8, i8)
+
 static FORCEINLINE __vec4_i8 __select(__vec4_i1 mask, __vec4_i8 a, __vec4_i8 b) {
     return __vec4_i8((_mm_extract_ps(mask.v, 0) != 0) ? _mm_extract_epi8(a.v, 0) : 
                                                         _mm_extract_epi8(b.v, 0),
@@ -781,6 +808,8 @@ static FORCEINLINE __vec4_i1  __signed_greater_equal_i16(__vec4_i16 a, __vec4_i1
     return __or(__signed_greater_than_i16(a, b), __equal_i16(a, b));
 }
 
+CMP_AND_MASK_INT(__vec4_i16, i16)
+
 static FORCEINLINE __vec4_i16 __select(__vec4_i1 mask, __vec4_i16 a, __vec4_i16 b) {
     return __vec4_i16((_mm_extract_ps(mask.v, 0) != 0) ? _mm_extract_epi16(a.v, 0) : 
                                                          _mm_extract_epi16(b.v, 0),
@@ -1039,6 +1068,8 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_than_i32(__vec4_i32 a, __vec4_i3
 static FORCEINLINE __vec4_i1 __signed_greater_than_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_cmpgt_epi32(a.v, b.v);
 }
+
+CMP_AND_MASK_INT(__vec4_i32, i32)
 
 static FORCEINLINE __vec4_i32 __select(__vec4_i1 mask, __vec4_i32 a, __vec4_i32 b) {
     return _mm_castps_si128(_mm_blendv_ps(_mm_castsi128_ps(b.v), 
@@ -1304,6 +1335,8 @@ static FORCEINLINE __vec4_i1 __signed_less_equal_i64(__vec4_i64 a, __vec4_i64 b)
     return __xor(__signed_greater_than_i64(a, b), __vec4_i1(1, 1, 1, 1));
 }
 
+CMP_AND_MASK_INT(__vec4_i64, i64)
+
 static FORCEINLINE __vec4_i64 __select(__vec4_i1 mask, __vec4_i64 a, __vec4_i64 b) {
     __m128 m0 = _mm_shuffle_ps(mask.v, mask.v, _MM_SHUFFLE(1, 1, 0, 0));
     __m128 m1 = _mm_shuffle_ps(mask.v, mask.v, _MM_SHUFFLE(3, 3, 2, 2));
@@ -1425,6 +1458,8 @@ static FORCEINLINE __vec4_i1 __ordered_float(__vec4_f a, __vec4_f b) {
 static FORCEINLINE __vec4_i1 __unordered_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpunord_ps(a.v, b.v);
 }
+
+CMP_AND_MASK_FLOAT(__vec4_f, float)
 
 static FORCEINLINE __vec4_f __select(__vec4_i1 mask, __vec4_f a, __vec4_f b) {
     return _mm_blendv_ps(b.v, a.v, mask.v);
@@ -1566,6 +1601,8 @@ static FORCEINLINE __vec4_i1 __unordered_double(__vec4_d a, __vec4_d b) {
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
+
+CMP_AND_MASK_FLOAT(__vec4_d, double)
 
 static FORCEINLINE __vec4_d __select(__vec4_i1 mask, __vec4_d a, __vec4_d b) {
     __m128 m0 = _mm_shuffle_ps(mask.v, mask.v, _MM_SHUFFLE(1, 1, 0, 0));

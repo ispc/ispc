@@ -265,6 +265,15 @@ static FORCEINLINE __vec32_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {     \
    for (int i = 0; i < 32; ++i)                                     \
        ret.v |= ((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;            \
    return ret;                                                      \
+}                                                                   \
+static FORCEINLINE __vec32_i1 NAME##_##SUFFIX##_and_mask(TYPE a, TYPE b,       \
+                                              __vec32_i1 mask) {    \
+   __vec32_i1 ret;                                                  \
+   ret.v = 0;                                                       \
+   for (int i = 0; i < 32; ++i)                                     \
+       ret.v |= ((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;            \
+   ret.v &= mask.v;                                                 \
+   return ret;                                                      \
 }
 
 #define INSERT_EXTRACT(VTYPE, STYPE)                                  \
