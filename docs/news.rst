@@ -2,6 +2,13 @@
 ispc News
 =========
 
+ispc 1.3.0 is Released
+----------------------
+
+A major new version of ``ispc`` has been released.  In addition to a number
+of new language features, this release notably features initial support for
+compiling to the Intel Xeon Phi (Many Integrated Core) architecture.
+
 ispc 1.2.1 is Released
 ----------------------
 

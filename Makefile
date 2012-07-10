@@ -99,10 +99,10 @@ OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
 
 default: ispc
 
-.PHONY: dirs clean depend doxygen print_llvm_src
+.PHONY: dirs clean depend doxygen print_llvm_src llvm_check
 .PRECIOUS: objs/builtins-%.cpp
 
-depend: $(CXX_SRC) $(HEADERS)
+depend: llvm_check $(CXX_SRC) $(HEADERS)
 	@echo Updating dependencies
 	@gcc -MM $(CXXFLAGS) $(CXX_SRC) | sed 's_^\([a-z]\)_objs/\1_g' > depend
 
@@ -112,7 +112,15 @@ dirs:
 	@echo Creating objs/ directory
 	@/bin/mkdir -p objs
 
-print_llvm_src:
+llvm_check:
+	@llvm-config --version > /dev/null || \
+	(echo; \
+	 echo "******************************************"; \
+	 echo "ERROR: llvm-config not found in your PATH";  \
+	 echo "******************************************"; \
+	 echo; exit 1)
+
+print_llvm_src: llvm_check
 	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
 
 clean:

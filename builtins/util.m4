@@ -737,9 +737,7 @@ define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
   %eltvec`'i = insertelement <$1 x $3> %eltvec`'eval(i-1), $3 %red`'eval(i-1), i32 i')
 
   ; make the atomic call, passing it the final reduced value
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-  %final0 = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %red`'eval($1-1))', `
-  %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst')
+  %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst
 
   ; now go back and compute the values to be returned for each program 
   ; instance--this just involves smearing the old value returned from the
@@ -768,21 +766,10 @@ ifelse(LLVM_VERSION, `LLVM_2_9',`
 ;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
 
 define(`global_atomic_uniform', `
-
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-declare $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %delta)
-
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
-  %r = call $3 @llvm.atomic.load.$2.$3.p0$3($3 * %ptr, $3 %val)
-  ret $3 %r
-}
-', `
 define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
   %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
   ret $3 %r
 }
-')
-
 ')
 
 ;; Macro to declare the function that implements the swap atomic.  
@@ -791,15 +778,9 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-declare i32 @llvm.atomic.swap.i32.p0i32(i32 * %ptr, i32 %val)
-declare i64 @llvm.atomic.swap.i64.p0i64(i64 * %ptr, i64 %val)')
-
 define(`global_swap', `
 define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
-ifelse(LLVM_VERSION, `LLVM_2_9',`
- %r = call $2 @llvm.atomic.swap.$2.p0$2($2 * %ptr, $2 %val)', `
- %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst')
+ %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst
  ret $2 %r
 }
 ')
@@ -813,9 +794,6 @@ ifelse(LLVM_VERSION, `LLVM_2_9',`
 
 define(`global_atomic_exchange', `
 
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-declare $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)')
-
 define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
                                <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline {
   %rptr = alloca <$1 x $2>
@@ -824,10 +802,7 @@ define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
   per_lane($1, <$1 x MASK> %mask, `
    %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
    %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-   %r_LANE_ID = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp_LANE_ID,
-                                                         $2 %val_LANE_ID)', `
-   %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst')
+   %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
    %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
    store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
 
@@ -837,9 +812,7 @@ ifelse(LLVM_VERSION, `LLVM_2_9',`
 
 define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
                                                        $2 %val) nounwind alwaysinline {
-ifelse(LLVM_VERSION, `LLVM_2_9',`
-  %r = call $2 @llvm.atomic.cmp.swap.$2.p0$2($2 * %ptr, $2 %cmp, $2 %val)', `
-  %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst')
+  %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
   ret $2 %r
 }
 ')
@@ -873,30 +846,6 @@ define i64 @__count_leading_zeros_i64(i64) nounwind readnone alwaysinline {
 ;; prefetching
 
 define(`define_prefetches', `
-ifelse(LLVM_VERSION, `LLVM_2_9',
-`
-declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality)
-
-define void @__prefetch_read_uniform_1(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 3)
-  ret void
-}
-
-define void @__prefetch_read_uniform_2(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 2)
-  ret void
-}
-
-define void @__prefetch_read_uniform_3(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 1)
-  ret void
-}
-
-define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
-  call void @llvm.prefetch(i8 * %0, i32 0, i32 0)
-  ret void
-}
-', `
 declare void @llvm.prefetch(i8* nocapture %ptr, i32 %readwrite, i32 %locality,
                             i32 %cachetype) ; cachetype == 1 is dcache
 
@@ -919,7 +868,6 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
   call void @llvm.prefetch(i8 * %0, i32 0, i32 0, i32 1)
   ret void
 }
-')
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1602,6 +1550,11 @@ declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
+
+define void @__pause() nounwind readnone {
+  call void asm sideeffect "pause", "~{dirflag},~{fpsr},~{flags}"() nounwind
+  ret void
+}
 
 ; This function declares placeholder masked store functions for the
 ;  front-end to use.
@@ -2751,22 +2704,22 @@ define(`masked_store_blend_8_16_by_4', `
 define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
                                      <4 x i32>) nounwind alwaysinline {
   %old = load <4 x i8> * %0, align 1
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old32 = bitcast <4 x i8> %old to i32
+    %new32 = bitcast <4 x i8> %1 to i32
+
+    %mask8 = trunc <4 x i32> %2 to <4 x i8>
+    %mask32 = bitcast <4 x i8> %mask8 to i32
+    %notmask32 = xor i32 %mask32, -1
+
+    %newmasked = and i32 %new32, %mask32
+    %oldmasked = and i32 %old32, %notmask32
+    %result = or i32 %newmasked, %oldmasked
+
+    %resultvec = bitcast i32 %result to <4 x i8>
+  ',`
     %m = trunc <4 x i32> %2 to <4 x i1>
     %resultvec = select <4 x i1> %m, <4 x i8> %1, <4 x i8> %old
-  ',`
-  %old32 = bitcast <4 x i8> %old to i32
-  %new32 = bitcast <4 x i8> %1 to i32
-
-  %mask8 = trunc <4 x i32> %2 to <4 x i8>
-  %mask32 = bitcast <4 x i8> %mask8 to i32
-  %notmask32 = xor i32 %mask32, -1
-
-  %newmasked = and i32 %new32, %mask32
-  %oldmasked = and i32 %old32, %notmask32
-  %result = or i32 %newmasked, %oldmasked
-
-  %resultvec = bitcast i32 %result to <4 x i8>
   ')
   store <4 x i8> %resultvec, <4 x i8> * %0, align 1
   ret void
@@ -2775,22 +2728,22 @@ define void @__masked_store_blend_i8(<4 x i8>* nocapture, <4 x i8>,
 define void @__masked_store_blend_i16(<4 x i16>* nocapture, <4 x i16>,
                                       <4 x i32>) nounwind alwaysinline {
   %old = load <4 x i16> * %0, align 2
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old64 = bitcast <4 x i16> %old to i64
+    %new64 = bitcast <4 x i16> %1 to i64
+
+    %mask16 = trunc <4 x i32> %2 to <4 x i16>
+    %mask64 = bitcast <4 x i16> %mask16 to i64
+    %notmask64 = xor i64 %mask64, -1
+
+    %newmasked = and i64 %new64, %mask64
+    %oldmasked = and i64 %old64, %notmask64
+    %result = or i64 %newmasked, %oldmasked
+
+    %resultvec = bitcast i64 %result to <4 x i16>
+  ',`
     %m = trunc <4 x i32> %2 to <4 x i1>
     %resultvec = select <4 x i1> %m, <4 x i16> %1, <4 x i16> %old
-  ',`
-  %old64 = bitcast <4 x i16> %old to i64
-  %new64 = bitcast <4 x i16> %1 to i64
-
-  %mask16 = trunc <4 x i32> %2 to <4 x i16>
-  %mask64 = bitcast <4 x i16> %mask16 to i64
-  %notmask64 = xor i64 %mask64, -1
-
-  %newmasked = and i64 %new64, %mask64
-  %oldmasked = and i64 %old64, %notmask64
-  %result = or i64 %newmasked, %oldmasked
-
-  %resultvec = bitcast i64 %result to <4 x i16>
   ')
   store <4 x i16> %resultvec, <4 x i16> * %0, align 2
   ret void
@@ -2801,22 +2754,22 @@ define(`masked_store_blend_8_16_by_8', `
 define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
                                      <8 x i32>) nounwind alwaysinline {
   %old = load <8 x i8> * %0, align 1
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old64 = bitcast <8 x i8> %old to i64
+    %new64 = bitcast <8 x i8> %1 to i64
+
+    %mask8 = trunc <8 x i32> %2 to <8 x i8>
+    %mask64 = bitcast <8 x i8> %mask8 to i64
+    %notmask64 = xor i64 %mask64, -1
+
+    %newmasked = and i64 %new64, %mask64
+    %oldmasked = and i64 %old64, %notmask64
+    %result = or i64 %newmasked, %oldmasked
+
+    %resultvec = bitcast i64 %result to <8 x i8>
+  ',`
     %m = trunc <8 x i32> %2 to <8 x i1>
     %resultvec = select <8 x i1> %m, <8 x i8> %1, <8 x i8> %old
-  ',`
-  %old64 = bitcast <8 x i8> %old to i64
-  %new64 = bitcast <8 x i8> %1 to i64
-
-  %mask8 = trunc <8 x i32> %2 to <8 x i8>
-  %mask64 = bitcast <8 x i8> %mask8 to i64
-  %notmask64 = xor i64 %mask64, -1
-
-  %newmasked = and i64 %new64, %mask64
-  %oldmasked = and i64 %old64, %notmask64
-  %result = or i64 %newmasked, %oldmasked
-
-  %resultvec = bitcast i64 %result to <8 x i8>
   ')
   store <8 x i8> %resultvec, <8 x i8> * %0, align 1
   ret void
@@ -2825,22 +2778,22 @@ define void @__masked_store_blend_i8(<8 x i8>* nocapture, <8 x i8>,
 define void @__masked_store_blend_i16(<8 x i16>* nocapture, <8 x i16>,
                                       <8 x i32>) nounwind alwaysinline {
   %old = load <8 x i16> * %0, align 2
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old128 = bitcast <8 x i16> %old to i128
+    %new128 = bitcast <8 x i16> %1 to i128
+
+    %mask16 = trunc <8 x i32> %2 to <8 x i16>
+    %mask128 = bitcast <8 x i16> %mask16 to i128
+    %notmask128 = xor i128 %mask128, -1
+
+    %newmasked = and i128 %new128, %mask128
+    %oldmasked = and i128 %old128, %notmask128
+    %result = or i128 %newmasked, %oldmasked
+
+    %resultvec = bitcast i128 %result to <8 x i16>
+  ',`
     %m = trunc <8 x i32> %2 to <8 x i1>
     %resultvec = select <8 x i1> %m, <8 x i16> %1, <8 x i16> %old
-  ',`
-  %old128 = bitcast <8 x i16> %old to i128
-  %new128 = bitcast <8 x i16> %1 to i128
-
-  %mask16 = trunc <8 x i32> %2 to <8 x i16>
-  %mask128 = bitcast <8 x i16> %mask16 to i128
-  %notmask128 = xor i128 %mask128, -1
-
-  %newmasked = and i128 %new128, %mask128
-  %oldmasked = and i128 %old128, %notmask128
-  %result = or i128 %newmasked, %oldmasked
-
-  %resultvec = bitcast i128 %result to <8 x i16>
   ')
   store <8 x i16> %resultvec, <8 x i16> * %0, align 2
   ret void
@@ -2852,22 +2805,22 @@ define(`masked_store_blend_8_16_by_16', `
 define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
                                      <16 x i32>) nounwind alwaysinline {
   %old = load <16 x i8> * %0, align 1
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old128 = bitcast <16 x i8> %old to i128
+    %new128 = bitcast <16 x i8> %1 to i128
+
+    %mask8 = trunc <16 x i32> %2 to <16 x i8>
+    %mask128 = bitcast <16 x i8> %mask8 to i128
+    %notmask128 = xor i128 %mask128, -1
+
+    %newmasked = and i128 %new128, %mask128
+    %oldmasked = and i128 %old128, %notmask128
+    %result = or i128 %newmasked, %oldmasked
+
+    %resultvec = bitcast i128 %result to <16 x i8>
+  ',`
     %m = trunc <16 x i32> %2 to <16 x i1>
     %resultvec = select <16 x i1> %m, <16 x i8> %1, <16 x i8> %old
-  ',`
-  %old128 = bitcast <16 x i8> %old to i128
-  %new128 = bitcast <16 x i8> %1 to i128
-
-  %mask8 = trunc <16 x i32> %2 to <16 x i8>
-  %mask128 = bitcast <16 x i8> %mask8 to i128
-  %notmask128 = xor i128 %mask128, -1
-
-  %newmasked = and i128 %new128, %mask128
-  %oldmasked = and i128 %old128, %notmask128
-  %result = or i128 %newmasked, %oldmasked
-
-  %resultvec = bitcast i128 %result to <16 x i8>
   ')
   store <16 x i8> %resultvec, <16 x i8> * %0, align 1
   ret void
@@ -2876,22 +2829,22 @@ define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
 define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
                                       <16 x i32>) nounwind alwaysinline {
   %old = load <16 x i16> * %0, align 2
-  ifelse(LLVM_VERSION,LLVM_3_1svn,`
+  ifelse(LLVM_VERSION,LLVM_3_0,`
+    %old256 = bitcast <16 x i16> %old to i256
+    %new256 = bitcast <16 x i16> %1 to i256
+
+    %mask16 = trunc <16 x i32> %2 to <16 x i16>
+    %mask256 = bitcast <16 x i16> %mask16 to i256
+    %notmask256 = xor i256 %mask256, -1
+
+    %newmasked = and i256 %new256, %mask256
+    %oldmasked = and i256 %old256, %notmask256
+    %result = or i256 %newmasked, %oldmasked
+
+    %resultvec = bitcast i256 %result to <16 x i16>
+  ',`
     %m = trunc <16 x i32> %2 to <16 x i1>
     %resultvec = select <16 x i1> %m, <16 x i16> %1, <16 x i16> %old
-  ',`
-  %old256 = bitcast <16 x i16> %old to i256
-  %new256 = bitcast <16 x i16> %1 to i256
-
-  %mask16 = trunc <16 x i32> %2 to <16 x i16>
-  %mask256 = bitcast <16 x i16> %mask16 to i256
-  %notmask256 = xor i256 %mask256, -1
-
-  %newmasked = and i256 %new256, %mask256
-  %oldmasked = and i256 %old256, %notmask256
-  %result = or i256 %newmasked, %oldmasked
-
-  %resultvec = bitcast i256 %result to <16 x i16>
   ')
   store <16 x i16> %resultvec, <16 x i16> * %0, align 2
   ret void

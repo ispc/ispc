@@ -171,7 +171,7 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
 
  done:
     *bufp = '\0';
-    puts(printString);
+    fputs(printString, stdout);
     fflush(stdout);
 }
 

@@ -38,7 +38,7 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.2.3dev"
+#define ISPC_VERSION "1.3.1dev"
 
 #if !defined(LLVM_3_0) && !defined(LLVM_3_1) && !defined(LLVM_3_2)
 #error "Only LLVM 3.0, 3.1, and the 3.2 development branch are supported"
@@ -454,7 +454,6 @@ struct Globals {
 
 enum {
     COST_ASSIGN = 1,
-    COST_COHERENT_BREAK_CONTINE = 4,
     COST_COMPLEX_ARITH_OP = 4,
     COST_DELETE = 32,
     COST_DEREF = 4,
@@ -465,7 +464,7 @@ enum {
     COST_GOTO = 4,
     COST_LOAD = 2,
     COST_NEW = 32,
-    COST_REGULAR_BREAK_CONTINUE = 2,
+    COST_BREAK_CONTINUE = 3,
     COST_RETURN = 4,
     COST_SELECT = 4,
     COST_SIMPLE_ARITH_LOGIC_OP = 1,

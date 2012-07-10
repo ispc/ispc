@@ -45,8 +45,13 @@
 #include <map>
 #include <llvm/Value.h>
 #include <llvm/Module.h>
-#include <llvm/Analysis/DIBuilder.h>
-#include <llvm/Analysis/DebugInfo.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Analysis/DebugInfo.h>
+  #include <llvm/Analysis/DIBuilder.h>
+#else
+  #include <llvm/DebugInfo.h>
+  #include <llvm/DIBuilder.h>
+#endif
 #include <llvm/Support/Dwarf.h>
 
 

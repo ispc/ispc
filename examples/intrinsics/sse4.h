@@ -237,6 +237,31 @@ CAST_BITS_SCALAR(int64_t, double)
 CAST_BITS_SCALAR(double, uint64_t)
 CAST_BITS_SCALAR(double, int64_t)
 
+#define CMP_AND_MASK_ONE(FUNC, TYPE)                                        \
+static FORCEINLINE __vec4_i1 FUNC##_and_mask(TYPE a, TYPE b, __vec4_i1 m) { \
+    return __and(FUNC(a, b), m);                                        \
+}
+
+#define CMP_AND_MASK_INT(TYPE, SUFFIX)           \
+CMP_AND_MASK_ONE(__equal_##SUFFIX, TYPE)         \
+CMP_AND_MASK_ONE(__not_equal_##SUFFIX, TYPE)              \
+CMP_AND_MASK_ONE(__unsigned_less_equal_##SUFFIX, TYPE)    \
+CMP_AND_MASK_ONE(__unsigned_greater_equal_##SUFFIX, TYPE) \
+CMP_AND_MASK_ONE(__unsigned_less_than_##SUFFIX, TYPE)     \
+CMP_AND_MASK_ONE(__unsigned_greater_than_##SUFFIX, TYPE)  \
+CMP_AND_MASK_ONE(__signed_less_equal_##SUFFIX, TYPE)      \
+CMP_AND_MASK_ONE(__signed_greater_equal_##SUFFIX, TYPE)   \
+CMP_AND_MASK_ONE(__signed_less_than_##SUFFIX, TYPE)       \
+CMP_AND_MASK_ONE(__signed_greater_than_##SUFFIX, TYPE)
+
+#define CMP_AND_MASK_FLOAT(TYPE, SUFFIX)           \
+CMP_AND_MASK_ONE(__equal_##SUFFIX, TYPE)         \
+CMP_AND_MASK_ONE(__not_equal_##SUFFIX, TYPE)              \
+CMP_AND_MASK_ONE(__less_equal_##SUFFIX, TYPE)      \
+CMP_AND_MASK_ONE(__greater_equal_##SUFFIX, TYPE)   \
+CMP_AND_MASK_ONE(__less_than_##SUFFIX, TYPE)       \
+CMP_AND_MASK_ONE(__greater_than_##SUFFIX, TYPE)
+
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
@@ -244,7 +269,7 @@ static FORCEINLINE uint64_t __movmsk(__vec4_i1 mask) {
     return (uint64_t)_mm_movemask_ps(mask.v);
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_i1 a, __vec4_i1 b) {
+static FORCEINLINE __vec4_i1 __equal_i1(__vec4_i1 a, __vec4_i1 b) {
     return _mm_cmpeq_epi32(_mm_castps_si128(a.v), _mm_castps_si128(b.v));
 }
 
@@ -287,7 +312,7 @@ static FORCEINLINE void __insert_element(__vec4_i1 *v, int index, bool val) {
     ((int32_t *)v)[index] = val ? -1 : 0;
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i1 __load(__vec4_i1 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i1 __load(const __vec4_i1 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
@@ -297,8 +322,16 @@ template <int ALIGN> static FORCEINLINE void __store(__vec4_i1 *p, __vec4_i1 val
     _mm_storeu_ps((float *)(&p->v), value.v);
 }
 
-static FORCEINLINE __vec4_i1 __smear_i1(__vec4_i1, int v) {
+static FORCEINLINE __vec4_i1 __smear_i1(int v) {
     return __vec4_i1(v, v, v, v);
+}
+
+static FORCEINLINE __vec4_i1 __setzero_i1() {
+    return __vec4_i1(_mm_setzero_ps());
+}
+
+static FORCEINLINE __vec4_i1 __undef_i1() {
+    return __vec4_i1();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -425,7 +458,7 @@ static FORCEINLINE __vec4_i8 __ashr(__vec4_i8 a, int32_t b) {
                      (int8_t)_mm_extract_epi8(a.v, 3) >> b);
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1 __equal_i8(__vec4_i8 a, __vec4_i8 b) {
     __m128i cmp = _mm_cmpeq_epi8(a.v, b.v);
     return __vec4_i1(_mm_extract_epi8(cmp, 0),
                      _mm_extract_epi8(cmp, 1),
@@ -433,11 +466,12 @@ static FORCEINLINE __vec4_i1 __equal(__vec4_i8 a, __vec4_i8 b) {
                      _mm_extract_epi8(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1 __not_equal(__vec4_i8 a, __vec4_i8 b) {
-    return __xor(__equal(a, b), __vec4_i1(1, 1, 1, 1));
+
+static FORCEINLINE __vec4_i1 __not_equal_i8(__vec4_i8 a, __vec4_i8 b) {
+    return __xor(__equal_i8(a, b), __vec4_i1(1, 1, 1, 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_equal_i8(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i1((uint8_t)_mm_extract_epi8(a.v, 0) <=
                      (uint8_t)_mm_extract_epi8(b.v, 0),
                      (uint8_t)_mm_extract_epi8(a.v, 1) <=
@@ -448,7 +482,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i8 a, __vec4_i8 b) {
                      (uint8_t)_mm_extract_epi8(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_equal_i8(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i1((uint8_t)_mm_extract_epi8(a.v, 0) >=
                      (uint8_t)_mm_extract_epi8(b.v, 0),
                      (uint8_t)_mm_extract_epi8(a.v, 1) >=
@@ -459,7 +493,7 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i8 a, __vec4_i8 b) 
                      (uint8_t)_mm_extract_epi8(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_than_i8(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i1((uint8_t)_mm_extract_epi8(a.v, 0) <
                      (uint8_t)_mm_extract_epi8(b.v, 0),
                      (uint8_t)_mm_extract_epi8(a.v, 1) <
@@ -470,7 +504,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i8 a, __vec4_i8 b) {
                      (uint8_t)_mm_extract_epi8(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_than_i8(__vec4_i8 a, __vec4_i8 b) {
     return __vec4_i1((uint8_t)_mm_extract_epi8(a.v, 0) >
                      (uint8_t)_mm_extract_epi8(b.v, 0),
                      (uint8_t)_mm_extract_epi8(a.v, 1) >
@@ -481,7 +515,7 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i8 a, __vec4_i8 b) {
                      (uint8_t)_mm_extract_epi8(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_less_than(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1  __signed_less_than_i8(__vec4_i8 a, __vec4_i8 b) {
     __m128i cmp = _mm_cmplt_epi8(a.v, b.v);
     return __vec4_i1(_mm_extract_epi8(cmp, 0),
                      _mm_extract_epi8(cmp, 1),
@@ -489,11 +523,11 @@ static FORCEINLINE __vec4_i1  __signed_less_than(__vec4_i8 a, __vec4_i8 b) {
                      _mm_extract_epi8(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_less_equal(__vec4_i8 a, __vec4_i8 b) {
-    return __or(__signed_less_than(a, b), __equal(a, b));
+static FORCEINLINE __vec4_i1  __signed_less_equal_i8(__vec4_i8 a, __vec4_i8 b) {
+    return __or(__signed_less_than_i8(a, b), __equal_i8(a, b));
 }
 
-static FORCEINLINE __vec4_i1  __signed_greater_than(__vec4_i8 a, __vec4_i8 b) {
+static FORCEINLINE __vec4_i1  __signed_greater_than_i8(__vec4_i8 a, __vec4_i8 b) {
     __m128i cmp = _mm_cmpgt_epi8(a.v, b.v);
     return __vec4_i1(_mm_extract_epi8(cmp, 0),
                      _mm_extract_epi8(cmp, 1),
@@ -501,9 +535,11 @@ static FORCEINLINE __vec4_i1  __signed_greater_than(__vec4_i8 a, __vec4_i8 b) {
                      _mm_extract_epi8(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_greater_equal(__vec4_i8 a, __vec4_i8 b) {
-    return __or(__signed_greater_than(a, b), __equal(a, b));
+static FORCEINLINE __vec4_i1  __signed_greater_equal_i8(__vec4_i8 a, __vec4_i8 b) {
+    return __or(__signed_greater_than_i8(a, b), __equal_i8(a, b));
 }
+
+CMP_AND_MASK_INT(__vec4_i8, i8)
 
 static FORCEINLINE __vec4_i8 __select(__vec4_i1 mask, __vec4_i8 a, __vec4_i8 b) {
     return __vec4_i8((_mm_extract_ps(mask.v, 0) != 0) ? _mm_extract_epi8(a.v, 0) : 
@@ -524,8 +560,16 @@ static FORCEINLINE void __insert_element(__vec4_i8 *v, int index, int8_t val) {
     ((int8_t *)v)[index] = val;
 }
 
-static FORCEINLINE __vec4_i8 __smear_i8(__vec4_i8, int8_t v) {
+static FORCEINLINE __vec4_i8 __smear_i8(int8_t v) {
     return _mm_set1_epi8(v);
+}
+
+static FORCEINLINE __vec4_i8 __setzero_i8() {
+    return _mm_set1_epi8(0);
+}
+
+static FORCEINLINE __vec4_i8 __undef_i8() {
+    return __vec4_i8();
 }
 
 static FORCEINLINE __vec4_i8 __broadcast_i8(__vec4_i8 v, int index) {
@@ -556,7 +600,7 @@ static FORCEINLINE __vec4_i8 __shuffle2_i8(__vec4_i8 v0, __vec4_i8 v1,
     return __vec4_i8(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i8 __load(__vec4_i8 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i8 __load(const __vec4_i8 *v) {
     uint8_t *ptr = (uint8_t *)(&v->v);
     return __vec4_i8(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -681,7 +725,7 @@ static FORCEINLINE __vec4_i16 __ashr(__vec4_i16 a, int32_t b) {
     return _mm_sra_epi16(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1 __equal_i16(__vec4_i16 a, __vec4_i16 b) {
     __m128i cmp = _mm_cmpeq_epi16(a.v, b.v);
     return __vec4_i1(_mm_extract_epi16(cmp, 0),
                      _mm_extract_epi16(cmp, 1),
@@ -689,11 +733,11 @@ static FORCEINLINE __vec4_i1 __equal(__vec4_i16 a, __vec4_i16 b) {
                      _mm_extract_epi16(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1  __not_equal(__vec4_i16 a, __vec4_i16 b) {
-    return __xor(__equal(a, b), __vec4_i1(1, 1, 1, 1));
+static FORCEINLINE __vec4_i1  __not_equal_i16(__vec4_i16 a, __vec4_i16 b) {
+    return __xor(__equal_i16(a, b), __vec4_i1(1, 1, 1, 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_equal_i16(__vec4_i16 a, __vec4_i16 b) {
     // FIXME: could use the trick that int32 does for the unsigned
     // comparisons so that we don't need to scalarie them.  (This also
     // applies to i8s...)
@@ -707,7 +751,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i16 a, __vec4_i16 b) {
                      (uint16_t)_mm_extract_epi16(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_equal_i16(__vec4_i16 a, __vec4_i16 b) {
     return __vec4_i1((uint16_t)_mm_extract_epi16(a.v, 0) >=
                      (uint16_t)_mm_extract_epi16(b.v, 0),
                      (uint16_t)_mm_extract_epi16(a.v, 1) >=
@@ -718,7 +762,7 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i16 a, __vec4_i16 b
                      (uint16_t)_mm_extract_epi16(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_than_i16(__vec4_i16 a, __vec4_i16 b) {
     return __vec4_i1((uint16_t)_mm_extract_epi16(a.v, 0) <
                      (uint16_t)_mm_extract_epi16(b.v, 0),
                      (uint16_t)_mm_extract_epi16(a.v, 1) <
@@ -729,7 +773,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i16 a, __vec4_i16 b) {
                      (uint16_t)_mm_extract_epi16(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_than_i16(__vec4_i16 a, __vec4_i16 b) {
     return __vec4_i1((uint16_t)_mm_extract_epi16(a.v, 0) >
                      (uint16_t)_mm_extract_epi16(b.v, 0),
                      (uint16_t)_mm_extract_epi16(a.v, 1) >
@@ -740,7 +784,7 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i16 a, __vec4_i16 b)
                      (uint16_t)_mm_extract_epi16(b.v, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_less_than(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1  __signed_less_than_i16(__vec4_i16 a, __vec4_i16 b) {
     __m128i cmp = _mm_cmplt_epi16(a.v, b.v);
     return __vec4_i1(_mm_extract_epi16(cmp, 0),
                      _mm_extract_epi16(cmp, 1),
@@ -748,11 +792,11 @@ static FORCEINLINE __vec4_i1  __signed_less_than(__vec4_i16 a, __vec4_i16 b) {
                      _mm_extract_epi16(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_less_equal(__vec4_i16 a, __vec4_i16 b) {
-    return __or(__signed_less_than(a, b), __equal(a, b));
+static FORCEINLINE __vec4_i1  __signed_less_equal_i16(__vec4_i16 a, __vec4_i16 b) {
+    return __or(__signed_less_than_i16(a, b), __equal_i16(a, b));
 }
 
-static FORCEINLINE __vec4_i1  __signed_greater_than(__vec4_i16 a, __vec4_i16 b) {
+static FORCEINLINE __vec4_i1  __signed_greater_than_i16(__vec4_i16 a, __vec4_i16 b) {
     __m128i cmp =  _mm_cmpgt_epi16(a.v, b.v);
     return __vec4_i1(_mm_extract_epi16(cmp, 0),
                      _mm_extract_epi16(cmp, 1),
@@ -760,9 +804,11 @@ static FORCEINLINE __vec4_i1  __signed_greater_than(__vec4_i16 a, __vec4_i16 b) 
                      _mm_extract_epi16(cmp, 3));
 }
 
-static FORCEINLINE __vec4_i1  __signed_greater_equal(__vec4_i16 a, __vec4_i16 b) {
-    return __or(__signed_greater_than(a, b), __equal(a, b));
+static FORCEINLINE __vec4_i1  __signed_greater_equal_i16(__vec4_i16 a, __vec4_i16 b) {
+    return __or(__signed_greater_than_i16(a, b), __equal_i16(a, b));
 }
+
+CMP_AND_MASK_INT(__vec4_i16, i16)
 
 static FORCEINLINE __vec4_i16 __select(__vec4_i1 mask, __vec4_i16 a, __vec4_i16 b) {
     return __vec4_i16((_mm_extract_ps(mask.v, 0) != 0) ? _mm_extract_epi16(a.v, 0) : 
@@ -783,8 +829,16 @@ static FORCEINLINE void __insert_element(__vec4_i16 *v, int index, int16_t val) 
     ((int16_t *)v)[index] = val;
 }
 
-static FORCEINLINE __vec4_i16 __smear_i16(__vec4_i16, int16_t v) {
+static FORCEINLINE __vec4_i16 __smear_i16(int16_t v) {
     return _mm_set1_epi16(v);
+}
+
+static FORCEINLINE __vec4_i16 __setzero_i16() {
+    return _mm_set1_epi16(0);
+}
+
+static FORCEINLINE __vec4_i16 __undef_i16() {
+    return __vec4_i16();
 }
 
 static FORCEINLINE __vec4_i16 __broadcast_i16(__vec4_i16 v, int index) {
@@ -815,7 +869,7 @@ static FORCEINLINE __vec4_i16 __shuffle2_i16(__vec4_i16 v0, __vec4_i16 v1,
     return __vec4_i16(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i16 __load(__vec4_i16 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i16 __load(const __vec4_i16 *v) {
     uint16_t *ptr = (uint16_t *)(&v->v);
     return __vec4_i16(ptr[0], ptr[1], ptr[2], ptr[3]);
 }
@@ -966,62 +1020,72 @@ static FORCEINLINE __vec4_i32 __ashr(__vec4_i32 a, int32_t b) {
     return _mm_sra_epi32(a.v, _mm_set_epi32(0, 0, 0, b));
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __equal_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_cmpeq_epi32(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __not_equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __not_equal_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_xor_si128(_mm_cmpeq_epi32(a.v, b.v),
                          _mm_cmpeq_epi32(a.v, a.v));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_equal_i32(__vec4_i32 a, __vec4_i32 b) {
     // a<=b == (min(a,b) == a)
     return _mm_cmpeq_epi32(_mm_min_epu32(a.v, b.v), a.v);
 }
 
-static FORCEINLINE __vec4_i1 __signed_less_equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __signed_less_equal_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_or_si128(_mm_cmplt_epi32(a.v, b.v),
                         _mm_cmpeq_epi32(a.v, b.v));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_equal_i32(__vec4_i32 a, __vec4_i32 b) {
     // a>=b == (max(a,b) == a)
     return _mm_cmpeq_epi32(_mm_max_epu32(a.v, b.v), a.v);
 }
 
-static FORCEINLINE __vec4_i1 __signed_greater_equal(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __signed_greater_equal_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_or_si128(_mm_cmpgt_epi32(a.v, b.v),
                         _mm_cmpeq_epi32(a.v, b.v));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_than_i32(__vec4_i32 a, __vec4_i32 b) {
     a.v = _mm_xor_si128(a.v, _mm_set1_epi32(0x80000000));
     b.v = _mm_xor_si128(b.v, _mm_set1_epi32(0x80000000));
     return _mm_cmplt_epi32(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __signed_less_than(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __signed_less_than_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_cmplt_epi32(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_than_i32(__vec4_i32 a, __vec4_i32 b) {
     a.v = _mm_xor_si128(a.v, _mm_set1_epi32(0x80000000));
     b.v = _mm_xor_si128(b.v, _mm_set1_epi32(0x80000000));
     return _mm_cmpgt_epi32(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __signed_greater_than(__vec4_i32 a, __vec4_i32 b) {
+static FORCEINLINE __vec4_i1 __signed_greater_than_i32(__vec4_i32 a, __vec4_i32 b) {
     return _mm_cmpgt_epi32(a.v, b.v);
 }
+
+CMP_AND_MASK_INT(__vec4_i32, i32)
 
 static FORCEINLINE __vec4_i32 __select(__vec4_i1 mask, __vec4_i32 a, __vec4_i32 b) {
     return _mm_castps_si128(_mm_blendv_ps(_mm_castsi128_ps(b.v), 
                                           _mm_castsi128_ps(a.v), mask.v));
 }
 
-static FORCEINLINE __vec4_i32 __smear_i32(__vec4_i32, int32_t v) {
+static FORCEINLINE __vec4_i32 __smear_i32(int32_t v) {
     return _mm_set1_epi32(v);
+}
+
+static FORCEINLINE __vec4_i32 __setzero_i32() {
+    return _mm_castps_si128(_mm_setzero_ps());
+}
+
+static FORCEINLINE __vec4_i32 __undef_i32() {
+    return __vec4_i32();
 }
 
 static FORCEINLINE int32_t __extract_element(__vec4_i32 v, int index) {
@@ -1060,7 +1124,7 @@ static FORCEINLINE __vec4_i32 __shuffle2_i32(__vec4_i32 v0, __vec4_i32 v1,
     return __vec4_i32(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i32 __load(__vec4_i32 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i32 __load(const __vec4_i32 *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_si128((__m128i *)(&v->v));
 }
@@ -1197,18 +1261,18 @@ static FORCEINLINE __vec4_i64 __ashr(__vec4_i64 a, int32_t b) {
                       (int64_t)_mm_extract_epi64(a.v[1], 1) >> b);
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __equal_i64(__vec4_i64 a, __vec4_i64 b) {
     __m128i cmp0 = _mm_cmpeq_epi64(a.v[0], b.v[0]);
     __m128i cmp1 = _mm_cmpeq_epi64(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castsi128_ps(cmp0), _mm_castsi128_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __not_equal(__vec4_i64 a, __vec4_i64 b) {
-    return __xor(__equal(a, b), __vec4_i1(1, 1, 1, 1));
+static FORCEINLINE __vec4_i1 __not_equal_i64(__vec4_i64 a, __vec4_i64 b) {
+    return __xor(__equal_i64(a, b), __vec4_i1(1, 1, 1, 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_equal_i64(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i1((uint64_t)_mm_extract_epi64(a.v[0], 0) <=
                      (uint64_t)_mm_extract_epi64(b.v[0], 0),
                      (uint64_t)_mm_extract_epi64(a.v[0], 1) <=
@@ -1219,7 +1283,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_equal(__vec4_i64 a, __vec4_i64 b) {
                      (uint64_t)_mm_extract_epi64(b.v[1], 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_equal_i64(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i1((uint64_t)_mm_extract_epi64(a.v[0], 0) >=
                      (uint64_t)_mm_extract_epi64(b.v[0], 0),
                      (uint64_t)_mm_extract_epi64(a.v[0], 1) >=
@@ -1230,7 +1294,7 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_equal(__vec4_i64 a, __vec4_i64 b
                      (uint64_t)_mm_extract_epi64(b.v[1], 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __unsigned_less_than_i64(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i1((uint64_t)_mm_extract_epi64(a.v[0], 0) <
                      (uint64_t)_mm_extract_epi64(b.v[0], 0),
                      (uint64_t)_mm_extract_epi64(a.v[0], 1) <
@@ -1241,7 +1305,7 @@ static FORCEINLINE __vec4_i1 __unsigned_less_than(__vec4_i64 a, __vec4_i64 b) {
                      (uint64_t)_mm_extract_epi64(b.v[1], 1));
 }
 
-static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __unsigned_greater_than_i64(__vec4_i64 a, __vec4_i64 b) {
     return __vec4_i1((uint64_t)_mm_extract_epi64(a.v[0], 0) >
                      (uint64_t)_mm_extract_epi64(b.v[0], 0),
                      (uint64_t)_mm_extract_epi64(a.v[0], 1) >
@@ -1252,24 +1316,26 @@ static FORCEINLINE __vec4_i1 __unsigned_greater_than(__vec4_i64 a, __vec4_i64 b)
                      (uint64_t)_mm_extract_epi64(b.v[1], 1));
 }
 
-static FORCEINLINE __vec4_i1 __signed_greater_than(__vec4_i64 a, __vec4_i64 b) {
+static FORCEINLINE __vec4_i1 __signed_greater_than_i64(__vec4_i64 a, __vec4_i64 b) {
     __m128i cmp0 = _mm_cmpgt_epi64(a.v[0], b.v[0]);
     __m128i cmp1 = _mm_cmpgt_epi64(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castsi128_ps(cmp0), _mm_castsi128_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __signed_greater_equal(__vec4_i64 a, __vec4_i64 b) {
-    return __or(__signed_greater_than(a, b), __equal(a, b));
+static FORCEINLINE __vec4_i1 __signed_greater_equal_i64(__vec4_i64 a, __vec4_i64 b) {
+    return __or(__signed_greater_than_i64(a, b), __equal_i64(a, b));
 }
 
-static FORCEINLINE __vec4_i1 __signed_less_than(__vec4_i64 a, __vec4_i64 b) {
-    return __xor(__signed_greater_equal(a, b), __vec4_i1(1, 1, 1, 1));
+static FORCEINLINE __vec4_i1 __signed_less_than_i64(__vec4_i64 a, __vec4_i64 b) {
+    return __xor(__signed_greater_equal_i64(a, b), __vec4_i1(1, 1, 1, 1));
 }
 
-static FORCEINLINE __vec4_i1 __signed_less_equal(__vec4_i64 a, __vec4_i64 b) {
-    return __xor(__signed_greater_than(a, b), __vec4_i1(1, 1, 1, 1));
+static FORCEINLINE __vec4_i1 __signed_less_equal_i64(__vec4_i64 a, __vec4_i64 b) {
+    return __xor(__signed_greater_than_i64(a, b), __vec4_i1(1, 1, 1, 1));
 }
+
+CMP_AND_MASK_INT(__vec4_i64, i64)
 
 static FORCEINLINE __vec4_i64 __select(__vec4_i1 mask, __vec4_i64 a, __vec4_i64 b) {
     __m128 m0 = _mm_shuffle_ps(mask.v, mask.v, _MM_SHUFFLE(1, 1, 0, 0));
@@ -1281,8 +1347,16 @@ static FORCEINLINE __vec4_i64 __select(__vec4_i1 mask, __vec4_i64 a, __vec4_i64 
     return __vec4_i64(_mm_castpd_si128(r0), _mm_castpd_si128(r1));
 }
 
-static FORCEINLINE __vec4_i64 __smear_i64(__vec4_i64, int64_t v) {
+static FORCEINLINE __vec4_i64 __smear_i64(int64_t v) {
     return __vec4_i64(v, v, v, v);
+}
+
+static FORCEINLINE __vec4_i64 __setzero_i64() {
+    return __vec4_i64(0, 0, 0, 0);
+}
+
+static FORCEINLINE __vec4_i64 __undef_i64() {
+    return __vec4_i64();
 }
 
 static FORCEINLINE int64_t __extract_element(__vec4_i64 v, int index) {
@@ -1322,7 +1396,7 @@ static FORCEINLINE __vec4_i64 __shuffle2_i64(__vec4_i64 v0, __vec4_i64 v1,
     return __vec4_i64(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_i64 __load(__vec4_i64 *v) {
+template <int ALIGN> static FORCEINLINE __vec4_i64 __load(const __vec4_i64 *v) {
     // FIXME: handle align of 16...
     return __vec4_i64(_mm_loadu_si128((__m128i *)(&v->v[0])),
                       _mm_loadu_si128((__m128i *)(&v->v[1])));
@@ -1353,40 +1427,54 @@ static FORCEINLINE __vec4_f __div(__vec4_f a, __vec4_f b) {
     return _mm_div_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __equal_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpeq_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __not_equal(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __not_equal_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpneq_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __less_than(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __less_than_float(__vec4_f a, __vec4_f b) {
     return _mm_cmplt_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __less_equal(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __less_equal_float(__vec4_f a, __vec4_f b) {
     return _mm_cmple_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __greater_than(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __greater_than_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpgt_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __greater_equal(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __greater_equal_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpge_ps(a.v, b.v);
 }
 
-static FORCEINLINE __vec4_i1 __ordered(__vec4_f a, __vec4_f b) {
+static FORCEINLINE __vec4_i1 __ordered_float(__vec4_f a, __vec4_f b) {
     return _mm_cmpord_ps(a.v, b.v);
 }
+
+static FORCEINLINE __vec4_i1 __unordered_float(__vec4_f a, __vec4_f b) {
+    return _mm_cmpunord_ps(a.v, b.v);
+}
+
+CMP_AND_MASK_FLOAT(__vec4_f, float)
 
 static FORCEINLINE __vec4_f __select(__vec4_i1 mask, __vec4_f a, __vec4_f b) {
     return _mm_blendv_ps(b.v, a.v, mask.v);
 }
 
-static FORCEINLINE __vec4_f __smear_float(__vec4_f, float v) {
+static FORCEINLINE __vec4_f __smear_float(float v) {
     return _mm_set1_ps(v);
+}
+
+static FORCEINLINE __vec4_f __setzero_float() {
+    return _mm_setzero_ps();
+}
+
+static FORCEINLINE __vec4_f __undef_float() {
+    return __vec4_f();
 }
 
 static FORCEINLINE float __extract_element(__vec4_f v, int index) {
@@ -1425,7 +1513,7 @@ static FORCEINLINE __vec4_f __shuffle2_float(__vec4_f v0, __vec4_f v1,
     return __vec4_f(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_f __load(__vec4_f *v) {
+template <int ALIGN> static FORCEINLINE __vec4_f __load(const __vec4_f *v) {
     // FIXME: handle align of 16...
     return _mm_loadu_ps((float *)(&v->v));
 }
@@ -1458,54 +1546,63 @@ static FORCEINLINE __vec4_d __div(__vec4_d a, __vec4_d b) {
                     _mm_div_pd(a.v[1], b.v[1]));
 }
 
-static FORCEINLINE __vec4_i1 __equal(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __equal_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpeq_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpeq_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __not_equal(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __not_equal_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpneq_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpneq_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __less_than(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __less_than_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmplt_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmplt_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __less_equal(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __less_equal_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmple_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmple_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __greater_than(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __greater_than_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpgt_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpgt_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 0 ,2));
 }
 
-static FORCEINLINE __vec4_i1 __greater_equal(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __greater_equal_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpge_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpge_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
 
-static FORCEINLINE __vec4_i1 __ordered(__vec4_d a, __vec4_d b) {
+static FORCEINLINE __vec4_i1 __ordered_double(__vec4_d a, __vec4_d b) {
     __m128d cmp0 = _mm_cmpord_pd(a.v[0], b.v[0]);
     __m128d cmp1 = _mm_cmpord_pd(a.v[1], b.v[1]);
     return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
                           _MM_SHUFFLE(2, 0, 2, 0));
 }
+
+static FORCEINLINE __vec4_i1 __unordered_double(__vec4_d a, __vec4_d b) {
+    __m128d cmp0 = _mm_cmpunord_pd(a.v[0], b.v[0]);
+    __m128d cmp1 = _mm_cmpunord_pd(a.v[1], b.v[1]);
+    return _mm_shuffle_ps(_mm_castpd_ps(cmp0), _mm_castpd_ps(cmp1),
+                          _MM_SHUFFLE(2, 0, 2, 0));
+}
+
+CMP_AND_MASK_FLOAT(__vec4_d, double)
 
 static FORCEINLINE __vec4_d __select(__vec4_i1 mask, __vec4_d a, __vec4_d b) {
     __m128 m0 = _mm_shuffle_ps(mask.v, mask.v, _MM_SHUFFLE(1, 1, 0, 0));
@@ -1517,8 +1614,16 @@ static FORCEINLINE __vec4_d __select(__vec4_i1 mask, __vec4_d a, __vec4_d b) {
     return __vec4_d(r0, r1);
 }
 
-static FORCEINLINE __vec4_d __smear_double(__vec4_d, double v) {
+static FORCEINLINE __vec4_d __smear_double(double v) {
     return __vec4_d(_mm_set1_pd(v), _mm_set1_pd(v));
+}
+
+static FORCEINLINE __vec4_d __setzero_double() {
+    return __vec4_d(_mm_setzero_pd(), _mm_setzero_pd());
+}
+
+static FORCEINLINE __vec4_d __undef_double() {
+    return __vec4_d();
 }
 
 static FORCEINLINE double __extract_element(__vec4_d v, int index) {
@@ -1558,7 +1663,7 @@ static FORCEINLINE __vec4_d __shuffle2_double(__vec4_d v0, __vec4_d v1,
     return __vec4_d(r[0], r[1], r[2], r[3]);
 }
 
-template <int ALIGN> static FORCEINLINE __vec4_d __load(__vec4_d *v) {
+template <int ALIGN> static FORCEINLINE __vec4_d __load(const __vec4_d *v) {
     // FIXME: handle align of 16...
     return __vec4_d(_mm_loadu_pd((double *)(&v->v[0])),
                     _mm_loadu_pd((double *)(&v->v[1])));
@@ -1617,13 +1722,11 @@ static FORCEINLINE __vec4_i16 __cast_sext(__vec4_i16, __vec4_i8 val) {
 }
 
 static FORCEINLINE __vec4_i8 __cast_sext(__vec4_i8, __vec4_i1 v) {
-    return __select(v, __smear_i8(__vec4_i8(), 0xff), 
-                       __smear_i8(__vec4_i8(), 0));
+    return __select(v, __smear_i8(0xff), __setzero_i8());
 }
 
 static FORCEINLINE __vec4_i16 __cast_sext(__vec4_i16, __vec4_i1 v) {
-    return __select(v, __smear_i16(__vec4_i16(), 0xffff),
-                       __smear_i16(__vec4_i16(), 0));
+    return __select(v, __smear_i16(0xffff), __setzero_i16());
 }
 
 static FORCEINLINE __vec4_i32 __cast_sext(__vec4_i32, __vec4_i1 v) {
@@ -1683,12 +1786,11 @@ static FORCEINLINE __vec4_i16 __cast_zext(__vec4_i16, __vec4_i8 val) {
 }
 
 static FORCEINLINE __vec4_i8 __cast_zext(__vec4_i8, __vec4_i1 v) {
-    return __select(v, __smear_i8(__vec4_i8(), 1), __smear_i8(__vec4_i8(), 0));
+    return __select(v, __smear_i8(1), __setzero_i8());
 }
 
 static FORCEINLINE __vec4_i16 __cast_zext(__vec4_i16, __vec4_i1 v) {
-    return __select(v, __smear_i16(__vec4_i16(), 1), 
-                       __smear_i16(__vec4_i16(), 0));
+    return __select(v, __smear_i16(1), __setzero_i16());
 }
 
 static FORCEINLINE __vec4_i32 __cast_zext(__vec4_i32, __vec4_i1 v) {
@@ -1696,7 +1798,7 @@ static FORCEINLINE __vec4_i32 __cast_zext(__vec4_i32, __vec4_i1 v) {
 }
 
 static FORCEINLINE __vec4_i64 __cast_zext(__vec4_i64, __vec4_i1 v) {
-    return __select(v, __smear_i64(__vec4_i64(), 1), __smear_i64(__vec4_i64(), 0));
+    return __select(v, __smear_i64(1), __setzero_i64());
 }
 
 // truncations
@@ -1856,11 +1958,11 @@ static FORCEINLINE __vec4_d __cast_uitofp(__vec4_d, __vec4_i64 val) {
 }
 
 static FORCEINLINE __vec4_f __cast_uitofp(__vec4_f, __vec4_i1 v) {
-    return __select(v, __smear_float(__vec4_f(), 1.), __smear_float(__vec4_f(), 0.));
+    return __select(v, __smear_float(1.), __setzero_float());
 }
 
 static FORCEINLINE __vec4_d __cast_uitofp(__vec4_d, __vec4_i1 v) {
-    return __select(v, __smear_double(__vec4_d(), 1.), __smear_double(__vec4_d(), 0.));
+    return __select(v, __smear_double(1.), __setzero_double());
 }
 
 // float/double to signed int
@@ -2795,8 +2897,8 @@ lGatherBaseOffsets32(RetVec, RetScalar, unsigned char *p, __vec4_i32 offsets,
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
-    offsets = __select(mask, offsets, __smear_i32(__vec4_i32(), 0));
-    constOffset = __select(mask, constOffset, __smear_i32(__vec4_i32(), 0));
+    offsets = __select(mask, offsets, __setzero_i32());
+    constOffset = __select(mask, constOffset, __setzero_i32());
 
     int offset = scale * _mm_extract_epi32(offsets.v, 0) + _mm_extract_epi32(constOffset.v, 0);
     RetScalar *ptr = (RetScalar *)(p + offset);
@@ -2853,8 +2955,8 @@ lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, __vec4_i64 offsets,
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
-    offsets = __select(mask, offsets, __smear_i64(__vec4_i64(), 0));
-    constOffset = __select(mask, constOffset, __smear_i64(__vec4_i64(), 0));
+    offsets = __select(mask, offsets, __setzero_i64());
+    constOffset = __select(mask, constOffset, __setzero_i64());
 
     int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) + _mm_extract_epi64(constOffset.v[0], 0);
     RetScalar *ptr = (RetScalar *)(p + offset);

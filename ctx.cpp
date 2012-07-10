@@ -66,20 +66,20 @@ struct CFInfo {
                            llvm::BasicBlock *continueTarget, 
                            llvm::Value *savedBreakLanesPtr,
                            llvm::Value *savedContinueLanesPtr,
-                           llvm::Value *savedMask, llvm::Value *savedLoopMask);
+                           llvm::Value *savedMask, llvm::Value *savedBlockEntryMask);
 
     static CFInfo *GetForeach(FunctionEmitContext::ForeachType ft,
                               llvm::BasicBlock *breakTarget,
                               llvm::BasicBlock *continueTarget, 
                               llvm::Value *savedBreakLanesPtr,
                               llvm::Value *savedContinueLanesPtr,
-                              llvm::Value *savedMask, llvm::Value *savedLoopMask);
+                              llvm::Value *savedMask, llvm::Value *savedBlockEntryMask);
 
     static CFInfo *GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
                              llvm::BasicBlock *continueTarget, 
                              llvm::Value *savedBreakLanesPtr,
                              llvm::Value *savedContinueLanesPtr,
-                             llvm::Value *savedMask, llvm::Value *savedLoopMask,
+                             llvm::Value *savedMask, llvm::Value *savedBlockEntryMask,
                              llvm::Value *switchExpr,
                              llvm::BasicBlock *bbDefault,
                              const std::vector<std::pair<int, llvm::BasicBlock *> > *bbCases,
@@ -101,7 +101,7 @@ struct CFInfo {
     bool isUniform;
     llvm::BasicBlock *savedBreakTarget, *savedContinueTarget;
     llvm::Value *savedBreakLanesPtr, *savedContinueLanesPtr;
-    llvm::Value *savedMask, *savedLoopMask;
+    llvm::Value *savedMask, *savedBlockEntryMask;
     llvm::Value *savedSwitchExpr;
     llvm::BasicBlock *savedDefaultBlock;
     const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCaseBlocks;
@@ -115,7 +115,7 @@ private:
         isUniform = uniformIf;
         savedBreakTarget = savedContinueTarget = NULL;
         savedBreakLanesPtr = savedContinueLanesPtr = NULL;
-        savedMask = savedLoopMask = sm;
+        savedMask = savedBlockEntryMask = sm;
         savedSwitchExpr = NULL;
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
@@ -135,7 +135,7 @@ private:
         savedBreakLanesPtr = sb;
         savedContinueLanesPtr = sc;
         savedMask = sm;
-        savedLoopMask = lm;
+        savedBlockEntryMask = lm;
         savedSwitchExpr = sse;
         savedDefaultBlock = bbd;
         savedCaseBlocks = bbc;
@@ -153,7 +153,7 @@ private:
         savedBreakLanesPtr = sb;
         savedContinueLanesPtr = sc;
         savedMask = sm;
-        savedLoopMask = lm;
+        savedBlockEntryMask = lm;
         savedSwitchExpr = NULL;
         savedDefaultBlock = NULL;
         savedCaseBlocks = NULL;
@@ -173,10 +173,10 @@ CFInfo::GetLoop(bool isUniform, llvm::BasicBlock *breakTarget,
                 llvm::BasicBlock *continueTarget, 
                 llvm::Value *savedBreakLanesPtr,
                 llvm::Value *savedContinueLanesPtr,
-                llvm::Value *savedMask, llvm::Value *savedLoopMask) {
+                llvm::Value *savedMask, llvm::Value *savedBlockEntryMask) {
     return new CFInfo(Loop, isUniform, breakTarget, continueTarget,
                       savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedLoopMask);
+                      savedMask, savedBlockEntryMask);
 }
 
 
@@ -200,6 +200,7 @@ CFInfo::GetForeach(FunctionEmitContext::ForeachType ft,
         break;
     default:
         FATAL("Unhandled foreach type");
+        return NULL;
     }
 
     return new CFInfo(cfType, breakTarget, continueTarget,
@@ -213,14 +214,14 @@ CFInfo::GetSwitch(bool isUniform, llvm::BasicBlock *breakTarget,
                   llvm::BasicBlock *continueTarget, 
                   llvm::Value *savedBreakLanesPtr,
                   llvm::Value *savedContinueLanesPtr, llvm::Value *savedMask,
-                  llvm::Value *savedLoopMask, llvm::Value *savedSwitchExpr,
+                  llvm::Value *savedBlockEntryMask, llvm::Value *savedSwitchExpr,
                   llvm::BasicBlock *savedDefaultBlock,
                   const std::vector<std::pair<int, llvm::BasicBlock *> > *savedCases,
                   const std::map<llvm::BasicBlock *, llvm::BasicBlock *> *savedNext,
                   bool savedSwitchConditionUniform) {
     return new CFInfo(Switch, isUniform, breakTarget, continueTarget, 
                       savedBreakLanesPtr, savedContinueLanesPtr,
-                      savedMask, savedLoopMask, savedSwitchExpr, savedDefaultBlock, 
+                      savedMask, savedBlockEntryMask, savedSwitchExpr, savedDefaultBlock, 
                       savedCases, savedNext, savedSwitchConditionUniform);
 }
 
@@ -248,7 +249,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
     fullMaskPointer = AllocaInst(LLVMTypes::MaskType, "full_mask_memory");
     StoreInst(LLVMMaskAllOn, fullMaskPointer);
 
-    loopMask = NULL;
+    blockEntryMask = NULL;
     breakLanesPtr = continueLanesPtr = NULL;
     breakTarget = continueTarget = NULL;
 
@@ -421,8 +422,8 @@ FunctionEmitContext::SetFunctionMask(llvm::Value *value) {
 
 
 void
-FunctionEmitContext::SetLoopMask(llvm::Value *value) {
-    loopMask = value;
+FunctionEmitContext::SetBlockEntryMask(llvm::Value *value) {
+    blockEntryMask = value;
 }
 
 
@@ -566,7 +567,7 @@ FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
     llvm::Value *oldMask = GetInternalMask();
     controlFlowInfo.push_back(CFInfo::GetLoop(uniformCF, breakTarget, 
                                               continueTarget, breakLanesPtr,
-                                              continueLanesPtr, oldMask, loopMask));
+                                              continueLanesPtr, oldMask, blockEntryMask));
     if (uniformCF)
         // If the loop has a uniform condition, we don't need to track
         // which lanes 'break' or 'continue'; all of the running ones go
@@ -583,7 +584,7 @@ FunctionEmitContext::StartLoop(llvm::BasicBlock *bt, llvm::BasicBlock *ct,
 
     breakTarget = bt;
     continueTarget = ct;
-    loopMask = NULL; // this better be set by the loop!
+    blockEntryMask = NULL; // this better be set by the loop!
 }
 
 
@@ -624,7 +625,7 @@ FunctionEmitContext::StartForeach(ForeachType ft) {
     llvm::Value *oldMask = GetInternalMask();
     controlFlowInfo.push_back(CFInfo::GetForeach(ft, breakTarget, continueTarget, 
                                                  breakLanesPtr, continueLanesPtr,
-                                                 oldMask, loopMask));
+                                                 oldMask, blockEntryMask));
     breakLanesPtr = NULL;
     breakTarget = NULL;
 
@@ -632,7 +633,7 @@ FunctionEmitContext::StartForeach(ForeachType ft) {
     StoreInst(LLVMMaskAllOff, continueLanesPtr);
     continueTarget = NULL; // should be set by SetContinueTarget()
 
-    loopMask = NULL;
+    blockEntryMask = NULL;
 }
 
 
@@ -705,9 +706,6 @@ FunctionEmitContext::Break(bool doCoherenceCheck) {
     // jump to the break location.
     if (inSwitchStatement() == false && ifsInCFAllUniform(CFInfo::Loop)) {
         BranchInst(breakTarget);
-        if (ifsInCFAllUniform(CFInfo::Loop) && doCoherenceCheck)
-            Warning(currentPos, "Coherent break statement not necessary in "
-                    "fully uniform control flow.");
         // Set bblock to NULL since the jump has terminated the basic block
         bblock = NULL;
     }
@@ -777,9 +775,6 @@ FunctionEmitContext::Continue(bool doCoherenceCheck) {
         // which case we know that only a single program instance is
         // executing.
         AddInstrumentationPoint("continue: uniform CF, jumped");
-        if (doCoherenceCheck)
-            Warning(currentPos, "Coherent continue statement not necessary in "
-                    "fully uniform control flow.");
         BranchInst(continueTarget);
         bblock = NULL;
     }
@@ -833,7 +828,7 @@ FunctionEmitContext::ifsInCFAllUniform(int type) const {
 void
 FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     llvm::Value *allDone = NULL;
-    AssertPos(currentPos, continueLanesPtr != NULL);
+
     if (breakLanesPtr == NULL) {
         // In a foreach loop, break and return are illegal, and
         // breakLanesPtr is NULL.  In this case, the mask is guaranteed to
@@ -849,18 +844,20 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
         // so, everyone is done and we can jump to the given target
         llvm::Value *returned = LoadInst(returnedLanesPtr,
                                          "returned_lanes");
-        llvm::Value *continued = LoadInst(continueLanesPtr,
-                                          "continue_lanes");
         llvm::Value *breaked = LoadInst(breakLanesPtr, "break_lanes");
-        llvm::Value *returnedOrContinued = BinaryOperator(llvm::Instruction::Or, 
-                                                          returned, continued,
-                                                          "returned|continued");
-        llvm::Value *returnedOrContinuedOrBreaked = 
-            BinaryOperator(llvm::Instruction::Or, returnedOrContinued,
-                           breaked, "returned|continued");
+        llvm::Value *finishedLanes = BinaryOperator(llvm::Instruction::Or, 
+                                                    returned, breaked,
+                                                    "returned|breaked");
+        if (continueLanesPtr != NULL) {
+            // It's NULL for "switch" statements...
+            llvm::Value *continued = LoadInst(continueLanesPtr,
+                                              "continue_lanes");
+            finishedLanes = BinaryOperator(llvm::Instruction::Or, finishedLanes,
+                                           continued, "returned|breaked|continued");
+        }
 
-        // Do we match the mask at loop entry?
-        allDone = MasksAllEqual(returnedOrContinuedOrBreaked, loopMask);
+        // Do we match the mask at loop or switch statement entry?
+        allDone = MasksAllEqual(finishedLanes, blockEntryMask);
     }
 
     llvm::BasicBlock *bAll = CreateBasicBlock("all_continued_or_breaked");
@@ -904,7 +901,7 @@ FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
     controlFlowInfo.push_back(CFInfo::GetSwitch(cfIsUniform, breakTarget, 
                                                 continueTarget, breakLanesPtr,
                                                 continueLanesPtr, oldMask, 
-                                                loopMask, switchExpr, defaultBlock, 
+                                                blockEntryMask, switchExpr, defaultBlock, 
                                                 caseBlocks, nextBlocks,
                                                 switchConditionWasUniform));
 
@@ -914,7 +911,7 @@ FunctionEmitContext::StartSwitch(bool cfIsUniform, llvm::BasicBlock *bbBreak) {
 
     continueLanesPtr = NULL;
     continueTarget = NULL;
-    loopMask = NULL;
+    blockEntryMask = NULL;
 
     // These will be set by the SwitchInst() method
     switchExpr = NULL;
@@ -3525,7 +3522,7 @@ FunctionEmitContext::popCFState() {
         continueTarget = ci->savedContinueTarget;
         breakLanesPtr = ci->savedBreakLanesPtr;
         continueLanesPtr = ci->savedContinueLanesPtr;
-        loopMask = ci->savedLoopMask;
+        blockEntryMask = ci->savedBlockEntryMask;
         switchExpr = ci->savedSwitchExpr;
         defaultBlock = ci->savedDefaultBlock;
         caseBlocks = ci->savedCaseBlocks;
@@ -3537,7 +3534,7 @@ FunctionEmitContext::popCFState() {
         continueTarget = ci->savedContinueTarget;
         breakLanesPtr = ci->savedBreakLanesPtr;
         continueLanesPtr = ci->savedContinueLanesPtr;
-        loopMask = ci->savedLoopMask;
+        blockEntryMask = ci->savedBlockEntryMask;
     }
     else {
         AssertPos(currentPos, ci->IsIf());

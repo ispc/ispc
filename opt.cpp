@@ -69,7 +69,11 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#include <llvm/Analysis/DebugInfo.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Analysis/DebugInfo.h>
+#else
+  #include <llvm/DebugInfo.h>
+#endif
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
   #include <alloca.h>

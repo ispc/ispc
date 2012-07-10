@@ -64,7 +64,6 @@
 #include <llvm/Instructions.h>
 #include <llvm/CallingConv.h>
 #include <llvm/Target/TargetData.h>
-#include <llvm/Support/IRBuilder.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/InstIterator.h>
 
@@ -3196,8 +3195,9 @@ SelectExpr::Optimize() {
         AssertPos(pos, exprType->IsVaryingType());
 
         // FIXME: it's annoying to have to have all of this replicated code.
-        if (Type::Equal(exprType, AtomicType::VaryingInt32) ||
-            Type::Equal(exprType, AtomicType::VaryingUInt32)) {
+        // FIXME: for completeness, it would also be nice to handle 8 and
+        // 16 bit types...
+        if (Type::Equal(exprType, AtomicType::VaryingInt32)) {
             int32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
             int32_t result[ISPC_MAX_NVEC];
             constExpr1->AsInt32(v1);
@@ -3206,12 +3206,29 @@ SelectExpr::Optimize() {
                 result[i] = bv[i] ? v1[i] : v2[i];
             return new ConstExpr(exprType, result, pos);
         }
-        else if (Type::Equal(exprType, AtomicType::VaryingInt64) ||
-                 Type::Equal(exprType, AtomicType::VaryingUInt64)) {
+        if (Type::Equal(exprType, AtomicType::VaryingUInt32)) {
+            uint32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
+            uint32_t result[ISPC_MAX_NVEC];
+            constExpr1->AsUInt32(v1);
+            constExpr2->AsUInt32(v2);
+            for (int i = 0; i < count; ++i)
+                result[i] = bv[i] ? v1[i] : v2[i];
+            return new ConstExpr(exprType, result, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingInt64)) {
             int64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
             int64_t result[ISPC_MAX_NVEC];
             constExpr1->AsInt64(v1);
             constExpr2->AsInt64(v2);
+            for (int i = 0; i < count; ++i)
+                result[i] = bv[i] ? v1[i] : v2[i];
+            return new ConstExpr(exprType, result, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingUInt64)) {
+            uint64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
+            uint64_t result[ISPC_MAX_NVEC];
+            constExpr1->AsUInt64(v1);
+            constExpr2->AsUInt64(v2);
             for (int i = 0; i < count; ++i)
                 result[i] = bv[i] ? v1[i] : v2[i];
             return new ConstExpr(exprType, result, pos);
@@ -7657,25 +7674,28 @@ FunctionSymbolExpr::GetConstant(const Type *type) const {
 }
 
 
-static void
-lPrintOverloadCandidates(SourcePos pos, const std::vector<Symbol *> &funcs, 
-                         const std::vector<const Type *> &argTypes, 
-                         const std::vector<bool> *argCouldBeNULL) {
-    for (unsigned int i = 0; i < funcs.size(); ++i) {
-        const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
-        AssertPos(pos, ft != NULL);
-        Error(funcs[i]->pos, "Candidate function: %s.", ft->GetString().c_str());
-    }
-
-    std::string passedTypes = "Passed types: (";
+static std::string
+lGetOverloadCandidateMessage(const std::vector<Symbol *> &funcs, 
+                             const std::vector<const Type *> &argTypes, 
+                             const std::vector<bool> *argCouldBeNULL) {
+    std::string message = "Passed types: (";
     for (unsigned int i = 0; i < argTypes.size(); ++i) {
         if (argTypes[i] != NULL)
-            passedTypes += argTypes[i]->GetString();
+            message += argTypes[i]->GetString();
         else
-            passedTypes += "(unknown type)";
-        passedTypes += (i < argTypes.size()-1) ? ", " : ")\n\n";
+            message += "(unknown type)";
+        message += (i < argTypes.size()-1) ? ", " : ")\n";
     }
-    Error(pos, "%s", passedTypes.c_str());
+
+    for (unsigned int i = 0; i < funcs.size(); ++i) {
+        const FunctionType *ft = CastType<FunctionType>(funcs[i]->type);
+        Assert(ft != NULL);
+        message += "Candidate: ";
+        message += ft->GetString();
+        if (i < funcs.size() - 1)
+            message += "\n";
+    }
+    return message;
 }
 
 
@@ -7948,20 +7968,23 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
     }
     else if (matches.size() > 1) {
         // Multiple matches: ambiguous
+        std::string candidateMessage = 
+            lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
         Error(pos, "Multiple overloaded functions matched call to function "
-              "\"%s\"%s.", funName, 
-              exactMatchOnly ? " only considering exact matches" : "");
-        lPrintOverloadCandidates(argPos, matches, argTypes, argCouldBeNULL);
+              "\"%s\"%s.\n%s", funName, 
+              exactMatchOnly ? " only considering exact matches" : "",
+              candidateMessage.c_str());
         return false;
     }
     else {
         // No matches at all
  failure:
+        std::string candidateMessage = 
+            lGetOverloadCandidateMessage(matches, argTypes, argCouldBeNULL);
         Error(pos, "Unable to find any matching overload for call to function "
-              "\"%s\"%s.", funName, 
-              exactMatchOnly ? " only considering exact matches" : "");
-        lPrintOverloadCandidates(argPos, candidateFunctions, argTypes, 
-                                 argCouldBeNULL);
+              "\"%s\"%s.\n%s", funName, 
+              exactMatchOnly ? " only considering exact matches" : "",
+              candidateMessage.c_str());
         return false;
     }
 }

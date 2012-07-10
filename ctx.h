@@ -42,8 +42,13 @@
 #include <map>
 #include <llvm/InstrTypes.h>
 #include <llvm/Instructions.h>
-#include <llvm/Analysis/DIBuilder.h>
-#include <llvm/Analysis/DebugInfo.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Analysis/DebugInfo.h>
+  #include <llvm/Analysis/DIBuilder.h>
+#else
+  #include <llvm/DebugInfo.h>
+  #include <llvm/DIBuilder.h>
+#endif
 
 struct CFInfo;
 
@@ -153,8 +158,8 @@ public:
                    bool uniformControlFlow);
 
     /** Informs FunctionEmitContext of the value of the mask at the start
-        of a loop body. */
-    void SetLoopMask(llvm::Value *mask);
+        of a loop body or switch statement. */
+    void SetBlockEntryMask(llvm::Value *mask);
 
     /** Informs FunctionEmitContext that code generation for a loop is
         finished. */
@@ -561,9 +566,9 @@ private:
         for error messages and debugging symbols. */
     SourcePos funcStartPos;
 
-    /** If currently in a loop body, the value of the mask at the start of
-        the loop. */
-    llvm::Value *loopMask;
+    /** If currently in a loop body or switch statement, the value of the
+        mask at the start of it. */
+    llvm::Value *blockEntryMask;
 
     /** If currently in a loop body or switch statement, this is a pointer
         to memory to store a mask value that represents which of the lanes

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ispc.h"
+#include "module.h"
 
 #include <stdio.h>
 
@@ -78,7 +79,6 @@
 #ifdef _MSC_VER
 #undef setjmp
 #endif
-
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetData.h"
@@ -228,6 +228,10 @@ namespace {
     const llvm::TargetData* TD;
     
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
+#ifndef LLVM_3_0
+    std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
+    unsigned VectorConstantIndex;
+#endif // !LLVM_3_0
     std::set<llvm::Function*> intrinsicPrototypesAlreadyGenerated;
     std::set<const llvm::Argument*> ByValParams;
     unsigned FPCounter;
@@ -254,6 +258,9 @@ namespace {
         vectorWidth(vecwidth) {
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
       FPCounter = 0;
+#ifndef LLVM_3_0
+      VectorConstantIndex = 0;
+#endif // !LLVM_3_0
     }
 
     virtual const char *getPassName() const { return "C backend"; }
@@ -279,6 +286,10 @@ namespace {
       // Output all floating point constants that cannot be printed accurately.
       printFloatingPointConstants(F);
 
+      // Output all vector constants so they can be accessed with single
+      // vector loads
+      printVectorConstants(F);
+
       printFunction(F);
       return false;
     }
@@ -293,6 +304,9 @@ namespace {
       delete MRI;
       delete MOFI;
       FPConstantMap.clear();
+#ifndef LLVM_3_0
+      VectorConstantMap.clear();
+#endif // !LLVM_3_0
       ByValParams.clear();
       intrinsicPrototypesAlreadyGenerated.clear();
       UnnamedStructIDs.clear();
@@ -351,6 +365,7 @@ namespace {
     void printContainedArrays(llvm::ArrayType *ATy, llvm::SmallPtrSet<llvm::Type *, 16> &);
     void printFloatingPointConstants(llvm::Function &F);
     void printFloatingPointConstants(const llvm::Constant *C);
+    void printVectorConstants(llvm::Function &F);
     void printFunctionSignature(const llvm::Function *F, bool Prototype);
 
     void printFunction(llvm::Function &);
@@ -811,7 +826,7 @@ void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
 
   // Make sure the last character is a null char, as automatically added by C
   if (isString && (CPA->getNumOperands() == 0 ||
-                   !cast<llvm::Constant>(*(CPA->op_end()-1))->isNullValue()))
+                   !llvm::cast<llvm::Constant>(*(CPA->op_end()-1))->isNullValue()))
     isString = false;
 
   if (isString) {
@@ -821,7 +836,7 @@ void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
 
     // Do not include the last character, which we know is null
     for (unsigned i = 0, e = CPA->getNumOperands()-1; i != e; ++i) {
-      unsigned char C = (unsigned char)(cast<llvm::ConstantInt>(CPA->getOperand(i))->getZExtValue());
+      unsigned char C = (unsigned char)(llvm::cast<llvm::ConstantInt>(CPA->getOperand(i))->getZExtValue());
 
       // Print it out literally if it is a printable character.  The only thing
       // to be careful about is when the last letter output was a hex escape
@@ -1099,22 +1114,31 @@ bool CWriter::printCast(unsigned opc, llvm::Type *SrcTy, llvm::Type *DstTy) {
 }
 
 
-// FIXME: generalize this/make it not so hard-coded?
-static const char *lGetSmearFunc(llvm::Type *matchType) {
+/** Construct the name of a function with the given base and returning a
+    vector of a given type.  For example, if base is "foo" and matchType is
+    i16, this will return the string "__foo_i16".
+ */
+static const char *
+lGetTypedFunc(const char *base, llvm::Type *matchType) {
+    char buf[64];
+    sprintf(buf, "__%s_", base);
     switch (matchType->getTypeID()) {
-    case llvm::Type::FloatTyID:  return "__smear_float";
-    case llvm::Type::DoubleTyID: return "__smear_double";
+    case llvm::Type::FloatTyID:  strcat(buf, "float");  break;
+    case llvm::Type::DoubleTyID: strcat(buf, "double"); break;
     case llvm::Type::IntegerTyID: {
         switch (llvm::cast<llvm::IntegerType>(matchType)->getBitWidth()) {
-        case 1:  return "__smear_i1";
-        case 8:  return "__smear_i8";
-        case 16: return "__smear_i16";
-        case 32: return "__smear_i32";
-        case 64: return "__smear_i64";
+        case 1:  strcat(buf, "i1");  break;
+        case 8:  strcat(buf, "i8");  break;
+        case 16: strcat(buf, "i16"); break;
+        case 32: strcat(buf, "i32"); break;
+        case 64: strcat(buf, "i64"); break;
+        default: return NULL;
         }
+        break;
     }
     default: return NULL;
     }
+    return strdup(buf);
 }
 
 
@@ -1459,64 +1483,79 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
   }
   case llvm::Type::VectorTyID: {
     llvm::VectorType *VT = llvm::dyn_cast<llvm::VectorType>(CPV->getType());
-    const char *smearFunc = lGetSmearFunc(VT->getElementType());
 
     if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
-        assert(smearFunc != NULL);
-
-        llvm::Constant *CZ = llvm::Constant::getNullValue(VT->getElementType());
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(CZ, Static);
-        Out << ")";
+        // All zeros; call the __setzero_* function.
+        const char *setZeroFunc = lGetTypedFunc("setzero", VT->getElementType());
+        assert(setZeroFunc != NULL);
+        Out << setZeroFunc << "()";
     }
-    else if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(CPV)) {
-      llvm::Constant *splatValue = CV->getSplatValue();
-      if (splatValue != NULL && smearFunc != NULL) {
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(splatValue, Static);
-        Out << ")";
-      }
-      else {
-        printType(Out, CPV->getType());
-        Out << "(";
-        printConstantVector(CV, Static);
-        Out << ")";
-      }
+    else if (llvm::isa<llvm::UndefValue>(CPV)) {
+        // Undefined value; call __undef_* so that we can potentially pass
+        // this information along..
+        const char *undefFunc = lGetTypedFunc("undef", VT->getElementType());
+        assert(undefFunc != NULL);
+        Out << undefFunc << "()";
     }
-#ifndef LLVM_3_0
-    else if (llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(CPV)) {
-      llvm::Constant *splatValue = CDV->getSplatValue();
-      if (splatValue != NULL && smearFunc != NULL) {
-        Out << smearFunc << "(";
-        printType(Out, VT);
-        Out << "(), ";
-        printConstant(splatValue, Static);
-        Out << ")";
-      }
-      else {
-        printType(Out, CPV->getType());
-        Out << "(";
-        printConstantDataSequential(CDV, Static);
-        Out << ")";
-      }
-    }
-#endif // !LLVM_3_0
     else {
-      assert(llvm::isa<llvm::UndefValue>(CPV));
-      llvm::Constant *CZ = llvm::Constant::getNullValue(VT->getElementType());
-      printType(Out, CPV->getType());
-      Out << "(";
-      printConstant(CZ, Static);
-      for (unsigned i = 1, e = VT->getNumElements(); i != e; ++i) {
-        Out << ", ";
-        printConstant(CZ, Static);
-      }
-      Out << ")";
+        const char *smearFunc = lGetTypedFunc("smear", VT->getElementType());
+
+        if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(CPV)) {
+            llvm::Constant *splatValue = CV->getSplatValue();
+            if (splatValue != NULL && smearFunc != NULL) {
+                // If it's a basic type and has a __smear_* function, then
+                // call that.
+                Out << smearFunc << "(";
+                printConstant(splatValue, Static);
+                Out << ")";
+            }
+            else {
+                // Otherwise call the constructor for the type
+                printType(Out, CPV->getType());
+                Out << "(";
+                printConstantVector(CV, Static);
+                Out << ")";
+            }
+        }
+#ifndef LLVM_3_0
+        // LLVM 3.1 and beyond have a different representation of constant vectors..
+        else if (llvm::ConstantDataVector *CDV =
+                 llvm::dyn_cast<llvm::ConstantDataVector>(CPV)) {
+            llvm::Constant *splatValue = CDV->getSplatValue();
+            if (splatValue != NULL && smearFunc != NULL) {
+                Out << smearFunc << "(";
+                printConstant(splatValue, Static);
+                Out << ")";
+            }
+            else if (VectorConstantMap.find(CDV) != VectorConstantMap.end()) {
+                // If we have emitted an static const array with the
+                // vector's values, just load from it.
+                unsigned index = VectorConstantMap[CDV];
+                int alignment = 4 * std::min(vectorWidth, 16);
+
+                Out << "__load<" << alignment << ">(";
+
+                // Cast the pointer to the array of element values to a
+                // pointer to the vector type.
+                Out << "(const ";
+                printSimpleType(Out, CDV->getType(), true, "");
+                Out << " *)";
+
+                Out << "(VectorConstant" << index << "))";
+            }
+            else {
+                printType(Out, CPV->getType());
+                Out << "(";
+                printConstantDataSequential(CDV, Static);
+                Out << ")";
+            }
+        }
+#endif // !LLVM_3_0
+        else {
+            llvm::report_fatal_error("Unexpected vector type");
+        }
     }
+    
     break;
   }
   case llvm::Type::StructTyID:
@@ -2147,9 +2186,9 @@ bool CWriter::doInitialization(llvm::Module &M) {
   Out << "#endif\n\n";
 
   if (g->opt.fastMath) {
-      Out << "#define ISPC_FAST_MATH 1\n"
+      Out << "#define ISPC_FAST_MATH 1\n";
   } else {
-      Out << "#undef ISPC_FAST_MATH\n"
+      Out << "#undef ISPC_FAST_MATH\n";
   }
 
   Out << "#include \"" << includeName << "\"\n";
@@ -2507,6 +2546,47 @@ void CWriter::printFloatingPointConstants(const llvm::Constant *C) {
   }
 }
 
+
+// For any vector constants, generate code to declare static const arrays
+// with their element values.  Doing so allows us to emit aligned vector
+// loads to get their values, rather than tediously inserting the
+// individual values into the vector.
+void CWriter::printVectorConstants(llvm::Function &F) {
+    // LLVM 3.1 and beyond have a different representation of constant
+    // vectors than before--here we will only do this for 3.1 and later, as
+    // the separate code path isn't worth the trouble.  This will hurt
+    // performance with 3.0 builds, though they should still generate
+    // correct code.
+#ifndef LLVM_3_0
+    for (llvm::constant_iterator I = constant_begin(&F), E = constant_end(&F);
+         I != E; ++I) {
+        const llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(*I);
+        if (CDV == NULL)
+            continue;
+
+        // Don't bother if this is a splat of the same value; a (more
+        // efficient?) __splat_* call will be generated for these.
+        if (CDV->getSplatValue() != NULL)
+            continue;
+
+        // Don't align to anything more than 64 bytes
+        int alignment = 4 * std::min(vectorWidth, 16);
+
+        Out << "static const ";
+        printSimpleType(Out, CDV->getElementType(), true, "");
+        Out << "__attribute__ ((aligned(" << alignment << "))) ";
+        Out << "VectorConstant" << VectorConstantIndex << "[] = { ";
+        for (int i = 0; i < (int)CDV->getNumElements(); ++i) {
+            printConstant(CDV->getElementAsConstant(i), false);
+            Out << ", ";
+        }
+        Out << " };\n";
+
+        VectorConstantMap[CDV] = VectorConstantIndex++;
+    }
+    Out << "\n";
+#endif // !LLVM_3_0
+}
 
 /// printSymbolTable - Run through symbol table looking for type names.  If a
 /// type name is found, emit its declaration...
@@ -3166,23 +3246,72 @@ void CWriter::visitBinaryOperator(llvm::Instruction &I) {
   }
 }
 
+
+static const char *
+lPredicateToString(llvm::CmpInst::Predicate p) {
+    switch (p) {
+    case llvm::ICmpInst::ICMP_EQ:  return "__equal";
+    case llvm::ICmpInst::ICMP_NE:  return "__not_equal";
+    case llvm::ICmpInst::ICMP_ULE: return "__unsigned_less_equal";
+    case llvm::ICmpInst::ICMP_SLE: return "__signed_less_equal";
+    case llvm::ICmpInst::ICMP_UGE: return "__unsigned_greater_equal";
+    case llvm::ICmpInst::ICMP_SGE: return "__signed_greater_equal";
+    case llvm::ICmpInst::ICMP_ULT: return "__unsigned_less_than";
+    case llvm::ICmpInst::ICMP_SLT: return "__signed_less_than";
+    case llvm::ICmpInst::ICMP_UGT: return "__unsigned_greater_than";
+    case llvm::ICmpInst::ICMP_SGT: return "__signed_greater_than";
+
+    case llvm::FCmpInst::FCMP_ORD: return "__ordered";
+    case llvm::FCmpInst::FCMP_UNO: return "__unordered";
+    case llvm::FCmpInst::FCMP_UEQ: return "__equal";
+    case llvm::FCmpInst::FCMP_UNE: return "__not_equal";
+    case llvm::FCmpInst::FCMP_ULT: return "__less_than";
+    case llvm::FCmpInst::FCMP_ULE: return "__less_equal";
+    case llvm::FCmpInst::FCMP_UGT: return "__greater_than";
+    case llvm::FCmpInst::FCMP_UGE: return "__greater_equal";
+    case llvm::FCmpInst::FCMP_OEQ: return "__equal";
+    case llvm::FCmpInst::FCMP_ONE: return "__not_equal";
+    case llvm::FCmpInst::FCMP_OLT: return "__less_than";
+    case llvm::FCmpInst::FCMP_OLE: return "__less_equal";
+    case llvm::FCmpInst::FCMP_OGT: return "__greater_than";
+    case llvm::FCmpInst::FCMP_OGE: return "__greater_equal";
+
+    default: llvm_unreachable(0); return NULL;
+    }
+}
+
+
+static const char *
+lTypeToSuffix(llvm::Type *t) {
+    llvm::VectorType *vt = llvm::dyn_cast<llvm::VectorType>(t);
+    Assert(vt != NULL);
+    t = vt->getElementType();
+
+    switch (t->getTypeID()) {
+    case llvm::Type::FloatTyID:  return "float";
+    case llvm::Type::DoubleTyID: return "double";
+    case llvm::Type::IntegerTyID: {
+        switch (llvm::cast<llvm::IntegerType>(t)->getBitWidth()) {
+        case 1:  return "i1";
+        case 8:  return "i8";
+        case 16: return "i16";
+        case 32: return "i32";
+        case 64: return "i64";
+        }
+    }
+    default: llvm_unreachable(0); return NULL;
+    }
+    return NULL;
+}
+
+
 void CWriter::visitICmpInst(llvm::ICmpInst &I) {
   bool isVector = llvm::isa<llvm::VectorType>(I.getOperand(0)->getType());
 
   if (isVector) {
-      switch (I.getPredicate()) {
-      case llvm::ICmpInst::ICMP_EQ:  Out << "__equal"; break;
-      case llvm::ICmpInst::ICMP_NE:  Out << "__not_equal"; break;
-      case llvm::ICmpInst::ICMP_ULE: Out << "__unsigned_less_equal"; break;
-      case llvm::ICmpInst::ICMP_SLE: Out << "__signed_less_equal"; break;
-      case llvm::ICmpInst::ICMP_UGE: Out << "__unsigned_greater_equal"; break;
-      case llvm::ICmpInst::ICMP_SGE: Out << "__signed_greater_equal"; break;
-      case llvm::ICmpInst::ICMP_ULT: Out << "__unsigned_less_than"; break;
-      case llvm::ICmpInst::ICMP_SLT: Out << "__signed_less_than"; break;
-      case llvm::ICmpInst::ICMP_UGT: Out << "__unsigned_greater_than"; break;
-      case llvm::ICmpInst::ICMP_SGT: Out << "__signed_greater_than"; break;
-      default: llvm_unreachable(0);
-      }
+      Out << lPredicateToString(I.getPredicate());
+      Out << "_";
+      Out << lTypeToSuffix(I.getOperand(0)->getType());
       Out << "(";
       writeOperand(I.getOperand(0));
       Out << ", ";
@@ -3247,23 +3376,10 @@ void CWriter::visitFCmpInst(llvm::FCmpInst &I) {
   // ispc source.
 
   if (isVector) {
-      switch (I.getPredicate()) {
-      default: llvm_unreachable("Illegal FCmp predicate");
-      case llvm::FCmpInst::FCMP_ORD: Out << "__ordered("; break;
-      case llvm::FCmpInst::FCMP_UNO: Out << "__cmpunord("; break;
-      case llvm::FCmpInst::FCMP_UEQ: Out << "__equal("; break;
-      case llvm::FCmpInst::FCMP_UNE: Out << "__not_equal("; break;
-      case llvm::FCmpInst::FCMP_ULT: Out << "__less_than("; break;
-      case llvm::FCmpInst::FCMP_ULE: Out << "__less_equal("; break;
-      case llvm::FCmpInst::FCMP_UGT: Out << "__greater_than("; break;
-      case llvm::FCmpInst::FCMP_UGE: Out << "__greater_equal("; break;
-      case llvm::FCmpInst::FCMP_OEQ: Out << "__equal("; break;
-      case llvm::FCmpInst::FCMP_ONE: Out << "__not_equal("; break;
-      case llvm::FCmpInst::FCMP_OLT: Out << "__less_than("; break;
-      case llvm::FCmpInst::FCMP_OLE: Out << "__less_equal("; break;
-      case llvm::FCmpInst::FCMP_OGT: Out << "__greater_than("; break;
-      case llvm::FCmpInst::FCMP_OGE: Out << "__greater_equal("; break;
-      }
+      Out << lPredicateToString(I.getPredicate());
+      Out << "_";
+      Out << lTypeToSuffix(I.getOperand(0)->getType());
+      Out << "(";
   }
   else {
   const char* op = 0;
@@ -3502,6 +3618,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::uadd_with_overflow:
           case llvm::Intrinsic::sadd_with_overflow:
           case llvm::Intrinsic::trap:
+          case llvm::Intrinsic::objectsize:
               // We directly implement these intrinsics
             break;
           default:
@@ -3509,7 +3626,9 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             // builtin, we handle it.
             const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
+#define Intrinsic llvm::Intrinsic
 #include "llvm/Intrinsics.gen"
+#undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
             // If we handle it, don't lower it.
             if (BuiltinName[0]) break;
@@ -3673,7 +3792,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     llvm::Function *F = I.getCalledFunction();
 #endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
+#define Intrinsic llvm::Intrinsic
 #include "llvm/Intrinsics.gen"
+#undef Intrinsic
 #undef GET_GCC_BUILTIN_NAME
     assert(BuiltinName[0] && "Unknown LLVM intrinsic!");
 
@@ -3816,6 +3937,8 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     return true;
   case llvm::Intrinsic::trap:
     Out << "abort()";
+    return true;
+  case llvm::Intrinsic::objectsize:
     return true;
   }
 }
@@ -4191,7 +4314,7 @@ char SmearCleanupPass::ID = 0;
 
 
 static int
-  lChainLength(llvm::InsertElementInst *inst) {
+lChainLength(llvm::InsertElementInst *inst) {
     int length = 0;
     while (inst != NULL) {
         ++length;
@@ -4239,24 +4362,26 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         {
         llvm::Type *matchType = toMatch->getType();
-        const char *smearFuncName = lGetSmearFunc(matchType);
+        const char *smearFuncName = lGetTypedFunc("smear", matchType);
 
         if (smearFuncName != NULL) {
             llvm::Function *smearFunc = module->getFunction(smearFuncName);
             if (smearFunc == NULL) {
+                // Declare the smar function if needed; it takes a single
+                // scalar parameter and returns a vector of the same
+                // parameter type.
                 llvm::Constant *sf = 
                     module->getOrInsertFunction(smearFuncName, iter->getType(), 
-                                                iter->getType(), matchType, NULL);
+                                                matchType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
             }
 
-            llvm::Value *undefResult = llvm::UndefValue::get(vt);
             assert(smearFunc != NULL);
-            llvm::Value *args[2] = { undefResult, toMatch };
-            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[2]);
+            llvm::Value *args[1] = { toMatch };
+            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
             llvm::Instruction *smearCall = 
                 llvm::CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
                                  (llvm::Instruction *)NULL);
@@ -4320,6 +4445,104 @@ BitcastCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         modifiedAny = true;
         goto restart;
     }
+    return modifiedAny;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// AndCmpCleanupPass
+
+class AndCmpCleanupPass : public llvm::BasicBlockPass {
+public:
+    AndCmpCleanupPass()
+        : BasicBlockPass(ID) { }
+
+    const char *getPassName() const { return "AndCmp Cleanup Pass"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    static char ID;
+};
+
+char AndCmpCleanupPass::ID = 0;
+
+// Look for ANDs of masks where one of the operands is a vector compare; we
+// can turn these into specialized calls to masked vector compares and
+// thence eliminate the AND.  For example, rather than emitting
+// __and(__less(a, b), c), we will emit __less_and_mask(a, b, c).
+bool
+AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    bool modifiedAny = false;
+
+ restart:
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        // See if we have an AND instruction
+        llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(&*iter);
+        if (bop == NULL || bop->getOpcode() != llvm::Instruction::And)
+            continue;
+
+        // Make sure it's a vector AND
+        if (llvm::isa<llvm::VectorType>(bop->getType()) == false)
+            continue;
+
+        // We only care about ANDs of the mask type, not, e.g. ANDs of
+        // int32s vectors.
+        if (bop->getType() != LLVMTypes::MaskType)
+            continue;
+
+        // Now see if either of the operands to the AND is a comparison
+        for (int i = 0; i < 2; ++i) {
+            llvm::Value *op = bop->getOperand(i);
+            llvm::CmpInst *opCmp = llvm::dyn_cast<llvm::CmpInst>(op);
+            if (opCmp == NULL)
+                continue;
+
+            // We have a comparison.  However, we also need to make sure
+            // that it's not comparing two mask values; those can't be
+            // simplified to something simpler.
+            if (opCmp->getOperand(0)->getType() == LLVMTypes::MaskType)
+                break;
+
+            // Success!  Go ahead and replace the AND with a call to the
+            // "__and_mask" variant of the comparison function for this
+            // operand.
+            std::string funcName = lPredicateToString(opCmp->getPredicate());
+            funcName += "_";
+            funcName += lTypeToSuffix(opCmp->getOperand(0)->getType());
+            funcName += "_and_mask";
+
+            llvm::Function *andCmpFunc = m->module->getFunction(funcName);
+            if (andCmpFunc == NULL) {
+                // Declare the function if needed; the first two arguments
+                // are the same as the two arguments to the compare we're
+                // replacing and the third argument is the mask type.
+                llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
+                llvm::Constant *acf = 
+                    m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType,
+                                                   cmpOpType, cmpOpType, 
+                                                   LLVMTypes::MaskType, NULL);
+                andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
+                Assert(andCmpFunc != NULL);
+                andCmpFunc->setDoesNotThrow(true);
+                andCmpFunc->setDoesNotAccessMemory(true);
+            }
+
+            // Set up the function call to the *_and_mask function; the
+            // mask value passed in is the other operand to the AND.
+            llvm::Value *args[3] = { opCmp->getOperand(0), opCmp->getOperand(1), 
+                                     bop->getOperand(i ^ 1) };
+            llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
+            llvm::Instruction *cmpCall = 
+                llvm::CallInst::Create(andCmpFunc, argArray, 
+                                       LLVMGetName(bop, "_and_mask"),
+                                       (llvm::Instruction *)NULL);
+
+            // And replace the original AND instruction with it.
+            llvm::ReplaceInstWithInst(iter, cmpCall);
+
+            modifiedAny = true;
+            goto restart;
+        }
+    }
+
     return modifiedAny;
 }
 
@@ -4503,6 +4726,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(llvm::createCFGSimplificationPass());   // clean up after lower invoke.
     pm.add(new SmearCleanupPass(module, vectorWidth));
     pm.add(new BitcastCleanupPass());
+    pm.add(new AndCmpCleanupPass());
     pm.add(new MaskOpsCleanupPass(module));
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(llvm::createPrintModulePass(&fos));
