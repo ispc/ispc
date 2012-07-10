@@ -857,17 +857,17 @@ static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec1
 
 static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
                                                        __vec16_i1 mask) {
-    return __and(__not(__equal(a,b)), mask);
+    return __and(__not(__equal_i64(a,b)), mask);
 }
 
-CMP_OP(__vec16_i64, uint64_t, __unsigned_less_equal, <=)
-CMP_OP(__vec16_i64, int64_t,  __signed_less_equal, <=)
-CMP_OP(__vec16_i64, uint64_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec16_i64, int64_t,  __signed_greater_equal, >=)
-CMP_OP(__vec16_i64, uint64_t, __unsigned_less_than, <)
-CMP_OP(__vec16_i64, int64_t,  __signed_less_than, <)
-CMP_OP(__vec16_i64, uint64_t, __unsigned_greater_than, >)
-CMP_OP(__vec16_i64, int64_t,  __signed_greater_than, >)
+CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_equal, <=)
+CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_equal, <=)
+CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_equal, >=)
+CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_than, <)
+CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_than, <)
+CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_than, >)
+CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_than, >)
 
 SELECT(__vec16_i64)
 INSERT_EXTRACT(__vec16_i64, int64_t)
@@ -1049,17 +1049,6 @@ static FORCEINLINE __vec16_i1 __greater_equal_float_and_mask(__vec16_f a, __vec1
 
 static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
     return _mm512_cmpord_ps_mask(a, b);
-}
-
-
-/*
-static FORCEINLINE __vec16_i1 __ordered(__vec16_f a, __vec16_f b) {
-    __vec16_i1 ret;
-    ret.v = 0;
-    for (int i = 0; i < 16; ++i)
-        ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
-    return ret;
->>>>>>> 8ef6bc16364d4c08aa5972141748110160613087
 }
 
 static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
