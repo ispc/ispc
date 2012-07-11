@@ -263,8 +263,20 @@ def run_test(filename):
                     gcc_arch = '-m32'
                 else:
                     gcc_arch = '-m64'
-                cc_cmd = "%s -O2 -msse4.2 -I. %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
-                         (options.compiler_exe, gcc_arch, match, obj_name, exe_name)
+
+                gcc_isa=""
+                if options.target == 'sse2' or options.target == 'sse2-x2':
+                    gcc_isa = '-msse3'
+                if options.target == 'sse4' or options.target == 'sse4-x2' or options.target == 'generic-4':
+                    gcc_isa = '-msse4.2'
+                if options.target == 'avx' or options.target == 'avx-x2' or options.target == 'generic-8':
+                    gcc_isa = '-mavx'
+                if (options.target == 'generic-16' or options.target == 'generic-32' or options.target == 'generic-64') \
+                        and (options.include_file.find("knc.h")!=-1 or options.include_file.find("knc2x.h")!=-1):
+                    gcc_isa = '-mmic'
+
+                cc_cmd = "%s -O2 -I. %s %s test_static.cpp -DTEST_SIG=%d %s -o %s" % \
+                         (options.compiler_exe, gcc_arch, gcc_isa, match, obj_name, exe_name)
                 if platform.system() == 'Darwin':
                     cc_cmd += ' -Wl,-no_pie'
                 if should_fail:
