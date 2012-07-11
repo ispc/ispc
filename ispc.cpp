@@ -212,6 +212,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 
     // This is the case for most of them
     t->hasHalf = t->hasRand = t->hasTranscendentals = false;
+    t->hasGather = t->hasScatter = false;
 
     if (!strcasecmp(isa, "sse2")) {
         t->isa = Target::SSE2;

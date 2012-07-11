@@ -252,8 +252,14 @@ struct Target {
         conversions. */
     bool hasHalf;
 
-    /** Indicates whether there is an ISA random number instruciton. */
+    /** Indicates whether there is an ISA random number instruction. */
     bool hasRand;
+
+    /** Indicates whether the target has a native gather instruction */
+    bool hasGather;
+
+    /** Indicates whether the target has a native scatter instruction */
+    bool hasScatter;
 
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */
