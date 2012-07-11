@@ -3007,84 +3007,84 @@ lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, __vec4_i64 offsets,
 }
 
 static FORCEINLINE __vec4_i8
-__gather_base_offsets32_i8(unsigned char *b, __vec4_i32 offsets,
+__gather_factored_base_offsets32_i8(unsigned char *b, __vec4_i32 offsets,
                            uint32_t scale,  __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_i8(), uint8_t(), b, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i8
-__gather_base_offsets64_i8(unsigned char *b, __vec4_i64 offsets,
+__gather_factored_base_offsets64_i8(unsigned char *b, __vec4_i64 offsets,
                            uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_i8(), uint8_t(), b, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i16
-__gather_base_offsets32_i16(unsigned char *b, __vec4_i32 offsets,
+__gather_factored_base_offsets32_i16(unsigned char *b, __vec4_i32 offsets,
                             uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_i16(), uint16_t(), b, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i16
- __gather_base_offsets64_i16(unsigned char *b, __vec4_i64 offsets,
+ __gather_factored_base_offsets64_i16(unsigned char *b, __vec4_i64 offsets,
                              uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_i16(), uint16_t(), b, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i32
-__gather_base_offsets32_i32(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
+__gather_factored_base_offsets32_i32(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
                             __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_i32(), uint32_t(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i32
-__gather_base_offsets64_i32(unsigned char *p, __vec4_i64 offsets,
+__gather_factored_base_offsets64_i32(unsigned char *p, __vec4_i64 offsets,
                             uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_i32(), uint32_t(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_f
-__gather_base_offsets32_float(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
+__gather_factored_base_offsets32_float(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
                               __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_f(), float(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_f
-__gather_base_offsets64_float(unsigned char *p, __vec4_i64 offsets,
+__gather_factored_base_offsets64_float(unsigned char *p, __vec4_i64 offsets,
                               uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_f(), float(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i64
-__gather_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets,
+__gather_factored_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets,
                             uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_i64(), uint64_t(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_i64
-__gather_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
+__gather_factored_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
                             uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_i64(), uint64_t(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_d
-__gather_base_offsets32_double(unsigned char *p, __vec4_i32 offsets,
+__gather_factored_base_offsets32_double(unsigned char *p, __vec4_i32 offsets,
                                uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets32(__vec4_d(), double(), p, offsets, scale, 
                                 constOffset, mask);
 }
 
 static FORCEINLINE __vec4_d
-__gather_base_offsets64_double(unsigned char *p, __vec4_i64 offsets,
+__gather_factored_base_offsets64_double(unsigned char *p, __vec4_i64 offsets,
                                uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
     return lGatherBaseOffsets64(__vec4_d(), double(), p, offsets, scale, 
                                 constOffset, mask);
@@ -3252,7 +3252,7 @@ static FORCEINLINE __vec4_d __gather64_double(__vec4_i64 ptrs, __vec4_i1 mask) {
   
 #define SCATTER32_64(SUFFIX, VEC_SUFFIX, TYPE, EXTRACT)             \
 static FORCEINLINE void                                             \
-__scatter_base_offsets32_##SUFFIX (unsigned char *b, __vec4_i32 offsets, \
+__scatter_factored_base_offsets32_##SUFFIX (unsigned char *b, __vec4_i32 offsets, \
                                    uint32_t scale, __vec4_i32 constOffset, \
                                    __vec4_##VEC_SUFFIX val, __vec4_i1 mask) { \
     uint32_t m = _mm_extract_ps(mask.v, 0);                             \
@@ -3281,7 +3281,7 @@ __scatter_base_offsets32_##SUFFIX (unsigned char *b, __vec4_i32 offsets, \
     }                                                                   \
 }                                                                       \
 static FORCEINLINE void                                                \
-__scatter_base_offsets64_##SUFFIX(unsigned char *p, __vec4_i64 offsets, \
+__scatter_factored_base_offsets64_##SUFFIX(unsigned char *p, __vec4_i64 offsets, \
                                   uint32_t scale, __vec4_i64 constOffset, \
                                   __vec4_##VEC_SUFFIX val, __vec4_i1 mask) { \
     uint32_t m = _mm_extract_ps(mask.v, 0);                            \
@@ -3322,7 +3322,7 @@ SCATTER32_64(float, f,     float,   _mm_extract_ps_as_float)
 
 
 static FORCEINLINE void
-__scatter_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets, 
+__scatter_factored_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets, 
                              uint32_t scale, __vec4_i32 constOffset, __vec4_i64 val, 
                              __vec4_i1 mask) {
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -3359,7 +3359,7 @@ __scatter_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets,
 }
 
 static FORCEINLINE void
-__scatter_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets, 
+__scatter_factored_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets, 
                              uint32_t scale, __vec4_i64 constOffset,
                              __vec4_i64 val, __vec4_i1 mask) {
     uint32_t m = _mm_extract_ps(mask.v, 0);
@@ -3396,17 +3396,17 @@ __scatter_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
 }
 
 static FORCEINLINE void
-__scatter_base_offsets32_double(unsigned char *p, __vec4_i32 offsets, 
+__scatter_factored_base_offsets32_double(unsigned char *p, __vec4_i32 offsets, 
                                 uint32_t scale, __vec4_i32 constOffset, __vec4_d val, 
                                 __vec4_i1 mask) {
-    __scatter_base_offsets32_i64(p, offsets, scale, constOffset, val, mask);
+    __scatter_factored_base_offsets32_i64(p, offsets, scale, constOffset, val, mask);
 }
 
 static FORCEINLINE void
-__scatter_base_offsets64_double(unsigned char *p, __vec4_i64 offsets, 
+__scatter_factored_base_offsets64_double(unsigned char *p, __vec4_i64 offsets, 
                                 uint32_t scale, __vec4_i64 constOffset, __vec4_d val, 
                                 __vec4_i1 mask) {
-    __scatter_base_offsets64_i64(p, offsets, scale, constOffset, val, mask);
+    __scatter_factored_base_offsets64_i64(p, offsets, scale, constOffset, val, mask);
 }
 
 

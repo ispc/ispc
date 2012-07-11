@@ -1940,7 +1940,7 @@ static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
 
 // offsets * offsetScale is in bytes (for all of these)
 
-#define GATHER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
+#define GATHER_FACTORED_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
 /*
 static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
                               uint32_t scale, OTYPE constOffset, \
@@ -1958,7 +1958,7 @@ static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
 */
 
 static FORCEINLINE __vec16_i32
-__gather_base_offsets32_i32(uint8_t *base, __vec16_i32 varyingOffset, 
+__gather_factored_base_offsets32_i32(uint8_t *base, __vec16_i32 varyingOffset, 
 			    uint32_t scale, __vec16_i32 constOffset, 
 			    __vec16_i1 mask) { 
     __vec16_i32 vscale = _mm512_extload_epi32(&scale, _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
@@ -1973,7 +1973,7 @@ __gather_base_offsets32_i32(uint8_t *base, __vec16_i32 varyingOffset,
 }
 
 static FORCEINLINE __vec16_f
-__gather_base_offsets32_float(uint8_t *base, __vec16_i32 varyingOffset, 
+__gather_factored_base_offsets32_float(uint8_t *base, __vec16_i32 varyingOffset, 
                               uint32_t scale, __vec16_i32 constOffset, 
                               __vec16_i1 mask) { 
     __vec16_i32 vscale = _mm512_extload_epi32(&scale, _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
@@ -1987,13 +1987,13 @@ __gather_base_offsets32_float(uint8_t *base, __vec16_i32 varyingOffset,
     return ret;
 }
 
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_base_offsets32_i8)
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_base_offsets64_i8)
-GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
-GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
-GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
-GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
-GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_factored_base_offsets32_i8)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_factored_base_offsets64_i8)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_factored_base_offsets32_i16)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_factored_base_offsets64_i16)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_factored_base_offsets64_i32)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_factored_base_offsets32_i64)
+GATHER_FACTORED_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_factored_base_offsets64_i64)
 
 #define GATHER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)
 /*
@@ -2039,7 +2039,7 @@ static FORCEINLINE __vec16_i32 __gather64_i32(__vec16_i64 ptrs, __vec16_i1 mask)
 */
 // scatter
 
-#define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
+#define SCATTER_FACTORED_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
 /*
 static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
                              uint32_t scale, OTYPE constOffset,         \
@@ -2054,16 +2054,16 @@ static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
 }
 */
 
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_base_offsets32_i8)
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_base_offsets64_i8)
-SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_base_offsets32_i16)
-SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64_i16)
-SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
-SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
-SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_factored_base_offsets32_i8)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_factored_base_offsets64_i8)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_factored_base_offsets32_i16)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_factored_base_offsets64_i16)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_factored_base_offsets64_i32)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_factored_base_offsets32_i64)
+SCATTER_FACTORED_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_factored_base_offsets64_i64)
 
 static FORCEINLINE void
-__scatter_base_offsets32_i32(uint8_t *b, __vec16_i32 varyingOffset,
+__scatter_factored_base_offsets32_i32(uint8_t *b, __vec16_i32 varyingOffset,
                              uint32_t scale, __vec16_i32 constOffset,
                              __vec16_i32 val, __vec16_i1 mask)
 {
@@ -2072,7 +2072,7 @@ __scatter_base_offsets32_i32(uint8_t *b, __vec16_i32 varyingOffset,
 }
 
 static FORCEINLINE void 
-__scatter_base_offsets32_float(void *base, const __vec16_i32 &varyingOffset, 
+__scatter_factored_base_offsets32_float(void *base, const __vec16_i32 &varyingOffset, 
                                uint32_t scale, const __vec16_i32 &constOffset, 
                                const __vec16_f &val, const __vec16_i1 mask) 
 { 
