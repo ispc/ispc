@@ -1507,40 +1507,38 @@ static FORCEINLINE void __masked_store_blend_double(void *p, __vec64_d val,
 
 // offsets * offsetScale is in bytes (for all of these)
 
-#define GATHER_FACTORED_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                  \
-static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
-                              uint32_t scale, OTYPE constOffset, \
-                              __vec64_i1 mask) {                        \
+#define GATHER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                  \
+static FORCEINLINE VTYPE FUNC(unsigned char *b, uint32_t scale,         \
+                              OTYPE offset, __vec64_i1 mask) {          \
     VTYPE ret;                                                          \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 64; ++i)                                        \
-        if ((mask.v & (1ull << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
+        if ((mask.v & (1ull << i)) != 0) {                              \
+            STYPE *ptr = (STYPE *)(base + scale * offset.v[i]);         \
             ret.v[i] = *ptr;                                            \
         }                                                               \
     return ret;                                                         \
 }
     
 
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i32, __gather_factored_base_offsets32_i8)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i64, __gather_factored_base_offsets64_i8)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i32, __gather_factored_base_offsets32_i16)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i64, __gather_factored_base_offsets64_i16)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i32, __gather_factored_base_offsets32_i32)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i64, __gather_factored_base_offsets64_i32)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_f, float, __vec64_i32, __gather_factored_base_offsets32_float)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_f, float, __vec64_i64, __gather_factored_base_offsets64_float)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i32, __gather_factored_base_offsets32_i64)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i64, __gather_factored_base_offsets64_i64)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_d, double, __vec64_i32, __gather_factored_base_offsets32_double)
-GATHER_FACTORED_BASE_OFFSETS(__vec64_d, double, __vec64_i64, __gather_factored_base_offsets64_double)
+GATHER_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i32, __gather_base_offsets32_i8)
+GATHER_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i64, __gather_base_offsets64_i8)
+GATHER_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i32, __gather_base_offsets32_i16)
+GATHER_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i64, __gather_base_offsets64_i16)
+GATHER_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i32, __gather_base_offsets32_i32)
+GATHER_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i64, __gather_base_offsets64_i32)
+GATHER_BASE_OFFSETS(__vec64_f, float, __vec64_i32, __gather_base_offsets32_float)
+GATHER_BASE_OFFSETS(__vec64_f, float, __vec64_i64, __gather_base_offsets64_float)
+GATHER_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i32, __gather_base_offsets32_i64)
+GATHER_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i64, __gather_base_offsets64_i64)
+GATHER_BASE_OFFSETS(__vec64_d, double, __vec64_i32, __gather_base_offsets32_double)
+GATHER_BASE_OFFSETS(__vec64_d, double, __vec64_i64, __gather_base_offsets64_double)
 
 #define GATHER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)         \
 static FORCEINLINE VTYPE FUNC(PTRTYPE ptrs, __vec64_i1 mask) {   \
     VTYPE ret;                                              \
     for (int i = 0; i < 64; ++i)                            \
-        if ((mask.v & (1ull << i)) != 0) {                     \
+        if ((mask.v & (1ull << i)) != 0) {                  \
             STYPE *ptr = (STYPE *)ptrs.v[i];                \
             ret.v[i] = *ptr;                                \
         }                                                   \
@@ -1562,32 +1560,30 @@ GATHER_GENERAL(__vec64_d, double, __vec64_i64, __gather64_double)
 
 // scatter
 
-#define SCATTER_FACTORED_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                 \
-static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
-                             uint32_t scale, OTYPE constOffset,         \
-                             VTYPE val, __vec64_i1 mask) {              \
+#define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                 \
+static FORCEINLINE void FUNC(unsigned char *b, uint32_t scale,          \
+                             OTYPE offset, VTYPE val, __vec64_i1 mask) { \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 64; ++i)                                        \
-        if ((mask.v & (1ull << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
+        if ((mask.v & (1ull << i)) != 0) {                              \
+            STYPE *ptr = (STYPE *)(base + scale * offset.v[i]);         \
             *ptr = val.v[i];                                            \
         }                                                               \
 }
     
 
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i32, __scatter_factored_base_offsets32_i8)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i64, __scatter_factored_base_offsets64_i8)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i32, __scatter_factored_base_offsets32_i16)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i64, __scatter_factored_base_offsets64_i16)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i32, __scatter_factored_base_offsets32_i32)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i64, __scatter_factored_base_offsets64_i32)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_f, float, __vec64_i32, __scatter_factored_base_offsets32_float)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_f, float, __vec64_i64, __scatter_factored_base_offsets64_float)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i32, __scatter_factored_base_offsets32_i64)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i64, __scatter_factored_base_offsets64_i64)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_d, double, __vec64_i32, __scatter_factored_base_offsets32_double)
-SCATTER_FACTORED_BASE_OFFSETS(__vec64_d, double, __vec64_i64, __scatter_factored_base_offsets64_double)
+SCATTER_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i32, __scatter_base_offsets32_i8)
+SCATTER_BASE_OFFSETS(__vec64_i8, int8_t, __vec64_i64, __scatter_base_offsets64_i8)
+SCATTER_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i32, __scatter_base_offsets32_i16)
+SCATTER_BASE_OFFSETS(__vec64_i16, int16_t, __vec64_i64, __scatter_base_offsets64_i16)
+SCATTER_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i32, __scatter_base_offsets32_i32)
+SCATTER_BASE_OFFSETS(__vec64_i32, int32_t, __vec64_i64, __scatter_base_offsets64_i32)
+SCATTER_BASE_OFFSETS(__vec64_f, float, __vec64_i32, __scatter_base_offsets32_float)
+SCATTER_BASE_OFFSETS(__vec64_f, float, __vec64_i64, __scatter_base_offsets64_float)
+SCATTER_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i32, __scatter_base_offsets32_i64)
+SCATTER_BASE_OFFSETS(__vec64_i64, int64_t, __vec64_i64, __scatter_base_offsets64_i64)
+SCATTER_BASE_OFFSETS(__vec64_d, double, __vec64_i32, __scatter_base_offsets32_double)
+SCATTER_BASE_OFFSETS(__vec64_d, double, __vec64_i64, __scatter_base_offsets64_double)
 
 #define SCATTER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)                 \
 static FORCEINLINE void FUNC(PTRTYPE ptrs, VTYPE val, __vec64_i1 mask) {  \

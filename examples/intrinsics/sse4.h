@@ -2892,54 +2892,53 @@ static FORCEINLINE void __masked_store_blend_double(void *p, __vec4_d val,
 
 template<typename RetVec, typename RetScalar>
 static FORCEINLINE RetVec
-lGatherBaseOffsets32(RetVec, RetScalar, unsigned char *p, __vec4_i32 offsets, 
-                     uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
+lGatherBaseOffsets32(RetVec, RetScalar, unsigned char *p, uint32_t scale, 
+                     __vec4_i32 offsets, __vec4_i1 mask) {
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
     offsets = __select(mask, offsets, __setzero_i32());
-    constOffset = __select(mask, constOffset, __setzero_i32());
 
-    int offset = scale * _mm_extract_epi32(offsets.v, 0) + _mm_extract_epi32(constOffset.v, 0);
+    int offset = scale * _mm_extract_epi32(offsets.v, 0);
     RetScalar *ptr = (RetScalar *)(p + offset);
     r[0] = *ptr;
 
-    offset = scale * _mm_extract_epi32(offsets.v, 1) + _mm_extract_epi32(constOffset.v, 1);
+    offset = scale * _mm_extract_epi32(offsets.v, 1);
     ptr = (RetScalar *)(p + offset);
     r[1] = *ptr;
 
-    offset = scale * _mm_extract_epi32(offsets.v, 2) + _mm_extract_epi32(constOffset.v, 2);
+    offset = scale * _mm_extract_epi32(offsets.v, 2);
     ptr = (RetScalar *)(p + offset);
     r[2] = *ptr;
 
-    offset = scale * _mm_extract_epi32(offsets.v, 3) + _mm_extract_epi32(constOffset.v, 3);
+    offset = scale * _mm_extract_epi32(offsets.v, 3);
     ptr = (RetScalar *)(p + offset);
     r[3] = *ptr;
 #else
     uint32_t m = _mm_extract_ps(mask.v, 0);
     if (m != 0) {
-        int offset = scale * _mm_extract_epi32(offsets.v, 0) + _mm_extract_epi32(constOffset.v, 0);
+        int offset = scale * _mm_extract_epi32(offsets.v, 0);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[0] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 1);
     if (m != 0) {
-        int offset = scale * _mm_extract_epi32(offsets.v, 1) + _mm_extract_epi32(constOffset.v, 1);
+        int offset = scale * _mm_extract_epi32(offsets.v, 1);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[1] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 2);
     if (m != 0) {
-        int offset = scale * _mm_extract_epi32(offsets.v, 2) + _mm_extract_epi32(constOffset.v, 2);
+        int offset = scale * _mm_extract_epi32(offsets.v, 2);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[2] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 3);
     if (m != 0) {
-        int offset = scale * _mm_extract_epi32(offsets.v, 3) + _mm_extract_epi32(constOffset.v, 3);
+        int offset = scale * _mm_extract_epi32(offsets.v, 3);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[3] = *ptr;
     }
@@ -2950,54 +2949,53 @@ lGatherBaseOffsets32(RetVec, RetScalar, unsigned char *p, __vec4_i32 offsets,
 
 template<typename RetVec, typename RetScalar>
 static FORCEINLINE RetVec
-lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, __vec4_i64 offsets,
-                     uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
+lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, uint32_t scale, 
+                     __vec4_i64 offsets, __vec4_i1 mask) {
     RetScalar r[4];
 #if 1
     // "Fast gather" trick...
     offsets = __select(mask, offsets, __setzero_i64());
-    constOffset = __select(mask, constOffset, __setzero_i64());
 
-    int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) + _mm_extract_epi64(constOffset.v[0], 0);
+    int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0);
     RetScalar *ptr = (RetScalar *)(p + offset);
     r[0] = *ptr;
 
-    offset = scale * _mm_extract_epi64(offsets.v[0], 1) + _mm_extract_epi64(constOffset.v[0], 1);
+    offset = scale * _mm_extract_epi64(offsets.v[0], 1);
     ptr = (RetScalar *)(p + offset);
     r[1] = *ptr;
 
-    offset = scale * _mm_extract_epi64(offsets.v[1], 0) + _mm_extract_epi64(constOffset.v[1], 0);
+    offset = scale * _mm_extract_epi64(offsets.v[1], 0);
     ptr = (RetScalar *)(p + offset);
     r[2] = *ptr;
 
-    offset = scale * _mm_extract_epi64(offsets.v[1], 1) + _mm_extract_epi64(constOffset.v[1], 1);
+    offset = scale * _mm_extract_epi64(offsets.v[1], 1);
     ptr = (RetScalar *)(p + offset);
     r[3] = *ptr;
 #else
     uint32_t m = _mm_extract_ps(mask.v, 0);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) + _mm_extract_epi64(constOffset.v[0], 0);
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[0] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 1);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1) + _mm_extract_epi64(constOffset.v[0], 1);
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[1] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 2);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0) + _mm_extract_epi64(constOffset.v[1], 0);
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[2] = *ptr;
     }
 
     m = _mm_extract_ps(mask.v, 3);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1) + _mm_extract_epi64(constOffset.v[1], 1);
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1);
         RetScalar *ptr = (RetScalar *)(p + offset);
         r[3] = *ptr;
     }
@@ -3007,87 +3005,75 @@ lGatherBaseOffsets64(RetVec, RetScalar, unsigned char *p, __vec4_i64 offsets,
 }
 
 static FORCEINLINE __vec4_i8
-__gather_factored_base_offsets32_i8(unsigned char *b, __vec4_i32 offsets,
-                           uint32_t scale,  __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_i8(), uint8_t(), b, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_i8(unsigned char *b, uint32_t scale,  __vec4_i32 offsets,
+                           __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_i8(), uint8_t(), b, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i8
-__gather_factored_base_offsets64_i8(unsigned char *b, __vec4_i64 offsets,
-                           uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_i8(), uint8_t(), b, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_i8(unsigned char *b, uint32_t scale, __vec4_i64 offsets,
+                           __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_i8(), uint8_t(), b, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i16
-__gather_factored_base_offsets32_i16(unsigned char *b, __vec4_i32 offsets,
-                            uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_i16(), uint16_t(), b, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_i16(unsigned char *b, uint32_t scale, __vec4_i32 offsets,
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_i16(), uint16_t(), b, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i16
- __gather_factored_base_offsets64_i16(unsigned char *b, __vec4_i64 offsets,
-                             uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_i16(), uint16_t(), b, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_i16(unsigned char *b, uint32_t scale, __vec4_i64 offsets,
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_i16(), uint16_t(), b, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i32
-__gather_factored_base_offsets32_i32(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
-                            __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_i32(), uint32_t(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_i32(uint8_t *p, uint32_t scale, __vec4_i32 offsets, 
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_i32(), uint32_t(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i32
-__gather_factored_base_offsets64_i32(unsigned char *p, __vec4_i64 offsets,
-                            uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_i32(), uint32_t(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_i32(unsigned char *p, uint32_t scale, __vec4_i64 offsets,
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_i32(), uint32_t(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_f
-__gather_factored_base_offsets32_float(uint8_t *p, __vec4_i32 offsets, uint32_t scale,
-                              __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_f(), float(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_float(uint8_t *p, uint32_t scale, __vec4_i32 offsets, 
+                              __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_f(), float(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_f
-__gather_factored_base_offsets64_float(unsigned char *p, __vec4_i64 offsets,
-                              uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_f(), float(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_float(unsigned char *p, uint32_t scale, __vec4_i64 offsets,
+                              __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_f(), float(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i64
-__gather_factored_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets,
-                            uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_i64(), uint64_t(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_i64(unsigned char *p, uint32_t scale, __vec4_i32 offsets,
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_i64(), uint64_t(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_i64
-__gather_factored_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets,
-                            uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_i64(), uint64_t(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_i64(unsigned char *p, uint32_t scale, __vec4_i64 offsets,
+                            __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_i64(), uint64_t(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_d
-__gather_factored_base_offsets32_double(unsigned char *p, __vec4_i32 offsets,
-                               uint32_t scale, __vec4_i32 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets32(__vec4_d(), double(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets32_double(unsigned char *p, uint32_t scale, __vec4_i32 offsets,
+                               __vec4_i1 mask) {
+    return lGatherBaseOffsets32(__vec4_d(), double(), p, scale, offsets, mask);
 }
 
 static FORCEINLINE __vec4_d
-__gather_factored_base_offsets64_double(unsigned char *p, __vec4_i64 offsets,
-                               uint32_t scale, __vec4_i64 constOffset, __vec4_i1 mask) {
-    return lGatherBaseOffsets64(__vec4_d(), double(), p, offsets, scale, 
-                                constOffset, mask);
+__gather_base_offsets64_double(unsigned char *p, uint32_t scale, __vec4_i64 offsets,
+                                __vec4_i1 mask) {
+    return lGatherBaseOffsets64(__vec4_d(), double(), p, scale, offsets, mask);
 }
 
 template<typename RetVec, typename RetScalar>
@@ -3252,63 +3238,55 @@ static FORCEINLINE __vec4_d __gather64_double(__vec4_i64 ptrs, __vec4_i1 mask) {
   
 #define SCATTER32_64(SUFFIX, VEC_SUFFIX, TYPE, EXTRACT)             \
 static FORCEINLINE void                                             \
-__scatter_factored_base_offsets32_##SUFFIX (unsigned char *b, __vec4_i32 offsets, \
-                                   uint32_t scale, __vec4_i32 constOffset, \
+__scatter_base_offsets32_##SUFFIX (unsigned char *b, uint32_t scale, \
+                                   __vec4_i32 offsets, \
                                    __vec4_##VEC_SUFFIX val, __vec4_i1 mask) { \
     uint32_t m = _mm_extract_ps(mask.v, 0);                             \
     if (m != 0) {                                                       \
-        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 0) + \
-                             _mm_extract_epi32(constOffset.v, 0));      \
+        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 0)); \
         *ptr = EXTRACT(val.v, 0);                                       \
     }                                                                   \
     m = _mm_extract_ps(mask.v, 1);                                      \
     if (m != 0) {                                                       \
-        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 1) + \
-                             _mm_extract_epi32(constOffset.v, 1));      \
+        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 1)); \
         *ptr = EXTRACT(val.v, 1);                                       \
     }                                                                   \
     m = _mm_extract_ps(mask.v, 2);                                      \
     if (m != 0) {                                                       \
-        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 2) + \
-                             _mm_extract_epi32(constOffset.v, 2));      \
+        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 2)); \
         *ptr = EXTRACT(val.v, 2);                                       \
     }                                                                   \
     m = _mm_extract_ps(mask.v, 3);                                      \
     if (m != 0) {                                                       \
-        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 3) + \
-                             _mm_extract_epi32(constOffset.v, 3));      \
+        TYPE *ptr = (TYPE *)(b + scale * _mm_extract_epi32(offsets.v, 3)); \
         *ptr = EXTRACT(val.v, 3);                                       \
     }                                                                   \
 }                                                                       \
-static FORCEINLINE void                                                \
-__scatter_factored_base_offsets64_##SUFFIX(unsigned char *p, __vec4_i64 offsets, \
-                                  uint32_t scale, __vec4_i64 constOffset, \
+static FORCEINLINE void                                                 \
+__scatter_base_offsets64_##SUFFIX(unsigned char *p, uint32_t scale,     \
+                                  __vec4_i64 offsets,                   \
                                   __vec4_##VEC_SUFFIX val, __vec4_i1 mask) { \
     uint32_t m = _mm_extract_ps(mask.v, 0);                            \
     if (m != 0) {                                                      \
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) +  \
-            _mm_extract_epi64(constOffset.v[0], 0);                    \
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0);   \
         TYPE *ptr = (TYPE *)(p + offset);                              \
         *ptr = EXTRACT(val.v, 0);                                      \
     }                                                                  \
     m = _mm_extract_ps(mask.v, 1);                                     \
     if (m != 0) {                                                      \
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1) +  \
-            _mm_extract_epi64(constOffset.v[0], 1);                    \
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1);   \
         TYPE *ptr = (TYPE *)(p + offset);                              \
         *ptr = EXTRACT(val.v, 1);                                      \
     }                                                                  \
     m = _mm_extract_ps(mask.v, 2);                                     \
     if (m != 0) {                                                      \
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0) +  \
-            _mm_extract_epi64(constOffset.v[1], 0);                    \
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0);   \
         TYPE *ptr = (TYPE *)(p + offset);                              \
         *ptr = EXTRACT(val.v, 2);                                      \
     }                                                                  \
     m = _mm_extract_ps(mask.v, 3);                                     \
     if (m != 0) {                                                      \
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1) +  \
-            _mm_extract_epi64(constOffset.v[1], 1);                    \
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1);   \
         TYPE *ptr = (TYPE *)(p + offset);                              \
         *ptr = EXTRACT(val.v, 3);                                      \
     }                                                                  \
@@ -3322,91 +3300,79 @@ SCATTER32_64(float, f,     float,   _mm_extract_ps_as_float)
 
 
 static FORCEINLINE void
-__scatter_factored_base_offsets32_i64(unsigned char *p, __vec4_i32 offsets, 
-                             uint32_t scale, __vec4_i32 constOffset, __vec4_i64 val, 
-                             __vec4_i1 mask) {
-    uint32_t m = _mm_extract_ps(mask.v, 0);
-    if (m != 0) {
-        int32_t offset = scale * _mm_extract_epi32(offsets.v, 0) +
-            _mm_extract_epi32(constOffset.v, 0);
-        uint64_t *ptr = (uint64_t *)(p + offset);
-        *ptr = _mm_extract_epi64(val.v[0], 0);
-    }
-
-    m = _mm_extract_ps(mask.v, 1);
-    if (m != 0) {
-        int32_t offset = scale * _mm_extract_epi32(offsets.v, 1) +
-            _mm_extract_epi32(constOffset.v, 1);
-        uint64_t *ptr = (uint64_t *)(p + offset);
-        *ptr = _mm_extract_epi64(val.v[0], 1);
-    }
-
-    m = _mm_extract_ps(mask.v, 2);
-    if (m != 0) {
-        int32_t offset = scale * _mm_extract_epi32(offsets.v, 2) +
-            _mm_extract_epi32(constOffset.v, 2);
-        uint64_t *ptr = (uint64_t *)(p + offset);
-        *ptr = _mm_extract_epi64(val.v[1], 0);
-    }
-
-    m = _mm_extract_ps(mask.v, 3);
-    if (m != 0) {
-        int32_t offset = scale * _mm_extract_epi32(offsets.v, 3) +
-            _mm_extract_epi32(constOffset.v, 3);
-        uint64_t *ptr = (uint64_t *)(p + offset);
-        *ptr = _mm_extract_epi64(val.v[1], 1);
-    }
-}
-
-static FORCEINLINE void
-__scatter_factored_base_offsets64_i64(unsigned char *p, __vec4_i64 offsets, 
-                             uint32_t scale, __vec4_i64 constOffset,
+__scatter_base_offsets32_i64(unsigned char *p, uint32_t scale, __vec4_i32 offsets, 
                              __vec4_i64 val, __vec4_i1 mask) {
     uint32_t m = _mm_extract_ps(mask.v, 0);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0) +
-            _mm_extract_epi64(constOffset.v[0], 0);
+        int32_t offset = scale * _mm_extract_epi32(offsets.v, 0);
         uint64_t *ptr = (uint64_t *)(p + offset);
         *ptr = _mm_extract_epi64(val.v[0], 0);
     }
 
     m = _mm_extract_ps(mask.v, 1);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1) +
-            _mm_extract_epi64(constOffset.v[0], 1);
+        int32_t offset = scale * _mm_extract_epi32(offsets.v, 1);
         uint64_t *ptr = (uint64_t *)(p + offset);
         *ptr = _mm_extract_epi64(val.v[0], 1);
     }
 
     m = _mm_extract_ps(mask.v, 2);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0) +
-            _mm_extract_epi64(constOffset.v[1], 0);
+        int32_t offset = scale * _mm_extract_epi32(offsets.v, 2);
         uint64_t *ptr = (uint64_t *)(p + offset);
         *ptr = _mm_extract_epi64(val.v[1], 0);
     }
 
     m = _mm_extract_ps(mask.v, 3);
     if (m != 0) {
-        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1) +
-            _mm_extract_epi64(constOffset.v[1], 1);
+        int32_t offset = scale * _mm_extract_epi32(offsets.v, 3);
         uint64_t *ptr = (uint64_t *)(p + offset);
         *ptr = _mm_extract_epi64(val.v[1], 1);
     }
 }
 
 static FORCEINLINE void
-__scatter_factored_base_offsets32_double(unsigned char *p, __vec4_i32 offsets, 
-                                uint32_t scale, __vec4_i32 constOffset, __vec4_d val, 
-                                __vec4_i1 mask) {
-    __scatter_factored_base_offsets32_i64(p, offsets, scale, constOffset, val, mask);
+__scatter_base_offsets64_i64(unsigned char *p, uint32_t scale, __vec4_i64 offsets, 
+                             __vec4_i64 val, __vec4_i1 mask) {
+    uint32_t m = _mm_extract_ps(mask.v, 0);
+    if (m != 0) {
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 0);
+        uint64_t *ptr = (uint64_t *)(p + offset);
+        *ptr = _mm_extract_epi64(val.v[0], 0);
+    }
+
+    m = _mm_extract_ps(mask.v, 1);
+    if (m != 0) {
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[0], 1);
+        uint64_t *ptr = (uint64_t *)(p + offset);
+        *ptr = _mm_extract_epi64(val.v[0], 1);
+    }
+
+    m = _mm_extract_ps(mask.v, 2);
+    if (m != 0) {
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 0);
+        uint64_t *ptr = (uint64_t *)(p + offset);
+        *ptr = _mm_extract_epi64(val.v[1], 0);
+    }
+
+    m = _mm_extract_ps(mask.v, 3);
+    if (m != 0) {
+        int64_t offset = scale * _mm_extract_epi64(offsets.v[1], 1);
+        uint64_t *ptr = (uint64_t *)(p + offset);
+        *ptr = _mm_extract_epi64(val.v[1], 1);
+    }
 }
 
 static FORCEINLINE void
-__scatter_factored_base_offsets64_double(unsigned char *p, __vec4_i64 offsets, 
-                                uint32_t scale, __vec4_i64 constOffset, __vec4_d val, 
-                                __vec4_i1 mask) {
-    __scatter_factored_base_offsets64_i64(p, offsets, scale, constOffset, val, mask);
+__scatter_base_offsets32_double(unsigned char *p, uint32_t scale, __vec4_i32 offsets, 
+                                __vec4_d val, __vec4_i1 mask) {
+    __scatter_base_offsets32_i64(p, scale, offsets, val, mask);
+}
+
+static FORCEINLINE void
+__scatter_base_offsets64_double(unsigned char *p, uint32_t scale, __vec4_i64 offsets, 
+                                __vec4_d val, __vec4_i1 mask) {
+    __scatter_base_offsets64_i64(p, scale, offsets, val, mask);
 }
 
 

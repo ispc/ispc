@@ -32,6 +32,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32";
 
 define(`MASK',`i1')
+define(`HAVE_GATHER',`1')
+define(`HAVE_SCATTER',`1')
+
 include(`util.m4')
 
 stdlib_core()
@@ -334,19 +337,19 @@ define void @__masked_store_blend_double(<WIDTH x double>* nocapture,
 ;; gather/scatter
 
 define(`gather_scatter', `
-declare <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * nocapture, <WIDTH x i32>,
-                        i32, <WIDTH x i32>, <WIDTH x i1>) nounwind readonly 
-declare <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * nocapture, <WIDTH x i64>,
-                        i32, <WIDTH x i64>, <WIDTH x i1>) nounwind readonly 
+declare <WIDTH x $1> @__gather_base_offsets32_$1(i8 * nocapture, i32, <WIDTH x i32>,
+                                                 <WIDTH x i1>) nounwind readonly 
+declare <WIDTH x $1> @__gather_base_offsets64_$1(i8 * nocapture, i32, <WIDTH x i64>,
+                                                  <WIDTH x i1>) nounwind readonly 
 declare <WIDTH x $1> @__gather32_$1(<WIDTH x i32>, 
                                     <WIDTH x i1>) nounwind readonly 
 declare <WIDTH x $1> @__gather64_$1(<WIDTH x i64>, 
                                     <WIDTH x i1>) nounwind readonly 
 
-declare void @__scatter_factored_base_offsets32_$1(i8* nocapture, <WIDTH x i32>,
-                  i32, <WIDTH x i32>, <WIDTH x $1>, <WIDTH x i1>) nounwind 
-declare void @__scatter_factored_base_offsets64_$1(i8* nocapture, <WIDTH x i64>,
-                  i32, <WIDTH x i64>, <WIDTH x $1>, <WIDTH x i1>) nounwind 
+declare void @__scatter_base_offsets32_$1(i8* nocapture, i32, <WIDTH x i32>,
+                                          <WIDTH x $1>, <WIDTH x i1>) nounwind 
+declare void @__scatter_base_offsets64_$1(i8* nocapture, i32, <WIDTH x i64>,
+                                          <WIDTH x $1>, <WIDTH x i1>) nounwind 
 declare void @__scatter32_$1(<WIDTH x i32>, <WIDTH x $1>,
                              <WIDTH x i1>) nounwind 
 declare void @__scatter64_$1(<WIDTH x i64>, <WIDTH x $1>,
