@@ -114,8 +114,8 @@ static void lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                                        const EnumType *enumType);
 
 static const char *lBuiltinTokens[] = {
-    "assert", "bool", "break", "case", "cbreak", "ccontinue", "cdo",
-    "cfor", "cif", "cwhile", "const", "continue", "creturn", "default",
+    "assert", "bool", "break", "case", "cdo",
+    "cfor", "cif", "cwhile", "const", "continue", "default",
     "do", "delete", "double", "else", "enum", "export", "extern", "false",
     "float", "for", "foreach", "foreach_active", "foreach_tiled",
      "foreach_unique", "goto", "if", "in", "inline",
@@ -144,7 +144,7 @@ struct ForeachDimension {
 %}
 
 %union {
-    int64_t intVal;
+    uint64_t intVal;
     float floatVal;
     std::string *stringVal;
     const char *constCharPtr;
@@ -198,8 +198,8 @@ struct ForeachDimension {
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
-%token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE TOKEN_CBREAK
-%token TOKEN_CCONTINUE TOKEN_CRETURN TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
+%token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
+%token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
 
 %type <expr> primary_expression postfix_expression integer_dotdotdot
 %type <expr> unary_expression cast_expression funcall_expression launch_expression
@@ -1870,21 +1870,13 @@ jump_statement
     : TOKEN_GOTO goto_identifier ';'
       { $$ = new GotoStmt($2, @1, @2); }
     | TOKEN_CONTINUE ';'
-      { $$ = new ContinueStmt(false, @1); }
+      { $$ = new ContinueStmt(@1); }
     | TOKEN_BREAK ';'
-      { $$ = new BreakStmt(false, @1); }
+      { $$ = new BreakStmt(@1); }
     | TOKEN_RETURN ';'
-      { $$ = new ReturnStmt(NULL, false, @1); }
+      { $$ = new ReturnStmt(NULL, @1); }
     | TOKEN_RETURN expression ';'
-      { $$ = new ReturnStmt($2, false, @1); }
-    | TOKEN_CCONTINUE ';'
-      { $$ = new ContinueStmt(true, @1); }
-    | TOKEN_CBREAK ';'
-      { $$ = new BreakStmt(true, @1); }
-    | TOKEN_CRETURN ';'
-      { $$ = new ReturnStmt(NULL, true, @1); }
-    | TOKEN_CRETURN expression ';'
-      { $$ = new ReturnStmt($2, true, @1); }
+      { $$ = new ReturnStmt($2, @1); }
     ;
 
 sync_statement

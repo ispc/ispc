@@ -619,6 +619,15 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                mTriple.getVendor() == bcTriple.getVendor());
         bcModule->setTargetTriple(mTriple.str());
 
+        // This is also suboptimal; LLVM issues a warning about linking
+        // modules with different datalayouts, due to things like
+        // bulitins-c.c having the regular IA layout, but the generic
+        // targets having a layout with 16-bit alignment for 16xi1 vectors.
+        // As long as builtins-c.c doesn't have any 16xi1 vector types
+        // (which it shouldn't!), then this override is safe.
+        if (g->target.isa == Target::GENERIC)
+            bcModule->setDataLayout(module->getDataLayout());
+
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule, 
                                       llvm::Linker::DestroySource,

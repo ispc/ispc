@@ -241,9 +241,11 @@ Module::Module(const char *fn) {
     module->setTargetTriple(g->target.GetTripleString());
 
     if (g->target.isa == Target::GENERIC) {
-        // <16 x i1> vectors only need 16 bit / 2 byte alignment
-        std::string datalayout = module->getDataLayout();
-        datalayout += "v16:16:16";
+        // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
+        // that to the regular datalayout string for IA..
+        std::string datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
+            "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
+            "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32";
         module->setDataLayout(datalayout);
     }
 
@@ -922,8 +924,8 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
           return 1;
         }
         if (fileType != NULL)
-            fprintf(stderr, "Warning: emitting %s file, but filename \"%s\" "
-                    "has suffix \"%s\"?\n", fileType, outFileName, suffix);
+            Warning(SourcePos(), "Warning: emitting %s file, but filename \"%s\" "
+                    "has suffix \"%s\"?", fileType, outFileName, suffix);
     }
 
     if (outputType == Header)
@@ -937,6 +939,11 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     else if (outputType == Bitcode)
         return writeBitcode(module, outFileName);
     else if (outputType == CXX) {
+        if (g->target.isa != Target::GENERIC) {
+            Error(SourcePos(), "Only \"generic-*\" targets can be used with "
+                  "C++ emission.");
+            return false;
+        }
         extern bool WriteCXXFile(llvm::Module *module, const char *fn, 
                                  int vectorWidth, const char *includeName);
         return WriteCXXFile(module, outFileName, g->target.vectorWidth,
@@ -2190,6 +2197,12 @@ Module::CompileAndOutput(const char *srcFile,
         if (outputType == CXX) {
             Error(SourcePos(), "Illegal to specify more then one target when "
                   "compiling C++ output.");
+            return 1;
+        }
+        if (srcFile == NULL || !strcmp(srcFile, "-")) {
+            Error(SourcePos(), "Compiling programs from standard input isn't "
+                  "supported when compiling for multiple targets.  Please use "
+                  "an intermediate temporary file.");
             return 1;
         }
 

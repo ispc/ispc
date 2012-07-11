@@ -258,12 +258,21 @@ static FORCEINLINE TYPE NAME(TYPE a, TYPE b) {                      \
    return ret;                                                      \
 }
 
-#define CMP_OP(TYPE, CAST, NAME, OP)                                \
-static FORCEINLINE __vec32_i1 NAME(TYPE a, TYPE b) {                \
+#define CMP_OP(TYPE, SUFFIX, CAST, NAME, OP)                        \
+static FORCEINLINE __vec32_i1 NAME##_##SUFFIX(TYPE a, TYPE b) {     \
    __vec32_i1 ret;                                                  \
    ret.v = 0;                                                       \
    for (int i = 0; i < 32; ++i)                                     \
        ret.v |= ((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;            \
+   return ret;                                                      \
+}                                                                   \
+static FORCEINLINE __vec32_i1 NAME##_##SUFFIX##_and_mask(TYPE a, TYPE b,       \
+                                              __vec32_i1 mask) {    \
+   __vec32_i1 ret;                                                  \
+   ret.v = 0;                                                       \
+   for (int i = 0; i < 32; ++i)                                     \
+       ret.v |= ((CAST)(a.v[i]) OP (CAST)(b.v[i])) << i;            \
+   ret.v &= mask.v;                                                 \
    return ret;                                                      \
 }
 
@@ -277,7 +286,7 @@ static FORCEINLINE void __insert_element(VTYPE *v, int index, STYPE val) { \
 
 #define LOAD_STORE(VTYPE, STYPE)                       \
 template <int ALIGN>                                   \
-static FORCEINLINE VTYPE __load(VTYPE *p) {            \
+static FORCEINLINE VTYPE __load(const VTYPE *p) {      \
     STYPE *ptr = (STYPE *)p;                           \
     VTYPE ret;                                         \
     for (int i = 0; i < 32; ++i)                       \
@@ -327,11 +336,24 @@ static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
 }
 
 #define SMEAR(VTYPE, NAME, STYPE)                                  \
-static FORCEINLINE VTYPE __smear_##NAME(VTYPE retType, STYPE v) {  \
+static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {                 \
     VTYPE ret;                                                     \
     for (int i = 0; i < 32; ++i)                                   \
         ret.v[i] = v;                                              \
     return ret;                                                    \
+}
+
+#define SETZERO(VTYPE, NAME)                   \
+static FORCEINLINE VTYPE __setzero_##NAME() {  \
+    VTYPE ret;                                                     \
+    for (int i = 0; i < 32; ++i)                                   \
+        ret.v[i] = 0;                                              \
+    return ret;                                                    \
+}
+
+#define UNDEF(VTYPE, NAME)                                         \
+static FORCEINLINE VTYPE __undef_##NAME() {                        \
+    return VTYPE();                                                \
 }
 
 #define BROADCAST(VTYPE, NAME, STYPE)                 \
@@ -382,7 +404,7 @@ static FORCEINLINE uint64_t __movmsk(__vec32_i1 mask) {
     return (uint64_t)mask.v;
 }
 
-static FORCEINLINE __vec32_i1 __equal(__vec32_i1 a, __vec32_i1 b) {
+static FORCEINLINE __vec32_i1 __equal_i1(__vec32_i1 a, __vec32_i1 b) {
     __vec32_i1 r;
     r.v = (a.v & b.v) | (~a.v & ~b.v);
     return r;
@@ -447,7 +469,7 @@ static FORCEINLINE void __insert_element(__vec32_i1 *vec, int index,
         vec->v |= (1 << index);
 }
 
-template <int ALIGN> static FORCEINLINE __vec32_i1 __load(__vec32_i1 *p) {
+template <int ALIGN> static FORCEINLINE __vec32_i1 __load(const __vec32_i1 *p) {
     uint16_t *ptr = (uint16_t *)p;
     __vec32_i1 r;
     r.v = *ptr;
@@ -459,11 +481,22 @@ template <int ALIGN> static FORCEINLINE void __store(__vec32_i1 *p, __vec32_i1 v
     *ptr = v.v;
 }
 
-static FORCEINLINE __vec32_i1 __smear_i1(__vec32_i1, int v) {
+static FORCEINLINE __vec32_i1 __smear_i1(int v) {
     return __vec32_i1(v, v, v, v, v, v, v, v, 
                       v, v, v, v, v, v, v, v,
                       v, v, v, v, v, v, v, v,
                       v, v, v, v, v, v, v, v);
+}
+
+static FORCEINLINE __vec32_i1 __setzero_i1() {
+    return __vec32_i1(0, 0, 0, 0, 0, 0, 0, 0, 
+                      0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0,
+                      0, 0, 0, 0, 0, 0, 0, 0);
+}
+
+static FORCEINLINE __vec32_i1 __undef_i1() {
+    return __vec32_i1();
 }
 
 
@@ -491,20 +524,22 @@ SHIFT_UNIFORM(__vec32_i8, uint8_t, __lshr, >>)
 SHIFT_UNIFORM(__vec32_i8, int8_t, __ashr, >>)
 SHIFT_UNIFORM(__vec32_i8, int8_t, __shl, <<)
 
-CMP_OP(__vec32_i8, int8_t,  __equal, ==)
-CMP_OP(__vec32_i8, int8_t,  __not_equal, !=)
-CMP_OP(__vec32_i8, uint8_t, __unsigned_less_equal, <=)
-CMP_OP(__vec32_i8, int8_t,  __signed_less_equal, <=)
-CMP_OP(__vec32_i8, uint8_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec32_i8, int8_t,  __signed_greater_equal, >=)
-CMP_OP(__vec32_i8, uint8_t, __unsigned_less_than, <)
-CMP_OP(__vec32_i8, int8_t,  __signed_less_than, <)
-CMP_OP(__vec32_i8, uint8_t, __unsigned_greater_than, >)
-CMP_OP(__vec32_i8, int8_t,  __signed_greater_than, >)
+CMP_OP(__vec32_i8, i8, int8_t,  __equal, ==)
+CMP_OP(__vec32_i8, i8, int8_t,  __not_equal, !=)
+CMP_OP(__vec32_i8, i8, uint8_t, __unsigned_less_equal, <=)
+CMP_OP(__vec32_i8, i8, int8_t,  __signed_less_equal, <=)
+CMP_OP(__vec32_i8, i8, uint8_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec32_i8, i8, int8_t,  __signed_greater_equal, >=)
+CMP_OP(__vec32_i8, i8, uint8_t, __unsigned_less_than, <)
+CMP_OP(__vec32_i8, i8, int8_t,  __signed_less_than, <)
+CMP_OP(__vec32_i8, i8, uint8_t, __unsigned_greater_than, >)
+CMP_OP(__vec32_i8, i8, int8_t,  __signed_greater_than, >)
 
 SELECT(__vec32_i8)
 INSERT_EXTRACT(__vec32_i8, int8_t)
 SMEAR(__vec32_i8, i8, int8_t)
+SETZERO(__vec32_i8, i8)
+UNDEF(__vec32_i8, i8)
 BROADCAST(__vec32_i8, i8, int8_t)
 ROTATE(__vec32_i8, i8, int8_t)
 SHUFFLES(__vec32_i8, i8, int8_t)
@@ -534,20 +569,22 @@ SHIFT_UNIFORM(__vec32_i16, uint16_t, __lshr, >>)
 SHIFT_UNIFORM(__vec32_i16, int16_t, __ashr, >>)
 SHIFT_UNIFORM(__vec32_i16, int16_t, __shl, <<)
 
-CMP_OP(__vec32_i16, int16_t,  __equal, ==)
-CMP_OP(__vec32_i16, int16_t,  __not_equal, !=)
-CMP_OP(__vec32_i16, uint16_t, __unsigned_less_equal, <=)
-CMP_OP(__vec32_i16, int16_t,  __signed_less_equal, <=)
-CMP_OP(__vec32_i16, uint16_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec32_i16, int16_t,  __signed_greater_equal, >=)
-CMP_OP(__vec32_i16, uint16_t, __unsigned_less_than, <)
-CMP_OP(__vec32_i16, int16_t,  __signed_less_than, <)
-CMP_OP(__vec32_i16, uint16_t, __unsigned_greater_than, >)
-CMP_OP(__vec32_i16, int16_t,  __signed_greater_than, >)
+CMP_OP(__vec32_i16, i16, int16_t,  __equal, ==)
+CMP_OP(__vec32_i16, i16, int16_t,  __not_equal, !=)
+CMP_OP(__vec32_i16, i16, uint16_t, __unsigned_less_equal, <=)
+CMP_OP(__vec32_i16, i16, int16_t,  __signed_less_equal, <=)
+CMP_OP(__vec32_i16, i16, uint16_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec32_i16, i16, int16_t,  __signed_greater_equal, >=)
+CMP_OP(__vec32_i16, i16, uint16_t, __unsigned_less_than, <)
+CMP_OP(__vec32_i16, i16, int16_t,  __signed_less_than, <)
+CMP_OP(__vec32_i16, i16, uint16_t, __unsigned_greater_than, >)
+CMP_OP(__vec32_i16, i16, int16_t,  __signed_greater_than, >)
 
 SELECT(__vec32_i16)
 INSERT_EXTRACT(__vec32_i16, int16_t)
 SMEAR(__vec32_i16, i16, int16_t)
+SETZERO(__vec32_i16, i16)
+UNDEF(__vec32_i16, i16)
 BROADCAST(__vec32_i16, i16, int16_t)
 ROTATE(__vec32_i16, i16, int16_t)
 SHUFFLES(__vec32_i16, i16, int16_t)
@@ -577,20 +614,22 @@ SHIFT_UNIFORM(__vec32_i32, uint32_t, __lshr, >>)
 SHIFT_UNIFORM(__vec32_i32, int32_t, __ashr, >>)
 SHIFT_UNIFORM(__vec32_i32, int32_t, __shl, <<)
 
-CMP_OP(__vec32_i32, int32_t,  __equal, ==)
-CMP_OP(__vec32_i32, int32_t,  __not_equal, !=)
-CMP_OP(__vec32_i32, uint32_t, __unsigned_less_equal, <=)
-CMP_OP(__vec32_i32, int32_t,  __signed_less_equal, <=)
-CMP_OP(__vec32_i32, uint32_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec32_i32, int32_t,  __signed_greater_equal, >=)
-CMP_OP(__vec32_i32, uint32_t, __unsigned_less_than, <)
-CMP_OP(__vec32_i32, int32_t,  __signed_less_than, <)
-CMP_OP(__vec32_i32, uint32_t, __unsigned_greater_than, >)
-CMP_OP(__vec32_i32, int32_t,  __signed_greater_than, >)
+CMP_OP(__vec32_i32, i32, int32_t,  __equal, ==)
+CMP_OP(__vec32_i32, i32, int32_t,  __not_equal, !=)
+CMP_OP(__vec32_i32, i32, uint32_t, __unsigned_less_equal, <=)
+CMP_OP(__vec32_i32, i32, int32_t,  __signed_less_equal, <=)
+CMP_OP(__vec32_i32, i32, uint32_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec32_i32, i32, int32_t,  __signed_greater_equal, >=)
+CMP_OP(__vec32_i32, i32, uint32_t, __unsigned_less_than, <)
+CMP_OP(__vec32_i32, i32, int32_t,  __signed_less_than, <)
+CMP_OP(__vec32_i32, i32, uint32_t, __unsigned_greater_than, >)
+CMP_OP(__vec32_i32, i32, int32_t,  __signed_greater_than, >)
 
 SELECT(__vec32_i32)
 INSERT_EXTRACT(__vec32_i32, int32_t)
 SMEAR(__vec32_i32, i32, int32_t)
+SETZERO(__vec32_i32, i32)
+UNDEF(__vec32_i32, i32)
 BROADCAST(__vec32_i32, i32, int32_t)
 ROTATE(__vec32_i32, i32, int32_t)
 SHUFFLES(__vec32_i32, i32, int32_t)
@@ -620,20 +659,22 @@ SHIFT_UNIFORM(__vec32_i64, uint64_t, __lshr, >>)
 SHIFT_UNIFORM(__vec32_i64, int64_t, __ashr, >>)
 SHIFT_UNIFORM(__vec32_i64, int64_t, __shl, <<)
 
-CMP_OP(__vec32_i64, int64_t,  __equal, ==)
-CMP_OP(__vec32_i64, int64_t,  __not_equal, !=)
-CMP_OP(__vec32_i64, uint64_t, __unsigned_less_equal, <=)
-CMP_OP(__vec32_i64, int64_t,  __signed_less_equal, <=)
-CMP_OP(__vec32_i64, uint64_t, __unsigned_greater_equal, >=)
-CMP_OP(__vec32_i64, int64_t,  __signed_greater_equal, >=)
-CMP_OP(__vec32_i64, uint64_t, __unsigned_less_than, <)
-CMP_OP(__vec32_i64, int64_t,  __signed_less_than, <)
-CMP_OP(__vec32_i64, uint64_t, __unsigned_greater_than, >)
-CMP_OP(__vec32_i64, int64_t,  __signed_greater_than, >)
+CMP_OP(__vec32_i64, i64, int64_t,  __equal, ==)
+CMP_OP(__vec32_i64, i64, int64_t,  __not_equal, !=)
+CMP_OP(__vec32_i64, i64, uint64_t, __unsigned_less_equal, <=)
+CMP_OP(__vec32_i64, i64, int64_t,  __signed_less_equal, <=)
+CMP_OP(__vec32_i64, i64, uint64_t, __unsigned_greater_equal, >=)
+CMP_OP(__vec32_i64, i64, int64_t,  __signed_greater_equal, >=)
+CMP_OP(__vec32_i64, i64, uint64_t, __unsigned_less_than, <)
+CMP_OP(__vec32_i64, i64, int64_t,  __signed_less_than, <)
+CMP_OP(__vec32_i64, i64, uint64_t, __unsigned_greater_than, >)
+CMP_OP(__vec32_i64, i64, int64_t,  __signed_greater_than, >)
 
 SELECT(__vec32_i64)
 INSERT_EXTRACT(__vec32_i64, int64_t)
 SMEAR(__vec32_i64, i64, int64_t)
+SETZERO(__vec32_i64, i64)
+UNDEF(__vec32_i64, i64)
 BROADCAST(__vec32_i64, i64, int64_t)
 ROTATE(__vec32_i64, i64, int64_t)
 SHUFFLES(__vec32_i64, i64, int64_t)
@@ -647,18 +688,26 @@ BINARY_OP(__vec32_f, __sub, -)
 BINARY_OP(__vec32_f, __mul, *)
 BINARY_OP(__vec32_f, __div, /)
 
-CMP_OP(__vec32_f, float, __equal, ==)
-CMP_OP(__vec32_f, float, __not_equal, !=)
-CMP_OP(__vec32_f, float, __less_than, <)
-CMP_OP(__vec32_f, float, __less_equal, <=)
-CMP_OP(__vec32_f, float, __greater_than, >)
-CMP_OP(__vec32_f, float, __greater_equal, >=)
+CMP_OP(__vec32_f, float, float, __equal, ==)
+CMP_OP(__vec32_f, float, float, __not_equal, !=)
+CMP_OP(__vec32_f, float, float, __less_than, <)
+CMP_OP(__vec32_f, float, float, __less_equal, <=)
+CMP_OP(__vec32_f, float, float, __greater_than, >)
+CMP_OP(__vec32_f, float, float, __greater_equal, >=)
 
-static FORCEINLINE __vec32_i1 __ordered(__vec32_f a, __vec32_f b) {
+static FORCEINLINE __vec32_i1 __ordered_float(__vec32_f a, __vec32_f b) {
     __vec32_i1 ret;
     ret.v = 0;
     for (int i = 0; i < 32; ++i)
         ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
+    return ret;
+}
+
+static FORCEINLINE __vec32_i1 __unordered_float(__vec32_f a, __vec32_f b) {
+    __vec32_i1 ret;
+    ret.v = 0;
+    for (int i = 0; i < 32; ++i)
+        ret.v |= ((a.v[i] != a.v[i]) || (b.v[i] != b.v[i])) ? (1 << i) : 0;
     return ret;
 }
 
@@ -669,6 +718,8 @@ static FORCEINLINE __vec32_i1 __ordered(__vec32_f a, __vec32_f b) {
 SELECT(__vec32_f)
 INSERT_EXTRACT(__vec32_f, float)
 SMEAR(__vec32_f, float, float)
+SETZERO(__vec32_f, float)
+UNDEF(__vec32_f, float)
 BROADCAST(__vec32_f, float, float)
 ROTATE(__vec32_f, float, float)
 SHUFFLES(__vec32_f, float, float)
@@ -797,18 +848,26 @@ BINARY_OP(__vec32_d, __sub, -)
 BINARY_OP(__vec32_d, __mul, *)
 BINARY_OP(__vec32_d, __div, /)
 
-CMP_OP(__vec32_d, double, __equal, ==)
-CMP_OP(__vec32_d, double, __not_equal, !=)
-CMP_OP(__vec32_d, double, __less_than, <)
-CMP_OP(__vec32_d, double, __less_equal, <=)
-CMP_OP(__vec32_d, double, __greater_than, >)
-CMP_OP(__vec32_d, double, __greater_equal, >=)
+CMP_OP(__vec32_d, double, double, __equal, ==)
+CMP_OP(__vec32_d, double, double, __not_equal, !=)
+CMP_OP(__vec32_d, double, double, __less_than, <)
+CMP_OP(__vec32_d, double, double, __less_equal, <=)
+CMP_OP(__vec32_d, double, double, __greater_than, >)
+CMP_OP(__vec32_d, double, double, __greater_equal, >=)
 
-static FORCEINLINE __vec32_i1 __ordered(__vec32_d a, __vec32_d b) {
+static FORCEINLINE __vec32_i1 __ordered_double(__vec32_d a, __vec32_d b) {
     __vec32_i1 ret;
     ret.v = 0;
     for (int i = 0; i < 32; ++i)
         ret.v |= ((a.v[i] == a.v[i]) && (b.v[i] == b.v[i])) ? (1 << i) : 0;
+    return ret;
+}
+
+static FORCEINLINE __vec32_i1 __unordered_double(__vec32_d a, __vec32_d b) {
+    __vec32_i1 ret;
+    ret.v = 0;
+    for (int i = 0; i < 32; ++i)
+        ret.v |= ((a.v[i] != a.v[i]) || (b.v[i] != b.v[i])) ? (1 << i) : 0;
     return ret;
 }
 
@@ -819,6 +878,8 @@ static FORCEINLINE __vec32_i1 __ordered(__vec32_d a, __vec32_d b) {
 SELECT(__vec32_d)
 INSERT_EXTRACT(__vec32_d, double)
 SMEAR(__vec32_d, double, double)
+SETZERO(__vec32_d, double)
+UNDEF(__vec32_d, double)
 BROADCAST(__vec32_d, double, double)
 ROTATE(__vec32_d, double, double)
 SHUFFLES(__vec32_d, double, double)

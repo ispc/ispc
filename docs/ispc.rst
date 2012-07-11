@@ -584,15 +584,15 @@ distribution.
 With the current beta implementation, complex ``ispc`` programs are able to
 run on Xeon Phi, though there are a number of known limitations:
 
-* The ``examples/intrinsics/knc.h`` header file isn’t complete yet; for
-  example, vector operations with ``int8`` and ``int16`` types aren’t yet
+* The ``examples/intrinsics/knc.h`` header file isn't complete yet; for
+  example, vector operations with ``int8`` and ``int16`` types aren't yet
   implemented.  Programs that operate on ``varying`` ``int32``, ``float``,
   and ``double`` data-types (and ``uniform`` variables of any data type,
   and arrays and structures of these types), should operate correctly.
 
 * If you use the ``launch`` functionality to launch tasks across cores,
   note that the pthreads task system implemented in
-  ``examples/tasksys.cpp`` hasn’t been tuned for Xeon Phi yet, and has
+  ``examples/tasksys.cpp`` hasn't been tuned for Xeon Phi yet, and has
   known issues with setting thread affinities optimally.
 
 * The compiler currently emits unaligned memory accesses in many cases
@@ -2491,7 +2491,7 @@ could instead be written inside a ``foreach_active`` statement:
 The variable name provided in parenthesis after the ``foreach_active``
 keyword (here, ``index``), causes a ``const uniform int64`` local variable
 of that name to be declared, where the variable takes the ``programIndex``
-value of the program instance executing at each loop iteraton.  
+value of the program instance executing at each loop iteration.  
 
 In the code above, because only one program instance is executing at a time
 when the loop body executes, the update to ``array`` is well-defined.
@@ -2504,7 +2504,7 @@ more complex cases.)
 ``break`` and ``return`` are prohibited.  The order in which the active
 program instances are processed in the loop is not defined.
 
-See the `Using "foreach_active" Effectively`_ Section in the ispc
+See the `Using "foreach_active" Effectively`_ Section in the ``ispc``
 Performance Guide for more details about ``foreach_active``.
 
 .. _Using "foreach_active" Effectively: perfguide.html#using-foreach-active-effectively
@@ -2910,7 +2910,7 @@ we have assigned zero to ``b``, though only for the program instances
 currently executing--i.e. those where ``a < 0``.  After re-establishing the
 executing mask with ``unmasked``, we then compare ``b`` to zero--this
 comparison is well-defined (and "true") for the program instances where ``a
-< 0``, but it is undefed for any program instances where that isn't the
+< 0``, but it is undefined for any program instances where that isn't the
 case, since the value of ``b`` is undefined for those program instances.
 Similar surprising cases can arise when writing to ``varying`` variables
 within ``unmasked`` code.

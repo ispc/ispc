@@ -195,45 +195,31 @@ public:
 };
 
 
-/** @brief Statement implementation for a break or 'coherent' break
-    statement in the program. */
+/** @brief Statement implementation for a break statement in the
+    program. */
 class BreakStmt : public Stmt {
 public:
-    BreakStmt(bool doCoherenceCheck, SourcePos pos);
+    BreakStmt(SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
     Stmt *TypeCheck();
     int EstimateCost() const;
-
-private:
-    /** This indicates whether the generated code will check to see if no
-        more program instances are currently running after the break, in
-        which case the code can have a jump to the end of the current
-        loop. */
-    const bool doCoherenceCheck;
 };
 
 
-/** @brief Statement implementation for a continue or 'coherent' continue
-    statement in the program. */
+/** @brief Statement implementation for a continue statement in the
+    program. */
 class ContinueStmt : public Stmt {
 public:
-    ContinueStmt(bool doCoherenceCheck, SourcePos pos);
+    ContinueStmt(SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
 
     Stmt *TypeCheck();
     int EstimateCost() const;
-
-private:
-    /** This indicates whether the generated code will check to see if no
-        more program instances are currently running after the continue, in
-        which case the code can have a jump to the end of the current
-        loop. */
-    const bool doCoherenceCheck;
 };
 
 
@@ -314,11 +300,11 @@ public:
 
 
 
-/** @brief Statement implementation for a 'return' or 'coherent' return
-    statement in the program. */
+/** @brief Statement implementation for a 'return' statement in the
+    program. */
 class ReturnStmt : public Stmt {
 public:
-    ReturnStmt(Expr *e, bool cc, SourcePos p);
+    ReturnStmt(Expr *e, SourcePos p);
 
     void EmitCode(FunctionEmitContext *ctx) const;
     void Print(int indent) const;
@@ -327,11 +313,6 @@ public:
     int EstimateCost() const;
 
     Expr *expr;
-    /** This indicates whether the generated code will check to see if no
-        more program instances are currently running after the return, in
-        which case the code can possibly jump to the end of the current
-        function. */
-    const bool doCoherenceCheck;
 };
 
 
