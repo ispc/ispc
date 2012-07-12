@@ -2,13 +2,15 @@
 export uniform int width() { return programCount; }
 
 int zero = 0;
+void *gptr;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform int8 a[programCount];
+    uniform int16 a[programCount];
     for (uniform int i = 0; i < programCount; ++i)
         a[i] = aFOO[i];
-    
-    int g = a[programIndex+zero]; 
+
+    int16 *ptr = (aFOO[0] == 1234) ? (int16 * varying)gptr : (a + programIndex);
+    int g = *ptr;
     RET[programIndex] = g; 
 }
 

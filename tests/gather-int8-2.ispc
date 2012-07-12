@@ -1,7 +1,7 @@
 
 export uniform int width() { return programCount; }
 
-int zero = 0;
+int64 zero = 0;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     uniform int8 a[programCount];

@@ -4,14 +4,18 @@ export uniform int width() { return programCount; }
 int zero = 0;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform int8 a[programCount];
+    uniform double a[programCount];
     for (uniform int i = 0; i < programCount; ++i)
         a[i] = aFOO[i];
     
-    int g = a[programIndex+zero]; 
+    int g = 0;
+    if (programIndex < 2)
+        g = a[programIndex+zero]; 
     RET[programIndex] = g; 
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 1 + programIndex;
+    RET[programIndex] = 0;
+    RET[0] = 1;
+    RET[1] = 2;
 }
