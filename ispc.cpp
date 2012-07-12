@@ -94,20 +94,22 @@ lGetSystemISA() {
     int info[4];
     __cpuid(info, 1);
 
-    if ((info[2] & (1 << 28)) != 0) {
-        // AVX1 for sure. Do we have AVX2?
-        // Call cpuid with eax=7, ecx=0
-        __cpuidex(info, 7, 0);
-        if ((info[1] & (1 << 5)) != 0)
-            return "avx2";
-        else {
-            // ivybridge?
-            if ((info[2] & (1 << 29)) != 0 &&  // F16C
-                (info[2] & (1 << 30)) != 0)    // RDRAND
-                return "avx1.1";
+    if ((info[2] & (1 << 28)) != 0) {  // AVX
+        // AVX1 for sure....
+        // Ivy Bridge?
+        if ((info[2] & (1 << 29)) != 0 &&  // F16C
+            (info[2] & (1 << 30)) != 0) {  // RDRAND
+            // So far, so good.  AVX2?
+            // Call cpuid with eax=7, ecx=0
+            int info2[4];
+            __cpuidex(info2, 7, 0);
+            if ((info2[1] & (1 << 5)) != 0)
+                return "avx2";
             else
-                return "avx";
+                return "avx1.1";
         }
+        // Regular AVX
+        return "avx";
     }
     else if ((info[2] & (1 << 19)) != 0)
         return "sse4";
