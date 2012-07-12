@@ -3712,3 +3712,48 @@ define void @__scatter64_$1(<WIDTH x i64> %ptrs, <WIDTH x $1> %values,
 
 '
 )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rdrand 
+
+define(`rdrand_decls', `
+declare i1 @__rdrand_i16(i16 * nocapture)
+declare i1 @__rdrand_i32(i32 * nocapture)
+declare i1 @__rdrand_i64(i64 * nocapture)
+')
+
+define(`rdrand_definition', `
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rdrand
+
+declare {i16, i32} @llvm.x86.rdrand.16()
+declare {i32, i32} @llvm.x86.rdrand.32()
+declare {i64, i32} @llvm.x86.rdrand.64()
+
+define i1 @__rdrand_i16(i16 * %ptr) {
+  %v = call {i16, i32} @llvm.x86.rdrand.16()
+  %v0 = extractvalue {i16, i32} %v, 0
+  %v1 = extractvalue {i16, i32} %v, 1
+  store i16 %v0, i16 * %ptr
+  %good = icmp ne i32 %v1, 0
+  ret i1 %good
+}
+
+define i1 @__rdrand_i32(i32 * %ptr) {
+  %v = call {i32, i32} @llvm.x86.rdrand.32()
+  %v0 = extractvalue {i32, i32} %v, 0
+  %v1 = extractvalue {i32, i32} %v, 1
+  store i32 %v0, i32 * %ptr
+  %good = icmp ne i32 %v1, 0
+  ret i1 %good
+}
+
+define i1 @__rdrand_i64(i64 * %ptr) {
+  %v = call {i64, i32} @llvm.x86.rdrand.64()
+  %v0 = extractvalue {i64, i32} %v, 0
+  %v1 = extractvalue {i64, i32} %v, 1
+  store i64 %v0, i64 * %ptr
+  %good = icmp ne i32 %v1, 0
+  ret i1 %good
+}
+')

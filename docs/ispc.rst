@@ -140,6 +140,7 @@ Contents:
     * `Basic Math Functions`_
     * `Transcendental Functions`_
     * `Pseudo-Random Numbers`_
+    * `Random Numbers`_
 
   + `Output Functions`_
   + `Assertions`_
@@ -3454,6 +3455,40 @@ be used to get a pseudo-random ``float`` value.
     float frandom(varying RNGState * uniform state)
     uniform unsigned int32 random(RNGState * uniform state)
     uniform float frandom(uniform RNGState * uniform state)
+
+
+Random Numbers
+--------------
+
+Some recent CPUs (including those based on the Intel(r) Ivy Bridge
+micro-architecture), provide support for generating true random numbers.  A
+few standard library functions make this functionality available:
+
+::
+
+    bool rdrand(uniform int32 * uniform ptr)
+    bool rdrand(varying int32 * uniform ptr)
+    bool rdrand(uniform int32 * varying ptr)
+
+If the processor doesn't have sufficient entropy to generate a random
+number, then this function fails and returns ``false``.  Otherwise, if the
+processor is successful, the random value is stored in the given pointer
+and ``true`` is returned.  Therefore, this function should generally be
+used as follows, called repeatedly until it is successful:
+
+::
+
+    int r;
+    while (rdrand(&r) == false)
+        ; // empty loop body
+   
+
+In addition to the ``int32`` variants of ``rdrand()`` listed above, there
+are versions that return ``int16``, ``float``, and ``int64`` values as
+well.
+
+Note that when compiling to targets other than ``avx1.1`` and ``avx2``, the
+``rdrand()`` functions always return ``false``.
 
 Output Functions
 ----------------
