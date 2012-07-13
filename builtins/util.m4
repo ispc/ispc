@@ -3471,6 +3471,40 @@ pl_done:
 ;;
 ;; $1: scalar type for which to generate functions to do gathers
 
+define(`gen_gather_general', `
+; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
+define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs, 
+                                   <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <WIDTH x $1>
+  per_lane(WIDTH, <WIDTH x i32> %vecmask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = load $1 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
+  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
+ ')
+
+  %ret = load <WIDTH x $1> * %ret_ptr
+  ret <WIDTH x $1> %ret
+}
+
+; fully general 64-bit gather, takes array of pointers encoded as vector of i32s
+define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs, 
+                                   <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
+  %ret_ptr = alloca <WIDTH x $1>
+  per_lane(WIDTH, <WIDTH x i32> %vecmask, `
+  %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
+  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
+  %val_LANE_ID = load $1 * %ptr_LANE_ID
+  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
+  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
+ ')
+
+  %ret = load <WIDTH x $1> * %ret_ptr
+  ret <WIDTH x $1> %ret
+}
+')
+
 ; vec width, type
 define(`gen_gather_factored', `
 ;; Define the utility function to do the gather operation for a single element
@@ -3582,37 +3616,42 @@ define <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64
   ret <WIDTH x $1> %ret`'eval(WIDTH-1)
 }
 
-; fully general 32-bit gather, takes array of pointers encoded as vector of i32s
-define <WIDTH x $1> @__gather32_$1(<WIDTH x i32> %ptrs, 
-                                <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
-  %ret_ptr = alloca <WIDTH x $1>
-  per_lane(WIDTH, <WIDTH x i32> %vecmask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i32> %ptrs, i32 LANE
-  %ptr_LANE_ID = inttoptr i32 %iptr_LANE_ID to $1 *
-  %val_LANE_ID = load $1 * %ptr_LANE_ID
-  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
-  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
- ')
+gen_gather_general($1)
+'
+)
 
-  %ret = load <WIDTH x $1> * %ret_ptr
-  ret <WIDTH x $1> %ret
+; vec width, type
+define(`gen_gather', `
+
+gen_gather_factored($1)
+
+define <WIDTH x $1>
+@__gather_base_offsets32_$1(i8 * %ptr, i32 %offset_scale,
+                           <WIDTH x i32> %offsets,
+                           <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
+  %scale_vec = bitcast i32 %offset_scale to <1 x i32>
+  %smear_scale = shufflevector <1 x i32> %scale_vec, <1 x i32> undef,
+     <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
+  %scaled_offsets = mul <WIDTH x i32> %smear_scale, %offsets
+  %v = call <WIDTH x $1> @__gather_factored_base_offsets32_$1(i8 * %ptr, <WIDTH x i32> %scaled_offsets, i32 1, 
+                                                     <WIDTH x i32> zeroinitializer, <WIDTH x i32> %vecmask)
+  ret <WIDTH x $1> %v
 }
 
-; fully general 64-bit gather, takes array of pointers encoded as vector of i32s
-define <WIDTH x $1> @__gather64_$1(<WIDTH x i64> %ptrs, 
-                                <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
-  %ret_ptr = alloca <WIDTH x $1>
-  per_lane(WIDTH, <WIDTH x i32> %vecmask, `
-  %iptr_LANE_ID = extractelement <WIDTH x i64> %ptrs, i32 LANE
-  %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to $1 *
-  %val_LANE_ID = load $1 * %ptr_LANE_ID
-  %store_ptr_LANE_ID = getelementptr <WIDTH x $1> * %ret_ptr, i32 0, i32 LANE
-  store $1 %val_LANE_ID, $1 * %store_ptr_LANE_ID
- ')
-
-  %ret = load <WIDTH x $1> * %ret_ptr
-  ret <WIDTH x $1> %ret
+define <WIDTH x $1>
+@__gather_base_offsets64_$1(i8 * %ptr, i32 %offset_scale,
+                            <WIDTH x i64> %offsets,
+                            <WIDTH x i32> %vecmask) nounwind readonly alwaysinline {
+  %scale64 = zext i32 %offset_scale to i64
+  %scale_vec = bitcast i64 %scale64 to <1 x i64>
+  %smear_scale = shufflevector <1 x i64> %scale_vec, <1 x i64> undef,
+     <WIDTH x i32> < forloop(i, 1, eval(WIDTH-1), `i32 0, ') i32 0 >
+  %scaled_offsets = mul <WIDTH x i64> %smear_scale, %offsets
+  %v = call <WIDTH x $1> @__gather_factored_base_offsets64_$1(i8 * %ptr, <WIDTH x i64> %scaled_offsets,
+                                                     i32 1, <WIDTH x i64> zeroinitializer, <WIDTH x i32> %vecmask)
+  ret <WIDTH x $1> %v
 }
+
 '
 )
 

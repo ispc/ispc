@@ -365,6 +365,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
         t->hasRand = true;
+        t->hasGather = true;
 #endif
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
@@ -378,6 +379,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
         t->hasRand = true;
+        t->hasGather = true;
 #endif
     }
 #endif // !LLVM_3_0
