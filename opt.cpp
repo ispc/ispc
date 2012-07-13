@@ -447,6 +447,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target.vectorWidth > 1) {
+            optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
         }
         if (!g->opt.disableMaskAllOnOptimizations) {
@@ -489,6 +490,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target.vectorWidth > 1) {
+            optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
         
             if (g->opt.disableCoalescing == false &&
@@ -507,6 +509,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target.vectorWidth > 1) {
+            optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
         }
 
