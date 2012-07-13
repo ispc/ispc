@@ -444,12 +444,12 @@ masked_load(double, 8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather/scatter
 
-gen_gather(i8)
-gen_gather(i16)
-gen_gather(i32)
-gen_gather(float)
-gen_gather(i64)
-gen_gather(double)
+gen_gather_factored(i8)
+gen_gather_factored(i16)
+gen_gather_factored(i32)
+gen_gather_factored(float)
+gen_gather_factored(i64)
+gen_gather_factored(double)
 
 gen_scatter(i8)
 gen_scatter(i16)

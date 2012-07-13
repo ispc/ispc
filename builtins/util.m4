@@ -3472,7 +3472,7 @@ pl_done:
 ;; $1: scalar type for which to generate functions to do gathers
 
 ; vec width, type
-define(`gen_gather', `
+define(`gen_gather_factored', `
 ;; Define the utility function to do the gather operation for a single element
 ;; of the type
 define <WIDTH x $1> @__gather_elt32_$1(i8 * %ptr, <WIDTH x i32> %offsets, i32 %offset_scale,
