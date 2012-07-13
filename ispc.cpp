@@ -328,8 +328,14 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
+#if !defined(LLVM_3_0)
+        // LLVM 3.1+ only
         t->hasHalf = true;
+  #if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
         t->hasRand = true;
+  #endif
+#endif
     }
     else if (!strcasecmp(isa, "avx1.1-x2")) {
         t->isa = Target::AVX11;
@@ -338,8 +344,14 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
+#if !defined(LLVM_3_0)
+        // LLVM 3.1+ only
         t->hasHalf = true;
+  #if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
         t->hasRand = true;
+  #endif
+#endif
     }
 #ifndef LLVM_3_0
     else if (!strcasecmp(isa, "avx2")) {
@@ -350,7 +362,10 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
+#if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
         t->hasRand = true;
+#endif
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
         t->isa = Target::AVX2;
@@ -360,7 +375,10 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
+#if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
         t->hasRand = true;
+#endif
     }
 #endif // !LLVM_3_0
     else {
