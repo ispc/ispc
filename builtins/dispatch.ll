@@ -76,18 +76,19 @@ declare void @abort() noreturn
 ;;     /* NOTE: the values returned below must be the same as the
 ;;        corresponding enumerant values in Target::ISA. */
 ;;     if ((info[2] & (1 << 28)) != 0) {
-;;         // AVX1 for sure. Do we have AVX2?
-;;         // Call cpuid with eax=7, ecx=0
-;;         __cpuid_count(info, 7, 0);
-;;         if ((info[1] & (1 << 5)) != 0)
-;;             return 4; // AVX2
-;;         else {
-;;             if ((info[2] & (1 << 29)) != 0 &&  // F16C
-;;                 (info[2] & (1 << 30)) != 0)    // RDRAND
-;;                 return 3; // AVX1 on IVB
-;;             else
-;;                 return 2; // AVX1
-;;         }
+;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
+;;            (info[2] & (1 << 30)) != 0) {  // RDRAND
+;;            // So far, so good.  AVX2?
+;;            // Call cpuid with eax=7, ecx=0
+;;            int info2[4];
+;;            __cpuid_count(info2, 7, 0);
+;;            if ((info2[1] & (1 << 5)) != 0)
+;;                return 4;
+;;            else
+;;                return 3;
+;;        }
+;;        // Regular AVX
+;;        return 2;
 ;;     }
 ;;     else if ((info[2] & (1 << 19)) != 0)
 ;;         return 1; // SSE4
@@ -104,40 +105,37 @@ entry:
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
   %and = and i32 %asmresult5.i, 268435456
   %cmp = icmp eq i32 %and, 0
-  br i1 %cmp, label %if.else14, label %if.then
+  br i1 %cmp, label %if.else13, label %if.then
 
 if.then:                                          ; preds = %entry
-  %1 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i29 = extractvalue { i32, i32, i32, i32 } %1, 1
-  %and3 = and i32 %asmresult4.i29, 32
-  %cmp4 = icmp eq i32 %and3, 0
-  br i1 %cmp4, label %if.else, label %return
+  %1 = and i32 %asmresult5.i, 1610612736
+  %2 = icmp eq i32 %1, 1610612736
+  br i1 %2, label %if.then7, label %return
 
-if.else:                                          ; preds = %if.then
-  %asmresult5.i30 = extractvalue { i32, i32, i32, i32 } %1, 2
-  %2 = and i32 %asmresult5.i30, 1610612736
-  %3 = icmp eq i32 %2, 1610612736
-  br i1 %3, label %return, label %if.else13
-
-if.else13:                                        ; preds = %if.else
+if.then7:                                         ; preds = %if.then
+  %3 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %asmresult4.i28 = extractvalue { i32, i32, i32, i32 } %3, 1
+  %and10 = lshr i32 %asmresult4.i28, 5
+  %4 = and i32 %and10, 1
+  %5 = add i32 %4, 3
   br label %return
 
-if.else14:                                        ; preds = %entry
-  %and16 = and i32 %asmresult5.i, 524288
-  %cmp17 = icmp eq i32 %and16, 0
-  br i1 %cmp17, label %if.else19, label %return
+if.else13:                                        ; preds = %entry
+  %and15 = and i32 %asmresult5.i, 524288
+  %cmp16 = icmp eq i32 %and15, 0
+  br i1 %cmp16, label %if.else18, label %return
 
-if.else19:                                        ; preds = %if.else14
-  %and21 = and i32 %asmresult6.i, 67108864
-  %cmp22 = icmp eq i32 %and21, 0
-  br i1 %cmp22, label %if.else24, label %return
+if.else18:                                        ; preds = %if.else13
+  %and20 = and i32 %asmresult6.i, 67108864
+  %cmp21 = icmp eq i32 %and20, 0
+  br i1 %cmp21, label %if.else23, label %return
 
-if.else24:                                        ; preds = %if.else19
+if.else23:                                        ; preds = %if.else18
   tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                           ; preds = %if.else19, %if.else14, %if.else13, %if.else, %if.then
-  %retval.0 = phi i32 [ 2, %if.else13 ], [ 4, %if.then ], [ 3, %if.else ], [ 1, %if.else14 ], [ 0, %if.else19 ]
+return:                                           ; preds = %if.else18, %if.else13, %if.then7, %if.then
+  %retval.0 = phi i32 [ %5, %if.then7 ], [ 2, %if.then ], [ 1, %if.else13 ], [ 0, %if.else18 ]
   ret i32 %retval.0
 }
 

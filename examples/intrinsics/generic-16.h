@@ -1307,15 +1307,13 @@ static FORCEINLINE void __masked_store_blend_double(void *p, __vec16_d val,
 // offsets * offsetScale is in bytes (for all of these)
 
 #define GATHER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                  \
-static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
-                              uint32_t scale, OTYPE constOffset, \
-                              __vec16_i1 mask) {                        \
+static FORCEINLINE VTYPE FUNC(unsigned char *b, uint32_t scale,         \
+                              OTYPE offset, __vec16_i1 mask) {          \
     VTYPE ret;                                                          \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
+            STYPE *ptr = (STYPE *)(base + scale * offset.v[i]);         \
             ret.v[i] = *ptr;                                            \
         }                                                               \
     return ret;                                                         \
@@ -1362,14 +1360,13 @@ GATHER_GENERAL(__vec16_d,   double,  __vec16_i64, __gather64_double)
 // scatter
 
 #define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)                 \
-static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
-                             uint32_t scale, OTYPE constOffset,         \
-                             VTYPE val, __vec16_i1 mask) {              \
+static FORCEINLINE void FUNC(unsigned char *b, uint32_t scale,          \
+                             OTYPE offset, VTYPE val,                   \
+                             __vec16_i1 mask) {                         \
     int8_t *base = (int8_t *)b;                                         \
     for (int i = 0; i < 16; ++i)                                        \
         if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
+            STYPE *ptr = (STYPE *)(base + scale * offset.v[i]);         \
             *ptr = val.v[i];                                            \
         }                                                               \
 }

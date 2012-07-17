@@ -803,6 +803,13 @@ template <> static FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 // int64
 
 
+static FORCEINLINE __vec16_i64 __setzero_i64() {
+    __vec16_i64 ret;
+    ret.v_lo = _mm512_setzero_epi32();
+    ret.v_hi = _mm512_setzero_epi32();
+    return ret;
+}
+
 static FORCEINLINE __vec16_i64 __add(const __vec16_i64 &a, const __vec16_i64 &b)
 {
     __mmask16 carry = 0;
@@ -878,7 +885,7 @@ static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, int index)
     return src[index+16] | (int64_t(src[index]) << 32);
 }
 
-static FORCEINLINE  __vec16_i64 __smear_i64(__vec16_i64, const int64_t &l) {
+static FORCEINLINE  __vec16_i64 __smear_i64(const int64_t &l) {
     const int *i = (const int*)&l;
     return __vec16_i64(_mm512_set_1to16_epi32(i[0]), _mm512_set_1to16_epi32(i[1]));
 }
@@ -1373,6 +1380,11 @@ CAST(__vec16_i32, int32_t, __vec16_i16, int16_t, __cast_sext)
 CAST(__vec16_i32, int32_t, __vec16_i8,  int8_t,  __cast_sext)
 CAST(__vec16_i16, int16_t, __vec16_i8,  int8_t,  __cast_sext)
 
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+    return __vec16_i64(val.v,_mm512_srai_epi32(val.v,31));
+}
+
 #define CAST_SEXT_I1(TYPE)
 /*
 static FORCEINLINE TYPE __cast_sext(TYPE, __vec16_i1 v) {  \
@@ -1388,11 +1400,6 @@ static FORCEINLINE TYPE __cast_sext(TYPE, __vec16_i1 v) {  \
 CAST_SEXT_I1(__vec16_i8)
 CAST_SEXT_I1(__vec16_i16)
 CAST_SEXT_I1(__vec16_i32)
-
-static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
-{
-    return __vec16_i64(val.v,_mm512_srai_epi32(val.v,31));
-}
 
 // zero extension
 CAST(__vec16_i64, uint64_t, __vec16_i32, uint32_t, __cast_zext)
@@ -1420,6 +1427,14 @@ CAST_ZEXT_I1(__vec16_i8)
 CAST_ZEXT_I1(__vec16_i16)
 CAST_ZEXT_I1(__vec16_i32)
 CAST_ZEXT_I1(__vec16_i64)
+
+static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1 &val)
+{
+    __vec16_i32 ret = _mm512_setzero_epi32();
+    __vec16_i32 one = _mm512_set1_epi32(1);
+    return _mm512_mask_mov_epi32(ret, val.m, one);
+}
+
 
 // truncations
 CAST(__vec16_i32, int32_t, __vec16_i64, int64_t, __cast_trunc)
@@ -1589,11 +1604,6 @@ CAST_BITS_SCALAR(double, int64_t)
 ///////////////////////////////////////////////////////////////////////////
 // various math functions
 
-/*
-static FORCEINLINE void __fastmath() {
-}
-*/
-
 static FORCEINLINE float __round_uniform_float(float v) {
     return roundf(v);
 }
@@ -1659,13 +1669,24 @@ static FORCEINLINE __vec16_f __min_varying_float(__vec16_f v1, __vec16_f v2) {
   return _mm512_gmin_ps(v1, v2);
 }
 
+static FORCEINLINE __vec16_i32 __max_varying_int32(__vec16_i32 v1, __vec16_i32 v2) {
+  return _mm512_max_epi32(v1, v2);
+}
+
+static FORCEINLINE __vec16_i32 __min_varying_int32(__vec16_i32 v1, __vec16_i32 v2) {
+  return _mm512_min_epi32(v1, v2);
+}
+
+static FORCEINLINE __vec16_i32 __max_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) {
+  return _mm512_max_epu32(v1, v2);
+}
+
+static FORCEINLINE __vec16_i32 __min_varying_uint32(__vec16_i32 v1, __vec16_i32 v2) {
+  return _mm512_min_epu32(v1, v2);
+}
+
 BINARY_OP_FUNC(__vec16_d, __max_varying_double, __max_uniform_double)
 BINARY_OP_FUNC(__vec16_d, __min_varying_double, __min_uniform_double)
-
-BINARY_OP_FUNC(__vec16_i32, __max_varying_int32, __max_uniform_int32)
-BINARY_OP_FUNC(__vec16_i32, __min_varying_int32, __min_uniform_int32)
-BINARY_OP_FUNC(__vec16_i32, __max_varying_uint32, __max_uniform_uint32)
-BINARY_OP_FUNC(__vec16_i32, __min_varying_uint32, __min_uniform_uint32)
 
 BINARY_OP_FUNC(__vec16_i64, __max_varying_int64, __max_uniform_int64)
 BINARY_OP_FUNC(__vec16_i64, __min_varying_int64, __min_uniform_int64)
@@ -1940,60 +1961,33 @@ static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
 
 // offsets * offsetScale is in bytes (for all of these)
 
-#define GATHER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
-/*
-static FORCEINLINE VTYPE FUNC(unsigned char *b, OTYPE varyingOffset,    \
-                              uint32_t scale, OTYPE constOffset, \
-                              __vec16_i1 mask) {                        \
-    VTYPE ret;                                                          \
-    int8_t *base = (int8_t *)b;                                         \
-    for (int i = 0; i < 16; ++i)                                        \
-        if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
-            ret.v[i] = *ptr;                                            \
-        }                                                               \
-    return ret;                                                         \
-}
-*/
-
 static FORCEINLINE __vec16_i32
-__gather_base_offsets32_i32(uint8_t *base, __vec16_i32 varyingOffset, 
-			    uint32_t scale, __vec16_i32 constOffset, 
-			    __vec16_i1 mask) { 
-    __vec16_i32 vscale = _mm512_extload_epi32(&scale, _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
-    __vec16_i32 offsets = __add(__mul(vscale, varyingOffset), constOffset);
-    __vec16_i32 tmp;
-
-    // Loop is generated by intrinsic
+__gather_base_offsets32_i32(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
+			    __vec16_i1 mask) {
+    __vec16_i32 tmp = _mm512_undefined_epi32();
     __vec16_i32 ret = _mm512_mask_i32extgather_epi32(tmp, mask, offsets, base, 
-                                                     _MM_UPCONV_EPI32_NONE, 1,
+                                                     _MM_UPCONV_EPI32_NONE, scale,
                                                      _MM_HINT_NONE);
     return ret;
 }
 
 static FORCEINLINE __vec16_f
-__gather_base_offsets32_float(uint8_t *base, __vec16_i32 varyingOffset, 
-                              uint32_t scale, __vec16_i32 constOffset, 
+__gather_base_offsets32_float(uint8_t *base, uint32_t scale, __vec16_i32 offsets,
                               __vec16_i1 mask) { 
-    __vec16_i32 vscale = _mm512_extload_epi32(&scale, _MM_UPCONV_EPI32_NONE, _MM_BROADCAST_1X16, _MM_HINT_NONE);
-    __vec16_i32 offsets = __add(__mul(vscale, varyingOffset), constOffset);
-    __vec16_f tmp;
-
-    // Loop is generated by intrinsic
-    __vec16_f ret = _mm512_mask_i32extgather_ps(tmp, mask, offsets, base, 
-                                                _MM_UPCONV_PS_NONE, 1,
+    __vec16_f tmp = _mm512_undefined_ps();
+    __vec16_f ret = _mm512_mask_i32extgather_ps(tmp, mask, offsets, base,
+                                                _MM_UPCONV_PS_NONE, scale,
                                                 _MM_HINT_NONE);
     return ret;
 }
 
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_base_offsets32_i8)
-GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_base_offsets64_i8)
-GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
-GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
-GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
-GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
-GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
+//GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __gather_base_offsets32_i8)
+//GATHER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __gather_base_offsets64_i8)
+//GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
+//GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
+//GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
+//GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
+//GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
 
 #define GATHER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)
 /*
@@ -2039,46 +2033,42 @@ static FORCEINLINE __vec16_i32 __gather64_i32(__vec16_i64 ptrs, __vec16_i1 mask)
 */
 // scatter
 
-#define SCATTER_BASE_OFFSETS(VTYPE, STYPE, OTYPE, FUNC)
-/*
-static FORCEINLINE void FUNC(unsigned char *b, OTYPE varyingOffset,     \
-                             uint32_t scale, OTYPE constOffset,         \
-                             VTYPE val, __vec16_i1 mask) {              \
-    int8_t *base = (int8_t *)b;                                         \
-    for (int i = 0; i < 16; ++i)                                        \
-        if ((mask.v & (1 << i)) != 0) {                                 \
-            STYPE *ptr = (STYPE *)(base + scale * varyingOffset.v[i] +  \
-                                   constOffset.v[i]);                   \
-            *ptr = val.v[i];                                            \
-        }                                                               \
-}
-*/
-
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_base_offsets32_i8)
-SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_base_offsets64_i8)
-SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_base_offsets32_i16)
-SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64_i16)
-SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
-SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
-SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
+//SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i32, __scatter_base_offsets32_i8)
+//SCATTER_BASE_OFFSETS(__vec16_i8, int8_t, __vec16_i64, __scatter_base_offsets64_i8)
+//SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __scatter_base_offsets32_i16)
+//SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64_i16)
+//SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
+//SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
+//SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
 
 static FORCEINLINE void
-__scatter_base_offsets32_i32(uint8_t *b, __vec16_i32 varyingOffset,
-                             uint32_t scale, __vec16_i32 constOffset,
+__scatter_base_offsets32_i32(uint8_t *b, uint32_t scale, __vec16_i32 offsets,
                              __vec16_i32 val, __vec16_i1 mask)
 {
-    __vec16_i32 offsets = __add(__mul(__vec16_i32(scale), varyingOffset), constOffset);
-    _mm512_mask_i32extscatter_epi32(b, mask, offsets, val, _MM_DOWNCONV_EPI32_NONE, 1, _MM_HINT_NONE);
+    _mm512_mask_i32extscatter_epi32(b, mask, offsets, val, 
+                                    _MM_DOWNCONV_EPI32_NONE, scale, 
+                                    _MM_HINT_NONE);
 }
 
 static FORCEINLINE void 
-__scatter_base_offsets32_float(void *base, const __vec16_i32 &varyingOffset, 
-                               uint32_t scale, const __vec16_i32 &constOffset, 
-                               const __vec16_f &val, const __vec16_i1 mask) 
+__scatter_base_offsets32_float(void *base, uint32_t scale, __vec16_i32 offsets,
+                               __vec16_f val, __vec16_i1 mask) 
 { 
-    __vec16_i32 offsets = __add(__mul(varyingOffset,__vec16_i32(scale)), constOffset);
-    _mm512_mask_i32extscatter_ps(base, mask, offsets, val, _MM_DOWNCONV_PS_NONE, _MM_SCALE_1, _MM_HINT_NONE);
+    _mm512_mask_i32extscatter_ps(base, mask, offsets, val, 
+                                 _MM_DOWNCONV_PS_NONE, scale,
+                                 _MM_HINT_NONE);
 }
+
+/*
+static FORCEINLINE void
+__scatter_base_offsets64_float(void *base, const __vec16_i64 &varyingOffset,
+                               uint32_t scale, const __vec16_i64 &constOffset,
+                               const __vec16_f &val, const __vec16_i1 mask)
+{
+    __vec16_i64 offsets = __add(__mul(varyingOffset,__vec16_i64(scale)), constOffset);
+    _mm512_mask_i64extscatter_ps(base, mask, offsets, val, _MM_DOWNCONV_PS_NONE, _MM_SCALE_1, _MM_HINT_NONE);
+}
+*/
 
 #define SCATTER_GENERAL(VTYPE, STYPE, PTRTYPE, FUNC)
 /*

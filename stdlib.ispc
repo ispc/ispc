@@ -4068,3 +4068,188 @@ static inline void seed_rng(uniform RNGState * uniform state,
 static inline void fastmath() {
     __fastmath();
 }
+
+///////////////////////////////////////////////////////////////////////////
+// rdrand
+
+static inline uniform bool rdrand(float * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        uniform int32 irand;
+        uniform bool success = __rdrand_i32(&irand);
+        if (success) {
+            irand &= (1<<23)-1;
+            *ptr = floatbits(0x3F800000 | irand)-1.0f;
+        }
+        return success;
+    }
+}
+
+static inline bool rdrand(varying float * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        bool success = false;
+        foreach_active (index) {
+            uniform int32 irand;
+            if (__rdrand_i32(&irand)) {
+                // FIXME: it probably would be preferable, here and in the
+                // following rdrand() function, to do the int->float stuff
+                // in vector form.  However, we need to be careful to not
+                // clobber any existing already-set values in *ptr with
+                // inactive lanes here...
+                irand &= (1<<23)-1;
+                *ptr = floatbits(0x3F800000 | irand)-1.0f;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline bool rdrand(float * ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        float * uniform ptrs[programCount];
+        ptrs[programIndex] = ptr;
+
+        bool success = false;
+        foreach_active (index) {
+            uniform int32 irand;
+            if (__rdrand_i32(&irand)) {
+                irand &= (1<<23)-1;
+                *ptrs[index] = floatbits(0x3F800000 | irand)-1.0f;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline uniform bool rdrand(int16 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else
+        return __rdrand_i16(ptr);
+}
+
+static inline bool rdrand(varying int16 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        bool success = false;
+        foreach_active (index) {
+            uniform int16 irand;
+            if (__rdrand_i16(&irand)) {
+                *ptr = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline bool rdrand(int16 * ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        int16 * uniform ptrs[programCount];
+        ptrs[programIndex] = ptr;
+        bool success = false;
+
+        foreach_active (index) {
+            uniform int16 irand;
+            if (__rdrand_i16(&irand)) {
+                *ptrs[index] = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline uniform bool rdrand(int32 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else
+        return __rdrand_i32(ptr);
+}
+
+static inline bool rdrand(varying int32 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        bool success = false;
+        foreach_active (index) {
+            uniform int32 irand;
+            if (__rdrand_i32(&irand)) {
+                *ptr = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline bool rdrand(int32 * ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        int32 * uniform ptrs[programCount];
+        ptrs[programIndex] = ptr;
+        bool success = false;
+
+        foreach_active (index) {
+            uniform int32 irand;
+            if (__rdrand_i32(&irand)) {
+                *ptrs[index] = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline uniform bool rdrand(int64 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else
+        return __rdrand_i64(ptr);
+}
+
+static inline bool rdrand(varying int64 * uniform ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        bool success = false;
+        foreach_active (index) {
+            uniform int64 irand;
+            if (__rdrand_i64(&irand)) {
+                *ptr = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}
+
+static inline bool rdrand(int64 * ptr) {
+    if (__have_native_rand == false)
+        return false;
+    else {
+        int64 * uniform ptrs[programCount];
+        ptrs[programIndex] = ptr;
+        bool success = false;
+
+        foreach_active (index) {
+            uniform int64 irand;
+            if (__rdrand_i64(&irand)) {
+                *ptrs[index] = irand;
+                success = true;
+            }
+        }
+        return success;
+    }
+}

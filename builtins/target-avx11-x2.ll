@@ -29,13 +29,55 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-define(`NO_HALF_DECLARES', `1')
+include(`target-avx-x2.ll')
 
-include(`target-avx1-x2.ll')
+ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
+       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
+       `rdrand_definition()')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int min/max
+
+define <16 x i32> @__min_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+  binary4to16(ret, i32, @llvm.x86.sse41.pminsd, %0, %1)
+  ret <16 x i32> %ret
+}
+
+define <16 x i32> @__max_varying_int32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+  binary4to16(ret, i32, @llvm.x86.sse41.pmaxsd, %0, %1)
+  ret <16 x i32> %ret
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; unsigned int min/max
+
+define <16 x i32> @__min_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+  binary4to16(ret, i32, @llvm.x86.sse41.pminud, %0, %1)
+  ret <16 x i32> %ret
+}
+
+define <16 x i32> @__max_varying_uint32(<16 x i32>, <16 x i32>) nounwind readonly alwaysinline {
+  binary4to16(ret, i32, @llvm.x86.sse41.pmaxud, %0, %1)
+  ret <16 x i32> %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; gather
+
+gen_gather(i8)
+gen_gather(i16)
+gen_gather(i32)
+gen_gather(float)
+gen_gather(i64)
+gen_gather(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float/half conversions
 
+ifelse(LLVM_VERSION, `LLVM_3_0', `
+;; nothing to define...
+', `
 declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readnone
 ; 0 is round nearest even
 declare <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float>, i32) nounwind readnone
@@ -86,4 +128,5 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %r = extractelement <8 x i16> %rv, i32 0
   ret i16 %r
 }
-
+'
+)

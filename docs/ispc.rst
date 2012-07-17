@@ -140,6 +140,7 @@ Contents:
     * `Basic Math Functions`_
     * `Transcendental Functions`_
     * `Pseudo-Random Numbers`_
+    * `Random Numbers`_
 
   + `Output Functions`_
   + `Assertions`_
@@ -2084,7 +2085,7 @@ can be declared:
 
     soa<8> Point pts[...];
 
-The in-memory layout of the ``Point``s has had the SOA transformation
+The in-memory layout of the ``Point`` instances has had the SOA transformation
 applied, such that there are 8 ``x`` values in memory followed by 8 ``y``
 values, and so forth.  Here is the effective declaration of ``soa<8>
 Point``:
@@ -2266,7 +2267,7 @@ based on C++'s ``new`` and ``delete`` operators:
    // use ptr...
    delete[] ptr;
 
-In the above code, each program instance allocates its own ``count`-sized
+In the above code, each program instance allocates its own ``count`` sized
 array of ``uniform int`` values, uses that memory, and then deallocates
 that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
 serviced by corresponding calls the system C library's ``malloc()`` and
@@ -2277,9 +2278,7 @@ analogous to the corresponding rules are for pointers (as described in
 `Pointer Types`_.)  Specifically, if a specific rate qualifier isn't
 provided with the ``new`` expression, then the default is that a "varying"
 ``new`` is performed, where each program instance performs a unique
-allocation.  The allocated type, in turn, is by default ``uniform`` for
-``varying`` ``new`` expressions, and ``varying`` for ``uniform`` new
-expressions.
+allocation.  The allocated type, in turn, is by default ``uniform``.
  
 After a pointer has been deleted, it is illegal to access the memory it
 points to.  However, that deletion happens on a per-program-instance basis.
@@ -3457,6 +3456,40 @@ be used to get a pseudo-random ``float`` value.
     uniform unsigned int32 random(RNGState * uniform state)
     uniform float frandom(uniform RNGState * uniform state)
 
+
+Random Numbers
+--------------
+
+Some recent CPUs (including those based on the Intel(r) Ivy Bridge
+micro-architecture), provide support for generating true random numbers.  A
+few standard library functions make this functionality available:
+
+::
+
+    bool rdrand(uniform int32 * uniform ptr)
+    bool rdrand(varying int32 * uniform ptr)
+    bool rdrand(uniform int32 * varying ptr)
+
+If the processor doesn't have sufficient entropy to generate a random
+number, then this function fails and returns ``false``.  Otherwise, if the
+processor is successful, the random value is stored in the given pointer
+and ``true`` is returned.  Therefore, this function should generally be
+used as follows, called repeatedly until it is successful:
+
+::
+
+    int r;
+    while (rdrand(&r) == false)
+        ; // empty loop body
+   
+
+In addition to the ``int32`` variants of ``rdrand()`` listed above, there
+are versions that return ``int16``, ``float``, and ``int64`` values as
+well.
+
+Note that when compiling to targets other than ``avx1.1`` and ``avx2``, the
+``rdrand()`` functions always return ``false``.
+
 Output Functions
 ----------------
 
@@ -3491,7 +3524,7 @@ generates the following output on a four-wide compilation target:
 ::
 
     i = 10, x = [0.000000,1.000000,2.000000,3.000000]
-    added to x = [1.000000,2.000000,((2.000000)),((3.000000)]
+    added to x = [1.000000,2.000000,((2.000000)),((3.000000))]
     last print of x = [1.000000,2.000000,2.000000,3.000000]
 
 When a varying variable is printed, the values for program instances that
@@ -4010,8 +4043,8 @@ Systems Programming Support
 Atomic Operations and Memory Fences
 -----------------------------------
 
-The standard range of atomic memory operations are provided by the standard
-library``ispc``, including variants to handle both uniform and varying
+The standard set of atomic memory operations are provided by the standard
+library, including variants to handle both uniform and varying
 types as well as "local" and "global" atomics.
 
 Local atomics provide atomic behavior across the program instances in a

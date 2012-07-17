@@ -1,19 +1,17 @@
+
 export uniform int width() { return programCount; }
 
-export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
-    uniform int16 x[programCount];
-    x[programIndex] = programIndex;
-    int a = aFOO[programIndex]-1;
-    unsigned int16 v;
-    if (programIndex < 2)
-        v = x[a];
-    else
-        v = 2;
-    RET[programIndex] = v;
+int zero = 0;
+
+export void f_f(uniform float RET[], uniform float aFOO[]) {
+    uniform int16 a[programCount];
+    for (uniform int i = 0; i < programCount; ++i)
+        a[i] = aFOO[i];
+    
+    int g = a[programIndex+zero]; 
+    RET[programIndex] = g; 
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 2;
-    RET[0] = 0;
-    RET[1] = 1;
+    RET[programIndex] = 1 + programIndex;
 }
