@@ -523,7 +523,7 @@ static std::string CBEMangle(const std::string &S) {
   std::string Result;
 
   for (unsigned i = 0, e = S.size(); i != e; ++i)
-    if (isalnum(S[i]) || S[i] == '_') {
+    if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
       Result += S[i];
     } else {
       Result += '_';
@@ -1115,29 +1115,35 @@ bool CWriter::printCast(unsigned opc, llvm::Type *SrcTy, llvm::Type *DstTy) {
 
 
 /** Construct the name of a function with the given base and returning a
-    vector of a given type.  For example, if base is "foo" and matchType is
-    i16, this will return the string "__foo_i16".
+    vector of a given type, of the specified idth.  For example, if base 
+    is "foo" and matchType is i32 and width is 16, this will return the 
+    string "__foo_i32<__vec16_i32>".
  */
 static const char *
-lGetTypedFunc(const char *base, llvm::Type *matchType) {
-    char buf[64];
-    sprintf(buf, "__%s_", base);
+lGetTypedFunc(const char *base, llvm::Type *matchType, int width) {
+    static const char *ty_desc_str[] = {"f", "d", "i1", "i8", "i16", "i32", "i64"};
+    static const char *fn_desc_str[] = {"float", "double", "i1", "i8", "i16", "i32", "i64"};
+    enum {DESC_FLOAT, DESC_DOUBLE, DESC_I1, DESC_I8, DESC_I16, DESC_I32, DESC_I64} desc;
+
     switch (matchType->getTypeID()) {
-    case llvm::Type::FloatTyID:  strcat(buf, "float");  break;
-    case llvm::Type::DoubleTyID: strcat(buf, "double"); break;
+    case llvm::Type::FloatTyID:  desc = DESC_FLOAT; break;
+    case llvm::Type::DoubleTyID: desc = DESC_DOUBLE; break;
     case llvm::Type::IntegerTyID: {
         switch (llvm::cast<llvm::IntegerType>(matchType)->getBitWidth()) {
-        case 1:  strcat(buf, "i1");  break;
-        case 8:  strcat(buf, "i8");  break;
-        case 16: strcat(buf, "i16"); break;
-        case 32: strcat(buf, "i32"); break;
-        case 64: strcat(buf, "i64"); break;
+        case 1:  desc = DESC_I1;  break;
+        case 8:  desc = DESC_I8;  break;
+        case 16: desc = DESC_I16; break;
+        case 32: desc = DESC_I32; break;
+        case 64: desc = DESC_I64; break;
         default: return NULL;
         }
         break;
     }
     default: return NULL;
     }
+
+    char buf[64];
+    snprintf(buf, 64, "__%s_%s<__vec%d_%s>", base, fn_desc_str[desc], width, ty_desc_str[desc]);
     return strdup(buf);
 }
 
@@ -1486,19 +1492,19 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
 
     if (llvm::isa<llvm::ConstantAggregateZero>(CPV)) {
         // All zeros; call the __setzero_* function.
-        const char *setZeroFunc = lGetTypedFunc("setzero", VT->getElementType());
+        const char *setZeroFunc = lGetTypedFunc("setzero", VT->getElementType(), vectorWidth);
         assert(setZeroFunc != NULL);
         Out << setZeroFunc << "()";
     }
     else if (llvm::isa<llvm::UndefValue>(CPV)) {
         // Undefined value; call __undef_* so that we can potentially pass
         // this information along..
-        const char *undefFunc = lGetTypedFunc("undef", VT->getElementType());
+        const char *undefFunc = lGetTypedFunc("undef", VT->getElementType(), vectorWidth);
         assert(undefFunc != NULL);
         Out << undefFunc << "()";
     }
     else {
-        const char *smearFunc = lGetTypedFunc("smear", VT->getElementType());
+        const char *smearFunc = lGetTypedFunc("smear", VT->getElementType(), vectorWidth);
 
         if (llvm::ConstantVector *CV = llvm::dyn_cast<llvm::ConstantVector>(CPV)) {
             llvm::Constant *splatValue = CV->getSplatValue();
@@ -1713,8 +1719,8 @@ void CWriter::printConstantWithCast(llvm::Constant* CPV, unsigned Opcode) {
 std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
   // Resolve potential alias.
-    if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
-      if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
+  if (const llvm::GlobalAlias *GA = llvm::dyn_cast<llvm::GlobalAlias>(Operand)) {
+    if (const llvm::Value *V = GA->resolveAliasedGlobal(false))
       Operand = V;
   }
 
@@ -4362,12 +4368,11 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         {
         llvm::Type *matchType = toMatch->getType();
-        const char *smearFuncName = lGetTypedFunc("smear", matchType);
-
+        const char *smearFuncName = lGetTypedFunc("smear", matchType, vectorWidth);
         if (smearFuncName != NULL) {
             llvm::Function *smearFunc = module->getFunction(smearFuncName);
             if (smearFunc == NULL) {
-                // Declare the smar function if needed; it takes a single
+                // Declare the smear function if needed; it takes a single
                 // scalar parameter and returns a vector of the same
                 // parameter type.
                 llvm::Constant *sf = 
