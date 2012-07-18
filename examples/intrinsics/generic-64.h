@@ -461,7 +461,8 @@ static FORCEINLINE TYPE NAME(TYPE a, int32_t b) {                   \
 }
 
 #define SMEAR(VTYPE, NAME, STYPE)                                  \
-static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {                 \
+template <class RetVecType> VTYPE __smear_##NAME(STYPE);           \
+template <> FORCEINLINE VTYPE __smear_##NAME<VTYPE>(STYPE v) {          \
     VTYPE ret;                                                     \
     for (int i = 0; i < 64; ++i)                                   \
         ret.v[i] = v;                                              \
@@ -469,7 +470,8 @@ static FORCEINLINE VTYPE __smear_##NAME(STYPE v) {                 \
 }
 
 #define SETZERO(VTYPE, NAME)                                       \
-static FORCEINLINE VTYPE __setzero_##NAME() {                      \
+template <class RetVecType> VTYPE __setzero_##NAME();              \
+template <> FORCEINLINE VTYPE __setzero_##NAME<VTYPE>() {               \
     VTYPE ret;                                                     \
     for (int i = 0; i < 64; ++i)                                   \
         ret.v[i] = 0;                                              \
@@ -477,7 +479,8 @@ static FORCEINLINE VTYPE __setzero_##NAME() {                      \
 }
 
 #define UNDEF(VTYPE, NAME)                                         \
-static FORCEINLINE VTYPE __undef_##NAME(VTYPE retType) {           \
+template <class RetVecType> VTYPE __undef_##NAME();                \
+template <> FORCEINLINE VTYPE __undef_##NAME<VTYPE>() {                 \
     return VTYPE();                                                \
 }
 
@@ -606,7 +609,8 @@ template <int ALIGN> static FORCEINLINE void __store(__vec64_i1 *p, __vec64_i1 v
     *ptr = v.v;
 }
 
-static FORCEINLINE __vec64_i1 __smear_i1(int v) {
+template <class RetVecType> __vec64_i1 __smear_i1(int i);
+template <> FORCEINLINE __vec64_i1 __smear_i1<__vec64_i1>(int v) {
     return __vec64_i1(v, v, v, v, v, v, v, v, 
                       v, v, v, v, v, v, v, v,
                       v, v, v, v, v, v, v, v,
@@ -617,7 +621,8 @@ static FORCEINLINE __vec64_i1 __smear_i1(int v) {
                       v, v, v, v, v, v, v, v);
 }
 
-static FORCEINLINE __vec64_i1 __setzero_i1() {
+template <class RetVecType> __vec64_i1 __setzero_i1();
+template <> FORCEINLINE __vec64_i1 __setzero_i1<__vec64_i1>() {
     return __vec64_i1(0, 0, 0, 0, 0, 0, 0, 0, 
                       0, 0, 0, 0, 0, 0, 0, 0,
                       0, 0, 0, 0, 0, 0, 0, 0,
@@ -628,7 +633,8 @@ static FORCEINLINE __vec64_i1 __setzero_i1() {
                       0, 0, 0, 0, 0, 0, 0, 0);
 }
 
-static FORCEINLINE __vec64_i1 __undef_i1() {
+template <class RetVecType> __vec64_i1 __undef_i1();
+template <> FORCEINLINE __vec64_i1 __undef_i1<__vec64_i1>() {
     return __vec64_i1();
 }
 

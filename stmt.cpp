@@ -2207,7 +2207,7 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // lane's value of the varying expression is the same as the value
         // we've selected to process this time through--i.e.:
         // oldMask & (smear(element) == exprValue)
-        llvm::Value *uniqueSmear = ctx->SmearUniform(uniqueValue, "unique_semar");
+        llvm::Value *uniqueSmear = ctx->SmearUniform(uniqueValue, "unique_smear");
         llvm::Value *matchingLanes = NULL;
         if (uniqueValue->getType()->isFloatingPointTy())
             matchingLanes = 
