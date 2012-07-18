@@ -1060,12 +1060,12 @@ PointerType::Mangle() const {
         return "";
     }
 
-    std::string ret = variability.MangleString() + std::string("<");
+    std::string ret = variability.MangleString() + std::string("_3C_"); // <
     if (isSlice || isFrozen)  ret += "-";
     if (isSlice) ret += "s";
     if (isFrozen) ret += "f";
     if (isSlice || isFrozen)  ret += "-";
-    return ret + baseType->Mangle() + std::string(">");
+    return ret + baseType->Mangle() + std::string("_3E_"); // >
 }
 
 
@@ -1636,7 +1636,7 @@ std::string
 VectorType::Mangle() const {
     std::string s = base->Mangle();
     char buf[16];
-    sprintf(buf, "<%d>", numElements);
+    sprintf(buf, "_3C_%d_3E_", numElements); // "<%d>"
     return s + std::string(buf);
 }
 
@@ -1789,7 +1789,7 @@ lMangleStructName(const std::string &name, Variability variability) {
         n += buf;
         break;
     default:
-        FATAL("Unexpected varaibility in lMangleStructName()");
+        FATAL("Unexpected variability in lMangleStructName()");
     }
     
     // And stuff the name at the end....
@@ -2049,7 +2049,7 @@ std::string
 StructType::Mangle() const {
     return lMangleStruct(variability, isConst, name);
 }
-    
+
 
 std::string
 StructType::GetCDeclaration(const std::string &n) const {
