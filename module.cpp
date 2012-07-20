@@ -2168,6 +2168,22 @@ Module::CompileAndOutput(const char *srcFile,
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
+            if (outputType == CXX) {
+                if (target == NULL || strncmp(target, "generic-", 8) != 0) {
+                    Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
+                          "targets must be used.");
+                    return 1;
+                }
+            }
+            else if (outputType == Asm || outputType == Object) {
+                if (target != NULL && strncmp(target, "generic-", 8) == 0) {
+                    Error(SourcePos(), "When using a \"generic-*\" compilation target, "
+                          "%s output can not be used.",
+                          (outputType == Asm) ? "assembly" : "object file");
+                    return 1;
+                }
+            }
+
             if (outFileName != NULL)
                 if (!m->writeOutput(outputType, outFileName, includeFileName))
                     return 1;

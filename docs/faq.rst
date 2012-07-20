@@ -14,6 +14,11 @@ distribution.
   + `Why are there multiple versions of exported ispc functions in the assembly output?`_
   + `How can I more easily see gathers and scatters in generated assembly?`_
 
+* Running The Compiler
+
+  + `Why is it required to use one of the "generic" targets with C++ output?`_
+  + `Why won't the compiler generate an object file or assembly output with the "generic" targets?`_
+
 * Language Details
 
   + `What is the difference between "int *foo" and "int foo[]"?`_
@@ -220,6 +225,55 @@ easier to understand:
             movdqa        %xmm1, %xmm0
             movaps        %xmm3, %xmm1
             jmp        ___pseudo_scatter_base_offsets32_32 ## TAILCALL
+
+
+Running The Compiler
+====================
+
+Why is it required to use one of the "generic" targets with C++ output?
+-----------------------------------------------------------------------
+
+The C++ output option transforms the provided ``ispc`` program source into
+C++ code where each basic operation in the program (addition, comparison,
+etc.) is represented as a function call to an as-yet-undefined function,
+chaining the results of these calls together to perform the required
+computations.  It is then expected that the user will provide the
+implementation of these functions via a header file with ``inline``
+functions defined for each of these functions and then use a C++ compiler
+to generate a final object file.  (Examples of these headers include
+``examples/intrinsics/sse4.h`` and ``examples/intrinsics/knc.h`` in the
+``ispc`` distribution.)
+
+If a target other than one of the "generic" ones is used with C++ output,
+then the compiler will transform certain operations into particular code
+sequences that may not be desired for the actual final target; for example,
+SSE targets that don't have hardware "gather" instructions will transform a
+gather into a sequence of scalar load instructions.  When this in turn is
+transformed to C++ code, the fact that the loads were originally a gather
+is lost, and the header file of function definitions wouldn't have a chance
+to map the "gather" to a target-specific operation, as the ``knc.h`` header
+does, for example.  Thus, the "generic" targets exist to provide basic
+targets of various vector widths, without imposing any limitations on the
+final target's capabilities.
+
+Why won't the compiler generate an object file or assembly output with the "generic" targets?
+---------------------------------------------------------------------------------------------
+
+As described in the above FAQ entry, when compiling to the "generic"
+targets, ``ispc`` generates vector code for the source program that
+transforms every basic operation in the program (addition, comparison,
+etc.) into a separate function call.
+
+While there is no fundamental reason that the compiler couldn't generate
+target-specific object code with a function call to an undefined function
+for each primitive operation, doing so wouldn't actually be useful in
+practice--providing definitions of these functions in a separate object
+file and actually performing function calls for each of them (versus
+turning them into inline function calls) would be a highly inefficient way
+to run the program.
+
+Therefore, in the interests of encouraging the  use of the system,
+these types of output are disallowed.
 
 
 Language Details
