@@ -49,7 +49,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/Target/Mangler.h"
+//#include "llvm/Target/Mangler.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -218,7 +218,7 @@ namespace {
   class CWriter : public llvm::FunctionPass, public llvm::InstVisitor<CWriter> {
     llvm::formatted_raw_ostream &Out;
     llvm::IntrinsicLowering *IL;
-    llvm::Mangler *Mang;
+    //llvm::Mangler *Mang;
     llvm::LoopInfo *LI;
     const llvm::Module *TheModule;
     const llvm::MCAsmInfo* TAsm;
@@ -251,7 +251,7 @@ namespace {
     static char ID;
       explicit CWriter(llvm::formatted_raw_ostream &o, const char *incname,
                        int vecwidth)
-      : FunctionPass(ID), Out(o), IL(0), Mang(0), LI(0),
+          : FunctionPass(ID), Out(o), IL(0), /* Mang(0), */ LI(0),
         TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
         OpaqueCounter(0), NextAnonValueNumber(0), 
         includeName(incname ? incname : "generic_defs.h"),
@@ -298,7 +298,7 @@ namespace {
       // Free memory...
       delete IL;
       delete TD;
-      delete Mang;
+      //delete Mang;
       delete TCtx;
       delete TAsm;
       delete MRI;
@@ -1726,9 +1726,11 @@ std::string CWriter::GetValueName(const llvm::Value *Operand) {
 
   // Mangle globals with the standard mangler interface for LLC compatibility.
   if (const llvm::GlobalValue *GV = llvm::dyn_cast<llvm::GlobalValue>(Operand)) {
-    llvm::SmallString<128> Str;
-    Mang->getNameWithPrefix(Str, GV, false);
-    return CBEMangle(Str.str().str());
+    (void)GV;
+    //llvm::SmallString<128> Str;
+    //Mang->getNameWithPrefix(Str, GV, false);
+    //return CBEMangle(Str.str().str());
+    return CBEMangle(Operand->getName().str().c_str());
   }
 
   std::string Name = Operand->getName();
@@ -2149,7 +2151,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
   TAsm = new CBEMCAsmInfo();
   MRI  = new llvm::MCRegisterInfo();
   TCtx = new llvm::MCContext(*TAsm, *MRI, NULL);
-  Mang = new llvm::Mangler(*TCtx, *TD);
+  //Mang = new llvm::Mangler(*TCtx, *TD);
 
   // Keep track of which functions are static ctors/dtors so they can have
   // an attribute added to their prototypes.
