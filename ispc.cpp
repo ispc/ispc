@@ -124,6 +124,9 @@ lGetSystemISA() {
 
 static const char *supportedCPUs[] = { 
     "atom", "penryn", "core2", "corei7", "corei7-avx"
+#ifdef LLVM_3_2
+    , "core-avx-i"
+#endif // LLVM_3_2
 };
 
 
@@ -134,7 +137,9 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         if (cpu != NULL) {
             // If a CPU was specified explicitly, try to pick the best
             // possible ISA based on that.
-            if (!strcmp(cpu, "sandybridge") ||
+            if (!strcmp(cpu, "corei7-avx-i"))
+                isa = "avx1.1";
+            else if (!strcmp(cpu, "sandybridge") ||
                 !strcmp(cpu, "corei7-avx"))
                 isa = "avx";
             else if (!strcmp(cpu, "corei7") ||
