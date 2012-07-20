@@ -2023,7 +2023,13 @@ FunctionEmitContext::MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1) {
     }
 
     // And then update to match bit widths
-    if (type0 == LLVMTypes::Int32VectorType &&
+    if (type0 == LLVMTypes::Int32Type &&
+        type1 == LLVMTypes::Int64Type)
+        *v0 = SExtInst(*v0, LLVMTypes::Int64Type);
+    else if (type1 == LLVMTypes::Int32Type &&
+             type0 == LLVMTypes::Int64Type)
+        *v1 = SExtInst(*v1, LLVMTypes::Int64Type);
+    else if (type0 == LLVMTypes::Int32VectorType &&
         type1 == LLVMTypes::Int64VectorType)
         *v0 = SExtInst(*v0, LLVMTypes::Int64VectorType);
     else if (type1 == LLVMTypes::Int32VectorType &&
