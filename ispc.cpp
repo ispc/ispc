@@ -41,11 +41,12 @@
 #include "llvmutil.h"
 #include <stdio.h>
 #ifdef ISPC_IS_WINDOWS
-#include <windows.h>
-#include <direct.h>
-#define strcasecmp stricmp
+  #include <windows.h>
+  #include <direct.h>
+  #define strcasecmp stricmp
 #else
-#include <unistd.h>
+  #include <sys/types.h>
+  #include <unistd.h>
 #endif
 #include <llvm/LLVMContext.h>
 #include <llvm/Module.h>
