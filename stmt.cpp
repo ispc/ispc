@@ -675,39 +675,38 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
                       llvm::Value *ltest, llvm::BasicBlock *bDone) const {
     ctx->StartVaryingIf(oldMask);
     llvm::BasicBlock *bNext = ctx->CreateBasicBlock("safe_if_after_true");
-    if (trueStmts != NULL) {
-        llvm::BasicBlock *bRunTrue = ctx->CreateBasicBlock("safe_if_run_true");
-        ctx->SetInternalMaskAnd(oldMask, ltest);
 
-        // Do any of the program instances want to run the 'true'
-        // block?  If not, jump ahead to bNext.
-        llvm::Value *maskAnyQ = ctx->Any(ctx->GetFullMask());
-        ctx->BranchInst(bRunTrue, bNext, maskAnyQ);
+    llvm::BasicBlock *bRunTrue = ctx->CreateBasicBlock("safe_if_run_true");
+    ctx->SetInternalMaskAnd(oldMask, ltest);
 
-        // Emit statements for true
-        ctx->SetCurrentBasicBlock(bRunTrue);
+    // Do any of the program instances want to run the 'true'
+    // block?  If not, jump ahead to bNext.
+    llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
+    ctx->BranchInst(bRunTrue, bNext, maskAnyTrueQ);
+
+    // Emit statements for true
+    ctx->SetCurrentBasicBlock(bRunTrue);
+    if (trueStmts != NULL)
         lEmitIfStatements(ctx, trueStmts, "if: expr mixed, true statements");
-        AssertPos(pos, ctx->GetCurrentBasicBlock()); 
-        ctx->BranchInst(bNext);
-        ctx->SetCurrentBasicBlock(bNext);
-    }
-    if (falseStmts != NULL) {
-        llvm::BasicBlock *bRunFalse = ctx->CreateBasicBlock("safe_if_run_false");
-        bNext = ctx->CreateBasicBlock("safe_if_after_false");
-        ctx->SetInternalMaskAndNot(oldMask, ltest);
+    AssertPos(pos, ctx->GetCurrentBasicBlock()); 
+    ctx->BranchInst(bNext);
+    ctx->SetCurrentBasicBlock(bNext);
 
-        // Similarly, check to see if any of the instances want to
-        // run the 'false' block...
-        llvm::Value *maskAnyQ = ctx->Any(ctx->GetFullMask());
-        ctx->BranchInst(bRunFalse, bNext, maskAnyQ);
+    // False...
+    llvm::BasicBlock *bRunFalse = ctx->CreateBasicBlock("safe_if_run_false");
+    ctx->SetInternalMaskAndNot(oldMask, ltest);
 
-        // Emit code for false
-        ctx->SetCurrentBasicBlock(bRunFalse);
+    // Similarly, check to see if any of the instances want to
+    // run the 'false' block...
+    llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
+    ctx->BranchInst(bRunFalse, bDone, maskAnyFalseQ);
+
+    // Emit code for false
+    ctx->SetCurrentBasicBlock(bRunFalse);
+    if (falseStmts)
         lEmitIfStatements(ctx, falseStmts, "if: expr mixed, false statements");
-        AssertPos(pos, ctx->GetCurrentBasicBlock());
-        ctx->BranchInst(bNext);
-        ctx->SetCurrentBasicBlock(bNext);
-    }
+    AssertPos(pos, ctx->GetCurrentBasicBlock());
+
     ctx->BranchInst(bDone);
     ctx->SetCurrentBasicBlock(bDone);
     ctx->EndIf();
