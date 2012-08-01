@@ -810,8 +810,7 @@ lMatchingBoolType(const Type *type) {
     if (vt != NULL)
         return new VectorType(boolBase, vt->GetElementCount());
     else {
-        Assert(CastType<AtomicType>(type) != NULL ||
-               CastType<PointerType>(type) != NULL);
+        Assert(Type::IsBasicType(type));
         return boolBase;
     }
 }
