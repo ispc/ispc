@@ -3274,15 +3274,19 @@ SelectExpr::TypeCheck() {
     if (!type1 || !type2)
         return NULL;
 
-    if (CastType<ArrayType>(type1)) {
-        Error(pos, "Array type \"%s\" can't be used in select expression", 
-              type1->GetString().c_str());
-        return NULL;
+    if (const ArrayType *at1 = CastType<ArrayType>(type1)) {
+        expr1 = TypeConvertExpr(expr1, PointerType::GetUniform(at1->GetBaseType()),
+                                "select");
+        if (expr1 == NULL)
+            return NULL;
+        type1 = expr1->GetType();
     }
-    if (CastType<ArrayType>(type2)) {
-        Error(pos, "Array type \"%s\" can't be used in select expression", 
-              type2->GetString().c_str());
-        return NULL;
+    if (const ArrayType *at2 = CastType<ArrayType>(type2)) {
+        expr2 = TypeConvertExpr(expr2, PointerType::GetUniform(at2->GetBaseType()),
+                                "select");
+        if (expr2 == NULL)
+            return NULL;
+        type2 = expr2->GetType();
     }
 
     const Type *testType = test->GetType();
