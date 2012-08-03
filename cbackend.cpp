@@ -39,6 +39,9 @@
 #include "llvm/Intrinsics.h"
 #include "llvm/IntrinsicInst.h"
 #include "llvm/InlineAsm.h"
+#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+  #include "llvm/TypeFinder.h"
+#endif // LLVM_3_2 +
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2613,7 +2616,11 @@ void CWriter::printModuleTypes() {
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   TheModule->findUsedStructTypes(StructTypes);
 #else
-  TheModule->findUsedStructTypes(StructTypes, false);
+  llvm::TypeFinder typeFinder;
+  typeFinder.run(*TheModule, false);
+  for (llvm::TypeFinder::iterator iter = typeFinder.begin();
+       iter != typeFinder.end(); ++iter)
+      StructTypes.push_back(*iter);
 #endif
 
   // Get all of the array types used in the module
