@@ -3142,14 +3142,14 @@ AssertStmt::EmitCode(FunctionEmitContext *ctx) const {
     bool isUniform = type->IsUniformType();
 
     // The actual functionality to do the check and then handle falure is
-    // done via a builtin written in bitcode in builtins.m4.
+    // done via a builtin written in bitcode in builtins/util.m4.
     llvm::Function *assertFunc = 
         isUniform ? m->module->getFunction("__do_assert_uniform") :
                     m->module->getFunction("__do_assert_varying");
     AssertPos(pos, assertFunc != NULL);
 
     char *errorString;
-    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s\n", 
+    if (asprintf(&errorString, "%s:%d:%d: Assertion failed: %s", 
                  pos.name, pos.first_line, pos.first_column, 
                  message.c_str()) == -1) {
         Error(pos, "Fatal error when generating assert string: asprintf() "

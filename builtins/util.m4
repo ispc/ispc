@@ -2499,14 +2499,14 @@ define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; assert
 
-declare i32 @printf(i8*, ...)
+declare i32 @puts(i8*)
 declare void @abort() noreturn
 
 define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
-  %call = call i32 (i8*, ...)* @printf(i8* %str)
+  %call = call i32 @puts(i8* %str)
   call void @abort() noreturn
   unreachable
 
@@ -2525,7 +2525,7 @@ define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
   br i1 %all_ok, label %ok, label %fail
 
 fail:
-  %call = call i32 (i8*, ...)* @printf(i8* %str)
+  %call = call i32 @puts(i8* %str)
   call void @abort() noreturn
   unreachable
 
