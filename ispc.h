@@ -304,6 +304,10 @@ struct Opt {
         performance in the generated code). */
     bool disableAsserts;
 
+    /** Indicates whether FMA instructions should be disabled (on targets
+        that support them). */
+    bool disableFMA;
+
     /** If enabled, disables the various optimizations that kick in when
         the execution mask can be determined to be "all on" at compile
         time. */

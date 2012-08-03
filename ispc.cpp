@@ -366,7 +366,11 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 8;
         t->vectorWidth = 8;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+#ifndef LLVM_3_1
+            ",+fma"
+#endif // !LLVM_3_1
+            ;
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
@@ -380,7 +384,11 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 16;
         t->vectorWidth = 16;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand";
+        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+#ifndef LLVM_3_1
+            ",+fma"
+#endif // !LLVM_3_1
+            ;
         t->maskingIsFree = false;
         t->maskBitCount = 32;
         t->hasHalf = true;
@@ -477,6 +485,10 @@ Target::GetTargetMachine() const {
 #else
     std::string featuresString = attributes;
     llvm::TargetOptions options;
+#if !defined(LLVM_3_1)
+    if (g->opt.disableFMA == false)
+        options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+#endif // !LLVM_3_1
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, options,
                                     relocModel);
@@ -627,6 +639,7 @@ Opt::Opt() {
     force32BitAddressing = true;
     unrollLoops = true;
     disableAsserts = false;
+    disableFMA = false;
     disableMaskAllOnOptimizations = false;
     disableHandlePseudoMemoryOps = false;
     disableBlendedMaskedStores = false;
