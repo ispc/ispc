@@ -254,10 +254,10 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; double precision sqrt
 
-declare <2 x double> @llvm.x86.sse.sqrt.sd(<2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
 
 define double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  sse_unary_scalar(ret, 2, double, @llvm.x86.sse.sqrt.sd, %0)
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
   ret double %ret
 }
 
