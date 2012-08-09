@@ -2484,6 +2484,12 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
         AssertPos(currentPos, ptrType != NULL);
     }
 
+    if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
+        Error(currentPos, "Unable to load to undefined struct type \"%s\".",
+              ptrType->GetBaseType()->GetString().c_str());
+        return NULL;
+    }
+
     if (ptrType->IsUniformType()) {
         if (ptrType->IsSlice()) {
             return loadUniformFromSOA(ptr, mask, ptrType, name);
@@ -2962,6 +2968,12 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr,
     else {
         ptrType = CastType<PointerType>(ptrRefType);
         AssertPos(currentPos, ptrType != NULL);
+    }
+
+    if (CastType<UndefinedStructType>(ptrType->GetBaseType())) {
+        Error(currentPos, "Unable to store to undefined struct type \"%s\".",
+              ptrType->GetBaseType()->GetString().c_str());
+        return;
     }
 
     // Figure out what kind of store we're doing here
