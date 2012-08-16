@@ -19,20 +19,7 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-ifeq ($(shell $(LLVM_CONFIG) --version), 3.0)
-  LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
-else
-  LLVM_LIBS=-lLLVMAsmParser -lLLVMInstrumentation -lLLVMLinker			\
-	-lLLVMArchive -lLLVMBitReader -lLLVMDebugInfo -lLLVMJIT -lLLVMipo	\
-	-lLLVMBitWriter -lLLVMTableGen 			                        \
-	-lLLVMX86Disassembler -lLLVMX86CodeGen -lLLVMSelectionDAG		\
-	-lLLVMAsmPrinter -lLLVMX86AsmParser -lLLVMX86Desc -lLLVMX86Info		\
-	-lLLVMX86AsmPrinter -lLLVMX86Utils -lLLVMMCDisassembler	-lLLVMMCParser	\
-	-lLLVMCodeGen -lLLVMScalarOpts	-lLLVMInstCombine -lLLVMTransformUtils	\
-	-lLLVMipa -lLLVMAnalysis -lLLVMMCJIT -lLLVMRuntimeDyld			\
-	-lLLVMExecutionEngine -lLLVMTarget -lLLVMMC -lLLVMObject -lLLVMCore 	\
-	-lLLVMSupport
-endif
+LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
