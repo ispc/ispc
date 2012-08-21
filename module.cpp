@@ -1082,7 +1082,6 @@ lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
     std::vector<const StructType *> emittedStructs;
     for (unsigned int i = 0; i < structTypes.size(); ++i)
         lEmitStructDecl(structTypes[i], &emittedStructs, file);
-    Assert(emittedStructs.size() == structTypes.size());
 }
 
 
