@@ -2823,7 +2823,7 @@ AssignExpr::TypeCheck() {
         if (CastType<PointerType>(lvalueType) == NULL ||
             (ftype = CastType<FunctionType>(lvalueType->GetBaseType())) == NULL) {
             Error(lvalue->pos, "Can't assign function pointer to type \"%s\".",
-                  lvalue->GetType()->GetString().c_str());
+                  lvalueType ? lvalueType->GetString().c_str() : "<unknown>");
             return NULL;
         }
 
