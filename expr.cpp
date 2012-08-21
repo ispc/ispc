@@ -2157,7 +2157,6 @@ BinaryExpr::Optimize() {
                 std::vector<Symbol *> rcpFuns;
                 m->symbolTable->LookupFunction("rcp", &rcpFuns);
                 if (rcpFuns.size() > 0) {
-                    AssertPos(pos, rcpFuns.size() == 2);
                     Expr *rcpSymExpr = new FunctionSymbolExpr("rcp", rcpFuns, pos);
                     ExprList *args = new ExprList(arg1, arg1->pos);
                     Expr *rcpCall = new FunctionCallExpr(rcpSymExpr, args, 
