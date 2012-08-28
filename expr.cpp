@@ -3995,7 +3995,10 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
 
         // Get a pointer type to the underlying elements
         const SequentialType *st = CastType<SequentialType>(baseExprType);
-        AssertPos(pos, st != NULL);
+        if (st == NULL) {
+            Assert(m->errorCount > 0);
+            return NULL;
+        }
         lvType = PointerType::GetUniform(st->GetElementType());
 
         // And do the indexing calculation into the temporary array in memory
