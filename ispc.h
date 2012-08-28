@@ -51,6 +51,9 @@
 #elif defined(__APPLE__)
 #define ISPC_IS_APPLE
 #endif
+#if defined(__KNC__)
+#define ISPC_IS_KNC
+#endif
 
 #include <stdint.h>
 #include <stdlib.h>
