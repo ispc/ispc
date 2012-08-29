@@ -3552,9 +3552,11 @@ FunctionCallExpr::TypeCheck() {
                 return NULL;
         }
         else {
-            if (isLaunch)
+            if (isLaunch) {
                 Error(pos, "\"launch\" expression illegal with non-\"task\"-"
                       "qualified function.");
+                return NULL;
+            }
             AssertPos(pos, launchCountExpr == NULL);
         }
     }
