@@ -600,11 +600,11 @@ lParseInteger(bool dotdotdot) {
         else {
             // No u or l suffix           
             // First, see if we can fit this into a 32-bit integer...
-            if (yylval.intVal <= 0x7fffffffLLU)
+            if (yylval.intVal <= 0x7fffffffULL)
                 return TOKEN_INT32_CONSTANT;
-            else if (yylval.intVal <= 0xffffffffLLU)
+            else if (yylval.intVal <= 0xffffffffULL)
                 return TOKEN_UINT32_CONSTANT;
-            else if (yylval.intVal <= 0x7fffffffffffffffLLU)
+            else if (yylval.intVal <= 0x7fffffffffffffffULL)
                 return TOKEN_INT64_CONSTANT;
             else
                 return TOKEN_UINT64_CONSTANT;

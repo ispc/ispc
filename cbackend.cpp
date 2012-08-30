@@ -81,6 +81,7 @@
 // Some ms header decided to define setjmp as _setjmp, undo this for this file.
 #ifdef _MSC_VER
 #undef setjmp
+#define snprintf _snprintf
 #endif
 
 #include "llvm/Target/TargetMachine.h"
