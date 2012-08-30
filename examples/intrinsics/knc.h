@@ -2392,16 +2392,21 @@ static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec16_f *out0, __vec16
 ///////////////////////////////////////////////////////////////////////////
 // prefetch
 
-static FORCEINLINE void __prefetch_read_uniform_1(unsigned char *) {
+static FORCEINLINE void __prefetch_read_uniform_1(const char *p) {
+    _mm_prefetch(p, _MM_HINT_T0); // prefetch into L1$
 }
 
-static FORCEINLINE void __prefetch_read_uniform_2(unsigned char *) {
+static FORCEINLINE void __prefetch_read_uniform_2(const char *p) {
+    _mm_prefetch(p, _MM_HINT_T1); // prefetch into L2$
 }
 
-static FORCEINLINE void __prefetch_read_uniform_3(unsigned char *) {
+static FORCEINLINE void __prefetch_read_uniform_3(const char *p) {
+    // There is no L3$ on KNC, don't want to pollute L2$ unecessarily
 }
 
-static FORCEINLINE void __prefetch_read_uniform_nt(unsigned char *) {
+static FORCEINLINE void __prefetch_read_uniform_nt(const char *p) {
+    _mm_prefetch(p, _MM_HINT_T2); // prefetch into L2$ with non-temporal hint
+    // _mm_prefetch(p, _MM_HINT_NTA); // prefetch into L1$ with non-temporal hint
 }
 
 ///////////////////////////////////////////////////////////////////////////
