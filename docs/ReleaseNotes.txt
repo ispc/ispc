@@ -7,8 +7,9 @@ of small bugs have been fixed.
 
 New targets:
 
-* This release provides "beta" support for compiling to Intel Xeon Phi (the
-  "Many Integrated Core" arthiecture).  See
+* This release provides "beta" support for compiling to Intel® Xeon
+  Phi™ processor, code named Knights Corner, the first processor in
+  the Intel® Many Integrated Core Architecture.  See
   http://ispc.github.com/ispc.html#compiling-for-the-intel-xeon-phi-architecture
   for more details on this support.
 
