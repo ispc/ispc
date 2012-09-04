@@ -613,9 +613,10 @@ run on Knights Corner, though there are a number of known limitations:
   ``-fp-model except``) the compiler will generate code that uses the
   x87 unit rather than KNC's vector unit. For similar reasons, the
   options ``–ansi`` and ``–fmath-errno`` may result in calls to math
-  functions that are implemented in x87 rather than KNC instructions.
-  This will have a significant performance impact. See the ICC manual
-  for details on these compiler options.
+  functions that are implemented in x87 rather than using Initial Many
+  Core Instructions (Intel® IMCI) instructions.  This will have a
+  significant performance impact. See the ICC manual for details on
+  these compiler options.
 
 All of these issues are currently actively being addressed and will be
 fixed in future releases.
