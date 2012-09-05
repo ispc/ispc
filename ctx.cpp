@@ -830,13 +830,9 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     llvm::Value *allDone = NULL;
 
     if (breakLanesPtr == NULL) {
-        // In a foreach loop, break and return are illegal, and
-        // breakLanesPtr is NULL.  In this case, the mask is guaranteed to
-        // be all on at the start of each iteration, so we only need to
-        // check if all lanes have continued..
         llvm::Value *continued = LoadInst(continueLanesPtr,
                                           "continue_lanes");
-        allDone = All(continued);
+        allDone = MasksAllEqual(continued, blockEntryMask);
     }
     else {
         // Check to see if (returned lanes | continued lanes | break lanes) is

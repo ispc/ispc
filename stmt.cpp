@@ -1659,8 +1659,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
                          varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
 
-        if (nDims == 1)
+        if (nDims == 1) {
             ctx->SetInternalMask(emask);
+        }
         else {
             llvm::Value *oldMask = ctx->LoadInst(extrasMaskPtrs[nDims-2]);
             llvm::Value *newMask =
@@ -1706,6 +1707,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->CreateBasicBlock("foreach_full_continue");
     ctx->SetCurrentBasicBlock(bbFullBody); {
         ctx->SetInternalMask(LLVMMaskAllOn);
+        ctx->SetBlockEntryMask(LLVMMaskAllOn);
         lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1], 
                               dimVariables[nDims-1]->storagePtr, span);
         ctx->SetContinueTarget(bbFullBodyContinue);
@@ -1753,6 +1755,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
                          varyingCounter, smearEnd);
         emask = ctx->I1VecToBoolVec(emask);
         ctx->SetInternalMask(emask);
+        ctx->SetBlockEntryMask(emask);
 
         ctx->StoreInst(LLVMFalse, stepIndexAfterMaskedBodyPtr);
         ctx->BranchInst(bbMaskedBody);
@@ -1772,6 +1775,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->AddInstrumentationPoint("foreach loop body (masked)");
         ctx->SetContinueTarget(bbMaskedBodyContinue);
         ctx->DisableGatherScatterWarnings();
+        ctx->SetBlockEntryMask(ctx->GetFullMask());
         stmts->EmitCode(ctx);
         ctx->EnableGatherScatterWarnings();
         ctx->BranchInst(bbMaskedBodyContinue);
@@ -2014,6 +2018,9 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetCurrentBasicBlock(bbBody); {
+        ctx->RestoreContinuedLanes();
+        ctx->SetBlockEntryMask(ctx->GetFullMask());
+
         // Run the code in the body of the loop.  This is easy now.
         if (stmts)
             stmts->EmitCode(ctx);
@@ -2226,6 +2233,8 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetCurrentBasicBlock(bbBody); {
+        ctx->RestoreContinuedLanes();
+        ctx->SetBlockEntryMask(ctx->GetFullMask());
         // Run the code in the body of the loop.  This is easy now.
         if (stmts)
             stmts->EmitCode(ctx);
