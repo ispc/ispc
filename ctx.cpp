@@ -1404,7 +1404,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
         return ret;
     }
     else
-        return SExtInst(b, LLVMTypes::BoolVectorType, "val_to_boolvec32");
+        return SExtInst(b, LLVMTypes::BoolVectorType, LLVMGetName(b, "_to_i32"));
 }
 
 
