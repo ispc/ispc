@@ -380,7 +380,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>NOMINMAX;LLVM_3_1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624</DisableSpecificWarnings>
     </ClCompile>
@@ -398,7 +398,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NOMINMAX;LLVM_3_1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%LLVM_VERSION%</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(LLVM_INSTALL_DIR)\include;.;.\winstuff;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4146;4800;4996;4355;4624</DisableSpecificWarnings>
     </ClCompile>
