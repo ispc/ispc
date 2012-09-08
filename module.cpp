@@ -1071,6 +1071,8 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     // And now it's safe to declare this one
     emittedStructs->push_back(st);
 
+    fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
+    fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
     fprintf(file, "struct %s", st->GetStructName().c_str());
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
@@ -1083,7 +1085,8 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
         std::string d = type->GetCDeclaration(st->GetElementName(i));
         fprintf(file, "    %s;\n", d.c_str());
     }
-    fprintf(file, "};\n\n");
+    fprintf(file, "};\n");
+    fprintf(file, "#endif\n\n");
 }
 
 
@@ -1110,6 +1113,8 @@ lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
     
     for (unsigned int i = 0; i < enumTypes.size(); ++i) {
+        fprintf(file, "#ifndef __ISPC_ENUM_%s__\n",enumTypes[i]->GetEnumName().c_str());
+        fprintf(file, "#define __ISPC_ENUM_%s__\n",enumTypes[i]->GetEnumName().c_str());
         std::string declaration = enumTypes[i]->GetCDeclaration("");
         fprintf(file, "%s {\n", declaration.c_str());
 
@@ -1130,6 +1135,7 @@ lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
                     (j < enumTypes[i]->GetEnumeratorCount() - 1) ? ',' : ' ');
         }
         fprintf(file, "};\n");
+        fprintf(file, "#endif\n\n");
     }
 }
 
@@ -1160,6 +1166,8 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
         int size = vt->GetElementCount();
 
         baseDecl = vt->GetBaseType()->GetCDeclaration("");
+        fprintf(file, "#ifndef __ISPC_VECTOR_%s%d__\n",baseDecl.c_str(), size);
+        fprintf(file, "#define __ISPC_VECTOR_%s%d__\n",baseDecl.c_str(), size);
         fprintf(file, "#ifdef _MSC_VER\n__declspec( align(%d) ) ", align);
         fprintf(file, "struct %s%d { %s v[%d]; };\n", baseDecl.c_str(), size,
                 baseDecl.c_str(), size);
@@ -1167,6 +1175,7 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
         fprintf(file, "struct %s%d { %s v[%d]; } __attribute__ ((aligned(%d)));\n", 
                 baseDecl.c_str(), size, baseDecl.c_str(), size, align);
         fprintf(file, "#endif\n");
+        fprintf(file, "#endif\n\n");
     }
     fprintf(file, "\n");
 }
@@ -1407,7 +1416,9 @@ Module::writeDevStub(const char *fn)
     Assert(fct);
     
     if (!fct->GetReturnType()->IsVoidType()) {
-      Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-void return types.\n");
+      //Error(sym->pos,"When emitting offload-stubs, \"export\"ed functions cannot have non-void return types.\n");
+      Warning(sym->pos,"When emitting offload-stubs, ignoring \"export\"ed function with non-void return types.\n");
+      continue;
     }
 
     // -------------------------------------------------------

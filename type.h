@@ -381,6 +381,9 @@ public:
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &name) const;
 
+    /** Returns the name of the enum type.  (e.g. struct Foo -> "Foo".) */
+    const std::string &GetEnumName() const { return name; }
+
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
