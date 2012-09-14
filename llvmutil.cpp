@@ -1399,8 +1399,7 @@ lExtractFirstVectorElement(llvm::Value *v,
     // First, handle various constant types; do the extraction manually, as
     // appropriate.
     if (llvm::isa<llvm::ConstantAggregateZero>(v) == true) {
-        Assert(vt->getElementType()->isIntegerTy());
-        return llvm::ConstantInt::get(vt->getElementType(), 0);
+        return llvm::Constant::getNullValue(vt->getElementType());
     }
     if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
 #ifndef LLVM_3_0
