@@ -2203,6 +2203,10 @@ bool CWriter::doInitialization(llvm::Module &M) {
       Out << "#undef ISPC_FAST_MATH\n";
   }
 
+  if (g->opt.forceAlignedMemory) {
+      Out << "#define ISPC_FORCE_ALIGNED_MEMORY\n";
+  }
+
   Out << "#include \"" << includeName << "\"\n";
 
   Out << "\n/* Basic Library Function Declarations */\n";
