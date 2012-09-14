@@ -1783,6 +1783,8 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
         opts.addMacroDef("ISPC_TARGET_HAS_HALF");
     if (g->target.hasTranscendentals)
         opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
+    if (g->opt.forceAlignedMemory)
+        opts.addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
 
     opts.addMacroDef("ISPC_MAJOR_VERSION=1");
     opts.addMacroDef("ISPC_MINOR_VERSION=3");
