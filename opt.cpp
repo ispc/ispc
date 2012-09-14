@@ -791,7 +791,11 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                                               llvm::PointerType::get(returnType, 0), 
                                               name, callInst);
                     lCopyMetadata(castPtr, callInst);
-                    int align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
+                    int align;
+                    if (g->opt.forceAlignedMemory)
+                        align = 0;
+                    else
+                        align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                     name = LLVMGetName(callInst->getArgOperand(0), "_load");
                     llvm::Instruction *loadInst = 
                         new llvm::LoadInst(castPtr, name, false /* not volatile */,
@@ -829,7 +833,11 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
                     llvm::StoreInst *storeInst = 
                         new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
-                    int align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
+                    int align;
+                    if (g->opt.forceAlignedMemory)
+                        align = 0;
+                    else
+                        align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
                     storeInst->setAlignment(align);
                     lCopyMetadata(storeInst, callInst);
                     llvm::ReplaceInstWithInst(callInst, storeInst);
@@ -2553,7 +2561,7 @@ lImproveMaskedStore(llvm::CallInst *callInst) {
         lCopyMetadata(lvalue, callInst);
         llvm::Instruction *store = 
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
-                                info->align);
+                                g->opt.forceAlignedMemory ? 0 : info->align);
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
         return true;
@@ -2616,7 +2624,8 @@ lImproveMaskedLoad(llvm::CallInst *callInst,
                                     callInst);
         llvm::Instruction *load = 
             new llvm::LoadInst(ptr, callInst->getName(), false /* not volatile */,
-                               info->align, (llvm::Instruction *)NULL);
+                               g->opt.forceAlignedMemory ? 0 : info->align,
+                               (llvm::Instruction *)NULL);
         lCopyMetadata(load, callInst);
         llvm::ReplaceInstWithInst(callInst, load);
         return true;

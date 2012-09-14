@@ -119,6 +119,7 @@ usage(int ret) {
     printf("        disable-loop-unroll\t\tDisable loop unrolling.\n");
     printf("        fast-masked-vload\t\tFaster masked vector loads on SSE (may go past end of array)\n");
     printf("        fast-math\t\t\tPerform non-IEEE-compliant optimizations of numeric expressions\n");
+    printf("        force-aligned-memory\t\tAlways issue \"aligned\" vector load and store instructions\n");
 #ifndef ISPC_IS_WINDOWS
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
 #endif // !ISPC_IS_WINDOWS
@@ -336,6 +337,8 @@ int main(int Argc, char *Argv[]) {
                 g->opt.unrollLoops = false;
             else if (!strcmp(opt, "disable-fma"))
                 g->opt.disableFMA = true;
+            else if (!strcmp(opt, "force-aligned-memory"))
+                g->opt.forceAlignedMemory = true;
 
             // These are only used for performance tests of specific
             // optimizations

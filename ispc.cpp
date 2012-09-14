@@ -640,6 +640,7 @@ Opt::Opt() {
     unrollLoops = true;
     disableAsserts = false;
     disableFMA = false;
+    forceAlignedMemory = false;
     disableMaskAllOnOptimizations = false;
     disableHandlePseudoMemoryOps = false;
     disableBlendedMaskedStores = false;

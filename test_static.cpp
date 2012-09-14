@@ -99,15 +99,21 @@ void *ISPCAlloc(void **handle, int64_t size, int32_t alignment) {
 }
 
 
+#if defined(_WIN32) || defined(_WIN64)
+#define ALIGN
+#else
+#define ALIGN __attribute__((aligned(64)))
+#endif
 
 int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= 64);
 
-    float returned_result[64];
-    float vfloat[64];
-    double vdouble[64];
-    int vint[64], vint2[64];
+    float returned_result[64] ALIGN;
+    float vfloat[64] ALIGN;
+    double vdouble[64] ALIGN;
+    int vint[64] ALIGN;
+    int vint2[64] ALIGN;
 
     for (int i = 0; i < 64; ++i) {
         returned_result[i] = -1e20;

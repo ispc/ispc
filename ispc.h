@@ -311,6 +311,12 @@ struct Opt {
         that support them). */
     bool disableFMA;
 
+    /** Always generate aligned vector load/store instructions; this
+        implies a guarantee that all dynamic access through pointers that
+        becomes a vector load/store will be a cache-aligned sequence of
+        locations. */
+    bool forceAlignedMemory;
+
     /** If enabled, disables the various optimizations that kick in when
         the execution mask can be determined to be "all on" at compile
         time. */
