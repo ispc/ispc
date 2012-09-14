@@ -2397,16 +2397,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
 
-    // FIXME: it's not clear to me that we generate unaligned vector loads
-    // of varying stuff out of the front-end any more.  (Only by the
-    // optimization passes that lower gathers to vector loads, I think..)
-    // So remove this??
-    int align = 0;
-    if (llvm::isa<llvm::VectorType>(pt->getElementType()))
-        align = 1;
-    llvm::Instruction *inst = new llvm::LoadInst(ptr, name, 
-                                                 false /* not volatile */,
-                                                 align, bblock);
+    llvm::Instruction *inst = new llvm::LoadInst(ptr, name, bblock);
     AddDebugPos(inst);
     return inst;
 }
@@ -2958,17 +2949,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
         return;
     }
 
-    llvm::Instruction *inst;
-    if (llvm::isa<llvm::VectorType>(value->getType()))
-        // FIXME: same for load--do we still need/want this??
-        // Specify an unaligned store, since we don't know that the ptr
-        // will in fact be aligned to a vector width here.  (Actually
-        // should be aligned to the alignment of the vector elment type...)
-        inst = new llvm::StoreInst(value, ptr, false /* not volatile */,
-                                   1, bblock);
-    else
-        inst = new llvm::StoreInst(value, ptr, bblock);
-
+    llvm::Instruction *inst = new llvm::StoreInst(value, ptr, bblock);
     AddDebugPos(inst);
 }
 
