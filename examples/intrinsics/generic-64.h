@@ -55,6 +55,7 @@ typedef int64_t __vec1_i64;
 
 struct __vec64_i1 {
     __vec64_i1() { }
+    __vec64_i1(const uint64_t &vv) : v(vv) { }
     __vec64_i1(uint64_t v0, uint64_t v1, uint64_t v2, uint64_t v3,
                uint64_t v4, uint64_t v5, uint64_t v6, uint64_t v7,
                uint64_t v8, uint64_t v9, uint64_t v10, uint64_t v11,
@@ -530,6 +531,18 @@ INSERT_EXTRACT(__vec1_d, double)
 
 static FORCEINLINE uint64_t __movmsk(__vec64_i1 mask) {
     return (uint64_t)mask.v;
+}
+
+static FORCEINLINE __vec64_i1 __any(__vec64_i1 mask) {
+    return (mask.v!=0);
+}
+
+static FORCEINLINE __vec64_i1 __all(__vec64_i1 mask) {
+    return (mask.v==0xFFFFFFFFFFFFFFFF);
+}
+
+static FORCEINLINE __vec64_i1 __none(__vec64_i1 mask) {
+    return (mask.v==0);
 }
 
 static FORCEINLINE __vec64_i1 __equal_i1(__vec64_i1 a, __vec64_i1 b) {

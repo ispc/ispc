@@ -269,6 +269,18 @@ static FORCEINLINE uint64_t __movmsk(__vec4_i1 mask) {
     return (uint64_t)_mm_movemask_ps(mask.v);
 }
 
+static FORCEINLINE __vec4_i1 __any(__vec4_i1 mask) {
+    return (_mm_movemask_ps(mask.v)!=0);
+}
+
+static FORCEINLINE __vec4_i1 __all(__vec4_i1 mask) {
+    return (_mm_movemask_ps(mask.v)=0xF);
+}
+
+static FORCEINLINE __vec4_i1 __none(__vec4_i1 mask) {
+    return (_mm_movemask_ps(mask.v)==0);
+}
+
 static FORCEINLINE __vec4_i1 __equal_i1(__vec4_i1 a, __vec4_i1 b) {
     return _mm_cmpeq_epi32(_mm_castps_si128(a.v), _mm_castps_si128(b.v));
 }

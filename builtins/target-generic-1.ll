@@ -198,6 +198,27 @@ define  i64 @__movmsk(<1 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define  i1 @__any(<1 x i32>) nounwind readnone alwaysinline {
+  %item = extractelement <1 x i32> %0, i32 0
+  %v = lshr i32 %item, 31
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define  i1 @__all(<1 x i32>) nounwind readnone alwaysinline {
+  %item = extractelement <1 x i32> %0, i32 0
+  %v = lshr i32 %item, 31
+  %cmp = icmp eq i32 %v, 1
+  ret i1 %cmp
+}
+
+define  i1 @__none(<1 x i32>) nounwind readnone alwaysinline {
+  %item = extractelement <1 x i32> %0, i32 0
+  %v = lshr i32 %item, 31
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding

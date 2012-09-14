@@ -297,6 +297,18 @@ static FORCEINLINE uint32_t __movmsk(__vec32_i1 mask) {
     return ((m1<<16)|m2);
 }
 
+static FORCEINLINE uint32_t __any(__vec32_i1 mask) {
+    return (mask.m!=0);
+}
+
+static FORCEINLINE uint32_t __all(__vec32_i1 mask) {
+    return (mask.m==0xFFFFFFFF);
+}
+
+static FORCEINLINE uint32_t __none(__vec32_i1 mask) {
+    return (mask.m==0x0);
+}
+
 static FORCEINLINE __vec32_i1 __equal(__vec32_i1 a, __vec32_i1 b) {
     __vec32_i1 ret;
     ret.m16.m1 = _mm512_knot(_mm512_kandn(a.m16.m1, b.m16.m1));

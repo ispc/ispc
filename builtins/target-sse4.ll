@@ -278,6 +278,27 @@ define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define i1 @__any(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 15
+  ret i1 %cmp
+}
+
+define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone
 
 define float @__reduce_add_float(<4 x float>) nounwind readonly alwaysinline {

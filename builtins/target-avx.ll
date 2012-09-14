@@ -182,6 +182,27 @@ define i64 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define i1 @__any(<8 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %v = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %floatmask) nounwind readnone
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<8 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %v = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 255
+  ret i1 %cmp
+}
+
+define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %v = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 

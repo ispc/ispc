@@ -190,6 +190,53 @@ define i64 @__movmsk(<16 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define i1 @__any(<16 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <16 x i32> %0 to <16 x float>
+  %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v0 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask0) nounwind readnone
+  %mask1 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask1) nounwind readnone
+
+  %v1shift = shl i32 %v1, 8
+  %v = or i32 %v1shift, %v0
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<16 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <16 x i32> %0 to <16 x float>
+  %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v0 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask0) nounwind readnone
+  %mask1 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask1) nounwind readnone
+
+  %v1shift = shl i32 %v1, 8
+  %v = or i32 %v1shift, %v0
+  %cmp = icmp eq i32 %v, 65535
+  ret i1 %cmp
+}
+
+define i1 @__none(<16 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <16 x i32> %0 to <16 x float>
+  %mask0 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v0 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask0) nounwind readnone
+  %mask1 = shufflevector <16 x float> %floatmask, <16 x float> undef,
+          <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %v1 = call i32 @llvm.x86.avx.movmsk.ps.256(<8 x float> %mask1) nounwind readnone
+
+  %v1shift = shl i32 %v1, 8
+  %v = or i32 %v1shift, %v0
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 

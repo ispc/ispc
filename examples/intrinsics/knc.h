@@ -428,6 +428,18 @@ static FORCEINLINE __vec16_i1 __movmsk(__vec16_i1 mask) {
     return _mm512_kmov(mask);
 }
 
+static FORCEINLINE __vec16_i1 __any(__vec16_i1 mask) {
+    return (mask!=0);
+}
+
+static FORCEINLINE __vec16_i1 __all(__vec16_i1 mask) {
+    return (mask=0xFFFF);
+}
+
+static FORCEINLINE __vec16_i1 __none(__vec16_i1 mask) {
+    return (mask==0);
+}
+
 static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {
     return _mm512_knot( _mm512_kandn(a, b));
 }

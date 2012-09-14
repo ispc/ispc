@@ -1287,29 +1287,54 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
 
 llvm::Value *
 FunctionEmitContext::Any(llvm::Value *mask) {
-    llvm::Value *mmval = LaneMask(mask);
-    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, mmval,
-                   LLVMInt64(0), LLVMGetName(mask, "_any"));
+    // Call the target-dependent any function to test that the mask is non-zero
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__any", &mm);
+    if (g->target.maskBitCount == 1)
+        AssertPos(currentPos, mm.size() == 1);
+    else
+        // There should be one with signed int signature, one unsigned int.
+        AssertPos(currentPos, mm.size() == 2);
+    // We can actually call either one, since both are i32s as far as
+    // LLVM's type system is concerned...
+    llvm::Function *fmm = mm[0]->function;
+    return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_any"));
 }
 
 
 llvm::Value *
 FunctionEmitContext::All(llvm::Value *mask) {
-    llvm::Value *mmval = LaneMask(mask);
-    llvm::Value *allOnMaskValue = (g->target.vectorWidth == 64) ?
-        LLVMInt64(~0ull) :
-        LLVMInt64((1ull << g->target.vectorWidth) - 1);
-
-    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mmval,
-                   allOnMaskValue, LLVMGetName(mask, "_all"));
+    // Call the target-dependent movmsk function to turn the vector mask
+    // into an i64 value
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__all", &mm);
+    if (g->target.maskBitCount == 1)
+        AssertPos(currentPos, mm.size() == 1);
+    else
+        // There should be one with signed int signature, one unsigned int.
+        AssertPos(currentPos, mm.size() == 2);
+    // We can actually call either one, since both are i32s as far as
+    // LLVM's type system is concerned...
+    llvm::Function *fmm = mm[0]->function;
+    return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_all"));
 }
 
 
 llvm::Value *
 FunctionEmitContext::None(llvm::Value *mask) {
-    llvm::Value *mmval = LaneMask(mask);
-    return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mmval,
-                   LLVMInt64(0), LLVMGetName(mask, "_none"));
+    // Call the target-dependent movmsk function to turn the vector mask
+    // into an i64 value
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__none", &mm);
+    if (g->target.maskBitCount == 1)
+        AssertPos(currentPos, mm.size() == 1);
+    else
+        // There should be one with signed int signature, one unsigned int.
+        AssertPos(currentPos, mm.size() == 2);
+    // We can actually call either one, since both are i32s as far as
+    // LLVM's type system is concerned...
+    llvm::Function *fmm = mm[0]->function;
+    return CallInst(fmm, NULL, mask, LLVMGetName(mask, "_none"));
 }
 
 

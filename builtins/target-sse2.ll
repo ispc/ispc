@@ -246,6 +246,27 @@ define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define i1 @__any(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 15
+  ret i1 %cmp
+}
+
+define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i32> %0 to <4 x float>
+  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
 define float @__reduce_add_float(<4 x float> %v) nounwind readonly alwaysinline {
   %v1 = shufflevector <4 x float> %v, <4 x float> undef,
                       <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>

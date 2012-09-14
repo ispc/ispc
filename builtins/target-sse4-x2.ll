@@ -255,6 +255,60 @@ define i64 @__movmsk(<8 x i32>) nounwind readnone alwaysinline {
   ret i64 %v64
 }
 
+define i1 @__any(<8 x i32>) nounwind readnone alwaysinline {
+  ; first do two 4-wide movmsk calls
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
+
+  ; and shift the first one over by 4 before ORing it with the value 
+  ; of the second one
+  %v1s = shl i32 %v1, 4
+  %v = or i32 %v0, %v1s
+  %cmp = icmp ne i32 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @__all(<8 x i32>) nounwind readnone alwaysinline {
+  ; first do two 4-wide movmsk calls
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
+
+  ; and shift the first one over by 4 before ORing it with the value 
+  ; of the second one
+  %v1s = shl i32 %v1, 4
+  %v = or i32 %v0, %v1s
+  %cmp = icmp eq i32 %v, 255
+  ret i1 %cmp
+}
+
+define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
+  ; first do two 4-wide movmsk calls
+  %floatmask = bitcast <8 x i32> %0 to <8 x float>
+  %m0 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v0 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m0) nounwind readnone
+  %m1 = shufflevector <8 x float> %floatmask, <8 x float> undef,
+          <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v1 = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %m1) nounwind readnone
+
+  ; and shift the first one over by 4 before ORing it with the value 
+  ; of the second one
+  %v1s = shl i32 %v1, 4
+  %v = or i32 %v0, %v1s
+  %cmp = icmp eq i32 %v, 0
+  ret i1 %cmp
+}
+
 define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8by4(float, @llvm.x86.sse.min.ps, @__min_uniform_float)
 }
