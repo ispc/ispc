@@ -2123,7 +2123,7 @@ static FORCEINLINE __vec16_i32 __masked_load_i32<64>(void *p, __vec16_i1 mask) {
 
 // Currently, when a pseudo_gather is converted into a masked load, it has to be unaligned
 static FORCEINLINE __vec16_i32 __masked_load_i32(void *p, __vec16_i1 mask) {
-#if 1
+#if ASSUME_ALIGNED
 # pragma message("masked_load_i32 currently works only for _aligned_ loads")
   return _mm512_mask_load_epi32(__vec16_i32(),mask.m,p);
 #else
@@ -2165,7 +2165,7 @@ template <> static FORCEINLINE __vec16_f __masked_load_float<64>(void *p, __vec1
 #endif 
 
 static FORCEINLINE __vec16_f __masked_load_float(void *p, __vec16_i1 mask) {
-#if 1
+#if ASSUME_ALIGNED
 # pragma message("masked_load_i32 currently works only for _aligned_ loads")
   return _mm512_mask_load_ps(__vec16_f(),mask.m,p);
 #else
@@ -2241,7 +2241,7 @@ template <> static FORCEINLINE void __masked_store_i32<64>(void *p, __vec16_i32 
 #endif
 
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
-#if 1
+#if ASSUME_ALIGNED
 # pragma message("masked_store_i32 currently works only for _aligned_ stores")
   _mm512_mask_store_epi32(p,mask.m,val);
 #else
@@ -2279,7 +2279,7 @@ template <> static FORCEINLINE void __masked_store_float<64>(void *p, __vec16_f 
 #endif 
 
 static FORCEINLINE void __masked_store_float(void *p, __vec16_f val, __vec16_i1 mask) {
-#if 1
+#if ASSUME_ALIGNED
 # pragma message("masked_store_float currently works only for _aligned_ stores")
 
   // std::cout << "masked store to " << p << " mask " << ((int*)mask.m) << std::endl;
@@ -2318,7 +2318,7 @@ template <> static FORCEINLINE void __masked_store_double<64>(void *p, __vec16_d
 #endif
 
 static FORCEINLINE void __masked_store_double(void *p, __vec16_d val, __vec16_i1 mask) {
-#if 1
+#if ASSUME_ALIGNED
 # pragma message("masked_store_double currently works only for _aligned_ stores")
   _mm512_mask_store_pd(((float*)p)+00,mask.m8.m1,val.v1);
   _mm512_mask_store_pd(((float*)p)+16,mask.m8.m2,val.v2);
