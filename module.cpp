@@ -1538,6 +1538,13 @@ Module::writeHostStub(const char *fn)
     const FunctionType *fct = CastType<FunctionType>(sym->type);
     Assert(fct);
 
+    if (!fct->GetReturnType()->IsVoidType()) {
+      Warning(sym->pos,"When emitting offload-stubs, ignoring \"export\"ed function with non-void return types.\n");
+      continue;
+    }
+
+
+
     // -------------------------------------------------------
     // first, emit a struct that holds the parameters
     // -------------------------------------------------------
