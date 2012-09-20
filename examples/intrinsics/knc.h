@@ -43,9 +43,6 @@
 #include <iostream> // for operator<<(m512[i])
 #include <iomanip>  // for operator<<(m512[i])
 
-// iw: TODO - need to set that to whatever the cmdline flag sais
-#define ASSUME_ALIGNED 0
-
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #define PRE_ALIGN(x)  /*__declspec(align(x))*/
@@ -106,7 +103,7 @@ typedef struct PRE_ALIGN(2) __vec16_i1 {
             ((v12) << 12) |
             ((v13) << 13) |
             ((v14) << 14) |
-  	    ((v15) << 15);
+            ((v15) << 15);
     }
 
     union {
@@ -477,8 +474,7 @@ static FORCEINLINE __vec16_i1 __movmsk(__vec16_i1 mask) {
 }
 
 static FORCEINLINE __vec16_i1 __any(__vec16_i1 mask) {
-    // return (mask!=0);
-  return !_mm512_kortestz(mask,mask);
+  return !_mm512_kortestz(mask, mask);
 }
 
 static FORCEINLINE __vec16_i1 __all(__vec16_i1 mask) {
@@ -486,7 +482,6 @@ static FORCEINLINE __vec16_i1 __all(__vec16_i1 mask) {
 }
 
 static FORCEINLINE __vec16_i1 __none(__vec16_i1 mask) {
-  //    return (mask==0);                      
   return !__any(mask);
 }
 
@@ -570,7 +565,7 @@ template <> static FORCEINLINE __vec16_i1 __setzero_i1<__vec16_i1>() {
 
 template <class RetVecType> RetVecType __undef_i1();
 template <> static FORCEINLINE __vec16_i1 __undef_i1<__vec16_i1>() {
-    return __vec16_i1(); // FIXME? __mm512_undef_mask();
+    return __vec16_i1();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -850,7 +845,7 @@ template <> static FORCEINLINE __vec16_i32 __setzero_i32<__vec16_i32>() {
 
 template <class RetVecType> RetVecType __undef_i32();
 template <> static FORCEINLINE __vec16_i32 __undef_i32<__vec16_i32>() {
-    return _mm512_undefined_epi32();
+    return __vec16_i32();
 }
 
 static FORCEINLINE __vec16_i32 __broadcast_i32(__vec16_i32 v, int index) {
@@ -875,12 +870,12 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 */
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) {
-#if ASSUME_ALIGNED
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     return _mm512_load_epi32(p);
 #else
-    __vec16_i32 v =  _mm512_undefined_epi32();
-    v = _mm512_extloadunpackhi_epi32(v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    __vec16_i32 v;
     v = _mm512_extloadunpacklo_epi32(v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v = _mm512_extloadunpackhi_epi32(v, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     return v;
 #endif
 }
@@ -890,11 +885,11 @@ template <> static FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) {
 }
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32 v) {
-#if ASSUME_ALIGNED
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     _mm512_store_epi32(p, v);
 #else
-    _mm512_extpackstorehi_epi32(p, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     _mm512_extpackstorelo_epi32(p, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+64, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 #endif
 }
 
@@ -926,10 +921,7 @@ template <> static FORCEINLINE __vec16_i64 __setzero_i64<__vec16_i64>() {
 
 template <class RetVecType> RetVecType __undef_i64();
 template <> static FORCEINLINE __vec16_i64 __undef_i64<__vec16_i64>() {
-    __vec16_i64 ret;
-    ret.v_lo = _mm512_undefined_epi32();
-    ret.v_hi = _mm512_undefined_epi32();
-    return ret;
+    return __vec16_i64();
 }
 
 static FORCEINLINE __vec16_i64 __add(const __vec16_i64 &a, const __vec16_i64 &b)
@@ -1101,12 +1093,12 @@ LOAD_STORE(__vec16_i64, int64_t)
 
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) {
-    __vec16_i32 v1 = _mm512_undefined_epi32();
-    __vec16_i32 v2 = _mm512_undefined_epi32();
-    v2 = _mm512_extloadunpackhi_epi32(v2, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    __vec16_i32 v1;
+    __vec16_i32 v2;
     v2 = _mm512_extloadunpacklo_epi32(v2, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    v1 = _mm512_extloadunpackhi_epi32(v1, ((uint8_t*)p)+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    v1 = _mm512_extloadunpacklo_epi32(v1, ((uint8_t*)p)+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v2 = _mm512_extloadunpackhi_epi32(v2, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v1 = _mm512_extloadunpacklo_epi32(v1, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v1 = _mm512_extloadunpackhi_epi32(v1, (uint8_t*)p+128, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
 
     __vec16_i64 ret;
     ret.v_hi = _mm512_mask_permutevar_epi32(ret.v_hi, 0xFF00,
@@ -1162,10 +1154,10 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
     v2 = _mm512_mask_permutevar_epi32(v2, 0x5555,
                                       _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
                                       v.v_lo);
-    _mm512_extpackstorehi_epi32(p, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     _mm512_extpackstorelo_epi32(p, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorehi_epi32(((uint8_t*)p)+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_epi32(((uint8_t*)p)+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+64, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 }
 
 template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) {
@@ -1300,7 +1292,7 @@ template <> static FORCEINLINE __vec16_f __setzero_float<__vec16_f>() {
 
 template <class RetVecType> RetVecType __undef_float();
 template <> static FORCEINLINE __vec16_f __undef_float<__vec16_f>() {
-    return _mm512_undefined_ps();
+    return __vec16_f();
 }
 
 static FORCEINLINE __vec16_f __broadcast_float(__vec16_f v, int index) {
@@ -1325,12 +1317,12 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f v0, __vec16_f v1, __vec1
 */
 
 template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
-#if ASSUME_ALIGNED
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     return _mm512_load_ps(p);
 #else
-    __vec16_f v = _mm512_undefined_ps();
-    v = _mm512_extloadunpackhi_ps(v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+    __vec16_f v;
     v = _mm512_extloadunpacklo_ps(v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+    v = _mm512_extloadunpackhi_ps(v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
     return v;
 #endif
 }
@@ -1340,11 +1332,11 @@ template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
 }
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) {
-#if ASSUME_ALIGNED
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     _mm512_store_ps(p, v);
 #else
-    _mm512_extpackstorehi_ps(p, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
     _mm512_extpackstorelo_ps(p, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
 #endif
 }
 
@@ -1526,10 +1518,7 @@ template <> static FORCEINLINE __vec16_d __setzero_double<__vec16_d>() {
 
 template <class RetVecType> RetVecType __undef_double();
 template <> static FORCEINLINE __vec16_d __undef_double<__vec16_d>() {
-    __vec16_d ret;
-    ret.v1 = _mm512_undefined_pd();
-    ret.v2 = _mm512_undefined_pd();
-    return ret;
+    return __vec16_d();
 }
 
 static FORCEINLINE __vec16_d __broadcast_double(__vec16_d v, int index) {
@@ -1557,12 +1546,10 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_d v0, __vec16_d v1, __vec1
 
 template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) {
     __vec16_d ret;
-    ret.v1 = _mm512_undefined_pd();
-    ret.v2 = _mm512_undefined_pd();
-    ret.v1 = _mm512_extloadunpackhi_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
     ret.v1 = _mm512_extloadunpacklo_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_extloadunpackhi_pd(ret.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_extloadunpacklo_pd(ret.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    ret.v1 = _mm512_extloadunpackhi_pd(ret.v1, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    ret.v2 = _mm512_extloadunpacklo_pd(ret.v2, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    ret.v2 = _mm512_extloadunpackhi_pd(ret.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
     return ret;
 }
 
@@ -1578,10 +1565,10 @@ template <> static FORCEINLINE __vec16_d __load<128>(const __vec16_d *p) {
 }
  
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) {
-    _mm512_extpackstorehi_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
     _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorehi_pd(((uint8_t*)p)+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_pd(((uint8_t*)p)+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorelo_pd((uint8_t*)p+64, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_pd((uint8_t*)p+128, v.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
 }
 
 template <> static FORCEINLINE void __store<64>(__vec16_d *p, __vec16_d v) {
@@ -1734,9 +1721,7 @@ static FORCEINLINE __vec16_d __cast_sitofp(__vec16_d, __vec16_i64 val) {
 */
 
 // unsigned int to float/double
-CAST(__vec16_f, float, __vec16_i8,   uint8_t,  __cast_uitofp)
 CAST(__vec16_f, float, __vec16_i16,  uint16_t, __cast_uitofp)
-CAST(__vec16_f, float, __vec16_i32,  uint32_t, __cast_uitofp)
 CAST(__vec16_f, float, __vec16_i64,  uint64_t, __cast_uitofp)
 CAST(__vec16_d, double, __vec16_i8,  uint8_t,  __cast_uitofp)
 CAST(__vec16_d, double, __vec16_i16, uint16_t, __cast_uitofp)
@@ -1766,13 +1751,13 @@ static FORCEINLINE __vec16_f __cast_uitofp(__vec16_f, __vec16_i32 v) {
 static FORCEINLINE __vec16_i32 __cast_fptosi(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epi32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
 }
+
 static FORCEINLINE __vec16_i32 __cast_fptoui(__vec16_i32, __vec16_f val) {
   return _mm512_cvtfxpnt_round_adjustps_epu32(val, _MM_ROUND_MODE_TOWARD_ZERO, _MM_EXPADJ_NONE);
 }
 
 CAST(__vec16_i8,  int8_t,  __vec16_f, float, __cast_fptosi)
 CAST(__vec16_i16, int16_t, __vec16_f, float, __cast_fptosi)
-CAST(__vec16_i32, int32_t, __vec16_f, float, __cast_fptosi)
 CAST(__vec16_i64, int64_t, __vec16_f, float, __cast_fptosi)
 CAST(__vec16_i8,  int8_t,  __vec16_d, double, __cast_fptosi)
 CAST(__vec16_i16, int16_t, __vec16_d, double, __cast_fptosi)
@@ -1782,7 +1767,6 @@ CAST(__vec16_i64, int64_t, __vec16_d, double, __cast_fptosi)
 // float/double to unsigned int
 CAST(__vec16_i8,  uint8_t,  __vec16_f, float, __cast_fptoui)
 CAST(__vec16_i16, uint16_t, __vec16_f, float, __cast_fptoui)
-CAST(__vec16_i32, uint32_t, __vec16_f, float, __cast_fptoui)
 CAST(__vec16_i64, uint64_t, __vec16_f, float, __cast_fptoui)
 CAST(__vec16_i8,  uint8_t,  __vec16_d, double, __cast_fptoui)
 CAST(__vec16_i16, uint16_t, __vec16_d, double, __cast_fptoui)
@@ -1804,9 +1788,9 @@ typedef union {
 #define CAST_BITS(TO, TO_TYPE, TO_ELT, FROM, FROM_ELT)
 /*
 static FORCEINLINE TO __cast_bits(TO, FROM val) {      \
-  BitcastUnion u;				       \
-  u.FROM_ELT = val;				       \
-  return u.TO_ELT;				       \
+  BitcastUnion u;                                      \
+  u.FROM_ELT = val;                                    \
+  return u.TO_ELT;                                     \
 }
 */
 
@@ -2106,31 +2090,16 @@ static FORCEINLINE __vec16_i16 __masked_load_i16(void *p,
 }
 */
 
-#if 0
-template <int ALIGN> 
-static FORCEINLINE __vec16_i32 __masked_load_i32(void *p, __vec16_i1 mask) {
-    __vec16_i32 ret;
-    ret = _mm512_mask_extloadunpackhi_epi32(ret, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    ret = _mm512_mask_extloadunpacklo_epi32(ret, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    return ret;
-}
-
-template <> 
-static FORCEINLINE __vec16_i32 __masked_load_i32<64>(void *p, __vec16_i1 mask) {
-    return _mm512_mask_load_epi32(_mm512_undefined_epi32(), mask, p);
-}
-#endif
-
 // Currently, when a pseudo_gather is converted into a masked load, it has to be unaligned
 static FORCEINLINE __vec16_i32 __masked_load_i32(void *p, __vec16_i1 mask) {
-#if ASSUME_ALIGNED
-# pragma message("masked_load_i32 currently works only for _aligned_ loads")
-  return _mm512_mask_load_epi32(__vec16_i32(),mask.m,p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+    return _mm512_mask_load_epi32(__vec16_i32(), mask.m, p);
 #else
+    __vec16_i32 tmp;
+    tmp.v = _mm512_mask_extloadunpacklo_epi32(tmp.v, 0xFFFF, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_mask_extloadunpackhi_epi32(tmp.v, 0xFFFF, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     __vec16_i32 ret;
-    ret = _mm512_mask_extloadunpackhi_epi32(ret, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    ret = _mm512_mask_extloadunpacklo_epi32(ret, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    return ret;
+    return _mm512_mask_mov_epi32(ret.v, mask.m, tmp.v);
 #endif
 }
 
@@ -2142,8 +2111,6 @@ static FORCEINLINE __vec16_i64 __masked_load_i64(void *p,
         __vec16_i32 v32[2];
     } ret;
 
-    ret.v32[0] = _mm512_undefined_epi32();
-    ret.v32[1] = _mm512_undefined_epi32();
     ret.v32[0] = _mm512_mask_loadq(ret, mask, p, _MM_FULLUPC64_NONE, _MM_BROADCAST_8X8, _MM_HINT_NONE);
     ret.v32[1] = _mm512_mask_loadq(ret, mask, p, _MM_FULLUPC64_NONE, _MM_BROADCAST_8X8, _MM_HINT_NONE);
 
@@ -2151,60 +2118,35 @@ static FORCEINLINE __vec16_i64 __masked_load_i64(void *p,
 }
 */
 
-#if 0
-template <int ALIGN> static FORCEINLINE __vec16_f __masked_load_float(void *p, __vec16_i1 mask) {
-    __vec16_f ret;
-    ret = _mm512_mask_extloadunpackhi_ps(ret, mask, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    ret = _mm512_mask_extloadunpacklo_ps(ret, mask, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    return ret;
-}
-
-template <> static FORCEINLINE __vec16_f __masked_load_float<64>(void *p, __vec16_i1 mask) {
-    return _mm512_mask_load_ps(_mm512_undefined_ps(), mask, p);
-}
-#endif 
-
 static FORCEINLINE __vec16_f __masked_load_float(void *p, __vec16_i1 mask) {
-#if ASSUME_ALIGNED
-# pragma message("masked_load_i32 currently works only for _aligned_ loads")
-  return _mm512_mask_load_ps(__vec16_f(),mask.m,p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+    return _mm512_mask_load_ps(_mm512_undefined_ps(), mask.m,p);
 #else
+    __vec16_f tmp;
+    tmp.v = _mm512_mask_extloadunpacklo_ps(tmp.v, 0xFFFF, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_mask_extloadunpackhi_ps(tmp.v, 0xFFFF, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
     __vec16_f ret;
-    ret = _mm512_mask_extloadunpackhi_ps(ret, mask, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    ret = _mm512_mask_extloadunpacklo_ps(ret, mask, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    return ret;
+    return _mm512_mask_mov_ps(ret.v, mask.m, tmp.v);
 #endif
 }
-
-#if 0
-template <int ALIGN> static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
-    __vec16_d ret;
-    ret.v1 = _mm512_undefined_pd();
-    ret.v2 = _mm512_undefined_pd();
-    ret.v1 = _mm512_mask_extloadunpackhi_pd(ret.v1, mask.m8.m1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v1 = _mm512_mask_extloadunpacklo_pd(ret.v1, mask.m8.m1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_mask_extloadunpackhi_pd(ret.v2, mask.m8.m2, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_mask_extloadunpacklo_pd(ret.v2, mask.m8.m2, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    return ret;
-}
-
-template <> static FORCEINLINE __vec16_d __masked_load_double<64>(void *p, __vec16_i1 mask) {
-    __vec16_d ret;
-    ret.v1 = _mm512_mask_load_pd(_mm512_undefined_pd(), mask.m8.m1, p);
-    ret.v2 = _mm512_mask_load_pd(_mm512_undefined_pd(), mask.m8.m2, p);
-    return ret;
-}
-#endif
 
 static FORCEINLINE __vec16_d __masked_load_double(void *p, __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     __vec16_d ret;
-    ret.v1 = _mm512_undefined_pd();
-    ret.v2 = _mm512_undefined_pd();
-    ret.v1 = _mm512_mask_extloadunpackhi_pd(ret.v1, mask.m8.m1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v1 = _mm512_mask_extloadunpacklo_pd(ret.v1, mask.m8.m1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_mask_extloadunpackhi_pd(ret.v2, mask.m8.m2, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    ret.v2 = _mm512_mask_extloadunpacklo_pd(ret.v2, mask.m8.m2, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    ret.v1 = _mm512_mask_load_pd(ret.v1, mask.m8.m1, p);
+    ret.v2 = _mm512_mask_load_pd(ret.v2, mask.m8.m2, (uint8_t*)p+64);
     return ret;
+#else
+    __vec16_d tmp;
+    tmp.v1 = _mm512_mask_extloadunpacklo_pd(tmp.v1, 0xFF, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v1 = _mm512_mask_extloadunpackhi_pd(tmp.v1, 0xFF, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v2 = _mm512_mask_extloadunpacklo_pd(tmp.v2, 0xFF, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v2 = _mm512_mask_extloadunpackhi_pd(tmp.v2, 0xFF, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    __vec16_d ret;
+    ret.v1 = _mm512_mask_mov_pd(ret.v1, mask.m8.m1, tmp.v1);
+    ret.v2 = _mm512_mask_mov_pd(ret.v2, mask.m8.m2, tmp.v2);
+    return ret;
+#endif
 }
 
 /*
@@ -2225,32 +2167,16 @@ static FORCEINLINE void __masked_store_i16(void *p, __vec16_i16 val,
 }
 */
 
-#if 0
-template <int ALIGN> static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
-    __vec16_i32 tmp;
-    tmp = _mm512_extloadunpackhi_epi32(tmp, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    tmp = _mm512_extloadunpacklo_epi32(tmp, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_epi32(tmp, mask, val);
-    _mm512_extpackstorehi_epi32(p, tmp, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_epi32(p, tmp, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-}
-
-template <> static FORCEINLINE void __masked_store_i32<64>(void *p, __vec16_i32 val, __vec16_i1 mask) {
-    _mm512_mask_store_epi32(p, mask, val);
-}
-#endif
-
 static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) {
-#if ASSUME_ALIGNED
-# pragma message("masked_store_i32 currently works only for _aligned_ stores")
-  _mm512_mask_store_epi32(p,mask.m,val);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+    _mm512_mask_store_epi32(p, mask.m, val.v);
 #else
     __vec16_i32 tmp;
-    tmp = _mm512_extloadunpackhi_epi32(tmp, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    tmp = _mm512_extloadunpacklo_epi32(tmp, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_epi32(tmp, mask, val);
-    _mm512_extpackstorehi_epi32(p, tmp, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_epi32(p, tmp, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_extloadunpacklo_epi32(tmp.v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_extloadunpackhi_epi32(tmp.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_mask_mov_epi32(tmp.v, mask.m, val.v);
+    _mm512_extpackstorelo_epi32(p, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
 #endif
 }
 
@@ -2263,77 +2189,37 @@ static FORCEINLINE void __masked_store_i64(void *p, __vec16_i64 val,
 }
 */
 
-#if 0
-template <int ALIGN> static FORCEINLINE void __masked_store_float(void *p, __vec16_f val, __vec16_i1 mask) {
-    __vec16_f tmp;
-    tmp = _mm512_extloadunpackhi_ps(tmp, p, _MM_UPCONV_P_NONE, _MM_HINT_NONE);
-    tmp = _mm512_extloadunpacklo_ps(tmp, p, _MM_UPCONV_P_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_ps(tmp, mask, val);
-    _mm512_extpackstorehi_ps(p, tmp, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_ps(p, tmp, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-}
-
-template <> static FORCEINLINE void __masked_store_float<64>(void *p, __vec16_f val, __vec16_i1 mask) {
-    _mm512_mask_store_ps(p, mask, val);
-}
-#endif 
-
-static FORCEINLINE void __masked_store_float(void *p, __vec16_f val, __vec16_i1 mask) {
-#if ASSUME_ALIGNED
-# pragma message("masked_store_float currently works only for _aligned_ stores")
-
-  // std::cout << "masked store to " << p << " mask " << ((int*)mask.m) << std::endl;
-  // std::cout << " " << val << std::endl;
-
-  _mm512_mask_store_ps(p,mask.m,val);
+static FORCEINLINE void __masked_store_float(void *p, __vec16_f val,
+                                             __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+    _mm512_mask_store_ps(p, mask.m, val.v);
 #else
     __vec16_f tmp;
-    tmp = _mm512_extloadunpackhi_ps(tmp, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    tmp = _mm512_extloadunpacklo_ps(tmp, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_ps(tmp, mask, val);
-    _mm512_extpackstorehi_ps(p, tmp, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_ps(p, tmp, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_extloadunpacklo_ps(tmp.v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_extloadunpackhi_ps(tmp.v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+    tmp.v = _mm512_mask_mov_ps(tmp.v, mask.m, val.v);
+    _mm512_extpackstorelo_ps(p, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_ps((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
 #endif
 }
 
-#if 0
-template <int ALIGN> static FORCEINLINE void __masked_store_double(void *p, __vec16_d val, __vec16_i1 mask) {
-    __vec16_d tmp;
-    tmp.v1 = _mm512_extloadunpackhi_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    tmp.v1 = _mm512_extloadunpacklo_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    tmp.v2 = _mm512_extloadunpackhi_pd(tmp.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    tmp.v2 = _mm512_extloadunpacklo_pd(tmp.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_pd(tmp.v1, mask.m8.m1, val.v1);
-    _mm512_mask_mov_pd(tmp.v2, mask.m8.m2, val.v2);
-    _mm512_extpackstorehi_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorehi_pd(((uint8_t*)p)+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_pd(((uint8_t*)p)+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-}
-
-template <> static FORCEINLINE void __masked_store_double<64>(void *p, __vec16_d val, __vec16_i1 mask) {
+static FORCEINLINE void __masked_store_double(void *p, __vec16_d val,
+                                              __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
     _mm512_mask_store_pd(p, mask.m8.m1, val.v1);
-    _mm512_mask_store_pd(((uint8_t*)p)+64, mask.m8.m2, val.v2);
-}
-#endif
-
-static FORCEINLINE void __masked_store_double(void *p, __vec16_d val, __vec16_i1 mask) {
-#if ASSUME_ALIGNED
-# pragma message("masked_store_double currently works only for _aligned_ stores")
-  _mm512_mask_store_pd(((float*)p)+00,mask.m8.m1,val.v1);
-  _mm512_mask_store_pd(((float*)p)+16,mask.m8.m2,val.v2);
+    _mm512_mask_store_pd((uint8_t*)p+64, mask.m8.m2, val.v2);
 #else
     __vec16_d tmp;
-    tmp.v1 = _mm512_extloadunpackhi_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
     tmp.v1 = _mm512_extloadunpacklo_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    tmp.v2 = _mm512_extloadunpackhi_pd(tmp.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    tmp.v2 = _mm512_extloadunpacklo_pd(tmp.v2, ((uint8_t*)p)+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_mask_mov_pd(tmp.v1, mask.m8.m1, val.v1);
-    _mm512_mask_mov_pd(tmp.v2, mask.m8.m2, val.v2);
-    _mm512_extpackstorehi_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v1 = _mm512_extloadunpackhi_pd(tmp.v1, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v2 = _mm512_extloadunpacklo_pd(tmp.v2, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v2 = _mm512_extloadunpackhi_pd(tmp.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
+    tmp.v1 = _mm512_mask_mov_pd(tmp.v1, mask.m8.m1, val.v1);
+    tmp.v2 = _mm512_mask_mov_pd(tmp.v2, mask.m8.m2, val.v2);
     _mm512_extpackstorelo_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorehi_pd(((uint8_t*)p)+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorelo_pd(((uint8_t*)p)+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_pd((uint8_t*)p+64, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorelo_pd((uint8_t*)p+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+    _mm512_extpackstorehi_pd((uint8_t*)p+128, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
 #endif
 }
 
@@ -2373,39 +2259,32 @@ static FORCEINLINE void __masked_store_blend_float(void *p, __vec16_f val,
 
 static FORCEINLINE __vec16_i8
 __gather_base_offsets32_i8(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
-			    __vec16_i1 mask) {
-  // (iw): need to temporarily store as int because gathers can only return ints.
-  __vec16_i32 tmp = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, base, 
-                                                   _MM_UPCONV_EPI32_SINT8, scale,
-                                                   _MM_HINT_NONE);
-  // now, downconverting to chars into temporary char vector
-  __vec16_i8 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
-  return ret;
+                           __vec16_i1 mask) {
+    // (iw): need to temporarily store as int because gathers can only return ints.
+    __vec16_i32 tmp = _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, base, 
+                                                     _MM_UPCONV_EPI32_SINT8, scale,
+                                                     _MM_HINT_NONE);
+    // now, downconverting to chars into temporary char vector
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
 }
 
 static FORCEINLINE __vec16_i32
 __gather_base_offsets32_i32(uint8_t *base, uint32_t scale, __vec16_i32 offsets, 
-			    __vec16_i1 mask) {
-    __vec16_i32 tmp = _mm512_undefined_epi32();
-    __vec16_i32 ret = _mm512_mask_i32extgather_epi32(tmp, mask, offsets, base, 
-                                                     _MM_UPCONV_EPI32_NONE, scale,
-                                                     _MM_HINT_NONE);
-    return ret;
+                            __vec16_i1 mask) {
+    return _mm512_mask_i32extgather_epi32(_mm512_undefined_epi32(), mask, offsets, 
+                                          base, _MM_UPCONV_EPI32_NONE, scale,
+                                          _MM_HINT_NONE);
 }
 
 static FORCEINLINE __vec16_f
 __gather_base_offsets32_float(uint8_t *base, uint32_t scale, __vec16_i32 offsets,
                               __vec16_i1 mask) { 
-    __vec16_f tmp = _mm512_undefined_ps();
-    __vec16_f ret = _mm512_mask_i32extgather_ps(tmp, mask, offsets, base,
-                                                _MM_UPCONV_PS_NONE, scale,
-                                                _MM_HINT_NONE);
-    return ret;
+    return _mm512_mask_i32extgather_ps(_mm512_undefined_ps(), mask, offsets,
+                                       base, _MM_UPCONV_PS_NONE, scale,
+                                       _MM_HINT_NONE);
 }
-
-// There is no gather instruction with 64-bit offsets in KNC.
-// So we cannot implement __gather_base_offsets64_*()
 
 /*! gather with 64-bit offsets.
 
@@ -2413,29 +2292,30 @@ __gather_base_offsets32_float(uint8_t *base, uint32_t scale, __vec16_i32 offsets
   upper 32 bits are all 0es (in practice, offsets are usually array
   indices, and _usually_ <4G even if the compiler cannot statically
   figure out that this is the case */
+
 static FORCEINLINE __vec16_f
 __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
-                              __vec16_i1 mask) { 
-// There is no gather instruction with 64-bit offsets in KNC.
-// So we cannot implement __gather_base_offsets64_*() -- iw: wrong; just have to manually iterate over the upper 32 bits ;-)
-  __vec16_i1 still_to_do = mask;
-  __vec16_f ret;
-  // PING;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask
-      (mask,offsets.v_hi,
-       __smear_i32<__vec16_i32>((int32_t)hi32),_MM_CMPINT_EQ);
-    
-    void * base = (void*)((unsigned long)_base  +
-                          ((scale*(unsigned long)hi32) << 32));    
-    ret = _mm512_mask_i32extgather_ps(ret, match, offsets.v_lo, base,
-                                      _MM_UPCONV_PS_NONE, scale,
-                                      _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
-  return ret;
+                              __vec16_i1 mask) {
+    // There is no gather instruction with 64-bit offsets in KNC.
+    // We have to manually iterate over the upper 32 bits ;-)
+    __vec16_i1 still_to_do = mask;
+    __vec16_f ret;
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+                                                      __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                      _MM_CMPINT_EQ);
+        
+        void * base = (void*)((unsigned long)_base  +
+                              ((scale*(unsigned long)hi32) << 32));
+        ret = _mm512_mask_i32extgather_ps(ret, match, offsets.v_lo, base,
+                                          _MM_UPCONV_PS_NONE, scale,
+                                          _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match, still_to_do);
+    }
+
+    return ret;
 }
 
 
@@ -2443,71 +2323,70 @@ static FORCEINLINE __vec16_i8
 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                            __vec16_i1 mask) 
 { 
-  __vec16_i1 still_to_do = mask;
-  __vec16_i32 tmp;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask
-      (mask,offsets.v_hi,
-       __smear_i32<__vec16_i32>((int32_t)hi32),_MM_CMPINT_EQ);
+    __vec16_i1 still_to_do = mask;
+    __vec16_i32 tmp;
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+                                                      __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                      _MM_CMPINT_EQ);
     
-    void * base = (void*)((unsigned long)_base  +
-                          ((scale*(unsigned long)hi32) << 32));    
-    tmp = _mm512_mask_i32extgather_epi32(tmp, match, offsets.v_lo, base,
-                                         _MM_UPCONV_EPI32_SINT8, scale,
-                                         _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
-  __vec16_i8 ret;
-  _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
-  return ret;
+        void * base = (void*)((unsigned long)_base  +
+                              ((scale*(unsigned long)hi32) << 32));    
+        tmp = _mm512_mask_i32extgather_epi32(tmp, match, offsets.v_lo, base,
+                                             _MM_UPCONV_EPI32_SINT8, scale,
+                                             _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match,still_to_do);
+    }
+    __vec16_i8 ret;
+    _mm512_extstore_epi32(ret.v,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+    return ret;
 }
-
 
 
 static FORCEINLINE void
 __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                                __vec16_f value,
-                              __vec16_i1 mask) { 
-  __vec16_i1 still_to_do = mask;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask
-      (mask,offsets.v_hi,
-       __smear_i32<__vec16_i32>((int32_t)hi32),_MM_CMPINT_EQ);
+                               __vec16_i1 mask) { 
+    __vec16_i1 still_to_do = mask;
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+                                                      __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                      _MM_CMPINT_EQ);
 
-    void * base = (void*)((unsigned long)_base  +
-                          ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
-                                 value,
-                                 _MM_DOWNCONV_PS_NONE, scale,
-                                 _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
+        void * base = (void*)((unsigned long)_base  +
+                              ((scale*(unsigned long)hi32) << 32));    
+        _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
+                                     value,
+                                     _MM_DOWNCONV_PS_NONE, scale,
+                                     _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match,still_to_do);
+    }
 }
 
 static FORCEINLINE void
 __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                              __vec16_i32 value,
                              __vec16_i1 mask) { 
-  __vec16_i1 still_to_do = mask;
-  while (still_to_do) {
-    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
-    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
-    __vec16_i1 match = _mm512_mask_cmp_epi32_mask
-      (mask,offsets.v_hi,
-       __smear_i32<__vec16_i32>((int32_t)hi32),_MM_CMPINT_EQ);
+    __vec16_i1 still_to_do = mask;
+    while (still_to_do) {
+        int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+        const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+        __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+                                                      __smear_i32<__vec16_i32>((int32_t)hi32),
+                                                      _MM_CMPINT_EQ);
     
-    void * base = (void*)((unsigned long)_base  +
-                          ((scale*(unsigned long)hi32) << 32));    
-    _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
-                                    value,
-                                    _MM_DOWNCONV_EPI32_NONE, scale,
-                                    _MM_HINT_NONE);
-    still_to_do = _mm512_kxor(match,still_to_do);
-  }
+        void * base = (void*)((unsigned long)_base  +
+                              ((scale*(unsigned long)hi32) << 32));    
+        _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
+                                        value,
+                                        _MM_DOWNCONV_EPI32_NONE, scale,
+                                        _MM_HINT_NONE);
+        still_to_do = _mm512_kxor(match,still_to_do);
+    }
 }
 
 
@@ -2516,8 +2395,8 @@ static FORCEINLINE __vec16_i32
 __gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 offsets,
                             __vec16_i1 mask) 
 {
-  __vec16_f r = __gather_base_offsets64_float(_base,scale,offsets,mask);
-  return (__vec16_i32&)r;
+    __vec16_f r = __gather_base_offsets64_float(_base,scale,offsets,mask);
+    return (__vec16_i32&)r;
 }
 
 
@@ -2612,16 +2491,16 @@ SCATTER_GENERAL(__vec16_i64, int64_t, __vec16_i64, __scatter64_i64)
 static FORCEINLINE int32_t __packed_load_active(uint32_t *p, __vec16_i32 *val,
                                                 __vec16_i1 mask) {
     __vec16_i32 v;
-    v = _mm512_mask_extloadunpackhi_epi32(_mm512_undefined_epi32(), mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     v = _mm512_mask_extloadunpacklo_epi32(v, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+    v = _mm512_mask_extloadunpackhi_epi32(_mm512_undefined_epi32(), mask, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
     __store<64>(val, v);
     return _mm_countbits_32(uint32_t(mask));
 }
 
 static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val,
                                                  __vec16_i1 mask) {
-    _mm512_mask_extpackstorehi_epi32(p, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     _mm512_mask_extpackstorelo_epi32(p, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+    _mm512_mask_extpackstorehi_epi32((uint8_t*)p+64, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     return _mm_countbits_32(uint32_t(mask.m));
 }
 
