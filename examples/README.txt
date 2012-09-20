@@ -73,6 +73,14 @@ This directory includes three implementations of the algorithm:
   light culling and shading.
 
 
+GMRES
+=====
+
+An implementation of the generalized minimal residual method for solving
+sparse matrix equations.
+(http://en.wikipedia.org/wiki/Generalized_minimal_residual_method)
+
+
 Mandelbrot
 ==========
 

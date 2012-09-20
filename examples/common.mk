@@ -1,16 +1,22 @@
 
 TASK_CXX=../tasksys.cpp
 TASK_LIB=-lpthread
-TASK_OBJ=tasksys.o
+TASK_OBJ=objs/tasksys.o
 
 CXX=g++
 CXXFLAGS=-Iobjs/ -O2 -m64
+CC=gcc
+CCFLAGS=-Iobjs/ -O2 -m64
+
 LIBS=-lm $(TASK_LIB) -lstdc++
 ISPC=ispc -O2 --arch=x86-64 $(ISPC_FLAGS)
 ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
 	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
-CPP_OBJS=$(addprefix objs/, $(CPP_SRC:.cpp=.o) $(TASK_OBJ))
+
+CPP_OBJS=$(addprefix objs/, $(CPP_SRC:.cpp=.o))
+CC_OBJS=$(addprefix objs/, $(CC_SRC:.c=.o))
+OBJS=$(CPP_OBJS) $(CC_OBJS) $(TASK_OBJ) $(ISPC_OBJS)
 
 default: $(EXAMPLE)
 
@@ -26,11 +32,14 @@ objs/%.cpp objs/%.o objs/%.h: dirs
 clean:
 	/bin/rm -rf objs *~ $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16
 
-$(EXAMPLE): $(CPP_OBJS) $(ISPC_OBJS)
+$(EXAMPLE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 objs/%.o: %.cpp dirs $(ISPC_HEADER)
 	$(CXX) $< $(CXXFLAGS) -c -o $@
+
+objs/%.o: %.c dirs $(ISPC_HEADER)
+	$(CC) $< $(CCFLAGS) -c -o $@
 
 objs/%.o: ../%.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
