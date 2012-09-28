@@ -301,7 +301,13 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) || 
-            ((function->hasFnAttr(llvm::Attribute::AlwaysInline) == false) &&
+            (
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+              (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
+#else
+              (function->getFnAttributes().hasAlwaysInlineAttr() == false)
+#endif
+             &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->isUnmasked == false);
         checkMask &= (g->target.maskingIsFree == false);
