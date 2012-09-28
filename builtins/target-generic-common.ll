@@ -234,7 +234,6 @@ declare i32 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone
 declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone 
 
-declare i32 @__reduce_add_uint32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone 
 
@@ -246,7 +245,6 @@ declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone
 declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone 
 
-declare i64 @__reduce_add_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
 

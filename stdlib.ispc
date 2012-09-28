@@ -922,7 +922,7 @@ __declspec(safe)
 static inline uniform unsigned int reduce_add(unsigned int x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
-    return __reduce_add_uint32(__mask ? x : 0);
+    return __reduce_add_int32(__mask ? x : 0);
 }
 
 __declspec(safe) 

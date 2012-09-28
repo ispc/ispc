@@ -502,11 +502,6 @@ define  i32 @__reduce_max_int32(<1 x i32>) nounwind readnone {
   ret i32 %r
 }
 
-define  i32 @__reduce_add_uint32(<1 x i32> %v) nounwind readnone {
-  %r = call i32 @__reduce_add_int32(<1 x i32> %v)
-  ret i32 %r
-}
-
 define  i32 @__reduce_min_uint32(<1 x i32>) nounwind readnone {
   %r = extractelement <1 x i32> %0, i32 0
   ret i32 %r

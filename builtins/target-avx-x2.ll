@@ -272,7 +272,7 @@ reduce_equal(16)
 ;; horizontal int32 ops
 
 define <16 x i32> @__add_varying_int32(<16 x i32>,
-                                                <16 x i32>) nounwind readnone alwaysinline {
+                                       <16 x i32>) nounwind readnone alwaysinline {
   %s = add <16 x i32> %0, %1
   ret <16 x i32> %s
 }
@@ -299,11 +299,6 @@ define i32 @__reduce_max_int32(<16 x i32>) nounwind readnone alwaysinline {
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint32 ops
-
-define i32 @__reduce_add_uint32(<16 x i32> %v) nounwind readnone alwaysinline {
-  %r = call i32 @__reduce_add_int32(<16 x i32> %v)
-  ret i32 %r
-}
 
 define i32 @__reduce_min_uint32(<16 x i32>) nounwind readnone alwaysinline {
   reduce16(i32, @__min_varying_uint32, @__min_uniform_uint32)
@@ -381,11 +376,6 @@ define i64 @__reduce_max_int64(<16 x i64>) nounwind readnone alwaysinline {
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; horizontal uint64 ops
-
-define i64 @__reduce_add_uint64(<16 x i64> %v) nounwind readnone alwaysinline {
-  %r = call i64 @__reduce_add_int64(<16 x i64> %v)
-  ret i64 %r
-}
 
 define i64 @__reduce_min_uint64(<16 x i64>) nounwind readnone alwaysinline {
   reduce16(i64, @__min_varying_uint64, @__min_uniform_uint64)

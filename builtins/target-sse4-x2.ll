@@ -342,11 +342,6 @@ define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8by4(i32, @llvm.x86.sse41.pmaxsd, @__max_uniform_int32)
 }
 
-define i32 @__reduce_add_uint32(<8 x i32> %v) nounwind readnone alwaysinline {
-  %r = call i32 @__reduce_add_int32(<8 x i32> %v)
-  ret i32 %r
-}
-
 define i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8by4(i32, @llvm.x86.sse41.pminud, @__min_uniform_uint32)
 }

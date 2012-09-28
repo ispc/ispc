@@ -303,18 +303,13 @@ define i32 @__reduce_max_int32(<4 x i32>) nounwind readnone {
   reduce4(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
-define i32 @__reduce_add_uint32(<4 x i32> %v) nounwind readnone {
-  %r = call i32 @__reduce_add_int32(<4 x i32> %v)
-  ret i32 %r
-}
-
 define i32 @__reduce_min_uint32(<4 x i32>) nounwind readnone {
   reduce4(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
 define i32 @__reduce_max_uint32(<4 x i32>) nounwind readnone {
   reduce4(i32, @__max_varying_uint32, @__max_uniform_uint32)
- }
+}
 
 
 define double @__reduce_add_double(<4 x double>) nounwind readnone {
