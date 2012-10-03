@@ -3461,8 +3461,15 @@ library.  State for the RNG is maintained in an instance of the
 ::
 
     struct RNGState;
-    void seed_rng(varying RNGState * uniform state, int seed)
+    void seed_rng(varying RNGState * uniform state, varying int seed)
     void seed_rng(uniform RNGState * uniform state, uniform int seed)
+
+Note that if the same ``varying`` seed value is used for all of the program
+instances (e.g. ``RNGState state; seed_rng(&state, 1);``), then all of the
+program instances in the gang will see the same sequence of pseudo-random
+numbers.  If this behavior isn't desred, you may want to add the
+``programIndex`` value to the provided seed or otherwise ensure that the
+seed has a unique value for each program instance. 
 
 After the RNG is seeded, the ``random()`` function can be used to get a
 pseudo-random ``unsigned int32`` value and the ``frandom()`` function can
