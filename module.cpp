@@ -1788,6 +1788,8 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
 
     if (g->target.hasHalf)
         opts.addMacroDef("ISPC_TARGET_HAS_HALF");
+    if (g->target.hasRand)
+        opts.addMacroDef("ISPC_TARGET_HAS_RAND");
     if (g->target.hasTranscendentals)
         opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
     if (g->opt.forceAlignedMemory)

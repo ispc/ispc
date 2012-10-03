@@ -2,7 +2,7 @@
 export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-#if !defined(ISPC_TARGET_AVX11) && !defined(ISPC_TARGET_AVX2)
+#ifndef ISPC_HAS_RAND
     RET[programIndex] = 1;
 #else
 
