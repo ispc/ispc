@@ -3558,11 +3558,11 @@ Assertions
 The ``ispc`` standard library includes a mechanism for adding ``assert()``
 statements to ``ispc`` program code.  Like ``assert()`` in C, the
 ``assert()`` function takes a single boolean expression as an argument.  If
-the expression evaluates to true at runtime, then a diagnostic error
+the expression evaluates to false at runtime, then a diagnostic error
 message printed and the ``abort()`` function is called.
 
 When called with a ``varying`` quantity, an assertion triggers if the
-expression evaluates to true for any any of the executing program instances
+expression evaluates to false for any any of the executing program instances
 at the point where it is called.  Thus, given code like:
 
 ::
