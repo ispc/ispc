@@ -1033,7 +1033,6 @@ AllocTaskGroup() {
         if (tg != NULL) {
             void *ptr = lAtomicCompareAndSwapPointer((void **)(&freeTaskGroups[i]), NULL, tg);
             if (ptr != NULL) {
-                assert(ptr == tg);
                 return (TaskGroup *)ptr;
             }
         }
