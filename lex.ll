@@ -592,7 +592,7 @@ lParseInteger(bool dotdotdot) {
             return us ? TOKEN_UINT32_CONSTANT : TOKEN_INT32_CONSTANT;
         else if (us) {
             // u suffix only
-            if (yylval.intVal <= 0xfffffffL)
+            if (yylval.intVal <= 0xffffffffL)
                 return TOKEN_UINT32_CONSTANT;
             else
                 return TOKEN_UINT64_CONSTANT;
