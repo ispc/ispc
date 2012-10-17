@@ -61,7 +61,11 @@
 #include <llvm/Instructions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetData.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Target/TargetData.h>
+#else
+  #include <llvm/DataLayout.h>
+#endif
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/Host.h>
@@ -407,8 +411,14 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 
     if (!error) {
         llvm::TargetMachine *targetMachine = t->GetTargetMachine();
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         const llvm::TargetData *targetData = targetMachine->getTargetData();
         t->is32Bit = (targetData->getPointerSize() == 4);
+#else
+        int addressSpace = 0;
+        const llvm::DataLayout *dataLayout = targetMachine->getDataLayout();
+        t->is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
+#endif
         Assert(t->vectorWidth <= ISPC_MAX_NVEC);
     }
 
@@ -577,9 +587,16 @@ Target::SizeOf(llvm::Type *type,
                                           "sizeof_int", insertAtEnd);
     }
 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
     uint64_t bitSize = td->getTypeSizeInBits(type);
+#else
+    const llvm::DataLayout *dl = GetTargetMachine()->getDataLayout();
+    Assert(dl != NULL);
+    uint64_t bitSize = dl->getTypeSizeInBits(type);
+#endif
+
     Assert((bitSize % 8) == 0);
     uint64_t byteSize = bitSize / 8;
     if (is32Bit || g->opt.force32BitAddressing)
@@ -610,15 +627,22 @@ Target::StructOffset(llvm::Type *type, int element,
                                           "offset_int", insertAtEnd);
     }
 
-    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
-    Assert(td != NULL);
     llvm::StructType *structType = 
         llvm::dyn_cast<llvm::StructType>(type);
     if (structType == NULL || structType->isSized() == false) {
         Assert(m->errorCount > 0);
         return NULL;
     }
+
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
+    Assert(td != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
+#else
+    const llvm::DataLayout *dl = GetTargetMachine()->getDataLayout();
+    Assert(dl != NULL);
+    const llvm::StructLayout *sl = dl->getStructLayout(structType);
+#endif
     Assert(sl != NULL);
 
     uint64_t offset = sl->getElementOffset(element);

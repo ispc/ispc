@@ -59,7 +59,6 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetData.h>
 #include <llvm/PassManager.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
@@ -305,7 +304,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
               (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
 #else
-              (function->getFnAttributes().hasAlwaysInlineAttr() == false)
+              (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
 #endif
              &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
@@ -443,7 +442,11 @@ Function::GenerateIR() {
                     functionName += std::string("_") + g->target.GetISAString();
                 llvm::Function *appFunction = 
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
                 appFunction->setDoesNotThrow(true);
+#else
+                appFunction->setDoesNotThrow();
+#endif
 
                 if (appFunction->getName() != functionName) {
                     // this was a redefinition for which we already emitted an

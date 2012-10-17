@@ -48,6 +48,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <llvm/LLVMContext.h>
+#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+  #include <llvm/Attributes.h>
+#endif
 #include <llvm/Module.h>
 #include <llvm/Type.h>
 #include <llvm/DerivedTypes.h>
@@ -697,7 +700,11 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
     llvm::Function *func = module->getFunction(name);
     Assert(func != NULL); // it should be declared already...
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     func->addFnAttr(llvm::Attribute::AlwaysInline);
+#else
+    func->addFnAttr(llvm::Attributes::AlwaysInline);
+#endif
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
     llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);
 

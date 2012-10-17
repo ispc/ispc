@@ -63,7 +63,6 @@
 #include <llvm/LLVMContext.h>
 #include <llvm/Instructions.h>
 #include <llvm/CallingConv.h>
-#include <llvm/Target/TargetData.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/Support/InstIterator.h>
 

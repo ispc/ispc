@@ -61,7 +61,11 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Target/TargetData.h"
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include "llvm/Target/TargetData.h"
+#else
+  #include "llvm/DataLayout.h"
+#endif
 #include "llvm/Support/CallSite.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -71,6 +75,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Config/config.h"
 
 #include <llvm/Transforms/IPO.h>
@@ -83,9 +88,6 @@
 #undef setjmp
 #define snprintf _snprintf
 #endif
-
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetData.h"
 
 // FIXME:
 namespace {
@@ -229,7 +231,14 @@ namespace {
     const llvm::MCRegisterInfo *MRI;
     const llvm::MCObjectFileInfo *MOFI;
     llvm::MCContext *TCtx;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     const llvm::TargetData* TD;
+#else
+    // FIXME: it's ugly to have the name be "TD" here, but it saves us
+    // lots of ifdefs in the below since the new DataLayout and the old
+    // TargetData have generally similar interfaces...
+    const llvm::DataLayout* TD;
+#endif
     
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
 #ifndef LLVM_3_0
@@ -569,12 +578,21 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
     if (PrintedType)
       FunctionInnards << ", ";
     llvm::Type *ArgTy = *I;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
+#else
+    if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
+#endif
       assert(ArgTy->isPointerTy());
       ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
     }
     printType(FunctionInnards, ArgTy,
-            /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt), "");
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+              /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
+#else
+              PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
+#endif
+              "");
     PrintedType = true;
   }
   if (FTy->isVarArg()) {
@@ -586,7 +604,12 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
   }
   FunctionInnards << ')';
   printType(Out, RetTy,
-          /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt), FunctionInnards.str());
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+            /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
+#else
+            PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
+#endif
+            FunctionInnards.str());
 }
 
 llvm::raw_ostream &
@@ -696,14 +719,23 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     for (llvm::FunctionType::param_iterator I = FTy->param_begin(),
            E = FTy->param_end(); I != E; ++I) {
       llvm::Type *ArgTy = *I;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
       if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
+#else
+      if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
+#endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
       }
       if (I != FTy->param_begin())
         FunctionInnards << ", ";
       printType(FunctionInnards, ArgTy,
-            /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt), "");
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+                /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
+#else
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
+#endif
+                "");
       ++Idx;
     }
     if (FTy->isVarArg()) {
@@ -715,7 +747,12 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     }
     FunctionInnards << ')';
     printType(Out, FTy->getReturnType(),
-            /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt), FunctionInnards.str());
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+              /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
+#else
+              PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
+#endif
+              FunctionInnards.str());
     return Out;
   }
   case llvm::Type::StructTyID: {
@@ -1953,7 +1990,11 @@ void CWriter::writeOperandWithCast(llvm::Value* Operand, const llvm::ICmpInst &C
 // directives to cater to specific compilers as need be.
 //
 static void generateCompilerSpecificCode(llvm::formatted_raw_ostream& Out,
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
                                          const llvm::TargetData *TD) {
+#else
+                                         const llvm::DataLayout *TD) {
+#endif
   // We output GCC specific attributes to preserve 'linkonce'ness on globals.
   // If we aren't being compiled with GCC, just drop these attributes.
   Out << "#ifndef __GNUC__  /* Can only support \"linkonce\" vars with GCC */\n"
@@ -2139,7 +2180,11 @@ bool CWriter::doInitialization(llvm::Module &M) {
   // Initialize
   TheModule = &M;
 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
   TD = new llvm::TargetData(&M);
+#else
+  TD = new llvm::DataLayout(&M);
+#endif
   IL = new llvm::IntrinsicLowering(*TD);
   IL->AddPrototypes(M);
 
@@ -2777,13 +2822,21 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         else
           ArgName = "";
         llvm::Type *ArgTy = I->getType();
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
+#else
+        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
+#endif
           ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
         }
         printType(FunctionInnards, ArgTy,
-            /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
-            ArgName);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+                  /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
+#else
+                  PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
+#endif
+                  ArgName);
         PrintedArg = true;
         ++Idx;
       }
@@ -2804,12 +2857,22 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
     for (; I != E; ++I) {
       if (PrintedArg) FunctionInnards << ", ";
       llvm::Type *ArgTy = *I;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
       if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
+#else
+      if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
+#endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
       }
       printType(FunctionInnards, ArgTy,
-             /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt));
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+                /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt)
+#else
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt)
+
+#endif
+                );
       PrintedArg = true;
       ++Idx;
     }
@@ -2841,7 +2904,11 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
   // Print out the return type and the signature built above.
   printType(Out, RetTy,
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
             /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
+#else
+            PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
+#endif
             FunctionInnards.str());
 }
 
@@ -3785,11 +3852,22 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
       Out << '(';
       printType(Out, FTy->getParamType(ArgNo),
-            /*isSigned=*/PAL.paramHasAttr(ArgNo+1, llvm::Attribute::SExt));
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+                /*isSigned=*/PAL.paramHasAttr(ArgNo+1, llvm::Attribute::SExt)
+#else
+                PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attributes::SExt)
+#endif
+                );
       Out << ')';
     }
     // Check if the argument is expected to be passed by value.
-    if (I.paramHasAttr(ArgNo+1, llvm::Attribute::ByVal))
+    if (I.paramHasAttr(ArgNo+1, 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+                       llvm::Attribute::ByVal
+#else
+                       llvm::Attributes::ByVal
+#endif
+                       ))
       writeOperandDeref(*AI);
     else
       writeOperand(*AI);
@@ -4394,8 +4472,13 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                 matchType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
+#else
+                smearFunc->setDoesNotThrow();
+                smearFunc->setDoesNotAccessMemory();
+#endif
             }
 
             assert(smearFunc != NULL);
@@ -4540,8 +4623,13 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                    LLVMTypes::MaskType, NULL);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
                 Assert(andCmpFunc != NULL);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
                 andCmpFunc->setDoesNotThrow(true);
                 andCmpFunc->setDoesNotAccessMemory(true);
+#else
+                andCmpFunc->setDoesNotThrow();
+                andCmpFunc->setDoesNotAccessMemory();
+#endif
             }
 
             // Set up the function call to the *_and_mask function; the
@@ -4585,22 +4673,36 @@ public:
         notFunc = 
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
         assert(notFunc != NULL);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         notFunc->addFnAttr(llvm::Attribute::NoUnwind);
         notFunc->addFnAttr(llvm::Attribute::ReadNone);
+#else
+        notFunc->addFnAttr(llvm::Attributes::NoUnwind);
+        notFunc->addFnAttr(llvm::Attributes::ReadNone);
+#endif
 
         andNotFuncs[0] = 
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt,
                                                       NULL));
         assert(andNotFuncs[0] != NULL);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         andNotFuncs[0]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[0]->addFnAttr(llvm::Attribute::ReadNone);
-
+#else
+        andNotFuncs[0]->addFnAttr(llvm::Attributes::NoUnwind);
+        andNotFuncs[0]->addFnAttr(llvm::Attributes::ReadNone);
+#endif
         andNotFuncs[1] = 
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt,
                                                       NULL));
         assert(andNotFuncs[1] != NULL);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         andNotFuncs[1]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[1]->addFnAttr(llvm::Attribute::ReadNone);
+#else
+        andNotFuncs[1]->addFnAttr(llvm::Attributes::NoUnwind);
+        andNotFuncs[1]->addFnAttr(llvm::Attributes::ReadNone);
+#endif
     }
 
     const char *getPassName() const { return "MaskOps Cleanup Pass"; }

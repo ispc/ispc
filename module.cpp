@@ -77,7 +77,12 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetData.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Target/TargetData.h>
+#else
+  #include <llvm/DataLayout.h>
+  #include <llvm/TargetTransformInfo.h>
+#endif
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
 #include <clang/Frontend/CompilerInstance.h>
@@ -751,14 +756,22 @@ Module::AddFunctionDeclaration(const std::string &name,
                                module);
 
     // Set function attributes: we never throw exceptions
-    function->setDoesNotThrow(true);
+    function->setDoesNotThrow();
     if (storageClass != SC_EXTERN_C && 
         !g->generateDebuggingSymbols &&
         isInline)
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         function->addFnAttr(llvm::Attribute::AlwaysInline);
+#else
+        function->addFnAttr(llvm::Attributes::AlwaysInline);
+#endif
     if (functionType->isTask)
         // This also applies transitively to members I think? 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
+#else
+        function->setDoesNotAlias(1);
+#endif
 
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
@@ -800,7 +813,12 @@ Module::AddFunctionDeclaration(const std::string &name,
 
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
             function->setDoesNotAlias(i+1, true);
+#else
+            function->setDoesNotAlias(i+1);
+#endif
+
 #if 0
             int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
@@ -1022,16 +1040,27 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     if (const llvm::TargetData *td = targetMachine->getTargetData())
         pm.add(new llvm::TargetData(*td));
     else
         pm.add(new llvm::TargetData(module));
+#else
+    if (const llvm::DataLayout *dl = targetMachine->getDataLayout())
+        pm.add(new llvm::DataLayout(*dl));
+    else
+        pm.add(new llvm::DataLayout(module));
+#endif
 
     llvm::formatted_raw_ostream fos(of->os());
+
+#ifdef LLVM_3_0
     llvm::CodeGenOpt::Level optLevel = 
         (g->opt.level > 0) ? llvm::CodeGenOpt::Aggressive : llvm::CodeGenOpt::None;
-
     if (targetMachine->addPassesToEmitFile(pm, fos, fileType, optLevel)) {
+#else
+    if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
+#endif
         fprintf(stderr, "Fatal error adding passes to emit object file!");
         exit(1);
     }

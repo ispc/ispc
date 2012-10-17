@@ -64,7 +64,11 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
-#include <llvm/Target/TargetData.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
+  #include <llvm/Target/TargetData.h>
+#else
+  #include <llvm/DataLayout.h>
+#endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
@@ -403,7 +407,18 @@ Optimize(llvm::Module *module, int optLevel) {
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
+
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     optPM.add(new llvm::TargetData(module));
+#else
+    llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
+    if (const llvm::DataLayout *dl = targetMachine->getDataLayout())
+        optPM.add(new llvm::DataLayout(*dl));
+    else
+        optPM.add(new llvm::DataLayout(module));
+    optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
+                                            targetMachine->getVectorTargetTransformInfo()));
+#endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
 
