@@ -473,15 +473,15 @@ static FORCEINLINE __vec16_i1 __movmsk(__vec16_i1 mask) {
     return _mm512_kmov(mask);
 }
 
-static FORCEINLINE __vec16_i1 __any(__vec16_i1 mask) {
+static FORCEINLINE bool __any(__vec16_i1 mask) {
   return !_mm512_kortestz(mask, mask);
 }
 
-static FORCEINLINE __vec16_i1 __all(__vec16_i1 mask) {
+static FORCEINLINE bool __all(__vec16_i1 mask) {
     return (mask=0xFFFF);
 }
 
-static FORCEINLINE __vec16_i1 __none(__vec16_i1 mask) {
+static FORCEINLINE bool __none(__vec16_i1 mask) {
   return !__any(mask);
 }
 

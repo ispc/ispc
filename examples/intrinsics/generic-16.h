@@ -343,15 +343,15 @@ static FORCEINLINE uint64_t __movmsk(__vec16_i1 mask) {
     return (uint64_t)mask.v;
 }
 
-static FORCEINLINE __vec16_i1 __any(__vec16_i1 mask) {
+static FORCEINLINE bool __any(__vec16_i1 mask) {
     return (mask.v!=0);
 }
 
-static FORCEINLINE __vec16_i1 __all(__vec16_i1 mask) {
+static FORCEINLINE bool __all(__vec16_i1 mask) {
     return (mask.v==0xFFFF);
 }
 
-static FORCEINLINE __vec16_i1 __none(__vec16_i1 mask) {
+static FORCEINLINE bool __none(__vec16_i1 mask) {
     return (mask.v==0);
 }
 

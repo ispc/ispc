@@ -296,15 +296,15 @@ static FORCEINLINE uint32_t __movmsk(__vec32_i1 mask) {
     return ((m1<<16)|m2);
 }
 
-static FORCEINLINE uint32_t __any(__vec32_i1 mask) {
+static FORCEINLINE bool __any(__vec32_i1 mask) {
     return !_mm512_kortestz(mask.m16.m1, mask.m16.m2);
 }
 
-static FORCEINLINE uint32_t __all(__vec32_i1 mask) {
+static FORCEINLINE bool __all(__vec32_i1 mask) {
     return (mask.m==0xFFFFFFFF);
 }
 
-static FORCEINLINE uint32_t __none(__vec32_i1 mask) {
+static FORCEINLINE bool __none(__vec32_i1 mask) {
     return !__any(mask);
 }
 

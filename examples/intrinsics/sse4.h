@@ -269,15 +269,15 @@ static FORCEINLINE uint64_t __movmsk(__vec4_i1 mask) {
     return (uint64_t)_mm_movemask_ps(mask.v);
 }
 
-static FORCEINLINE __vec4_i1 __any(__vec4_i1 mask) {
+static FORCEINLINE bool __any(__vec4_i1 mask) {
     return (_mm_movemask_ps(mask.v)!=0);
 }
 
-static FORCEINLINE __vec4_i1 __all(__vec4_i1 mask) {
+static FORCEINLINE bool __all(__vec4_i1 mask) {
     return (_mm_movemask_ps(mask.v)=0xF);
 }
 
-static FORCEINLINE __vec4_i1 __none(__vec4_i1 mask) {
+static FORCEINLINE bool __none(__vec4_i1 mask) {
     return (_mm_movemask_ps(mask.v)==0);
 }
 
