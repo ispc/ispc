@@ -1,0 +1,606 @@
+=== v1.3.0 === (29 June 2012)
+
+This is a major new release of ispc, with support for more compilation
+targets and a number of additions to the language.  As usual, the quality
+of generated code has also been improved in a number of cases and a number
+of small bugs have been fixed.
+
+New targets:
+
+* This release provides "beta" support for compiling to Intel® Xeon
+  Phi™ processor, code named Knights Corner, the first processor in
+  the Intel® Many Integrated Core Architecture.  See
+  http://ispc.github.com/ispc.html#compiling-for-the-intel-xeon-phi-architecture
+  for more details on this support.
+
+* This release also has an "avx1.1" target, which provides support for the
+  new instructions in the Intel Ivy Bridge microarchitecutre. 
+
+New language features:
+
+* The foreach_active statement allows iteration over the active program
+  instances in a gang.  (See
+  http://ispc.github.com/ispc.html#iteration-over-active-program-instances-foreach-active)
+
+* foreach_unique allows iterating over subsets of program instances in a
+  gang that share the same value of a variable.  (See
+  http://ispc.github.com/ispc.html#iteration-over-unique-elements-foreach-unique)
+
+* An "unmasked" function qualifier and statement in the language allow
+  re-activating execution of all program instances in a gang.  (See
+  http://ispc.github.com/ispc.html#re-establishing-the-execution-mask
+
+Standard library updates:
+
+* The seed_rng() function has been modified to take a "varying" seed value
+  when a varying RNGState is being initialized.
+
+* An isnan() function has been added, to check for floating-point "not a
+  number" values.
+
+* The float_to_srgb8() routine does high performance conversion of
+  floating-point color values to SRGB8 format.
+
+Other changes:
+
+* A number of bugfixes have been made for compiler crashes with malformed
+  programs.
+
+* Floating-point comparisons are now "unordered", so that any comparison
+  where one of the operands is a "not a number" value returns false.  (This
+  matches standard IEEE floating-point behavior.)
+
+* The code generated for 'break' statements in "varying" loops has been
+  improved for some common cases. 
+
+* Compile time and compiler memory use have both been improved,
+  particularly for large input programs.
+
+* A nubmer of bugs have been fixed in the debugging information generated
+  by the compiler when the "-g" command-line flag is used.
+
+=== v1.2.2 === (20 April 2012)
+
+This release includes a number of small additions to functionality and a
+number of bugfixes.  New functionality includes:
+
+* It's now possible to forward declare structures as in C/C++: "struct
+  Foo;".  After such a declaration, structs with pointers to "Foo" and
+  functions that take pointers or references to Foo structs can be declared
+  without the entire definition of Foo being available.
+
+* New built-in types size_t, ptrdiff_t, and [u]intptr_t are now available,
+  corresponding to the equivalent types in C.
+
+* The standard library now provides atomic_swap*() and
+  atomic_compare_exchange*() functions for void * types.
+
+* The C++ backend has seen a number of improvements to the quality and
+  readability of generated code.
+
+A number of bugs have been fixed in this release as well.  The most
+significant are:
+
+* Fixed a bug where nested loops could cause a compiler crash in some
+  circumstances (issues #240, and #229)
+
+* Gathers could access invlaid mamory (and cause the program to crash) in
+  some circumstances (#235)
+
+* References to temporary values are now handled properly when passed to a
+  function that takes a reference typed parameter.
+
+* A case where incorrect code could be generated for compile-time-constant
+  initializers has been fixed (#234).
+
+=== v1.2.1 === (6 April 2012)
+
+This release contains only minor new functionality and is mostly for many
+small bugfixes and improvements to error handling and error reporting.
+The new functionality that is present is:
+
+* Significantly more efficient versions of the float / half conversion
+  routines are now available in the standard library, thanks to Fabian
+  Giesen.
+
+* The last member of a struct can now be a zero-length array; this allows
+  the trick of dynamically allocating enough storage for the struct and
+  some number of array elements at the end of it.
+
+Significant bugs fixed include:
+
+* Issue #205: When a target ISA isn't specified, use the host system's
+  capabilities to choose a target for which it will be able to run the
+  generated code.
+
+* Issues #215 and #217: Don't allocate storage for global variables that
+  are declared "extern".
+
+* Issue #197: Allow NULL as a default argument value in a function
+  declaration.
+
+* Issue #223: Fix bugs where taking the address of a function wouldn't work
+  as expected.
+
+* Issue #224: When there are overloaded variants of a function that take
+  both reference and const reference parameters, give the non-const
+  reference preference when matching values of that underlying type.
+
+* Issue #225: An error is issed when a varying lvalue is assigned to a
+  reference type (rather than crashing).
+
+* Issue #193: Permit conversions from array types to void *, not just the
+  pointer type of the underlying array element.
+
+* Issue #199: Still evaluate expressions that are cast to (void).
+
+The documentation has also been improved, with FAQs added to clarify some
+aspects of the ispc pointer model.
+
+=== v1.2.0 === (20 March 2012)
+
+This is a major new release of ispc, with a number of significant
+improvements to functionality, performance, and compiler robustness.  It
+does, however, include three small changes to language syntax and semantics
+that may require changes to existing programs:
+
+* Syntax for the "launch" keyword has been cleaned up; it's now no longer
+  necessary to bracket the launched function call with angle brackets.
+  (In other words, now use "launch foo();", rather than "launch < foo() >;".
+
+* When using pointers, the pointed-to data type is now "uniform" by
+  default.  Use the varying keyword to specify varying pointed-to types when
+  needed.  (i.e. "float *ptr" is a varying pointer to uniform float data,
+  whereas previously it was a varying pointer to varying float values.)
+  Use "varying float *" to specify a varying pointer to varying float data,
+  and so forth.
+
+* The details of "uniform" and "varying" and how they interact with struct
+  types have been cleaned up.  Now, when a struct type is declared, if the
+  struct elements don't have explicit "uniform" or "varying" qualifiers,
+  they are said to have "unbound" variability.  When a struct type is
+  instantiated, any unbound variability elements inherit the variability of
+  the parent struct type. See http://ispc.github.com/ispc.html#struct-types
+  for more details.
+
+ispc has a new language feature that makes it much easier to use the
+efficient "(array of) structure of arrays" (AoSoA, or SoA) memory layout of
+data.  A new "soa<n>" qualifier can be applied to structure types to
+specify an n-wide SoA version of the corresponding type.  Array indexing
+and pointer operations with arrays SoA types automatically handles the
+two-stage indexing calculation to access the data.  See
+http://ispc.github.com/ispc.html#structure-of-array-types for more details.
+
+For more efficient access of data that is still in "array of structures"
+(AoS) format, ispc has a new "memory coalescing" optimization that
+automatically detects series of strided loads and/or gathers that can be
+transformed into a more efficient set of vector loads and shuffles.  A
+diagnostic is emitted when this optimization is successfully applied. 
+
+Smaller changes in this release:
+
+* The standard library now provides memcpy(), memmove() and memset()
+  functions, as well as single-precision asin() and acos() functions.
+
+* -I can now be specified on the command-line to specify a search path for
+  #include files.
+
+* A number of improvements have been made to error reporting from the
+  parser, and a number of cases where malformed programs could cause the
+  compiler to crash have been fixed.
+
+* A number of small improvements to the quality and performance of generated
+  code have been made, including finding more cases where 32-bit addressing
+  calculations can be safely done on 64-bit systems and generating better
+  code for initializer expressions.
+
+=== v1.1.4 === (4 February 2012)
+
+There are two major bugfixes for Windows in this release.  First, a number
+of failures in AVX code generation on Windows have been fixed; AVX on
+Windows now has no known issues.  Second, a longstanding bug in parsing 64-bit
+integer constants on Windows has been fixed.
+
+This release features a new experimental scalar target, contributed by Gabe
+Weisz <gweisz@cs.cmu.edu>.  This target ("--target=generic-1") compiles
+gangs of single program instances (i.e. programCount == 1); it can be
+useful for debugging ispc programs.
+
+The compiler now supports dynamic memory allocation in ispc programs (with
+"new" and "delete" operators based on C++).  See
+http://ispc.github.com/ispc.html#dynamic-memory-allocation in the
+documentation for more information.
+
+ispc now performs "short circuit" evaluation of the || and && logical
+operators and the ? : selection operator.  (This represents the correction
+of a major incompatibility with C.)  Code like "(index < arraySize &&
+array[index] == 1)" thus now executes as in C, where "array[index]" won't
+be evaluated unless "index" is less than "arraySize".
+
+The standard library now provides "local" atomic operations, which are
+atomic across the gang of program instances (but not across other gangs or
+other hardware threads.  See the updated documentation on atomics for more
+information:
+http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences.
+
+The standard library now offers a clock() function, which returns a uniform
+int64 value that counts processor cycles; it can be used for
+fine-resolution timing measurements.
+
+Finally (of limited interest now): ispc now supports the forthcoming AVX2
+instruction set, due with Haswell-generation CPUs.  All tests and examples
+compile and execute correctly with AVX2.  (Thanks specifically to Craig
+Topper and Nadav Rotem for work on AVX2 support in LLVM, which made this
+possible.)
+ 
+=== v1.1.3 === (20 January 2012)
+
+With this release, the language now supports "switch" statements, with the
+same semantics and syntax as in C.
+
+This release includes fixes for two important performance related issues:
+the quality of code generated for "foreach" statements has been
+substantially improved (https://github.com/ispc/ispc/issues/151), and a
+performance regression with code for "gathers" that was introduced in
+v1.1.2 has been fixed in this release. 
+
+A number of other small bugs were fixed in this release as well, including
+one where invalid memory would sometimes be incorrectly accessed
+(https://github.com/ispc/ispc/issues/160).
+
+Thanks to Jean-Luc Duprat for a number of patches that improve support for
+building on various platforms, and to Pierre-Antoine Lacaze for patches so
+that ispc builds under MinGW.
+
+=== v1.1.2 === (9 January 2012)
+
+The major new feature in this release is support for "generic" C++
+vectorized output; in other words, ispc can emit C++ code that corresponds
+to the vectorized computation that the ispc program represents.  See the
+examples/intrinsics directory in the ispc distribution for two example
+implementations of the set of functions that must be provided map the
+vector calls generated by ispc to target specific functions.
+
+ispc now has partial support for 'goto' statements; specifically, goto is
+allowed if any enclosing control flow statements (if/for/while/do) have
+'uniform' test expressions, but not if they have 'varying' tests.
+
+A number of improvements have been made to the code generated for gathers
+and scatters--one of them (better matching x86's "free" scale by 2/4/8 for
+addressing calculations) improved the performance of the noise example by
+14%.
+
+Many small bugs have been fixed in this release as well, including issue
+numbers 138, 129, 135, 127, 149, and 142.
+
+=== v1.1.1 === (15 December 2011)
+
+This release doesn't include any significant new functionality, but does
+include a small improvements in generated code and a number of bug fixes.
+
+The one user-visible language change is that integer constants may be
+specified with 'u' and 'l' suffixes, like in C.  For example, "1024llu"
+defines the constant with unsigned 64-bit type.
+
+More informative and useful error messages are printed when function
+overload resolution fails.
+
+Masking is avoided in additional cases when the mask can be
+statically-determined to be all on. 
+
+A number of small bugs have been fixed:
+- Under some circumstances, incorrect masks were used when assigning a
+  value to a reference and when doing gathers/scatters.
+- Incorrect code could be generated in some cases when some instances
+  returned part way through a function but others contineud executing.
+- Type checking wasn't being performed for calls through function pointers;
+  now an error is issued if the arguments don't match up, etc.
+- Incorrect code was being generated for gather/scatter to structs that had
+  elements with varying short-vector types.
+- Typechecking wasn't being performed for "foreach" statements; this led to
+  problems like function overload resolution not being performed if an
+  overloaded function call was used to determine the iteration range..
+- A number of symbols would be multiply-defined when compiling to multiple
+  targets and using the sse2-x2 target as one of them (issue #131).
+
+=== v1.1.0 === (5 December 2011)
+
+This is a major new release of the compiler, with significant additions to
+language functionality and capabilities.  It includes a number of small
+language syntax changes that will require modification of existing
+programs.  These changes should generally be straightforward and all are
+steps toward eliminating parts of ispc syntax that are incompatible with
+C/C++.  See
+http://ispc.github.com/ispc.html#updating-ispc-programs-for-changes-in-ispc-1-1
+for more information about these changes.
+
+ispc now fully supports pointers, including pointer arithmetic, implicit
+conversions of arrays to pointers, and all of the other capabilities of
+pointers in C.  See http://ispc.github.com/ispc.html#pointer-types for more
+information about pointers in ispc and
+http://ispc.github.com/ispc.html#function-pointer-types for information
+about function pointers in ispc.
+
+Reference types are now declared with C++ syntax (e.g. "const float &foo").
+
+ispc now supports 64-bit addressing.  For performance reasons, this
+capability is disabled by default (even on 64-bit targets), but can be
+enabled with a command-line flag:
+http://ispc.github.com/ispc.html#selecting-32-or-64-bit-addressing.
+
+This release features new parallel "foreach" statements, which make it
+easier in many instances to map program instances to data for data-parallel
+computation than the programIndex/programCount mechanism:
+http://ispc.github.com/ispc.html#parallel-iteration-statements-foreach-and-foreach-tiled.
+
+Finally, all of the system's documentation has been significantly revised.
+The documentation of ispc's parallel execution model has been rewritten:
+http://ispc.github.com/ispc.html#the-ispc-parallel-execution-model, and
+there is now a more specific discussion of similarities and differences
+between ispc and C/C++:
+http://ispc.github.com/ispc.html#relationship-to-the-c-programming-language.
+There is now a separate FAQ (http://ispc.github.com/faq.html), and a
+Performance Guide (http://ispc.github.com/perfguide.html).
+ 
+=== v1.0.12 === (20 October 2011)
+
+This release includes a new "double-pumped" 8-wide target for SSE2,
+"sse2-x2".  Like the sse4-x2 and avx-x2 targets, this target may deliver
+higher performance for some workloads than the regular sse2 target.  (For
+other workloads, it may be slower.)
+
+The ispc language now includes an "assert()" statement.  See
+http://ispc.github.com/ispc.html#assertions for more information.
+
+The compiler now sets a preprocessor #define based on the target ISA; for
+example, ISPC_TARGET_SSE4 is defined for the sse4 targets, and so forth.
+
+The standard library now provides high-performance routines for converting
+between some "array of structures" and "structure of arrays" formats.
+See
+http://ispc.github.com/ispc.html#converting-between-array-of-structures-and-structure-of-arrays-layout
+for more information.
+
+Inline functions now have static linkage.
+
+A number of improvements have been made to the optimization passes that
+detect when gathers and scatters can be transformed into vector stores and
+loads, respectively.  In particular, these passes now handle variables that
+are used as loop induction variables much better.
+
+=== v1.0.11 === (6 October 2011)
+
+The main new feature in this release is support for generating code for
+multiple targets (e.g., SSE2, SSE4, and AVX) and having the compiled code
+select the best variant at execution time.  For more information, see
+http://ispc.github.com/ispc.html#compiling-with-support-for-multiple-instruction-sets.
+
+All of the examples now take advantage of the support for multiple
+compilation targets; thus, if one has an AVX system, it's not necessary to
+recompile the examples to use the AVX target.
+
+Performance of the built-in task system that is used in the examples has
+been improved.
+
+Finally, the print() statement now works on OSX; it had been broken for the
+last few releases.
+
+=== v1.0.10 === (30 September 2011)
+
+This release features an extensive new example showing the application of
+ispc to a deferred shading algorithm for scenes with thousands of lights
+(examples/deferred).  This is an implementation of the algorithm that Johan
+Andersson described at SIGGRAPH 2009 and was implemented by Andrew
+Lauritzen and Jefferson Montgomery.  The basic idea is that a pre-rendered
+G-buffer is partitioned into tiles, and in each tile, the set of lights
+that contribute to the tile is computed.  Then, the pixels in the tile are
+then shaded using those light sources. (See slides 19-29 of
+http://s09.idav.ucdavis.edu/talks/04-JAndersson-ParallelFrostbite-Siggraph09.pdf
+for more details on the algorithm.)
+
+The mechanism for launching tasks from ispc code has been generalized to
+allow multiple tasks to be launched with a single launch call (see
+http://ispc.github.com/ispc.html#task-parallelism-language-syntax for more
+information.)
+
+A few new functions have been added to the standard library: num_cores()
+returns the number of cores in the system's CPU, and variants of all of the
+atomic operators that take 'uniform' values as parameters have been added.
+
+=== v1.0.9 === (26 September 2011)
+
+The binary release of v1.0.9 is the first that supports AVX code
+generation.  Two targets are provided: "avx", which runs with a
+programCount of 8, and "avx-x2" which runs 16 program instances
+simultaneously.  (This binary is also built using the in-progress LLVM 3.0
+development libraries, while previous ones have been built with the
+released 2.9 version of LLVM.)
+
+This release has no other significant changes beyond a number of small
+bugfixes (https://github.com/ispc/ispc/issues/100,
+https://github.com/ispc/ispc/issues/101, https://github.com/ispc/ispc/issues/103.)
+ 
+=== v1.0.8 === (19 September 2011)
+
+A number of improvements have been made to handling of 'if' statements in
+the language:
+  - A bug was fixed where invalid memory could be incorrectly accessed even
+    if none of the running program instances wanted to execute the
+    corresponding instructions (https://github.com/ispc/ispc/issues/74).
+  - The code generated for 'if' statements is a bit simpler and thus more
+    efficient.
+
+There is now '--pic' command-line argument that causes position-independent
+code to be generated (Linux and OSX only).
+
+A number of additional performance improvements:
+  - Loops are now unrolled by default; the --opt=disable-loop-unroll
+    command-line argument can be used to disable this behavior.
+    (https://github.com/ispc/ispc/issues/78)
+  - A few more cases where gathers/scatters could be determined at compile
+    time to actually access contiguous locations have been added.
+    (https://github.com/ispc/ispc/issues/79)
+
+Finally, warnings are now issued (if possible) when it can be determined
+at compile-time that an out-of-bounds array index is being used.
+(https://github.com/ispc/ispc/issues/98).
+
+
+=== v1.0.7 === (3 September 2011)
+
+The various atomic_*_global() standard library functions are generally
+substantially more efficient.  They all previously issued one hardware
+atomic instruction for each running program instance but now locally
+compute a reduction over the operands and issue a single hardware atomic,
+giving the same effect and results in the end (issue #57).
+
+CPU/ISA target handling has been substantially improved.  If no CPU is
+specified, the host CPU type is used, not just a default of "nehalem".  A
+number of bugs were fixed that ensure that LLVM doesn't generate SSE>2
+instructions when using the SSE2 target (fixes issue #82).
+
+Shift rights of unsigned integer types use a logical shift right
+instruction now, not an arithmetic shift right (fixed issue #88).
+
+When emitting header files, 'extern' declarations of globals used in ispc
+code are now outside of the ispc namespace.  Fixes issue #64.
+
+The stencil example has been modified to do runs with and without
+parallelism.
+
+Many other small bugfixes and improvements.
+
+=== v1.0.6 === (17 August 2011)
+
+Some additional cross-program instance operations have been added to the
+standard library.  reduce_equal() checks to see if the given value is the
+same across all running program instances, and exclusive_scan_{and,or,and}()
+computes a scan over the given value in the running program instances.
+See the documentation of these new routines for more information:
+http://ispc.github.com/ispc.html#cross-program-instance-operations.
+
+The simple task system implementations used in the examples have been
+improved.  The Windows version no nlonger has a hard limit on the number of
+tasks that can be launched, and all versions have less dynamic memory
+allocation and less locking.  More of the examples now have paths that also
+measure performance using tasks along with SPMD vectorization.
+
+Two new examples have been added: one that shows the implementation of a
+ray-marching volume rendering algorithm, and one that shows a 3D stencil
+computation, as might be done for PDE solutions.
+
+Standard library routines to issue prefetches have been added.  See the
+documentation for more details: http://ispc.github.com/ispc.html#prefetches.
+
+Fast versions of the float to half-precision float conversion routines have
+been added.  For more details, see:
+http://ispc.github.com/ispc.html#conversions-to-and-from-half-precision-floats.
+
+There is the usual set of small bug fixes.  Notably, a number of details
+related to handling 32 versus 64 bit targets have been fixed, which in turn
+has fixed a bug related to tasks having incorrect values for pointers
+passed to them.
+
+=== v1.0.5 === (1 August 2011)
+
+Multi-element vector swizzles are supported; for example, given a 3-wide
+vector "foo", then expressions like "foo.zyx" and "foo.yz" can be used to
+construct other short vectors.  See
+http://ispc.github.com/ispc.html#short-vector-types
+for more details.  (Thanks to Pete Couperus for implementing this code!).
+
+int8 and int16 datatypes are now supported.  It is still generally more
+efficient to use int32 for intermediate computations, even if the in-memory
+format is int8 or int16.
+
+There are now standard library routines to convert to and from 'half'-format
+floating-point values (half_to_float() and float_to_half()).
+
+There is a new example with an implementation of Perlin's Noise function
+(examples/noise).  It shows a speedup of approximately 4.2x versus a C
+implementation on OSX and a 2.9x speedup versus C on Windows.
+
+=== v1.0.4 === (18 July 2011)
+
+enums are now supported in ispc; see the section on enumeration types in
+the documentation (http://ispc.github.com/ispc.html#enumeration-types) for
+more informaiton.
+
+bools are converted to integers with zero extension, not sign extension as
+before (i.e. a 'true' bool converts to the value one, not 'all bits on'.)
+For cases where sign extension is still desired, there is a
+sign_extend(bool) function in the standard library.
+
+Support for 64-bit types in the standard library is much more complete than
+before.
+
+64-bit integer constants are now supported by the parser.
+
+Storage for parameters to tasks is now allocated dynamically on Windows,
+rather than on the stack; with this fix, all tests now run correctly on
+Windows.
+
+There is now support for atomic swap and compare/exchange with float and
+double types.
+
+A number of additional small bugs have been fixed and a number of cases
+where the compiler would crash given a malformed program have been fixed.
+
+=== v1.0.3 === (4 July 2011)
+
+ispc now has a bulit-in pre-processor (from LLVM's clang compiler).
+(Thanks to Pete Couperus for this patch!)  It is therefore no longer
+necessary to use cl.exe for preprocessing on Windows; the MSVC proejct
+files for the examples have been updated accordingly.
+
+There is another variant of the shuffle() function int the standard
+library: "<type> shuffle(<type> v0, <type> v1, int permute)", where the
+permutation vector indexes over the concatenation of the two vectors
+(e.g. the value 0 corresponds to the first element of v0, the value
+2*programCount-1 corresponds to the last element of v1, etc.)
+
+ispc now supports the usual range of atomic operations (add, subtract, min,
+max, and, or, and xor) as well as atomic swap and atomic compare and
+exchange.  There is also a facility for inserting memory fences.  See the
+"Atomic Operations and Memory Fences" section of the user's guide
+(http://ispc.github.com/ispc.html#atomic-operations-and-memory-fences) for
+more information.
+ 
+There are now both 'signed' and 'unsigned' variants of the standard library
+functions like packed_load_active() that take references to arrays of
+signed int32s and unsigned int32s respectively.  (The
+{load_from,store_to}_{int8,int16}() functions have similarly been augmented
+to have both 'signed' and 'unsigned' variants.)
+
+In initializer expressions with variable declarations, it is no longer
+legal to initialize arrays and structs with single scalar values that then
+initialize their members; they now must be initialized with initializer
+lists in braces (or initialized after of the initializer with a loop over
+array elements, etc.)
+
+=== v1.0.2 === (1 July 2011)
+
+Floating-point hexidecimal constants are now parsed correctly on Windows
+(fixes issue #16).
+
+SSE2 is now the default target if --cpu=atom is given in the command line
+arguments and another target isn't explicitly specified.
+
+The standard library now provides broadcast(), rotate(), and shuffle()
+routines for efficient communication between program instances.
+
+The MSVC solution files to build the examples on Windows now use
+/fpmath:fast when building.
+
+=== v1.0.1 === (24 June 2011)
+
+ispc no longer requires that pointers to memory that are passed in to ispc
+have alignment equal to the targets vector width; now alignment just has to
+be the regular element alignment (e.g. 4 bytes for floats, etc.)  This
+change also fixed a number of cases where it previously incorrectly
+generated aligned load/store instructions in cases where the address wasn't
+actually aligned (even if the base address passed into ispc code was).
+
+=== v1.0 === (21 June 2011)
+
+Initial Release

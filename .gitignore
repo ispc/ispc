@@ -1,0 +1,15 @@
+*.pyc
+*~
+depend
+ispc
+ispc_test
+objs
+docs/doxygen
+docs/*.html
+tests*/*cpp
+tests*/*run
+examples/*/*.png
+examples/*/*.ppm
+examples/*/objs/*
+
+

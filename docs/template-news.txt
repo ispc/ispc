@@ -1,0 +1,66 @@
+%(head_prefix)s
+%(head)s
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-1486404-4']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+%(stylesheet)s
+%(body_prefix)s
+<div id="wrap">
+  <div id="wrap2">
+    <div id="header">
+      <h1 id="logo">Intel SPMD Program Compiler</h1>
+      <div id="slogan">An open-source compiler for high-performance SIMD programming on
+      the CPU</div>
+    </div>
+    <div id="nav">
+      <div id="nbar">
+        <ul>
+          <li><a href="index.html">Overview</a></li>
+          <li id="selected"><a href="news.html">News</a></li>
+          <li><a href="features.html">Features</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="documentation.html">Documentation</a></li>
+          <li><a href="perf.html">Performance</a></li>
+          <li><a href="contrib.html">Contributors</a></li>
+        </ul>
+      </div>
+    </div>
+    <div id="content-wrap">
+      <div id="sidebar">
+          <div class="widgetspace">
+            <h1>Resources</h1>
+            <ul class="menu">
+              <li><a href="http://github.com/ispc/ispc/">ispc page on github</a></li>
+              <li><a href="http://groups.google.com/group/ispc-users/">ispc
+              users mailing list</a></li>
+              <li><a href="http://groups.google.com/group/ispc-dev/">ispc
+              developers mailing list</a></li>
+              <li><a href="http://github.com/ispc/ispc/wiki/">Wiki</a></li>
+              <li><a href="http://github.com/ispc/ispc/issues/">Bug tracking</a></li>
+              <li><a href="doxygen/index.html">Doxygen</a></li>
+            </ul>
+        </div>
+      </div>
+%(body_pre_docinfo)s
+%(docinfo)s
+<div id="content">
+%(body)s
+</div>
+    <div class="clearfix"></div>
+    <div id="footer"> &copy; 2011-2012 <strong>Intel Corporation</strong> | Valid <a href="http://validator.w3.org/check?uri=referer">XHTML</a> | <a href="http://jigsaw.w3.org/css-validator/check/referer">CSS</a> | ClearBlue  by: <a href="http://www.themebin.com/">ThemeBin</a>
+      <!-- Please Do Not remove this link, thank u -->
+      </div>
+      </div>
+      </div>
+      </div>
+%(body_suffix)s

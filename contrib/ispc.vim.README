@@ -1,0 +1,8 @@
+To install vim syntax highlighting for ispc files:
+
+1) Copy ispc.vim into ~/.vim/syntax/ispc.vim (create if necessary)
+2) Create a filetype for ispc files to correspond to that syntax file
+   To do this, create and append the following line to ~/.vim/ftdetect/ispc.vim
+
+au BufRead,BufNewFile *.ispc set filetype=ispc
+

@@ -1,0 +1,25 @@
+
+export uniform int width() { return programCount; }
+
+typedef float (*FuncType)(float, float);
+
+float foo(float a, float b) {
+    return a+b;
+}
+
+static float bar(float a, float b) {
+    return a<b?a:b;
+}
+
+
+export void f_f(uniform float RET[], uniform float aFOO[]) {
+    float a = aFOO[programIndex]; 
+    float b = aFOO[0]-1; // == 0
+    FuncType func[] = { (a == 1) ? foo : bar, (a == 1) ? bar : foo };
+    FuncType f = func[(a == 1) ? 0 : 1];
+    RET[programIndex] = f(a,b);
+}
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = programIndex+1;
+}

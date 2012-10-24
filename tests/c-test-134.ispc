@@ -1,0 +1,23 @@
+
+export uniform int width() { return programCount; }
+
+
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    float a = aFOO[programIndex];
+    float i, j;
+    for (i = 0; i < b; ++i) {
+        cif (a == 1.) cbreak;
+        for (j = 0; j < b; ++j) {
+            if (a == 3.) cbreak;
+            ++a;
+        }
+    }
+    RET[programIndex] = a;
+}
+
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = 26+programIndex;
+    RET[0] = 1;
+    RET[1] = RET[2] = 3;
+}
