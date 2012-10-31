@@ -2018,7 +2018,6 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetCurrentBasicBlock(bbBody); {
-        ctx->RestoreContinuedLanes();
         ctx->SetBlockEntryMask(ctx->GetFullMask());
 
         // Run the code in the body of the loop.  This is easy now.
@@ -2030,6 +2029,7 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetCurrentBasicBlock(bbCheckForMore); {
+        ctx->RestoreContinuedLanes();
         // At the end of the loop body (either due to running the
         // statements normally, or a continue statement in the middle of
         // the loop that jumps to the end, see if there are any lanes left
@@ -2233,7 +2233,6 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     ctx->SetCurrentBasicBlock(bbBody); {
-        ctx->RestoreContinuedLanes();
         ctx->SetBlockEntryMask(ctx->GetFullMask());
         // Run the code in the body of the loop.  This is easy now.
         if (stmts)
@@ -2248,6 +2247,7 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
         // statements normally, or a continue statement in the middle of
         // the loop that jumps to the end, see if there are any lanes left
         // to be processed.
+        ctx->RestoreContinuedLanes();
         llvm::Value *remainingBits = ctx->LoadInst(maskBitsPtr, "remaining_bits");
         llvm::Value *nonZero = 
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE,
