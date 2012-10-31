@@ -274,7 +274,7 @@ static FORCEINLINE bool __any(__vec4_i1 mask) {
 }
 
 static FORCEINLINE bool __all(__vec4_i1 mask) {
-    return (_mm_movemask_ps(mask.v)=0xF);
+    return (_mm_movemask_ps(mask.v)==0xF);
 }
 
 static FORCEINLINE bool __none(__vec4_i1 mask) {
