@@ -4318,15 +4318,36 @@ IndexExpr::TypeCheck() {
     bool isUniform = (index->GetType()->IsUniformType() && 
                       !g->opt.disableUniformMemoryOptimizations);
 
-    // Unless we have an explicit 64-bit index and are compiling to a
-    // 64-bit target with 64-bit addressing, convert the index to an int32
-    // type.
-    if (Type::EqualIgnoringConst(indexType->GetAsUniformType(),
-                                 AtomicType::UniformInt64) == false ||
-        g->target.is32Bit ||
-        g->opt.force32BitAddressing) {
-        const Type *indexType = isUniform ? AtomicType::UniformInt32 : 
-            AtomicType::VaryingInt32;
+    if (!isUniform) {
+        // Unless we have an explicit 64-bit index and are compiling to a
+        // 64-bit target with 64-bit addressing, convert the index to an int32
+        // type.
+        //    The range of varying index is limited to [0,2^31) as a result.
+        if (Type::EqualIgnoringConst(indexType->GetAsUniformType(),
+                                     AtomicType::UniformInt64) == false ||
+            g->target.is32Bit ||
+            g->opt.force32BitAddressing) {
+            const Type *indexType = AtomicType::VaryingInt32;
+            index = TypeConvertExpr(index, indexType, "array index");
+            if (index == NULL)
+                return NULL;
+        }
+    } else { // isUniform
+        // For 32-bit target:
+        //   force the index to 32 bit.
+        // For 64-bit target:
+        //   We don't want to limit the index range. 
+        //   We sxt/zxt the index to 64 bit right here because 
+        //   LLVM doesn't distinguish unsigned from signed (both are i32)
+        //
+        //   However, the index can be still truncated to signed int32 if
+        //   the index type is 64 bit and --addressing=32.
+        bool force_32bit = g->target.is32Bit || 
+            (g->opt.force32BitAddressing && 
+             Type::EqualIgnoringConst(indexType->GetAsUniformType(),
+                                      AtomicType::UniformInt64));
+        const Type *indexType = force_32bit ? 
+            AtomicType::UniformInt32 : AtomicType::UniformInt64;
         index = TypeConvertExpr(index, indexType, "array index");
         if (index == NULL)
             return NULL;
