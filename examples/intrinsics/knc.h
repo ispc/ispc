@@ -478,7 +478,7 @@ static FORCEINLINE bool __any(__vec16_i1 mask) {
 }
 
 static FORCEINLINE bool __all(__vec16_i1 mask) {
-    return (mask=0xFFFF);
+    return (mask==0xFFFF);
 }
 
 static FORCEINLINE bool __none(__vec16_i1 mask) {
