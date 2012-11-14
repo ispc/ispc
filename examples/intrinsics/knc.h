@@ -474,15 +474,15 @@ static FORCEINLINE __vec16_i1 __movmsk(__vec16_i1 mask) {
 }
 
 static FORCEINLINE bool __any(__vec16_i1 mask) {
-  return !_mm512_kortestz(mask, mask);
+    return !_mm512_kortestz(mask, mask);
 }
 
 static FORCEINLINE bool __all(__vec16_i1 mask) {
-    return (mask==0xFFFF);
+    return _mm512_kortestc(mask, mask);
 }
 
 static FORCEINLINE bool __none(__vec16_i1 mask) {
-  return !__any(mask);
+    return !__any(mask);
 }
 
 static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {
