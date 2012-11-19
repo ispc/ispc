@@ -471,8 +471,14 @@ Optimize(llvm::Module *module, int optLevel) {
         }
         optPM.add(llvm::createDeadInstEliminationPass());
 
+        // Max struct size threshold for scalar replacement is
+        //    1) 4 fields (r,g,b,w)
+        //    2) field size: vectorWidth * sizeof(float)
+        const int field_limit = 4;
+        int sr_threshold = g->target.vectorWidth * sizeof(float) * field_limit;
+
         // On to more serious optimizations
-        optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
@@ -494,7 +500,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCFGSimplificationPass());
-        optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createTailCallEliminationPass());
 
@@ -540,7 +546,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());   
-        optPM.add(llvm::createScalarReplAggregatesPass(-1, false));
+        optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold, false));
         optPM.add(llvm::createInstructionCombiningPass());  
         optPM.add(llvm::createCFGSimplificationPass());     
         optPM.add(llvm::createReassociatePass());           
