@@ -1746,18 +1746,29 @@ Module::writeHeader(const char *fn) {
 
 
 void
-Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostream) const
+Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
 {
     clang::CompilerInstance inst;
     inst.createFileManager();
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
+#else
+    clang::DiagnosticOptions diagOptions;
+    clang::TextDiagnosticPrinter *diagPrinter =
+        new clang::TextDiagnosticPrinter(stderrRaw, &diagOptions);
+#endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     clang::DiagnosticsEngine *diagEngine = 
         new clang::DiagnosticsEngine(diagIDs, diagPrinter);
+#else
+    clang::DiagnosticsEngine *diagEngine = 
+        new clang::DiagnosticsEngine(diagIDs, &diagOptions, diagPrinter);
+#endif
     inst.setDiagnostics(diagEngine);
 
     clang::TargetOptions &options = inst.getTargetOpts();
@@ -1771,12 +1782,22 @@ Module::execPreprocessor(const char* infilename, llvm::raw_string_ostream* ostre
     }
     options.Triple = triple.getTriple();
 
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
+#else
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &options);
+#endif
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
+#if defined(LLVM_3_0) || defined(LLVM_3_1)
     inst.InitializeSourceManager(infilename);
+#else
+    clang::FrontendInputFile inputFile(infilename, clang::IK_None);
+    inst.InitializeSourceManager(inputFile);
+#endif
 
     // Don't remove comments in the preprocessor, so that we can accurately
     // track the source file position by handling them ourselves.
