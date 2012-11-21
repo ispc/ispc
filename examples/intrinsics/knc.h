@@ -1959,7 +1959,7 @@ static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v) {
 #ifdef ISPC_FAST_MATH
     return _mm512_rsqrt23_ps(v); // Approximation with 0.775ULP accuracy
 #else 
-    return _mm512_invsqrt_pd(v);
+    return _mm512_invsqrt_ps(v);
 #endif
 }
 
