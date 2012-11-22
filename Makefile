@@ -129,6 +129,10 @@ objs/cbackend.o: cbackend.cpp
 	@echo Compiling $<
 	@$(CXX) -fno-rtti -fno-exceptions $(CXXFLAGS) -o $@ -c $<
 
+objs/opt.o: opt.cpp
+	@echo Compiling $<
+	@$(CXX) -fno-rtti $(CXXFLAGS) -o $@ -c $<
+
 objs/%.o: objs/%.cpp
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
