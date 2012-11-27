@@ -482,7 +482,7 @@ static FORCEINLINE bool __all(__vec16_i1 mask) {
 }
 
 static FORCEINLINE bool __none(__vec16_i1 mask) {
-    return !__any(mask);
+    return _mm512_kortestz(mask, mask);
 }
 
 static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {

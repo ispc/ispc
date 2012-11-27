@@ -340,9 +340,9 @@ static inline uniform bool any(bool v) {
     // We only care about whether "any" is true for the active program instances,
     // so we have to make v with the current program mask.
 #ifdef ISPC_TARGET_GENERIC
-    return __movmsk(v & __mask) != 0;
+    return __any(v | !__mask);
 #else
-    return __movmsk(__sext_varying_bool(v) & __mask) != 0;
+    return __any(__sext_varying_bool(v) | !__mask);
 #endif
 }
 
@@ -350,13 +350,24 @@ __declspec(safe)
 static inline uniform bool all(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
+
 #ifdef ISPC_TARGET_GENERIC
-    bool match = ((v & __mask) == __mask);
+    return __all(v | !__mask);
 #else
-    int32 match = __sext_varying_bool((__sext_varying_bool(v) & __mask) == __mask);
+    return __all(__sext_varying_bool(v) | !__mask);
 #endif
-    return __movmsk(match) == ((programCount == 64) ? ~0ull : 
-                               ((1ull << programCount) - 1));
+}
+
+__declspec(safe)
+static inline uniform bool none(bool v) {
+    // As with any(), we need to explicitly mask v with the current program mask
+    // so we're only looking at the current lanes
+
+#ifdef ISPC_TARGET_GENERIC
+    return __none(v | !__mask);
+#else
+    return __none(__sext_varying_bool(v) | !__mask);
+#endif
 }
 
 __declspec(safe) 

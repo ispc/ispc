@@ -3701,15 +3701,18 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 Reductions
 ----------
 
-A number routines are available to evaluate conditions across the running
-program instances.  For example, ``any()`` returns ``true`` if the given
-value ``v`` is ``true`` for any of the SPMD program instances currently
-running, and ``all()`` returns ``true`` if it true for all of them.
+A number routines are available to evaluate conditions across the
+running program instances.  For example, ``any()`` returns ``true`` if
+the given value ``v`` is ``true`` for any of the SPMD program
+instances currently running, ``all()`` returns ``true`` if it true
+for all of them, and ``none()`` returns ``true`` if ``v`` is always
+``false``.
 
 ::
 
     uniform bool any(bool v)
     uniform bool all(bool v)
+    uniform bool none(bool v)
 
 You can also compute a variety of reductions across the program instances.
 For example, the values of the given value in each of the active program
