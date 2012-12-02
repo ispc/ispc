@@ -1757,9 +1757,9 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
 #else
-    clang::DiagnosticOptions diagOptions;
+    clang::DiagnosticOptions *diagOptions = new clang::DiagnosticOptions();
     clang::TextDiagnosticPrinter *diagPrinter =
-        new clang::TextDiagnosticPrinter(stderrRaw, &diagOptions);
+        new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
 #endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
@@ -1767,7 +1767,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         new clang::DiagnosticsEngine(diagIDs, diagPrinter);
 #else
     clang::DiagnosticsEngine *diagEngine = 
-        new clang::DiagnosticsEngine(diagIDs, &diagOptions, diagPrinter);
+        new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
 #endif
     inst.setDiagnostics(diagEngine);
 
