@@ -129,9 +129,9 @@ lGetSystemISA() {
 
 static const char *supportedCPUs[] = { 
     "atom", "penryn", "core2", "corei7", "corei7-avx"
-#ifdef LLVM_3_2
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
     , "core-avx-i", "core-avx2"
-#endif // LLVM_3_2
+#endif // LLVM_3_2 or LLVM_3_3
 };
 
 
