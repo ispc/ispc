@@ -71,7 +71,11 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#include "llvm/Support/InstVisitor.h"
+#if defined(LLVM_3_3)
+  #include "llvm/InstVisitor.h"
+#else
+  #include "llvm/Support/InstVisitor.h"
+#endif
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
