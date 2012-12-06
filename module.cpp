@@ -1075,6 +1075,23 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 }
 
 
+/** Given a pointer to an element of a structure, see if it is a struct
+    type or an array of a struct type.  If so, return a pointer to the
+    underlying struct type. */
+static const StructType *
+lGetElementStructType(const Type *t) {
+    const StructType *st = CastType<StructType>(t);
+    if (st != NULL)
+        return st;
+
+    const ArrayType *at = CastType<ArrayType>(t);
+    if (at != NULL)
+        return lGetElementStructType(at->GetElementType());
+
+    return NULL;
+}
+
+
 /** Emits a declaration for the given struct to the given file.  This
     function first makes sure that declarations for any structs that are
     (recursively) members of this struct are emitted first.
@@ -1092,7 +1109,7 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     // Otherwise first make sure any contained structs have been declared.
     for (int i = 0; i < st->GetElementCount(); ++i) {
         const StructType *elementStructType = 
-            CastType<StructType>(st->GetElementType(i));
+            lGetElementStructType(st->GetElementType(i));
         if (elementStructType != NULL)
             lEmitStructDecl(elementStructType, emittedStructs, file);
     }
