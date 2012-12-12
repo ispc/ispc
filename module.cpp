@@ -808,7 +808,12 @@ Module::AddFunctionDeclaration(const std::string &name,
         // uniform pointers, since varying pointers are int vectors...)
         if (!functionType->isTask && 
             ((CastType<PointerType>(argType) != NULL &&
-              argType->IsUniformType()) ||
+              argType->IsUniformType() &&
+              // Exclude SOA argument because it is a pair {struct *, int}
+              // instead of pointer
+              !CastType<PointerType>(argType)->IsSlice())
+             ||
+
              CastType<ReferenceType>(argType) != NULL)) {
 
             // NOTE: LLVM indexes function parameters starting from 1.
