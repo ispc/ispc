@@ -1799,13 +1799,8 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     }
     options.Triple = triple.getTriple();
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
-#else
-    clang::TargetInfo *target =
-        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &options);
-#endif
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
