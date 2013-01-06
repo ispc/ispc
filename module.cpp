@@ -64,12 +64,21 @@
 #define strcasecmp stricmp
 #endif
 
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Module.h>
+  #include <llvm/Type.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Intrinsics.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Type.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Intrinsics.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Transforms/IPO.h>
@@ -80,7 +89,11 @@
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
 #else
-  #include <llvm/DataLayout.h>
+  #if defined(LLVM_3_2)
+    #include <llvm/DataLayout.h>
+  #else // LLVM 3.3+
+    #include <llvm/IR/DataLayout.h>
+  #endif
   #include <llvm/TargetTransformInfo.h>
 #endif
 #include <llvm/Analysis/Verifier.h>
@@ -760,10 +773,10 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass != SC_EXTERN_C && 
         !g->generateDebuggingSymbols &&
         isInline)
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
-        function->addFnAttr(llvm::Attribute::AlwaysInline);
-#else
+#ifdef LLVM_3_2
         function->addFnAttr(llvm::Attributes::AlwaysInline);
+#else
+        function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
     if (functionType->isTask)
         // This also applies transitively to members I think? 
@@ -1799,8 +1812,13 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     }
     options.Triple = triple.getTriple();
 
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
+#else // LLVM 3.3+
+    clang::TargetInfo *target =
+        clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), &options);
+#endif
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());

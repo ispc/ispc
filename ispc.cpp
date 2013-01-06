@@ -48,8 +48,15 @@
   #include <sys/types.h>
   #include <unistd.h>
 #endif
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+#else
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+#endif
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
   #include <llvm/Analysis/DIBuilder.h>
@@ -58,13 +65,14 @@
   #include <llvm/DIBuilder.h>
 #endif
 #include <llvm/Support/Dwarf.h>
-#include <llvm/Instructions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
-#else
+#elif defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
 #endif
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>

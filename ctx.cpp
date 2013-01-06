@@ -45,11 +45,18 @@
 #include "module.h"
 #include "sym.h"
 #include <map>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
 #include <llvm/Support/Dwarf.h>
-#include <llvm/Metadata.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Metadata.h>
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/Metadata.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring

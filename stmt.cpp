@@ -48,14 +48,25 @@
 #include <stdio.h>
 #include <map>
 
-#include <llvm/Module.h>
-#include <llvm/Function.h>
-#include <llvm/Type.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/LLVMContext.h>
-#include <llvm/Metadata.h>
-#include <llvm/Instructions.h>
-#include <llvm/CallingConv.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Module.h>
+  #include <llvm/Type.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Function.h>
+  #include <llvm/DerivedTypes.h>
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Metadata.h>
+  #include <llvm/CallingConv.h>
+#else
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Type.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Function.h>
+  #include <llvm/IR/DerivedTypes.h>
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Metadata.h>
+  #include <llvm/IR/CallingConv.h>
+#endif
 #include <llvm/Support/raw_ostream.h>
 
 ///////////////////////////////////////////////////////////////////////////

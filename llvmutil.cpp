@@ -38,8 +38,13 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
-#include <llvm/Instructions.h>
-#include <llvm/BasicBlock.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Instructions.h>
+  #include <llvm/BasicBlock.h>
+#else
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/BasicBlock.h>
+#endif
 #include <set>
 #include <map>
 

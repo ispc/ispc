@@ -43,8 +43,13 @@
 
 #include <stdio.h>
 #include <map>
-#include <llvm/Value.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Value.h>
+  #include <llvm/Module.h>
+#else
+  #include <llvm/IR/Value.h>
+  #include <llvm/IR/Module.h>
+#endif
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
   #include <llvm/Analysis/DIBuilder.h>

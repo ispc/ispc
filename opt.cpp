@@ -48,15 +48,24 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Intrinsics.h>
+  #include <llvm/Function.h>
+  #include <llvm/BasicBlock.h>
+  #include <llvm/Constants.h>
+#else
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Intrinsics.h>
+  #include <llvm/IR/Function.h>
+  #include <llvm/IR/BasicBlock.h>
+  #include <llvm/IR/Constants.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Assembly/PrintModulePass.h>
-#include <llvm/Function.h>
-#include <llvm/BasicBlock.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
-#include <llvm/Constants.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/ADT/Triple.h>
@@ -66,8 +75,11 @@
 #include <llvm/Target/TargetOptions.h>
 #if defined(LLVM_3_0) || defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
-#else
+#elif defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
+  #include <llvm/TargetTransformInfo.h>
 #endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
@@ -416,8 +428,13 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(new llvm::DataLayout(*dl));
     else
         optPM.add(new llvm::DataLayout(module));
+  #ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
+  #else // LLVM 3.3+
+    optPM.add(llvm::createNoTTIPass(targetMachine->getScalarTargetTransformInfo(),
+                                    targetMachine->getVectorTargetTransformInfo()));
+  #endif
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
