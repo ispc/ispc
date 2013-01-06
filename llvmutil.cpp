@@ -549,7 +549,7 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
     llvm::CastInst *cast1 = llvm::dyn_cast<llvm::CastInst>(v1);
     if (cast0 != NULL && cast1 != NULL) {
         if (cast0->getOpcode() != cast1->getOpcode())
-            return NULL;
+            return false;
         return lValuesAreEqual(cast0->getOperand(0), cast1->getOperand(0),
                                seenPhi0, seenPhi1);
     }

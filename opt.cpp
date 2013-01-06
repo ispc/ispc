@@ -342,7 +342,7 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
             if (c == NULL)
-                return NULL;
+                return false;
             elements.push_back(c);
         }
 #else

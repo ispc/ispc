@@ -2315,14 +2315,14 @@ ForeachUniqueStmt::TypeCheck() {
         Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
               "must be \"varying\" type, not \"%s\".",
               type->GetString().c_str());
-        return false;
+        return NULL;
     }
 
     if (Type::IsBasicType(type) == false) {
         Error(expr->pos, "Iteration domain type in \"foreach_tiled\" loop "
               "must be an atomic, pointer, or enum type, not \"%s\".",
               type->GetString().c_str());
-        return false;
+        return NULL;
     }
 
     return this;
