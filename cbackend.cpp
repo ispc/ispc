@@ -29,7 +29,7 @@
 
 #include "llvmutil.h"
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Constants.h"
   #include "llvm/DerivedTypes.h"
   #include "llvm/CallingConv.h"
@@ -50,7 +50,7 @@
 #endif
 #include "llvm/Pass.h"
 #include "llvm/PassManager.h"
-#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+#if !defined(LLVM_3_1)
   #include "llvm/TypeFinder.h"
 #endif // LLVM_3_2 +
 #include "llvm/ADT/StringExtras.h"
@@ -72,7 +72,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include "llvm/Target/TargetData.h"
 #elif defined(LLVM_3_2)
   #include "llvm/DataLayout.h"
@@ -248,7 +248,7 @@ namespace {
     const llvm::MCRegisterInfo *MRI;
     const llvm::MCObjectFileInfo *MOFI;
     llvm::MCContext *TCtx;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     const llvm::TargetData* TD;
 #else
     // FIXME: it's ugly to have the name be "TD" here, but it saves us
@@ -258,10 +258,8 @@ namespace {
 #endif
     
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
-#ifndef LLVM_3_0
     std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
     unsigned VectorConstantIndex;
-#endif // !LLVM_3_0
     std::set<llvm::Function*> intrinsicPrototypesAlreadyGenerated;
     std::set<const llvm::Argument*> ByValParams;
     unsigned FPCounter;
@@ -288,9 +286,7 @@ namespace {
         vectorWidth(vecwidth) {
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
       FPCounter = 0;
-#ifndef LLVM_3_0
       VectorConstantIndex = 0;
-#endif // !LLVM_3_0
     }
 
     virtual const char *getPassName() const { return "C backend"; }
@@ -334,9 +330,7 @@ namespace {
       delete MRI;
       delete MOFI;
       FPConstantMap.clear();
-#ifndef LLVM_3_0
       VectorConstantMap.clear();
-#endif // !LLVM_3_0
       ByValParams.clear();
       intrinsicPrototypesAlreadyGenerated.clear();
       UnnamedStructIDs.clear();
@@ -348,7 +342,7 @@ namespace {
                            bool isSigned = false,
                            const std::string &VariableName = "",
                            bool IgnoreName = false,
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
                            const llvm::AttrListPtr &PAL = llvm::AttrListPtr()
 #else
                            const llvm::AttributeSet &PAL = llvm::AttributeSet()
@@ -359,7 +353,7 @@ namespace {
                            const std::string &NameSoFar = "");
 
     void printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
                                               const llvm::AttrListPtr &PAL,
 #else
                                               const llvm::AttributeSet &PAL,
@@ -417,9 +411,7 @@ namespace {
     bool printConstExprCast(const llvm::ConstantExpr *CE, bool Static);
     void printConstantArray(llvm::ConstantArray *CPA, bool Static);
     void printConstantVector(llvm::ConstantVector *CV, bool Static);
-#ifndef LLVM_3_0
     void printConstantDataSequential(llvm::ConstantDataSequential *CDS, bool Static);
-#endif
 
     /// isAddressExposed - Return true if the specified value's name needs to
     /// have its address taken in order to get a C value of the correct type.
@@ -494,11 +486,6 @@ namespace {
     void visitInvokeInst(llvm::InvokeInst &I) {
       llvm_unreachable("Lowerinvoke pass didn't work!");
     }
-#ifdef LLVM_3_0
-    void visitUnwindInst(llvm::UnwindInst &I) {
-      llvm_unreachable("Lowerinvoke pass didn't work!");
-    }
-#endif // LLVM_3_0
     void visitResumeInst(llvm::ResumeInst &I) {
       llvm_unreachable("DwarfEHPrepare pass didn't work!");
     }
@@ -589,7 +576,7 @@ std::string CWriter::getArrayName(llvm::ArrayType *AT) {
 /// return type, except, instead of printing the type as void (*)(Struct*, ...)
 /// print it as "Struct (*)(...)", for struct return functions.
 void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
                                                    const llvm::AttrListPtr &PAL,
 #else
                                                    const llvm::AttributeSet &PAL,
@@ -608,7 +595,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
     if (PrintedType)
       FunctionInnards << ", ";
     llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
 #elif defined(LLVM_3_2)
     if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
@@ -619,7 +606,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
       ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
     }
     printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
               /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
               PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
@@ -638,7 +625,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
   }
   FunctionInnards << ')';
   printType(Out, RetTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
             /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
@@ -740,7 +727,7 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
 llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
                                 bool isSigned, const std::string &NameSoFar,
                                 bool IgnoreName, 
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
                                 const llvm::AttrListPtr &PAL
 #else
                                 const llvm::AttributeSet &PAL
@@ -762,7 +749,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     for (llvm::FunctionType::param_iterator I = FTy->param_begin(),
            E = FTy->param_end(); I != E; ++I) {
       llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
       if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
 #elif defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
@@ -775,7 +762,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
       if (I != FTy->param_begin())
         FunctionInnards << ", ";
       printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
@@ -794,7 +781,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     }
     FunctionInnards << ')';
     printType(Out, FTy->getReturnType(),
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
               /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
               PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
@@ -909,61 +896,6 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 }
 
 void CWriter::printConstantArray(llvm::ConstantArray *CPA, bool Static) {
-#ifdef LLVM_3_0
-  llvm::Type *ETy = CPA->getType()->getElementType();
-  // MMP: this looks like a bug: both sides of the || are the same
-  bool isString = ETy == llvm::Type::getInt8Ty(CPA->getContext());
-
-  // Make sure the last character is a null char, as automatically added by C
-  if (isString && (CPA->getNumOperands() == 0 ||
-                   !llvm::cast<llvm::Constant>(*(CPA->op_end()-1))->isNullValue()))
-    isString = false;
-
-  if (isString) {
-    Out << "\"";
-    // Keep track of whether the last number was a hexadecimal escape.
-    bool LastWasHex = false;
-
-    // Do not include the last character, which we know is null
-    for (unsigned i = 0, e = CPA->getNumOperands()-1; i != e; ++i) {
-      unsigned char C = (unsigned char)(llvm::cast<llvm::ConstantInt>(CPA->getOperand(i))->getZExtValue());
-
-      // Print it out literally if it is a printable character.  The only thing
-      // to be careful about is when the last letter output was a hex escape
-      // code, in which case we have to be careful not to print out hex digits
-      // explicitly (the C compiler thinks it is a continuation of the previous
-      // character, sheesh...)
-      //
-      if (isprint(C) && (!LastWasHex || !isxdigit(C))) {
-        LastWasHex = false;
-        if (C == '"' || C == '\\')
-          Out << "\\" << (char)C;
-        else
-          Out << (char)C;
-      } else {
-        LastWasHex = false;
-        switch (C) {
-          case '\n': Out << "\\n"; break;
-          case '\t': Out << "\\t"; break;
-          case '\r': Out << "\\r"; break;
-          case '\v': Out << "\\v"; break;
-          case '\a': Out << "\\a"; break;
-          case '\"': Out << "\\\""; break;
-          case '\'': Out << "\\\'"; break;
-          default:
-            Out << "\\x";
-            Out << (char)(( C/16  < 10) ? ( C/16 +'0') : ( C/16 -10+'A'));
-            Out << (char)(((C&15) < 10) ? ((C&15)+'0') : ((C&15)-10+'A'));
-            LastWasHex = true;
-            break;
-        }
-      }
-    }
-    Out << "\"";
-    return;
-  }
-#endif // LLVM_3_0
-
   printConstant(llvm::cast<llvm::Constant>(CPA->getOperand(0)), Static);
   for (unsigned i = 1, e = CPA->getNumOperands(); i != e; ++i) {
     Out << ", ";
@@ -979,7 +911,6 @@ void CWriter::printConstantVector(llvm::ConstantVector *CP, bool Static) {
   }
 }
 
-#ifndef LLVM_3_0
 void CWriter::printConstantDataSequential(llvm::ConstantDataSequential *CDS,
                                           bool Static) {
   // As a special case, print the array as a string if it is an array of
@@ -1036,9 +967,7 @@ void CWriter::printConstantDataSequential(llvm::ConstantDataSequential *CDS,
     }
   }
 }
-#endif // !LLVM_3_0
 
-#ifndef LLVM_3_0
 static inline std::string ftostr(const llvm::APFloat& V) {
   std::string Buf;
   if (&V.getSemantics() == &llvm::APFloat::IEEEdouble) {
@@ -1050,7 +979,6 @@ static inline std::string ftostr(const llvm::APFloat& V) {
   }
   return "<unknown format in ftostr>"; // error
 }
-#endif // !LLVM_3_0
 
 // isFPCSafeToPrint - Returns true if we may assume that CFP may be written out
 // textually as a double (rather than as a reference to a stack-allocated
@@ -1554,11 +1482,9 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
     }
     if (llvm::ConstantArray *CA = llvm::dyn_cast<llvm::ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
-#ifndef LLVM_3_0
     } else if (llvm::ConstantDataSequential *CDS = 
                llvm::dyn_cast<llvm::ConstantDataSequential>(CPV)) {
       printConstantDataSequential(CDS, Static);
-#endif // !LLVM_3_0
     } else {
       assert(llvm::isa<llvm::ConstantAggregateZero>(CPV) || llvm::isa<llvm::UndefValue>(CPV));
       if (AT->getNumElements()) {
@@ -1613,8 +1539,6 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 Out << ")";
             }
         }
-#ifndef LLVM_3_0
-        // LLVM 3.1 and beyond have a different representation of constant vectors..
         else if (llvm::ConstantDataVector *CDV =
                  llvm::dyn_cast<llvm::ConstantDataVector>(CPV)) {
             llvm::Constant *splatValue = CDV->getSplatValue();
@@ -1646,7 +1570,6 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
                 Out << ")";
             }
         }
-#endif // !LLVM_3_0
         else {
             llvm::report_fatal_error("Unexpected vector type");
         }
@@ -2039,7 +1962,7 @@ void CWriter::writeOperandWithCast(llvm::Value* Operand, const llvm::ICmpInst &C
 // directives to cater to specific compilers as need be.
 //
 static void generateCompilerSpecificCode(llvm::formatted_raw_ostream& Out,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                                          const llvm::TargetData *TD) {
 #else
                                          const llvm::DataLayout *TD) {
@@ -2229,7 +2152,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
   // Initialize
   TheModule = &M;
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   TD = new llvm::TargetData(&M);
 #else
   TD = new llvm::DataLayout(&M);
@@ -2662,12 +2585,6 @@ void CWriter::printFloatingPointConstants(const llvm::Constant *C) {
 // loads to get their values, rather than tediously inserting the
 // individual values into the vector.
 void CWriter::printVectorConstants(llvm::Function &F) {
-    // LLVM 3.1 and beyond have a different representation of constant
-    // vectors than before--here we will only do this for 3.1 and later, as
-    // the separate code path isn't worth the trouble.  This will hurt
-    // performance with 3.0 builds, though they should still generate
-    // correct code.
-#ifndef LLVM_3_0
     for (llvm::constant_iterator I = constant_begin(&F), E = constant_end(&F);
          I != E; ++I) {
         const llvm::ConstantDataVector *CDV = llvm::dyn_cast<llvm::ConstantDataVector>(*I);
@@ -2695,7 +2612,6 @@ void CWriter::printVectorConstants(llvm::Function &F) {
         VectorConstantMap[CDV] = VectorConstantIndex++;
     }
     Out << "\n";
-#endif // !LLVM_3_0
 }
 
 /// printSymbolTable - Run through symbol table looking for type names.  If a
@@ -2712,7 +2628,7 @@ void CWriter::printModuleTypes() {
 
   // Get all of the struct types used in the module.
   std::vector<llvm::StructType*> StructTypes;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   TheModule->findUsedStructTypes(StructTypes);
 #else
   llvm::TypeFinder typeFinder;
@@ -2841,7 +2757,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
   // Loop over the arguments, printing them...
   llvm::FunctionType *FT = llvm::cast<llvm::FunctionType>(F->getFunctionType());
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   const llvm::AttrListPtr &PAL = F->getAttributes();
 #else
   const llvm::AttributeSet &PAL = F->getAttributes();
@@ -2875,7 +2791,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         else
           ArgName = "";
         llvm::Type *ArgTy = I->getType();
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
         if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
 #elif defined(LLVM_3_2)
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
@@ -2886,7 +2802,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
           ByValParams.insert(I);
         }
         printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                   /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
                   PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
@@ -2914,7 +2830,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
     for (; I != E; ++I) {
       if (PrintedArg) FunctionInnards << ", ";
       llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
       if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
 #elif defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
@@ -2925,7 +2841,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
       }
       printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt)
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt)
@@ -2964,7 +2880,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
   // Print out the return type and the signature built above.
   printType(Out, RetTy,
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
             /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
 #elif defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
@@ -3145,17 +3061,9 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
   printBranchToBlock(SI.getParent(), SI.getDefaultDest(), 2);
   Out << ";\n";
 
-#ifdef LLVM_3_0
-  // Skip the first item since that's the default case.
-  unsigned NumCases = SI.getNumCases();
-  for (unsigned i = 1; i < NumCases; ++i) {
-    llvm::ConstantInt* CaseVal = SI.getCaseValue(i);
-    llvm::BasicBlock* Succ = SI.getSuccessor(i);
-#else
-    for (llvm::SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
+  for (llvm::SwitchInst::CaseIt i = SI.case_begin(), e = SI.case_end(); i != e; ++i) {
     llvm::ConstantInt* CaseVal = i.getCaseValue();
     llvm::BasicBlock* Succ = i.getCaseSuccessor();
-#endif // !LLVM_3_0
     Out << "  case ";
     writeOperand(CaseVal);
     Out << ":\n";
@@ -3776,7 +3684,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Intrinsics.gen"
 #else
   #include "llvm/IR/Intrinsics.gen"
@@ -3841,7 +3749,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
   // If this is a call to a struct-return function, assign to the first
   // parameter instead of passing it to the call.
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   const llvm::AttrListPtr &PAL = I.getAttributes();
 #else
   const llvm::AttributeSet &PAL = I.getAttributes();
@@ -3922,7 +3830,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
       Out << '(';
       printType(Out, FTy->getParamType(ArgNo),
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 /*isSigned=*/PAL.paramHasAttr(ArgNo+1, llvm::Attribute::SExt)
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attributes::SExt)
@@ -3958,12 +3866,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     // If this is an intrinsic that directly corresponds to a GCC
     // builtin, we emit it here.
     const char *BuiltinName = "";
-#ifdef LLVM_3_0
-    llvm::Function *F = I.getCalledFunction();
-#endif // LLVM_3_0
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Intrinsics.gen"
 #else
   #include "llvm/IR/Intrinsics.gen"
@@ -4548,7 +4453,7 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                 matchType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 smearFunc->setDoesNotThrow(true);
                 smearFunc->setDoesNotAccessMemory(true);
 #else
@@ -4699,7 +4604,7 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                    LLVMTypes::MaskType, NULL);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
                 Assert(andCmpFunc != NULL);
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 andCmpFunc->setDoesNotThrow(true);
                 andCmpFunc->setDoesNotAccessMemory(true);
 #else
@@ -4807,14 +4712,12 @@ lIsAllTrue(llvm::Value *v) {
                 ci->isOne());
     }
                 
-#ifndef LLVM_3_0
     if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
         llvm::ConstantInt *ci;
         return (cdv->getSplatValue() != NULL &&
                 (ci = llvm::dyn_cast<llvm::ConstantInt>(cdv->getSplatValue())) != NULL &&
                 ci->isOne());
     }
-#endif
 
     return false;
 }

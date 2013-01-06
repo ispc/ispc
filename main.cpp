@@ -62,9 +62,7 @@ static void
 lPrintVersion() {
     printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", 
            ISPC_VERSION, BUILD_VERSION, BUILD_DATE, 
-#if defined(LLVM_3_0)
-           "3.0"
-#elif defined(LLVM_3_1)
+#if defined(LLVM_3_1)
            "3.1"
 #elif defined(LLVM_3_2)
            "3.2"

@@ -64,7 +64,7 @@
 #define strcasecmp stricmp
 #endif
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -86,7 +86,7 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
 #else
   #if defined(LLVM_3_2)
@@ -149,7 +149,6 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     if (g->generateDebuggingSymbols == false)
         return;
 
-#ifndef LLVM_3_0
     // loop over the compile units that contributed to the final module
     if (llvm::NamedMDNode *cuNodes = module->getNamedMetadata("llvm.dbg.cu")) {
         for (unsigned i = 0, ie = cuNodes->getNumOperands(); i != ie; ++i) {
@@ -228,7 +227,6 @@ lStripUnusedDebugInfo(llvm::Module *module) {
     }
     for (int i = 0; i < (int)toErase.size(); ++i)
         module->eraseNamedMetadata(toErase[i]);
-#endif // !LLVM_3_0
 
     // Wrap up by running the LLVM pass to remove anything left that's
     // unused.
@@ -780,7 +778,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 #endif
     if (functionType->isTask)
         // This also applies transitively to members I think? 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
 #else
         function->setDoesNotAlias(1);
@@ -826,7 +824,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
             function->setDoesNotAlias(i+1, true);
 #else
             function->setDoesNotAlias(i+1);
@@ -1053,7 +1051,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     if (const llvm::TargetData *td = targetMachine->getTargetData())
         pm.add(new llvm::TargetData(*td));
     else
@@ -1067,13 +1065,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 
     llvm::formatted_raw_ostream fos(of->os());
 
-#ifdef LLVM_3_0
-    llvm::CodeGenOpt::Level optLevel = 
-        (g->opt.level > 0) ? llvm::CodeGenOpt::Aggressive : llvm::CodeGenOpt::None;
-    if (targetMachine->addPassesToEmitFile(pm, fos, fileType, optLevel)) {
-#else
     if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
-#endif
         fprintf(stderr, "Fatal error adding passes to emit object file!");
         exit(1);
     }
@@ -1783,7 +1775,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
 #else
@@ -1792,7 +1784,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
 #endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     clang::DiagnosticsEngine *diagEngine = 
         new clang::DiagnosticsEngine(diagIDs, diagPrinter);
 #else
@@ -1804,15 +1796,11 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     clang::TargetOptions &options = inst.getTargetOpts();
     llvm::Triple triple(module->getTargetTriple());
     if (triple.getTriple().empty()) {
-#ifdef LLVM_3_0
-        triple.setTriple(llvm::sys::getHostTriple());
-#else
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
-#endif
     }
     options.Triple = triple.getTriple();
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
 #else // LLVM 3.3+
@@ -1822,7 +1810,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     inst.InitializeSourceManager(infilename);
 #else
     clang::FrontendInputFile inputFile(infilename, clang::IK_None);

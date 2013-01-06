@@ -46,7 +46,7 @@
 #include "sym.h"
 #include <map>
 #include <llvm/Support/Dwarf.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/Metadata.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -358,9 +358,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          mangledName,        diFile,
                                          firstLine,          diSubprogramType,
                                          isStatic,           true, /* is defn */
-#ifndef LLVM_3_0
                                          firstLine,
-#endif // !LLVM_3_0
                                          flags,
                                          isOptimized,        llvmFunction);
         AssertPos(currentPos, diSubprogram.Verify());
@@ -1384,11 +1382,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
-#ifdef LLVM_3_0
-    llvm::Constant *lstr = llvm::ConstantArray::get(*g->ctx, str);
-#else
     llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
-#endif
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
                                                     true /*isConst*/, 
@@ -1438,11 +1432,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
-#ifdef LLVM_3_0
-    llvm::Constant *sConstant = llvm::ConstantArray::get(*g->ctx, s);
-#else
     llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
-#endif
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), 
                                                  true /* const */,
                                                  llvm::GlobalValue::InternalLinkage,

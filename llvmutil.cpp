@@ -38,7 +38,7 @@
 #include "llvmutil.h"
 #include "ispc.h"
 #include "type.h"
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/Instructions.h>
   #include <llvm/BasicBlock.h>
 #else
@@ -660,9 +660,6 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
         return true;
     }
 
-    // Deal with the fact that LLVM3.1 and previous versions have different
-    // representations for vectors of constant ints...
-#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cv == NULL)
         return false;
@@ -670,20 +667,6 @@ LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts) {
     for (int i = 0; i < (int)cv->getNumElements(); ++i)
         ret[i] = cv->getElementAsInteger(i);
     return true;
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv == NULL)
-        return false;
-
-     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-     cv->getVectorElements(elements);
-     for (int i = 0; i < (int)vt->getNumElements(); ++i) {
-         llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-         Assert(ci != NULL);
-         ret[i] = ci->getSExtValue();
-     }
-     return true;
-#endif // !LLVM_3_0
 }
 
 
@@ -952,11 +935,9 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     if (cv != NULL)
         return (cv->getSplatValue() != NULL);
 
-#ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cdv != NULL)
         return (cdv->getSplatValue() != NULL);
-#endif
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
@@ -1106,22 +1087,13 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
     elements.
  */
 static bool
-lVectorIsLinearConstantInts(
-#ifndef LLVM_3_0
-                            llvm::ConstantDataVector *cv, 
-#else
-                            llvm::ConstantVector *cv, 
-#endif
+lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv, 
                             int vectorLength, 
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifndef LLVM_3_0
     for (int i = 0; i < (int)cv->getNumElements(); ++i)
         elements.push_back(cv->getElementAsConstant(i));
-#else
-    cv->getVectorElements(elements);
-#endif
     Assert((int)elements.size() == vectorLength);
 
     llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(elements[0]);
@@ -1157,11 +1129,7 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
-#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op0);
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(op0);
-#endif
     if (cv == NULL)
         return false;
 
@@ -1231,11 +1199,7 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 std::vector<llvm::PHINode *> &seenPhis) {
     // First try the easy case: if the values are all just constant
     // integers and have the expected stride between them, then we're done.
-#ifndef LLVM_3_0
     llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(v);
-#else
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-#endif
     if (cv != NULL)
         return lVectorIsLinearConstantInts(cv, vectorLength, stride);
 
@@ -1407,19 +1371,11 @@ lExtractFirstVectorElement(llvm::Value *v,
         return llvm::Constant::getNullValue(vt->getElementType());
     }
     if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
-#ifndef LLVM_3_0
         return cv->getOperand(0);
-#else
-        llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-        cv->getVectorElements(elements);
-        return elements[0];
-#endif // !LLVM_3_0
     }
-#ifndef LLVM_3_0
     if (llvm::ConstantDataVector *cdv = 
         llvm::dyn_cast<llvm::ConstantDataVector>(v))
         return cdv->getElementAsConstant(0);
-#endif  // !LLVM_3_0
 
     // Otherwise, all that we should have at this point is an instruction
     // of some sort

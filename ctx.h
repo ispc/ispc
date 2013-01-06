@@ -40,14 +40,14 @@
 
 #include "ispc.h"
 #include <map>
-#if defined(LLVM_3_0) || defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/InstrTypes.h>
   #include <llvm/Instructions.h>
 #else
   #include <llvm/IR/InstrTypes.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
   #include <llvm/Analysis/DIBuilder.h>
 #else
