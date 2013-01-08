@@ -45,11 +45,18 @@
 #include "module.h"
 #include "sym.h"
 #include <map>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
 #include <llvm/Support/Dwarf.h>
-#include <llvm/Metadata.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Metadata.h>
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/Metadata.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
@@ -351,9 +358,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          mangledName,        diFile,
                                          firstLine,          diSubprogramType,
                                          isStatic,           true, /* is defn */
-#ifndef LLVM_3_0
                                          firstLine,
-#endif // !LLVM_3_0
                                          flags,
                                          isOptimized,        llvmFunction);
         AssertPos(currentPos, diSubprogram.Verify());
@@ -1377,11 +1382,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
-#ifdef LLVM_3_0
-    llvm::Constant *lstr = llvm::ConstantArray::get(*g->ctx, str);
-#else
     llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
-#endif
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
                                                     true /*isConst*/, 
@@ -1431,11 +1432,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
-#ifdef LLVM_3_0
-    llvm::Constant *sConstant = llvm::ConstantArray::get(*g->ctx, s);
-#else
     llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
-#endif
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(), 
                                                  true /* const */,
                                                  llvm::GlobalValue::InternalLinkage,

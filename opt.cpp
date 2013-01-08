@@ -48,15 +48,24 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#include <llvm/Module.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Intrinsics.h>
+  #include <llvm/Function.h>
+  #include <llvm/BasicBlock.h>
+  #include <llvm/Constants.h>
+#else
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Intrinsics.h>
+  #include <llvm/IR/Function.h>
+  #include <llvm/IR/BasicBlock.h>
+  #include <llvm/IR/Constants.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Assembly/PrintModulePass.h>
-#include <llvm/Function.h>
-#include <llvm/BasicBlock.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
-#include <llvm/Constants.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/ADT/Triple.h>
@@ -64,16 +73,19 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
-#else
+#elif defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
+  #include <llvm/TargetTransformInfo.h>
 #endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
 #else
   #include <llvm/DebugInfo.h>
@@ -311,7 +323,6 @@ lConstElementsToMask(const llvm::SmallVector<llvm::Constant *,
  */
 static bool
 lGetMask(llvm::Value *factor, uint64_t *mask) {
-#ifndef LLVM_3_0
     llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(factor);
     if (cdv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
@@ -320,22 +331,17 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
         *mask = lConstElementsToMask(elements);
         return true;
     }
-#endif
 
     llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(factor);
     if (cv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifndef LLVM_3_0
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
             if (c == NULL)
-                return NULL;
+                return false;
             elements.push_back(c);
         }
-#else
-        cv->getVectorElements(elements);
-#endif
         *mask = lConstElementsToMask(elements);
         return true;
     }
@@ -408,7 +414,7 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     optPM.add(new llvm::TargetData(module));
 #else
     llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
@@ -416,8 +422,13 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(new llvm::DataLayout(*dl));
     else
         optPM.add(new llvm::DataLayout(module));
+  #ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
+  #else // LLVM 3.3+
+    optPM.add(llvm::createNoTTIPass(targetMachine->getScalarTargetTransformInfo(),
+                                    targetMachine->getVectorTargetTransformInfo()));
+  #endif
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
@@ -933,8 +944,6 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-    // vector select wasn't available before 3.1...
-#ifndef LLVM_3_0
         llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
         if (selectInst != NULL && selectInst->getType()->isVectorTy()) {
             llvm::Value *factor = selectInst->getOperand(0);
@@ -955,7 +964,6 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 goto restart;
             }
         }
-#endif // !LLVM_3_0
 
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
         if (callInst == NULL)
@@ -1168,7 +1176,6 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // Indexing into global arrays can lead to this form, with
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
-#ifndef LLVM_3_0
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
             llvm::Constant *c = 
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
@@ -1176,9 +1183,6 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                 return NULL;
             elements.push_back(c);
         }
-#else
-        cv->getVectorElements(elements);
-#endif
 
         llvm::Constant *delta[ISPC_MAX_NVEC];
         for (unsigned int i = 0; i < elements.size(); ++i) {
@@ -1263,9 +1267,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                        llvm::Value **variableOffset, 
                        llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::ConstantVector>(vec) ||
-#ifndef LLVM_3_0
         llvm::isa<llvm::ConstantDataVector>(vec) ||
-#endif
         llvm::isa<llvm::ConstantAggregateZero>(vec)) {
         *constOffset = vec;
         *variableOffset = NULL;
@@ -1388,12 +1390,8 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
    *splat, if so). */
 static bool
 lIsIntegerSplat(llvm::Value *v, int *splat) {
-#ifdef LLVM_3_0
-    llvm::ConstantVector *cvec = llvm::dyn_cast<llvm::ConstantVector>(v);
-#else
     llvm::ConstantDataVector *cvec = 
         llvm::dyn_cast<llvm::ConstantDataVector>(v);
-#endif
     if (cvec == NULL)
         return false;
 
@@ -1528,9 +1526,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     fprintf(stderr, "\n");
 
     if (llvm::isa<llvm::ConstantVector>(*vec) ||
-#ifndef LLVM_3_0
         llvm::isa<llvm::ConstantDataVector>(*vec) ||
-#endif
         llvm::isa<llvm::ConstantAggregateZero>(*vec))
         return NULL;
 

@@ -40,8 +40,13 @@
 
 #include "ispc.h"
 #include "util.h"
-#include <llvm/Type.h>
-#include <llvm/DerivedTypes.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Type.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/Type.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 #include <llvm/ADT/SmallVector.h>
 
 class ConstExpr;

@@ -43,9 +43,14 @@
 
 #include <stdio.h>
 #include <map>
-#include <llvm/Value.h>
-#include <llvm/Module.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Value.h>
+  #include <llvm/Module.h>
+#else
+  #include <llvm/IR/Value.h>
+  #include <llvm/IR/Module.h>
+#endif
+#if defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
   #include <llvm/Analysis/DIBuilder.h>
 #else
@@ -815,7 +820,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
                                             32 /* size in bits */,
                                             32 /* align in bits */,
                                             elementArray
-#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+#if !defined(LLVM_3_1)
                                             , llvm::DIType()
 #endif
                                             );
@@ -2621,7 +2626,7 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
     }
 
     llvm::DIType diTargetType = targetType->GetDIType(scope);
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     return m->diBuilder->createReferenceType(diTargetType);
 #else
     return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,

@@ -48,9 +48,16 @@
   #include <sys/types.h>
   #include <unistd.h>
 #endif
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Module.h>
+  #include <llvm/Instructions.h>
+#else
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Instructions.h>
+#endif
+#if defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
   #include <llvm/Analysis/DIBuilder.h>
 #else
@@ -58,13 +65,14 @@
   #include <llvm/DIBuilder.h>
 #endif
 #include <llvm/Support/Dwarf.h>
-#include <llvm/Instructions.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
-#else
+#elif defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
 #endif
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -340,13 +348,10 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
-#if !defined(LLVM_3_0)
-        // LLVM 3.1+ only
         t->hasHalf = true;
-  #if !defined(LLVM_3_1)
+#if !defined(LLVM_3_1)
         // LLVM 3.2+ only
         t->hasRand = true;
-  #endif
 #endif
     }
     else if (!strcasecmp(isa, "avx1.1-x2")) {
@@ -356,16 +361,12 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
         t->maskingIsFree = false;
         t->maskBitCount = 32;
-#if !defined(LLVM_3_0)
-        // LLVM 3.1+ only
         t->hasHalf = true;
-  #if !defined(LLVM_3_1)
+#if !defined(LLVM_3_1)
         // LLVM 3.2+ only
         t->hasRand = true;
-  #endif
 #endif
     }
-#ifndef LLVM_3_0
     else if (!strcasecmp(isa, "avx2")) {
         t->isa = Target::AVX2;
         t->nativeVectorWidth = 8;
@@ -402,7 +403,6 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         t->hasGather = true;
 #endif
     }
-#endif // !LLVM_3_0
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n", 
                 isa, SupportedTargetISAs());
@@ -411,7 +411,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 
     if (!error) {
         llvm::TargetMachine *targetMachine = t->GetTargetMachine();
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
         const llvm::TargetData *targetData = targetMachine->getTargetData();
         t->is32Bit = (targetData->getPointerSize() == 4);
 #else
@@ -448,9 +448,7 @@ Target::SupportedTargetArchs() {
 const char *
 Target::SupportedTargetISAs() {
     return "sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
-#ifndef LLVM_3_0
         ", avx1.1, avx1.1-x2, avx2, avx2-x2"
-#endif // !LLVM_3_0
         ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
 
@@ -459,11 +457,7 @@ std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
     // Start with the host triple as the default
-#ifdef LLVM_3_0
-    triple.setTriple(llvm::sys::getHostTriple());
-#else
     triple.setTriple(llvm::sys::getDefaultTargetTriple());
-#endif
 
     // And override the arch in the host triple based on what the user
     // specified.  Here we need to deal with the fact that LLVM uses one
@@ -488,11 +482,6 @@ Target::GetTargetMachine() const {
 
     llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
                                                   llvm::Reloc::Default;
-#ifdef LLVM_3_0
-    std::string featuresString = attributes;
-    llvm::TargetMachine *targetMachine = 
-        target->createTargetMachine(triple, cpu, featuresString, relocModel);
-#else
     std::string featuresString = attributes;
     llvm::TargetOptions options;
 #if !defined(LLVM_3_1)
@@ -502,7 +491,6 @@ Target::GetTargetMachine() const {
     llvm::TargetMachine *targetMachine = 
         target->createTargetMachine(triple, cpu, featuresString, options,
                                     relocModel);
-#endif // !LLVM_3_0
     Assert(targetMachine != NULL);
 
     targetMachine->setAsmVerbosityDefault(true);
@@ -587,7 +575,7 @@ Target::SizeOf(llvm::Type *type,
                                           "sizeof_int", insertAtEnd);
     }
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
     uint64_t bitSize = td->getTypeSizeInBits(type);
@@ -634,7 +622,7 @@ Target::StructOffset(llvm::Type *type, int element,
         return NULL;
     }
 
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
     const llvm::TargetData *td = GetTargetMachine()->getTargetData();
     Assert(td != NULL);
     const llvm::StructLayout *sl = td->getStructLayout(structType);
