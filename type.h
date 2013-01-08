@@ -430,7 +430,7 @@ public:
                 bool isSlice = false, bool frozen = false);
 
     /** Helper method to return a uniform pointer to the given type. */
-    static PointerType *GetUniform(const Type *t);
+    static PointerType *GetUniform(const Type *t, bool isSlice = false);
     /** Helper method to return a varying pointer to the given type. */
     static PointerType *GetVarying(const Type *t);
 

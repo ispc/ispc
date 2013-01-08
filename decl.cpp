@@ -456,7 +456,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                     return;
                 }
 
-                decl->type = PointerType::GetUniform(targetType);
+                decl->type = PointerType::GetUniform(targetType, at->IsSOAType());
 
                 // Make sure there are no unsized arrays (other than the
                 // first dimension) in function parameter lists.
