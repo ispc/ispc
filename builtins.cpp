@@ -47,15 +47,25 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include <llvm/LLVMContext.h>
-#if !defined(LLVM_3_0) && !defined(LLVM_3_1)
+#if defined(LLVM_3_2)
   #include <llvm/Attributes.h>
 #endif
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Module.h>
+  #include <llvm/Type.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Intrinsics.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/Attributes.h>
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Type.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Intrinsics.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 #include <llvm/Linker.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/ADT/Triple.h>
@@ -700,10 +710,10 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
     llvm::Function *func = module->getFunction(name);
     Assert(func != NULL); // it should be declared already...
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
-    func->addFnAttr(llvm::Attribute::AlwaysInline);
-#else
+#if defined(LLVM_3_2)
     func->addFnAttr(llvm::Attributes::AlwaysInline);
+#else
+    func->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
     llvm::ReturnInst::Create(*g->ctx, LLVMInt32(val), bblock);

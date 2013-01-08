@@ -83,7 +83,11 @@ struct ForeachDimension;
 #include "util.h"
 
 #include <stdio.h>
-#include <llvm/Constants.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/Constants.h>
+#else
+  #include <llvm/IR/Constants.h>
+#endif
 
 #define UNIMPLEMENTED \
         Error(yylloc, "Unimplemented parser functionality %s:%d", \

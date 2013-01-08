@@ -46,12 +46,21 @@
 #include "util.h"
 #include <stdio.h>
 
-#include <llvm/LLVMContext.h>
-#include <llvm/Module.h>
-#include <llvm/Type.h>
-#include <llvm/DerivedTypes.h>
-#include <llvm/Instructions.h>
-#include <llvm/Intrinsics.h>
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/LLVMContext.h>
+  #include <llvm/Module.h>
+  #include <llvm/Type.h>
+  #include <llvm/Instructions.h>
+  #include <llvm/Intrinsics.h>
+  #include <llvm/DerivedTypes.h>
+#else
+  #include <llvm/IR/LLVMContext.h>
+  #include <llvm/IR/Module.h>
+  #include <llvm/IR/Type.h>
+  #include <llvm/IR/Instructions.h>
+  #include <llvm/IR/Intrinsics.h>
+  #include <llvm/IR/DerivedTypes.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Transforms/IPO.h>
@@ -301,10 +310,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // isn't worth the code bloat / overhead.
         bool checkMask = (type->isTask == true) || 
             (
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
               (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
-#else
+#elif defined(LLVM_3_2)
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
+#else // LLVM 3.3+
+              (function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false)
 #endif
              &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
@@ -442,7 +453,7 @@ Function::GenerateIR() {
                     functionName += std::string("_") + g->target.GetISAString();
                 llvm::Function *appFunction = 
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
-#if defined(LLVM_3_0) || defined(LLVM_3_1)
+#if defined(LLVM_3_1)
                 appFunction->setDoesNotThrow(true);
 #else
                 appFunction->setDoesNotThrow();
