@@ -149,6 +149,12 @@ namespace {
           for (llvm::BasicBlock::const_iterator II = BB->begin(),
                E = BB->end(); II != E; ++II) {
             const llvm::Instruction &I = *II;
+
+            // Operands of SwitchInsts changed format after 3.1
+            // Seems like there ought to be better way to do what we
+            // want here.  For now, punt on SwitchInsts.
+            if (llvm::isa<llvm::SwitchInst>(&I)) continue;
+            
             // Incorporate the type of the instruction and all its operands.
             incorporateType(I.getType());
             for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end();
