@@ -874,8 +874,8 @@ PointerType::PointerType(const Type *t, Variability v, bool ic, bool is,
 
 
 PointerType *
-PointerType::GetUniform(const Type *t) {
-    return new PointerType(t, Variability(Variability::Uniform), false);
+PointerType::GetUniform(const Type *t, bool is) {
+    return new PointerType(t, Variability(Variability::Uniform), false, is);
 }
 
 
