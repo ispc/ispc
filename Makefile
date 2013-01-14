@@ -24,10 +24,8 @@ LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
              -lclangSerialization -lclangParse -lclangSema \
-             -lclangAnalysis -lclangAST -lclangLex -lclangBasic
-ifneq ($(shell $(LLVM_CONFIG) --version), 3.0)
-  CLANG_LIBS += -lclangEdit
-endif
+             -lclangAnalysis -lclangAST -lclangBasic \
+             -lclangEdit -lclangLex
 
 ISPC_LIBS=$(shell $(LLVM_CONFIG) --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread

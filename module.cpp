@@ -91,10 +91,11 @@
 #else
   #if defined(LLVM_3_2)
     #include <llvm/DataLayout.h>
+    #include <llvm/TargetTransformInfo.h>
   #else // LLVM 3.3+
     #include <llvm/IR/DataLayout.h>
+    #include <llvm/Analysis/TargetTransformInfo.h>
   #endif
-  #include <llvm/TargetTransformInfo.h>
 #endif
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
