@@ -51,7 +51,11 @@
 #include "llvm/Pass.h"
 #include "llvm/PassManager.h"
 #if !defined(LLVM_3_1)
-  #include "llvm/TypeFinder.h"
+  #if defined(LLVM_3_2)
+    #include "llvm/TypeFinder.h"
+  #else // LLVM_3_3 +
+    #include "llvm/IR/TypeFinder.h"
+  #endif
 #endif // LLVM_3_2 +
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"

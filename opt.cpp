@@ -79,7 +79,7 @@
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
-  #include <llvm/TargetTransformInfo.h>
+  #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Analysis/Verifier.h>
@@ -426,8 +426,7 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
   #else // LLVM 3.3+
-    optPM.add(llvm::createNoTTIPass(targetMachine->getScalarTargetTransformInfo(),
-                                    targetMachine->getVectorTargetTransformInfo()));
+    targetMachine->addAnalysisPasses(optPM);
   #endif
 #endif
 

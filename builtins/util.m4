@@ -3295,7 +3295,7 @@ check_neighbors:
   %castvec = bitcast <$1 x $2> %vec to <$1 x $4>
   %castvr = call <$1 x $4> @__rotate_i$6(<$1 x $4> %castvec, i32 1)
   %vr = bitcast <$1 x $4> %castvr to <$1 x $2>
-  %eq = $5 eq <$1 x $2> %vec, %vr
+  %eq = $5 $7 <$1 x $2> %vec, %vr
   ifelse(MASK,i32, `
     %eq32 = sext <$1 x i1> %eq to <$1 x i32>
     %eqmm = call i64 @__movmsk(<$1 x i32> %eq32)', `
@@ -3310,7 +3310,7 @@ check_neighbors:
   %v`'i = extractelement <$1 x $2> %vec, i32 i')
 
   forloop(i, 0, eval($1-2), `
-  %eq`'i = $5 eq $2 %v`'i, %v`'eval(i+1)')
+  %eq`'i = $5 $7 $2 %v`'i, %v`'eval(i+1)')
 
   %and0 = and i1 %eq0, %eq1
   forloop(i, 1, eval($1-3), `
@@ -3330,10 +3330,10 @@ not_all_equal:
 ')
 
 define(`reduce_equal', `
-reduce_equal_aux($1, i32, int32, i32, icmp, 32)
-reduce_equal_aux($1, float, float, i32, fcmp, 32)
-reduce_equal_aux($1, i64, int64, i64, icmp, 64)
-reduce_equal_aux($1, double, double, i64, fcmp, 64)
+reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
+reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
+reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)
+reduce_equal_aux($1, double, double, i64, fcmp, 64, oeq)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
