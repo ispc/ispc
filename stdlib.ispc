@@ -340,9 +340,9 @@ static inline uniform bool any(bool v) {
     // We only care about whether "any" is true for the active program instances,
     // so we have to make v with the current program mask.
 #ifdef ISPC_TARGET_GENERIC
-    return __any(v | !__mask);
+    return __any(v & __mask);
 #else
-    return __any(__sext_varying_bool(v) | !__mask);
+    return __any(__sext_varying_bool(v) & __mask);
 #endif
 }
 
@@ -364,9 +364,9 @@ static inline uniform bool none(bool v) {
     // so we're only looking at the current lanes
 
 #ifdef ISPC_TARGET_GENERIC
-    return __none(v | !__mask);
+    return __none(v & __mask);
 #else
-    return __none(__sext_varying_bool(v) | !__mask);
+    return __none(__sext_varying_bool(v) & __mask);
 #endif
 }
 
