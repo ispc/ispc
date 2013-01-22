@@ -315,7 +315,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 #elif defined(LLVM_3_2)
               (function->getFnAttributes().hasAttribute(llvm::Attributes::AlwaysInline) == false)
 #else // LLVM 3.3+
-              (function->getAttributes().getFnAttributes().hasAttribute(llvm::Attribute::AlwaysInline) == false)
+              (function->getAttributes().getFnAttributes().hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::AlwaysInline) == false)
 #endif
              &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
