@@ -610,7 +610,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif defined(LLVM_3_2)
     if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-    if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
+        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
       assert(ArgTy->isPointerTy());
       ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -621,7 +621,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif defined(LLVM_3_2)
               PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
-              PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
+              PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #endif
               "");
     PrintedType = true;
@@ -640,7 +640,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 #elif defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
-            PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
+            PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #endif
             FunctionInnards.str());
 }
@@ -764,7 +764,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-      if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
+          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -777,7 +777,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
-                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #endif
                 "");
       ++Idx;
@@ -796,7 +796,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #elif defined(LLVM_3_2)
               PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
-              PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
+              PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #endif
               FunctionInnards.str());
     return Out;
@@ -2806,7 +2806,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif defined(LLVM_3_2)
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
+            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
           ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
@@ -2817,7 +2817,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif defined(LLVM_3_2)
                   PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
-                  PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt),
+                  PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
 #endif
                   ArgName);
         PrintedArg = true;
@@ -2845,7 +2845,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-      if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::ByVal)) {
+          if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
         assert(ArgTy->isPointerTy());
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
@@ -2856,7 +2856,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt)
 #else
-                PAL.getParamAttributes(Idx).hasAttribute(llvm::Attribute::SExt)
+                PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
 #endif
                 );
       PrintedArg = true;
@@ -2895,7 +2895,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 #elif defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
-            PAL.getParamAttributes(0).hasAttribute(llvm::Attribute::SExt),
+            PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
 #endif
             FunctionInnards.str());
 }
@@ -3845,7 +3845,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 #elif defined(LLVM_3_2)
                 PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attributes::SExt)
 #else
-                PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attribute::SExt)
+                PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
 #endif
                 );
       Out << ')';
@@ -3854,7 +3854,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
     if (I.paramHasAttr(ArgNo+1, 
 #if defined(LLVM_3_2)
                        llvm::Attributes::ByVal
-#else
+#else 
                        llvm::Attribute::ByVal
 #endif
                        ))
