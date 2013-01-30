@@ -1827,17 +1827,24 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     // track the source file position by handling them ourselves.
     inst.getPreprocessorOutputOpts().ShowComments = 1;
 
+#if defined(LLVM_3_3)
+    inst.getPreprocessorOutputOpts().ShowCPP = 1;
+#endif
+
     clang::HeaderSearchOptions &headerOpts = inst.getHeaderSearchOpts();
     headerOpts.UseBuiltinIncludes = 0;
     headerOpts.UseStandardSystemIncludes = 0;
     headerOpts.UseStandardCXXIncludes = 0;
     if (g->debugPrint)
         headerOpts.Verbose = 1;
-    for (int i = 0; i < (int)g->includePath.size(); ++i)
+    for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
+#if !defined(LLVM_3_3)                           
                            true /* is user supplied */,
+#endif
                            false /* not a framework */,
                            true /* ignore sys root */);
+    }
 
     clang::PreprocessorOptions &opts = inst.getPreprocessorOpts();
 
