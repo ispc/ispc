@@ -19,7 +19,7 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
+LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs engine ipo bitreader bitwriter instrumentation linker)
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
