@@ -19,7 +19,7 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs)
+LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs engine ipo bitreader bitwriter instrumentation linker)
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
@@ -42,8 +42,23 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
+# Define build time stamp and revision.
+# For revision we use GIT or SVN info.
 BUILD_DATE=$(shell date +%Y%m%d)
-BUILD_VERSION=$(shell git log --abbrev-commit --abbrev=16 | head -1)
+GIT_REVISION:=$(shell git log --abbrev-commit --abbrev=16 2>/dev/null | head -1)
+ifeq (${GIT_REVISION},)
+    SVN_REVISION:=$(shell svn log -l 1 2>/dev/null | grep -o \^r[[:digit:]]\* )
+    ifeq (${SVN_REVISION},)
+        # Failed to get revision info
+        BUILD_VERSION:="no_version_info"
+    else
+        # SVN revision info
+        BUILD_VERSION:=$(SVN_REVISION)
+    endif
+else
+    # GIT revision info
+    BUILD_VERSION:=$(GIT_REVISION)
+endif
 
 CXX=g++
 CPP=cpp
