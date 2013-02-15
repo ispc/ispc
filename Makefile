@@ -104,7 +104,7 @@ default: ispc
 
 depend: llvm_check $(CXX_SRC) $(HEADERS)
 	@echo Updating dependencies
-	@gcc -MM $(CXXFLAGS) $(CXX_SRC) | sed 's_^\([a-z]\)_objs/\1_g' > depend
+	@$(CXX) -MM $(CXXFLAGS) $(CXX_SRC) | sed 's_^\([a-z]\)_objs/\1_g' > depend
 
 -include depend
 
@@ -133,6 +133,13 @@ doxygen:
 ispc: print_llvm_src dirs $(OBJS)
 	@echo Creating ispc executable
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
+
+# Build ispc with address sanitizer instrumentation using clang compiler
+# Note that this is not portable build
+asan: ispc
+asan: CXX=clang++
+asan: OPT+=-fsanitize=address
+
 
 objs/%.o: %.cpp
 	@echo Compiling $<
