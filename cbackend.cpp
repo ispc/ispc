@@ -4841,7 +4841,10 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(llvm::createPrintModulePass(&fos));
     pm.add(new CWriter(fos, includeName, vectorWidth));
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
+    // This interface is depricated for 3.3+
     pm.add(llvm::createGCInfoDeleter());
+#endif
 //CO    pm.add(llvm::createVerifierPass());
 
     pm.run(*module);
