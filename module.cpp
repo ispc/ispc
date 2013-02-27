@@ -785,6 +785,10 @@ Module::AddFunctionDeclaration(const std::string &name,
         function->setDoesNotAlias(1);
 #endif
 
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+    function->addAttributes(llvm::AttributeSet::FunctionIndex, *g->target.tf_attributes);
+#endif
+
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
     if (functionType->isExported && 

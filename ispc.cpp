@@ -73,6 +73,7 @@
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
+  #include <llvm/IR/Attributes.h>
 #endif
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/Support/TargetSelect.h>
@@ -419,6 +420,19 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         const llvm::DataLayout *dataLayout = targetMachine->getDataLayout();
         t->is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
 #endif
+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+        // This is LLVM 3.3+ feature.
+        // Initialize target-specific "target-feature" attribute.
+        llvm::AttrBuilder attrBuilder;
+        attrBuilder.addAttribute("target-features", t->attributes);
+        t->tf_attributes = new llvm::AttributeSet(
+            llvm::AttributeSet::get(
+                *g->ctx,
+                llvm::AttributeSet::FunctionIndex,
+                attrBuilder));
+#endif
+
         Assert(t->vectorWidth <= ISPC_MAX_NVEC);
     }
 

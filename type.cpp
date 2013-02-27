@@ -2131,8 +2131,18 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
 
     llvm::DIArray elements = m->diBuilder->getOrCreateArray(elementLLVMTypes);
     llvm::DIFile diFile = pos.GetDIFile();
-    return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, currentSize, 
-                                          align, 0, elements);
+    return m->diBuilder->createStructType(
+        scope,
+        name,
+        diFile,
+        pos.first_line, // Line number
+        currentSize,    // Size in bits
+        align,          // Alignment in bits
+        0,              // Flags
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+        llvm::DIType(), // DerivedFrom
+#endif
+        elements);
 }
 
 
@@ -2364,9 +2374,18 @@ llvm::DIType
 UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
     llvm::DIFile diFile = pos.GetDIFile();
     llvm::DIArray elements;
-    return m->diBuilder->createStructType(scope, name, diFile, pos.first_line, 
-                                          0 /* size */, 0 /* align */, 
-                                          0 /* flags */, elements); 
+    return m->diBuilder->createStructType(
+        scope,
+        name,
+        diFile,
+        pos.first_line, // Line number
+        0,              // Size
+        0,              // Align
+        0,              // Flags
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+        llvm::DIType(), // DerivedFrom
+#endif
+        elements);
 }
 
 
