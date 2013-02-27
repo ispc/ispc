@@ -597,8 +597,14 @@ lSetInternalFunctions(llvm::Module *module) {
     int count = sizeof(names) / sizeof(names[0]);
     for (int i = 0; i < count; ++i) {
         llvm::Function *f = module->getFunction(names[i]);
-        if (f != NULL && f->empty() == false)
+        if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+            f->addAttributes(
+                llvm::AttributeSet::FunctionIndex,
+                *g->target.tf_attributes);
+#endif
+        }
     }
 }
 
