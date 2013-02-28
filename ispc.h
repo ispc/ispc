@@ -68,6 +68,7 @@
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
+    class AttributeSet;
     class BasicBlock;
     class Constant;
     class ConstantValue;
@@ -224,8 +225,15 @@ struct Target {
     /** Target CPU. (e.g. "corei7", "corei7-avx", ..) */
     std::string cpu;
 
-    /** Target-specific attributes to pass along to the LLVM backend */
+    /** Target-specific attribute string to pass along to the LLVM backend */
     std::string attributes;
+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+    /** Target-specific LLVM attribute, which has to be attached to every
+        function to ensure that it is generated for correct target architecture.
+        This is requirement was introduced in LLVM 3.3 */
+    llvm::AttributeSet* tf_attributes;
+#endif
 
     /** Native vector width of the vector instruction set.  Note that this
         value is directly derived from the ISA Being used (e.g. it's 4 for
