@@ -32,7 +32,7 @@
 */
 
 /** @file module.h
-    @brief Declaration of the Module class, which is the ispc-side representation
+    @brief %Declaration of the Module class, which is the ispc-side representation
     of the results of compiling a source file.
  */
 
