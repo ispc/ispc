@@ -1714,7 +1714,7 @@ isn't performed implicitly, for example for function calls.
 Function Pointer Types
 ----------------------
 
-Pointers to functions can also be to be taken and used as in C and C++.
+Pointers to functions can also be taken and used as in C and C++.
 The syntax for declaring function pointer types is the same as in those
 languages; it's generally easiest to use a ``typedef`` to help:
 
@@ -1788,7 +1788,7 @@ Enumeration Types
 -----------------
 
 It is possible to define user-defined enumeration types in ``ispc`` with
-the ``enum`` keyword, which is followed by an option enumeration type name
+the ``enum`` keyword, which is followed by an optional enumeration type name
 and then a brace-delimited list of enumerators with optional values:
 
 ::
@@ -2043,7 +2043,7 @@ Here, ``b`` is a ``varying Bar`` (since ``varying`` is the default
 variability).  If ``Bar`` is defined as above, then ``vb.a`` is still a
 ``uniform int``, since its varaibility was bound in the original
 declaration of the ``Bar`` type.  Similarly, ``vb.b`` is ``varying``.  The
-variability fo ``vb.c`` is ``varying``, since ``vb`` is ``varying``.
+variability of ``vb.c`` is ``varying``, since ``vb`` is ``varying``.
 
 (Similarly, ``ub.a`` is ``uniform``, ``ub.b`` is ``varying``, and ``ub.c``
 is ``uniform``.)
@@ -2293,8 +2293,8 @@ serviced by corresponding calls the system C library's ``malloc()`` and
 ``free()`` functions.
 
 Note that the rules for ``uniform`` and ``varying`` for ``new`` are
-analogous to the corresponding rules are for pointers (as described in
-`Pointer Types`_.)  Specifically, if a specific rate qualifier isn't
+analogous to the corresponding rules for pointers (as described in
+`Pointer Types`_).  Specifically, if a specific rate qualifier isn't
 provided with the ``new`` expression, then the default is that a "varying"
 ``new`` is performed, where each program instance performs a unique
 allocation.  The allocated type, in turn, is by default ``uniform``.
@@ -2533,7 +2533,7 @@ Iteration over unique elements: "foreach_unique"
 ------------------------------------------------
 
 It can be useful to iterate over the elements of a varying variable,
-processing the subsets of of them that have the same value together.  For
+processing the subsets of them that have the same value together.  For
 example, consider a varying variable ``x`` that has the values ``{1, 2, 2,
 1, 1, 0, 0, 0}``, where the program is running on a target with a gang size
 of 8 program instances.  Here, ``x`` has three unique values across the
@@ -2571,7 +2571,7 @@ Parallel Iteration Statements: "foreach" and "foreach_tiled"
 
 The ``foreach`` and ``foreach_tiled`` constructs specify loops over a
 possibly multi-dimensional domain of integer ranges.  Their role goes
-beyond "syntactic sugar"; they provides one of the two key ways of
+beyond "syntactic sugar"; they provide one of the two key ways of
 expressing parallel computation in ``ispc``.
 
 In general, a ``foreach`` or ``foreach_tiled`` statement takes one or more
@@ -2892,7 +2892,7 @@ following code:
 The general idea is that we are first using SPMD parallelism to determine
 which of the items requires further processing, checking a gang's worth of
 them concurrently inside the ``foreach`` loop.  Assuming that only a subset
-of them need further processing, would be wasteful to do this work within
+of them needs further processing, would be wasteful to do this work within
 the ``foreach`` loop in the same program instance that made the initial
 determination of whether more work as needed; in this case, all of the
 program instances corresponding to items that didn't need further
@@ -3114,7 +3114,7 @@ with the given size and alignment.  Note that there is no explicit
 ``ISPCFree()`` call; instead, all memory allocated within an ``ispc``
 function should be freed when ``ISPCSync()`` is called.
 
-``ISPCLaunch()`` is called to launch to launch one or more asynchronous
+``ISPCLaunch()`` is called to launch one or more asynchronous
 tasks.  Each ``launch`` statement in ``ispc`` code causes a call to
 ``ISPCLaunch()`` to be emitted in the generated code.  The three parameters
 after the handle pointer to the function are relatively straightforward;
@@ -3164,7 +3164,7 @@ Recall from `Expressions`_ that ``ispc`` short-circuits the evaluation of
 logical and selection operators: given an expression like ``(index < count
 && array[index] == 0)``, then ``array[index] == 0`` is only evaluated if
 ``index < count`` is true.  This property is useful for writing expressions
-like the preceeding one, where the second expression may not be safe to
+like the preceding one, where the second expression may not be safe to
 evaluate in some cases.
 
 This short-circuiting can impose overhead in the generated code; additional
@@ -3789,7 +3789,7 @@ implemented as:
 
     void scan_add(int *in_array, int *result_array, int count) {
         result_array[0] = 0;
-        for (int i = 0; i < count; ++i)
+        for (int i = 1; i < count; ++i)
             result_array[i] = result_array[i-1] + in_array[i-1];
     }
 
@@ -4025,7 +4025,7 @@ to do floating-point math directly with ``half`` types in ``ispc``; these
 functions facilitate converting to and from half-format data in memory.
 
 To use them, half-format data should be loaded into an ``int16`` and the
-``half_to_float()`` function used to convert it the a 32-bit floating point
+``half_to_float()`` function used to convert it to a 32-bit floating point
 value.  To store a value to memory in half format, the ``float_to_half()``
 function returns the 16 bits that are the closest match to the given
 ``float``, in half format.
@@ -4120,11 +4120,11 @@ stored in the location that ``ptr`` points to has that program instance's
 value "delta" added to it atomically, and the old value at that location is
 returned from the function.
 
-One thing to note is that that the type of the value being added to a
+One thing to note is that the type of the value being added to is a
 ``uniform`` integer, while the increment amount and the return value are
 ``varying``.  In other words, the semantics of this call are that each
 running program instance individually issues the atomic operation with its
-own ``delta`` value and gets the previous value of back in return.  The
+own ``delta`` value and gets the previous value back in return.  The
 atomics for the running program instances may be issued in arbitrary order;
 it's not guaranteed that they will be issued in ``programIndex`` order, for
 example.
@@ -4332,7 +4332,7 @@ System Information
 
 The value of a  high-precision hardware clock counter is returned by the
 ``clock()`` routine; its value increments by one each processor cycle.
-Thus, taking the difference between the values returned by ``clock()`` and
+Thus, taking the difference between the values returned by ``clock()`` at
 different points in program execution gives the number of cycles between
 those points in the program.
 
@@ -4439,7 +4439,7 @@ It is illegal to overload functions declared with ``extern "C"`` linkage;
 ``ispc`` issues an error in this case.
 
 **Only a single function call is made back to C++ for the entire gang of
-runing program instances**.  Furthermore, function calls back to C/C++ are not
+running program instances**.  Furthermore, function calls back to C/C++ are not
 made if none of the program instances want to make the call.  For example,
 given code like:
 
@@ -4541,7 +4541,7 @@ Because ``varying`` types have size that depends on the size of the gang of
 program instances, ``ispc`` prohibits any varying types from being used in
 parameters to functions with the ``export`` qualifier.  (``ispc`` also
 prohibits passing structures that themselves have varying types as members,
-etc.)  Thus, all datatypes that is shared with the application must have
+etc.)  Thus, all datatypes that are shared with the application must have
 the ``uniform`` or ``soa`` rate qualifier applied to them.  (See `Use
 "Structure of Arrays" Layout When Possible`_ in the Performance Guide for
 more discussion of how to load vectors of SOA data from the application.)
@@ -4576,7 +4576,7 @@ application code if possible.
 Data Alignment and Aliasing
 ---------------------------
 
-There are are two important constraints that must be adhered to when
+There are two important constraints that must be adhered to when
 passing pointers from the application to ``ispc`` programs.
 
 The first is that it is required that it be valid to read memory at the
@@ -4601,7 +4601,7 @@ functions.  Given a function like:
         if (b == 0) { ... }
     }
 
-Then if the same variable must not be passed to ``func()``.  This is
+Then the same variable must not be passed to ``func()``.  This is
 another case of aliasing, and if the caller calls the function as ``func(x,
 x)``, it's not guaranteed that the ``if`` test will evaluate to true, due
 to the compiler's requirement of no aliasing.

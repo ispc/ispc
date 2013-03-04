@@ -32,7 +32,7 @@
 */
 
 /** @file ctx.h
-    @brief Declaration of the FunctionEmitContext class
+    @brief %Declaration of the FunctionEmitContext class
 */
 
 #ifndef ISPC_CTX_H
