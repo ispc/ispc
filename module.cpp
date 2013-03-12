@@ -1895,11 +1895,12 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         if (g->cppArgs[i].substr(0,2) == "-D") {
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
-    }    
+    }
+
+    inst.getLangOpts().LineComment = 1;
     inst.createPreprocessor();
 
-    clang::LangOptions langOptions;
-    diagPrinter->BeginSourceFile(langOptions, &inst.getPreprocessor());
+    diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
     clang::DoPrintPreprocessedInput(inst.getPreprocessor(),
                                     ostream, inst.getPreprocessorOutputOpts());
     diagPrinter->EndSourceFile();
