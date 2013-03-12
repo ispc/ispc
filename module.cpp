@@ -1897,7 +1897,11 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         }
     }
 
+#if defined(LLVM_3_1)
+    inst.getLangOpts().BCPLComment = 1;
+#else
     inst.getLangOpts().LineComment = 1;
+#endif
     inst.createPreprocessor();
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());
