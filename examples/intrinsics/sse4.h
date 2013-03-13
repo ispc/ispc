@@ -51,9 +51,6 @@
 #define FORCEINLINE __attribute__((always_inline)) inline
 #endif
 
-#undef FORCEINLINE
-#define FORCEINLINE
-
 typedef float __vec1_f;
 typedef double __vec1_d;
 typedef int8_t __vec1_i8;
@@ -3986,3 +3983,7 @@ static FORCEINLINE uint64_t __atomic_cmpxchg(uint64_t *p, uint64_t cmpval,
     return __sync_val_compare_and_swap(p, cmpval, newval);
 #endif
 }
+
+#undef FORCEINLINE
+
+
