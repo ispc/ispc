@@ -119,12 +119,12 @@ namespace {
     // objects, we keep several helper maps.
     llvm::DenseSet<const llvm::Value*> VisitedConstants;
     llvm::DenseSet<llvm::Type*> VisitedTypes;
-    
+
     std::vector<llvm::ArrayType*> &ArrayTypes;
   public:
     TypeFinder(std::vector<llvm::ArrayType*> &t)
       : ArrayTypes(t) {}
-    
+
     void run(const llvm::Module &M) {
       // Get types from global variables.
         for (llvm::Module::const_global_iterator I = M.global_begin(),
@@ -133,7 +133,7 @@ namespace {
         if (I->hasInitializer())
           incorporateValue(I->getInitializer());
       }
-      
+
       // Get types from aliases.
       for (llvm::Module::const_alias_iterator I = M.alias_begin(),
            E = M.alias_end(); I != E; ++I) {
@@ -141,13 +141,13 @@ namespace {
         if (const llvm::Value *Aliasee = I->getAliasee())
           incorporateValue(Aliasee);
       }
-      
+
       llvm::SmallVector<std::pair<unsigned, llvm::MDNode*>, 4> MDForInst;
 
       // Get types from functions.
       for (llvm::Module::const_iterator FI = M.begin(), E = M.end(); FI != E; ++FI) {
         incorporateType(FI->getType());
-        
+
         for (llvm::Function::const_iterator BB = FI->begin(), E = FI->end();
              BB != E;++BB)
           for (llvm::BasicBlock::const_iterator II = BB->begin(),
@@ -158,13 +158,13 @@ namespace {
             // Seems like there ought to be better way to do what we
             // want here.  For now, punt on SwitchInsts.
             if (llvm::isa<llvm::SwitchInst>(&I)) continue;
-            
+
             // Incorporate the type of the instruction and all its operands.
             incorporateType(I.getType());
             for (llvm::User::const_op_iterator OI = I.op_begin(), OE = I.op_end();
                  OI != OE; ++OI)
               incorporateValue(*OI);
-            
+
             // Incorporate types hiding in metadata.
             I.getAllMetadataOtherThanDebugLoc(MDForInst);
             for (unsigned i = 0, e = MDForInst.size(); i != e; ++i)
@@ -172,7 +172,7 @@ namespace {
             MDForInst.clear();
           }
       }
-      
+
       for (llvm::Module::const_named_metadata_iterator I = M.named_metadata_begin(),
            E = M.named_metadata_end(); I != E; ++I) {
         const llvm::NamedMDNode *NMD = I;
@@ -180,7 +180,7 @@ namespace {
           incorporateMDNode(NMD->getOperand(i));
       }
     }
-    
+
   private:
     void incorporateType(llvm::Type *Ty) {
       // Check to see if we're already visited this type.
@@ -189,13 +189,13 @@ namespace {
 
       if (llvm::ArrayType *ATy = llvm::dyn_cast<llvm::ArrayType>(Ty))
           ArrayTypes.push_back(ATy);
-      
+
       // Recursively walk all contained types.
       for (llvm::Type::subtype_iterator I = Ty->subtype_begin(),
            E = Ty->subtype_end(); I != E; ++I)
         incorporateType(*I);
     }
-    
+
     /// incorporateValue - This method is used to walk operand lists finding
     /// types hiding in constant expressions and other operands that won't be
     /// walked in other ways.  GlobalValues, basic blocks, instructions, and
@@ -204,27 +204,27 @@ namespace {
       if (const llvm::MDNode *M = llvm::dyn_cast<llvm::MDNode>(V))
         return incorporateMDNode(M);
       if (!llvm::isa<llvm::Constant>(V) || llvm::isa<llvm::GlobalValue>(V)) return;
-      
+
       // Already visited?
       if (!VisitedConstants.insert(V).second)
         return;
-      
+
       // Check this type.
       incorporateType(V->getType());
-      
+
       // Look in operands for types.
       const llvm::User *U = llvm::cast<llvm::User>(V);
       for (llvm::Constant::const_op_iterator I = U->op_begin(),
            E = U->op_end(); I != E;++I)
         incorporateValue(*I);
     }
-    
+
     void incorporateMDNode(const llvm::MDNode *V) {
-      
+
       // Already visited?
       if (!VisitedConstants.insert(V).second)
         return;
-      
+
       // Look in operands for types.
       for (unsigned i = 0, e = V->getNumOperands(); i != e; ++i)
         if (llvm::Value *Op = V->getOperand(i))
@@ -266,7 +266,7 @@ namespace {
     // TargetData have generally similar interfaces...
     const llvm::DataLayout* TD;
 #endif
-    
+
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
     std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
     unsigned VectorConstantIndex;
@@ -276,7 +276,7 @@ namespace {
     unsigned OpaqueCounter;
     llvm::DenseMap<const llvm::Value*, unsigned> AnonValueNumbers;
     unsigned NextAnonValueNumber;
-    
+
     std::string includeName;
     int vectorWidth;
 
@@ -291,7 +291,7 @@ namespace {
                        int vecwidth)
           : FunctionPass(ID), Out(o), IL(0), /* Mang(0), */ LI(0),
         TheModule(0), TAsm(0), MRI(0), MOFI(0), TCtx(0), TD(0),
-        OpaqueCounter(0), NextAnonValueNumber(0), 
+        OpaqueCounter(0), NextAnonValueNumber(0),
         includeName(incname ? incname : "generic_defs.h"),
         vectorWidth(vecwidth) {
       initializeLoopInfoPass(*llvm::PassRegistry::getPassRegistry());
@@ -372,7 +372,7 @@ namespace {
 
     std::string getStructName(llvm::StructType *ST);
     std::string getArrayName(llvm::ArrayType *AT);
-    
+
     /// writeOperandDeref - Print the result of dereferencing the specified
     /// operand with '*'.  This is equivalent to printing '*' then using
     /// writeOperand, but avoids excess syntax in some cases.
@@ -399,7 +399,7 @@ namespace {
 
   private :
     void lowerIntrinsics(llvm::Function &F);
-    /// Prints the definition of the intrinsic function F. Supports the 
+    /// Prints the definition of the intrinsic function F. Supports the
     /// intrinsics which need to be explicitly defined in the CBackend.
     void printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostream &Out);
 
@@ -573,7 +573,7 @@ static std::string CBEMangle(const std::string &S) {
 std::string CWriter::getStructName(llvm::StructType *ST) {
   if (!ST->isLiteral() && !ST->getName().empty())
     return CBEMangle("l_"+ST->getName().str());
-  
+
   return "l_unnamed_" + llvm::utostr(UnnamedStructIDs[ST]);
 }
 
@@ -694,19 +694,19 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
         assert(eltTy->isIntegerTy());
         switch (eltTy->getPrimitiveSizeInBits()) {
         case 1:
-            suffix = "i1"; 
+            suffix = "i1";
             break;
         case 8:
-            suffix = "i8"; 
+            suffix = "i8";
             break;
         case 16:
-            suffix = "i16"; 
+            suffix = "i16";
             break;
         case 32:
-            suffix = "i32"; 
+            suffix = "i32";
             break;
         case 64:
-            suffix = "i64"; 
+            suffix = "i64";
             break;
         default:
             llvm::report_fatal_error("Only integer types of size 8/16/32/64 are "
@@ -714,7 +714,7 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
         }
     }
 
-    return Out << "__vec" << VTy->getNumElements() << "_" << suffix << " " << 
+    return Out << "__vec" << VTy->getNumElements() << "_" << suffix << " " <<
         NameSoFar;
 #else
     return printSimpleType(Out, VTy->getElementType(), isSigned,
@@ -736,7 +736,7 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
 //
 llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
                                 bool isSigned, const std::string &NameSoFar,
-                                bool IgnoreName, 
+                                bool IgnoreName,
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
                                 const llvm::AttrListPtr &PAL
 #else
@@ -803,11 +803,11 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
   }
   case llvm::Type::StructTyID: {
     llvm::StructType *STy = llvm::cast<llvm::StructType>(Ty);
-    
+
     // Check to see if the type is named.
     if (!IgnoreName)
       return Out << getStructName(STy) << ' ' << NameSoFar;
-    
+
     Out << "struct " << NameSoFar << " {\n";
 
     // print initialization func
@@ -930,13 +930,13 @@ void CWriter::printConstantDataSequential(llvm::ConstantDataSequential *CDS,
     Out << '\"';
     // Keep track of whether the last number was a hexadecimal escape.
     bool LastWasHex = false;
-    
+
     llvm::StringRef Bytes = CDS->getAsCString();
-    
+
     // Do not include the last character, which we know is null
     for (unsigned i = 0, e = Bytes.size(); i != e; ++i) {
       unsigned char C = Bytes[i];
-      
+
       // Print it out literally if it is a printable character.  The only thing
       // to be careful about is when the last letter output was a hex escape
       // code, in which case we have to be careful not to print out hex digits
@@ -1143,8 +1143,8 @@ bool CWriter::printCast(unsigned opc, llvm::Type *SrcTy, llvm::Type *DstTy) {
 
 
 /** Construct the name of a function with the given base and returning a
-    vector of a given type, of the specified idth.  For example, if base 
-    is "foo" and matchType is i32 and width is 16, this will return the 
+    vector of a given type, of the specified idth.  For example, if base
+    is "foo" and matchType is i32 and width is 16, this will return the
     string "__foo_i32<__vec16_i32>".
  */
 static const char *
@@ -1492,7 +1492,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
     }
     if (llvm::ConstantArray *CA = llvm::dyn_cast<llvm::ConstantArray>(CPV)) {
       printConstantArray(CA, Static);
-    } else if (llvm::ConstantDataSequential *CDS = 
+    } else if (llvm::ConstantDataSequential *CDS =
                llvm::dyn_cast<llvm::ConstantDataSequential>(CPV)) {
       printConstantDataSequential(CDS, Static);
     } else {
@@ -1584,7 +1584,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
             llvm::report_fatal_error("Unexpected vector type");
         }
     }
-    
+
     break;
   }
   case llvm::Type::StructTyID:
@@ -2658,7 +2658,7 @@ void CWriter::printModuleTypes() {
   Out << "/* Structure and array forward declarations */\n";
 
   unsigned NextTypeID = 0;
-  
+
   // If any of them are missing names, add a unique ID to UnnamedStructIDs.
   // Print out forward declarations for structure types.
   for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
@@ -2718,7 +2718,7 @@ void CWriter::printContainedStructs(llvm::Type *Ty,
   if (llvm::StructType *ST = llvm::dyn_cast<llvm::StructType>(Ty)) {
     // Check to see if we have already printed this struct.
     if (!Printed.insert(Ty)) return;
-    
+
     // Print structure type out.
     printType(Out, ST, false, getStructName(ST), true);
     Out << ";\n\n";
@@ -3623,8 +3623,8 @@ void CWriter::printIntrinsicDefinition(const llvm::Function &F, llvm::raw_ostrea
     Out << "  r.field1 = (r.field0 < a);\n";
     Out << "  return r;\n}\n";
     break;
-    
-  case llvm::Intrinsic::sadd_with_overflow:            
+
+  case llvm::Intrinsic::sadd_with_overflow:
     // static inline Rty sadd_ixx(ixx a, ixx b) {
     //   Rty r;
     //   r.field1 = (b > 0 && a > XX_MAX - b) ||
@@ -3851,10 +3851,10 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
       Out << ')';
     }
     // Check if the argument is expected to be passed by value.
-    if (I.paramHasAttr(ArgNo+1, 
+    if (I.paramHasAttr(ArgNo+1,
 #if defined(LLVM_3_2)
                        llvm::Attributes::ByVal
-#else 
+#else
                        llvm::Attribute::ByVal
 #endif
                        ))
@@ -4419,7 +4419,7 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
-        llvm::InsertElementInst *insertInst = 
+        llvm::InsertElementInst *insertInst =
             llvm::dyn_cast<llvm::InsertElementInst>(&*iter);
         if (insertInst == NULL)
             continue;
@@ -4444,7 +4444,7 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             else if (toMatch != insertValue)
                 goto not_equal;
 
-            insertInst = 
+            insertInst =
                 llvm::dyn_cast<llvm::InsertElementInst>(insertInst->getOperand(0));
         }
         assert(toMatch != NULL);
@@ -4458,8 +4458,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // Declare the smear function if needed; it takes a single
                 // scalar parameter and returns a vector of the same
                 // parameter type.
-                llvm::Constant *sf = 
-                    module->getOrInsertFunction(smearFuncName, iter->getType(), 
+                llvm::Constant *sf =
+                    module->getOrInsertFunction(smearFuncName, iter->getType(),
                                                 matchType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
@@ -4475,7 +4475,7 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             assert(smearFunc != NULL);
             llvm::Value *args[1] = { toMatch };
             llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[1]);
-            llvm::Instruction *smearCall = 
+            llvm::Instruction *smearCall =
                 llvm::CallInst::Create(smearFunc, argArray, LLVMGetName(toMatch, "_smear"),
                                  (llvm::Instruction *)NULL);
 
@@ -4608,9 +4608,9 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                 // are the same as the two arguments to the compare we're
                 // replacing and the third argument is the mask type.
                 llvm::Type *cmpOpType = opCmp->getOperand(0)->getType();
-                llvm::Constant *acf = 
+                llvm::Constant *acf =
                     m->module->getOrInsertFunction(funcName, LLVMTypes::MaskType,
-                                                   cmpOpType, cmpOpType, 
+                                                   cmpOpType, cmpOpType,
                                                    LLVMTypes::MaskType, NULL);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
                 Assert(andCmpFunc != NULL);
@@ -4625,11 +4625,11 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 
             // Set up the function call to the *_and_mask function; the
             // mask value passed in is the other operand to the AND.
-            llvm::Value *args[3] = { opCmp->getOperand(0), opCmp->getOperand(1), 
+            llvm::Value *args[3] = { opCmp->getOperand(0), opCmp->getOperand(1),
                                      bop->getOperand(i ^ 1) };
             llvm::ArrayRef<llvm::Value *> argArray(&args[0], &args[3]);
-            llvm::Instruction *cmpCall = 
-                llvm::CallInst::Create(andCmpFunc, argArray, 
+            llvm::Instruction *cmpCall =
+                llvm::CallInst::Create(andCmpFunc, argArray,
                                        LLVMGetName(bop, "_and_mask"),
                                        (llvm::Instruction *)NULL);
 
@@ -4656,12 +4656,12 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 class MaskOpsCleanupPass : public llvm::BasicBlockPass {
 public:
     MaskOpsCleanupPass(llvm::Module *m)
-        : BasicBlockPass(ID) { 
+        : BasicBlockPass(ID) {
         llvm::Type *mt = LLVMTypes::MaskType;
 
         // Declare the __not, __and_not1, and __and_not2 functions that we
         // expect the target to end up providing.
-        notFunc = 
+        notFunc =
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__not", mt, mt, NULL));
         assert(notFunc != NULL);
 #if defined(LLVM_3_2)
@@ -4672,7 +4672,7 @@ public:
         notFunc->addFnAttr(llvm::Attribute::ReadNone);
 #endif
 
-        andNotFuncs[0] = 
+        andNotFuncs[0] =
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not1", mt, mt, mt,
                                                       NULL));
         assert(andNotFuncs[0] != NULL);
@@ -4683,7 +4683,7 @@ public:
         andNotFuncs[0]->addFnAttr(llvm::Attribute::NoUnwind);
         andNotFuncs[0]->addFnAttr(llvm::Attribute::ReadNone);
 #endif
-        andNotFuncs[1] = 
+        andNotFuncs[1] =
             llvm::dyn_cast<llvm::Function>(m->getOrInsertFunction("__and_not2", mt, mt, mt,
                                                       NULL));
         assert(andNotFuncs[1] != NULL);
@@ -4711,7 +4711,7 @@ char MaskOpsCleanupPass::ID = 0;
 
 
 /** Returns true if the given value is a compile-time constant vector of
-    i1s with all elements 'true'. 
+    i1s with all elements 'true'.
 */
 static bool
 lIsAllTrue(llvm::Value *v) {
@@ -4721,7 +4721,7 @@ lIsAllTrue(llvm::Value *v) {
                 (ci = llvm::dyn_cast<llvm::ConstantInt>(cv->getSplatValue())) != NULL &&
                 ci->isOne());
     }
-                
+
     if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
         llvm::ConstantInt *ci;
         return (cdv->getSplatValue() != NULL &&
@@ -4770,7 +4770,7 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
             // Check for XOR with all-true values
             if (lIsAllTrue(bop->getOperand(1))) {
                 llvm::ArrayRef<llvm::Value *> arg(bop->getOperand(0));
-                llvm::CallInst *notCall = llvm::CallInst::Create(notFunc, arg, 
+                llvm::CallInst *notCall = llvm::CallInst::Create(notFunc, arg,
                                                      bop->getName());
                 ReplaceInstWithInst(iter, notCall);
                 modifiedAny = true;
@@ -4791,7 +4791,7 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                     llvm::ArrayRef<llvm::Value *> argsRef(&args[0], 2);
 
                     // Call the appropriate __and_not* function.
-                    llvm::CallInst *andNotCall = 
+                    llvm::CallInst *andNotCall =
                         llvm::CallInst::Create(andNotFuncs[i], argsRef, bop->getName());
 
                     ReplaceInstWithInst(iter, andNotCall);

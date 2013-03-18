@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file decl.h
@@ -48,7 +48,7 @@
     qualifiers, and that it's basic type is 'int'.  Then for each variable
     declaration, the Declaraiton class holds an instance of a Declarator,
     which in turn records the per-variable information like the name, array
-    size (if any), initializer expression, etc.  
+    size (if any), initializer expression, etc.
 */
 
 #ifndef ISPC_DECL_H
@@ -124,7 +124,7 @@ enum DeclaratorKind {
     DK_FUNCTION
 };
 
-/** @brief Representation of the declaration of a single variable.  
+/** @brief Representation of the declaration of a single variable.
 
     In conjunction with an instance of the DeclSpecs, this gives us
     everything we need for a full variable declaration.
@@ -162,7 +162,7 @@ public:
     StorageClass storageClass;
 
     /** For array declarators, this gives the declared size of the array.
-        Unsized arrays have arraySize == 0. */ 
+        Unsized arrays have arraySize == 0. */
     int arraySize;
 
     /** Name associated with the declarator. */

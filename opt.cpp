@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file opt.cpp
@@ -145,7 +145,7 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 
 /** This utility routine copies the metadata (if any) attached to the
-    'from' instruction in the IR to the 'to' instruction.  
+    'from' instruction in the IR to the 'to' instruction.
 
     For flexibility, this function takes an llvm::Value rather than an
     llvm::Instruction for the 'to' parameter; at some places in the code
@@ -157,9 +157,9 @@ static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 static void
 lCopyMetadata(llvm::Value *vto, const llvm::Instruction *from) {
     llvm::Instruction *to = llvm::dyn_cast<llvm::Instruction>(vto);
-    if (!to) 
+    if (!to)
         return;
-                                                              
+
     llvm::SmallVector<std::pair<unsigned int, llvm::MDNode *>, 8> metadata;
     from->getAllMetadata(metadata);
     for (unsigned int i = 0; i < metadata.size(); ++i)
@@ -202,16 +202,16 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
     // expected to have done in its operation
     llvm::MDString *str = llvm::dyn_cast<llvm::MDString>(filename->getOperand(0));
     Assert(str);
-    llvm::ConstantInt *first_lnum = 
+    llvm::ConstantInt *first_lnum =
         llvm::dyn_cast<llvm::ConstantInt>(first_line->getOperand(0));
     Assert(first_lnum);
-    llvm::ConstantInt *first_colnum = 
+    llvm::ConstantInt *first_colnum =
         llvm::dyn_cast<llvm::ConstantInt>(first_column->getOperand(0));
     Assert(first_column);
-    llvm::ConstantInt *last_lnum = 
+    llvm::ConstantInt *last_lnum =
         llvm::dyn_cast<llvm::ConstantInt>(last_line->getOperand(0));
     Assert(last_lnum);
-    llvm::ConstantInt *last_colnum = 
+    llvm::ConstantInt *last_colnum =
         llvm::dyn_cast<llvm::ConstantInt>(last_column->getOperand(0));
     Assert(last_column);
 
@@ -223,7 +223,7 @@ lGetSourcePosFromMetadata(const llvm::Instruction *inst, SourcePos *pos) {
 
 
 static llvm::Instruction *
-lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           const char *name, llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[2] = { arg0, arg1 };
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[2]);
@@ -232,7 +232,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
 
 
 static llvm::Instruction *
-lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, const char *name,
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[3] = { arg0, arg1, arg2 };
@@ -242,7 +242,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
 
 
 static llvm::Instruction *
-lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, llvm::Value *arg3, const char *name,
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[4] = { arg0, arg1, arg2, arg3 };
@@ -251,7 +251,7 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
 }
 
 static llvm::Instruction *
-lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4,
           const char *name, llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[5] = { arg0, arg1, arg2, arg3, arg4 };
@@ -261,9 +261,9 @@ lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
 
 
 static llvm::Instruction *
-lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1, 
+lCallInst(llvm::Function *func, llvm::Value *arg0, llvm::Value *arg1,
           llvm::Value *arg2, llvm::Value *arg3, llvm::Value *arg4,
-          llvm::Value *arg5, const char *name, 
+          llvm::Value *arg5, const char *name,
           llvm::Instruction *insertBefore = NULL) {
     llvm::Value *args[6] = { arg0, arg1, arg2, arg3, arg4, arg5 };
     llvm::ArrayRef<llvm::Value *> newArgArray(&args[0], &args[6]);
@@ -286,7 +286,7 @@ lGEPInst(llvm::Value *ptr, llvm::Value *offset, const char *name,
     to the first vector value and so forth.
 */
 static uint64_t
-lConstElementsToMask(const llvm::SmallVector<llvm::Constant *, 
+lConstElementsToMask(const llvm::SmallVector<llvm::Constant *,
                                              ISPC_MAX_NVEC> &elements) {
     Assert(elements.size() <= 64);
 
@@ -336,7 +336,7 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
     if (cv != NULL) {
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
-            llvm::Constant *c = 
+            llvm::Constant *c =
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
             if (c == NULL)
                 return false;
@@ -523,7 +523,7 @@ Optimize(llvm::Module *module, int optLevel) {
             g->target.vectorWidth > 1) {
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
-        
+
             if (g->opt.disableCoalescing == false &&
                 g->target.isa != Target::GENERIC) {
                 // It is important to run this here to make it easier to
@@ -544,10 +544,10 @@ Optimize(llvm::Module *module, int optLevel) {
             optPM.add(CreateImproveMemoryOpsPass());
         }
 
-        optPM.add(llvm::createIPSCCPPass());              
-        optPM.add(llvm::createDeadArgEliminationPass());  
+        optPM.add(llvm::createIPSCCPPass());
+        optPM.add(llvm::createDeadArgEliminationPass());
         optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createCFGSimplificationPass());   
+        optPM.add(llvm::createCFGSimplificationPass());
 
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateReplacePseudoMemoryOpsPass());
@@ -555,39 +555,39 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateVSelMovmskOptPass());
 
         optPM.add(llvm::createFunctionInliningPass());
-        optPM.add(llvm::createArgumentPromotionPass());   
+        optPM.add(llvm::createArgumentPromotionPass());
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold, false));
-        optPM.add(llvm::createInstructionCombiningPass());  
-        optPM.add(llvm::createCFGSimplificationPass());     
-        optPM.add(llvm::createReassociatePass());           
-        optPM.add(llvm::createLoopRotatePass());            
-        optPM.add(llvm::createLICMPass());                  
+        optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(llvm::createCFGSimplificationPass());
+        optPM.add(llvm::createReassociatePass());
+        optPM.add(llvm::createLoopRotatePass());
+        optPM.add(llvm::createLICMPass());
         optPM.add(llvm::createLoopUnswitchPass(false));
         optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createIndVarSimplifyPass());        
-        optPM.add(llvm::createLoopIdiomPass());             
-        optPM.add(llvm::createLoopDeletionPass());          
+        optPM.add(llvm::createIndVarSimplifyPass());
+        optPM.add(llvm::createLoopIdiomPass());
+        optPM.add(llvm::createLoopDeletionPass());
         if (g->opt.unrollLoops)
-            optPM.add(llvm::createLoopUnrollPass());          
-        optPM.add(llvm::createGVNPass());                 
+            optPM.add(llvm::createLoopUnrollPass());
+        optPM.add(llvm::createGVNPass());
 
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateVSelMovmskOptPass());
-            
-        optPM.add(llvm::createMemCpyOptPass());             
-        optPM.add(llvm::createSCCPPass());                  
+
+        optPM.add(llvm::createMemCpyOptPass());
+        optPM.add(llvm::createSCCPPass());
         optPM.add(llvm::createInstructionCombiningPass());
-        optPM.add(llvm::createJumpThreadingPass());         
+        optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCorrelatedValuePropagationPass());
-        optPM.add(llvm::createDeadStoreEliminationPass());  
-        optPM.add(llvm::createAggressiveDCEPass());         
-        optPM.add(llvm::createCFGSimplificationPass());     
-        optPM.add(llvm::createInstructionCombiningPass());  
-        optPM.add(llvm::createStripDeadPrototypesPass()); 
+        optPM.add(llvm::createDeadStoreEliminationPass());
+        optPM.add(llvm::createAggressiveDCEPass());
+        optPM.add(llvm::createCFGSimplificationPass());
+        optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(llvm::createStripDeadPrototypesPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
-        optPM.add(llvm::createGlobalDCEPass());         
-        optPM.add(llvm::createConstantMergePass());     
+        optPM.add(llvm::createGlobalDCEPass());
+        optPM.add(llvm::createConstantMergePass());
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along
@@ -614,7 +614,7 @@ Optimize(llvm::Module *module, int optLevel) {
     operations.
 
     @todo The better thing to do would be to submit a patch to LLVM to get
-    these; they're presumably pretty simple patterns to match.  
+    these; they're presumably pretty simple patterns to match.
 */
 class IntrinsicsOpt : public llvm::BasicBlockPass {
 public:
@@ -638,7 +638,7 @@ private:
     struct BlendInstruction {
         BlendInstruction(llvm::Function *f, uint64_t ao, int o0, int o1, int of)
             : function(f), allOnMask(ao), op0(o0), op1(o1), opFactor(of) { }
-        /** Function pointer for the blend instruction */ 
+        /** Function pointer for the blend instruction */
         llvm::Function *function;
         /** Mask value for an "all on" mask for this instruction */
         uint64_t allOnMask;
@@ -661,17 +661,17 @@ private:
 char IntrinsicsOpt::ID = 0;
 
 
-IntrinsicsOpt::IntrinsicsOpt() 
+IntrinsicsOpt::IntrinsicsOpt()
     : BasicBlockPass(ID) {
 
     // All of the mask instructions we may encounter.  Note that even if
     // compiling for AVX, we may still encounter the regular 4-wide SSE
     // MOVMSK instruction.
-    llvm::Function *sseMovmsk = 
+    llvm::Function *sseMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
     maskInstructions.push_back(sseMovmsk);
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
-    llvm::Function *avxMovmsk = 
+    llvm::Function *avxMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
     Assert(avxMovmsk != NULL);
     maskInstructions.push_back(avxMovmsk);
@@ -712,13 +712,13 @@ bool
 IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("IntrinsicsOpt");
 
-    llvm::Function *avxMaskedLoad32 = 
+    llvm::Function *avxMaskedLoad32 =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
-    llvm::Function *avxMaskedLoad64 = 
+    llvm::Function *avxMaskedLoad64 =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_pd_256);
-    llvm::Function *avxMaskedStore32 = 
+    llvm::Function *avxMaskedStore32 =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_ps_256);
-    llvm::Function *avxMaskedStore64 = 
+    llvm::Function *avxMaskedStore64 =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_pd_256);
     Assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
     Assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
@@ -732,13 +732,13 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
         BlendInstruction *blend = matchingBlendInstruction(callInst->getCalledFunction());
         if (blend != NULL) {
-            llvm::Value *v[2] = { callInst->getArgOperand(blend->op0), 
+            llvm::Value *v[2] = { callInst->getArgOperand(blend->op0),
                                   callInst->getArgOperand(blend->op1) };
             llvm::Value *factor = callInst->getArgOperand(blend->opFactor);
 
             // If the values are the same, then no need to blend..
             if (v[0] == v[1]) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, v[0]);
                 modifiedAny = true;
                 goto restart;
@@ -751,13 +751,13 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             // otherwise the result is undefined and any value is fine,
             // ergo the defined one is an acceptable result.)
             if (lIsUndef(v[0])) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, v[1]);
                 modifiedAny = true;
                 goto restart;
             }
             if (lIsUndef(v[1])) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, v[0]);
                 modifiedAny = true;
                 goto restart;
@@ -774,7 +774,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     value = v[1];
 
                 if (value != NULL) {
-                    llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                    llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                                iter, value);
                     modifiedAny = true;
                     goto restart;
@@ -817,9 +817,9 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     Assert(llvm::isa<llvm::VectorType>(returnType));
                     // cast the i8 * to the appropriate type
                     const char *name = LLVMGetName(callInst->getArgOperand(0), "_cast");
-                    llvm::Value *castPtr = 
+                    llvm::Value *castPtr =
                         new llvm::BitCastInst(callInst->getArgOperand(0),
-                                              llvm::PointerType::get(returnType, 0), 
+                                              llvm::PointerType::get(returnType, 0),
                                               name, callInst);
                     lCopyMetadata(castPtr, callInst);
                     int align;
@@ -828,7 +828,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     else
                         align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                     name = LLVMGetName(callInst->getArgOperand(0), "_load");
-                    llvm::Instruction *loadInst = 
+                    llvm::Instruction *loadInst =
                         new llvm::LoadInst(castPtr, name, false /* not volatile */,
                                            align, (llvm::Instruction *)NULL);
                     lCopyMetadata(loadInst, callInst);
@@ -856,13 +856,13 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     llvm::Type *storeType = rvalue->getType();
                     const char *name = LLVMGetName(callInst->getArgOperand(0),
                                                    "_ptrcast");
-                    llvm::Value *castPtr = 
+                    llvm::Value *castPtr =
                         new llvm::BitCastInst(callInst->getArgOperand(0),
-                                              llvm::PointerType::get(storeType, 0), 
+                                              llvm::PointerType::get(storeType, 0),
                                               name, callInst);
                     lCopyMetadata(castPtr, callInst);
 
-                    llvm::StoreInst *storeInst = 
+                    llvm::StoreInst *storeInst =
                         new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
                     int align;
                     if (g->opt.forceAlignedMemory)
@@ -919,7 +919,7 @@ CreateIntrinsicsOptPass() {
     appropriate operand if so.
 
     @todo The better thing to do would be to submit a patch to LLVM to get
-    these; they're presumably pretty simple patterns to match.  
+    these; they're presumably pretty simple patterns to match.
 */
 class VSelMovmskOpt : public llvm::BasicBlockPass {
 public:
@@ -957,7 +957,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                 value = selectInst->getOperand(2);
 
             if (value != NULL) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                            iter, value);
                 modifiedAny = true;
                 goto restart;
@@ -979,7 +979,7 @@ VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
             callInst->getArgOperand(0)->dump();
             fprintf(stderr, "-----------\n");
 #endif
-            llvm::ReplaceInstWithValue(iter->getParent()->getInstList(), 
+            llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
                                        iter, LLVMInt64(mask));
             modifiedAny = true;
             goto restart;
@@ -1042,7 +1042,7 @@ lCheckForActualPointer(llvm::Value *v) {
     else if (llvm::isa<llvm::PtrToIntInst>(v))
         return v;
     else {
-        llvm::ConstantExpr *uce = 
+        llvm::ConstantExpr *uce =
             llvm::dyn_cast<llvm::ConstantExpr>(v);
         if (uce != NULL &&
             uce->getOpcode() == llvm::Instruction::PtrToInt)
@@ -1093,7 +1093,7 @@ lGetBasePointer(llvm::Value *v) {
     form "base pointer + offset", whee op0 is the base pointer and op1 is
     the offset; if so return the base and the offset. */
 static llvm::Constant *
-lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1, 
+lGetConstantAddExprBaseOffset(llvm::Constant *op0, llvm::Constant *op1,
                               llvm::Constant **delta) {
     llvm::ConstantExpr *op = llvm::dyn_cast<llvm::ConstantExpr>(op0);
     if (op == NULL || op->getOpcode() != llvm::Instruction::PtrToInt)
@@ -1152,17 +1152,17 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
     if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add) {
         // If we have a common pointer plus something, then we're also
         // good.
-        if ((base = lGetBasePtrAndOffsets(bop->getOperand(0), 
+        if ((base = lGetBasePtrAndOffsets(bop->getOperand(0),
                                           offsets, insertBefore)) != NULL) {
-            *offsets = 
+            *offsets =
                 llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
                                              bop->getOperand(1), "new_offsets",
                                              insertBefore);
             return base;
         }
-        else if ((base = lGetBasePtrAndOffsets(bop->getOperand(1), 
+        else if ((base = lGetBasePtrAndOffsets(bop->getOperand(1),
                                                offsets, insertBefore)) != NULL) {
-            *offsets = 
+            *offsets =
                 llvm::BinaryOperator::Create(llvm::Instruction::Add, *offsets,
                                              bop->getOperand(0), "new_offsets",
                                              insertBefore);
@@ -1176,7 +1176,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         // ConstantVectors..
         llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
         for (int i = 0; i < (int)cv->getNumOperands(); ++i) {
-            llvm::Constant *c = 
+            llvm::Constant *c =
                 llvm::dyn_cast<llvm::Constant>(cv->getOperand(i));
             if (c == NULL)
                 return NULL;
@@ -1203,12 +1203,12 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                 // Try both orderings of the operands to see if we can get
                 // a pointer+offset out of them.
                 elementBase =
-                    lGetConstantAddExprBaseOffset(ce->getOperand(0), 
+                    lGetConstantAddExprBaseOffset(ce->getOperand(0),
                                                   ce->getOperand(1),
                                                   &delta[i]);
                 if (elementBase == NULL)
-                    elementBase = 
-                        lGetConstantAddExprBaseOffset(ce->getOperand(1), 
+                    elementBase =
+                        lGetConstantAddExprBaseOffset(ce->getOperand(1),
                                                       ce->getOperand(0),
                                                       &delta[i]);
             }
@@ -1230,7 +1230,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         }
 
         Assert(base != NULL);
-        llvm::ArrayRef<llvm::Constant *> deltas(&delta[0], 
+        llvm::ArrayRef<llvm::Constant *> deltas(&delta[0],
                                                 &delta[elements.size()]);
         *offsets = llvm::ConstantVector::get(deltas);
         return base;
@@ -1263,7 +1263,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
  */
 static void
 lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
-                       llvm::Value **variableOffset, 
+                       llvm::Value **variableOffset,
                        llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::ConstantVector>(vec) ||
         llvm::isa<llvm::ConstantDataVector>(vec) ||
@@ -1283,13 +1283,13 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
         if (co == NULL)
             *constOffset = NULL;
         else
-            *constOffset = new llvm::SExtInst(co, sext->getType(), 
+            *constOffset = new llvm::SExtInst(co, sext->getType(),
                                               LLVMGetName(co, "_sext"),
                                               insertBefore);
         if (vo == NULL)
             *variableOffset = NULL;
         else
-            *variableOffset = new llvm::SExtInst(vo, sext->getType(), 
+            *variableOffset = new llvm::SExtInst(vo, sext->getType(),
                                                  LLVMGetName(vo, "_sext"),
                                                  insertBefore);
         return;
@@ -1312,7 +1312,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             else if (c1 == NULL || llvm::isa<llvm::ConstantAggregateZero>(c1))
                 *constOffset = c0;
             else
-                *constOffset = 
+                *constOffset =
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, c0, c1,
                                                  LLVMGetName("add", c0, c1),
                                                  insertBefore);
@@ -1322,7 +1322,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
             else if (v1 == NULL || llvm::isa<llvm::ConstantAggregateZero>(v1))
                 *variableOffset = v0;
             else
-                *variableOffset = 
+                *variableOffset =
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, v0, v1,
                                                  LLVMGetName("add", v0, v1),
                                                  insertBefore);
@@ -1355,7 +1355,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                 vc = llvm::BinaryOperator::Create(llvm::Instruction::Mul, v0, v1,
                                                   LLVMGetName("mul", v0, v1), insertBefore);
 
-            
+
             llvm::Value *vab = NULL;
             if (va != NULL && vb != NULL)
                 vab = llvm::BinaryOperator::Create(llvm::Instruction::Add, va, vb,
@@ -1366,7 +1366,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                 vab = vb;
 
             if (vab != NULL && vc != NULL)
-                *variableOffset = 
+                *variableOffset =
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, vab, vc,
                                                  LLVMGetName("add", vab, vc), insertBefore);
             else if (vab != NULL)
@@ -1389,7 +1389,7 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
    *splat, if so). */
 static bool
 lIsIntegerSplat(llvm::Value *v, int *splat) {
-    llvm::ConstantDataVector *cvec = 
+    llvm::ConstantDataVector *cvec =
         llvm::dyn_cast<llvm::ConstantDataVector>(v);
     if (cvec == NULL)
         return false;
@@ -1398,7 +1398,7 @@ lIsIntegerSplat(llvm::Value *v, int *splat) {
     if (splatConst == NULL)
         return false;
 
-    llvm::ConstantInt *ci = 
+    llvm::ConstantInt *ci =
         llvm::dyn_cast<llvm::ConstantInt>(splatConst);
     if (ci == NULL)
         return false;
@@ -1407,10 +1407,10 @@ lIsIntegerSplat(llvm::Value *v, int *splat) {
     *splat = (int)splatVal;
     return true;
 }
-        
+
 
 static llvm::Value *
-lExtract248Scale(llvm::Value *splatOperand, int splatValue, 
+lExtract248Scale(llvm::Value *splatOperand, int splatValue,
                  llvm::Value *otherOperand, llvm::Value **result) {
     if (splatValue == 2 || splatValue == 4 || splatValue == 8) {
         *result = otherOperand;
@@ -1420,20 +1420,20 @@ lExtract248Scale(llvm::Value *splatOperand, int splatValue,
     // see if we can pull out that much of the scale anyway; this may in
     // turn allow other optimizations later.
     for (int scale = 8; scale >= 2; scale /= 2) {
-        llvm::Instruction *insertBefore = 
+        llvm::Instruction *insertBefore =
             llvm::dyn_cast<llvm::Instruction>(*result);
         Assert(insertBefore != NULL);
 
         if ((splatValue % scale) == 0) {
             // *result = otherOperand * splatOperand / scale;
-            llvm::Value *splatScaleVec = 
+            llvm::Value *splatScaleVec =
                 (splatOperand->getType() == LLVMTypes::Int32VectorType) ?
                 LLVMInt32Vector(scale) : LLVMInt64Vector(scale);
-            llvm::Value *splatDiv = 
+            llvm::Value *splatDiv =
                 llvm::BinaryOperator::Create(llvm::Instruction::SDiv,
                                              splatOperand, splatScaleVec,
                                              "div", insertBefore);
-            *result = 
+            *result =
                 llvm::BinaryOperator::Create(llvm::Instruction::Mul,
                                              splatDiv, otherOperand,
                                              "mul", insertBefore);
@@ -1546,7 +1546,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
     if (LLVMVectorValuesAllEqual(*vec)) {
         // FIXME: we may want to redo all of the expression here, in scalar
         // form (if at all possible), for code quality...
-        llvm::Value *unif = 
+        llvm::Value *unif =
             llvm::ExtractElementInst::Create(*vec, LLVMInt32(0),
                                              "first_uniform", insertBefore);
         *vec = NULL;
@@ -1572,7 +1572,7 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
             *vec = llvm::BinaryOperator::Create(llvm::Instruction::Add,
                                                 op0, op1, "new_add", insertBefore);
 
-        if (s0 == NULL) 
+        if (s0 == NULL)
             return s1;
         else if (s1 == NULL)
             return s0;
@@ -1602,8 +1602,8 @@ lExtractUniforms(llvm::Value **vec, llvm::Instruction *insertBefore) {
 
 
 static void
-lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector, 
-                           llvm::Value *offsetScale, 
+lExtractUniformsFromOffset(llvm::Value **basePtr, llvm::Value **offsetVector,
+                           llvm::Value *offsetScale,
                            llvm::Instruction *insertBefore) {
 #if 1
     (*basePtr)->dump();
@@ -1646,15 +1646,15 @@ lVectorIs32BitInts(llvm::Value *v) {
     32-bit values.  If so, return true and update the pointed-to
     llvm::Value *s to be the 32-bit equivalents. */
 static bool
-lOffsets32BitSafe(llvm::Value **variableOffsetPtr, 
-                  llvm::Value **constOffsetPtr, 
+lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
+                  llvm::Value **constOffsetPtr,
                   llvm::Instruction *insertBefore) {
     llvm::Value *variableOffset = *variableOffsetPtr;
     llvm::Value *constOffset = *constOffsetPtr;
 
     if (variableOffset->getType() != LLVMTypes::Int32VectorType) {
         llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(variableOffset);
-        if (sext != NULL && 
+        if (sext != NULL &&
             sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType)
             // sext of a 32-bit vector -> the 32-bit vector is good
             variableOffset = sext->getOperand(0);
@@ -1662,7 +1662,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
             // The only constant vector we should have here is a vector of
             // all zeros (i.e. a ConstantAggregateZero, but just in case,
             // do the more general check with lVectorIs32BitInts().
-            variableOffset = 
+            variableOffset =
                 new llvm::TruncInst(variableOffset, LLVMTypes::Int32VectorType,
                                     LLVMGetName(variableOffset, "_trunc"),
                                     insertBefore);
@@ -1673,7 +1673,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
     if (constOffset->getType() != LLVMTypes::Int32VectorType) {
         if (lVectorIs32BitInts(constOffset)) {
             // Truncate them so we have a 32-bit vector type for them.
-            constOffset = 
+            constOffset =
                 new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
                                     LLVMGetName(constOffset, "_trunc"), insertBefore);
         }
@@ -1686,7 +1686,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
             // constant vector out of them, and
             // llvm::ConstantFoldInstruction() doesn't seem to be doing
             // enough for us in some cases if we call it from here.
-            constOffset = 
+            constOffset =
                 new llvm::TruncInst(constOffset, LLVMTypes::Int32VectorType,
                                     LLVMGetName(constOffset, "_trunc"), insertBefore);
         }
@@ -1702,7 +1702,7 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
     32-bit values.  If so, return true and update the pointed-to
     llvm::Value * to be the 32-bit equivalent. */
 static bool
-lOffsets32BitSafe(llvm::Value **offsetPtr, 
+lOffsets32BitSafe(llvm::Value **offsetPtr,
                   llvm::Instruction *insertBefore) {
     llvm::Value *offset = *offsetPtr;
 
@@ -1710,7 +1710,7 @@ lOffsets32BitSafe(llvm::Value **offsetPtr,
         return true;
 
     llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(offset);
-    if (sext != NULL && 
+    if (sext != NULL &&
         sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType) {
         // sext of a 32-bit vector -> the 32-bit vector is good
         *offsetPtr = sext->getOperand(0);
@@ -1720,7 +1720,7 @@ lOffsets32BitSafe(llvm::Value **offsetPtr,
         // The only constant vector we should have here is a vector of
         // all zeros (i.e. a ConstantAggregateZero, but just in case,
         // do the more general check with lVectorIs32BitInts().
-        *offsetPtr = 
+        *offsetPtr =
             new llvm::TruncInst(offset, LLVMTypes::Int32VectorType,
                                 LLVMGetName(offset, "_trunc"),
                                 insertBefore);
@@ -1734,8 +1734,8 @@ lOffsets32BitSafe(llvm::Value **offsetPtr,
 static bool
 lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     struct GSInfo {
-        GSInfo(const char *pgFuncName, const char *pgboFuncName, 
-               const char *pgbo32FuncName, bool ig) 
+        GSInfo(const char *pgFuncName, const char *pgboFuncName,
+               const char *pgbo32FuncName, bool ig)
             : isGather(ig) {
             func = m->module->getFunction(pgFuncName);
             baseOffsetsFunc = m->module->getFunction(pgboFuncName);
@@ -1747,7 +1747,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     };
 
     GSInfo gsFuncs[] = {
-        GSInfo("__pseudo_gather32_i8",  
+        GSInfo("__pseudo_gather32_i8",
                g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
                g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
@@ -1916,7 +1916,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
     // lGetBasePtrAndOffsets).
     llvm::Value *ptrs = callInst->getArgOperand(0);
     llvm::Value *offsetVector = NULL;
-    llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector, 
+    llvm::Value *basePtr = lGetBasePtrAndOffsets(ptrs, &offsetVector,
                                                  callInst);
 
     if (basePtr == NULL || offsetVector == NULL)
@@ -1943,7 +1943,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // If we're doing 32-bit addressing on a 64-bit target, here we
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
-        if (g->opt.force32BitAddressing && 
+        if (g->opt.force32BitAddressing &&
             lOffsets32BitSafe(&offsetVector, callInst)) {
             gatherScatterFunc = info->baseOffsets32Func;
         }
@@ -1956,7 +1956,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = 
+            llvm::Instruction *newCall =
                 lCallInst(gatherScatterFunc, basePtr, offsetScale, offsetVector,
                           mask, callInst->getName().str().c_str(),
                           NULL);
@@ -1970,8 +1970,8 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Instruction *newCall = 
-                lCallInst(gatherScatterFunc, basePtr, offsetScale, 
+            llvm::Instruction *newCall =
+                lCallInst(gatherScatterFunc, basePtr, offsetScale,
                           offsetVector, storeValue, mask, "", NULL);
             lCopyMetadata(newCall, callInst);
             llvm::ReplaceInstWithInst(callInst, newCall);
@@ -1984,7 +1984,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // which in turn allows their implementations to end up emitting
         // x86 instructions with constant offsets encoded in them.
         llvm::Value *constOffset, *variableOffset;
-        lExtractConstantOffset(offsetVector, &constOffset, &variableOffset, 
+        lExtractConstantOffset(offsetVector, &constOffset, &variableOffset,
                                callInst);
         if (constOffset == NULL)
             constOffset = LLVMIntAsType(0, offsetVector->getType());
@@ -2000,7 +2000,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
         // If we're doing 32-bit addressing on a 64-bit target, here we
         // will see if we can call one of the 32-bit variants of the pseudo
         // gather/scatter functions.
-        if (g->opt.force32BitAddressing && 
+        if (g->opt.force32BitAddressing &&
             lOffsets32BitSafe(&variableOffset, &constOffset, callInst)) {
             gatherScatterFunc = info->baseOffsets32Func;
         }
@@ -2013,7 +2013,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // llvm::Instruction to llvm::CallInst::Create; this means that
             // the instruction isn't inserted into a basic block and that
             // way we can then call ReplaceInstWithInst().
-            llvm::Instruction *newCall = 
+            llvm::Instruction *newCall =
                 lCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
                           constOffset, mask, callInst->getName().str().c_str(),
                           NULL);
@@ -2027,7 +2027,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
             // Generate a new function call to the next pseudo scatter
             // base+offsets instruction.  See above for why passing NULL
             // for the Instruction * is intended.
-            llvm::Instruction *newCall = 
+            llvm::Instruction *newCall =
                 lCallInst(gatherScatterFunc, basePtr, variableOffset, offsetScale,
                           constOffset, storeValue, mask, "", NULL);
             lCopyMetadata(newCall, callInst);
@@ -2047,7 +2047,7 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 static bool
 lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     struct GSBOInfo {
-        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig) 
+        GSBOInfo(const char *pgboFuncName, const char *pgbo32FuncName, bool ig)
             : isGather(ig) {
             baseOffsetsFunc = m->module->getFunction(pgboFuncName);
             baseOffsets32Func = m->module->getFunction(pgbo32FuncName);
@@ -2058,65 +2058,65 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 
     GSBOInfo gsFuncs[] = {
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
-                                       "__pseudo_gather_factored_base_offsets32_i8", 
+                                       "__pseudo_gather_factored_base_offsets32_i8",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
-                                       "__pseudo_gather_factored_base_offsets32_i8", 
+                                       "__pseudo_gather_factored_base_offsets32_i8",
                  true),
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
-                                       "__pseudo_gather_factored_base_offsets32_i16", 
+                                       "__pseudo_gather_factored_base_offsets32_i16",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
-                                       "__pseudo_gather_factored_base_offsets32_i16", 
+                                       "__pseudo_gather_factored_base_offsets32_i16",
                  true),
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
-                                       "__pseudo_gather_factored_base_offsets32_i32", 
+                                       "__pseudo_gather_factored_base_offsets32_i32",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
-                                       "__pseudo_gather_factored_base_offsets32_i32", 
+                                       "__pseudo_gather_factored_base_offsets32_i32",
                  true),
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
-                                       "__pseudo_gather_factored_base_offsets32_float", 
+                                       "__pseudo_gather_factored_base_offsets32_float",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
-                                       "__pseudo_gather_factored_base_offsets32_float", 
+                                       "__pseudo_gather_factored_base_offsets32_float",
                  true),
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
-                                       "__pseudo_gather_factored_base_offsets32_i64", 
+                                       "__pseudo_gather_factored_base_offsets32_i64",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
-                                       "__pseudo_gather_factored_base_offsets32_i64", 
+                                       "__pseudo_gather_factored_base_offsets32_i64",
                  true),
         GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
-                                       "__pseudo_gather_factored_base_offsets32_double", 
+                                       "__pseudo_gather_factored_base_offsets32_double",
                  g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
-                                       "__pseudo_gather_factored_base_offsets32_double", 
+                                       "__pseudo_gather_factored_base_offsets32_double",
                  true),
 
         GSBOInfo( g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
-                                         "__pseudo_scatter_factored_base_offsets32_i8", 
+                                         "__pseudo_scatter_factored_base_offsets32_i8",
                   g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
-                                         "__pseudo_scatter_factored_base_offsets32_i8", 
+                                         "__pseudo_scatter_factored_base_offsets32_i8",
                   false),
         GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
-                                        "__pseudo_scatter_factored_base_offsets32_i16", 
+                                        "__pseudo_scatter_factored_base_offsets32_i16",
                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
-                                        "__pseudo_scatter_factored_base_offsets32_i16", 
+                                        "__pseudo_scatter_factored_base_offsets32_i16",
                  false),
         GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
-                                        "__pseudo_scatter_factored_base_offsets32_i32", 
+                                        "__pseudo_scatter_factored_base_offsets32_i32",
                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
-                                        "__pseudo_scatter_factored_base_offsets32_i32", 
+                                        "__pseudo_scatter_factored_base_offsets32_i32",
                  false),
         GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
-                                        "__pseudo_scatter_factored_base_offsets32_float", 
+                                        "__pseudo_scatter_factored_base_offsets32_float",
                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
-                                        "__pseudo_scatter_factored_base_offsets32_float", 
+                                        "__pseudo_scatter_factored_base_offsets32_float",
                  false),
         GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
-                                        "__pseudo_scatter_factored_base_offsets32_i64", 
+                                        "__pseudo_scatter_factored_base_offsets32_i64",
                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
-                                        "__pseudo_scatter_factored_base_offsets32_i64", 
+                                        "__pseudo_scatter_factored_base_offsets32_i64",
                  false),
         GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
-                                        "__pseudo_scatter_factored_base_offsets32_double", 
+                                        "__pseudo_scatter_factored_base_offsets32_double",
                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
-                                        "__pseudo_scatter_factored_base_offsets32_double", 
+                                        "__pseudo_scatter_factored_base_offsets32_double",
                  false),
     };
 
@@ -2150,7 +2150,7 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 
     // Try to decompose the old variable offset
     llvm::Value *constOffset, *variableOffset;
-    lExtractConstantOffset(origVariableOffset, &constOffset, &variableOffset, 
+    lExtractConstantOffset(origVariableOffset, &constOffset, &variableOffset,
                            callInst);
 
     // No luck
@@ -2163,7 +2163,7 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
 
     // We need to scale the value we add to the constant offset by the
     // 2/4/8 scale for the variable offset, if present.
-    llvm::ConstantInt *varScale = 
+    llvm::ConstantInt *varScale =
         llvm::dyn_cast<llvm::ConstantInt>(callInst->getArgOperand(2));
     Assert(varScale != NULL);
 
@@ -2202,7 +2202,7 @@ lComputeCommonPointer(llvm::Value *base, llvm::Value *offsets,
 
 static llvm::Constant *
 lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
-    llvm::ConstantInt *offsetScaleInt = 
+    llvm::ConstantInt *offsetScaleInt =
         llvm::dyn_cast<llvm::ConstantInt>(offsetScale);
     Assert(offsetScaleInt != NULL);
     uint64_t scaleValue = offsetScaleInt->getZExtValue();
@@ -2239,7 +2239,7 @@ static bool
 lGSToLoadStore(llvm::CallInst *callInst) {
     struct GatherImpInfo {
         GatherImpInfo(const char *pName, const char *lmName, llvm::Type *st,
-                      int a) 
+                      int a)
             : align(a), isFactored(!g->target.hasGather) {
             pseudoFunc = m->module->getFunction(pName);
             loadMaskedFunc = m->module->getFunction(lmName);
@@ -2256,45 +2256,45 @@ lGSToLoadStore(llvm::CallInst *callInst) {
 
     GatherImpInfo gInfo[] = {
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
-                                            "__pseudo_gather_factored_base_offsets32_i8", 
+                                            "__pseudo_gather_factored_base_offsets32_i8",
                       "__masked_load_i8", LLVMTypes::Int8Type, 1),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
-                                            "__pseudo_gather_factored_base_offsets32_i16", 
+                                            "__pseudo_gather_factored_base_offsets32_i16",
                       "__masked_load_i16", LLVMTypes::Int16Type, 2),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
-                                            "__pseudo_gather_factored_base_offsets32_i32", 
+                                            "__pseudo_gather_factored_base_offsets32_i32",
                       "__masked_load_i32", LLVMTypes::Int32Type, 4),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
-                                            "__pseudo_gather_factored_base_offsets32_float", 
+                                            "__pseudo_gather_factored_base_offsets32_float",
                       "__masked_load_float", LLVMTypes::FloatType, 4),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
-                                            "__pseudo_gather_factored_base_offsets32_i64", 
+                                            "__pseudo_gather_factored_base_offsets32_i64",
                       "__masked_load_i64", LLVMTypes::Int64Type, 8),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
-                                            "__pseudo_gather_factored_base_offsets32_double", 
+                                            "__pseudo_gather_factored_base_offsets32_double",
                       "__masked_load_double", LLVMTypes::DoubleType, 8),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i8" :
-                                            "__pseudo_gather_factored_base_offsets64_i8", 
+                                            "__pseudo_gather_factored_base_offsets64_i8",
                       "__masked_load_i8", LLVMTypes::Int8Type, 1),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i16" :
-                                            "__pseudo_gather_factored_base_offsets64_i16", 
+                                            "__pseudo_gather_factored_base_offsets64_i16",
                       "__masked_load_i16", LLVMTypes::Int16Type, 2),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i32" :
-                                            "__pseudo_gather_factored_base_offsets64_i32", 
+                                            "__pseudo_gather_factored_base_offsets64_i32",
                       "__masked_load_i32", LLVMTypes::Int32Type, 4),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_float" :
-                                            "__pseudo_gather_factored_base_offsets64_float", 
+                                            "__pseudo_gather_factored_base_offsets64_float",
                        "__masked_load_float", LLVMTypes::FloatType, 4),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i64" :
-                                            "__pseudo_gather_factored_base_offsets64_i64", 
+                                            "__pseudo_gather_factored_base_offsets64_i64",
                       "__masked_load_i64", LLVMTypes::Int64Type, 8),
         GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_double" :
-                                            "__pseudo_gather_factored_base_offsets64_double", 
+                                            "__pseudo_gather_factored_base_offsets64_double",
                       "__masked_load_double", LLVMTypes::DoubleType, 8),
     };
 
     struct ScatterImpInfo {
-        ScatterImpInfo(const char *pName, const char *msName, 
+        ScatterImpInfo(const char *pName, const char *msName,
                        llvm::Type *vpt, int a)
             : align(a), isFactored(!g->target.hasScatter) {
             pseudoFunc = m->module->getFunction(pName);
@@ -2308,7 +2308,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
         const int align;
         const bool isFactored;
     };
-    
+
     ScatterImpInfo sInfo[] = {
         ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
                                               "__pseudo_scatter_factored_base_offsets32_i8",
@@ -2387,10 +2387,10 @@ lGSToLoadStore(llvm::CallInst *callInst) {
         mask = callInst->getArgOperand((gatherInfo != NULL) ? 4 : 5);
 
         // Compute the full offset vector: offsetScale * varyingOffsets + constOffsets
-        llvm::Constant *offsetScaleVec = 
+        llvm::Constant *offsetScaleVec =
             lGetOffsetScaleVec(offsetScale, varyingOffsets->getType());
 
-        llvm::Value *scaledVarying = 
+        llvm::Value *scaledVarying =
             llvm::BinaryOperator::Create(llvm::Instruction::Mul, offsetScaleVec,
                                          varyingOffsets, "scaled_varying", callInst);
         fullOffsets =
@@ -2405,7 +2405,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
 
         llvm::Value *offsetScale = callInst->getArgOperand(1);
         llvm::Value *offsets = callInst->getArgOperand(2);
-        llvm::Value *offsetScaleVec = 
+        llvm::Value *offsetScaleVec =
             lGetOffsetScaleVec(offsetScale, offsets->getType());
 
         fullOffsets =
@@ -2413,7 +2413,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
                                          offsets, "scaled_offsets", callInst);
     }
 
-    Debug(SourcePos(), "GSToLoadStore: %s.", 
+    Debug(SourcePos(), "GSToLoadStore: %s.",
           fullOffsets->getName().str().c_str());
 
     if (LLVMVectorValuesAllEqual(fullOffsets)) {
@@ -2441,7 +2441,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
                                                                callInst->getName());
             }
             lCopyMetadata(vecValue, callInst);
-            llvm::ReplaceInstWithInst(callInst, 
+            llvm::ReplaceInstWithInst(callInst,
                                       llvm::dyn_cast<llvm::Instruction>(vecValue));
             return true;
         }
@@ -2476,8 +2476,8 @@ lGSToLoadStore(llvm::CallInst *callInst) {
 
             if (gatherInfo != NULL) {
                 Debug(pos, "Transformed gather to unaligned vector load!");
-                llvm::Instruction *newCall = 
-                    lCallInst(gatherInfo->loadMaskedFunc, ptr, mask, 
+                llvm::Instruction *newCall =
+                    lCallInst(gatherInfo->loadMaskedFunc, ptr, mask,
                               LLVMGetName(ptr, "_masked_load"));
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
@@ -2485,10 +2485,10 @@ lGSToLoadStore(llvm::CallInst *callInst) {
             }
             else {
                 Debug(pos, "Transformed scatter to unaligned vector store!");
-                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast", 
+                ptr = new llvm::BitCastInst(ptr, scatterInfo->vecPtrType, "ptrcast",
                                             callInst);
                 llvm::Instruction *newCall =
-                    lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue, 
+                    lCallInst(scatterInfo->maskedStoreFunc, ptr, storeValue,
                               mask, "");
                 lCopyMetadata(newCall, callInst);
                 llvm::ReplaceInstWithInst(callInst, newCall);
@@ -2512,7 +2512,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
 static bool
 lImproveMaskedStore(llvm::CallInst *callInst) {
     struct MSInfo {
-        MSInfo(const char *name, const int a) 
+        MSInfo(const char *name, const int a)
             : align(a) {
             func = m->module->getFunction(name);
             Assert(func != NULL);
@@ -2520,7 +2520,7 @@ lImproveMaskedStore(llvm::CallInst *callInst) {
         llvm::Function *func;
         const int align;
     };
-        
+
     MSInfo msInfo[] = {
         MSInfo("__pseudo_masked_store_i8",  1),
         MSInfo("__pseudo_masked_store_i16", 2),
@@ -2575,7 +2575,7 @@ lImproveMaskedStore(llvm::CallInst *callInst) {
 
         lvalue = new llvm::BitCastInst(lvalue, ptrType, "lvalue_to_ptr_type", callInst);
         lCopyMetadata(lvalue, callInst);
-        llvm::Instruction *store = 
+        llvm::Instruction *store =
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
                                 g->opt.forceAlignedMemory ? 0 : info->align);
         lCopyMetadata(store, callInst);
@@ -2591,7 +2591,7 @@ static bool
 lImproveMaskedLoad(llvm::CallInst *callInst,
                    llvm::BasicBlock::iterator iter) {
     struct MLInfo {
-        MLInfo(const char *name, const int a) 
+        MLInfo(const char *name, const int a)
             : align(a) {
             func = m->module->getFunction(name);
             Assert(func != NULL);
@@ -2599,7 +2599,7 @@ lImproveMaskedLoad(llvm::CallInst *callInst,
         llvm::Function *func;
         const int align;
     };
-        
+
     MLInfo mlInfo[] = {
         MLInfo("__masked_load_i8",  1),
         MLInfo("__masked_load_i16", 2),
@@ -2636,9 +2636,9 @@ lImproveMaskedLoad(llvm::CallInst *callInst,
     else if (maskStatus == ALL_ON) {
         // The mask is all on, so turn this into a regular load
         llvm::Type *ptrType = llvm::PointerType::get(callInst->getType(), 0);
-        ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load", 
+        ptr = new llvm::BitCastInst(ptr, ptrType, "ptr_cast_for_load",
                                     callInst);
-        llvm::Instruction *load = 
+        llvm::Instruction *load =
             new llvm::LoadInst(ptr, callInst->getName(), false /* not volatile */,
                                g->opt.forceAlignedMemory ? 0 : info->align,
                                (llvm::Instruction *)NULL);
@@ -2713,7 +2713,7 @@ CreateImproveMemoryOpsPass() {
 //  any of scalar, 2-wide (i.e. 64-bit), 4-wide, or 8-wide loads.  Further,
 //  we generate code that shuffles these loads around.  Doing fewer, larger
 //  loads in this manner, when possible, can be more efficient.
-//    
+//
 //  Second, this pass can coalesce memory accesses across multiple
 //  gathers. If we have a series of gathers without any memory writes in
 //  the middle, then we try to analyze their reads collectively and choose
@@ -2739,9 +2739,9 @@ char GatherCoalescePass::ID = 0;
     decided to generate.
  */
 struct CoalescedLoadOp {
-    CoalescedLoadOp(int64_t s, int c) { 
-        start = s; 
-        count = c; 
+    CoalescedLoadOp(int64_t s, int c) {
+        start = s;
+        count = c;
         load = element0 = element1 = NULL;
     }
 
@@ -2769,7 +2769,7 @@ struct CoalescedLoadOp {
     load of the given width doesn't make sense, then false is returned.
  */
 static bool
-lVectorLoadIsEfficient(std::set<int64_t>::iterator iter, 
+lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
                        std::set<int64_t>::iterator end,
                        std::set<int64_t>::iterator *newIter, int vectorWidth) {
     // We're considering a vector load of width vectorWidth, starting at
@@ -2785,7 +2785,7 @@ lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
     //
     // 2. And don't have too large a gap in between them (e.g., it's not
     //    worth generating an 8-wide load for two elements with offsets 0
-    //    and 7, but no loads requested in between).  
+    //    and 7, but no loads requested in between).
     //
     // Then we continue moving forward through the elements until we either
     // fill up the vector or run out of elements.
@@ -2844,7 +2844,7 @@ lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
             //    except under contrived circumstances, but better safe
             //    than sorry.)
             const int pageSize = 4096;
-            if (vectorWidth != 2 && 
+            if (vectorWidth != 2 &&
                 (lastAccepted - start) > (vectorWidth / 2) &&
                 (*iter - lastAccepted) < pageSize) {
                 *newIter = iter;
@@ -2854,7 +2854,7 @@ lVectorLoadIsEfficient(std::set<int64_t>::iterator iter,
                 return false;
         }
 
-        // Continue moving forward 
+        // Continue moving forward
         lastAccepted = *iter;
         ++iter;
     }
@@ -2898,7 +2898,7 @@ lSelectLoads(const std::vector<int64_t> &loadOffsets,
             // effective (i.e. would cover a reasonable number of the
             // offsets that need to be loaded from).
             std::set<int64_t>::iterator newIter;
-            if (lVectorLoadIsEfficient(iter, allOffsets.end(), &newIter, 
+            if (lVectorLoadIsEfficient(iter, allOffsets.end(), &newIter,
                                        vectorWidths[i])) {
                 // Yes: create the corresponding coalesced load and update
                 // the iterator to the returned iterator; doing so skips
@@ -2910,7 +2910,7 @@ lSelectLoads(const std::vector<int64_t> &loadOffsets,
                 break;
             }
         }
-        
+
         if (gotOne == false) {
             // We couldn't find a vector load starting from this offset
             // that made sense, so emit a scalar load and continue onward.
@@ -2958,7 +2958,7 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
     for (int i = 0; i < (int)loadOps.size(); ++i)
         ++loadOpsCount[loadOps[i].count];
 
-    // Generate a string the describes the mix of load ops 
+    // Generate a string the describes the mix of load ops
     char loadOpsInfo[512];
     loadOpsInfo[0] = '\0';
     std::map<int, int>::const_iterator iter = loadOpsCount.begin();
@@ -2973,12 +2973,12 @@ lCoalescePerfInfo(const std::vector<llvm::CallInst *> &coalesceGroup,
 
     if (coalesceGroup.size() == 1)
         PerformanceWarning(pos, "Coalesced gather into %d load%s (%s).",
-                           (int)loadOps.size(), 
+                           (int)loadOps.size(),
                            (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
     else
         PerformanceWarning(pos, "Coalesced %d gathers starting here %sinto %d "
-                           "load%s (%s).", (int)coalesceGroup.size(), 
-                           otherPositions,(int)loadOps.size(), 
+                           "load%s (%s).", (int)coalesceGroup.size(),
+                           otherPositions,(int)loadOps.size(),
                            (loadOps.size() > 1) ? "s" : "", loadOpsInfo);
 }
 
@@ -3006,11 +3006,11 @@ lGEPAndLoad(llvm::Value *basePtr, int64_t offset, int align,
    instructions.
  */
 static void
-lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps, 
+lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
            int elementSize, llvm::Instruction *insertBefore) {
     Debug(SourcePos(), "Coalesce doing %d loads.", (int)loadOps.size());
     for (int i = 0; i < (int)loadOps.size(); ++i) {
-        Debug(SourcePos(), "Load #%d @ %" PRId64 ", %d items", i, loadOps[i].start, 
+        Debug(SourcePos(), "Load #%d @ %" PRId64 ", %d items", i, loadOps[i].start,
               loadOps[i].count);
 
         // basePtr is an i8 *, so the offset from it should be in terms of
@@ -3030,7 +3030,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
             loadOps[i].load = lGEPAndLoad(basePtr, start, align, insertBefore,
                                           LLVMTypes::Int64Type);
             // element0 = (int32)value;
-            loadOps[i].element0 = 
+            loadOps[i].element0 =
                 new llvm::TruncInst(loadOps[i].load, LLVMTypes::Int32Type,
                                     "load64_elt0", insertBefore);
             // element1 = (int32)(value >> 32)
@@ -3038,7 +3038,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
                 llvm::BinaryOperator::Create(llvm::Instruction::LShr,
                                              loadOps[i].load, LLVMInt64(32),
                                              "load64_shift", insertBefore);
-            loadOps[i].element1 = 
+            loadOps[i].element1 =
                 new llvm::TruncInst(shift, LLVMTypes::Int32Type,
                                     "load64_elt1", insertBefore);
             break;
@@ -3055,7 +3055,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
             // 8-wide vector load
             llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 8);
-            loadOps[i].load = lGEPAndLoad(basePtr, start, align, 
+            loadOps[i].load = lGEPAndLoad(basePtr, start, align,
                                           insertBefore, vt);
             break;
         }
@@ -3072,7 +3072,7 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
     load operations.
  */
 static std::vector<CoalescedLoadOp>
-lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps, 
+lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps,
                  llvm::Instruction *insertBefore) {
     std::vector<CoalescedLoadOp> ret;
     for (unsigned int i = 0; i < loadOps.size(); ++i) {
@@ -3102,7 +3102,7 @@ lSplit8WideLoads(const std::vector<CoalescedLoadOp> &loadOps,
     vector for any and all elements for which it applies.
  */
 static llvm::Value *
-lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load, 
+lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load,
             const int64_t offsets[4], bool set[4],
             llvm::Instruction *insertBefore) {
     for (int elt = 0; elt < 4; ++elt) {
@@ -3113,7 +3113,7 @@ lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load,
             // If this load gives one of the values that we need, then we
             // can just insert it in directly
             Assert(set[elt] == false);
-            result = 
+            result =
                 llvm::InsertElementInst::Create(result, load.load, LLVMInt32(elt),
                                                 "insert_load", insertBefore);
             set[elt] = true;
@@ -3128,7 +3128,7 @@ lApplyLoad1(llvm::Value *result, const CoalescedLoadOp &load,
     elements that they apply to. */
 static llvm::Value *
 lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
-            const int64_t offsets[4], bool set[4], 
+            const int64_t offsets[4], bool set[4],
             llvm::Instruction *insertBefore) {
     for (int elt = 0; elt < 4; ++elt) {
         // First, try to do a 64-bit-wide insert into the result vector.
@@ -3145,7 +3145,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             Assert(set[elt] == false && set[elt+1] == false);
 
             // In this case, we bitcast from a 4xi32 to a 2xi64 vector
-            llvm::Type *vec2x64Type = 
+            llvm::Type *vec2x64Type =
                 llvm::VectorType::get(LLVMTypes::Int64Type, 2);
             result = new llvm::BitCastInst(result, vec2x64Type, "to2x64",
                                            insertBefore);
@@ -3153,11 +3153,11 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             // And now we can insert the 64-bit wide value into the
             // appropriate elment
             result = llvm::InsertElementInst::Create(result, load.load,
-                                                     LLVMInt32(elt/2), 
+                                                     LLVMInt32(elt/2),
                                                      "insert64", insertBefore);
-            
+
             // And back to 4xi32.
-            llvm::Type *vec4x32Type = 
+            llvm::Type *vec4x32Type =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             result = new llvm::BitCastInst(result, vec4x32Type, "to4x32",
                                            insertBefore);
@@ -3167,7 +3167,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             // elements
             ++elt;
         }
-        else if (offsets[elt] >= load.start && 
+        else if (offsets[elt] >= load.start &&
                  offsets[elt] < load.start + load.count) {
             Debug(SourcePos(), "Load 2 @ %" PRId64 " matches for element #%d "
                   "(value %" PRId64 ")", load.start, elt, offsets[elt]);
@@ -3176,7 +3176,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
             Assert(set[elt] == false);
             llvm::Value *toInsert = (offsets[elt] == load.start) ?
                 load.element0 : load.element1;
-            result =                         
+            result =
                 llvm::InsertElementInst::Create(result, toInsert, LLVMInt32(elt),
                                                 "insert_load", insertBefore);
             set[elt] = true;
@@ -3195,7 +3195,7 @@ lApplyLoad2(llvm::Value *result, const CoalescedLoadOp &load,
 /** And handle a 4-wide load */
 static llvm::Value *
 lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
-            const int64_t offsets[4], bool set[4], 
+            const int64_t offsets[4], bool set[4],
             llvm::Instruction *insertBefore) {
     // Conceptually, we're doing to consider doing a shuffle vector with
     // the 4-wide load and the 4-wide result we have so far to generate a
@@ -3204,11 +3204,11 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
     int32_t shuf[4] = { 4, 5, 6, 7 };
 
     for (int elt = 0; elt < 4; ++elt) {
-        if (offsets[elt] >= load.start && 
+        if (offsets[elt] >= load.start &&
             offsets[elt] < load.start + load.count) {
             Debug(SourcePos(), "Load 4 @ %" PRId64 " matches for element #%d "
                   "(value %" PRId64 ")", load.start, elt, offsets[elt]);
-            
+
             // If the current element falls within the range of locations
             // that the 4-wide load covers, then compute the appropriate
             // shuffle index that extracts the appropriate element from the
@@ -3235,13 +3235,13 @@ lApplyLoad4(llvm::Value *result, const CoalescedLoadOp &load,
     for the four elements of the result.
 */
 static llvm::Value *
-lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
+lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    llvm::Type *returnType = 
+    llvm::Type *returnType =
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
-    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" 
+    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %"
           PRId64 " %" PRId64 "].", offsets[0], offsets[1], offsets[2], offsets[3]);
 
     // Track whether we have found a valid value for each of the four
@@ -3281,7 +3281,7 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
 
 static llvm::Value *
 lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
-             const int64_t offsets[4], bool set[4], 
+             const int64_t offsets[4], bool set[4],
              llvm::Instruction *insertBefore) {
     int32_t firstMatchElements[4] = { -1, -1, -1, -1 };
     const CoalescedLoadOp *firstMatch = NULL;
@@ -3296,7 +3296,7 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
         int32_t matchElements[4] = { -1, -1, -1, -1 };
         bool anyMatched = false;
         for (int elt = 0; elt < 4; ++elt) {
-            if (offsets[elt] >= loadop.start && 
+            if (offsets[elt] >= loadop.start &&
                 offsets[elt] < loadop.start + loadop.count) {
                 Debug(SourcePos(), "Load 4 @ %" PRId64 " matches for element #%d "
                       "(value %" PRId64 ")", loadop.start, elt, offsets[elt]);
@@ -3350,8 +3350,8 @@ lApplyLoad4s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
 
 
 static llvm::Value *
-lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps, 
-              const int64_t offsets[4], bool set[4], 
+lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
+              const int64_t offsets[4], bool set[4],
               llvm::Instruction *insertBefore) {
     // Loop over all of the loads and check each one to see if it provides
     // a value that's applicable to the result
@@ -3375,13 +3375,13 @@ lApplyLoad12s(llvm::Value *result, const std::vector<CoalescedLoadOp> &loadOps,
     for the four elements of the result.
 */
 static llvm::Value *
-lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps, 
+lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
                  const int64_t offsets[4], llvm::Instruction *insertBefore) {
-    llvm::Type *returnType = 
+    llvm::Type *returnType =
         llvm::VectorType::get(LLVMTypes::Int32Type, 4);
     llvm::Value *result = llvm::UndefValue::get(returnType);
 
-    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %" 
+    Debug(SourcePos(), "Starting search for loads [%" PRId64 " %" PRId64 " %"
           PRId64 " %" PRId64 "].",  offsets[0], offsets[1], offsets[2], offsets[3]);
 
     // Track whether we have found a valid value for each of the four
@@ -3407,7 +3407,7 @@ lAssemble4Vector(const std::vector<CoalescedLoadOp> &loadOps,
     result vector.
  */
 static void
-lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps, 
+lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
                        const std::vector<int64_t> &constOffsets,
                        std::vector<llvm::Value *> &results,
                        llvm::Instruction *insertBefore) {
@@ -3460,7 +3460,7 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
     llvm::Value *basePtr = gatherInst->getArgOperand(0);
     llvm::Value *variableOffsets = gatherInst->getArgOperand(1);
     llvm::Value *offsetScale = gatherInst->getArgOperand(2);
-    
+
     // All of the variable offsets values should be the same, due to
     // checking for this in GatherCoalescePass::runOnBasicBlock().  Thus,
     // extract the first value and use that as a scalar.
@@ -3468,8 +3468,8 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
     if (variable->getType() == LLVMTypes::Int64Type)
         offsetScale = new llvm::ZExtInst(offsetScale, LLVMTypes::Int64Type,
                                          "scale_to64", insertBefore);
-    llvm::Value *offset = 
-        llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable, 
+    llvm::Value *offset =
+        llvm::BinaryOperator::Create(llvm::Instruction::Mul, variable,
                                      offsetScale, "offset", insertBefore);
 
     return lGEPInst(basePtr, offset, "new_base", insertBefore);
@@ -3566,7 +3566,7 @@ lCoalesceGathers(const std::vector<llvm::CallInst *> &coalesceGroup) {
 
         llvm::Type *origType = coalesceGroup[i]->getType();
         if (origType != ir->getType())
-            ir = new llvm::BitCastInst(ir, origType, ir->getName(), 
+            ir = new llvm::BitCastInst(ir, origType, ir->getName(),
                                        coalesceGroup[i]);
 
         // Previously, all of the instructions to compute the final result
@@ -3803,7 +3803,7 @@ lIsSafeToBlend(llvm::Value *lvalue) {
         llvm::AllocaInst *ai = llvm::dyn_cast<llvm::AllocaInst>(lvalue);
         if (ai) {
             llvm::Type *type = ai->getType();
-            llvm::PointerType *pt = 
+            llvm::PointerType *pt =
                 llvm::dyn_cast<llvm::PointerType>(type);
             assert(pt != NULL);
             type = pt->getElementType();
@@ -3811,13 +3811,13 @@ lIsSafeToBlend(llvm::Value *lvalue) {
             while ((at = llvm::dyn_cast<llvm::ArrayType>(type))) {
                 type = at->getElementType();
             }
-            llvm::VectorType *vt = 
+            llvm::VectorType *vt =
                 llvm::dyn_cast<llvm::VectorType>(type);
-            return (vt != NULL && 
+            return (vt != NULL &&
                     (int)vt->getNumElements() == g->target.vectorWidth);
         }
         else {
-            llvm::GetElementPtrInst *gep = 
+            llvm::GetElementPtrInst *gep =
                 llvm::dyn_cast<llvm::GetElementPtrInst>(lvalue);
             if (gep != NULL)
                 return lIsSafeToBlend(gep->getOperand(0));
@@ -3835,7 +3835,7 @@ lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
             pseudoFunc = m->module->getFunction(pname);
             blendFunc = m->module->getFunction(bname);
             maskedStoreFunc = m->module->getFunction(msname);
-            Assert(pseudoFunc != NULL && blendFunc != NULL && 
+            Assert(pseudoFunc != NULL && blendFunc != NULL &&
                    maskedStoreFunc != NULL);
         }
         llvm::Function *pseudoFunc;
@@ -3844,17 +3844,17 @@ lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
     };
 
     LMSInfo msInfo[] = {
-        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8", 
+        LMSInfo("__pseudo_masked_store_i8", "__masked_store_blend_i8",
                 "__masked_store_i8"),
-        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16", 
+        LMSInfo("__pseudo_masked_store_i16", "__masked_store_blend_i16",
                 "__masked_store_i16"),
-        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32", 
+        LMSInfo("__pseudo_masked_store_i32", "__masked_store_blend_i32",
                 "__masked_store_i32"),
-        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float", 
+        LMSInfo("__pseudo_masked_store_float", "__masked_store_blend_float",
                 "__masked_store_float"),
-        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64", 
+        LMSInfo("__pseudo_masked_store_i64", "__masked_store_blend_i64",
                 "__masked_store_i64"),
-        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double", 
+        LMSInfo("__pseudo_masked_store_double", "__masked_store_blend_double",
                 "__masked_store_double")
     };
 
@@ -3891,7 +3891,7 @@ lReplacePseudoMaskedStore(llvm::CallInst *callInst) {
 }
 
 
-static bool 
+static bool
 lReplacePseudoGS(llvm::CallInst *callInst) {
     struct LowerGSInfo {
         LowerGSInfo(const char *pName, const char *aName, bool ig)
@@ -3919,56 +3919,56 @@ lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_gather64_i64", "__gather64_i64", true),
         LowerGSInfo("__pseudo_gather64_double", "__gather64_double", true),
 
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8",  
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i8",
                     "__gather_factored_base_offsets32_i8",  true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i16",
                     "__gather_factored_base_offsets32_i16", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i32",
                     "__gather_factored_base_offsets32_i32", true),
         LowerGSInfo("__pseudo_gather_factored_base_offsets32_float",
                     "__gather_factored_base_offsets32_float", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i64", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_i64",
                     "__gather_factored_base_offsets32_i64", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets32_double", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets32_double",
                     "__gather_factored_base_offsets32_double", true),
 
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i8",  
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i8",
                     "__gather_factored_base_offsets64_i8",  true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i16", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i16",
                     "__gather_factored_base_offsets64_i16", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i32", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i32",
                     "__gather_factored_base_offsets64_i32", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_float", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_float",
                     "__gather_factored_base_offsets64_float", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i64", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_i64",
                     "__gather_factored_base_offsets64_i64", true),
-        LowerGSInfo("__pseudo_gather_factored_base_offsets64_double", 
+        LowerGSInfo("__pseudo_gather_factored_base_offsets64_double",
                     "__gather_factored_base_offsets64_double", true),
 
-        LowerGSInfo("__pseudo_gather_base_offsets32_i8",  
+        LowerGSInfo("__pseudo_gather_base_offsets32_i8",
                     "__gather_base_offsets32_i8",  true),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i16", 
+        LowerGSInfo("__pseudo_gather_base_offsets32_i16",
                     "__gather_base_offsets32_i16", true),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i32", 
+        LowerGSInfo("__pseudo_gather_base_offsets32_i32",
                     "__gather_base_offsets32_i32", true),
         LowerGSInfo("__pseudo_gather_base_offsets32_float",
                     "__gather_base_offsets32_float", true),
-        LowerGSInfo("__pseudo_gather_base_offsets32_i64", 
+        LowerGSInfo("__pseudo_gather_base_offsets32_i64",
                     "__gather_base_offsets32_i64", true),
-        LowerGSInfo("__pseudo_gather_base_offsets32_double", 
+        LowerGSInfo("__pseudo_gather_base_offsets32_double",
                     "__gather_base_offsets32_double", true),
 
-        LowerGSInfo("__pseudo_gather_base_offsets64_i8",  
+        LowerGSInfo("__pseudo_gather_base_offsets64_i8",
                     "__gather_base_offsets64_i8",  true),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i16", 
+        LowerGSInfo("__pseudo_gather_base_offsets64_i16",
                     "__gather_base_offsets64_i16", true),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i32", 
+        LowerGSInfo("__pseudo_gather_base_offsets64_i32",
                     "__gather_base_offsets64_i32", true),
-        LowerGSInfo("__pseudo_gather_base_offsets64_float", 
+        LowerGSInfo("__pseudo_gather_base_offsets64_float",
                     "__gather_base_offsets64_float", true),
-        LowerGSInfo("__pseudo_gather_base_offsets64_i64", 
+        LowerGSInfo("__pseudo_gather_base_offsets64_i64",
                     "__gather_base_offsets64_i64", true),
-        LowerGSInfo("__pseudo_gather_base_offsets64_double", 
+        LowerGSInfo("__pseudo_gather_base_offsets64_double",
                     "__gather_base_offsets64_double", true),
 
         LowerGSInfo("__pseudo_scatter32_i8",  "__scatter32_i8",  false),
@@ -3985,57 +3985,57 @@ lReplacePseudoGS(llvm::CallInst *callInst) {
         LowerGSInfo("__pseudo_scatter64_i64", "__scatter64_i64", false),
         LowerGSInfo("__pseudo_scatter64_double", "__scatter64_double", false),
 
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8",  
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i8",
                     "__scatter_factored_base_offsets32_i8",  false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i16", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i16",
                     "__scatter_factored_base_offsets32_i16", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i32", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i32",
                     "__scatter_factored_base_offsets32_i32", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_float", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_float",
                     "__scatter_factored_base_offsets32_float", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i64", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets32_i64",
                     "__scatter_factored_base_offsets32_i64", false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets32_double",
                     "__scatter_factored_base_offsets32_double", false),
 
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i8",  
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i8",
                     "__scatter_factored_base_offsets64_i8",  false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i16", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i16",
                     "__scatter_factored_base_offsets64_i16", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i32", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i32",
                     "__scatter_factored_base_offsets64_i32", false),
         LowerGSInfo("__pseudo_scatter_factored_base_offsets64_float",
                     "__scatter_factored_base_offsets64_float", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i64", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_i64",
                     "__scatter_factored_base_offsets64_i64", false),
-        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_double", 
+        LowerGSInfo("__pseudo_scatter_factored_base_offsets64_double",
                     "__scatter_factored_base_offsets64_double", false),
 
 
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i8",  
+        LowerGSInfo("__pseudo_scatter_base_offsets32_i8",
                     "__scatter_base_offsets32_i8",  false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i16", 
+        LowerGSInfo("__pseudo_scatter_base_offsets32_i16",
                     "__scatter_base_offsets32_i16", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i32", 
+        LowerGSInfo("__pseudo_scatter_base_offsets32_i32",
                     "__scatter_base_offsets32_i32", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_float", 
+        LowerGSInfo("__pseudo_scatter_base_offsets32_float",
                     "__scatter_base_offsets32_float", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets32_i64", 
+        LowerGSInfo("__pseudo_scatter_base_offsets32_i64",
                     "__scatter_base_offsets32_i64", false),
         LowerGSInfo("__pseudo_scatter_base_offsets32_double",
                     "__scatter_base_offsets32_double", false),
 
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i8",  
+        LowerGSInfo("__pseudo_scatter_base_offsets64_i8",
                     "__scatter_base_offsets64_i8",  false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i16", 
+        LowerGSInfo("__pseudo_scatter_base_offsets64_i16",
                     "__scatter_base_offsets64_i16", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i32", 
+        LowerGSInfo("__pseudo_scatter_base_offsets64_i32",
                     "__scatter_base_offsets64_i32", false),
         LowerGSInfo("__pseudo_scatter_base_offsets64_float",
                     "__scatter_base_offsets64_float", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_i64", 
+        LowerGSInfo("__pseudo_scatter_base_offsets64_i64",
                     "__scatter_base_offsets64_i64", false),
-        LowerGSInfo("__pseudo_scatter_base_offsets64_double", 
+        LowerGSInfo("__pseudo_scatter_base_offsets64_double",
                     "__scatter_base_offsets64_double", false),
     };
 
@@ -4118,7 +4118,7 @@ CreateReplacePseudoMemoryOpsPass() {
     This pass resolves these calls into either 'true' or 'false' values so
     that later optimization passes can operate with these as constants.
 
-    See stdlib.m4 for a number of uses of this idiom. 
+    See stdlib.m4 for a number of uses of this idiom.
  */
 
 class IsCompileTimeConstantPass : public llvm::BasicBlockPass {
@@ -4159,7 +4159,7 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         int j;
         int nFuncs = sizeof(funcs) / sizeof(funcs[0]);
         for (j = 0; j < nFuncs; ++j) {
-            if (funcs[j] != NULL && callInst->getCalledFunction() == funcs[j]) 
+            if (funcs[j] != NULL && callInst->getCalledFunction() == funcs[j])
                 break;
         }
         if (j == nFuncs)
@@ -4242,7 +4242,7 @@ char MakeInternalFuncsStaticPass::ID = 0;
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     const char *names[] = {
-        "__fast_masked_vload", 
+        "__fast_masked_vload",
         "__gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i16",
         "__gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i64",
         "__gather_factored_base_offsets32_float", "__gather_factored_base_offsets32_double",
@@ -4261,12 +4261,12 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__gather64_i8", "__gather64_i16",
         "__gather64_i32", "__gather64_i64",
         "__gather64_float", "__gather64_double",
-        "__gather_elt32_i8", "__gather_elt32_i16", 
-        "__gather_elt32_i32", "__gather_elt32_i64", 
-        "__gather_elt32_float", "__gather_elt32_double", 
-        "__gather_elt64_i8", "__gather_elt64_i16", 
-        "__gather_elt64_i32", "__gather_elt64_i64", 
-        "__gather_elt64_float", "__gather_elt64_double", 
+        "__gather_elt32_i8", "__gather_elt32_i16",
+        "__gather_elt32_i32", "__gather_elt32_i64",
+        "__gather_elt32_float", "__gather_elt32_double",
+        "__gather_elt64_i8", "__gather_elt64_i16",
+        "__gather_elt64_i32", "__gather_elt64_i64",
+        "__gather_elt64_float", "__gather_elt64_double",
         "__masked_load_i8", "__masked_load_i16",
         "__masked_load_i32", "__masked_load_i64",
         "__masked_load_float", "__masked_load_double",
@@ -4288,12 +4288,12 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
         "__scatter_base_offsets64_i8", "__scatter_base_offsets64_i16",
         "__scatter_base_offsets64_i32", "__scatter_base_offsets64_i64",
         "__scatter_base_offsets64_float", "__scatter_base_offsets64_double",
-        "__scatter_elt32_i8", "__scatter_elt32_i16", 
-        "__scatter_elt32_i32", "__scatter_elt32_i64", 
-        "__scatter_elt32_float", "__scatter_elt32_double", 
-        "__scatter_elt64_i8", "__scatter_elt64_i16", 
-        "__scatter_elt64_i32", "__scatter_elt64_i64", 
-        "__scatter_elt64_float", "__scatter_elt64_double", 
+        "__scatter_elt32_i8", "__scatter_elt32_i16",
+        "__scatter_elt32_i32", "__scatter_elt32_i64",
+        "__scatter_elt32_float", "__scatter_elt32_double",
+        "__scatter_elt64_i8", "__scatter_elt64_i16",
+        "__scatter_elt64_i32", "__scatter_elt64_i64",
+        "__scatter_elt64_float", "__scatter_elt64_double",
         "__scatter32_i8", "__scatter32_i16",
         "__scatter32_i32", "__scatter32_i64",
         "__scatter32_float", "__scatter32_double",

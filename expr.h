@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file expr.h
@@ -101,7 +101,7 @@ class UnaryExpr : public Expr {
 public:
     enum Op {
         PreInc,      ///< Pre-increment
-        PreDec,      ///< Pre-decrement 
+        PreDec,      ///< Pre-decrement
         PostInc,     ///< Post-increment
         PostDec,     ///< Post-decrement
         Negate,      ///< Negation
@@ -198,7 +198,7 @@ public:
 };
 
 
-/** @brief Selection expression, corresponding to "test ? a : b".  
+/** @brief Selection expression, corresponding to "test ? a : b".
 
     Returns the value of "a" or "b", depending on the value of "test".
 */
@@ -245,7 +245,7 @@ public:
  */
 class FunctionCallExpr : public Expr {
 public:
-    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p, 
+    FunctionCallExpr(Expr *func, ExprList *args, SourcePos p,
                      bool isLaunch = false, Expr *launchCountExpr = NULL);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
@@ -266,7 +266,7 @@ public:
 /** @brief Expression representing indexing into something with an integer
     offset.
 
-    This is used for both array indexing and indexing into VectorTypes. 
+    This is used for both array indexing and indexing into VectorTypes.
 */
 class IndexExpr : public Expr {
 public:
@@ -317,7 +317,7 @@ public:
     std::string identifier;
     const SourcePos identifierPos;
 
-    MemberExpr(Expr *expr, const char *identifier, SourcePos pos, 
+    MemberExpr(Expr *expr, const char *identifier, SourcePos pos,
                SourcePos identifierPos, bool derefLValue);
 
     /** Indicates whether the expression should be dereferenced before the
@@ -330,7 +330,7 @@ protected:
 };
 
 
-/** @brief Expression representing a compile-time constant value.  
+/** @brief Expression representing a compile-time constant value.
 
     This class can currently represent compile-time constants of anything
     that is an AtomicType or an EnumType; for anything more complex, we
@@ -640,7 +640,7 @@ private:
 
 /** @brief Expression representing a function symbol in the program (generally
     used for a function call).
- */    
+ */
 class FunctionSymbolExpr : public Expr {
 public:
     FunctionSymbolExpr(const char *name, const std::vector<Symbol *> &candFuncs,
@@ -714,7 +714,7 @@ public:
 class NullPointerExpr : public Expr {
 public:
     NullPointerExpr(SourcePos p) : Expr(p) { }
-    
+
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
     Expr *TypeCheck();
@@ -726,11 +726,11 @@ public:
 
 
 /** An expression representing a "new" expression, used for dynamically
-    allocating memory. 
+    allocating memory.
 */
 class NewExpr : public Expr {
 public:
-    NewExpr(int typeQual, const Type *type, Expr *initializer, Expr *count, 
+    NewExpr(int typeQual, const Type *type, Expr *initializer, Expr *count,
             SourcePos tqPos, SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
@@ -742,7 +742,7 @@ public:
 
     /** Type of object to allocate storage for. */
     const Type *allocType;
-    /** Expression giving the number of elements to allocate, when the 
+    /** Expression giving the number of elements to allocate, when the
         "new Foo[expr]" form is used.  This may be NULL, in which case a
         single element of the given type will be allocated. */
     Expr *countExpr;

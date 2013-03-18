@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file builtins-c.c
@@ -101,12 +101,12 @@ typedef int Bool;
 
     @param format  Print format string
     @param types   Encoded types of the values being printed.
-                   (See lEncodeType()). 
+                   (See lEncodeType()).
     @param width   Vector width of the compilation target
     @param mask    Current lane mask when the print statemnt is called
     @param args    Array of pointers to the values to be printed
  */
-void __do_print(const char *format, const char *types, int width, uint64_t mask, 
+void __do_print(const char *format, const char *types, int width, uint64_t mask,
                 void **args) {
     char printString[PRINT_BUF_SIZE+1]; // +1 for trailing NUL
     char *bufp = &printString[0];

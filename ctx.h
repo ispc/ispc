@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file ctx.h
@@ -75,7 +75,7 @@ public:
         @param firstStmtPos Source file position of the first statement in the
                             function
      */
-    FunctionEmitContext(Function *function, Symbol *funSym, 
+    FunctionEmitContext(Function *function, Symbol *funSym,
                         llvm::Function *llvmFunction,
                         SourcePos firstStmtPos);
     ~FunctionEmitContext();
@@ -87,9 +87,9 @@ public:
     /** @name Current basic block management
         @{
      */
-    /** Returns the current basic block pointer */ 
+    /** Returns the current basic block pointer */
     llvm::BasicBlock *GetCurrentBasicBlock();
-    
+
     /** Set the given llvm::BasicBlock to be the basic block to emit
         forthcoming instructions into. */
     void SetCurrentBasicBlock(llvm::BasicBlock *bblock);
@@ -97,7 +97,7 @@ public:
     /** @name Mask management
         @{
      */
-    /** Returns the mask value at entry to the current function. */ 
+    /** Returns the mask value at entry to the current function. */
     llvm::Value *GetFunctionMask();
 
     /** Returns the mask value corresponding to "varying" control flow
@@ -106,7 +106,7 @@ public:
     llvm::Value *GetInternalMask();
 
     /** Returns the complete current mask value--i.e. the logical AND of
-        the function entry mask and the internal mask. */ 
+        the function entry mask and the internal mask. */
     llvm::Value *GetFullMask();
 
     /** Returns a pointer to storage in memory that stores the current full
@@ -159,7 +159,7 @@ public:
         'continue' statements should jump to (if all running lanes want to
         break or continue), uniformControlFlow indicates whether the loop
         condition is 'uniform'. */
-    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget, 
+    void StartLoop(llvm::BasicBlock *breakTarget, llvm::BasicBlock *continueTarget,
                    bool uniformControlFlow);
 
     /** Informs FunctionEmitContext of the value of the mask at the start
@@ -213,8 +213,8 @@ public:
         @param caseBlocks   vector that stores the mapping from label values
                             after "case" statements to basic blocks corresponding
                             to the "case" labels.
-        @param nextBlocks   For each basic block for a "case" or "default" 
-                            label, this gives the basic block for the 
+        @param nextBlocks   For each basic block for a "case" or "default"
+                            label, this gives the basic block for the
                             immediately-following "case" or "default" label (or
                             the basic block after the "switch" statement for the
                             last label.)
@@ -272,7 +272,7 @@ public:
     /** @} */
 
     /** @name Small helper/utility routines
-        @{ 
+        @{
     */
     /** Given a boolean mask value of type LLVMTypes::MaskType, return an
         i1 value that indicates if any of the mask lanes are on. */
@@ -332,7 +332,7 @@ public:
         llvm::Instruction for convenience; in calling code we often have
         Instructions stored using Value pointers; the code here returns
         silently if it's not actually given an instruction. */
-    void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL, 
+    void AddDebugPos(llvm::Value *instruction, const SourcePos *pos = NULL,
                      llvm::DIScope *scope = NULL);
 
     /** Inform the debugging information generation code that a new scope
@@ -361,7 +361,7 @@ public:
         instructions.  See the LLVM assembly language reference manual
         (http://llvm.org/docs/LangRef.html) and the LLVM doxygen documentaion
         (http://llvm.org/doxygen) for more information.  Here we will only
-        document significant generalizations to the functionality of the 
+        document significant generalizations to the functionality of the
         corresponding basic LLVM instructions.
 
         Beyond actually emitting the instruction, the implementations of
@@ -377,7 +377,7 @@ public:
         this also handles applying the given operation to the vector
         elements. */
     llvm::Value *BinaryOperator(llvm::Instruction::BinaryOps inst,
-                                llvm::Value *v0, llvm::Value *v1, 
+                                llvm::Value *v0, llvm::Value *v1,
                                 const char *name = NULL);
 
     /** Emit the "not" operator.  Like BinaryOperator(), this also handles
@@ -387,7 +387,7 @@ public:
     /** Emit a comparison instruction.  If the operands are VectorTypes,
         then a value for the corresponding boolean VectorType is
         returned. */
-    llvm::Value *CmpInst(llvm::Instruction::OtherOps inst, 
+    llvm::Value *CmpInst(llvm::Instruction::OtherOps inst,
                          llvm::CmpInst::Predicate pred,
                          llvm::Value *v0, llvm::Value *v1, const char *name = NULL);
 
@@ -407,17 +407,17 @@ public:
                                  const char *name = NULL);
     llvm::Instruction *CastInst(llvm::Instruction::CastOps op, llvm::Value *value,
                                 llvm::Type *type, const char *name = NULL);
-    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type, 
+    llvm::Instruction *FPCastInst(llvm::Value *value, llvm::Type *type,
                                   const char *name = NULL);
-    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type, 
+    llvm::Instruction *SExtInst(llvm::Value *value, llvm::Type *type,
                                 const char *name = NULL);
-    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type, 
+    llvm::Instruction *ZExtInst(llvm::Value *value, llvm::Type *type,
                                 const char *name = NULL);
 
     /** Given two integer-typed values (but possibly one vector and the
         other not, and or of possibly-different bit-widths), update their
         values as needed so that the two have the same (more general)
-        type. */ 
+        type. */
     void MatchIntegerTypes(llvm::Value **v0, llvm::Value **v1);
 
     /** Create a new slice pointer out of the given pointer to an soa type
@@ -462,9 +462,9 @@ public:
         allocated at the given alignment.  By default, the alloca
         instruction is added at the start of the function in the entry
         basic block; if it should be added to the current basic block, then
-        the atEntryBlock parameter should be false. */ 
-    llvm::Value *AllocaInst(llvm::Type *llvmType, 
-                            const char *name = NULL, int align = 0, 
+        the atEntryBlock parameter should be false. */
+    llvm::Value *AllocaInst(llvm::Type *llvmType,
+                            const char *name = NULL, int align = 0,
                             bool atEntryBlock = true);
 
     /** Standard store instruction; for this variant, the lvalue must be a
@@ -481,7 +481,7 @@ public:
 
     /** Copy count bytes of memory from the location pointed to by src to
         the location pointed to by dest.  (src and dest must not be
-        overlapping.) */ 
+        overlapping.) */
     void MemcpyInst(llvm::Value *dest, llvm::Value *src, llvm::Value *count,
                     llvm::Value *align = NULL);
 
@@ -497,10 +497,10 @@ public:
     /** This convenience method maps to an llvm::InsertElementInst if the
         given value is a llvm::VectorType, and to an llvm::InsertValueInst
         otherwise. */
-    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt, 
+    llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
                             const char *name = NULL);
 
-    llvm::PHINode *PhiNode(llvm::Type *type, int count, 
+    llvm::PHINode *PhiNode(llvm::Type *type, int count,
                            const char *name = NULL);
     llvm::Instruction *SelectInst(llvm::Value *test, llvm::Value *val0,
                                   llvm::Value *val1, const char *name = NULL);
@@ -526,7 +526,7 @@ public:
 
     /** Launch an asynchronous task to run the given function, passing it
         he given argument values. */
-    llvm::Value *LaunchInst(llvm::Value *callee, 
+    llvm::Value *LaunchInst(llvm::Value *callee,
                             std::vector<llvm::Value *> &argVals,
                             llvm::Value *launchCount);
 
@@ -680,7 +680,7 @@ private:
     void jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target);
     llvm::Value *emitGatherCallback(llvm::Value *lvalue, llvm::Value *retPtr);
 
-    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index, 
+    llvm::Value *applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
                                  const Type *ptrType);
 
     void restoreMaskGivenReturns(llvm::Value *oldMask);
@@ -694,7 +694,7 @@ private:
                  const Type *ptrType, llvm::Value *mask);
     void maskedStore(llvm::Value *value, llvm::Value *ptr, const Type *ptrType,
                      llvm::Value *mask);
-    void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr, 
+    void storeUniformToSOA(llvm::Value *value, llvm::Value *ptr,
                            llvm::Value *mask, const Type *valueType,
                            const PointerType *ptrType);
     llvm::Value *loadUniformFromSOA(llvm::Value *ptr, llvm::Value *mask,

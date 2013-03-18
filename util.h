@@ -28,12 +28,12 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file util.h
 
-    @brief 
+    @brief
 */
 
 #ifndef ISPC_UTIL_H
@@ -50,9 +50,9 @@ struct SourcePos;
     of two already. */
 inline uint32_t RoundUpPow2(uint32_t v) {
     v--;
-    v |= v >> 1;    
+    v |= v >> 1;
     v |= v >> 2;
-    v |= v >> 4;    
+    v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
     return v+1;
@@ -75,7 +75,7 @@ int  asprintf(char **sptr, const char *fmt, ...);
     g->debugPrint is \c true.  In addition to a program source code
     position to associate with the message, a printf()-style format string
     is passed along with any values needed for items in the format
-    string. 
+    string.
 */
 void Debug(SourcePos p, const char *format, ...) PRINTF_FUNC;
 
@@ -93,7 +93,7 @@ void Warning(SourcePos p, const char *format, ...) PRINTF_FUNC;
     able to issue any subsequent error messages.  In addition to a program
     source code position to associate with the message, a printf()-style
     format string is passed along with any values needed for items in the
-    format string. 
+    format string.
 */
 void Error(SourcePos p, const char *format, ...) PRINTF_FUNC;
 
@@ -102,7 +102,7 @@ void Error(SourcePos p, const char *format, ...) PRINTF_FUNC;
     completion of compilation.  In addition to a program source code
     position to associate with the message, a printf()-style format string
     is passed along with any values needed for items in the format
-    string.  
+    string.
 */
 void PerformanceWarning(SourcePos p, const char *format, ...) PRINTF_FUNC;
 
@@ -143,7 +143,7 @@ std::vector<std::string> MatchStrings(const std::string &str,
 /** Given the current working directory and a filename relative to that
     directory, this function returns the final directory that the resulting
     file is in and the base name of the file itself. */
-void GetDirectoryAndFileName(const std::string &currentDir, 
+void GetDirectoryAndFileName(const std::string &currentDir,
                              const std::string &relativeName,
                              std::string *directory, std::string *filename);
 

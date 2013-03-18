@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file llvmutil.h
@@ -59,7 +59,7 @@ namespace llvm {
 /** This structure holds pointers to a variety of LLVM types; code
     elsewhere can use them from here, ratherthan needing to make more
     verbose LLVM API calls.
- */ 
+ */
 struct LLVMTypes {
     static llvm::Type *VoidType;
     static llvm::PointerType *VoidPointerType;
@@ -257,7 +257,7 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
 
     and initializes the provided elements array such that the i'th
     llvm::Value * in the array is the element that was inserted into the
-    i'th element of the vector.  
+    i'th element of the vector.
 
     When the chain of insertelement instruction comes to an end, the only
     base case that this function handles is the initial value being a
@@ -286,7 +286,7 @@ extern llvm::Value *LLVMExtractFirstVectorElement(llvm::Value *v);
 /** This function takes two vectors, expected to be the same length, and
     returns a new vector of twice the length that represents concatenating
     the two of them. */
-extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+extern llvm::Value *LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
                                       llvm::Instruction *insertBefore);
 
 /** This is a utility function for vector shuffling; it takes two vectors

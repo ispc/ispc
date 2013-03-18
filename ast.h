@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file ast.h
-    @brief 
+    @brief
 */
 
 #ifndef ISPC_AST_H
@@ -121,12 +121,12 @@ extern ASTNode *Optimize(ASTNode *root);
 
 /** Convenience version of Optimize() for Expr *s that returns an Expr *
     (rather than an ASTNode *, which would require the caller to cast back
-    to an Expr *). */ 
+    to an Expr *). */
 extern Expr *Optimize(Expr *);
 
 /** Convenience version of Optimize() for Expr *s that returns an Stmt *
     (rather than an ASTNode *, which would require the caller to cast back
-    to a Stmt *). */ 
+    to a Stmt *). */
 extern Stmt *Optimize(Stmt *);
 
 /** Perform type-checking on the given AST (or portion of one), returning a
@@ -144,7 +144,7 @@ extern Stmt *TypeCheck(Stmt *);
 extern int EstimateCost(ASTNode *root);
 
 /** Returns true if it would be safe to run the given code with an "all
-    off" mask. */ 
+    off" mask. */
 extern bool SafeToRunWithMaskAllOff(ASTNode *root);
 
 #endif // ISPC_AST_H
