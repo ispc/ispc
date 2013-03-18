@@ -104,14 +104,14 @@ public:
         declarations of functions and types used in the ispc/application
         interface.
         @param srcFile      Pathname to ispc source file to compile
-        @param arch         Target architecture (e.g. "x86-64")
-        @param cpu          Target CPU (e.g. "core-i7")
-        @param targets      Target ISAs; this parameter may give a single target
+        @param arch         %Target architecture (e.g. "x86-64")
+        @param cpu          %Target CPU (e.g. "core-i7")
+        @param targets      %Target ISAs; this parameter may give a single target
                             ISA, or may give a comma-separated list of them in
                             case we are compiling to multiple ISAs.
         @param generatePIC  Indicates whether position-independent code should
                             be generated.
-        @param outputType   Type of output to generate (object files, assembly,
+        @param outputType   %Type of output to generate (object files, assembly,
                             LLVM bitcode.)
         @param outFileName  Base name of output filename for object files, etc.
                             If for example the multiple targets "sse2" and "avx"
