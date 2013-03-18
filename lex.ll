@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 %{
@@ -62,7 +62,7 @@ inline int isatty(int) { return 0; }
 #include <unistd.h>
 #endif // ISPC_IS_WINDOWS
 
-static int allTokens[] = { 
+static int allTokens[] = {
   TOKEN_ASSERT, TOKEN_BOOL, TOKEN_BREAK, TOKEN_CASE,
   TOKEN_CDO, TOKEN_CFOR, TOKEN_CIF, TOKEN_CWHILE,
   TOKEN_CONST, TOKEN_CONTINUE, TOKEN_DEFAULT, TOKEN_DO,
@@ -74,11 +74,11 @@ static int allTokens[] = {
   TOKEN_NEW, TOKEN_NULL, TOKEN_PRINT, TOKEN_RETURN, TOKEN_SOA, TOKEN_SIGNED,
   TOKEN_SIZEOF, TOKEN_STATIC, TOKEN_STRUCT, TOKEN_SWITCH, TOKEN_SYNC,
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
-  TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE, 
-  TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT, 
+  TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
+  TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
   TOKEN_FLOAT_CONSTANT,
-  TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT, 
-  TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT, 
+  TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT,
+  TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT,
   TOKEN_INC_OP, TOKEN_DEC_OP, TOKEN_LEFT_OP, TOKEN_RIGHT_OP, TOKEN_LE_OP,
   TOKEN_GE_OP, TOKEN_EQ_OP, TOKEN_NE_OP, TOKEN_AND_OP, TOKEN_OR_OP,
   TOKEN_MUL_ASSIGN, TOKEN_DIV_ASSIGN, TOKEN_MOD_ASSIGN, TOKEN_ADD_ASSIGN,
@@ -406,7 +406,7 @@ while { RT; return TOKEN_WHILE; }
 
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
-{IDENT} { 
+{IDENT} {
     RT;
     /* We have an identifier--is it a type name or an identifier?
        The symbol table will straighten us out... */
@@ -414,10 +414,10 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     if (m->symbolTable->LookupType(yytext) != NULL)
         return TOKEN_TYPE_NAME;
     else
-        return TOKEN_IDENTIFIER; 
+        return TOKEN_IDENTIFIER;
 }
 
-{INT_NUMBER} { 
+{INT_NUMBER} {
     RT;
     return lParseInteger(false);
 }
@@ -428,16 +428,16 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 }
 
 
-{FLOAT_NUMBER} { 
+{FLOAT_NUMBER} {
     RT;
     yylval.floatVal = (float)atof(yytext);
-    return TOKEN_FLOAT_CONSTANT; 
+    return TOKEN_FLOAT_CONSTANT;
 }
 
 {HEX_FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = (float)lParseHexFloat(yytext); 
-    return TOKEN_FLOAT_CONSTANT; 
+    yylval.floatVal = (float)lParseHexFloat(yytext);
+    return TOKEN_FLOAT_CONSTANT;
 }
 
 "++" { RT; return TOKEN_INC_OP; }
@@ -489,17 +489,17 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 {WHITESPACE} { }
 
 \n {
-    yylloc.last_line++; 
-    yylloc.last_column = 1; 
+    yylloc.last_line++;
+    yylloc.last_column = 1;
 }
 
-#(line)?[ ][0-9]+[ ]\"(\\.|[^\\"])*\"[^\n]* { 
-    lHandleCppHash(&yylloc); 
+#(line)?[ ][0-9]+[ ]\"(\\.|[^\\"])*\"[^\n]* {
+    lHandleCppHash(&yylloc);
 }
 
 . {
     Error(yylloc, "Illegal character: %c (0x%x)", yytext[0], int(yytext[0]));
-    YY_USER_ACTION 
+    YY_USER_ACTION
 }
 
 %%
@@ -558,7 +558,7 @@ lParseInteger(bool dotdotdot) {
         else if (*endPtr == 'M')
             mega = true;
         else if (*endPtr == 'G')
-            giga = true;        
+            giga = true;
         else if (*endPtr == 'l' || *endPtr == 'L')
             ls++;
         else if (*endPtr == 'u' || *endPtr == 'U')
@@ -598,7 +598,7 @@ lParseInteger(bool dotdotdot) {
                 return TOKEN_UINT64_CONSTANT;
         }
         else {
-            // No u or l suffix           
+            // No u or l suffix
             // First, see if we can fit this into a 32-bit integer...
             if (yylval.intVal <= 0x7fffffffULL)
                 return TOKEN_INT32_CONSTANT;
@@ -613,7 +613,7 @@ lParseInteger(bool dotdotdot) {
 }
 
 
-/** Handle a C-style comment in the source. 
+/** Handle a C-style comment in the source.
  */
 static void
 lCComment(SourcePos *pos) {
@@ -750,7 +750,7 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
        char cval = '\0';
        p = lEscapeChar(p, &cval, pos);
        str.push_back(cval);
-    } 
+    }
     yylval->stringVal = new std::string(str);
 }
 
@@ -758,7 +758,7 @@ lStringConst(YYSTYPE *yylval, SourcePos *pos)
 /** Compute the value 2^n, where the exponent is given as an integer.
     There are more efficient ways to do this, for example by just slamming
     the bits into the appropriate bits of the double, but let's just do the
-    obvious thing. 
+    obvious thing.
 */
 static double
 ipow2(int exponent) {
@@ -777,7 +777,7 @@ ipow2(int exponent) {
 
 
 /** Parse a hexadecimal-formatted floating-point number (C99 hex float
-    constant-style). 
+    constant-style).
 */
 static double
 lParseHexFloat(const char *ptr) {

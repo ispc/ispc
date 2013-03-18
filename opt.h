@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file opt.h
@@ -43,7 +43,7 @@
 /** Optimize the functions in the given module, applying the specified
     level of optimization.  optLevel zero corresponds to essentially no
     optimization--just enough to generate correct code, while level one
-    corresponds to full optimization.  
+    corresponds to full optimization.
 */
 void Optimize(llvm::Module *module, int optLevel);
 

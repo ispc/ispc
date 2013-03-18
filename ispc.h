@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file ispc.h
@@ -158,7 +158,7 @@ extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *e
     ((void)((expr) ? 0 : ((void)DoAssertPos (pos, __FILE__, __LINE__, #expr), 0)))
 
 
-/** @brief Structure that defines a compilation target 
+/** @brief Structure that defines a compilation target
 
     This structure defines a compilation target for the ispc compiler.
 */
@@ -188,7 +188,7 @@ struct Target {
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */
     llvm::TargetMachine *GetTargetMachine() const;
-    
+
     /** Returns a string like "avx" encoding the target. */
     const char *GetISAString() const;
 
@@ -281,11 +281,11 @@ struct Target {
 /** @brief Structure that collects optimization options
 
     This structure collects all of the options related to optimization of
-    generated code. 
+    generated code.
 */
 struct Opt {
     Opt();
-    
+
     /** Optimization level.  Currently, the only valid values are 0,
         indicating essentially no optimization, and 1, indicating as much
         optimization as possible. */
@@ -308,7 +308,7 @@ struct Opt {
     /** Indicates if addressing math will be done with 32-bit math, even on
         64-bit systems.  (This is generally noticably more efficient,
         though at the cost of addressing >2GB).
-     */ 
+     */
     bool force32BitAddressing;
 
     /** Indicates whether Assert() statements should be ignored (for
@@ -387,7 +387,7 @@ struct Opt {
     bool disableCoalescing;
 };
 
-/** @brief This structure collects together a number of global variables. 
+/** @brief This structure collects together a number of global variables.
 
     This structure collects a number of global variables that mostly
     represent parameter settings for this compilation run.  In particular,
@@ -445,12 +445,12 @@ struct Globals {
         externally-defined program instrumentation function. (See the
         "Instrumenting your ispc programs" section in the user's
         manual.) */
-    bool emitInstrumentation; 
+    bool emitInstrumentation;
 
     /** Indicates whether ispc should generate debugging symbols for the
         program in its output. */
     bool generateDebuggingSymbols;
-   
+
     /** If true, function names are mangled by appending the target ISA and
         vector width to them. */
     bool mangleFunctionsWithTarget;

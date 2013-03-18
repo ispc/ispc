@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file util.cpp
@@ -139,7 +139,7 @@ lResetColor() {
 }
 
 /** Given a pointer into a string, find the end of the current word and
-    return a pointer to its last character. 
+    return a pointer to its last character.
 */
 static const char *
 lFindWordEnd(const char *buf) {
@@ -166,7 +166,7 @@ lPrintFileLineContext(SourcePos p) {
     while ((c = fgetc(f)) != EOF) {
         // Don't print more than three lines of context.  (More than that,
         // and we're probably doing the wrong thing...)
-        if (curLine >= std::max(p.first_line, p.last_line-2) && 
+        if (curLine >= std::max(p.first_line, p.last_line-2) &&
             curLine <= p.last_line)
             fputc(c, stderr);
         if (c == '\n')
@@ -322,7 +322,7 @@ asprintf(char **sptr, const char *fmt, ...)
     @param args   Arguments with values for format string % entries
 */
 static void
-lPrint(const char *type, bool isError, SourcePos p, const char *fmt, 
+lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
        va_list args) {
     char *errorBuf, *formattedBuf;
     if (vasprintf(&errorBuf, fmt, args) == -1) {
@@ -335,7 +335,7 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
         // We don't have a valid SourcePos, so create a message without it
         if (asprintf(&formattedBuf, "%s%s%s%s%s: %s%s", lStartBold(),
                      isError ? lStartRed() : lStartBlue(), type,
-                     lResetColor(), lStartBold(), errorBuf, 
+                     lResetColor(), lStartBold(), errorBuf,
                      lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
@@ -344,10 +344,10 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
     }
     else {
         // Create an error message that includes the file and line number
-        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s", 
-                     lStartBold(), p.name, p.first_line, p.first_column, 
-                     isError ? lStartRed() : lStartBlue(), type, 
-                     lResetColor(), lStartBold(), errorBuf, 
+        if (asprintf(&formattedBuf, "%s%s:%d:%d: %s%s%s%s: %s%s",
+                     lStartBold(), p.name, p.first_line, p.first_column,
+                     isError ? lStartRed() : lStartBlue(), type,
+                     lResetColor(), lStartBold(), errorBuf,
                      lResetColor()) == -1) {
             fprintf(stderr, "asprintf() unable to allocate memory!\n");
             exit(1);
@@ -507,7 +507,7 @@ StringEditDistance(const std::string &str1, const std::string &str2, int maxDist
 }
 
 
-std::vector<std::string> 
+std::vector<std::string>
 MatchStrings(const std::string &str, const std::vector<std::string> &options) {
     if (str.size() == 0 || (str.size() == 1 && !isalpha(str[0])))
         // don't even try...
@@ -536,7 +536,7 @@ MatchStrings(const std::string &str, const std::vector<std::string> &options) {
 
 
 void
-GetDirectoryAndFileName(const std::string &currentDirectory, 
+GetDirectoryAndFileName(const std::string &currentDirectory,
                         const std::string &relativeName,
                         std::string *directory, std::string *filename) {
 #ifdef ISPC_IS_WINDOWS
@@ -550,7 +550,7 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
 #else
     // We need a fully qualified path.  First, see if the current file name
     // is fully qualified itself--in that case, the current working
-    // directory isn't needed.  
+    // directory isn't needed.
     // @todo This probably needs to be smarter for Windows...
     std::string fullPath;
     if (relativeName[0] == '/')
