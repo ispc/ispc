@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file ast.cpp
@@ -109,20 +109,20 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
             es->expr = (Expr *)WalkAST(es->expr, preFunc, postFunc, data);
         else if ((ds = dynamic_cast<DeclStmt *>(node)) != NULL) {
             for (unsigned int i = 0; i < ds->vars.size(); ++i)
-                ds->vars[i].init = (Expr *)WalkAST(ds->vars[i].init, preFunc, 
+                ds->vars[i].init = (Expr *)WalkAST(ds->vars[i].init, preFunc,
                                                    postFunc, data);
         }
         else if ((is = dynamic_cast<IfStmt *>(node)) != NULL) {
             is->test = (Expr *)WalkAST(is->test, preFunc, postFunc, data);
-            is->trueStmts = (Stmt *)WalkAST(is->trueStmts, preFunc, 
+            is->trueStmts = (Stmt *)WalkAST(is->trueStmts, preFunc,
                                             postFunc, data);
-            is->falseStmts = (Stmt *)WalkAST(is->falseStmts, preFunc, 
+            is->falseStmts = (Stmt *)WalkAST(is->falseStmts, preFunc,
                                              postFunc, data);
         }
         else if ((dos = dynamic_cast<DoStmt *>(node)) != NULL) {
-            dos->testExpr = (Expr *)WalkAST(dos->testExpr, preFunc, 
+            dos->testExpr = (Expr *)WalkAST(dos->testExpr, preFunc,
                                             postFunc, data);
-            dos->bodyStmts = (Stmt *)WalkAST(dos->bodyStmts, preFunc, 
+            dos->bodyStmts = (Stmt *)WalkAST(dos->bodyStmts, preFunc,
                                              postFunc, data);
         }
         else if ((fs = dynamic_cast<ForStmt *>(node)) != NULL) {
@@ -133,10 +133,10 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         }
         else if ((fes = dynamic_cast<ForeachStmt *>(node)) != NULL) {
             for (unsigned int i = 0; i < fes->startExprs.size(); ++i)
-                fes->startExprs[i] = (Expr *)WalkAST(fes->startExprs[i], preFunc, 
+                fes->startExprs[i] = (Expr *)WalkAST(fes->startExprs[i], preFunc,
                                                      postFunc, data);
             for (unsigned int i = 0; i < fes->endExprs.size(); ++i)
-                fes->endExprs[i] = (Expr *)WalkAST(fes->endExprs[i], preFunc, 
+                fes->endExprs[i] = (Expr *)WalkAST(fes->endExprs[i], preFunc,
                                                    postFunc, data);
             fes->stmts = (Stmt *)WalkAST(fes->stmts, preFunc, postFunc, data);
         }
@@ -217,7 +217,7 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         }
         else if ((el = dynamic_cast<ExprList *>(node)) != NULL) {
             for (unsigned int i = 0; i < el->exprs.size(); ++i)
-                el->exprs[i] = (Expr *)WalkAST(el->exprs[i], preFunc, 
+                el->exprs[i] = (Expr *)WalkAST(el->exprs[i], preFunc,
                                                postFunc, data);
         }
         else if ((fce = dynamic_cast<FunctionCallExpr *>(node)) != NULL) {
@@ -247,9 +247,9 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
         else if ((aoe = dynamic_cast<AddressOfExpr *>(node)) != NULL)
             aoe->expr = (Expr *)WalkAST(aoe->expr, preFunc, postFunc, data);
         else if ((newe = dynamic_cast<NewExpr *>(node)) != NULL) {
-            newe->countExpr = (Expr *)WalkAST(newe->countExpr, preFunc, 
+            newe->countExpr = (Expr *)WalkAST(newe->countExpr, preFunc,
                                               postFunc, data);
-            newe->initExpr = (Expr *)WalkAST(newe->initExpr, preFunc, 
+            newe->initExpr = (Expr *)WalkAST(newe->initExpr, preFunc,
                                              postFunc, data);
         }
         else if (dynamic_cast<SymbolExpr *>(node) != NULL ||
@@ -257,9 +257,9 @@ WalkAST(ASTNode *node, ASTPreCallBackFunc preFunc, ASTPostCallBackFunc postFunc,
                  dynamic_cast<FunctionSymbolExpr *>(node) != NULL ||
                  dynamic_cast<SyncExpr *>(node) != NULL ||
                  dynamic_cast<NullPointerExpr *>(node) != NULL) {
-            // nothing to do 
+            // nothing to do
         }
-        else 
+        else
             FATAL("Unhandled expression type in WalkAST().");
     }
 

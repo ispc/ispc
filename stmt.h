@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file stmt.h
@@ -84,8 +84,8 @@ public:
 
 
 struct VariableDeclaration {
-    VariableDeclaration(Symbol *s = NULL, Expr *i = NULL) { 
-        sym = s; init = i; 
+    VariableDeclaration(Symbol *s = NULL, Expr *i = NULL) {
+        sym = s; init = i;
     }
     Symbol *sym;
     Expr *init;
@@ -137,12 +137,12 @@ private:
         'false' blocks. */
     const bool doAllCheck;
 
-    void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask, 
+    void emitMaskedTrueAndFalse(FunctionEmitContext *ctx, llvm::Value *oldMask,
                                 llvm::Value *test) const;
     void emitVaryingIf(FunctionEmitContext *ctx, llvm::Value *test) const;
     void emitMaskAllOn(FunctionEmitContext *ctx,
                        llvm::Value *test, llvm::BasicBlock *bDone) const;
-    void emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask, 
+    void emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
                        llvm::Value *test, llvm::BasicBlock *bDone) const;
 };
 
@@ -152,7 +152,7 @@ private:
  */
 class DoStmt : public Stmt {
 public:
-    DoStmt(Expr *testExpr, Stmt *bodyStmts, bool doCoherentCheck, 
+    DoStmt(Expr *testExpr, Stmt *bodyStmts, bool doCoherentCheck,
            SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
@@ -227,9 +227,9 @@ public:
  */
 class ForeachStmt : public Stmt {
 public:
-    ForeachStmt(const std::vector<Symbol *> &loopVars, 
-                const std::vector<Expr *> &startExprs, 
-                const std::vector<Expr *> &endExprs, 
+    ForeachStmt(const std::vector<Symbol *> &loopVars,
+                const std::vector<Expr *> &startExprs,
+                const std::vector<Expr *> &endExprs,
                 Stmt *bodyStatements, bool tiled, SourcePos pos);
 
     void EmitCode(FunctionEmitContext *ctx) const;
@@ -283,7 +283,7 @@ public:
 };
 
 
-/** 
+/**
  */
 class UnmaskedStmt : public Stmt {
 public:
@@ -493,7 +493,7 @@ public:
     Expr *expr;
 };
 
-extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts, 
+extern Stmt *CreateForeachActiveStmt(Symbol *iterSym, Stmt *stmts,
                                      SourcePos pos);
 
 #endif // ISPC_STMT_H

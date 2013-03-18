@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file builtins.cpp
-    @brief Definitions of functions related to setting up the standard library 
+    @brief Definitions of functions related to setting up the standard library
            and other builtins.
 */
 
@@ -169,9 +169,9 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
 
 
 static void
-lCreateSymbol(const std::string &name, const Type *returnType, 
-              llvm::SmallVector<const Type *, 8> &argTypes, 
-              const llvm::FunctionType *ftype, llvm::Function *func, 
+lCreateSymbol(const std::string &name, const Type *returnType,
+              llvm::SmallVector<const Type *, 8> &argTypes,
+              const llvm::FunctionType *ftype, llvm::Function *func,
               SymbolTable *symbolTable) {
     SourcePos noPos;
     noPos.name = "__stdlib";
@@ -251,7 +251,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
                       "representable for builtin %s", j, name.c_str());
                 return false;
             }
-            anyIntArgs |= 
+            anyIntArgs |=
                 (Type::Equal(type, lLLVMTypeToISPCType(llvmArgType, !intAsUnsigned)) == false);
             argTypes.push_back(type);
         }
@@ -286,7 +286,7 @@ lAddModuleSymbols(llvm::Module *module, SymbolTable *symbolTable) {
 
 /** In many of the builtins-*.ll files, we have declarations of various LLVM
     intrinsics that are then used in the implementation of various target-
-    specific functions.  This function loops over all of the intrinsic 
+    specific functions.  This function loops over all of the intrinsic
     declarations and makes sure that the signature we have in our .ll file
     matches the signature of the actual intrinsic.
 */
@@ -304,7 +304,7 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
             Assert(id != 0);
-            llvm::Type *intrinsicType = 
+            llvm::Type *intrinsicType =
                 llvm::Intrinsic::getType(*g->ctx, id);
             intrinsicType = llvm::PointerType::get(intrinsicType, 0);
             Assert(func->getType() == intrinsicType);
@@ -410,7 +410,7 @@ lSetInternalFunctions(llvm::Module *module) {
         "__delete_varying",
         "__do_assert_uniform",
         "__do_assert_varying",
-        "__do_print", 
+        "__do_print",
         "__doublebits_uniform_int64",
         "__doublebits_varying_int64",
         "__exclusive_scan_add_double",
@@ -654,7 +654,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
-        if (llvm::Linker::LinkModules(module, bcModule, 
+        if (llvm::Linker::LinkModules(module, bcModule,
                                       llvm::Linker::DestroySource,
                                       &linkError))
             Error(SourcePos(), "Error linking stdlib bitcode: %s", linkError.c_str());
@@ -672,7 +672,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
 static void
 lDefineConstantInt(const char *name, int val, llvm::Module *module,
                    SymbolTable *symbolTable) {
-    Symbol *sym = 
+    Symbol *sym =
         new Symbol(name, SourcePos(), AtomicType::UniformInt32->GetAsConstType(),
                    SC_STATIC);
     sym->constValue = new ConstExpr(sym->type, val, SourcePos());
@@ -694,8 +694,8 @@ lDefineConstantInt(const char *name, int val, llvm::Module *module,
         // FIXME? DWARF says that this (and programIndex below) should
         // have the DW_AT_artifical attribute.  It's not clear if this
         // matters for anything though.
-        llvm::DIGlobalVariable var = 
-            m->diBuilder->createGlobalVariable(name, 
+        llvm::DIGlobalVariable var =
+            m->diBuilder->createGlobalVariable(name,
                                                file,
                                                0 /* line */,
                                                diType,
@@ -732,8 +732,8 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
 
 static void
 lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
-    Symbol *sym = 
-        new Symbol("programIndex", SourcePos(), 
+    Symbol *sym =
+        new Symbol("programIndex", SourcePos(),
                    AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
@@ -755,7 +755,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
         llvm::DIType diType = sym->type->GetDIType(file);
         Assert(diType.Verify());
         llvm::DIGlobalVariable var =
-            m->diBuilder->createGlobalVariable(sym->name.c_str(), 
+            m->diBuilder->createGlobalVariable(sym->name.c_str(),
                                                file,
                                                0 /* line */,
                                                diType,
@@ -773,13 +773,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     if (g->target.is32Bit) {
         extern unsigned char builtins_bitcode_c_32[];
         extern int builtins_bitcode_c_32_length;
-        AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length, 
+        AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length,
                            module, symbolTable);
     }
     else {
         extern unsigned char builtins_bitcode_c_64[];
         extern int builtins_bitcode_c_64_length;
-        AddBitcodeToModule(builtins_bitcode_c_64, builtins_bitcode_c_64_length, 
+        AddBitcodeToModule(builtins_bitcode_c_64, builtins_bitcode_c_64_length,
                            module, symbolTable);
     }
 
@@ -792,12 +792,12 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         extern unsigned char builtins_bitcode_sse2_x2[];
         extern int builtins_bitcode_sse2_x2_length;
         switch (g->target.vectorWidth) {
-        case 4: 
-            AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length, 
+        case 4:
+            AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length,
                                module, symbolTable);
             break;
         case 8:
-            AddBitcodeToModule(builtins_bitcode_sse2_x2, builtins_bitcode_sse2_x2_length, 
+            AddBitcodeToModule(builtins_bitcode_sse2_x2, builtins_bitcode_sse2_x2_length,
                                module, symbolTable);
             break;
         default:
@@ -810,14 +810,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         extern unsigned char builtins_bitcode_sse4_x2[];
         extern int builtins_bitcode_sse4_x2_length;
         switch (g->target.vectorWidth) {
-        case 4: 
+        case 4:
             AddBitcodeToModule(builtins_bitcode_sse4,
-                               builtins_bitcode_sse4_length, 
+                               builtins_bitcode_sse4_length,
                                module, symbolTable);
             break;
         case 8:
-            AddBitcodeToModule(builtins_bitcode_sse4_x2, 
-                               builtins_bitcode_sse4_x2_length, 
+            AddBitcodeToModule(builtins_bitcode_sse4_x2,
+                               builtins_bitcode_sse4_x2_length,
                                module, symbolTable);
             break;
         default:
@@ -829,14 +829,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 8:
             extern unsigned char builtins_bitcode_avx1[];
             extern int builtins_bitcode_avx1_length;
-            AddBitcodeToModule(builtins_bitcode_avx1, 
-                               builtins_bitcode_avx1_length, 
+            AddBitcodeToModule(builtins_bitcode_avx1,
+                               builtins_bitcode_avx1_length,
                                module, symbolTable);
             break;
         case 16:
             extern unsigned char builtins_bitcode_avx1_x2[];
             extern int builtins_bitcode_avx1_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx1_x2, 
+            AddBitcodeToModule(builtins_bitcode_avx1_x2,
                                builtins_bitcode_avx1_x2_length,
                                module,  symbolTable);
             break;
@@ -849,14 +849,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 8:
             extern unsigned char builtins_bitcode_avx11[];
             extern int builtins_bitcode_avx11_length;
-            AddBitcodeToModule(builtins_bitcode_avx11, 
-                               builtins_bitcode_avx11_length, 
+            AddBitcodeToModule(builtins_bitcode_avx11,
+                               builtins_bitcode_avx11_length,
                                module, symbolTable);
             break;
         case 16:
             extern unsigned char builtins_bitcode_avx11_x2[];
             extern int builtins_bitcode_avx11_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx11_x2, 
+            AddBitcodeToModule(builtins_bitcode_avx11_x2,
                                builtins_bitcode_avx11_x2_length,
                                module,  symbolTable);
             break;
@@ -869,14 +869,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 8:
             extern unsigned char builtins_bitcode_avx2[];
             extern int builtins_bitcode_avx2_length;
-            AddBitcodeToModule(builtins_bitcode_avx2, 
-                               builtins_bitcode_avx2_length, 
+            AddBitcodeToModule(builtins_bitcode_avx2,
+                               builtins_bitcode_avx2_length,
                                module, symbolTable);
             break;
         case 16:
             extern unsigned char builtins_bitcode_avx2_x2[];
             extern int builtins_bitcode_avx2_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx2_x2, 
+            AddBitcodeToModule(builtins_bitcode_avx2_x2,
                                builtins_bitcode_avx2_x2_length,
                                module,  symbolTable);
             break;
@@ -889,43 +889,43 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         case 4:
             extern unsigned char builtins_bitcode_generic_4[];
             extern int builtins_bitcode_generic_4_length;
-            AddBitcodeToModule(builtins_bitcode_generic_4, 
-                               builtins_bitcode_generic_4_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_4,
+                               builtins_bitcode_generic_4_length,
                                module, symbolTable);
             break;
         case 8:
             extern unsigned char builtins_bitcode_generic_8[];
             extern int builtins_bitcode_generic_8_length;
-            AddBitcodeToModule(builtins_bitcode_generic_8, 
-                               builtins_bitcode_generic_8_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_8,
+                               builtins_bitcode_generic_8_length,
                                module, symbolTable);
             break;
         case 16:
             extern unsigned char builtins_bitcode_generic_16[];
             extern int builtins_bitcode_generic_16_length;
-            AddBitcodeToModule(builtins_bitcode_generic_16, 
-                               builtins_bitcode_generic_16_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_16,
+                               builtins_bitcode_generic_16_length,
                                module, symbolTable);
             break;
         case 32:
             extern unsigned char builtins_bitcode_generic_32[];
             extern int builtins_bitcode_generic_32_length;
-            AddBitcodeToModule(builtins_bitcode_generic_32, 
-                               builtins_bitcode_generic_32_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_32,
+                               builtins_bitcode_generic_32_length,
                                module, symbolTable);
             break;
         case 64:
             extern unsigned char builtins_bitcode_generic_64[];
             extern int builtins_bitcode_generic_64_length;
-            AddBitcodeToModule(builtins_bitcode_generic_64, 
-                               builtins_bitcode_generic_64_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_64,
+                               builtins_bitcode_generic_64_length,
                                module, symbolTable);
             break;
-	case 1:
+        case 1:
             extern unsigned char builtins_bitcode_generic_1[];
             extern int builtins_bitcode_generic_1_length;
-            AddBitcodeToModule(builtins_bitcode_generic_1, 
-                               builtins_bitcode_generic_1_length, 
+            AddBitcodeToModule(builtins_bitcode_generic_1,
+                               builtins_bitcode_generic_1_length,
                                module, symbolTable);
             break;
         default:
@@ -947,7 +947,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantInt("__math_lib", (int)g->mathLib, module, symbolTable);
     lDefineConstantInt("__math_lib_ispc", (int)Globals::Math_ISPC, module,
                        symbolTable);
-    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast, 
+    lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast,
                        module, symbolTable);
     lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module,
                        symbolTable);
@@ -956,9 +956,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
                            module, symbolTable);
 
-    lDefineConstantInt("__have_native_half", g->target.hasHalf, module, 
+    lDefineConstantInt("__have_native_half", g->target.hasHalf, module,
                        symbolTable);
-    lDefineConstantInt("__have_native_rand", g->target.hasRand, module, 
+    lDefineConstantInt("__have_native_rand", g->target.hasRand, module,
                        symbolTable);
     lDefineConstantInt("__have_native_transcendentals", g->target.hasTranscendentals,
                        module, symbolTable);

@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file module.h
@@ -64,7 +64,7 @@ public:
 
     /** Add a new global variable corresponding to the given Symbol to the
         module.  If non-NULL, initExpr gives the initiailizer expression
-        for the global's inital value. */ 
+        for the global's inital value. */
     void AddGlobalVariable(const std::string &name, const Type *type,
                            Expr *initExpr, bool isConst,
                            StorageClass storageClass, SourcePos pos);
@@ -72,7 +72,7 @@ public:
     /** Add a declaration of the function defined by the given function
         symbol to the module. */
     void AddFunctionDeclaration(const std::string &name,
-                                const FunctionType *ftype, 
+                                const FunctionType *ftype,
                                 StorageClass sc, bool isInline, SourcePos pos);
 
     /** Adds the function described by the declaration information and the
@@ -82,7 +82,7 @@ public:
 
     /** Adds the given type to the set of types that have their definitions
         included in automatically generated header files. */
-    void AddExportedTypes(const std::vector<std::pair<const Type *, 
+    void AddExportedTypes(const std::vector<std::pair<const Type *,
                                                       SourcePos> > &types);
 
     /** After a source file has been compiled, output can be generated in a
@@ -91,7 +91,7 @@ public:
                       Bitcode,  /** Generate LLVM IR bitcode output */
                       Object,   /** Generate a native object file */
                       CXX,      /** Generate a C++ file */
-                      Header,   /** Generate a C/C++ header file with 
+                      Header,   /** Generate a C/C++ header file with
                                     declarations of 'export'ed functions, global
                                     variables, and the types used by them. */
                       Deps,     /** generate dependencies */
@@ -122,18 +122,18 @@ public:
                               inclusion from C/C++ code with declarations of
                               types and functions exported from the given ispc
                               source file.
-        @param includeFileName If non-NULL, gives the filename for the C++ 
+        @param includeFileName If non-NULL, gives the filename for the C++
                                backend to emit in an #include statement to
                                get definitions of the builtins for the generic
                                target.
         @return             Number of errors encountered when compiling
                             srcFile.
      */
-    static int CompileAndOutput(const char *srcFile, const char *arch, 
-                                const char *cpu, const char *targets, 
-                                bool generatePIC, 
-                                OutputType outputType, 
-                                const char *outFileName, 
+    static int CompileAndOutput(const char *srcFile, const char *arch,
+                                const char *cpu, const char *targets,
+                                bool generatePIC,
+                                OutputType outputType,
+                                const char *outFileName,
                                 const char *headerFileName,
                                 const char *includeFileName,
                                 const char *depsFileName,
@@ -148,7 +148,7 @@ public:
     SymbolTable *symbolTable;
 
     /** llvm Module object into which globals and functions are added. */
-    llvm::Module *module; 
+    llvm::Module *module;
 
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
@@ -171,7 +171,7 @@ private:
     bool writeHostStub(const char *filename);
     bool writeObjectFileOrAssembly(OutputType outputType, const char *filename);
     static bool writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
-                                          llvm::Module *module, OutputType outputType, 
+                                          llvm::Module *module, OutputType outputType,
                                           const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName);
 

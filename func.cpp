@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file func.cpp
-    @brief 
+    @brief
 */
 
 #include "func.h"
@@ -85,7 +85,7 @@ Function::Function(Symbol *s, Stmt *c) {
         code = TypeCheck(code);
 
         if (code != NULL && g->debugPrint) {
-            fprintf(stderr, "After typechecking function \"%s\":\n", 
+            fprintf(stderr, "After typechecking function \"%s\":\n",
                     sym->name.c_str());
             code->Print(0);
             fprintf(stderr, "---------------------\n");
@@ -94,7 +94,7 @@ Function::Function(Symbol *s, Stmt *c) {
         if (code != NULL) {
             code = Optimize(code);
             if (g->debugPrint) {
-                fprintf(stderr, "After optimizing function \"%s\":\n", 
+                fprintf(stderr, "After optimizing function \"%s\":\n",
                         sym->name.c_str());
                 code->Print(0);
                 fprintf(stderr, "---------------------\n");
@@ -160,7 +160,7 @@ Function::GetType() const {
     'mem2reg' pass will in turn promote to SSA registers..
  */
 static void
-lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const 
+lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
                      std::vector<Symbol *> &args,
                      FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
@@ -169,7 +169,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
     Assert(llvm::isa<llvm::StructType>(pt->getElementType()));
-    const llvm::StructType *argStructType = 
+    const llvm::StructType *argStructType =
         llvm::dyn_cast<const llvm::StructType>(pt->getElementType());
 
     // Get the type of the argument we're copying in and its Symbol pointer
@@ -199,8 +199,8 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
     involves wiring up the function parameter values to be available in the
     function body code.
  */
-void 
-Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function, 
+void
+Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
                    SourcePos firstStmtPos) {
     // Connect the __mask builtin to the location in memory that stores its
     // value
@@ -259,7 +259,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     }
     else {
         // Regular, non-task function
-        llvm::Function::arg_iterator argIter = function->arg_begin(); 
+        llvm::Function::arg_iterator argIter = function->arg_begin();
         for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
             Symbol *sym = args[i];
             if (sym == NULL)
@@ -301,14 +301,14 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         ctx->AddInstrumentationPoint("function entry");
 
         int costEstimate = EstimateCost(code);
-        Debug(code->pos, "Estimated cost for function \"%s\" = %d\n", 
+        Debug(code->pos, "Estimated cost for function \"%s\" = %d\n",
               sym->name.c_str(), costEstimate);
 
         // If the body of the function is non-trivial, then we wrap the
         // entire thing inside code that tests to see if the mask is all
         // on, all off, or mixed.  If this is a simple function, then this
         // isn't worth the code bloat / overhead.
-        bool checkMask = (type->isTask == true) || 
+        bool checkMask = (type->isTask == true) ||
             (
 #if defined(LLVM_3_1)
               (function->hasFnAttr(llvm::Attribute::AlwaysInline) == false)
@@ -322,7 +322,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         checkMask &= (type->isUnmasked == false);
         checkMask &= (g->target.maskingIsFree == false);
         checkMask &= (g->opt.disableCoherentControlFlow == false);
-        
+
         if (checkMask) {
             llvm::Value *mask = ctx->GetFunctionMask();
             llvm::Value *allOn = ctx->All(mask);
@@ -409,7 +409,7 @@ Function::GenerateIR() {
 
     // But if that function has a definition, we don't want to redefine it.
     if (function->empty() == false) {
-        Error(sym->pos, "Ignoring redefinition of function \"%s\".", 
+        Error(sym->pos, "Ignoring redefinition of function \"%s\".",
               sym->name.c_str());
         return;
     }
@@ -426,7 +426,7 @@ Function::GenerateIR() {
             firstStmtPos = code->pos;
     }
 
-    // And we can now go ahead and emit the code 
+    // And we can now go ahead and emit the code
     {
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
@@ -451,7 +451,7 @@ Function::GenerateIR() {
                 std::string functionName = sym->name;
                 if (g->mangleFunctionsWithTarget)
                     functionName += std::string("_") + g->target.GetISAString();
-                llvm::Function *appFunction = 
+                llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
 #if defined(LLVM_3_1)
                 appFunction->setDoesNotThrow(true);
@@ -470,7 +470,7 @@ Function::GenerateIR() {
                     emitCode(&ec, appFunction, firstStmtPos);
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
-                        if (llvm::verifyFunction(*appFunction, 
+                        if (llvm::verifyFunction(*appFunction,
                                                  llvm::ReturnStatusAction) == true) {
                             if (g->debugPrint)
                                 appFunction->dump();

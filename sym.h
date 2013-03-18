@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file sym.h
@@ -75,7 +75,7 @@ public:
                                    location in memory.) */
     llvm::Function *function; /*!< For symbols that represent functions,
                                    this stores the LLVM Function value for
-                                   the symbol once it has been created. */ 
+                                   the symbol once it has been created. */
     llvm::Function *exportedFunction;
                               /*!< For symbols that represent functions with
                                    'export' qualifiers, this points to the LLVM
@@ -91,18 +91,18 @@ public:
                                    struct types.  For cases like these, ConstExpr is NULL,
                                    though for all const symbols, the value pointed to by the
                                    storagePtr member will be its constant value.  (This
-                                   messiness is due to needing an ispc ConstExpr for the early 
+                                   messiness is due to needing an ispc ConstExpr for the early
                                    constant folding optimizations). */
     StorageClass storageClass;/*!< Records the storage class (if any) provided with the
                                    symbol's declaration. */
-    int varyingCFDepth;       /*!< This member records the number of levels of nested 'varying' 
+    int varyingCFDepth;       /*!< This member records the number of levels of nested 'varying'
                                    control flow within which the symbol was declared.  Having
                                    this value available makes it possible to avoid performing
                                    masked stores when modifying the symbol's value when the
-                                   store is done at the same 'varying' control flow depth as 
+                                   store is done at the same 'varying' control flow depth as
                                    the one where the symbol was originally declared. */
-    const Function *parentFunction; 
-                              /*!< For symbols that are parameters to functions or are 
+    const Function *parentFunction;
+                              /*!< For symbols that are parameters to functions or are
                                    variables declared inside functions, this gives the
                                    function they're in. */
 };
@@ -130,7 +130,7 @@ public:
 
     /** For each scope started by a call to SymbolTable::PushScope(), there
         must be a matching call to SymbolTable::PopScope() at the end of
-        that scope. */ 
+        that scope. */
     void PopScope();
 
     /** Adds the given variable symbol to the symbol table.
@@ -147,7 +147,7 @@ public:
         returning the first match found.
 
         @param  name The name of the variable to be searched for.
-        @return A pointer to the Symbol, if a match is found.  NULL if no 
+        @return A pointer to the Symbol, if a match is found.  NULL if no
         Symbol with the given name is in the symbol table. */
     Symbol *LookupVariable(const char *name);
 
@@ -165,7 +165,7 @@ public:
         be returned in the provided vector and it's up the the caller to
         resolve which one (if any) to use.  Returns true if any matches
         were found. */
-    bool LookupFunction(const char *name, 
+    bool LookupFunction(const char *name,
                         std::vector<Symbol *> *matches = NULL);
 
     /** Looks for a function with the given name and type
@@ -174,28 +174,28 @@ public:
         @return pointer to matching Symbol; NULL if none is found. */
     Symbol *LookupFunction(const char *name, const FunctionType *type);
 
-    /** Returns all of the functions in the symbol table that match the given 
+    /** Returns all of the functions in the symbol table that match the given
         predicate.
 
-        @param pred A unary predicate that returns true or false, given a Symbol 
-        pointer, based on whether the symbol should be included in the returned 
-        set of matches.  It can either be a function, with signature 
-        <tt>bool pred(const Symbol *s)</tt>, or a unary predicate object with 
+        @param pred A unary predicate that returns true or false, given a Symbol
+        pointer, based on whether the symbol should be included in the returned
+        set of matches.  It can either be a function, with signature
+        <tt>bool pred(const Symbol *s)</tt>, or a unary predicate object with
         an <tt>bool operator()(const Symbol *)</tt> method.
 
         @param matches Pointer to a vector in which to return the matching
-        symbols. 
+        symbols.
      */
-    template <typename Predicate> 
-        void GetMatchingFunctions(Predicate pred, 
+    template <typename Predicate>
+        void GetMatchingFunctions(Predicate pred,
                                   std::vector<Symbol *> *matches) const;
 
     /** Returns all of the variable symbols in the symbol table that match
         the given predicate.  The predicate is defined as in the
         GetMatchingFunctions() method.
      */
-    template <typename Predicate> 
-        void GetMatchingVariables(Predicate pred, 
+    template <typename Predicate>
+        void GetMatchingVariables(Predicate pred,
                                   std::vector<Symbol *> *matches) const;
 
     /** Adds the named type to the symbol table.  This is used for both
@@ -210,7 +210,7 @@ public:
         @param pos Position in source file where the type was named
         @return true if the named type was successfully added.  False if a type
         with the same name has already been defined.
-        
+
     */
     bool AddType(const char *name, const Type *type, SourcePos pos);
 
@@ -248,7 +248,7 @@ public:
     const Type *RandomType();
 
 private:
-    std::vector<std::string> closestTypeMatch(const char *str, 
+    std::vector<std::string> closestTypeMatch(const char *str,
                                               bool structsVsEnums) const;
 
     /** This member variable holds one SymbolMap for each of the current
@@ -278,7 +278,7 @@ private:
 
 
 template <typename Predicate> void
-SymbolTable::GetMatchingFunctions(Predicate pred, 
+SymbolTable::GetMatchingFunctions(Predicate pred,
                                   std::vector<Symbol *> *matches) const {
     // Iterate through all function symbols and apply the given predicate.
     // If it returns true, add the Symbol * to the provided vector.
@@ -294,7 +294,7 @@ SymbolTable::GetMatchingFunctions(Predicate pred,
 
 
 template <typename Predicate> void
-SymbolTable::GetMatchingVariables(Predicate pred, 
+SymbolTable::GetMatchingVariables(Predicate pred,
                                   std::vector<Symbol *> *matches) const {
     for (unsigned int i = 0; i < variables.size(); ++i) {
         SymbolMapType &sm = *(variables[i]);

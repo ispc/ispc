@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -61,7 +61,7 @@ extern "C" {
     extern void f_duf(float *result, double *a, float b);
     extern void f_di(float *result, double *a, int *b);
     extern void result(float *val);
-    
+
     void ISPCLaunch(void **handlePtr, void *f, void *d, int);
     void ISPCSync(void *handle);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
     f_di(returned_result, vdouble, vint2);
 #else
 #error "Unknown or unset TEST_SIG value"
-#endif    
+#endif
 
     float expected_result[64];
     memset(expected_result, 0, 64*sizeof(float));
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
             return 1;
 #else
             printf("%s: value %d disagrees: returned %f [%a], expected %f [%a]\n",
-                   argv[0], i, returned_result[i], returned_result[i], 
+                   argv[0], i, returned_result[i], returned_result[i],
                    expected_result[i], expected_result[i]);
             ++errors;
 #endif // EXPECT_FAILURE
