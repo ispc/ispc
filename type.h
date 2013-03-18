@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file type.h
@@ -53,17 +53,17 @@ class ConstExpr;
 class StructType;
 
 /** Types may have uniform, varying, SOA, or unbound variability; this
-    struct is used by Type implementations to record their variability. 
+    struct is used by Type implementations to record their variability.
 */
 struct Variability {
     enum VarType { Unbound, Uniform, Varying, SOA };
 
     Variability(VarType t = Unbound, int w = 0) : type(t), soaWidth(w) { }
 
-    bool operator==(const Variability &v) const { 
-        return v.type == type && v.soaWidth == soaWidth; 
+    bool operator==(const Variability &v) const {
+        return v.type == type && v.soaWidth == soaWidth;
     }
-    bool operator!=(const Variability &v) const { 
+    bool operator!=(const Variability &v) const {
         return v.type != type || v.soaWidth != soaWidth;
     }
 
@@ -72,7 +72,7 @@ struct Variability {
 
     std::string GetString() const;
     std::string MangleString() const;
-    
+
     VarType type;
     int soaWidth;
 };
@@ -122,19 +122,19 @@ public:
 
     /** Returns true if the underlying type is either a pointer type */
     bool IsPointerType() const;
-  
+
     /** Returns true if the underlying type is a array type */
     bool IsArrayType() const;
-  
+
     /** Returns true if the underlying type is a array type */
     bool IsReferenceType() const;
-  
+
     /** Returns true if the underlying type is either a pointer or an array */
     bool IsVoidType() const;
 
     /** Returns true if this type is 'const'-qualified. */
     virtual bool IsConstType() const = 0;
-    
+
     /** Returns true if the underlying type is a float or integer type. */
     bool IsNumericType() const { return IsFloatType() || IsIntType(); }
 
@@ -142,13 +142,13 @@ public:
     virtual Variability GetVariability() const = 0;
 
     /** Returns true if the underlying type is uniform */
-    bool IsUniformType() const { 
-        return GetVariability() == Variability::Uniform; 
+    bool IsUniformType() const {
+        return GetVariability() == Variability::Uniform;
     }
 
     /** Returns true if the underlying type is varying */
-    bool IsVaryingType() const { 
-        return GetVariability() == Variability::Varying; 
+    bool IsVaryingType() const {
+        return GetVariability() == Variability::Varying;
     }
 
     /** Returns true if the type is laid out in "structure of arrays"
@@ -161,8 +161,8 @@ public:
 
     /** Returns true if the underlying type's uniform/varying-ness is
         unbound. */
-    bool HasUnboundVariability() const { 
-        return GetVariability() == Variability::Unbound; 
+    bool HasUnboundVariability() const {
+        return GetVariability() == Variability::Unbound;
     }
 
     /* Returns a type wherein any elements of the original type and
@@ -196,7 +196,7 @@ public:
         For all other types, just returns its own type. */
     virtual const Type *GetReferenceTarget() const;
 
-    /** Get a const version of this type.  If it's already const, then the old 
+    /** Get a const version of this type.  If it's already const, then the old
         Type pointer is returned. */
     virtual const Type *GetAsConstType() const = 0;
 
@@ -244,7 +244,7 @@ public:
                             needed.
         @param reason       String describing the context of why the general
                             type is needed (e.g. "+ operator").
-        @param forceVarying If \c true, then make sure that the returned 
+        @param forceVarying If \c true, then make sure that the returned
                             type is "varying".
         @param vecSize      The vector size of the returned type.  If non-zero,
                             the returned type will be a VectorType of the
@@ -254,7 +254,7 @@ public:
 
         @todo the vecSize and forceVarying parts of this should probably be
         factored out and done separately in the cases when needed.
-        
+
     */
     static const Type *MoreGeneralType(const Type *type0, const Type *type1,
                                        SourcePos pos, const char *reason,
@@ -275,7 +275,7 @@ protected:
 };
 
 
-/** @brief AtomicType represents basic types like floats, ints, etc.  
+/** @brief AtomicType represents basic types like floats, ints, etc.
 
     AtomicTypes can be either uniform or varying.  Unique instances of all
     of the possible <tt>AtomicType</tt>s are available in the static members
@@ -313,7 +313,7 @@ public:
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
 
-    /** This enumerator records the basic types that AtomicTypes can be 
+    /** This enumerator records the basic types that AtomicTypes can be
         built from.  */
     enum BasicType {
         TYPE_VOID,
@@ -431,7 +431,7 @@ private:
  */
 class PointerType : public Type {
 public:
-    PointerType(const Type *t, Variability v, bool isConst, 
+    PointerType(const Type *t, Variability v, bool isConst,
                 bool isSlice = false, bool frozen = false);
 
     /** Helper method to return a uniform pointer to the given type. */
@@ -488,7 +488,7 @@ private:
 
     This is a common base class that StructTypes, ArrayTypes, and
     VectorTypes all inherit from.
-*/ 
+*/
 class CollectionType : public Type {
 public:
     /** Returns the total number of elements in the collection. */
@@ -532,7 +532,7 @@ protected:
 
     ArrayType represents a one-dimensional array of instances of some other
     type.  (Multi-dimensional arrays are represented by ArrayTypes that in
-    turn hold ArrayTypes as their child types.)  
+    turn hold ArrayTypes as their child types.)
 */
 class ArrayType : public SequentialType {
 public:
@@ -592,7 +592,7 @@ public:
         any array dimensions that are unsized according to the number of
         elements in the corresponding sectoin of the initializer
         expression.
-     */ 
+     */
     static const Type *SizeUnsizedArrays(const Type *type, Expr *initExpr);
 
 private:
@@ -663,9 +663,9 @@ private:
  */
 class StructType : public CollectionType {
 public:
-    StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts, 
-               const llvm::SmallVector<std::string, 8> &eltNames, 
-               const llvm::SmallVector<SourcePos, 8> &eltPositions, bool isConst, 
+    StructType(const std::string &name, const llvm::SmallVector<const Type *, 8> &elts,
+               const llvm::SmallVector<std::string, 8> &eltNames,
+               const llvm::SmallVector<SourcePos, 8> &eltPositions, bool isConst,
                Variability variability, SourcePos pos);
 
     Variability GetVariability() const;
@@ -707,7 +707,7 @@ public:
 
     /** Returns the name of the i'th element of the structure. */
     const std::string &GetElementName(int i) const { return elementNames[i]; }
-    
+
     /** Returns the total number of elements in the structure. */
     int GetElementCount() const { return int(elementTypes.size()); }
 
@@ -842,9 +842,9 @@ private:
  */
 class FunctionType : public Type {
 public:
-    FunctionType(const Type *returnType, 
+    FunctionType(const Type *returnType,
                  const llvm::SmallVector<const Type *, 8> &argTypes, SourcePos pos);
-    FunctionType(const Type *returnType, 
+    FunctionType(const Type *returnType,
                  const llvm::SmallVector<const Type *, 8> &argTypes,
                  const llvm::SmallVector<std::string, 8> &argNames,
                  const llvm::SmallVector<Expr *, 8> &argDefaults,
@@ -884,7 +884,7 @@ public:
         function type.  The \c disableMask parameter indicates whether the
         llvm::FunctionType should have the trailing mask parameter, if
         present, removed from the return function signature. */
-    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx, 
+    llvm::FunctionType *LLVMFunctionType(llvm::LLVMContext *ctx,
                                          bool disableMask = false) const;
 
     int GetNumParameters() const { return (int)paramTypes.size(); }
@@ -915,7 +915,7 @@ public:
     bool isSafe;
 
     /** If non-negative, this provides a user-supplied override to the cost
-        function estimate for the function. */ 
+        function estimate for the function. */
     int costOverride;
 
 private:
@@ -993,7 +993,7 @@ template <> inline const SequentialType *
 CastType(const Type *type) {
     // Note that this function must be updated if other sequential type
     // implementations are added.
-    if (type != NULL && 
+    if (type != NULL &&
         (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE))
         return (const SequentialType *)type;
     else
@@ -1004,7 +1004,7 @@ template <> inline const CollectionType *
 CastType(const Type *type) {
     // Similarly a new collection type implementation requires updating
     // this function.
-    if (type != NULL && 
+    if (type != NULL &&
         (type->typeId == ARRAY_TYPE || type->typeId == VECTOR_TYPE ||
          type->typeId == STRUCT_TYPE))
         return (const CollectionType *)type;

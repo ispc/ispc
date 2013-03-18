@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file llvmutil.cpp
@@ -124,19 +124,19 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target target) {
             llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.vectorWidth);
     }
 
-    LLVMTypes::Int1VectorType = 
+    LLVMTypes::Int1VectorType =
         llvm::VectorType::get(llvm::Type::getInt1Ty(*ctx), target.vectorWidth);
-    LLVMTypes::Int8VectorType = 
+    LLVMTypes::Int8VectorType =
         llvm::VectorType::get(LLVMTypes::Int8Type, target.vectorWidth);
-    LLVMTypes::Int16VectorType = 
+    LLVMTypes::Int16VectorType =
         llvm::VectorType::get(LLVMTypes::Int16Type, target.vectorWidth);
-    LLVMTypes::Int32VectorType = 
+    LLVMTypes::Int32VectorType =
         llvm::VectorType::get(LLVMTypes::Int32Type, target.vectorWidth);
-    LLVMTypes::Int64VectorType = 
+    LLVMTypes::Int64VectorType =
         llvm::VectorType::get(LLVMTypes::Int64Type, target.vectorWidth);
-    LLVMTypes::FloatVectorType = 
+    LLVMTypes::FloatVectorType =
         llvm::VectorType::get(LLVMTypes::FloatType, target.vectorWidth);
-    LLVMTypes::DoubleVectorType = 
+    LLVMTypes::DoubleVectorType =
         llvm::VectorType::get(LLVMTypes::DoubleType, target.vectorWidth);
 
     LLVMTypes::Int8VectorPointerType = llvm::PointerType::get(LLVMTypes::Int8VectorType, 0);
@@ -441,11 +441,11 @@ LLVMUInt64Vector(const uint64_t *ivec) {
 llvm::Constant *
 LLVMBoolVector(bool b) {
     llvm::Constant *v;
-    if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType) 
-        v = llvm::ConstantInt::get(LLVMTypes::Int32Type, b ? 0xffffffff : 0, 
+    if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+        v = llvm::ConstantInt::get(LLVMTypes::Int32Type, b ? 0xffffffff : 0,
                                    false /*unsigned*/);
     else {
-        Assert(LLVMTypes::BoolVectorType->getElementType() == 
+        Assert(LLVMTypes::BoolVectorType->getElementType() ==
                llvm::Type::getInt1Ty(*g->ctx));
         v = b ? LLVMTrue : LLVMFalse;
     }
@@ -462,11 +462,11 @@ LLVMBoolVector(const bool *bvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target.vectorWidth; ++i) {
         llvm::Constant *v;
-        if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType) 
-            v = llvm::ConstantInt::get(LLVMTypes::Int32Type, bvec[i] ? 0xffffffff : 0, 
+        if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+            v = llvm::ConstantInt::get(LLVMTypes::Int32Type, bvec[i] ? 0xffffffff : 0,
                                        false /*unsigned*/);
         else {
-            Assert(LLVMTypes::BoolVectorType->getElementType() == 
+            Assert(LLVMTypes::BoolVectorType->getElementType() ==
                    llvm::Type::getInt1Ty(*g->ctx));
             v = bvec[i] ? LLVMTrue : LLVMFalse;
         }
@@ -519,7 +519,7 @@ LLVMUIntAsType(uint64_t val, llvm::Type *type) {
     vectors definitely are equal.
 */
 static bool
-lValuesAreEqual(llvm::Value *v0, llvm::Value *v1, 
+lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
                 std::vector<llvm::PHINode *> &seenPhi0,
                 std::vector<llvm::PHINode *> &seenPhi1) {
     // Thanks to the fact that LLVM hashes and returns the same pointer for
@@ -571,7 +571,7 @@ lValuesAreEqual(llvm::Value *v0, llvm::Value *v1,
             // FIXME: should it be ok if the incoming blocks are different,
             // where we just return faliure in this case?
             Assert(phi0->getIncomingBlock(i) == phi1->getIncomingBlock(i));
-            if (!lValuesAreEqual(phi0->getIncomingValue(i), 
+            if (!lValuesAreEqual(phi0->getIncomingValue(i),
                                  phi1->getIncomingValue(i), seenPhi0, seenPhi1)) {
                 anyFailure = true;
                 break;
@@ -611,7 +611,7 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
         Assert(iOffset >= 0 && iOffset < vectorWidth);
         Assert(elements[iOffset] == NULL);
 
-        // Get the scalar value from this insert 
+        // Get the scalar value from this insert
         elements[iOffset] = ie->getOperand(1);
 
         // Do we have another insert?
@@ -623,7 +623,7 @@ LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
 
             // Get the value out of a constant vector if that's what we
             // have
-            llvm::ConstantVector *cv = 
+            llvm::ConstantVector *cv =
                 llvm::dyn_cast<llvm::ConstantVector>(insertBase);
 
             // FIXME: this assert is a little questionable; we probably
@@ -717,7 +717,7 @@ lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
         // we're good.
         for (unsigned int i = 0; i < numIncoming; ++i) {
             llvm::Value *incoming = phi->getIncomingValue(i);
-            bool mult = lIsExactMultiple(incoming, baseValue, vectorLength, 
+            bool mult = lIsExactMultiple(incoming, baseValue, vectorLength,
                                               seenPhis);
             if (mult == false) {
                 seenPhis.pop_back();
@@ -748,9 +748,9 @@ lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
 static int
 lRoundUpPow2(int v) {
     v--;
-    v |= v >> 1;    
+    v |= v >> 1;
     v |= v >> 2;
-    v |= v >> 4;    
+    v |= v >> 4;
     v |= v >> 8;
     v |= v >> 16;
     return v+1;
@@ -804,7 +804,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
         for (unsigned int i = 0; i < numIncoming; ++i) {
             llvm::Value *incoming = phi->getIncomingValue(i);
             bool ca = canAdd;
-            bool mult = lAllDivBaseEqual(incoming, baseValue, vectorLength, 
+            bool mult = lAllDivBaseEqual(incoming, baseValue, vectorLength,
                                          seenPhis, ca);
             if (mult == false) {
                 seenPhis.pop_back();
@@ -816,7 +816,7 @@ lAllDivBaseEqual(llvm::Value *val, int64_t baseValue, int vectorLength,
     }
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(val);
-    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add && 
+    if (bop != NULL && bop->getOpcode() == llvm::Instruction::Add &&
         canAdd == true) {
         llvm::Value *op0 = bop->getOperand(0);
         llvm::Value *op1 = bop->getOperand(1);
@@ -942,9 +942,9 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v);
     if (bop != NULL) {
         // Easy case: both operands are all equal -> return true
-        if (lVectorValuesAllEqual(bop->getOperand(0), vectorLength, 
+        if (lVectorValuesAllEqual(bop->getOperand(0), vectorLength,
                                   seenPhis) &&
-            lVectorValuesAllEqual(bop->getOperand(1), vectorLength, 
+            lVectorValuesAllEqual(bop->getOperand(1), vectorLength,
                                   seenPhis))
             return true;
 
@@ -952,7 +952,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
         // high (surviving) bits of the values are equal.
         if (bop->getOpcode() == llvm::Instruction::AShr ||
             bop->getOpcode() == llvm::Instruction::LShr)
-            return lVectorShiftRightAllEqual(bop->getOperand(0), 
+            return lVectorShiftRightAllEqual(bop->getOperand(0),
                                              bop->getOperand(1), vectorLength);
 
         return false;
@@ -960,7 +960,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 
     llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(v);
     if (cast != NULL)
-        return lVectorValuesAllEqual(cast->getOperand(0), vectorLength, 
+        return lVectorValuesAllEqual(cast->getOperand(0), vectorLength,
                                      seenPhis);
 
     llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
@@ -985,7 +985,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 
             std::vector<llvm::PHINode *> seenPhi0;
             std::vector<llvm::PHINode *> seenPhi1;
-            if (lValuesAreEqual(elements[lastNonNull], elements[i], seenPhi0, 
+            if (lValuesAreEqual(elements[lastNonNull], elements[i], seenPhi0,
                                 seenPhi1) == false)
                 return false;
             lastNonNull = i;
@@ -1087,8 +1087,8 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
     elements.
  */
 static bool
-lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv, 
-                            int vectorLength, 
+lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv,
+                            int vectorLength,
                             int stride) {
     // Flatten the vector out into the elements array
     llvm::SmallVector<llvm::Constant *, ISPC_MAX_NVEC> elements;
@@ -1108,7 +1108,7 @@ lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv,
     // is stride.  If not, fail.
     for (int i = 1; i < vectorLength; ++i) {
         ci = llvm::dyn_cast<llvm::ConstantInt>(elements[i]);
-        if (ci == NULL) 
+        if (ci == NULL)
             return false;
 
         int64_t nextVal = ci->getSExtValue();
@@ -1125,7 +1125,7 @@ lVectorIsLinearConstantInts(llvm::ConstantDataVector *cv,
     vector with values that increase by stride.
  */
 static bool
-lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength, 
+lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Is the first operand a constant integer value splatted across all of
     // the lanes?
@@ -1150,7 +1150,7 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
 
     // Check to see if the other operand is a linear vector with stride
     // given by stride/splatVal.
-    return lVectorIsLinear(op1, vectorLength, (int)(stride / splatVal), 
+    return lVectorIsLinear(op1, vectorLength, (int)(stride / splatVal),
                            seenPhis);
 }
 
@@ -1161,7 +1161,7 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
     data.
  */
 static bool
-lCheckAndForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength, 
+lCheckAndForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
                    int stride, std::vector<llvm::PHINode *> &seenPhis) {
     // Require op1 to be a compile-time constant
     int64_t maskValue[ISPC_MAX_NVEC];
@@ -1359,7 +1359,7 @@ LLVMDumpValue(llvm::Value *v) {
 
 
 static llvm::Value *
-lExtractFirstVectorElement(llvm::Value *v, 
+lExtractFirstVectorElement(llvm::Value *v,
                            std::map<llvm::PHINode *, llvm::PHINode *> &phiMap) {
     llvm::VectorType *vt =
         llvm::dyn_cast<llvm::VectorType>(v->getType());
@@ -1373,7 +1373,7 @@ lExtractFirstVectorElement(llvm::Value *v,
     if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
         return cv->getOperand(0);
     }
-    if (llvm::ConstantDataVector *cdv = 
+    if (llvm::ConstantDataVector *cdv =
         llvm::dyn_cast<llvm::ConstantDataVector>(v))
         return cdv->getElementAsConstant(0);
 
@@ -1423,9 +1423,9 @@ lExtractFirstVectorElement(llvm::Value *v,
         // The insertion point for the new phi node also has to be the
         // start of the bblock of the original phi node.
         llvm::Instruction *phiInsertPos = phi->getParent()->begin();
-        llvm::PHINode *scalarPhi = 
-            llvm::PHINode::Create(vt->getElementType(), 
-                                  phi->getNumIncomingValues(), 
+        llvm::PHINode *scalarPhi =
+            llvm::PHINode::Create(vt->getElementType(),
+                                  phi->getNumIncomingValues(),
                                   newName, phiInsertPos);
         phiMap[phi] = scalarPhi;
 
@@ -1452,7 +1452,7 @@ lExtractFirstVectorElement(llvm::Value *v,
     // have here.
     llvm::Instruction *insertAfter = llvm::dyn_cast<llvm::Instruction>(v);
     Assert(insertAfter != NULL);
-    llvm::Instruction *ee = 
+    llvm::Instruction *ee =
         llvm::ExtractElementInst::Create(v, LLVMInt32(0), "first_elt",
                                          (llvm::Instruction *)NULL);
     ee->insertAfter(insertAfter);
@@ -1474,7 +1474,7 @@ LLVMExtractFirstVectorElement(llvm::Value *v) {
     vector.
  */
 llvm::Value *
-LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2, 
+LLVMConcatVectors(llvm::Value *v1, llvm::Value *v2,
                   llvm::Instruction *insertBefore) {
     Assert(v1->getType() == v2->getType());
 

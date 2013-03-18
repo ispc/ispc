@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 %locations
@@ -125,14 +125,14 @@ static const char *lBuiltinTokens[] = {
      "foreach_unique", "goto", "if", "in", "inline",
     "int", "int8", "int16", "int32", "int64", "launch", "new", "NULL",
     "print", "return", "signed", "sizeof", "static", "struct", "switch",
-    "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned", 
-    "varying", "void", "while", NULL 
+    "sync", "task", "true", "typedef", "uniform", "unmasked", "unsigned",
+    "varying", "void", "while", NULL
 };
 
 static const char *lParamListTokens[] = {
     "bool", "const", "double", "enum", "false", "float", "int",
     "int8", "int16", "int32", "int64", "signed", "struct", "true",
-    "uniform", "unsigned", "varying", "void", NULL 
+    "uniform", "unsigned", "varying", "void", NULL
 };
 
 struct ForeachDimension {
@@ -179,27 +179,27 @@ struct ForeachDimension {
 }
 
 
-%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT 
-%token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT 
-%token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT 
+%token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT
+%token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
+%token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
 %token TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
-%token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP 
+%token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
-%token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN 
-%token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN 
+%token TOKEN_AND_OP TOKEN_OR_OP TOKEN_MUL_ASSIGN TOKEN_DIV_ASSIGN TOKEN_MOD_ASSIGN
+%token TOKEN_ADD_ASSIGN TOKEN_SUB_ASSIGN TOKEN_LEFT_ASSIGN TOKEN_RIGHT_ASSIGN
 %token TOKEN_AND_ASSIGN TOKEN_OR_ASSIGN TOKEN_XOR_ASSIGN
 %token TOKEN_SIZEOF TOKEN_NEW TOKEN_DELETE TOKEN_IN
 
 %token TOKEN_EXTERN TOKEN_EXPORT TOKEN_STATIC TOKEN_INLINE TOKEN_TASK TOKEN_DECLSPEC
 %token TOKEN_UNIFORM TOKEN_VARYING TOKEN_TYPEDEF TOKEN_SOA TOKEN_UNMASKED
 %token TOKEN_CHAR TOKEN_INT TOKEN_SIGNED TOKEN_UNSIGNED TOKEN_FLOAT TOKEN_DOUBLE
-%token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL 
+%token TOKEN_INT8 TOKEN_INT16 TOKEN_INT64 TOKEN_CONST TOKEN_VOID TOKEN_BOOL
 %token TOKEN_ENUM TOKEN_STRUCT TOKEN_TRUE TOKEN_FALSE
 
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
-%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED 
+%token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
@@ -221,7 +221,7 @@ struct ForeachDimension {
 %type <stmt> assert_statement sync_statement delete_statement unmasked_statement
 
 %type <declaration> declaration parameter_declaration
-%type <declarators> init_declarator_list 
+%type <declarators> init_declarator_list
 %type <declarationList> parameter_list parameter_type_list
 %type <declarator> declarator pointer reference
 %type <declarator> init_declarator direct_declarator struct_declarator
@@ -244,10 +244,10 @@ struct ForeachDimension {
 
 %type <typeQualifier> type_qualifier type_qualifier_list
 %type <storageClass> storage_class_specifier
-%type <declSpecs> declaration_specifiers 
+%type <declSpecs> declaration_specifiers
 
-%type <stringVal> string_constant 
-%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier 
+%type <stringVal> string_constant
+%type <constCharPtr> struct_or_union_name enum_identifier goto_identifier
 %type <constCharPtr> foreach_unique_identifier
 
 %type <intVal> int_constant soa_width_specifier rate_qualified_new
@@ -277,7 +277,7 @@ primary_expression
         Symbol *s = m->symbolTable->LookupVariable(name);
         $$ = NULL;
         if (s)
-            $$ = new SymbolExpr(s, @1);       
+            $$ = new SymbolExpr(s, @1);
         else {
             std::vector<Symbol *> funs;
             m->symbolTable->LookupFunction(name, &funs);
@@ -285,7 +285,7 @@ primary_expression
                 $$ = new FunctionSymbolExpr(name, funs, @1);
         }
         if ($$ == NULL) {
-            std::vector<std::string> alternates = 
+            std::vector<std::string> alternates =
                 m->symbolTable->ClosestVariableOrFunctionMatch(name);
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
@@ -293,23 +293,23 @@ primary_expression
     }
     | TOKEN_INT32_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
-                           (int32_t)yylval.intVal, @1); 
+                           (int32_t)yylval.intVal, @1);
     }
     | TOKEN_UINT32_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
-                           (uint32_t)yylval.intVal, @1); 
+                           (uint32_t)yylval.intVal, @1);
     }
     | TOKEN_INT64_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
-                           (int64_t)yylval.intVal, @1); 
+                           (int64_t)yylval.intVal, @1);
     }
     | TOKEN_UINT64_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
-                           (uint64_t)yylval.intVal, @1); 
+                           (uint64_t)yylval.intVal, @1);
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
-                           (float)yylval.floatVal, @1); 
+                           (float)yylval.floatVal, @1);
     }
     | TOKEN_TRUE {
         $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
@@ -328,7 +328,7 @@ primary_expression
 
 launch_expression
     : TOKEN_LAUNCH postfix_expression '(' argument_expression_list ')'
-      { 
+      {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
           $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, oneExpr);
       }
@@ -343,7 +343,7 @@ launch_expression
       { $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, $3); }
 
     | TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
-       { 
+       {
           Error(Union(@2, @7), "\"launch\" expressions no longer take '<' '>' "
                 "around function call expression.");
           $$ = NULL;
@@ -412,21 +412,21 @@ argument_expression_list
 
 unary_expression
     : funcall_expression
-    | TOKEN_INC_OP unary_expression   
+    | TOKEN_INC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreInc, $2, Union(@1, @2)); }
-    | TOKEN_DEC_OP unary_expression   
+    | TOKEN_DEC_OP unary_expression
       { $$ = new UnaryExpr(UnaryExpr::PreDec, $2, Union(@1, @2)); }
     | '&' unary_expression
       { $$ = new AddressOfExpr($2, Union(@1, @2)); }
     | '*' unary_expression
       { $$ = new PtrDerefExpr($2, Union(@1, @2)); }
-    | '+' cast_expression 
+    | '+' cast_expression
       { $$ = $2; }
-    | '-' cast_expression 
+    | '-' cast_expression
       { $$ = new UnaryExpr(UnaryExpr::Negate, $2, Union(@1, @2)); }
-    | '~' cast_expression 
+    | '~' cast_expression
       { $$ = new UnaryExpr(UnaryExpr::BitNot, $2, Union(@1, @2)); }
-    | '!' cast_expression 
+    | '!' cast_expression
       { $$ = new UnaryExpr(UnaryExpr::LogicalNot, $2, Union(@1, @2)); }
     | TOKEN_SIZEOF unary_expression
       { $$ = new SizeOfExpr($2, Union(@1, @2)); }
@@ -438,7 +438,7 @@ cast_expression
     : unary_expression
     | '(' type_name ')' cast_expression
       {
-          $$ = new TypeCastExpr($2, $4, Union(@1,@4)); 
+          $$ = new TypeCastExpr($2, $4, Union(@1,@4));
       }
     ;
 
@@ -630,7 +630,7 @@ constant_expression
     ;
 
 declaration_statement
-    : declaration     
+    : declaration
     {
         if ($1 == NULL) {
             AssertPos(@1, m->errorCount > 0);
@@ -810,11 +810,11 @@ init_declarator_list
 
 init_declarator
     : declarator
-    | declarator '=' initializer 
+    | declarator '=' initializer
       {
           if ($1 != NULL)
-              $1->initExpr = $3; 
-          $$ = $1; 
+              $1->initExpr = $3;
+          $$ = $1;
       }
     ;
 
@@ -829,7 +829,7 @@ type_specifier
     : atomic_var_type_specifier { $$ = $1; }
     | TOKEN_TYPE_NAME
     {
-        const Type *t = m->symbolTable->LookupType(yytext); 
+        const Type *t = m->symbolTable->LookupType(yytext);
         $$ = t;
     }
     | struct_or_union_specifier { $$ = $1; }
@@ -837,7 +837,7 @@ type_specifier
     ;
 
 type_specifier_list
-    : type_specifier      
+    : type_specifier
     {
         if ($1 == NULL)
             $$ = NULL;
@@ -883,8 +883,8 @@ struct_or_union_name
 
 struct_or_union_and_name
     : struct_or_union struct_or_union_name
-      { 
-          const Type *st = m->symbolTable->LookupType($2); 
+      {
+          const Type *st = m->symbolTable->LookupType($2);
           if (st == NULL) {
               st = new UndefinedStructType($2, Variability::Unbound, false, @2);
               m->symbolTable->AddType($2, st, @2);
@@ -905,7 +905,7 @@ struct_or_union_and_name
 
 struct_or_union_specifier
     : struct_or_union_and_name
-    | struct_or_union_and_name '{' struct_declaration_list '}' 
+    | struct_or_union_and_name '{' struct_declaration_list '}'
       {
           if ($3 != NULL) {
               llvm::SmallVector<const Type *, 8> elementTypes;
@@ -924,7 +924,7 @@ struct_or_union_specifier
           else
               $$ = NULL;
       }
-    | struct_or_union '{' struct_declaration_list '}' 
+    | struct_or_union '{' struct_declaration_list '}'
       {
           if ($3 != NULL) {
               llvm::SmallVector<const Type *, 8> elementTypes;
@@ -938,7 +938,7 @@ struct_or_union_specifier
           else
               $$ = NULL;
       }
-    | struct_or_union '{' '}' 
+    | struct_or_union '{' '}'
       {
           llvm::SmallVector<const Type *, 8> elementTypes;
           llvm::SmallVector<std::string, 8> elementNames;
@@ -946,7 +946,7 @@ struct_or_union_specifier
           $$ = new StructType("", elementTypes, elementNames, elementPositions,
                               false, Variability::Unbound, @1);
       }
-    | struct_or_union_and_name '{' '}' 
+    | struct_or_union_and_name '{' '}'
       {
           llvm::SmallVector<const Type *, 8> elementTypes;
           llvm::SmallVector<std::string, 8> elementNames;
@@ -963,18 +963,18 @@ struct_or_union_specifier
     ;
 
 struct_or_union
-    : TOKEN_STRUCT 
+    : TOKEN_STRUCT
     ;
 
 struct_declaration_list
-    : struct_declaration 
-      { 
+    : struct_declaration
+      {
           std::vector<StructDeclaration *> *sdl = new std::vector<StructDeclaration *>;
           if ($1 != NULL)
               sdl->push_back($1);
           $$ = sdl;
       }
-    | struct_declaration_list struct_declaration 
+    | struct_declaration_list struct_declaration
       {
           std::vector<StructDeclaration *> *sdl = (std::vector<StructDeclaration *> *)$1;
           if (sdl == NULL) {
@@ -988,7 +988,7 @@ struct_declaration_list
     ;
 
 struct_declaration
-    : specifier_qualifier_list struct_declarator_list ';' 
+    : specifier_qualifier_list struct_declarator_list ';'
       { $$ = ($1 != NULL && $2 != NULL) ? new StructDeclaration($1, $2) : NULL; }
     ;
 
@@ -996,7 +996,7 @@ specifier_qualifier_list
     : type_specifier specifier_qualifier_list
     | type_specifier
     | short_vec_specifier
-    | type_qualifier specifier_qualifier_list 
+    | type_qualifier specifier_qualifier_list
     {
         if ($2 != NULL) {
             if ($1 == TYPEQUAL_UNIFORM) {
@@ -1033,7 +1033,7 @@ specifier_qualifier_list
                           $2->ResolveUnboundVariability(Variability::Varying)->GetString().c_str());
                     $$ = $2;
                 }
-            } 
+            }
             else if ($1 == TYPEQUAL_INLINE) {
                 Error(@1, "\"inline\" qualifier is illegal outside of "
                       "function declarations.");
@@ -1059,7 +1059,7 @@ specifier_qualifier_list
         }
         else {
             if (m->errorCount == 0)
-                Error(@1, "Lost type qualifier in parser.");  
+                Error(@1, "Lost type qualifier in parser.");
             $$ = NULL;
         }
     }
@@ -1067,14 +1067,14 @@ specifier_qualifier_list
 
 
 struct_declarator_list
-    : struct_declarator 
+    : struct_declarator
       {
           std::vector<Declarator *> *sdl = new std::vector<Declarator *>;
           if ($1 != NULL)
               sdl->push_back($1);
           $$ = sdl;
       }
-    | struct_declarator_list ',' struct_declarator 
+    | struct_declarator_list ',' struct_declarator
       {
           std::vector<Declarator *> *sdl = (std::vector<Declarator *> *)$1;
           if (sdl == NULL) {
@@ -1099,19 +1099,19 @@ enum_identifier
     : TOKEN_IDENTIFIER { $$ = strdup(yytext); }
 
 enum_specifier
-    : TOKEN_ENUM '{' enumerator_list '}' 
+    : TOKEN_ENUM '{' enumerator_list '}'
       {
           $$ = lCreateEnumType(NULL, $3, @1);
       }
-    | TOKEN_ENUM enum_identifier '{' enumerator_list '}' 
+    | TOKEN_ENUM enum_identifier '{' enumerator_list '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
       }
-    | TOKEN_ENUM '{' enumerator_list ',' '}' 
+    | TOKEN_ENUM '{' enumerator_list ',' '}'
       {
           $$ = lCreateEnumType(NULL, $3, @1);
       }
-    | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}' 
+    | TOKEN_ENUM enum_identifier '{' enumerator_list ',' '}'
       {
           $$ = lCreateEnumType($2, $4, @2);
       }
@@ -1138,12 +1138,12 @@ enum_specifier
     ;
 
 enumerator_list
-    : enumerator 
+    : enumerator
       {
           if ($1 == NULL)
               $$ = NULL;
           else {
-              std::vector<Symbol *> *el = new std::vector<Symbol *>; 
+              std::vector<Symbol *> *el = new std::vector<Symbol *>;
               el->push_back($1);
               $$ = el;
           }
@@ -1198,7 +1198,7 @@ type_qualifier_list
     {
         $$ = $1;
     }
-    | type_qualifier_list type_qualifier 
+    | type_qualifier_list type_qualifier
     {
         $$ = $1 | $2;
     }
@@ -1243,9 +1243,9 @@ direct_declarator
           d->name = yytext;
           $$ = d;
       }
-    | '(' declarator ')' 
+    | '(' declarator ')'
     {
-        $$ = $2; 
+        $$ = $2;
     }
     | direct_declarator '[' constant_expression ']'
     {
@@ -1310,9 +1310,9 @@ direct_declarator
 
 
 pointer
-    : '*' 
+    : '*'
     {
-        $$ = new Declarator(DK_POINTER, @1); 
+        $$ = new Declarator(DK_POINTER, @1);
     }
     | '*' type_qualifier_list
       {
@@ -1337,9 +1337,9 @@ pointer
 
 
 reference
-    : '&' 
+    : '&'
     {
-        $$ = new Declarator(DK_REFERENCE, @1); 
+        $$ = new Declarator(DK_REFERENCE, @1);
     }
     ;
 
@@ -1375,10 +1375,10 @@ parameter_list
 parameter_declaration
     : declaration_specifiers declarator
     {
-        $$ = new Declaration($1, $2); 
+        $$ = new Declaration($1, $2);
     }
     | declaration_specifiers declarator '=' initializer
-    { 
+    {
         if ($1 != NULL && $2 != NULL) {
             $2->initExpr = $4;
             $$ = new Declaration($1, $2);
@@ -1398,11 +1398,11 @@ parameter_declaration
         if ($1 == NULL)
             $$ = NULL;
         else
-            $$ = new Declaration($1); 
+            $$ = new Declaration($1);
     }
     ;
 
-/* K&R? 
+/* K&R?
 identifier_list
     : IDENTIFIER
     | identifier_list ',' IDENTIFIER
@@ -1588,9 +1588,9 @@ labeled_statement
         $$ = new LabeledStmt($1, $3, @1);
     }
     | TOKEN_CASE constant_expression ':' statement
-      { 
+      {
           int value;
-          if ($2 != NULL && 
+          if ($2 != NULL &&
               lGetConstantInt($2, &value, @2, "Case statement value")) {
               $$ = new CaseStmt(value, $4, Union(@1, @2));
           }
@@ -1700,19 +1700,19 @@ foreach_active_identifier
 integer_dotdotdot
     : TOKEN_INT32DOTDOTDOT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
-                           (int32_t)yylval.intVal, @1); 
+                           (int32_t)yylval.intVal, @1);
     }
     | TOKEN_UINT32DOTDOTDOT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformUInt32->GetAsConstType(),
-                           (uint32_t)yylval.intVal, @1); 
+                           (uint32_t)yylval.intVal, @1);
     }
     | TOKEN_INT64DOTDOTDOT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt64->GetAsConstType(),
-                           (int64_t)yylval.intVal, @1); 
+                           (int64_t)yylval.intVal, @1);
     }
     | TOKEN_UINT64DOTDOTDOT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformUInt64->GetAsConstType(),
-                           (uint64_t)yylval.intVal, @1); 
+                           (uint64_t)yylval.intVal, @1);
     }
     ;
 
@@ -1749,7 +1749,7 @@ foreach_dimension_list
 foreach_unique_scope
     : TOKEN_FOREACH_UNIQUE { m->symbolTable->PushScope(); }
     ;
-   
+
 foreach_unique_identifier
     : TOKEN_IDENTIFIER { $$ = yylval.stringVal->c_str(); }
     ;
@@ -1764,11 +1764,11 @@ iteration_statement
     | TOKEN_CDO statement TOKEN_WHILE '(' expression ')' ';'
       { $$ = new DoStmt($5, $2, true, @1); }
     | for_scope '(' for_init_statement for_test ')' statement
-      { $$ = new ForStmt($3, $4, NULL, $6, false, @1); 
+      { $$ = new ForStmt($3, $4, NULL, $6, false, @1);
         m->symbolTable->PopScope();
       }
     | for_scope '(' for_init_statement for_test expression ')' statement
-      { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, false, @1); 
+      { $$ = new ForStmt($3, $4, new ExprStmt($5, @5), $7, false, @1);
         m->symbolTable->PopScope();
       }
     | cfor_scope '(' for_init_statement for_test ')' statement
@@ -1847,7 +1847,7 @@ iteration_statement
          m->symbolTable->PopScope();
      }
     | foreach_unique_scope '(' foreach_unique_identifier TOKEN_IN
-         expression ')' 
+         expression ')'
      {
          Expr *expr = $5;
          const Type *type;
@@ -1905,11 +1905,11 @@ unmasked_statement
 print_statement
     : TOKEN_PRINT '(' string_constant ')' ';'
       {
-           $$ = new PrintStmt(*$3, NULL, @1); 
+           $$ = new PrintStmt(*$3, NULL, @1);
       }
     | TOKEN_PRINT '(' string_constant ',' argument_expression_list ')' ';'
       {
-           $$ = new PrintStmt(*$3, $5, @1); 
+           $$ = new PrintStmt(*$3, $5, @1);
       }
     ;
 
@@ -1934,8 +1934,8 @@ external_declaration
         if ($3 != NULL)
             m->AddExportedTypes(*$3);
     }
-    | declaration 
-    { 
+    | declaration
+    {
         if ($1 != NULL)
             for (unsigned int i = 0; i < $1->declarators.size(); ++i)
                 lAddDeclaration($1->declSpecs, $1->declarators[i]);
@@ -1944,14 +1944,14 @@ external_declaration
     ;
 
 function_definition
-    : declaration_specifiers declarator 
+    : declaration_specifiers declarator
     {
         lAddDeclaration($1, $2);
-        lAddFunctionParams($2); 
+        lAddFunctionParams($2);
         lAddMaskToSymbolTable(@2);
         if ($1->typeQualifiers & TYPEQUAL_TASK)
             lAddThreadIndexCountToSymbolTable(@2);
-    } 
+    }
     compound_statement
     {
         if ($2 != NULL) {
@@ -1970,7 +1970,7 @@ function_definition
         m->symbolTable->PopScope(); // push in lAddFunctionParams();
     }
 /* function with no declared return type??
-func(...) 
+func(...)
     | declarator { lAddFunctionParams($1); } compound_statement
     {
         m->AddFunction(new DeclSpecs(XXX, $1, $3);
@@ -2002,34 +2002,34 @@ lYYTNameErr (char *yyres, const char *yystr)
       else
           return yystpcpy(yyres, n.c_str()) - yyres;
   }
-  
+
   if (*yystr == '"')
     {
       YYSIZE_T yyn = 0;
       char const *yyp = yystr;
 
       for (;;)
-	switch (*++yyp)
-	  {
-	  case '\'':
-	  case ',':
-	    goto do_not_strip_quotes;
+        switch (*++yyp)
+          {
+          case '\'':
+          case ',':
+            goto do_not_strip_quotes;
 
-	  case '\\':
-	    if (*++yyp != '\\')
-	      goto do_not_strip_quotes;
-	    /* Fall through.  */
-	  default:
-	    if (yyres)
-	      yyres[yyn] = *yyp;
-	    yyn++;
-	    break;
+          case '\\':
+            if (*++yyp != '\\')
+              goto do_not_strip_quotes;
+            /* Fall through.  */
+          default:
+            if (yyres)
+              yyres[yyn] = *yyp;
+            yyn++;
+            break;
 
-	  case '"':
-	    if (yyres)
-	      yyres[yyn] = '\0';
-	    return yyn;
-	  }
+          case '"':
+            if (yyres)
+              yyres[yyn] = '\0';
+            return yyn;
+          }
     do_not_strip_quotes: ;
     }
 
@@ -2085,7 +2085,7 @@ lAddDeclaration(DeclSpecs *ds, Declarator *decl) {
         }
 
         decl->type = decl->type->ResolveUnboundVariability(Variability::Varying);
-        
+
         const FunctionType *ft = CastType<FunctionType>(decl->type);
         if (ft != NULL) {
             bool isInline = (ds->typeQualifiers & TYPEQUAL_INLINE);
@@ -2113,7 +2113,7 @@ lAddFunctionParams(Declarator *decl) {
         return;
     }
 
-    // walk down to the declarator for the function itself 
+    // walk down to the declarator for the function itself
     while (decl->kind != DK_FUNCTION && decl->child != NULL)
         decl = decl->child;
     if (decl->kind != DK_FUNCTION) {
@@ -2265,13 +2265,13 @@ lCreateEnumType(const char *name, std::vector<Symbol *> *enums, SourcePos pos) {
 
 
 /** Given an array of enumerator symbols, make sure each of them has a
-    ConstExpr * in their Symbol::constValue member that stores their 
+    ConstExpr * in their Symbol::constValue member that stores their
     unsigned integer value.  Symbols that had values explicitly provided
     in the source file will already have ConstExpr * set; we just need
     to set the values for the others here.
 */
 static void
-lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums, 
+lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
                            const EnumType *enumType) {
     enumType = enumType->GetAsConstType();
     enumType = enumType->GetAsUniformType();
@@ -2304,7 +2304,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
             AssertPos(enums[i]->pos, enums[i]->constValue != NULL);
         }
         else {
-            enums[i]->constValue = new ConstExpr(enumType, nextVal++, 
+            enums[i]->constValue = new ConstExpr(enumType, nextVal++,
                                                  enums[i]->pos);
         }
     }

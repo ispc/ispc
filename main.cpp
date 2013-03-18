@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file main.cpp
@@ -60,8 +60,8 @@
 
 static void
 lPrintVersion() {
-    printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n", 
-           ISPC_VERSION, BUILD_VERSION, BUILD_DATE, 
+    printf("Intel(r) SPMD Program Compiler (ispc), %s (build %s @ %s, LLVM %s)\n",
+           ISPC_VERSION, BUILD_VERSION, BUILD_DATE,
 #if defined(LLVM_3_1)
            "3.1"
 #elif defined(LLVM_3_2)
@@ -70,7 +70,7 @@ lPrintVersion() {
            "3.3"
 #else
 #error "Unhandled LLVM version"
-#endif 
+#endif
            );
 }
 
@@ -82,7 +82,7 @@ usage(int ret) {
     printf("    [--addressing={32,64}]\t\tSelect 32- or 64-bit addressing. (Note that 32-bit\n");
     printf("                          \t\taddressing calculations are done by default, even\n");
     printf("                          \t\ton 64-bit target architectures.)\n");
-    printf("    [--arch={%s}]\t\tSelect target architecture\n", 
+    printf("    [--arch={%s}]\t\tSelect target architecture\n",
            Target::SupportedTargetArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
 #ifndef ISPC_IS_WINDOWS
@@ -160,7 +160,7 @@ devUsage(int ret) {
 /** We take arguments from both the command line as well as from the
     ISPC_ARGS environment variable.  This function returns a new set of
     arguments representing the ones from those two sources merged together.
-*/ 
+*/
 static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
     // Copy over the command line arguments (passed in)
     for (int i = 0; i < Argc; ++i)
@@ -185,7 +185,7 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
         strncpy(ptr, env, len);
         ptr[len] = '\0';
 
-        // Add it to the args array and get out of here 
+        // Add it to the args array and get out of here
         argv[argc++] = ptr;
         if (*end == '\0')
             break;
@@ -403,7 +403,7 @@ int main(int Argc, char *Argv[]) {
             g->opt.level = 0;
             optSet = true;
         }
-        else if (!strcmp(argv[i], "-O") ||  !strcmp(argv[i], "-O1") || 
+        else if (!strcmp(argv[i], "-O") ||  !strcmp(argv[i], "-O1") ||
                  !strcmp(argv[i], "-O2") || !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
             optSet = true;
@@ -480,7 +480,7 @@ int main(int Argc, char *Argv[]) {
             int seed = getpid();
 #endif
             g->fuzzTestSeed = seed;
-            Warning(SourcePos(), "Using seed %d for fuzz testing", 
+            Warning(SourcePos(), "Using seed %d for fuzz testing",
                     g->fuzzTestSeed);
         }
 #ifdef ISPC_IS_WINDOWS
@@ -490,7 +490,7 @@ int main(int Argc, char *Argv[]) {
 #endif
     }
 
-    if (outFileName == NULL && 
+    if (outFileName == NULL &&
         headerFileName == NULL &&
         depsFileName == NULL &&
         hostStubFileName == NULL &&
@@ -500,9 +500,9 @@ int main(int Argc, char *Argv[]) {
               "be issued, but no output will be generated.");
 
     return Module::CompileAndOutput(file, arch, cpu, target, generatePIC,
-                                    ot, 
-                                    outFileName, 
-                                    headerFileName, 
+                                    ot,
+                                    outFileName,
+                                    headerFileName,
                                     includeFileName,
                                     depsFileName,
                                     hostStubFileName,

@@ -28,7 +28,7 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file ispc.cpp
@@ -136,7 +136,7 @@ lGetSystemISA() {
 }
 
 
-static const char *supportedCPUs[] = { 
+static const char *supportedCPUs[] = {
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if defined(LLVM_3_2) || defined(LLVM_3_3)
     , "core-avx-i", "core-avx2"
@@ -187,7 +187,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     }
     else {
         bool foundCPU = false;
-        for (int i = 0; i < int(sizeof(supportedCPUs) / sizeof(supportedCPUs[0])); 
+        for (int i = 0; i < int(sizeof(supportedCPUs) / sizeof(supportedCPUs[0]));
              ++i) {
             if (!strcmp(cpu, supportedCPUs[i])) {
                 foundCPU = true;
@@ -405,7 +405,7 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
 #endif
     }
     else {
-        fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n", 
+        fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n",
                 isa, SupportedTargetISAs());
         error = true;
     }
@@ -494,7 +494,7 @@ llvm::TargetMachine *
 Target::GetTargetMachine() const {
     std::string triple = GetTripleString();
 
-    llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ : 
+    llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ :
                                                   llvm::Reloc::Default;
     std::string featuresString = attributes;
     llvm::TargetOptions options;
@@ -502,7 +502,7 @@ Target::GetTargetMachine() const {
     if (g->opt.disableFMA == false)
         options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 #endif // !LLVM_3_1
-    llvm::TargetMachine *targetMachine = 
+    llvm::TargetMachine *targetMachine =
         target->createTargetMachine(triple, cpu, featuresString, options,
                                     relocModel);
     Assert(targetMachine != NULL);
@@ -544,12 +544,12 @@ lGenericTypeLayoutIndeterminate(llvm::Type *type) {
         type == LLVMTypes::Int1VectorType)
         return true;
 
-    llvm::ArrayType *at = 
+    llvm::ArrayType *at =
         llvm::dyn_cast<llvm::ArrayType>(type);
     if (at != NULL)
         return lGenericTypeLayoutIndeterminate(at->getElementType());
 
-    llvm::PointerType *pt = 
+    llvm::PointerType *pt =
         llvm::dyn_cast<llvm::PointerType>(type);
     if (pt != NULL)
         return false;
@@ -569,7 +569,7 @@ lGenericTypeLayoutIndeterminate(llvm::Type *type) {
 
 
 llvm::Value *
-Target::SizeOf(llvm::Type *type, 
+Target::SizeOf(llvm::Type *type,
                llvm::BasicBlock *insertAtEnd) {
     if (isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type)) {
@@ -577,15 +577,15 @@ Target::SizeOf(llvm::Type *type,
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&index[0], &index[1]);
-        llvm::Instruction *gep = 
+        llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
                                             insertAtEnd);
 
         if (is32Bit || g->opt.force32BitAddressing)
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "sizeof_int", insertAtEnd);
         else
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, 
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type,
                                           "sizeof_int", insertAtEnd);
     }
 
@@ -611,25 +611,25 @@ Target::SizeOf(llvm::Type *type,
 llvm::Value *
 Target::StructOffset(llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
-    if (isa == Target::GENERIC && 
+    if (isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
         llvm::Value *voidPtr = llvm::ConstantPointerNull::get(ptrType);
         llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
-        llvm::Instruction *gep = 
+        llvm::Instruction *gep =
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
                                             insertAtEnd);
 
         if (is32Bit || g->opt.force32BitAddressing)
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type, 
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "offset_int", insertAtEnd);
         else
-            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type, 
+            return new llvm::PtrToIntInst(gep, LLVMTypes::Int64Type,
                                           "offset_int", insertAtEnd);
     }
 
-    llvm::StructType *structType = 
+    llvm::StructType *structType =
         llvm::dyn_cast<llvm::StructType>(type);
     if (structType == NULL || structType->isSized() == false) {
         Assert(m->errorCount > 0);
@@ -699,7 +699,7 @@ Globals::Globals() {
     enableFuzzTest = false;
     fuzzTestSeed = -1;
     mangleFunctionsWithTarget = false;
-    
+
     ctx = new llvm::LLVMContext;
 
 #ifdef ISPC_IS_WINDOWS
@@ -739,15 +739,15 @@ SourcePos::GetDIFile() const {
 
 
 void
-SourcePos::Print() const { 
+SourcePos::Print() const {
     printf(" @ [%s:%d.%d - %d.%d] ", name, first_line, first_column,
-           last_line, last_column); 
+           last_line, last_column);
 }
 
 
 bool
 SourcePos::operator==(const SourcePos &p2) const {
-    return (!strcmp(name, p2.name) && 
+    return (!strcmp(name, p2.name) &&
             first_line == p2.first_line &&
             first_column == p2.first_column &&
             last_line == p2.last_line &&

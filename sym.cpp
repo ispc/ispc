@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file sym.cpp
-    @brief file with definitions for symbol and symbol table classes. 
+    @brief file with definitions for symbol and symbol table classes.
 */
 
 #include "sym.h"
@@ -43,8 +43,8 @@
 ///////////////////////////////////////////////////////////////////////////
 // Symbol
 
-Symbol::Symbol(const std::string &n, SourcePos p, const Type *t, 
-               StorageClass sc) 
+Symbol::Symbol(const std::string &n, SourcePos p, const Type *t,
+               StorageClass sc)
   : pos(p), name(n) {
     storagePtr = NULL;
     function = exportedFunction = NULL;
@@ -72,7 +72,7 @@ SymbolTable::~SymbolTable() {
 
 
 void
-SymbolTable::PushScope() { 
+SymbolTable::PushScope() {
     SymbolMapType *sm;
     if (freeSymbolMaps.size() > 0) {
         sm = freeSymbolMaps.back();
@@ -87,7 +87,7 @@ SymbolTable::PushScope() {
 
 
 void
-SymbolTable::PopScope() { 
+SymbolTable::PopScope() {
     Assert(variables.size() > 1);
     freeSymbolMaps.push_back(variables.back());
     variables.pop_back();
@@ -105,14 +105,14 @@ SymbolTable::AddVariable(Symbol *symbol) {
             if (i == (int)variables.size()-1) {
                 // If a symbol of the same name was declared in the
                 // same scope, it's an error.
-                Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".", 
+                Error(symbol->pos, "Ignoring redeclaration of symbol \"%s\".",
                       symbol->name.c_str());
                 return false;
             }
             else {
                 // Otherwise it's just shadowing something else, which
                 // is legal but dangerous..
-                Warning(symbol->pos, 
+                Warning(symbol->pos,
                         "Symbol \"%s\" shadows symbol declared in outer scope.",
                         symbol->name.c_str());
                 (*variables.back())[symbol->name] = symbol;
@@ -308,7 +308,7 @@ SymbolTable::Print() {
         for (iter = sm.begin(); iter != sm.end(); ++iter) {
             fprintf(stderr, "%*c", depth, ' ');
             Symbol *sym = iter->second;
-            fprintf(stderr, "%s [%s]", sym->name.c_str(), 
+            fprintf(stderr, "%s [%s]", sym->name.c_str(),
                     sym->type->GetString().c_str());
         }
         fprintf(stderr, "\n");

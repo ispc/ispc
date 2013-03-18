@@ -28,11 +28,11 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /** @file decl.cpp
-    @brief Implementations of classes related to turning declarations into 
+    @brief Implementations of classes related to turning declarations into
            symbol names and types.
 */
 
@@ -62,7 +62,7 @@ lPrintTypeQualifiers(int typeQualifiers) {
 
 
 /** Given a Type and a set of type qualifiers, apply the type qualifiers to
-    the type, returning the type that is the result. 
+    the type, returning the type that is the result.
 */
 static const Type *
 lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
@@ -97,7 +97,7 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         if (unsignedType != NULL)
             type = unsignedType;
         else {
-            const Type *resolvedType = 
+            const Type *resolvedType =
                 type->ResolveUnboundVariability(Variability::Varying);
             Error(pos, "\"unsigned\" qualifier is illegal with \"%s\" type.",
                   resolvedType->GetString().c_str());
@@ -105,7 +105,7 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     }
 
     if ((typeQualifiers & TYPEQUAL_SIGNED) != 0 && type->IsIntType() == false) {
-        const Type *resolvedType = 
+        const Type *resolvedType =
             type->ResolveUnboundVariability(Variability::Varying);
         Error(pos, "\"signed\" qualifier is illegal with non-integer type "
               "\"%s\".", resolvedType->GetString().c_str());
@@ -147,7 +147,7 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     }
 
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
-    
+
     if (soaWidth > 0) {
         const StructType *st = CastType<StructType>(retType);
 
@@ -180,7 +180,7 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
                                "currently leads to inefficient code to access "
                                "soa types.", soaWidth, g->target.vectorWidth);
     }
-    
+
     return retType;
 }
 
@@ -215,8 +215,8 @@ DeclSpecs::Print() const {
 ///////////////////////////////////////////////////////////////////////////
 // Declarator
 
-Declarator::Declarator(DeclaratorKind dk, SourcePos p) 
-    : pos(p), kind(dk) { 
+Declarator::Declarator(DeclaratorKind dk, SourcePos p)
+    : pos(p), kind(dk) {
     child = NULL;
     typeQualifiers = 0;
     storageClass = SC_NONE;
@@ -238,7 +238,7 @@ Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
 
     storageClass = ds->storageClass;
 
-    if (ds->declSpecList.size() > 0 && 
+    if (ds->declSpecList.size() > 0 &&
         CastType<FunctionType>(type) == NULL) {
         Error(pos, "__declspec specifiers for non-function type \"%s\" are "
               "not used.", type->GetString().c_str());
@@ -315,7 +315,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         Error(pos, "\"export\" qualifier illegal in variable declaration.");
         return;
     }
-    
+
     Variability variability(Variability::Unbound);
     if (hasUniformQual)
         variability = Variability::Uniform;
@@ -396,7 +396,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         llvm::SmallVector<std::string, 8> argNames;
         llvm::SmallVector<Expr *, 8> argDefaults;
         llvm::SmallVector<SourcePos, 8> argPos;
-        
+
         // Loop over the function arguments and store the names, types,
         // default values (if any), and source file positions each one in
         // the corresponding vector.
@@ -431,7 +431,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
             if (d->declSpecs->storageClass != SC_NONE)
                 Error(decl->pos, "Storage class \"%s\" is illegal in "
-                      "function parameter declaration for parameter \"%s\".", 
+                      "function parameter declaration for parameter \"%s\".",
                       lGetStorageClassName(d->declSpecs->storageClass),
                       decl->name.c_str());
             if (Type::Equal(decl->type, AtomicType::Void)) {
@@ -486,7 +486,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                             init = dynamic_cast<NullPointerExpr *>(decl->initExpr);
                         if (init == NULL)
                             Error(decl->initExpr->pos, "Default value for parameter "
-                                  "\"%s\" must be a compile-time constant.", 
+                                  "\"%s\" must be a compile-time constant.",
                                   decl->name.c_str());
                     }
                     break;
@@ -507,14 +507,14 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Error(pos, "Illegal to return function type from function.");
             return;
         }
-        
+
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
-        
+
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
                   "qualifiers");
@@ -539,7 +539,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
-        const FunctionType *functionType = 
+        const FunctionType *functionType =
             new FunctionType(returnType, args, argNames, argDefaults,
                              argPos, isTask, isExported, isExternC, isUnmasked);
 
@@ -669,7 +669,7 @@ GetStructTypesNamesPositions(const std::vector<StructDeclaration *> &sd,
         // disgusting
         DeclSpecs ds(type);
         if (Type::Equal(type, AtomicType::Void) == false) {
-            if (type->IsUniformType()) 
+            if (type->IsUniformType())
                 ds.typeQualifiers |= TYPEQUAL_UNIFORM;
             else if (type->IsVaryingType())
                 ds.typeQualifiers |= TYPEQUAL_VARYING;
