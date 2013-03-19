@@ -122,6 +122,7 @@ llvm_check:
 
 print_llvm_src: llvm_check
 	@echo Using LLVM `llvm-config --version` from `llvm-config --libdir`
+	@echo Using compiler to build: `$(CXX) --version | head -1`
 
 clean:
 	/bin/rm -rf objs ispc
