@@ -514,6 +514,18 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
+        // Setup to use LLVM default AliasAnalysis
+        // Ideally, we want call:
+        //    llvm::PassManagerBuilder pm_Builder;
+        //    pm_Builder.OptLevel = optLevel;
+        //    pm_Builder.addInitialAliasAnalysisPasses(optPM);
+        // but the addInitialAliasAnalysisPasses() is a private function
+        // so we explicitly enable them here.
+        // Need to keep sync with future LLVM change
+        // An alternative is to call populateFunctionPassManager()
+        optPM.add(llvm::createTypeBasedAliasAnalysisPass(), 190);
+        optPM.add(llvm::createBasicAliasAnalysisPass());
+
         optPM.add(llvm::createGlobalDCEPass(), 200);
 
         // Early optimizations to try to reduce the total amount of code to
