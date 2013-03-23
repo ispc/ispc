@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -32,7 +32,7 @@
 */
 
 /** @file ispc.h
-    @brief Main ispc.header file
+    @brief Main ispc.header file. Defines Target, Globals and Opt classes.
 */
 
 #ifndef ISPC_H
@@ -162,12 +162,12 @@ extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *e
 
     This structure defines a compilation target for the ispc compiler.
 */
-struct Target {
+class Target {
+public:
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    static bool GetTarget(const char *arch, const char *cpu, const char *isa,
-                          bool pic, Target *);
+    Target(const char *arch, const char *cpu, const char *isa, bool pic);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported target ISAs. */
@@ -202,8 +202,8 @@ struct Target {
     llvm::Value *StructOffset(llvm::Type *type,
                               int element, llvm::BasicBlock *insertAtEnd);
 
-    /** llvm Target object representing this target. */
-    const llvm::Target *target;
+    /** Mark LLVM function with target specific attribute, if required. */
+    void markFuncWithTargetAttr(llvm::Function* func);
 
     /** Enumerator giving the instruction sets that the compiler can
         target.  These should be ordered from "worse" to "better" in that
@@ -213,68 +213,110 @@ struct Target {
         added or the enumerant values are reordered.  */
     enum ISA { SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
 
+    const llvm::Target *getTarget() const {return m_target;}
+
+    /** Reports if Target object has valid state. */
+    bool isValid() const {return m_valid;}
+
+    ISA getISA() const {return m_isa;}
+
+    std::string getArch() const {return m_arch;}
+
+    bool is32Bit() const {return m_is32Bit;}
+
+    std::string getCPU() const {return m_cpu;}
+
+    int getNativeVectorWidth() const {return m_nativeVectorWidth;}
+
+    int getVectorWidth() const {return m_vectorWidth;}
+
+    bool getGeneratePIC() const {return m_generatePIC;}
+
+    bool getMaskingIsFree() const {return m_maskingIsFree;}
+
+    int getMaskBitCount() const {return m_maskBitCount;}
+
+    bool hasHalf() const {return m_hasHalf;}
+
+    bool hasRand() const {return m_hasRand;}
+
+    bool hasGather() const {return m_hasGather;}
+
+    bool hasScatter() const {return m_hasScatter;}
+
+    bool hasTranscendentals() const {return m_hasTranscendentals;}
+
+private:
+
+    /** llvm Target object representing this target. */
+    const llvm::Target *m_target;
+
+    /** flag to report invalid state after construction
+        (due to bad parameters passed to constructor). */
+    bool m_valid;
+
     /** Instruction set being compiled to. */
-    ISA isa;
+    ISA m_isa;
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
-    std::string arch;
+    std::string m_arch;
 
     /** Is the target architecture 32 or 64 bit */
-    bool is32Bit;
+    bool m_is32Bit;
 
     /** Target CPU. (e.g. "corei7", "corei7-avx", ..) */
-    std::string cpu;
+    std::string m_cpu;
 
     /** Target-specific attribute string to pass along to the LLVM backend */
-    std::string attributes;
+    std::string m_attributes;
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2)
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */
-    llvm::AttributeSet* tf_attributes;
+    llvm::AttributeSet* m_tf_attributes;
 #endif
 
     /** Native vector width of the vector instruction set.  Note that this
         value is directly derived from the ISA Being used (e.g. it's 4 for
         SSE, 8 for AVX, etc.) */
-    int nativeVectorWidth;
+    int m_nativeVectorWidth;
 
     /** Actual vector width currently being compiled to.  This may be an
         integer multiple of the native vector width, for example if we're
         "doubling up" and compiling 8-wide on a 4-wide SSE system. */
-    int vectorWidth;
+    int m_vectorWidth;
 
     /** Indicates whether position independent code should be generated. */
-    bool generatePIC;
+    bool m_generatePIC;
 
     /** Is there overhead associated with masking on the target
         architecture; e.g. there is on SSE, due to extra blends and the
         like, but there isn't with an ISA that supports masking
         natively. */
-    bool maskingIsFree;
+    bool m_maskingIsFree;
 
     /** How many bits are used to store each element of the mask: e.g. this
         is 32 on SSE/AVX, since that matches the HW better, but it's 1 for
         the generic target. */
-    int maskBitCount;
+    int m_maskBitCount;
 
     /** Indicates whether the target has native support for float/half
         conversions. */
-    bool hasHalf;
+    bool m_hasHalf;
 
     /** Indicates whether there is an ISA random number instruction. */
-    bool hasRand;
+    bool m_hasRand;
 
     /** Indicates whether the target has a native gather instruction */
-    bool hasGather;
+    bool m_hasGather;
 
     /** Indicates whether the target has a native scatter instruction */
-    bool hasScatter;
+    bool m_hasScatter;
 
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */
-    bool hasTranscendentals;
+    bool m_hasTranscendentals;
 };
 
 
@@ -401,7 +443,7 @@ struct Globals {
     /** Optimization option settings */
     Opt opt;
     /** Compilation target information */
-    Target target;
+    Target* target;
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */

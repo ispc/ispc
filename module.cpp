@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -123,7 +123,7 @@ void RegisterDependency(const std::string &fileName)
 
 static void
 lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
-    const Type *ptrIntType = (g->target.is32Bit) ? AtomicType::VaryingInt32 :
+    const Type *ptrIntType = (g->target->is32Bit()) ? AtomicType::VaryingInt32 :
         AtomicType::VaryingInt64;
     ptrIntType = ptrIntType->GetAsUnboundVariabilityType();
 
@@ -132,7 +132,7 @@ lDeclareSizeAndPtrIntTypes(SymbolTable *symbolTable) {
                          SourcePos());
     symbolTable->AddType("ptrdiff_t", ptrIntType, SourcePos());
 
-    const Type *sizeType = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+    const Type *sizeType = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
         AtomicType::VaryingUInt32 : AtomicType::VaryingUInt64;
     sizeType = sizeType->GetAsUnboundVariabilityType();
     symbolTable->AddType("size_t", sizeType, SourcePos());
@@ -245,7 +245,7 @@ Module::Module(const char *fn) {
     // information has been set (so e.g. the vector width is known...)  In
     // particular, if we're compiling to multiple targets with different
     // vector widths, this needs to be redone each time through.
-    InitLLVMUtil(g->ctx, g->target);
+    InitLLVMUtil(g->ctx, *g->target);
 
     filename = fn;
     errorCount = 0;
@@ -255,9 +255,9 @@ Module::Module(const char *fn) {
     lDeclareSizeAndPtrIntTypes(symbolTable);
 
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
-    module->setTargetTriple(g->target.GetTripleString());
+    module->setTargetTriple(g->target->GetTripleString());
 
-    if (g->target.isa == Target::GENERIC) {
+    if (g->target->getISA() == Target::GENERIC) {
         // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
         // that to the regular datalayout string for IA..
         std::string datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
@@ -761,7 +761,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass != SC_EXTERN_C) {
         functionName += functionType->Mangle();
         if (g->mangleFunctionsWithTarget)
-            functionName += g->target.GetISAString();
+            functionName += g->target->GetISAString();
     }
     llvm::Function *function =
         llvm::Function::Create(llvmFunctionType, linkage, functionName.c_str(),
@@ -785,9 +785,7 @@ Module::AddFunctionDeclaration(const std::string &name,
         function->setDoesNotAlias(1);
 #endif
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
-    function->addAttributes(llvm::AttributeSet::FunctionIndex, *g->target.tf_attributes);
-#endif
+    g->target->markFuncWithTargetAttr(function);
 
     // Make sure that the return type isn't 'varying' or vector typed if
     // the function is 'export'ed.
@@ -841,7 +839,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 #endif
 
 #if 0
-            int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
+            int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
 #endif
         }
@@ -991,14 +989,14 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
     else if (outputType == Bitcode)
         return writeBitcode(module, outFileName);
     else if (outputType == CXX) {
-        if (g->target.isa != Target::GENERIC) {
+        if (g->target->getISA() != Target::GENERIC) {
             Error(SourcePos(), "Only \"generic-*\" targets can be used with "
                   "C++ emission.");
             return false;
         }
         extern bool WriteCXXFile(llvm::Module *module, const char *fn,
                                  int vectorWidth, const char *includeName);
-        return WriteCXXFile(module, outFileName, g->target.vectorWidth,
+        return WriteCXXFile(module, outFileName, g->target->getVectorWidth(),
                             includeFileName);
     }
     else
@@ -1036,7 +1034,7 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
 
 bool
 Module::writeObjectFileOrAssembly(OutputType outputType, const char *outFileName) {
-    llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
+    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
     return writeObjectFileOrAssembly(targetMachine, module, outputType,
                                      outFileName);
 }
@@ -1213,7 +1211,7 @@ lEmitVectorTypedefs(const std::vector<const VectorType *> &types, FILE *file) {
     fprintf(file, "// Vector types with external visibility from ispc code\n");
     fprintf(file, "///////////////////////////////////////////////////////////////////////////\n\n");
 
-    int align = g->target.nativeVectorWidth * 4;
+    int align = g->target->getNativeVectorWidth() * 4;
 
     for (unsigned int i = 0; i < types.size(); ++i) {
         std::string baseDecl;
@@ -1858,7 +1856,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     // Add #define for current compilation target
     char targetMacro[128];
-    sprintf(targetMacro, "ISPC_TARGET_%s", g->target.GetISAString());
+    sprintf(targetMacro, "ISPC_TARGET_%s", g->target->GetISAString());
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);
@@ -1866,16 +1864,16 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     }
     opts.addMacroDef(targetMacro);
 
-    if (g->target.is32Bit)
+    if (g->target->is32Bit())
         opts.addMacroDef("ISPC_POINTER_SIZE=32");
     else
         opts.addMacroDef("ISPC_POINTER_SIZE=64");
 
-    if (g->target.hasHalf)
+    if (g->target->hasHalf())
         opts.addMacroDef("ISPC_TARGET_HAS_HALF");
-    if (g->target.hasRand)
+    if (g->target->hasRand())
         opts.addMacroDef("ISPC_TARGET_HAS_RAND");
-    if (g->target.hasTranscendentals)
+    if (g->target->hasTranscendentals())
         opts.addMacroDef("ISPC_TARGET_HAS_TRANSCENDENTALS");
     if (g->opt.forceAlignedMemory)
         opts.addMacroDef("ISPC_FORCE_ALIGNED_MEMORY");
@@ -1992,7 +1990,7 @@ lGetExportedFunctions(SymbolTable *symbolTable,
     symbolTable->GetMatchingFunctions(lSymbolIsExported, &syms);
     for (unsigned int i = 0; i < syms.size(); ++i) {
         FunctionTargetVariants &ftv = functions[syms[i]->name];
-        ftv.func[g->target.isa] = syms[i]->exportedFunction;
+        ftv.func[g->target->getISA()] = syms[i]->exportedFunction;
     }
 }
 
@@ -2287,7 +2285,8 @@ Module::CompileAndOutput(const char *srcFile,
 {
     if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
-        if (!Target::GetTarget(arch, cpu, target, generatePIC, &g->target))
+        g->target = new Target(arch, cpu, target, generatePIC);
+        if (!g->target->isValid())
             return 1;
 
         m = new Module(srcFile);
@@ -2331,6 +2330,9 @@ Module::CompileAndOutput(const char *srcFile,
         delete m;
         m = NULL;
 
+        delete g->target;
+        g->target = NULL;
+
         return errorCount > 0;
     }
     else {
@@ -2368,19 +2370,19 @@ Module::CompileAndOutput(const char *srcFile,
         std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS];
         int errorCount = 0;
         for (unsigned int i = 0; i < targets.size(); ++i) {
-            if (!Target::GetTarget(arch, cpu, targets[i].c_str(), generatePIC,
-                                   &g->target))
+            g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC);
+            if (!g->target->isValid())
                 return 1;
 
             // Issue an error if we've already compiled to a variant of
             // this target ISA.  (It doesn't make sense to compile to both
             // avx and avx-x2, for example.)
-            if (targetMachines[g->target.isa] != NULL) {
+            if (targetMachines[g->target->getISA()] != NULL) {
                 Error(SourcePos(), "Can't compile to multiple variants of %s "
-                      "target!\n", g->target.GetISAString());
+                      "target!\n", g->target->GetISAString());
                 return 1;
             }
-            targetMachines[g->target.isa] = g->target.GetTargetMachine();
+            targetMachines[g->target->getISA()] = g->target->GetTargetMachine();
 
             m = new Module(srcFile);
             if (m->CompileFile() == 0) {
@@ -2392,7 +2394,7 @@ Module::CompileAndOutput(const char *srcFile,
                 lExtractAndRewriteGlobals(m->module, &globals[i]);
 
                 if (outFileName != NULL) {
-                    const char *isaName = g->target.GetISAString();
+                    const char *isaName = g->target->GetISAString();
                     std::string targetOutFileName =
                         lGetTargetFileName(outFileName, isaName);
                     if (!m->writeOutput(outputType, targetOutFileName.c_str()))
@@ -2406,6 +2408,9 @@ Module::CompileAndOutput(const char *srcFile,
             if (i == 0 && headerFileName != NULL)
                 if (!m->writeOutput(Module::Header, headerFileName))
                     return 1;
+
+            delete g->target;
+            g->target = NULL;
 
             // Important: Don't delete the llvm::Module *m here; we need to
             // keep it around so the llvm::Functions *s stay valid for when

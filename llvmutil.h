@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -110,8 +110,8 @@ extern llvm::Constant *LLVMTrue, *LLVMFalse;
     of LLVMTypes and the LLVMTrue/LLVMFalse constants.  However, it can't
     be called until the compilation target is known.
  */
-struct Target;
-extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target target);
+class Target;
+extern void InitLLVMUtil(llvm::LLVMContext *ctx, Target& target);
 
 /** Returns an LLVM i8 constant of the given value */
 extern llvm::ConstantInt *LLVMInt8(int8_t i);

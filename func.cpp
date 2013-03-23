@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2012, Intel Corporation
+  Copyright (c) 2011-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -320,7 +320,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
              &&
              costEstimate > CHECK_MASK_AT_FUNCTION_START_COST);
         checkMask &= (type->isUnmasked == false);
-        checkMask &= (g->target.maskingIsFree == false);
+        checkMask &= (g->target->getMaskingIsFree() == false);
         checkMask &= (g->opt.disableCoherentControlFlow == false);
 
         if (checkMask) {
@@ -450,7 +450,7 @@ Function::GenerateIR() {
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
                 if (g->mangleFunctionsWithTarget)
-                    functionName += std::string("_") + g->target.GetISAString();
+                    functionName += std::string("_") + g->target->GetISAString();
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
 #if defined(LLVM_3_1)

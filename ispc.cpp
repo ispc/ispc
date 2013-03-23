@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -143,10 +143,28 @@ static const char *supportedCPUs[] = {
 #endif // LLVM_3_2 or LLVM_3_3
 };
 
-
-bool
-Target::GetTarget(const char *arch, const char *cpu, const char *isa,
-                  bool pic, Target *t) {
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
+    m_target(NULL),
+    m_valid(false),
+    m_isa(SSE2),
+    m_arch(""),
+    m_is32Bit(true),
+    m_cpu(""),
+    m_attributes(""),
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+    m_tf_attributes(NULL),
+#endif
+    m_nativeVectorWidth(-1),
+    m_vectorWidth(-1),
+    m_generatePIC(pic),
+    m_maskingIsFree(false),
+    m_maskBitCount(-1),
+    m_hasHalf(false),
+    m_hasRand(false),
+    m_hasGather(false),
+    m_hasScatter(false),
+    m_hasTranscendentals(false)
+{
     if (isa == NULL) {
         if (cpu != NULL) {
             // If a CPU was specified explicitly, try to pick the best
@@ -197,30 +215,27 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         if (foundCPU == false) {
             fprintf(stderr, "Error: CPU type \"%s\" unknown. Supported CPUs: "
                     "%s.\n", cpu, SupportedTargetCPUs().c_str());
-            return false;
+            return;
         }
     }
 
-    t->cpu = cpu;
+    this->m_cpu = cpu;
 
     if (arch == NULL)
         arch = "x86-64";
 
     bool error = false;
 
-    t->generatePIC = pic;
-
     // Make sure the target architecture is a known one; print an error
     // with the valid ones otherwise.
-    t->target = NULL;
     for (llvm::TargetRegistry::iterator iter = llvm::TargetRegistry::begin();
          iter != llvm::TargetRegistry::end(); ++iter) {
         if (std::string(arch) == iter->getName()) {
-            t->target = &*iter;
+            this->m_target = &*iter;
             break;
         }
     }
-    if (t->target == NULL) {
+    if (this->m_target == NULL) {
         fprintf(stderr, "Invalid architecture \"%s\"\nOptions: ", arch);
         llvm::TargetRegistry::iterator iter;
         for (iter = llvm::TargetRegistry::begin();
@@ -230,178 +245,176 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
         error = true;
     }
     else {
-        t->arch = arch;
+        this->m_arch = arch;
     }
 
-    // This is the case for most of them
-    t->hasHalf = t->hasRand = t->hasTranscendentals = false;
-    t->hasGather = t->hasScatter = false;
-
+    // Check default LLVM generated targets
     if (!strcasecmp(isa, "sse2")) {
-        t->isa = Target::SSE2;
-        t->nativeVectorWidth = 4;
-        t->vectorWidth = 4;
-        t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::SSE2;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse2-x2")) {
-        t->isa = Target::SSE2;
-        t->nativeVectorWidth = 4;
-        t->vectorWidth = 8;
-        t->attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::SSE2;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4")) {
-        t->isa = Target::SSE4;
-        t->nativeVectorWidth = 4;
-        t->vectorWidth = 4;
-        t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 4;
+        // TODO: why not sse42 and popcnt?
+        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2")) {
-        t->isa = Target::SSE4;
-        t->nativeVectorWidth = 4;
-        t->vectorWidth = 8;
-        t->attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "generic-4")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 4;
-        t->vectorWidth = 4;
-        t->maskingIsFree = true;
-        t->maskBitCount = 1;
-        t->hasHalf = true;
-        t->hasTranscendentals = true;
-        t->hasGather = t->hasScatter = true;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 4;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
     }
     else if (!strcasecmp(isa, "generic-8")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 8;
-        t->maskingIsFree = true;
-        t->maskBitCount = 1;
-        t->hasHalf = true;
-        t->hasTranscendentals = true;
-        t->hasGather = t->hasScatter = true;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
     }
     else if (!strcasecmp(isa, "generic-16")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 16;
-        t->vectorWidth = 16;
-        t->maskingIsFree = true;
-        t->maskBitCount = 1;
-        t->hasHalf = true;
-        t->hasTranscendentals = true;
-        t->hasGather = t->hasScatter = true;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
     }
     else if (!strcasecmp(isa, "generic-32")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 32;
-        t->vectorWidth = 32;
-        t->maskingIsFree = true;
-        t->maskBitCount = 1;
-        t->hasHalf = true;
-        t->hasTranscendentals = true;
-        t->hasGather = t->hasScatter = true;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 32;
+        this->m_vectorWidth = 32;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
     }
     else if (!strcasecmp(isa, "generic-64")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 64;
-        t->vectorWidth = 64;
-        t->maskingIsFree = true;
-        t->maskBitCount = 1;
-        t->hasHalf = true;
-        t->hasTranscendentals = true;
-        t->hasGather = t->hasScatter = true;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 64;
+        this->m_vectorWidth = 64;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasHalf = true;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
     }
     else if (!strcasecmp(isa, "generic-1")) {
-        t->isa = Target::GENERIC;
-        t->nativeVectorWidth = 1;
-        t->vectorWidth = 1;
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::GENERIC;
+        this->m_nativeVectorWidth = 1;
+        this->m_vectorWidth = 1;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx") || !strcasecmp(isa, "avx1")) {
-        t->isa = Target::AVX;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 8;
-        t->attributes = "+avx,+popcnt,+cmov";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+avx,+popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx-x2") || !strcasecmp(isa, "avx1-x2")) {
-        t->isa = Target::AVX;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 16;
-        t->attributes = "+avx,+popcnt,+cmov";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+avx,+popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
     }
     else if (!strcasecmp(isa, "avx1.1")) {
-        t->isa = Target::AVX11;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 8;
-        t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
-        t->hasHalf = true;
+        this->m_isa = Target::AVX11;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
-        t->hasRand = true;
+        this->m_hasRand = true;
 #endif
     }
     else if (!strcasecmp(isa, "avx1.1-x2")) {
-        t->isa = Target::AVX11;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 16;
-        t->attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
-        t->hasHalf = true;
+        this->m_isa = Target::AVX11;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
-        t->hasRand = true;
+        this->m_hasRand = true;
 #endif
     }
     else if (!strcasecmp(isa, "avx2")) {
-        t->isa = Target::AVX2;
-        t->nativeVectorWidth = 8;
-        t->vectorWidth = 8;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
 #ifndef LLVM_3_1
             ",+fma"
 #endif // !LLVM_3_1
             ;
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
-        t->hasHalf = true;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
-        t->hasRand = true;
-        t->hasGather = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
 #endif
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
-        t->isa = Target::AVX2;
-        t->nativeVectorWidth = 16;
-        t->vectorWidth = 16;
-        t->attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
 #ifndef LLVM_3_1
             ",+fma"
 #endif // !LLVM_3_1
             ;
-        t->maskingIsFree = false;
-        t->maskBitCount = 32;
-        t->hasHalf = true;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
-        t->hasRand = true;
-        t->hasGather = true;
+        this->m_hasRand = true;
+        this->m_hasGather = true;
 #endif
     }
     else {
@@ -411,32 +424,36 @@ Target::GetTarget(const char *arch, const char *cpu, const char *isa,
     }
 
     if (!error) {
-        llvm::TargetMachine *targetMachine = t->GetTargetMachine();
+        llvm::TargetMachine *targetMachine = this->GetTargetMachine();
 #if defined(LLVM_3_1)
         const llvm::TargetData *targetData = targetMachine->getTargetData();
-        t->is32Bit = (targetData->getPointerSize() == 4);
+        this->m_is32Bit = (targetData->getPointerSize() == 4);
 #else
         int addressSpace = 0;
         const llvm::DataLayout *dataLayout = targetMachine->getDataLayout();
-        t->is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
+        this->m_is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
 #endif
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2)
         // This is LLVM 3.3+ feature.
         // Initialize target-specific "target-feature" attribute.
-        llvm::AttrBuilder attrBuilder;
-        attrBuilder.addAttribute("target-features", t->attributes);
-        t->tf_attributes = new llvm::AttributeSet(
-            llvm::AttributeSet::get(
-                *g->ctx,
-                llvm::AttributeSet::FunctionIndex,
-                attrBuilder));
+        if (!m_attributes.empty()) {
+            llvm::AttrBuilder attrBuilder;
+            attrBuilder.addAttribute("target-features", this->m_attributes);
+            this->m_tf_attributes = new llvm::AttributeSet(
+                llvm::AttributeSet::get(
+                    *g->ctx,
+                    llvm::AttributeSet::FunctionIndex,
+                    attrBuilder));
+        }
 #endif
 
-        Assert(t->vectorWidth <= ISPC_MAX_NVEC);
+        Assert(this->m_vectorWidth <= ISPC_MAX_NVEC);
     }
 
-    return !error;
+    m_valid = !error;
+
+    return;
 }
 
 
@@ -479,12 +496,12 @@ Target::GetTripleString() const {
     // slightly different ones for the triple.  TODO: is there a way to
     // have it do this remapping, which would presumably be a bit less
     // error prone?
-    if (arch == "x86")
+    if (m_arch == "x86")
         triple.setArchName("i386");
-    else if (arch == "x86-64")
+    else if (m_arch == "x86-64")
         triple.setArchName("x86_64");
     else
-        triple.setArchName(arch);
+        triple.setArchName(m_arch);
 
     return triple.str();
 }
@@ -494,16 +511,16 @@ llvm::TargetMachine *
 Target::GetTargetMachine() const {
     std::string triple = GetTripleString();
 
-    llvm::Reloc::Model relocModel = generatePIC ? llvm::Reloc::PIC_ :
+    llvm::Reloc::Model relocModel = m_generatePIC ? llvm::Reloc::PIC_ :
                                                   llvm::Reloc::Default;
-    std::string featuresString = attributes;
+    std::string featuresString = m_attributes;
     llvm::TargetOptions options;
 #if !defined(LLVM_3_1)
     if (g->opt.disableFMA == false)
         options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
 #endif // !LLVM_3_1
     llvm::TargetMachine *targetMachine =
-        target->createTargetMachine(triple, cpu, featuresString, options,
+        m_target->createTargetMachine(triple, m_cpu, featuresString, options,
                                     relocModel);
     Assert(targetMachine != NULL);
 
@@ -514,7 +531,7 @@ Target::GetTargetMachine() const {
 
 const char *
 Target::GetISAString() const {
-    switch (isa) {
+    switch (m_isa) {
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
@@ -571,7 +588,7 @@ lGenericTypeLayoutIndeterminate(llvm::Type *type) {
 llvm::Value *
 Target::SizeOf(llvm::Type *type,
                llvm::BasicBlock *insertAtEnd) {
-    if (isa == Target::GENERIC &&
+    if (m_isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type)) {
         llvm::Value *index[1] = { LLVMInt32(1) };
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
@@ -581,7 +598,7 @@ Target::SizeOf(llvm::Type *type,
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "sizeof_gep",
                                             insertAtEnd);
 
-        if (is32Bit || g->opt.force32BitAddressing)
+        if (m_is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "sizeof_int", insertAtEnd);
         else
@@ -601,7 +618,7 @@ Target::SizeOf(llvm::Type *type,
 
     Assert((bitSize % 8) == 0);
     uint64_t byteSize = bitSize / 8;
-    if (is32Bit || g->opt.force32BitAddressing)
+    if (m_is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)byteSize);
     else
         return LLVMInt64(byteSize);
@@ -611,7 +628,7 @@ Target::SizeOf(llvm::Type *type,
 llvm::Value *
 Target::StructOffset(llvm::Type *type, int element,
                      llvm::BasicBlock *insertAtEnd) {
-    if (isa == Target::GENERIC &&
+    if (m_isa == Target::GENERIC &&
         lGenericTypeLayoutIndeterminate(type) == true) {
         llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(element) };
         llvm::PointerType *ptrType = llvm::PointerType::get(type, 0);
@@ -621,7 +638,7 @@ Target::StructOffset(llvm::Type *type, int element,
             llvm::GetElementPtrInst::Create(voidPtr, arrayRef, "offset_gep",
                                             insertAtEnd);
 
-        if (is32Bit || g->opt.force32BitAddressing)
+        if (m_is32Bit || g->opt.force32BitAddressing)
             return new llvm::PtrToIntInst(gep, LLVMTypes::Int32Type,
                                           "offset_int", insertAtEnd);
         else
@@ -648,10 +665,18 @@ Target::StructOffset(llvm::Type *type, int element,
     Assert(sl != NULL);
 
     uint64_t offset = sl->getElementOffset(element);
-    if (is32Bit || g->opt.force32BitAddressing)
+    if (m_is32Bit || g->opt.force32BitAddressing)
         return LLVMInt32((int32_t)offset);
     else
         return LLVMInt64(offset);
+}
+
+void Target::markFuncWithTargetAttr(llvm::Function* func) {
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+    if (m_tf_attributes) {
+        func->addAttributes(llvm::AttributeSet::FunctionIndex, *m_tf_attributes);
+    }
+#endif
 }
 
 

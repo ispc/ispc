@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -662,7 +662,7 @@ InitSymbol(llvm::Value *ptr, const Type *symType, Expr *initExpr,
                 new llvm::GlobalVariable(*m->module, llvmType, true /* const */,
                                          llvm::GlobalValue::InternalLinkage,
                                          constValue, "const_initializer");
-            llvm::Value *size = g->target.SizeOf(llvmType,
+            llvm::Value *size = g->target->SizeOf(llvmType,
                                                  ctx->GetCurrentBasicBlock());
             ctx->MemcpyInst(ptr, constPtr, size);
         }
@@ -1462,12 +1462,12 @@ lEmitBinaryPointerArith(BinaryExpr::Op op, llvm::Value *value0,
             // points to in order to return the difference in elements.
             llvm::Type *llvmElementType =
                 ptrType->GetBaseType()->LLVMType(g->ctx);
-            llvm::Value *size = g->target.SizeOf(llvmElementType,
+            llvm::Value *size = g->target->SizeOf(llvmElementType,
                                                  ctx->GetCurrentBasicBlock());
             if (ptrType->IsVaryingType())
                 size = ctx->SmearUniform(size);
 
-            if (g->target.is32Bit == false &&
+            if (g->target->is32Bit() == false &&
                 g->opt.force32BitAddressing == true) {
                 // If we're doing 32-bit addressing math on a 64-bit
                 // target, then trunc the delta down to a 32-bit value.
@@ -1961,7 +1961,7 @@ BinaryExpr::GetType() const {
         else if (op == Sub) {
             if (CastType<PointerType>(type1) != NULL) {
                 // ptr - ptr -> ~ptrdiff_t
-                const Type *diffType = (g->target.is32Bit ||
+                const Type *diffType = (g->target->is32Bit() ||
                                         g->opt.force32BitAddressing) ?
                     AtomicType::UniformInt32 : AtomicType::UniformInt64;
                 if (type0->IsVaryingType() || type1->IsVaryingType())
@@ -2381,7 +2381,7 @@ BinaryExpr::TypeCheck() {
             return NULL;
         }
 
-        const Type *offsetType = g->target.is32Bit ?
+        const Type *offsetType = g->target->is32Bit() ?
             AtomicType::UniformInt32 : AtomicType::UniformInt64;
         if (pt0->IsVaryingType())
             offsetType = offsetType->GetAsVaryingType();
@@ -2866,7 +2866,7 @@ AssignExpr::TypeCheck() {
                 return NULL;
             }
 
-            const Type *deltaType = g->target.is32Bit ? AtomicType::UniformInt32 :
+            const Type *deltaType = g->target->is32Bit() ? AtomicType::UniformInt32 :
                 AtomicType::UniformInt64;
             if (lhsType->IsVaryingType())
                 deltaType = deltaType->GetAsVaryingType();
@@ -3811,7 +3811,7 @@ ExprList::GetConstant(const Type *type) const {
             // Uniform short vectors are stored as vectors of length
             // rounded up to the native vector width.  So we add additional
             // undef values here until we get the right size.
-            int vectorWidth = g->target.nativeVectorWidth;
+            int vectorWidth = g->target->getNativeVectorWidth();
             const VectorType *vt = CastType<VectorType>(type);
             const AtomicType *bt = vt->GetElementType();
 
@@ -3907,7 +3907,7 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
     // Onward: compute the per lane offsets.
     llvm::Value *varyingOffsets =
         llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-    for (int i = 0; i < g->target.vectorWidth; ++i)
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
         varyingOffsets = ctx->InsertInst(varyingOffsets, LLVMInt32(i), i,
                                          "varying_delta");
 
@@ -4350,7 +4350,7 @@ IndexExpr::TypeCheck() {
         //    The range of varying index is limited to [0,2^31) as a result.
         if (Type::EqualIgnoringConst(indexType->GetAsUniformType(),
                                      AtomicType::UniformInt64) == false ||
-            g->target.is32Bit ||
+            g->target->is32Bit() ||
             g->opt.force32BitAddressing) {
             const Type *indexType = AtomicType::VaryingInt32;
             index = TypeConvertExpr(index, indexType, "array index");
@@ -4367,7 +4367,7 @@ IndexExpr::TypeCheck() {
         //
         //   However, the index can be still truncated to signed int32 if
         //   the index type is 64 bit and --addressing=32.
-        bool force_32bit = g->target.is32Bit ||
+        bool force_32bit = g->target->is32Bit() ||
             (g->opt.force32BitAddressing &&
              Type::EqualIgnoringConst(indexType->GetAsUniformType(),
                                       AtomicType::UniformInt64));
@@ -5492,7 +5492,7 @@ lConvert(const From *from, To *to, int count, bool forceVarying) {
         lConvertElement(from[i], &to[i]);
 
     if (forceVarying && count == 1)
-        for (int i = 1; i < g->target.vectorWidth; ++i)
+        for (int i = 1; i < g->target->getVectorWidth(); ++i)
             to[i] = to[0];
 }
 
@@ -5730,7 +5730,7 @@ ConstExpr::AsUInt32(uint32_t *up, bool forceVarying) const {
 
 int
 ConstExpr::Count() const {
-    return GetType()->IsVaryingType() ? g->target.vectorWidth : 1;
+    return GetType()->IsVaryingType() ? g->target->getVectorWidth() : 1;
 }
 
 
@@ -6001,7 +6001,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         case AtomicType::TYPE_UINT16:
         case AtomicType::TYPE_UINT32:
         case AtomicType::TYPE_UINT64:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from unsigned int to float is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to float
@@ -6117,14 +6117,14 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
                                  exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6197,7 +6197,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6210,7 +6210,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6285,7 +6285,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = exprVal;
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from float to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6296,7 +6296,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = ctx->TruncInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from double to unsigned int is slow. "
                                    "Use \"int\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // unsigned int
@@ -6367,7 +6367,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
         case AtomicType::TYPE_FLOAT:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from float to unsigned int64 is slow. "
                                    "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
@@ -6378,7 +6378,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
             cast = exprVal;
             break;
         case AtomicType::TYPE_DOUBLE:
-            if (fromType->IsVaryingType() && g->target.isa != Target::GENERIC)
+            if (fromType->IsVaryingType() && g->target->getISA() != Target::GENERIC)
                 PerformanceWarning(pos, "Conversion from double to unsigned int64 is slow. "
                                    "Use \"int64\" if possible");
             cast = ctx->CastInst(llvm::Instruction::FPToUI, // signed int
@@ -6861,7 +6861,7 @@ TypeCastExpr::TypeCheck() {
     if (fromPtr != NULL && toAtomic != NULL && toAtomic->IsIntType()) {
         bool safeCast = (toAtomic->basicType == AtomicType::TYPE_INT64 ||
                          toAtomic->basicType == AtomicType::TYPE_UINT64);
-        if (g->target.is32Bit)
+        if (g->target->is32Bit())
             safeCast |= (toAtomic->basicType == AtomicType::TYPE_INT32 ||
                          toAtomic->basicType == AtomicType::TYPE_UINT32);
         if (safeCast == false)
@@ -7007,7 +7007,7 @@ lConvertPointerConstant(llvm::Constant *c, const Type *constType) {
     llvm::Constant *intPtr =
         llvm::ConstantExpr::getPtrToInt(c, LLVMTypes::PointerIntType);
     Assert(constType->IsVaryingType() || constType->IsSOAType());
-    int count = constType->IsVaryingType() ? g->target.vectorWidth :
+    int count = constType->IsVaryingType() ? g->target->getVectorWidth() :
         constType->GetSOAWidth();
 
     std::vector<llvm::Constant *> smear;
@@ -7498,13 +7498,13 @@ SizeOfExpr::GetValue(FunctionEmitContext *ctx) const {
     if (llvmType == NULL)
         return NULL;
 
-    return g->target.SizeOf(llvmType, ctx->GetCurrentBasicBlock());
+    return g->target->SizeOf(llvmType, ctx->GetCurrentBasicBlock());
 }
 
 
 const Type *
 SizeOfExpr::GetType() const {
-    return (g->target.is32Bit || g->opt.force32BitAddressing) ?
+    return (g->target->is32Bit() || g->opt.force32BitAddressing) ?
         AtomicType::UniformUInt32 : AtomicType::UniformUInt64;
 }
 
@@ -8182,7 +8182,7 @@ NewExpr::NewExpr(int typeQual, const Type *t, Expr *init, Expr *count,
 
 llvm::Value *
 NewExpr::GetValue(FunctionEmitContext *ctx) const {
-    bool do32Bit = (g->target.is32Bit || g->opt.force32BitAddressing);
+    bool do32Bit = (g->target->is32Bit() || g->opt.force32BitAddressing);
 
     // Determine how many elements we need to allocate.  Note that this
     // will be a varying value if this is a varying new.
@@ -8208,7 +8208,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
     // Compute the total amount of memory to allocate, allocSize, as the
     // product of the number of elements to allocate and the size of a
     // single element.
-    llvm::Value *eltSize = g->target.SizeOf(allocType->LLVMType(g->ctx),
+    llvm::Value *eltSize = g->target->SizeOf(allocType->LLVMType(g->ctx),
                                             ctx->GetCurrentBasicBlock());
     if (isVarying)
         eltSize = ctx->SmearUniform(eltSize, "smear_size");
@@ -8240,7 +8240,7 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
     if (retType == NULL)
         return NULL;
     if (isVarying) {
-        if (g->target.is32Bit)
+        if (g->target->is32Bit())
             // Convert i64 vector values to i32 if we are compiling to a
             // 32-bit target.
             ptrValue = ctx->TruncInst(ptrValue, LLVMTypes::VoidPointerVectorType,
@@ -8254,11 +8254,11 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
             // implemented to return NULL for program instances that aren't
             // executing; more generally, we should be using the current
             // execution mask for this...
-            for (int i = 0; i < g->target.vectorWidth; ++i) {
+            for (int i = 0; i < g->target->getVectorWidth(); ++i) {
                 llvm::BasicBlock *bbInit = ctx->CreateBasicBlock("init_ptr");
                 llvm::BasicBlock *bbSkip = ctx->CreateBasicBlock("skip_init");
                 llvm::Value *p = ctx->ExtractInst(ptrValue, i);
-                llvm::Value *nullValue = g->target.is32Bit ? LLVMInt32(0) :
+                llvm::Value *nullValue = g->target->is32Bit() ? LLVMInt32(0) :
                     LLVMInt64(0);
                 // Is the pointer for the current lane non-zero?
                 llvm::Value *nonNull = ctx->CmpInst(llvm::Instruction::ICmp,
@@ -8337,7 +8337,7 @@ NewExpr::TypeCheck() {
     }
 
     // Figure out the type that the allocation count should be
-    const Type *t = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+    const Type *t = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
         AtomicType::UniformUInt32 : AtomicType::UniformUInt64;
     if (isVarying)
         t = t->GetAsVaryingType();
