@@ -72,6 +72,11 @@ namespace llvm {
     class BasicBlock;
     class Constant;
     class ConstantValue;
+#if defined(LLVM_3_1)
+    class TargetData;
+#else
+    class DataLayout;
+#endif
     class DIBuilder;
     class DIDescriptor;
     class DIFile;
@@ -215,6 +220,14 @@ public:
 
     const llvm::Target *getTarget() const {return m_target;}
 
+    // Note the same name of method for 3.1 and 3.2+, this allows
+    // to reduce number ifdefs on client side.
+#if defined(LLVM_3_1)
+    llvm::TargetData *getDataLayout() const {return m_targetData;}
+#else
+    llvm::DataLayout *getDataLayout() const {return m_dataLayout;}
+#endif
+
     /** Reports if Target object has valid state. */
     bool isValid() const {return m_valid;}
 
@@ -260,6 +273,12 @@ private:
         must not be used.
         */
     llvm::TargetMachine *m_targetMachine;
+
+#if defined(LLVM_3_1)
+    llvm::TargetData *m_targetData;
+#else
+    llvm::DataLayout *m_dataLayout;
+#endif
 
     /** flag to report invalid state after construction
         (due to bad parameters passed to constructor). */

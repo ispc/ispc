@@ -414,14 +414,13 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
+
 #if defined(LLVM_3_1)
-    optPM.add(new llvm::TargetData(module));
+    optPM.add(new llvm::TargetData(*g->target->getDataLayout()));
 #else
+    optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
+
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-    if (const llvm::DataLayout *dl = targetMachine->getDataLayout())
-        optPM.add(new llvm::DataLayout(*dl));
-    else
-        optPM.add(new llvm::DataLayout(module));
   #ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));

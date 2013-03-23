@@ -257,14 +257,8 @@ Module::Module(const char *fn) {
     module = new llvm::Module(filename ? filename : "<stdin>", *g->ctx);
     module->setTargetTriple(g->target->GetTripleString());
 
-    if (g->target->getISA() == Target::GENERIC) {
-        // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
-        // that to the regular datalayout string for IA..
-        std::string datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-            "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
-            "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32";
-        module->setDataLayout(datalayout);
-    }
+    // DataLayout information supposed to be managed in single place in Target class.
+    module->setDataLayout(g->target->getDataLayout()->getStringRepresentation());
 
     if (g->generateDebuggingSymbols) {
         diBuilder = new llvm::DIBuilder(*module);
@@ -1060,15 +1054,9 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
 
     llvm::PassManager pm;
 #if defined(LLVM_3_1)
-    if (const llvm::TargetData *td = targetMachine->getTargetData())
-        pm.add(new llvm::TargetData(*td));
-    else
-        pm.add(new llvm::TargetData(module));
+    pm.add(new llvm::TargetData(*g->target->getDataLayout()));
 #else
-    if (const llvm::DataLayout *dl = targetMachine->getDataLayout())
-        pm.add(new llvm::DataLayout(*dl));
-    else
-        pm.add(new llvm::DataLayout(module));
+    pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #endif
 
     llvm::formatted_raw_ostream fos(of->os());

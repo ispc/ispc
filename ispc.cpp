@@ -146,6 +146,11 @@ static const char *supportedCPUs[] = {
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_target(NULL),
     m_targetMachine(NULL),
+#if defined(LLVM_3_1)
+    m_targetData(NULL),
+#else
+    m_dataLayout(NULL),
+#endif
     m_valid(false),
     m_isa(SSE2),
     m_arch(""),
@@ -443,15 +448,36 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 
         m_targetMachine->setAsmVerbosityDefault(true);
 
-        // Set is32Bit
+        // Initialize TargetData/DataLayout in 3 steps.
+        // 1. Get default data layout first
+        std::string dl_string;
 #if defined(LLVM_3_1)
-        const llvm::TargetData *targetData = m_targetMachine->getTargetData();
-        this->m_is32Bit = (targetData->getPointerSize() == 4);
+        dl_string = m_targetMachine->getTargetData()->getStringRepresentation();
 #else
-        int addressSpace = 0;
-        const llvm::DataLayout *dataLayout = m_targetMachine->getDataLayout();
-        this->m_is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
+        dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
 #endif
+
+        // 2. Adjust for generic
+        if (m_isa == Target::GENERIC) {
+            // <16 x i1> vectors only need 16 bit / 2 byte alignment, so add
+            // that to the regular datalayout string for IA..
+            // For generic-4 target we need to treat <4 x i1> as 128 bit value
+            // in terms of required memory storage and alignment, as this is
+            // translated to __m128 type.
+            dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
+                "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
+                "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32-v4:128:128";
+        }
+
+        // 3. Finally set member data
+#if defined(LLVM_3_1)
+        m_targetData = new llvm::TargetData(dl_string);
+#else
+        m_dataLayout = new llvm::DataLayout(dl_string);
+#endif
+
+        // Set is32Bit
+        this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2)
         // This is LLVM 3.3+ feature.
@@ -603,15 +629,7 @@ Target::SizeOf(llvm::Type *type,
                                           "sizeof_int", insertAtEnd);
     }
 
-#if defined(LLVM_3_1)
-    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
-    Assert(td != NULL);
-    uint64_t bitSize = td->getTypeSizeInBits(type);
-#else
-    const llvm::DataLayout *dl = GetTargetMachine()->getDataLayout();
-    Assert(dl != NULL);
-    uint64_t bitSize = dl->getTypeSizeInBits(type);
-#endif
+    uint64_t bitSize = getDataLayout()->getTypeSizeInBits(type);
 
     Assert((bitSize % 8) == 0);
     uint64_t byteSize = bitSize / 8;
@@ -650,15 +668,7 @@ Target::StructOffset(llvm::Type *type, int element,
         return NULL;
     }
 
-#if defined(LLVM_3_1)
-    const llvm::TargetData *td = GetTargetMachine()->getTargetData();
-    Assert(td != NULL);
-    const llvm::StructLayout *sl = td->getStructLayout(structType);
-#else
-    const llvm::DataLayout *dl = GetTargetMachine()->getDataLayout();
-    Assert(dl != NULL);
-    const llvm::StructLayout *sl = dl->getStructLayout(structType);
-#endif
+    const llvm::StructLayout *sl = getDataLayout()->getStructLayout(structType);
     Assert(sl != NULL);
 
     uint64_t offset = sl->getElementOffset(element);
