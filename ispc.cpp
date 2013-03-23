@@ -145,6 +145,7 @@ static const char *supportedCPUs[] = {
 
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_target(NULL),
+    m_targetMachine(NULL),
     m_valid(false),
     m_isa(SSE2),
     m_arch(""),
@@ -424,13 +425,31 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     }
 
     if (!error) {
-        llvm::TargetMachine *targetMachine = this->GetTargetMachine();
+        // Create TargetMachine
+        std::string triple = GetTripleString();
+
+        llvm::Reloc::Model relocModel = m_generatePIC ? llvm::Reloc::PIC_ :
+            llvm::Reloc::Default;
+        std::string featuresString = m_attributes;
+        llvm::TargetOptions options;
+#if !defined(LLVM_3_1)
+        if (g->opt.disableFMA == false)
+            options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
+#endif // !LLVM_3_1
+        m_targetMachine =
+            m_target->createTargetMachine(triple, m_cpu, featuresString, options,
+                    relocModel);
+        Assert(m_targetMachine != NULL);
+
+        m_targetMachine->setAsmVerbosityDefault(true);
+
+        // Set is32Bit
 #if defined(LLVM_3_1)
-        const llvm::TargetData *targetData = targetMachine->getTargetData();
+        const llvm::TargetData *targetData = m_targetMachine->getTargetData();
         this->m_is32Bit = (targetData->getPointerSize() == 4);
 #else
         int addressSpace = 0;
-        const llvm::DataLayout *dataLayout = targetMachine->getDataLayout();
+        const llvm::DataLayout *dataLayout = m_targetMachine->getDataLayout();
         this->m_is32Bit = (dataLayout->getPointerSize(addressSpace) == 4);
 #endif
 
@@ -504,28 +523,6 @@ Target::GetTripleString() const {
         triple.setArchName(m_arch);
 
     return triple.str();
-}
-
-
-llvm::TargetMachine *
-Target::GetTargetMachine() const {
-    std::string triple = GetTripleString();
-
-    llvm::Reloc::Model relocModel = m_generatePIC ? llvm::Reloc::PIC_ :
-                                                  llvm::Reloc::Default;
-    std::string featuresString = m_attributes;
-    llvm::TargetOptions options;
-#if !defined(LLVM_3_1)
-    if (g->opt.disableFMA == false)
-        options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-#endif // !LLVM_3_1
-    llvm::TargetMachine *targetMachine =
-        m_target->createTargetMachine(triple, m_cpu, featuresString, options,
-                                    relocModel);
-    Assert(targetMachine != NULL);
-
-    targetMachine->setAsmVerbosityDefault(true);
-    return targetMachine;
 }
 
 

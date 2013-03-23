@@ -187,7 +187,7 @@ public:
 
     /** Returns the LLVM TargetMachine object corresponding to this
         target. */
-    llvm::TargetMachine *GetTargetMachine() const;
+    llvm::TargetMachine *GetTargetMachine() const {return m_targetMachine;}
 
     /** Returns a string like "avx" encoding the target. */
     const char *GetISAString() const;
@@ -250,6 +250,16 @@ private:
 
     /** llvm Target object representing this target. */
     const llvm::Target *m_target;
+
+    /** llvm TargetMachine.
+        Note that it's not destroyed during Target destruction, as
+        Module::CompileAndOutput() uses TargetMachines after Target is destroyed.
+        This needs to be changed.
+        It's also worth noticing, that DataLayout of TargetMachine cannot be
+        modified and for generic targets it's not what we really need, so it
+        must not be used.
+        */
+    llvm::TargetMachine *m_targetMachine;
 
     /** flag to report invalid state after construction
         (due to bad parameters passed to constructor). */
