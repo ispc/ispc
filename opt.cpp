@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -353,7 +353,7 @@ lGetMask(llvm::Value *factor, uint64_t *mask) {
 #if 0
         llvm::ConstantExpr *ce = llvm::dyn_cast<llvm::ConstantExpr>(factor);
         if (ce != NULL) {
-            llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
+            llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
             const llvm::TargetData *td = targetMachine->getTargetData();
             llvm::Constant *c = llvm::ConstantFoldConstantExpression(ce, td);
             c->dump();
@@ -382,7 +382,7 @@ lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
         return ALL_OFF;
 
     if (vecWidth == -1)
-        vecWidth = g->target.vectorWidth;
+        vecWidth = g->target->getVectorWidth();
     Assert(vecWidth <= 64);
 
     for (int i = 0; i < vecWidth; ++i) {
@@ -414,14 +414,13 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
+
 #if defined(LLVM_3_1)
-    optPM.add(new llvm::TargetData(module));
+    optPM.add(new llvm::TargetData(*g->target->getDataLayout()));
 #else
-    llvm::TargetMachine *targetMachine = g->target.GetTargetMachine();
-    if (const llvm::DataLayout *dl = targetMachine->getDataLayout())
-        optPM.add(new llvm::DataLayout(*dl));
-    else
-        optPM.add(new llvm::DataLayout(module));
+    optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
+
+    llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
   #ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
@@ -471,7 +470,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->target.vectorWidth > 1) {
+            g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
         }
@@ -485,7 +484,7 @@ Optimize(llvm::Module *module, int optLevel) {
         //    1) 4 fields (r,g,b,w)
         //    2) field size: vectorWidth * sizeof(float)
         const int field_limit = 4;
-        int sr_threshold = g->target.vectorWidth * sizeof(float) * field_limit;
+        int sr_threshold = g->target->getVectorWidth() * sizeof(float) * field_limit;
 
         // On to more serious optimizations
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
@@ -520,12 +519,12 @@ Optimize(llvm::Module *module, int optLevel) {
         }
 
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->target.vectorWidth > 1) {
+            g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
 
             if (g->opt.disableCoalescing == false &&
-                g->target.isa != Target::GENERIC) {
+                g->target->getISA() != Target::GENERIC) {
                 // It is important to run this here to make it easier to
                 // finding matching gathers we can coalesce..
                 optPM.add(llvm::createEarlyCSEPass());
@@ -539,7 +538,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateVSelMovmskOptPass());
 
         if (g->opt.disableGatherScatterOptimizations == false &&
-            g->target.vectorWidth > 1) {
+            g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass());
             optPM.add(CreateImproveMemoryOpsPass());
         }
@@ -1062,18 +1061,18 @@ lGetBasePointer(llvm::Value *v) {
     llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
     if (ie != NULL) {
         llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(ie, g->target.vectorWidth, elements);
+        LLVMFlattenInsertChain(ie, g->target->getVectorWidth(), elements);
 
         // Make sure none of the elements is undefined.
         // TODO: it's probably ok to allow undefined elements and return
         // the base pointer if all of the other elements have the same
         // value.
-        for (int i = 0; i < g->target.vectorWidth; ++i)
+        for (int i = 0; i < g->target->getVectorWidth(); ++i)
             if (elements[i] == NULL)
                 return NULL;
 
         // Do all of the elements have the same value?
-        for (int i = 0; i < g->target.vectorWidth-1; ++i)
+        for (int i = 0; i < g->target->getVectorWidth()-1; ++i)
             if (elements[i] != elements[i+1])
                 return NULL;
 
@@ -1141,7 +1140,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
         // actually all the same value.
-        if (g->target.is32Bit)
+        if (g->target->is32Bit())
             *offsets = LLVMInt32Vector(0);
         else
             *offsets = LLVMInt64Vector((int64_t)0);
@@ -1197,7 +1196,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
                 // If the element is just a ptr to int instruction, treat
                 // it as having an offset of zero
                 elementBase = ce;
-                delta[i] = g->target.is32Bit ? LLVMInt32(0) : LLVMInt64(0);
+                delta[i] = g->target->is32Bit() ? LLVMInt32(0) : LLVMInt64(0);
             }
             else if (ce->getOpcode() == llvm::Instruction::Add) {
                 // Try both orderings of the operands to see if we can get
@@ -1748,150 +1747,150 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 
     GSInfo gsFuncs[] = {
         GSInfo("__pseudo_gather32_i8",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
                true),
         GSInfo("__pseudo_gather32_i16",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
                true),
         GSInfo("__pseudo_gather32_i32",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
                true),
         GSInfo("__pseudo_gather32_float",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
                true),
         GSInfo("__pseudo_gather32_i64",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
                true),
         GSInfo("__pseudo_gather32_double",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
                true),
 
         GSInfo("__pseudo_scatter32_i8",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
                false),
         GSInfo("__pseudo_scatter32_i16",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
                false),
         GSInfo("__pseudo_scatter32_i32",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
                false),
         GSInfo("__pseudo_scatter32_float",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
                false),
         GSInfo("__pseudo_scatter32_i64",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
                false),
         GSInfo("__pseudo_scatter32_double",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
                false),
 
         GSInfo("__pseudo_gather64_i8",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_i8" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_i8" :
                "__pseudo_gather_factored_base_offsets64_i8",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                "__pseudo_gather_factored_base_offsets32_i8",
                true),
         GSInfo("__pseudo_gather64_i16",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_i16" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_i16" :
                "__pseudo_gather_factored_base_offsets64_i16",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                "__pseudo_gather_factored_base_offsets32_i16",
                true),
         GSInfo("__pseudo_gather64_i32",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_i32" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32" :
                "__pseudo_gather_factored_base_offsets64_i32",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                "__pseudo_gather_factored_base_offsets32_i32",
                true),
         GSInfo("__pseudo_gather64_float",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_float" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_float" :
                "__pseudo_gather_factored_base_offsets64_float",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                "__pseudo_gather_factored_base_offsets32_float",
                true),
         GSInfo("__pseudo_gather64_i64",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_i64" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_i64" :
                "__pseudo_gather_factored_base_offsets64_i64",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                "__pseudo_gather_factored_base_offsets32_i64",
                true),
         GSInfo("__pseudo_gather64_double",
-               g->target.hasGather ? "__pseudo_gather_base_offsets64_double" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets64_double" :
                "__pseudo_gather_factored_base_offsets64_double",
-               g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+               g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                "__pseudo_gather_factored_base_offsets32_double",
                true),
 
         GSInfo("__pseudo_scatter64_i8",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i8" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i8" :
                "__pseudo_scatter_factored_base_offsets64_i8",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                "__pseudo_scatter_factored_base_offsets32_i8",
                false),
         GSInfo("__pseudo_scatter64_i16",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i16" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i16" :
                "__pseudo_scatter_factored_base_offsets64_i16",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                "__pseudo_scatter_factored_base_offsets32_i16",
                false),
         GSInfo("__pseudo_scatter64_i32",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i32" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i32" :
                "__pseudo_scatter_factored_base_offsets64_i32",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                "__pseudo_scatter_factored_base_offsets32_i32",
                false),
         GSInfo("__pseudo_scatter64_float",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_float" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_float" :
                "__pseudo_scatter_factored_base_offsets64_float",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                "__pseudo_scatter_factored_base_offsets32_float",
                false),
         GSInfo("__pseudo_scatter64_i64",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i64" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i64" :
                "__pseudo_scatter_factored_base_offsets64_i64",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                "__pseudo_scatter_factored_base_offsets32_i64",
                false),
         GSInfo("__pseudo_scatter64_double",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets64_double" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_double" :
                "__pseudo_scatter_factored_base_offsets64_double",
-               g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+               g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                "__pseudo_scatter_factored_base_offsets32_double",
                false),
     };
@@ -1933,8 +1932,8 @@ lGSToGSBaseOffsets(llvm::CallInst *callInst) {
 
     llvm::Function *gatherScatterFunc = info->baseOffsetsFunc;
 
-    if ((info->isGather == true && g->target.hasGather) ||
-        (info->isGather == false && g->target.hasScatter)) {
+    if ((info->isGather == true && g->target->hasGather()) ||
+        (info->isGather == false && g->target->hasScatter())) {
         // See if the offsets are scaled by 2, 4, or 8.  If so,
         // extract that scale factor and rewrite the offsets to remove
         // it.
@@ -2057,65 +2056,65 @@ lGSBaseOffsetsGetMoreConst(llvm::CallInst *callInst) {
     };
 
     GSBOInfo gsFuncs[] = {
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                                        "__pseudo_gather_factored_base_offsets32_i8",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                                        "__pseudo_gather_factored_base_offsets32_i8",
                  true),
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                                        "__pseudo_gather_factored_base_offsets32_i16",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                                        "__pseudo_gather_factored_base_offsets32_i16",
                  true),
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                                        "__pseudo_gather_factored_base_offsets32_i32",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                                        "__pseudo_gather_factored_base_offsets32_i32",
                  true),
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                                        "__pseudo_gather_factored_base_offsets32_float",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                                        "__pseudo_gather_factored_base_offsets32_float",
                  true),
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                                        "__pseudo_gather_factored_base_offsets32_i64",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                                        "__pseudo_gather_factored_base_offsets32_i64",
                  true),
-        GSBOInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+        GSBOInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                                        "__pseudo_gather_factored_base_offsets32_double",
-                 g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+                 g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                                        "__pseudo_gather_factored_base_offsets32_double",
                  true),
 
-        GSBOInfo( g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+        GSBOInfo( g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                                          "__pseudo_scatter_factored_base_offsets32_i8",
-                  g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+                  g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                                          "__pseudo_scatter_factored_base_offsets32_i8",
                   false),
-        GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                                         "__pseudo_scatter_factored_base_offsets32_i16",
-                 g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                                         "__pseudo_scatter_factored_base_offsets32_i16",
                  false),
-        GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                                         "__pseudo_scatter_factored_base_offsets32_i32",
-                 g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                                         "__pseudo_scatter_factored_base_offsets32_i32",
                  false),
-        GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                                         "__pseudo_scatter_factored_base_offsets32_float",
-                 g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                                         "__pseudo_scatter_factored_base_offsets32_float",
                  false),
-        GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                                         "__pseudo_scatter_factored_base_offsets32_i64",
-                 g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                                         "__pseudo_scatter_factored_base_offsets32_i64",
                  false),
-        GSBOInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+        GSBOInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                                         "__pseudo_scatter_factored_base_offsets32_double",
-                 g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+                 g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                                         "__pseudo_scatter_factored_base_offsets32_double",
                  false),
     };
@@ -2208,7 +2207,7 @@ lGetOffsetScaleVec(llvm::Value *offsetScale, llvm::Type *vecType) {
     uint64_t scaleValue = offsetScaleInt->getZExtValue();
 
     std::vector<llvm::Constant *> scales;
-    for (int i = 0; i < g->target.vectorWidth; ++i) {
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         if (vecType == LLVMTypes::Int64VectorType)
             scales.push_back(LLVMInt64(scaleValue));
         else {
@@ -2240,7 +2239,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
     struct GatherImpInfo {
         GatherImpInfo(const char *pName, const char *lmName, llvm::Type *st,
                       int a)
-            : align(a), isFactored(!g->target.hasGather) {
+            : align(a), isFactored(!g->target->hasGather()) {
             pseudoFunc = m->module->getFunction(pName);
             loadMaskedFunc = m->module->getFunction(lmName);
             Assert(pseudoFunc != NULL && loadMaskedFunc != NULL);
@@ -2255,40 +2254,40 @@ lGSToLoadStore(llvm::CallInst *callInst) {
     };
 
     GatherImpInfo gInfo[] = {
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i8" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i8" :
                                             "__pseudo_gather_factored_base_offsets32_i8",
                       "__masked_load_i8", LLVMTypes::Int8Type, 1),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i16" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i16" :
                                             "__pseudo_gather_factored_base_offsets32_i16",
                       "__masked_load_i16", LLVMTypes::Int16Type, 2),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i32" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i32" :
                                             "__pseudo_gather_factored_base_offsets32_i32",
                       "__masked_load_i32", LLVMTypes::Int32Type, 4),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_float" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_float" :
                                             "__pseudo_gather_factored_base_offsets32_float",
                       "__masked_load_float", LLVMTypes::FloatType, 4),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_i64" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_i64" :
                                             "__pseudo_gather_factored_base_offsets32_i64",
                       "__masked_load_i64", LLVMTypes::Int64Type, 8),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets32_double" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets32_double" :
                                             "__pseudo_gather_factored_base_offsets32_double",
                       "__masked_load_double", LLVMTypes::DoubleType, 8),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i8" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i8" :
                                             "__pseudo_gather_factored_base_offsets64_i8",
                       "__masked_load_i8", LLVMTypes::Int8Type, 1),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i16" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i16" :
                                             "__pseudo_gather_factored_base_offsets64_i16",
                       "__masked_load_i16", LLVMTypes::Int16Type, 2),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i32" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i32" :
                                             "__pseudo_gather_factored_base_offsets64_i32",
                       "__masked_load_i32", LLVMTypes::Int32Type, 4),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_float" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_float" :
                                             "__pseudo_gather_factored_base_offsets64_float",
                        "__masked_load_float", LLVMTypes::FloatType, 4),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_i64" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_i64" :
                                             "__pseudo_gather_factored_base_offsets64_i64",
                       "__masked_load_i64", LLVMTypes::Int64Type, 8),
-        GatherImpInfo(g->target.hasGather ? "__pseudo_gather_base_offsets64_double" :
+        GatherImpInfo(g->target->hasGather() ? "__pseudo_gather_base_offsets64_double" :
                                             "__pseudo_gather_factored_base_offsets64_double",
                       "__masked_load_double", LLVMTypes::DoubleType, 8),
     };
@@ -2296,7 +2295,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
     struct ScatterImpInfo {
         ScatterImpInfo(const char *pName, const char *msName,
                        llvm::Type *vpt, int a)
-            : align(a), isFactored(!g->target.hasScatter) {
+            : align(a), isFactored(!g->target->hasScatter()) {
             pseudoFunc = m->module->getFunction(pName);
             maskedStoreFunc = m->module->getFunction(msName);
             vecPtrType = vpt;
@@ -2310,40 +2309,40 @@ lGSToLoadStore(llvm::CallInst *callInst) {
     };
 
     ScatterImpInfo sInfo[] = {
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i8" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i8" :
                                               "__pseudo_scatter_factored_base_offsets32_i8",
                        "__pseudo_masked_store_i8", LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i16" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i16" :
                                               "__pseudo_scatter_factored_base_offsets32_i16",
                        "__pseudo_masked_store_i16", LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i32" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i32" :
                                               "__pseudo_scatter_factored_base_offsets32_i32",
                        "__pseudo_masked_store_i32", LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_float" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_float" :
                                               "__pseudo_scatter_factored_base_offsets32_float",
                        "__pseudo_masked_store_float", LLVMTypes::FloatVectorPointerType, 4),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_i64" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_i64" :
                                               "__pseudo_scatter_factored_base_offsets32_i64",
                        "__pseudo_masked_store_i64", LLVMTypes::Int64VectorPointerType, 8),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets32_double" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets32_double" :
                                               "__pseudo_scatter_factored_base_offsets32_double",
                        "__pseudo_masked_store_double", LLVMTypes::DoubleVectorPointerType, 8),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i8" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i8" :
                                               "__pseudo_scatter_factored_base_offsets64_i8",
                        "__pseudo_masked_store_i8", LLVMTypes::Int8VectorPointerType, 1),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i16" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i16" :
                                               "__pseudo_scatter_factored_base_offsets64_i16",
                        "__pseudo_masked_store_i16", LLVMTypes::Int16VectorPointerType, 2),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i32" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i32" :
                                               "__pseudo_scatter_factored_base_offsets64_i32",
                        "__pseudo_masked_store_i32", LLVMTypes::Int32VectorPointerType, 4),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_float" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_float" :
                                               "__pseudo_scatter_factored_base_offsets64_float",
                        "__pseudo_masked_store_float", LLVMTypes::FloatVectorPointerType, 4),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_i64" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_i64" :
                                               "__pseudo_scatter_factored_base_offsets64_i64",
                        "__pseudo_masked_store_i64", LLVMTypes::Int64VectorPointerType, 8),
-        ScatterImpInfo(g->target.hasScatter ? "__pseudo_scatter_base_offsets64_double" :
+        ScatterImpInfo(g->target->hasScatter() ? "__pseudo_scatter_base_offsets64_double" :
                                               "__pseudo_scatter_factored_base_offsets64_double",
                        "__pseudo_masked_store_double", LLVMTypes::DoubleVectorPointerType, 8),
     };
@@ -2432,8 +2431,8 @@ lGSToLoadStore(llvm::CallInst *callInst) {
                                         ptr->getName(), callInst);
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
             llvm::Value *vecValue = llvm::UndefValue::get(callInst->getType());
-            for (int i = 0; i < g->target.vectorWidth; ++i) {
-                if (i < g->target.vectorWidth - 1)
+            for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+                if (i < g->target->getVectorWidth() - 1)
                     vecValue = llvm::InsertElementInst::Create(vecValue, scalarValue, LLVMInt32(i),
                                                                callInst->getName(), callInst);
                 else
@@ -2449,7 +2448,7 @@ lGSToLoadStore(llvm::CallInst *callInst) {
             // A scatter with everyone going to the same location is
             // undefined (if there's more than one program instance in
             // the gang).  Issue a warning.
-            if (g->target.vectorWidth > 1)
+            if (g->target->getVectorWidth() > 1)
                 Warning(pos, "Undefined behavior: all program instances are "
                         "writing to the same location!");
 
@@ -3422,10 +3421,10 @@ lAssembleResultVectors(const std::vector<CoalescedLoadOp> &loadOps,
 
     // And now concatenate 1, 2, or 4 of the 4-wide vectors computed above
     // into 4, 8, or 16-wide final result vectors.
-    int numGathers = constOffsets.size() / g->target.vectorWidth;
+    int numGathers = constOffsets.size() / g->target->getVectorWidth();
     for (int i = 0; i < numGathers; ++i) {
         llvm::Value *result = NULL;
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 4:
             result = vec4s[i];
             break;
@@ -3486,7 +3485,7 @@ lComputeBasePtr(llvm::CallInst *gatherInst, llvm::Instruction *insertBefore) {
 static void
 lExtractConstOffsets(const std::vector<llvm::CallInst *> &coalesceGroup,
                      int elementSize, std::vector<int64_t> *constOffsets) {
-    int width = g->target.vectorWidth;
+    int width = g->target->getVectorWidth();
     *constOffsets = std::vector<int64_t>(coalesceGroup.size() * width, 0);
 
     int64_t *endPtr = &((*constOffsets)[0]);
@@ -3814,7 +3813,7 @@ lIsSafeToBlend(llvm::Value *lvalue) {
             llvm::VectorType *vt =
                 llvm::dyn_cast<llvm::VectorType>(type);
             return (vt != NULL &&
-                    (int)vt->getNumElements() == g->target.vectorWidth);
+                    (int)vt->getNumElements() == g->target->getVectorWidth());
         }
         else {
             llvm::GetElementPtrInst *gep =
@@ -4060,7 +4059,7 @@ lReplacePseudoGS(llvm::CallInst *callInst) {
     bool gotPosition = lGetSourcePosFromMetadata(callInst, &pos);
 
     callInst->setCalledFunction(info->actualFunc);
-    if (gotPosition && g->target.vectorWidth > 1) {
+    if (gotPosition && g->target->getVectorWidth() > 1) {
         if (info->isGather)
             PerformanceWarning(pos, "Gather required to load value.");
         else
