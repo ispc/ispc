@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -308,7 +308,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
                                          LLVMMaskAllOn, "__all_on_mask");
 
             char buf[256];
-            sprintf(buf, "__off_all_on_mask_%s", g->target.GetISAString());
+            sprintf(buf, "__off_all_on_mask_%s", g->target->GetISAString());
             llvm::Constant *offFunc =
                 m->module->getOrInsertFunction(buf, LLVMTypes::VoidType,
                                                NULL);
@@ -1295,7 +1295,7 @@ FunctionEmitContext::Any(llvm::Value *mask) {
     // Call the target-dependent any function to test that the mask is non-zero
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__any", &mm);
-    if (g->target.maskBitCount == 1)
+    if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
         // There should be one with signed int signature, one unsigned int.
@@ -1313,7 +1313,7 @@ FunctionEmitContext::All(llvm::Value *mask) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__all", &mm);
-    if (g->target.maskBitCount == 1)
+    if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
         // There should be one with signed int signature, one unsigned int.
@@ -1331,7 +1331,7 @@ FunctionEmitContext::None(llvm::Value *mask) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__none", &mm);
-    if (g->target.maskBitCount == 1)
+    if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
         // There should be one with signed int signature, one unsigned int.
@@ -1349,7 +1349,7 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
     // into an i64 value
     std::vector<Symbol *> mm;
     m->symbolTable->LookupFunction("__movmsk", &mm);
-    if (g->target.maskBitCount == 1)
+    if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
         // There should be one with signed int signature, one unsigned int.
@@ -1405,7 +1405,7 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
         return NULL;
     }
 
-    if (g->target.maskBitCount == 1)
+    if (g->target->getMaskBitCount() == 1)
         return b;
 
     llvm::ArrayType *at =
@@ -1594,7 +1594,7 @@ lArrayVectorWidth(llvm::Type *t) {
     llvm::VectorType *vectorElementType =
         llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
     Assert((vectorElementType != NULL &&
-            (int)vectorElementType->getNumElements() == g->target.vectorWidth));
+            (int)vectorElementType->getNumElements() == g->target->getVectorWidth()));
 
     return (int)arrayType->getNumElements();
 }
@@ -1678,10 +1678,10 @@ lGetMatchingBoolVectorType(llvm::Type *type) {
     llvm::VectorType *vectorElementType =
         llvm::dyn_cast<llvm::VectorType>(arrayType->getElementType());
     Assert(vectorElementType != NULL);
-    Assert((int)vectorElementType->getNumElements() == g->target.vectorWidth);
+    Assert((int)vectorElementType->getNumElements() == g->target->getVectorWidth());
 
     llvm::Type *base =
-        llvm::VectorType::get(LLVMTypes::BoolType, g->target.vectorWidth);
+        llvm::VectorType::get(LLVMTypes::BoolType, g->target->getVectorWidth());
     return llvm::ArrayType::get(base, arrayType->getNumElements());
 }
 
@@ -1741,9 +1741,9 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
         // All other varying types are represented as vectors of the
         // underlying type.
         ret = llvm::UndefValue::get(llvm::VectorType::get(eltType,
-                                                          g->target.vectorWidth));
+                                                          g->target->getVectorWidth()));
 
-    for (int i = 0; i < g->target.vectorWidth; ++i) {
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         llvm::Twine n = llvm::Twine("smear.") + llvm::Twine(name ? name : "") +
             llvm::Twine(i);
         ret = InsertInst(ret, value, i, n.str().c_str());
@@ -1963,7 +1963,7 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
     // Find the scale factor for the index (i.e. the size of the object
     // that the pointer(s) point(s) to.
     const Type *scaleType = ptrType->GetBaseType();
-    llvm::Value *scale = g->target.SizeOf(scaleType->LLVMType(g->ctx), bblock);
+    llvm::Value *scale = g->target->SizeOf(scaleType->LLVMType(g->ctx), bblock);
 
     bool indexIsVarying =
         llvm::isa<llvm::VectorType>(index->getType());
@@ -1971,10 +1971,10 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
     if (indexIsVarying == false) {
         // Truncate or sign extend the index as appropriate to a 32 or
         // 64-bit type.
-        if ((g->target.is32Bit || g->opt.force32BitAddressing) &&
+        if ((g->target->is32Bit() || g->opt.force32BitAddressing) &&
             index->getType() == LLVMTypes::Int64Type)
             index = TruncInst(index, LLVMTypes::Int32Type);
-        else if ((!g->target.is32Bit && !g->opt.force32BitAddressing) &&
+        else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                  index->getType() == LLVMTypes::Int32Type)
             index = SExtInst(index, LLVMTypes::Int64Type);
 
@@ -1988,10 +1988,10 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
     else {
         // Similarly, truncate or sign extend the index to be a 32 or 64
         // bit vector type
-        if ((g->target.is32Bit || g->opt.force32BitAddressing) &&
+        if ((g->target->is32Bit() || g->opt.force32BitAddressing) &&
             index->getType() == LLVMTypes::Int64VectorType)
             index = TruncInst(index, LLVMTypes::Int32VectorType);
-        else if ((!g->target.is32Bit && !g->opt.force32BitAddressing) &&
+        else if ((!g->target->is32Bit() && !g->opt.force32BitAddressing) &&
                  index->getType() == LLVMTypes::Int32VectorType)
             index = SExtInst(index, LLVMTypes::Int64VectorType);
 
@@ -2005,7 +2005,7 @@ FunctionEmitContext::applyVaryingGEP(llvm::Value *basePtr, llvm::Value *index,
     // For 64-bit targets, if we've been doing our offset calculations in
     // 32 bits, we still have to convert to a 64-bit value before we
     // actually add the offset to the pointer.
-    if (g->target.is32Bit == false && g->opt.force32BitAddressing == true)
+    if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true)
         offset = SExtInst(offset, LLVMTypes::Int64VectorType,
                           LLVMGetName(offset, "_to_64"));
 
@@ -2343,7 +2343,7 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
         if (st != NULL)
             // If the pointer is to a structure, Target::StructOffset() gives
             // us the offset in bytes to the given element of the structure
-            offset = g->target.StructOffset(st->LLVMType(g->ctx), elementNum,
+            offset = g->target->StructOffset(st->LLVMType(g->ctx), elementNum,
                                             bblock);
         else {
             // Otherwise we should have a vector or array here and the offset
@@ -2353,15 +2353,15 @@ FunctionEmitContext::AddElementOffset(llvm::Value *fullBasePtr, int elementNum,
                 CastType<SequentialType>(ptrType->GetBaseType());
             AssertPos(currentPos, st != NULL);
             llvm::Value *size =
-                g->target.SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
-            llvm::Value *scale = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+                g->target->SizeOf(st->GetElementType()->LLVMType(g->ctx), bblock);
+            llvm::Value *scale = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
                 LLVMInt32(elementNum) : LLVMInt64(elementNum);
             offset = BinaryOperator(llvm::Instruction::Mul, size, scale);
         }
 
         offset = SmearUniform(offset, "offset_smear");
 
-        if (g->target.is32Bit == false && g->opt.force32BitAddressing == true)
+        if (g->target->is32Bit() == false && g->opt.force32BitAddressing == true)
             // If we're doing 32 bit addressing with a 64 bit target, although
             // we did the math above in 32 bit, we need to go to 64 bit before
             // we add the offset to the varying pointers.
@@ -2583,26 +2583,26 @@ FunctionEmitContext::gather(llvm::Value *ptr, const PointerType *ptrType,
     const PointerType *pt = CastType<PointerType>(returnType);
     const char *funcName = NULL;
     if (pt != NULL)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_i32" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" :
             "__pseudo_gather64_i64";
     else if (llvmReturnType == LLVMTypes::DoubleVectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_double" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_double" :
             "__pseudo_gather64_double";
     else if (llvmReturnType == LLVMTypes::Int64VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_i64" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i64" :
             "__pseudo_gather64_i64";
     else if (llvmReturnType == LLVMTypes::FloatVectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_float" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_float" :
             "__pseudo_gather64_float";
     else if (llvmReturnType == LLVMTypes::Int32VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_i32" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i32" :
             "__pseudo_gather64_i32";
     else if (llvmReturnType == LLVMTypes::Int16VectorType)
-        funcName = g->target.is32Bit ? "__pseudo_gather32_i16" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i16" :
             "__pseudo_gather64_i16";
     else {
         AssertPos(currentPos, llvmReturnType == LLVMTypes::Int8VectorType);
-        funcName = g->target.is32Bit ? "__pseudo_gather32_i8" :
+        funcName = g->target->is32Bit() ? "__pseudo_gather32_i8" :
             "__pseudo_gather64_i8";
     }
 
@@ -2684,7 +2684,7 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         llvm::dyn_cast<llvm::ArrayType>(llvmType);
     if (align == 0 && arrayType != NULL &&
         !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
-        align = 4 * g->target.nativeVectorWidth;
+        align = 4 * g->target->getNativeVectorWidth();
 
     if (align != 0)
         inst->setAlignment(align);
@@ -2761,13 +2761,13 @@ FunctionEmitContext::maskedStore(llvm::Value *value, llvm::Value *ptr,
             return;
         }
 
-        if (g->target.is32Bit)
+        if (g->target->is32Bit())
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i32");
         else
             maskedStoreFunc = m->module->getFunction("__pseudo_masked_store_i64");
     }
     else if (Type::Equal(valueType, AtomicType::VaryingBool) &&
-             g->target.maskBitCount == 1) {
+             g->target->getMaskBitCount() == 1) {
         llvm::Value *notMask = BinaryOperator(llvm::Instruction::Xor, mask,
                                               LLVMMaskAllOn, "~mask");
         llvm::Value *old = LoadInst(ptr);
@@ -2894,31 +2894,31 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
     if (pt != NULL) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" :
             "__pseudo_scatter64_i64";
     }
     else if (type == LLVMTypes::DoubleVectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_double" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_double" :
             "__pseudo_scatter64_double";
     }
     else if (type == LLVMTypes::Int64VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_i64" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i64" :
             "__pseudo_scatter64_i64";
     }
     else if (type == LLVMTypes::FloatVectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_float" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_float" :
             "__pseudo_scatter64_float";
     }
     else if (type == LLVMTypes::Int32VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_i32" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i32" :
             "__pseudo_scatter64_i32";
     }
     else if (type == LLVMTypes::Int16VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_i16" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i16" :
             "__pseudo_scatter64_i16";
     }
     else if (type == LLVMTypes::Int8VectorType) {
-        funcName = g->target.is32Bit ? "__pseudo_scatter32_i8" :
+        funcName = g->target->is32Bit() ? "__pseudo_scatter32_i8" :
             "__pseudo_scatter64_i8";
     }
 
@@ -3408,13 +3408,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 
     llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
     AssertPos(currentPos, falloc != NULL);
-    llvm::Value *structSize = g->target.SizeOf(argStructType, bblock);
+    llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
     if (structSize->getType() != LLVMTypes::Int64Type)
         // ISPCAlloc expects the size as an uint64_t, but on 32-bit
         // targets, SizeOf returns a 32-bit value
         structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
                               "struct_size_to_64");
-    int align = 4 * RoundUpPow2(g->target.nativeVectorWidth);
+    int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
 
     std::vector<llvm::Value *> allocArgs;
     allocArgs.push_back(launchGroupHandlePtr);
@@ -3505,20 +3505,20 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     // Find the size of a uniform element of the varying type
     llvm::Type *llvmBaseUniformType =
         baseType->GetAsUniformType()->LLVMType(g->ctx);
-    llvm::Value *unifSize = g->target.SizeOf(llvmBaseUniformType, bblock);
+    llvm::Value *unifSize = g->target->SizeOf(llvmBaseUniformType, bblock);
     unifSize = SmearUniform(unifSize);
 
     // Compute offset = <0, 1, .. > * unifSize
     llvm::Value *varyingOffsets = llvm::UndefValue::get(unifSize->getType());
-    for (int i = 0; i < g->target.vectorWidth; ++i) {
-        llvm::Value *iValue = (g->target.is32Bit || g->opt.force32BitAddressing) ?
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
+        llvm::Value *iValue = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
             LLVMInt32(i) : LLVMInt64(i);
         varyingOffsets = InsertInst(varyingOffsets, iValue, i, "varying_delta");
     }
     llvm::Value *offset = BinaryOperator(llvm::Instruction::Mul, unifSize,
                                          varyingOffsets);
 
-    if (g->opt.force32BitAddressing == true && g->target.is32Bit == false)
+    if (g->opt.force32BitAddressing == true && g->target->is32Bit() == false)
         // On 64-bit targets where we're doing 32-bit addressing
         // calculations, we need to convert to an i64 vector before adding
         // to the pointer

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -566,10 +566,10 @@ AtomicType::GetDIType(llvm::DIDescriptor scope) const {
     }
     else if (variability == Variability::Varying) {
         llvm::DIType unifType = GetAsUniformType()->GetDIType(scope);
-        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-        uint64_t size =  unifType.getSizeInBits()  * g->target.vectorWidth;
-        uint64_t align = unifType.getAlignInBits() * g->target.vectorWidth;
+        uint64_t size =  unifType.getSizeInBits()  * g->target->getVectorWidth();
+        uint64_t align = unifType.getAlignInBits() * g->target->getVectorWidth();
         return m->diBuilder->createVectorType(size, align, unifType, subArray);
     }
     else {
@@ -830,10 +830,10 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     case Variability::Uniform:
         return diType;
     case Variability::Varying: {
-        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target.vectorWidth-1);
+        llvm::Value *sub = m->diBuilder->getOrCreateSubrange(0, g->target->getVectorWidth()-1);
         llvm::DIArray subArray = m->diBuilder->getOrCreateArray(sub);
-        uint64_t size =  diType.getSizeInBits()  * g->target.vectorWidth;
-        uint64_t align = diType.getAlignInBits() * g->target.vectorWidth;
+        uint64_t size =  diType.getSizeInBits()  * g->target->getVectorWidth();
+        uint64_t align = diType.getAlignInBits() * g->target->getVectorWidth();
         return m->diBuilder->createVectorType(size, align, diType, subArray);
     }
     case Variability::SOA: {
@@ -1173,7 +1173,7 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
     }
 
     llvm::DIType diTargetType = baseType->GetDIType(scope);
-    int bitsSize = g->target.is32Bit ? 32 : 64;
+    int bitsSize = g->target->is32Bit() ? 32 : 64;
     int ptrAlignBits = bitsSize;
     switch (variability.type) {
     case Variability::Uniform:
@@ -1183,7 +1183,7 @@ PointerType::GetDIType(llvm::DIDescriptor scope) const {
         // emit them as an array of pointers
         llvm::DIType eltType = m->diBuilder->createPointerType(diTargetType,
                                                                bitsSize, ptrAlignBits);
-        return lCreateDIArray(eltType, g->target.vectorWidth);
+        return lCreateDIArray(eltType, g->target->getVectorWidth());
     }
     case Variability::SOA: {
         ArrayType at(GetAsUniformType(), variability.soaWidth);
@@ -1712,7 +1712,7 @@ VectorType::GetDIType(llvm::DIDescriptor scope) const {
     // explicitly aligned to the machines natural vector alignment.
     uint64_t align = eltType.getAlignInBits();
     if (IsUniformType())
-        align = 4 * g->target.nativeVectorWidth;
+        align = 4 * g->target->getNativeVectorWidth();
 
     if (IsUniformType() || IsVaryingType())
         return m->diBuilder->createVectorType(sizeBits, align, eltType, subArray);
@@ -1732,11 +1732,11 @@ VectorType::getVectorMemoryCount() const {
     if (base->IsVaryingType())
         return numElements;
     else if (base->IsUniformType()) {
-        int nativeWidth = g->target.nativeVectorWidth;
+        int nativeWidth = g->target->getNativeVectorWidth();
         if (Type::Equal(base->GetAsUniformType(), AtomicType::UniformInt64) ||
             Type::Equal(base->GetAsUniformType(), AtomicType::UniformUInt64) ||
             Type::Equal(base->GetAsUniformType(), AtomicType::UniformDouble))
-            // target.nativeVectorWidth should be in terms of 32-bit
+            // target.getNativeVectorWidth() should be in terms of 32-bit
             // values, so for the 64-bit guys, it takes half as many of
             // them to fill the native width
             nativeWidth /= 2;
@@ -1778,7 +1778,7 @@ lMangleStructName(const std::string &name, Variability variability) {
     std::string n;
 
     // Encode vector width
-    sprintf(buf, "v%d", g->target.vectorWidth);
+    sprintf(buf, "v%d", g->target->getVectorWidth());
     n += buf;
 
     // Variability

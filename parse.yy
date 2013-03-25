@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -2148,7 +2148,7 @@ lAddFunctionParams(Declarator *decl) {
 
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
-    const Type *t = g->target.maskBitCount == 1 ?
+    const Type *t = g->target->getMaskBitCount() == 1 ?
         AtomicType::VaryingBool : AtomicType::VaryingUInt32;
     t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -175,10 +175,10 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
         else
             retType = st->GetAsSOAType(soaWidth);
 
-        if (soaWidth < g->target.vectorWidth)
+        if (soaWidth < g->target->getVectorWidth())
             PerformanceWarning(pos, "soa<%d> width smaller than gang size %d "
                                "currently leads to inefficient code to access "
-                               "soa types.", soaWidth, g->target.vectorWidth);
+                               "soa types.", soaWidth, g->target->getVectorWidth());
     }
 
     return retType;

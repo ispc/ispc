@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1274,7 +1274,7 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
     llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
     llvm::Value *smearCounter =
         llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-    for (int i = 0; i < g->target.vectorWidth; ++i)
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
         smearCounter =
             ctx->InsertInst(smearCounter, counter, i, "smear_counter");
 
@@ -1285,7 +1285,7 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
     // (0,1,2,3,0,1,2,3), and for the outer dimension we want
     // (0,0,0,0,1,1,1,1).
     int32_t delta[ISPC_MAX_NVEC];
-    for (int i = 0; i < g->target.vectorWidth; ++i) {
+    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         int d = i;
         // First, account for the effect of any dimensions at deeper
         // nesting levels than the current one.
@@ -1393,7 +1393,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     std::vector<llvm::Value *> nExtras, alignedEnd, extrasMaskPtrs;
 
     std::vector<int> span(nDims, 0);
-    lGetSpans(nDims-1, nDims, g->target.vectorWidth, isTiled, &span[0]);
+    lGetSpans(nDims-1, nDims, g->target->getVectorWidth(), isTiled, &span[0]);
 
     for (int i = 0; i < nDims; ++i) {
         // Basic blocks that we'll fill in later with the looping logic for
@@ -1518,7 +1518,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
                                   dimVariables[i]->storagePtr, span);
 
         llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target.vectorWidth; ++j)
+        for (int j = 0; j < g->target->getVectorWidth(); ++j)
             smearEnd = ctx->InsertInst(smearEnd, endVals[i], j, "smear_end");
         // Do a vector compare of its value to the end value to generate a
         // mask for this last bit of work.
@@ -1663,7 +1663,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *varyingCounter =
             ctx->LoadInst(dimVariables[nDims-1]->storagePtr);
         llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target.vectorWidth; ++j)
+        for (int j = 0; j < g->target->getVectorWidth(); ++j)
             smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
         llvm::Value *emask =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
@@ -1759,7 +1759,7 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1],
                                   dimVariables[nDims-1]->storagePtr, span);
         llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target.vectorWidth; ++j)
+        for (int j = 0; j < g->target->getVectorWidth(); ++j)
             smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
         llvm::Value *emask =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
@@ -1995,7 +1995,7 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // Get the "program index" vector value
         llvm::Value *programIndex =
             llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int i = 0; i < g->target.vectorWidth; ++i)
+        for (int i = 0; i < g->target->getVectorWidth(); ++i)
             programIndex = ctx->InsertInst(programIndex, LLVMInt32(i), i,
                                            "prog_index");
 
@@ -3103,7 +3103,7 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     // Set up the rest of the parameters to it
     args[0] = ctx->GetStringPtr(format);
     args[1] = ctx->GetStringPtr(argTypes);
-    args[2] = LLVMInt32(g->target.vectorWidth);
+    args[2] = LLVMInt32(g->target->getVectorWidth());
     args[3] = ctx->LaneMask(mask);
     std::vector<llvm::Value *> argVec(&args[0], &args[5]);
     ctx->CallInst(printFunc, NULL, argVec, "");
@@ -3254,7 +3254,7 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // calling it.
         llvm::Function *func = m->module->getFunction("__delete_varying");
         AssertPos(pos, func != NULL);
-        if (g->target.is32Bit)
+        if (g->target->is32Bit())
             exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType,
                                       "ptr_to_64");
         ctx->CallInst(func, NULL, exprValue, "");

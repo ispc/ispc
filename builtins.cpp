@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -210,7 +210,7 @@ lCreateISPCSymbol(llvm::Function *func, SymbolTable *symbolTable) {
     // symbol creation code below assumes that any LLVM vector of i32s is a
     // varying int32.  Here, we need that to be interpreted as a varying
     // bool, so just have a one-off override for that one...
-    if (g->target.maskBitCount != 1 && name == "__sext_varying_bool") {
+    if (g->target->getMaskBitCount() != 1 && name == "__sext_varying_bool") {
         const Type *returnType = AtomicType::VaryingInt32;
         llvm::SmallVector<const Type *, 8> argTypes;
         argTypes.push_back(AtomicType::VaryingBool);
@@ -599,11 +599,7 @@ lSetInternalFunctions(llvm::Module *module) {
         llvm::Function *f = module->getFunction(names[i]);
         if (f != NULL && f->empty() == false) {
             f->setLinkage(llvm::GlobalValue::InternalLinkage);
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
-            f->addAttributes(
-                llvm::AttributeSet::FunctionIndex,
-                *g->target.tf_attributes);
-#endif
+            g->target->markFuncWithTargetAttr(f);
         }
     }
 }
@@ -650,7 +646,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // targets having a layout with 16-bit alignment for 16xi1 vectors.
         // As long as builtins-c.c doesn't have any 16xi1 vector types
         // (which it shouldn't!), then this override is safe.
-        if (g->target.isa == Target::GENERIC)
+        if (g->target->getISA() == Target::GENERIC)
             bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
@@ -737,7 +733,7 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
                    AtomicType::VaryingInt32->GetAsConstType(), SC_STATIC);
 
     int pi[ISPC_MAX_NVEC];
-    for (int i = 0; i < g->target.vectorWidth; ++i)
+    for (int i = 0; i < g->target->getVectorWidth(); ++i)
         pi[i] = i;
     sym->constValue = new ConstExpr(sym->type, pi, SourcePos());
 
@@ -770,7 +766,7 @@ void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
     // Add the definitions from the compiled builtins-c.c file
-    if (g->target.is32Bit) {
+    if (g->target->is32Bit()) {
         extern unsigned char builtins_bitcode_c_32[];
         extern int builtins_bitcode_c_32_length;
         AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length,
@@ -785,13 +781,13 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
-    switch (g->target.isa) {
+    switch (g->target->getISA()) {
     case Target::SSE2:
         extern unsigned char builtins_bitcode_sse2[];
         extern int builtins_bitcode_sse2_length;
         extern unsigned char builtins_bitcode_sse2_x2[];
         extern int builtins_bitcode_sse2_x2_length;
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 4:
             AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length,
                                module, symbolTable);
@@ -809,7 +805,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         extern int builtins_bitcode_sse4_length;
         extern unsigned char builtins_bitcode_sse4_x2[];
         extern int builtins_bitcode_sse4_x2_length;
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 4:
             AddBitcodeToModule(builtins_bitcode_sse4,
                                builtins_bitcode_sse4_length,
@@ -825,7 +821,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX:
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 8:
             extern unsigned char builtins_bitcode_avx1[];
             extern int builtins_bitcode_avx1_length;
@@ -845,7 +841,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX11:
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 8:
             extern unsigned char builtins_bitcode_avx11[];
             extern int builtins_bitcode_avx11_length;
@@ -865,7 +861,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::AVX2:
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 8:
             extern unsigned char builtins_bitcode_avx2[];
             extern int builtins_bitcode_avx2_length;
@@ -885,7 +881,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     case Target::GENERIC:
-        switch (g->target.vectorWidth) {
+        switch (g->target->getVectorWidth()) {
         case 4:
             extern unsigned char builtins_bitcode_generic_4[];
             extern int builtins_bitcode_generic_4_length;
@@ -937,7 +933,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     }
 
     // define the 'programCount' builtin variable
-    lDefineConstantInt("programCount", g->target.vectorWidth, module, symbolTable);
+    lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable);
 
     // define the 'programIndex' builtin
     lDefineProgramIndex(module, symbolTable);
@@ -956,18 +952,18 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
                            module, symbolTable);
 
-    lDefineConstantInt("__have_native_half", g->target.hasHalf, module,
+    lDefineConstantInt("__have_native_half", g->target->hasHalf(), module,
                        symbolTable);
-    lDefineConstantInt("__have_native_rand", g->target.hasRand, module,
+    lDefineConstantInt("__have_native_rand", g->target->hasRand(), module,
                        symbolTable);
-    lDefineConstantInt("__have_native_transcendentals", g->target.hasTranscendentals,
+    lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
                        module, symbolTable);
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
-      if (g->target.isa == Target::GENERIC&&g->target.vectorWidth!=1) { // 1 wide uses x86 stdlib
+      if (g->target->getISA() == Target::GENERIC&&g->target->getVectorWidth()!=1) { // 1 wide uses x86 stdlib
             extern char stdlib_generic_code[];
             yy_scan_string(stdlib_generic_code);
             yyparse();
