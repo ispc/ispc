@@ -1777,6 +1777,21 @@ CAST(__vec16_i64, uint64_t, __vec16_d, double, __cast_fptoui)
 CAST(__vec16_f, float,  __vec16_d, double, __cast_fptrunc)
 CAST(__vec16_d, double, __vec16_f, float,  __cast_fpext)
 
+static FORCEINLINE __vec16_d __cast_fpext(__vec16_d, __vec16_f val) {
+    __vec16_d ret;
+    ret.v2 = _mm512_cvtpslo_pd(val.v);
+    __vec16_f other8 = _mm512_permute4f128_epi32(_mm512_castps_si512(val.v), _MM_PERM_DCDC);
+    ret.v1 = _mm512_cvtpslo_pd(other8);
+    return ret;
+}
+
+static FORCEINLINE __vec16_f __cast_fptrunc(__vec16_f, __vec16_d val) {
+    __m512i r0i = _mm512_castps_si512(_mm512_cvtpd_pslo(val.v1));
+    __m512i r1i = _mm512_castps_si512(_mm512_cvtpd_pslo(val.v2));
+
+    return _mm512_mask_permute4f128_epi32(r1i, 0xFF00, r0i, _MM_PERM_BABA);
+}
+
 /*
 typedef union {
     int32_t i32;
@@ -2288,6 +2303,20 @@ __gather_base_offsets32_float(uint8_t *base, uint32_t scale, __vec16_i32 offsets
     return _mm512_mask_i32extgather_ps(_mm512_undefined_ps(), mask, offsets,
                                        base, _MM_UPCONV_PS_NONE, scale,
                                        _MM_HINT_NONE);
+}
+
+static FORCEINLINE __vec16_d
+__gather_base_offsets32_double(uint8_t *base, uint32_t scale, __vec16_i32 offsets,
+                              __vec16_i1 mask) { 
+    __vec16_d ret;
+    ret.v2 = _mm512_mask_i32loextgather_pd(_mm512_undefined_pd(), mask, offsets,
+                                       base, _MM_UPCONV_PD_NONE, scale,
+                                       _MM_HINT_NONE); 
+    __m512i shuffled_offsets = _mm512_permute4f128_epi32(offsets.v, _MM_PERM_DCDC);
+    ret.v1 = _mm512_mask_i32loextgather_pd(_mm512_undefined_pd(), mask, shuffled_offsets,
+                                       base, _MM_UPCONV_PD_NONE, scale,
+                                       _MM_HINT_NONE); 
+    return ret;
 }
 
 /*! gather with 64-bit offsets.
