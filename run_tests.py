@@ -6,7 +6,6 @@ from optparse import OptionParser
 import multiprocessing
 from ctypes import c_int
 import os
-import os.path
 import sys
 import glob
 import re
@@ -17,6 +16,7 @@ import subprocess
 import shlex
 import platform
 import tempfile
+import os.path
 
 # disable fancy error/warning printing with ANSI colors, so grepping for error
 # messages doesn't get confused
