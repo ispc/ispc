@@ -97,10 +97,8 @@ ispc_exists = False
 for counter in PATH_dir:
 	if os.path.exists(counter + os.sep + options.compiler_exe):
 		compiler_exists = True
-		break
-	if os.path.exists(counter + os.sep + "ispc_exe"):
+	if (os.path.exists(counter + os.sep + "ispc") or os.path.exists(counter + os.sep + "ispc.exe")):
 		ispc_exists = True
-		break
 
 if not compiler_exists:
 	sys.stderr.write("Fatal error: missing the required compiler: %s \n" % 
