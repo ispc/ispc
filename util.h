@@ -147,4 +147,13 @@ void GetDirectoryAndFileName(const std::string &currentDir,
                              const std::string &relativeName,
                              std::string *directory, std::string *filename);
 
+/** Verification routine, which ensures that DataLayout of the module being
+    compiled is compatible with DataLayout of the library. At the moment we
+    allow the library DataLayout to a subset of the module DataLayout (and
+    extra floating point and vector types to be defined for module) or
+    empty library DataLayout.
+ */
+bool VerifyDataLayoutCompatibility(const std::string &module_dl,
+                                   const std::string &lib_dl);
+
 #endif // ISPC_UTIL_H
