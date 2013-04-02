@@ -16,6 +16,7 @@ import subprocess
 import shlex
 import platform
 import tempfile
+import os.path
 
 # disable fancy error/warning printing with ANSI colors, so grepping for error
 # messages doesn't get confused
@@ -87,6 +88,20 @@ if options.compiler_exe == None:
         options.compiler_exe = "cl"
     else:
         options.compiler_exe = "g++"
+
+# checks the required compiler otherwise prints an error message
+PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
+compiler_exists = False
+
+for counter in PATH_dir:
+	if os.path.exists(counter + os.sep + options.compiler_exe):
+		compiler_exists = True
+		break
+
+if not compiler_exists:
+	sys.stderr.write("Fatal error: missing the required compiler: %s \n" % 
+		options.compiler_exe)
+	sys.exit()
 
 def fix_windows_paths(files):
     ret = [ ]
