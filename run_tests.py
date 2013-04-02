@@ -89,18 +89,24 @@ if options.compiler_exe == None:
     else:
         options.compiler_exe = "g++"
 
-# checks the required compiler otherwise prints an error message
+# checks the required compiler and ispc_exe otherwise prints an error message
 PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
 compiler_exists = False
+ispc_exists = False
 
 for counter in PATH_dir:
 	if os.path.exists(counter + os.sep + options.compiler_exe):
 		compiler_exists = True
-		break
+	if (os.path.exists(counter + os.sep + "ispc") or os.path.exists(counter + os.sep + "ispc.exe")):
+		ispc_exists = True
 
 if not compiler_exists:
 	sys.stderr.write("Fatal error: missing the required compiler: %s \n" % 
 		options.compiler_exe)
+	sys.exit()
+
+if not ispc_exists:
+	sys.stderr.write("Fatal error: missing the required ispc_exe \n")
 	sys.exit()
 
 def fix_windows_paths(files):
