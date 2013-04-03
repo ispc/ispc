@@ -62,8 +62,8 @@ else:
 
 # checks the required ispc compiler otherwise prints an error message
 if not os.path.exists(ispc_exe):
-	sys.stderr.write("Fatal error: missing the required ispc compiler \n")
-	sys.exit()
+    sys.stderr.write("Fatal error: missing ispc compiler: %s\n" % ispc_exe)
+    sys.exit()
 
 ispc_exe += " " + options.ispc_flags
 
