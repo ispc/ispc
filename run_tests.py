@@ -178,7 +178,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         if compile_failed:
             sys.stdout.write("Compilation of test %s failed            \n" % filename)
             if output != "":
-                sys.stdout.write("%s" % output)
+                sys.stdout.write("%s" % output.encode("utf-8"))
             return (1, 0)
 
     (return_code, output) = run_command(run_cmd)
@@ -191,7 +191,7 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
             (filename, "unexpectedly passed" if expect_failure else "failed",
              return_code))
     if output != "":
-        sys.stdout.write("%s\n" % output)
+        sys.stdout.write("%s\n" % output.encode("utf-8"))
     if surprise == True:
         return (0, 1)
     else:

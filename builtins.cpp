@@ -640,14 +640,21 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                mTriple.getVendor() == bcTriple.getVendor());
         bcModule->setTargetTriple(mTriple.str());
 
-        // This is also suboptimal; LLVM issues a warning about linking
-        // modules with different datalayouts, due to things like
-        // bulitins-c.c having the regular IA layout, but the generic
-        // targets having a layout with 16-bit alignment for 16xi1 vectors.
-        // As long as builtins-c.c doesn't have any 16xi1 vector types
-        // (which it shouldn't!), then this override is safe.
-        if (g->target->getISA() == Target::GENERIC)
-            bcModule->setDataLayout(module->getDataLayout());
+        // We unconditionally set module DataLayout to library, but we must
+        // ensure that library and module DataLayouts are compatible.
+        // If they are not, we should recompile the library for problematic
+        // architecture and investigate what happened.
+        // Generally we allow library DataLayout to be subset of module
+        // DataLayout or library DataLayout to be empty.
+        if (!VerifyDataLayoutCompatibility(module->getDataLayout(),
+                                           bcModule->getDataLayout())) {
+            Error(SourcePos(), "Module DataLayout is incompatible with library DataLayout:\n"
+                               "Module  DL: %s\n"
+                               "Library DL: %s\n",
+                  module->getDataLayout().c_str(), bcModule->getDataLayout().c_str());
+        }
+
+        bcModule->setDataLayout(module->getDataLayout());
 
         std::string(linkError);
         if (llvm::Linker::LinkModules(module, bcModule,

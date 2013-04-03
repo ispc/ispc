@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,7 @@
 #include <errno.h>
 #endif // ISPC_IS_WINDOWS
 #include <set>
+#include <algorithm>
 
 /** Returns the width of the terminal where the compiler is running.
     Finding this out may fail in a variety of reasonable situations (piping
@@ -572,3 +573,63 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     *directory = std::string(fp, basenameStart - fp);
 #endif // ISPC_IS_WINDOWS
 }
+
+static std::set<std::string> lGetStringArray(const std::string &str) {
+    std::set<std::string> result;
+
+    Assert(str.find('-') != str.npos);
+
+    size_t pos_prev = 0, pos;
+    do {
+        pos = str.find('-', pos_prev);
+        std::string substr = str.substr(pos_prev, pos-pos_prev);
+        result.insert(substr);
+        pos_prev = pos;
+        pos_prev++;
+    } while (pos != str.npos);
+
+    return result;
+}
+
+bool VerifyDataLayoutCompatibility(const std::string &module_dl,
+                                   const std::string &lib_dl) {
+    if (lib_dl.empty()) {
+        // This is the case for most of library pre-compiled .ll files.
+        return true;
+    }
+
+    std::set<std::string> module_dl_set = lGetStringArray(module_dl);
+    std::set<std::string> lib_dl_set = lGetStringArray(lib_dl);
+
+    // For each element in library data layout, find matching module element.
+    // If no match is found, then we are in trouble and the library can't be used.
+    for (std::set<std::string>::iterator it = lib_dl_set.begin();
+         it != lib_dl_set.end(); ++it) {
+        // We use the simplest possible definition of "match", which is match exactly.
+        // Ideally it should be relaxed and for triples [p|i|v|f|a|s]<size>:<abi>:<pref>
+        // we should allow <pref> part (preferred alignment) to not match.
+        // But this seems to have no practical value at this point.
+        std::set<std::string>::iterator module_match =
+            std::find(module_dl_set.begin(), module_dl_set.end(), *it);
+        if (module_match == module_dl_set.end()) {
+            // No match for this piece of library DataLayout was found,
+            // return false.
+            return false;
+        }
+        // Remove matching piece from Module set.
+        module_dl_set.erase(module_match);
+    }
+
+    // We allow extra types to be defined in the Module, but we should check
+    // that it's something that we expect. And we expect vectors and floats.
+    for (std::set<std::string>::iterator it = module_dl_set.begin();
+         it != module_dl_set.end(); ++it) {
+        if ((*it)[0] == 'v' || (*it)[0] == 'f') {
+            continue;
+        }
+        return false;
+    }
+
+    return true;
+}
+
