@@ -1696,6 +1696,27 @@ lOffsets32BitSafe(llvm::Value **variableOffsetPtr,
     return true;
 }
 
+/** Check to see if the offset value is composed of a string of Adds,
+    SExts, and Constant Vectors that are 32-bit safe.  Recursively
+    explores the operands of Add instructions (as they might themselves
+    be adds that eventually terminate in constant vectors or a SExt.)
+ */
+
+static bool
+lIs32BitSafeHelper(llvm::Value *v) {
+    // handle Adds, SExts, Constant Vectors
+    if (llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(v)) {
+        if (bop->getOpcode() == llvm::Instruction::Add) {
+            return lIs32BitSafeHelper(bop->getOperand(0)) 
+                && lIs32BitSafeHelper(bop->getOperand(1));
+        }
+        return false;
+    }
+    else if (llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(v)) {
+        return sext->getOperand(0)->getType() == LLVMTypes::Int32VectorType;
+    }
+    else return lVectorIs32BitInts(v);
+}
 
 /** Check to see if the single offset vector can safely be represented with
     32-bit values.  If so, return true and update the pointed-to
@@ -1715,10 +1736,13 @@ lOffsets32BitSafe(llvm::Value **offsetPtr,
         *offsetPtr = sext->getOperand(0);
         return true;
     }
-    else if (lVectorIs32BitInts(offset)) {
+    else if (lIs32BitSafeHelper(offset)) {
         // The only constant vector we should have here is a vector of
         // all zeros (i.e. a ConstantAggregateZero, but just in case,
         // do the more general check with lVectorIs32BitInts().
+
+        // Alternatively, offset could be a sequence of adds terminating
+        // in safe constant vectors or a SExt.
         *offsetPtr =
             new llvm::TruncInst(offset, LLVMTypes::Int32VectorType,
                                 LLVMGetName(offset, "_trunc"),
