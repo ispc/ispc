@@ -1993,11 +1993,7 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // math...)
 
         // Get the "program index" vector value
-        llvm::Value *programIndex =
-            llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int i = 0; i < g->target->getVectorWidth(); ++i)
-            programIndex = ctx->InsertInst(programIndex, LLVMInt32(i), i,
-                                           "prog_index");
+        llvm::Value *programIndex = ctx->ProgramIndex();
 
         // And smear the current lane out to a vector
         llvm::Value *firstSet32 =

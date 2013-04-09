@@ -1379,6 +1379,19 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 #endif
 }
 
+llvm::Value *
+FunctionEmitContext::ProgramIndex() {
+    llvm::SmallVector<llvm::Constant*, 16> array;
+    for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
+        llvm::Constant *C = LLVMInt32(i);
+        array.push_back(C);
+    }
+
+    llvm::Constant* index = llvm::ConstantVector::get(array);
+
+    return index;
+}
+
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
@@ -1729,25 +1742,47 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
 
     llvm::Value *ret = NULL;
     llvm::Type *eltType = value->getType();
+    llvm::Type *vecType = NULL;
 
     llvm::PointerType *pt =
         llvm::dyn_cast<llvm::PointerType>(eltType);
     if (pt != NULL) {
         // Varying pointers are represented as vectors of i32/i64s
-        ret = llvm::UndefValue::get(LLVMTypes::VoidPointerVectorType);
+        vecType = LLVMTypes::VoidPointerVectorType;
         value = PtrToIntInst(value);
     }
-    else
+    else {
         // All other varying types are represented as vectors of the
         // underlying type.
-        ret = llvm::UndefValue::get(llvm::VectorType::get(eltType,
-                                                          g->target->getVectorWidth()));
-
-    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
-        llvm::Twine n = llvm::Twine("smear.") + llvm::Twine(name ? name : "") +
-            llvm::Twine(i);
-        ret = InsertInst(ret, value, i, n.str().c_str());
+        vecType = llvm::VectorType::get(eltType, g->target->getVectorWidth());
     }
+
+    // Check for a constant case.
+    if (llvm::Constant *const_val = llvm::dyn_cast<llvm::Constant>(value)) {
+        ret = llvm::ConstantVector::getSplat(
+            g->target->getVectorWidth(),
+            const_val);
+        return ret;
+    }
+
+    // Generate the follwoing sequence:
+    //   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
+    //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    //                                              <4 x i32> zeroinitializer
+    //
+    llvm::Value *undef1 = llvm::UndefValue::get(vecType);
+    llvm::Value *undef2 = llvm::UndefValue::get(vecType);
+
+    // InsertElement
+    llvm::Twine tw1 = llvm::Twine("broadcast_init.") + llvm::Twine(name ? name : "");
+    llvm::Value *insert = InsertInst(undef1, value, 0, tw1.str().c_str());
+
+    // ShuffleVector
+    llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
+        g->target->getVectorWidth(),
+        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+    llvm::Twine tw2 = llvm::Twine("broadcast.") + llvm::Twine(name ? name : "");
+    ret = ShuffleInst(insert, undef2, zeroVec, tw2.str().c_str());
 
     return ret;
 }
@@ -3126,6 +3161,27 @@ FunctionEmitContext::InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
                                              name, bblock);
     else
         ii = llvm::InsertValueInst::Create(v, eltVal, elt, name, bblock);
+    AddDebugPos(ii);
+    return ii;
+}
+
+
+llvm::Value *
+FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask,
+                                const char *name) {
+    if (v1 == NULL || v2 == NULL || mask == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    if (name == NULL) {
+        char buf[32];
+        sprintf(buf, "_shuffle");
+        name = LLVMGetName(v1, buf);
+    }
+
+    llvm::Instruction *ii = new llvm::ShuffleVectorInst(v1, v2, mask, name, bblock);
+
     AddDebugPos(ii);
     return ii;
 }

@@ -295,6 +295,10 @@ public:
         that indicates whether the two masks are equal. */
     llvm::Value *MasksAllEqual(llvm::Value *mask1, llvm::Value *mask2);
 
+    /** Generate ConstantVector, which contains ProgramIndex, i.e.
+        < i32 0, i32 1, i32 2, i32 3> */
+    llvm::Value *ProgramIndex();
+
     /** Given a string, create an anonymous global variable to hold its
         value and return the pointer to the string. */
     llvm::Value *GetStringPtr(const std::string &str);
@@ -498,6 +502,9 @@ public:
         given value is a llvm::VectorType, and to an llvm::InsertValueInst
         otherwise. */
     llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
+                            const char *name = NULL);
+
+    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask,
                             const char *name = NULL);
 
     llvm::PHINode *PhiNode(llvm::Type *type, int count,
