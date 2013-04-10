@@ -1272,11 +1272,8 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
                       const std::vector<int> &spans) {
     // Smear the uniform counter value out to be varying
     llvm::Value *counter = ctx->LoadInst(uniformCounterPtr);
-    llvm::Value *smearCounter =
-        llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-    for (int i = 0; i < g->target->getVectorWidth(); ++i)
-        smearCounter =
-            ctx->InsertInst(smearCounter, counter, i, "smear_counter");
+    llvm::Value *smearCounter = ctx->BroadcastValue(
+        counter, LLVMTypes::Int32VectorType, "smear_counter");
 
     // Figure out the offsets; this is a little bit tricky.  As an example,
     // consider a 2D tiled foreach loop, where we're running 8-wide and
@@ -1517,9 +1514,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
             lUpdateVaryingCounter(i, nDims, ctx, uniformCounterPtrs[i],
                                   dimVariables[i]->storagePtr, span);
 
-        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target->getVectorWidth(); ++j)
-            smearEnd = ctx->InsertInst(smearEnd, endVals[i], j, "smear_end");
+        llvm::Value *smearEnd = ctx->BroadcastValue(
+            endVals[i], LLVMTypes::Int32VectorType, "smear_end");
+
         // Do a vector compare of its value to the end value to generate a
         // mask for this last bit of work.
         llvm::Value *emask =
@@ -1662,9 +1659,9 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
     ctx->SetCurrentBasicBlock(bbPartial); {
         llvm::Value *varyingCounter =
             ctx->LoadInst(dimVariables[nDims-1]->storagePtr);
-        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target->getVectorWidth(); ++j)
-            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *smearEnd = ctx->BroadcastValue(
+            endVals[nDims-1], LLVMTypes::Int32VectorType, "smear_end");
+
         llvm::Value *emask =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
                          varyingCounter, smearEnd);
@@ -1758,9 +1755,8 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
         llvm::Value *varyingCounter =
             lUpdateVaryingCounter(nDims-1, nDims, ctx, uniformCounterPtrs[nDims-1],
                                   dimVariables[nDims-1]->storagePtr, span);
-        llvm::Value *smearEnd = llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-        for (int j = 0; j < g->target->getVectorWidth(); ++j)
-            smearEnd = ctx->InsertInst(smearEnd, endVals[nDims-1], j, "smear_end");
+        llvm::Value *smearEnd = ctx->BroadcastValue(
+            endVals[nDims-1], LLVMTypes::Int32VectorType, "smear_end");
         llvm::Value *emask =
             ctx->CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_SLT,
                          varyingCounter, smearEnd);
@@ -1993,7 +1989,7 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // math...)
 
         // Get the "program index" vector value
-        llvm::Value *programIndex = ctx->ProgramIndex();
+        llvm::Value *programIndex = ctx->ProgramIndexVector();
 
         // And smear the current lane out to a vector
         llvm::Value *firstSet32 =

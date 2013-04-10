@@ -1380,10 +1380,10 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 }
 
 llvm::Value *
-FunctionEmitContext::ProgramIndex() {
+FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
-        llvm::Constant *C = LLVMInt32(i);
+        llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
         array.push_back(C);
     }
 
@@ -1765,24 +1765,7 @@ FunctionEmitContext::SmearUniform(llvm::Value *value, const char *name) {
         return ret;
     }
 
-    // Generate the follwoing sequence:
-    //   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
-    //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
-    //                                              <4 x i32> zeroinitializer
-    //
-    llvm::Value *undef1 = llvm::UndefValue::get(vecType);
-    llvm::Value *undef2 = llvm::UndefValue::get(vecType);
-
-    // InsertElement
-    llvm::Twine tw1 = llvm::Twine("broadcast_init.") + llvm::Twine(name ? name : "");
-    llvm::Value *insert = InsertInst(undef1, value, 0, tw1.str().c_str());
-
-    // ShuffleVector
-    llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
-        g->target->getVectorWidth(),
-        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
-    llvm::Twine tw2 = llvm::Twine("broadcast.") + llvm::Twine(name ? name : "");
-    ret = ShuffleInst(insert, undef2, zeroVec, tw2.str().c_str());
+    ret = BroadcastValue(value, vecType, name);
 
     return ret;
 }
@@ -3187,6 +3170,45 @@ FunctionEmitContext::ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *
 }
 
 
+llvm::Value *
+FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type* vecType,
+                                    const char *name) {
+    if (v == NULL || vecType == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+    }
+
+    llvm::VectorType *ty = llvm::dyn_cast<llvm::VectorType>(vecType);
+    Assert(ty && ty->getVectorElementType() == v->getType());
+
+    if (name == NULL) {
+        char buf[32];
+        sprintf(buf, "_broadcast");
+        name = LLVMGetName(v, buf);
+    }
+
+    // Generate the follwoing sequence:
+    //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
+    //   %name.i = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    //                                              <4 x i32> zeroinitializer
+
+    llvm::Value *undef1 = llvm::UndefValue::get(vecType);
+    llvm::Value *undef2 = llvm::UndefValue::get(vecType);
+
+    // InsertElement
+    llvm::Twine tw = llvm::Twine(name) + llvm::Twine("_init");
+    llvm::Value *insert = InsertInst(undef1, v, 0, tw.str().c_str());
+
+    // ShuffleVector
+    llvm::Constant *zeroVec = llvm::ConstantVector::getSplat(
+        vecType->getVectorNumElements(),
+        llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+    llvm::Value *ret = ShuffleInst(insert, undef2, zeroVec, name);
+
+    return ret;
+}
+
+
 llvm::PHINode *
 FunctionEmitContext::PhiNode(llvm::Type *type, int count,
                              const char *name) {
@@ -3565,12 +3587,9 @@ FunctionEmitContext::addVaryingOffsetsIfNeeded(llvm::Value *ptr,
     unifSize = SmearUniform(unifSize);
 
     // Compute offset = <0, 1, .. > * unifSize
-    llvm::Value *varyingOffsets = llvm::UndefValue::get(unifSize->getType());
-    for (int i = 0; i < g->target->getVectorWidth(); ++i) {
-        llvm::Value *iValue = (g->target->is32Bit() || g->opt.force32BitAddressing) ?
-            LLVMInt32(i) : LLVMInt64(i);
-        varyingOffsets = InsertInst(varyingOffsets, iValue, i, "varying_delta");
-    }
+    bool is32bits = g->target->is32Bit() || g->opt.force32BitAddressing;
+    llvm::Value *varyingOffsets = ProgramIndexVector(is32bits);
+
     llvm::Value *offset = BinaryOperator(llvm::Instruction::Mul, unifSize,
                                          varyingOffsets);
 
