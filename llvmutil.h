@@ -264,8 +264,13 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
     constant vector.  For anything more complex (e.g. some other arbitrary
     value, it doesn't try to extract element values into the returned
     array.
+
+    This also handles common broadcast pattern:
+       %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
+       %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+                                                  <4 x i32> zeroinitializer
  */
-extern void LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
+extern void LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
                                    llvm::Value **elements);
 
 /** This is a utility routine for debugging that dumps out the given LLVM

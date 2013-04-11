@@ -601,44 +601,74 @@ lGetIntValue(llvm::Value *offset) {
 
 
 void
-LLVMFlattenInsertChain(llvm::InsertElementInst *ie, int vectorWidth,
+LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
                        llvm::Value **elements) {
-    for (int i = 0; i < vectorWidth; ++i)
+    for (int i = 0; i < vectorWidth; ++i) {
         elements[i] = NULL;
+    }
 
-    while (ie != NULL) {
-        int64_t iOffset = lGetIntValue(ie->getOperand(2));
-        Assert(iOffset >= 0 && iOffset < vectorWidth);
-        Assert(elements[iOffset] == NULL);
+    // Catch a pattern of InsertElement chain.
+    if (llvm::InsertElementInst *ie =
+            llvm::dyn_cast<llvm::InsertElementInst>(inst)) {
+        while (ie != NULL) {
+            int64_t iOffset = lGetIntValue(ie->getOperand(2));
+            Assert(iOffset >= 0 && iOffset < vectorWidth);
+            Assert(elements[iOffset] == NULL);
 
-        // Get the scalar value from this insert
-        elements[iOffset] = ie->getOperand(1);
+            // Get the scalar value from this insert
+            elements[iOffset] = ie->getOperand(1);
 
-        // Do we have another insert?
-        llvm::Value *insertBase = ie->getOperand(0);
-        ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
-        if (ie == NULL) {
-            if (llvm::isa<llvm::UndefValue>(insertBase))
-                return;
+            // Do we have another insert?
+            llvm::Value *insertBase = ie->getOperand(0);
+            ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
+            if (ie == NULL) {
+                if (llvm::isa<llvm::UndefValue>(insertBase)) {
+                    return;
+                }
 
-            // Get the value out of a constant vector if that's what we
-            // have
-            llvm::ConstantVector *cv =
-                llvm::dyn_cast<llvm::ConstantVector>(insertBase);
+                // Get the value out of a constant vector if that's what we
+                // have
+                llvm::ConstantVector *cv =
+                    llvm::dyn_cast<llvm::ConstantVector>(insertBase);
 
-            // FIXME: this assert is a little questionable; we probably
-            // shouldn't fail in this case but should just return an
-            // incomplete result.  But there aren't currently any known
-            // cases where we have anything other than an undef value or a
-            // constant vector at the base, so if that ever does happen,
-            // it'd be nice to know what happend so that perhaps we can
-            // handle it.
-            // FIXME: Also, should we handle ConstantDataVectors with
-            // LLVM3.1?  What about ConstantAggregateZero values??
-            Assert(cv != NULL);
+                // FIXME: this assert is a little questionable; we probably
+                // shouldn't fail in this case but should just return an
+                // incomplete result.  But there aren't currently any known
+                // cases where we have anything other than an undef value or a
+                // constant vector at the base, so if that ever does happen,
+                // it'd be nice to know what happend so that perhaps we can
+                // handle it.
+                // FIXME: Also, should we handle ConstantDataVectors with
+                // LLVM3.1?  What about ConstantAggregateZero values??
+                Assert(cv != NULL);
 
-            Assert(iOffset < (int)cv->getNumOperands());
-            elements[iOffset] = cv->getOperand((int32_t)iOffset);
+                Assert(iOffset < (int)cv->getNumOperands());
+                elements[iOffset] = cv->getOperand((int32_t)iOffset);
+            }
+        }
+    }
+    // Catch a pattern of broadcast implemented as InsertElement + Shuffle:
+    //   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
+    //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    //                                              <4 x i32> zeroinitializer
+    else if (llvm::ShuffleVectorInst *shuf =
+        llvm::dyn_cast<llvm::ShuffleVectorInst>(inst)) {
+        llvm::Value *indices = shuf->getOperand(2);
+        if (llvm::isa<llvm::ConstantAggregateZero>(indices)) {
+            llvm::Value *op = shuf->getOperand(0);
+            llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(op);
+            if (ie != NULL &&
+                llvm::isa<llvm::UndefValue>(ie->getOperand(0))) {
+                llvm::ConstantInt *ci =
+                    llvm::dyn_cast<llvm::ConstantInt>(ie->getOperand(2));
+
+                if (ci->isZero()) {
+                    for (int i = 0; i < vectorWidth; ++i) {
+                        elements[i] = ie->getOperand(1);
+                    }
+                    return;
+                }
+            }
         }
     }
 }
@@ -694,10 +724,10 @@ lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
     else
         Assert(LLVMVectorValuesAllEqual(val));
 
-    llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(val);
-    if (ie != NULL) {
+    if (llvm::isa<llvm::InsertElementInst>(val) ||
+        llvm::isa<llvm::ShuffleVectorInst>(val)) {
         llvm::Value *elts[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(ie, g->target->getVectorWidth(), elts);
+        LLVMFlattenInsertChain(val, g->target->getVectorWidth(), elts);
         // We just need to check the scalar first value, since we know that
         // all elements are equal
         return lIsExactMultiple(elts[0], baseValue, vectorLength,
@@ -1440,10 +1470,10 @@ lExtractFirstVectorElement(llvm::Value *v,
 
     // If we have a chain of insertelement instructions, then we can just
     // flatten them out and grab the value for the first one.
-    llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
-    if (ie != NULL) {
+    if (llvm::isa<llvm::InsertElementInst>(v) ||
+        llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(ie, vt->getNumElements(), elements);
+        LLVMFlattenInsertChain(v, vt->getNumElements(), elements);
         return elements[0];
     }
 

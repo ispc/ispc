@@ -3905,11 +3905,7 @@ lAddVaryingOffsetsIfNeeded(FunctionEmitContext *ctx, llvm::Value *ptr,
         return ptr;
 
     // Onward: compute the per lane offsets.
-    llvm::Value *varyingOffsets =
-        llvm::UndefValue::get(LLVMTypes::Int32VectorType);
-    for (int i = 0; i < g->target->getVectorWidth(); ++i)
-        varyingOffsets = ctx->InsertInst(varyingOffsets, LLVMInt32(i), i,
-                                         "varying_delta");
+    llvm::Value *varyingOffsets = ctx->ProgramIndexVector();
 
     // And finally add the per-lane offsets.  Note that we lie to the GEP
     // call and tell it that the pointers are to uniform elements and not
@@ -6768,9 +6764,8 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (!conv)
             return NULL;
 
-        llvm::Value *cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
-        for (int i = 0; i < toVector->GetElementCount(); ++i)
-            cast = ctx->InsertInst(cast, conv, i);
+        llvm::Value *cast = ctx->BroadcastValue(conv, toType->LLVMType(g->ctx));
+
         return cast;
     }
     else if (toPointerType != NULL) {

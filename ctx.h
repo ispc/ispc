@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -295,6 +295,10 @@ public:
         that indicates whether the two masks are equal. */
     llvm::Value *MasksAllEqual(llvm::Value *mask1, llvm::Value *mask2);
 
+    /** Generate ConstantVector, which contains ProgramIndex, i.e.
+        < i32 0, i32 1, i32 2, i32 3> */
+    llvm::Value *ProgramIndexVector(bool is32bits = true);
+
     /** Given a string, create an anonymous global variable to hold its
         value and return the pointer to the string. */
     llvm::Value *GetStringPtr(const std::string &str);
@@ -499,6 +503,16 @@ public:
         otherwise. */
     llvm::Value *InsertInst(llvm::Value *v, llvm::Value *eltVal, int elt,
                             const char *name = NULL);
+
+    /** This convenience method maps to an llvm::ShuffleVectorInst. */
+    llvm::Value *ShuffleInst(llvm::Value *v1, llvm::Value *v2, llvm::Value *mask,
+                            const char *name = NULL);
+
+    /** This convenience method to generate broadcast pattern. It takes a value
+        and a vector type. Type of the value must match element type of the
+        vector. */
+    llvm::Value *BroadcastValue(llvm::Value *v, llvm::Type *vecType,
+                                const char *name = NULL);
 
     llvm::PHINode *PhiNode(llvm::Type *type, int count,
                            const char *name = NULL);
