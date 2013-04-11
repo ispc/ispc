@@ -332,6 +332,15 @@ Module::CompileFile() {
             }
             fclose(f);
         }
+		else {
+			// Check stdin to EOF (it can be empty, so we need to exit)
+			char c = getchar();
+			if (c == EOF){
+				perror("empty stdin");
+				return 1;
+			}
+			ungetc(c, stdin);
+		}
 
         std::string buffer;
         llvm::raw_string_ostream os(buffer);
