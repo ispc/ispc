@@ -1058,10 +1058,10 @@ lCheckForActualPointer(llvm::Value *v) {
  */
 static llvm::Value *
 lGetBasePointer(llvm::Value *v) {
-    llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
-    if (ie != NULL) {
+    if (llvm::isa<llvm::InsertElementInst>(v) ||
+        llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(ie, g->target->getVectorWidth(), elements);
+        LLVMFlattenInsertChain(v, g->target->getVectorWidth(), elements);
 
         // Make sure none of the elements is undefined.
         // TODO: it's probably ok to allow undefined elements and return
@@ -1080,9 +1080,12 @@ lGetBasePointer(llvm::Value *v) {
     }
 
     // This case comes up with global/static arrays
-    llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v);
-    if (cv != NULL)
+    if (llvm::ConstantVector *cv = llvm::dyn_cast<llvm::ConstantVector>(v)) {
         return lCheckForActualPointer(cv->getSplatValue());
+    }
+    else if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
+        return lCheckForActualPointer(cdv->getSplatValue());
+    }
 
     return NULL;
 }
