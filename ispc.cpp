@@ -551,10 +551,9 @@ Target::GetTripleString() const {
     return triple.str();
 }
 
-
 const char *
-Target::GetISAString() const {
-    switch (m_isa) {
+Target::ISAToString(ISA isa) {
+    switch (isa) {
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
@@ -568,9 +567,14 @@ Target::GetISAString() const {
     case Target::GENERIC:
         return "generic";
     default:
-        FATAL("Unhandled target in GetISAString()");
+        FATAL("Unhandled target in ISAToString()");
     }
     return "";
+}
+
+const char *
+Target::GetISAString() const {
+    return ISAToString(m_isa);
 }
 
 

@@ -2405,20 +2405,28 @@ Module::CompileAndOutput(const char *srcFile,
             // we generate the dispatch module's functions...
         }
 
-        llvm::Module *dispatchModule =
-            lCreateDispatchModule(exportedFunctions);
-
-        lAddExtractedGlobals(dispatchModule, globals);
-
         // Find the first non-NULL target machine from the targets we
         // compiled to above.  We'll use this as the target machine for
         // compiling the dispatch module--this is safe in that it is the
         // least-common-denominator of all of the targets we compiled to.
-        llvm::TargetMachine *firstTargetMachine = targetMachines[0];
-        int i = 1;
-        while (i < Target::NUM_ISAS && firstTargetMachine == NULL)
+        llvm::TargetMachine *firstTargetMachine = NULL;
+        int i = 0;
+        const char *firstISA;
+        while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
+            firstISA = Target::ISAToString((Target::ISA) i);
             firstTargetMachine = targetMachines[i++];
+        }
         Assert(firstTargetMachine != NULL);
+
+        g->target = new Target(arch, cpu, firstISA, generatePIC);
+        if (!g->target->isValid()) {
+            return 1;
+        }
+
+        llvm::Module *dispatchModule =
+            lCreateDispatchModule(exportedFunctions);
+
+        lAddExtractedGlobals(dispatchModule, globals);
 
         if (outFileName != NULL) {
             if (outputType == Bitcode)
@@ -2427,6 +2435,10 @@ Module::CompileAndOutput(const char *srcFile,
                 writeObjectFileOrAssembly(firstTargetMachine, dispatchModule,
                                           outputType, outFileName);
         }
+
+        delete g->target;
+        g->target = NULL;
+
 
         return errorCount > 0;
     }
