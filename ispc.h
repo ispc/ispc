@@ -169,6 +169,14 @@ extern void DoAssertPos(SourcePos pos, const char *file, int line, const char *e
 */
 class Target {
 public:
+    /** Enumerator giving the instruction sets that the compiler can
+        target.  These should be ordered from "worse" to "better" in that
+        if a processor supports multiple target ISAs, then the most
+        flexible/performant of them will apear last in the enumerant.  Note
+        also that __best_available_isa() needs to be updated if ISAs are
+        added or the enumerant values are reordered.  */
+    enum ISA { SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
+
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
@@ -194,6 +202,9 @@ public:
         target. */
     llvm::TargetMachine *GetTargetMachine() const {return m_targetMachine;}
 
+    /** Convert ISA enum to string */
+    static const char *ISAToString(Target::ISA isa);
+
     /** Returns a string like "avx" encoding the target. */
     const char *GetISAString() const;
 
@@ -209,14 +220,6 @@ public:
 
     /** Mark LLVM function with target specific attribute, if required. */
     void markFuncWithTargetAttr(llvm::Function* func);
-
-    /** Enumerator giving the instruction sets that the compiler can
-        target.  These should be ordered from "worse" to "better" in that
-        if a processor supports multiple target ISAs, then the most
-        flexible/performant of them will apear last in the enumerant.  Note
-        also that __best_available_isa() needs to be updated if ISAs are
-        added or the enumerant values are reordered.  */
-    enum ISA { SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
 
     const llvm::Target *getTarget() const {return m_target;}
 
