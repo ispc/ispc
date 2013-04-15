@@ -4831,7 +4831,11 @@ MaskOpsCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (bop->getOpcode() == llvm::Instruction::Xor) {
             // Check for XOR with all-true values
             if (lIsAllTrue(bop->getOperand(1))) {
-                llvm::ArrayRef<llvm::Value *> arg(bop->getOperand(0));
+                llvm::Value *val = bop->getOperand(0);
+                // Note that ArrayRef takes reference to an object, which must live
+                // long enough, so passing return value of getOperand directly is
+                // incorrect and it actually causes crashes with gcc 4.7 and later.
+                llvm::ArrayRef<llvm::Value *> arg(val);
                 llvm::CallInst *notCall = llvm::CallInst::Create(notFunc, arg,
                                                      bop->getName());
                 ReplaceInstWithInst(iter, notCall);
