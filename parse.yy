@@ -567,7 +567,7 @@ rate_qualified_type_specifier
                 $$ = NULL;
             }
             else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
-                Error(@1, "soa<%d> width illegal.  Value must be positive power "
+                Error(@1, "soa<%d> width illegal. Value must be positive power "
                       "of two.", soaWidth);
                 $$ = NULL;
             }
