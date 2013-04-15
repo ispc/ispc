@@ -157,7 +157,7 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
             return NULL;
         }
         else if (soaWidth <= 0 || (soaWidth & (soaWidth - 1)) != 0) {
-            Error(pos, "soa<%d> width illegal.  Value must be positive power "
+            Error(pos, "soa<%d> width illegal. Value must be positive power "
                   "of two.", soaWidth);
             return NULL;
         }
