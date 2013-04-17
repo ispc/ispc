@@ -65,6 +65,14 @@
 #include <set>
 #include <algorithm>
 
+#if defined(LLVM_3_1)
+  #include <llvm/Target/TargetData.h>
+#elif defined(LLVM_3_2)
+  #include <llvm/DataLayout.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
+#endif
+
 /** Returns the width of the terminal where the compiler is running.
     Finding this out may fail in a variety of reasonable situations (piping
     compiler output to 'less', redirecting output to a file, running the
@@ -591,15 +599,36 @@ static std::set<std::string> lGetStringArray(const std::string &str) {
     return result;
 }
 
-bool VerifyDataLayoutCompatibility(const std::string &module_dl,
-                                   const std::string &lib_dl) {
+
+bool
+VerifyDataLayoutCompatibility(const std::string &module_dl,
+                              const std::string &lib_dl) {
     if (lib_dl.empty()) {
         // This is the case for most of library pre-compiled .ll files.
         return true;
     }
 
-    std::set<std::string> module_dl_set = lGetStringArray(module_dl);
-    std::set<std::string> lib_dl_set = lGetStringArray(lib_dl);
+    // Get "canonical" form. Instead of looking at "raw" DataLayout string, we
+    // look at the actual representation, as DataLayout class understands it.
+    // In the most cases there's no difference. But on x86 Windows (i386-pc-win32),
+    // clang generates a DataLayout string, which contains two definitions of f80,
+    // which contradic: f80:128:128 followed by f80:32:32. This is a bug, but
+    // correct thing to do is to interpret this exactly how LLVM would treat it,
+    // so we create a DataLayout class and take its string representation.
+#if defined(LLVM_3_1)
+    llvm::TargetData d1(module_dl);
+    llvm::TargetData d2(lib_dl);
+#else // LLVM 3.2+
+    llvm::DataLayout d1(module_dl);
+    llvm::DataLayout d2(lib_dl);
+#endif
+
+    std::string module_dl_canonic = d1.getStringRepresentation();
+    std::string lib_dl_canonic = d2.getStringRepresentation();
+
+    // Break down DataLayout strings to separate type definitions.
+    std::set<std::string> module_dl_set = lGetStringArray(module_dl_canonic);
+    std::set<std::string> lib_dl_set = lGetStringArray(lib_dl_canonic);
 
     // For each element in library data layout, find matching module element.
     // If no match is found, then we are in trouble and the library can't be used.
