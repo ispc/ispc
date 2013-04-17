@@ -209,6 +209,29 @@ lSignal(void *) {
 }
 
 
+static void
+lParseInclude(const char *path) {
+#ifdef ISPC_IS_WINDOWS
+    char delim = ';';
+#else
+    char delim = ':';
+#endif
+    size_t pos = 0, pos_end;
+    std::string str_path(path);
+    do {
+        pos_end = str_path.find(delim, pos);
+        size_t len = (pos_end == std::string::npos) ?
+            // Not found, copy till end of the string.
+            std::string::npos :
+            // Copy [pos, pos_end).
+            (pos_end - pos);
+        std::string s = str_path.substr(pos, len);
+        g->includePath.push_back(s);
+        pos = pos_end+1;
+    } while (pos_end != std::string::npos);
+}
+
+
 int main(int Argc, char *Argv[]) {
     int argc;
     char *argv[128];
@@ -292,10 +315,10 @@ int main(int Argc, char *Argv[]) {
                 fprintf(stderr, "No path specified after -I option.\n");
                 usage(1);
             }
-            g->includePath.push_back(argv[i]);
+            lParseInclude(argv[i]);
         }
         else if (!strncmp(argv[i], "-I", 2))
-            g->includePath.push_back(argv[i]+2);
+            lParseInclude(argv[i]+2);
         else if (!strcmp(argv[i], "--fuzz-test"))
             g->enableFuzzTest = true;
         else if (!strncmp(argv[i], "--fuzz-seed=", 12))
