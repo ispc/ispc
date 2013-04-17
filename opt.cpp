@@ -2457,18 +2457,24 @@ lGSToLoadStore(llvm::CallInst *callInst) {
             ptr = new llvm::BitCastInst(ptr, llvm::PointerType::get(gatherInfo->scalarType, 0),
                                         ptr->getName(), callInst);
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
-            llvm::Value *vecValue = llvm::UndefValue::get(callInst->getType());
-            for (int i = 0; i < g->target->getVectorWidth(); ++i) {
-                if (i < g->target->getVectorWidth() - 1)
-                    vecValue = llvm::InsertElementInst::Create(vecValue, scalarValue, LLVMInt32(i),
-                                                               callInst->getName(), callInst);
-                else
-                    vecValue = llvm::InsertElementInst::Create(vecValue, scalarValue, LLVMInt32(i),
-                                                               callInst->getName());
-            }
-            lCopyMetadata(vecValue, callInst);
+
+            // Generate the follwoing sequence:
+            //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
+            //   %name.i = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+            //                                              <4 x i32> zeroinitializer
+            llvm::Value *undef1Value = llvm::UndefValue::get(callInst->getType());
+            llvm::Value *undef2Value = llvm::UndefValue::get(callInst->getType());
+            llvm::Value *insertVec = llvm::InsertElementInst::Create(
+                undef1Value, scalarValue, LLVMInt32(0), callInst->getName(), callInst);
+            llvm::Value *zeroMask = llvm::ConstantVector::getSplat(
+                callInst->getType()->getVectorNumElements(),
+                llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+            llvm::Value *shufValue = new llvm::ShuffleVectorInst(
+                insertVec, undef2Value, zeroMask, callInst->getName());
+
+            lCopyMetadata(shufValue, callInst);
             llvm::ReplaceInstWithInst(callInst,
-                                      llvm::dyn_cast<llvm::Instruction>(vecValue));
+                                      llvm::dyn_cast<llvm::Instruction>(shufValue));
             return true;
         }
         else {
