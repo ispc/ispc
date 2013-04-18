@@ -3187,9 +3187,9 @@ FunctionEmitContext::BroadcastValue(llvm::Value *v, llvm::Type* vecType,
         name = LLVMGetName(v, buf);
     }
 
-    // Generate the follwoing sequence:
+    // Generate the following sequence:
     //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
-    //   %name.i = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+    //   %name.i = shufflevector <4 x i32> %name_init.i, <4 x i32> undef,
     //                                              <4 x i32> zeroinitializer
 
     llvm::Value *undef1 = llvm::UndefValue::get(vecType);

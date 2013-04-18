@@ -2458,9 +2458,9 @@ lGSToLoadStore(llvm::CallInst *callInst) {
                                         ptr->getName(), callInst);
             llvm::Value *scalarValue = new llvm::LoadInst(ptr, callInst->getName(), callInst);
 
-            // Generate the follwoing sequence:
-            //   %name_init.i = insertelement <4 x i32> undef, i32 %val, i32 0
-            //   %name.i = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
+            // Generate the following sequence:
+            //   %name123 = insertelement <4 x i32> undef, i32 %val, i32 0
+            //   %name124 = shufflevector <4 x i32> %name123, <4 x i32> undef,
             //                                              <4 x i32> zeroinitializer
             llvm::Value *undef1Value = llvm::UndefValue::get(callInst->getType());
             llvm::Value *undef2Value = llvm::UndefValue::get(callInst->getType());
