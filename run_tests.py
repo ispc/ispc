@@ -148,10 +148,9 @@ finished_tests_counter_lock = multiprocessing.Lock()
 
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
-def update_progress(fn):
-    global total_tests
+def update_progress(fn, total_tests_argument):
     finished_tests_counter.value = finished_tests_counter.value + 1
-    progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests, fn)
+    progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests_argument, fn)
     # spaces to clear out detrius from previous printing...
     for x in range(30):
         progress_str += ' '
@@ -344,7 +343,7 @@ def run_test(testname):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret):
+def run_tasks_from_queue(queue, queue_ret, total_tests_argument):
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
         os.mkdir(tmpdir)
@@ -376,7 +375,7 @@ def run_tasks_from_queue(queue, queue_ret):
             run_error_files += [ filename ]
 
         with finished_tests_counter_lock:
-            update_progress(filename)
+            update_progress(filename, total_tests_argument)
 
 task_threads = []
 
@@ -408,7 +407,7 @@ if __name__ == '__main__':
 
     # launch jobs to run tests
     for x in range(nthreads):
-        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret))
+        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret,total_tests))
         task_threads.append(t)
         t.start()
 
