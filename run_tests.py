@@ -69,7 +69,8 @@ if not os.path.exists(ispc_exe):
 
 ispc_exe += " " + options.ispc_flags
 
-print ispc_exe
+if __name__ == '__main__':
+    print "ispc compiler: %s\n" % ispc_exe
 
 is_generic_target = (options.target.find("generic-") != -1 and
                      options.target != "generic-1")
@@ -135,6 +136,13 @@ else:
         else:
             files += [ f ]
 
+# max_test_length is used to issue exact number of whitespace characters when
+# updating status. Otherwise update causes new lines standard 80 char terminal
+# on both Linux and Windows.
+max_test_length = 0
+for f in files:
+    max_test_length = max(max_test_length, len(f))
+
 # randomly shuffle the tests if asked to do so
 if (options.random):
     random.seed()
@@ -148,11 +156,12 @@ finished_tests_counter_lock = multiprocessing.Lock()
 
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
-def update_progress(fn, total_tests_argument):
+def update_progress(fn, total_tests_arg, max_test_length_arg):
     finished_tests_counter.value = finished_tests_counter.value + 1
-    progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests_argument, fn)
+    progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests_arg, fn)
     # spaces to clear out detrius from previous printing...
-    for x in range(30):
+    spaces_needed = max_test_length_arg - len(fn)
+    for x in range(spaces_needed):
         progress_str += ' '
     progress_str += '\r'
     sys.stdout.write(progress_str)
@@ -343,7 +352,7 @@ def run_test(testname):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, total_tests_argument):
+def run_tasks_from_queue(queue, queue_ret, total_tests_arg,max_test_length_arg):
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
         os.mkdir(tmpdir)
@@ -375,7 +384,7 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_argument):
             run_error_files += [ filename ]
 
         with finished_tests_counter_lock:
-            update_progress(filename, total_tests_argument)
+            update_progress(filename, total_tests_arg,max_test_length_arg)
 
 task_threads = []
 
@@ -407,7 +416,7 @@ if __name__ == '__main__':
 
     # launch jobs to run tests
     for x in range(nthreads):
-        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret,total_tests))
+        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret,total_tests,max_test_length))
         task_threads.append(t)
         t.start()
 
