@@ -151,14 +151,12 @@ if (options.random):
 # counter
 total_tests = 0
 
-finished_tests_counter = multiprocessing.Value(c_int)
-finished_tests_counter_lock = multiprocessing.Lock()
 
 # utility routine to print an update on the number of tests that have been
 # finished.  Should be called with the lock held..
-def update_progress(fn, total_tests_arg, max_test_length_arg):
-    finished_tests_counter.value = finished_tests_counter.value + 1
-    progress_str = " Done %d / %d [%s]" % (finished_tests_counter.value, total_tests_arg, fn)
+def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
+    counter.value += 1
+    progress_str = " Done %d / %d [%s]" % (counter.value, total_tests_arg, fn)
     # spaces to clear out detrius from previous printing...
     spaces_needed = max_test_length_arg - len(fn)
     for x in range(spaces_needed):
@@ -352,7 +350,7 @@ def run_test(testname):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, total_tests_arg,max_test_length_arg):
+def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg, counter, mutex):
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
         os.mkdir(tmpdir)
@@ -383,8 +381,8 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg,max_test_length_arg):
         if run_error != 0:
             run_error_files += [ filename ]
 
-        with finished_tests_counter_lock:
-            update_progress(filename, total_tests_arg,max_test_length_arg)
+        with mutex:
+            update_progress(filename, total_tests_arg, counter, max_test_length_arg)
 
 task_threads = []
 
@@ -414,9 +412,12 @@ if __name__ == '__main__':
     # we're interrupted
     signal.signal(signal.SIGINT, sigint)
 
+    finished_tests_counter = multiprocessing.Value(c_int)
+    finished_tests_counter_lock = multiprocessing.Lock()
+
     # launch jobs to run tests
     for x in range(nthreads):
-        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q,qret,total_tests,max_test_length))
+        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, total_tests, max_test_length, finished_tests_counter, finished_tests_counter_lock))
         task_threads.append(t)
         t.start()
 
