@@ -55,10 +55,12 @@ parser.add_option('--wrap-exe', dest='wrapexe',
 
 (options, args) = parser.parse_args()
 
+# use relative path to not depend on host directory, which may possibly
+# have white spaces and unicode characters.
 if not is_windows:
     ispc_exe = "./ispc"
 else:
-    ispc_exe = "../Release/ispc.exe"
+    ispc_exe = ".\\Release\\ispc.exe"
 
 # checks the required ispc compiler otherwise prints an error message
 if not os.path.exists(ispc_exe):
@@ -90,7 +92,7 @@ if is_generic_target and options.include_file == None:
 
 if options.compiler_exe == None:
     if is_windows:
-        options.compiler_exe = "cl"
+        options.compiler_exe = "cl.exe"
     else:
         options.compiler_exe = "g++"
 
@@ -99,34 +101,29 @@ PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
 compiler_exists = False
 
 for counter in PATH_dir:
-	if os.path.exists(counter + os.sep + options.compiler_exe):
-		compiler_exists = True
-		break
+    if os.path.exists(counter + os.sep + options.compiler_exe):
+        compiler_exists = True
+        break
 
 if not compiler_exists:
-	sys.stderr.write("Fatal error: missing the required compiler: %s \n" % 
-		options.compiler_exe)
-	sys.exit()
+    sys.stderr.write("Fatal error: missing the required compiler: %s \n" %
+        options.compiler_exe)
+    sys.exit()
 
-def fix_windows_paths(files):
-    ret = [ ]
-    for fn in files:
-        ret += [ string.replace(fn, '\\', '/') ]
-    return ret
-
+ispc_root = "."
     
 # if no specific test files are specified, run all of the tests in tests/,
 # failing_tests/, and tests_errors/
 if len(args) == 0:
-    files = glob.glob("tests/*ispc") + glob.glob("failing_tests/*ispc") + \
-        glob.glob("tests_errors/*ispc")
-    files = fix_windows_paths(files)
+    files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
+        glob.glob(ispc_root + os.sep + "failing_tests" + os.sep + "*ispc") + \
+        glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
 else:
     if is_windows:
         argfiles = [ ]
         for f in args:
             # we have to glob ourselves if this is being run under a DOS
-            # shell..
+            # shell, as it passes wildcard as is.
             argfiles += glob.glob(f)
     else:
         argfiles = args
@@ -165,7 +162,18 @@ def update_progress(fn):
 def run_command(cmd):
     if options.verbose:
         sys.stdout.write("Running: %s\n" % cmd)
-    sp = subprocess.Popen(shlex.split(cmd), stdin=None,
+
+    # Here's a bit tricky part. To pass a command for execution we should
+    # break down the line in to arguments. shlex class is designed exactly
+    # for this purpose, but by default it interprets escape sequences.
+    # On Windows backslaches are all over the place and they are treates as
+    # ESC-sequences, so we have to set manually to not interpret them.
+    lexer = shlex.shlex(cmd, posix=True)
+    lexer.whitespace_split = True
+    lexer.escape = ''
+    arg_list = list(lexer)
+
+    sp = subprocess.Popen(arg_list, stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE)
     out = sp.communicate()
@@ -203,23 +211,30 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         return (0, 0)
 
 
-def run_test(filename):
+def run_test(testname):
     global is_windows
     if is_windows:
-        input_prefix = "../"
+        # On Windows we run tests in tmp dir, so the root is one level up.
+        input_prefix = "..\\"
     else:
         input_prefix = ""
-        
+
+    # testname is a path to the test from the root of ispc dir
+    # filename is a path to the test from the current dir
+    # ispc_exe_rel is a relative path to ispc
+    filename = os.path.normpath(input_prefix + testname)
+    ispc_exe_rel = os.path.normpath(input_prefix + ispc_exe)
+
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
     if want_error == True:
-        ispc_cmd = ispc_exe + " --werror --nowrap %s --arch=%s --target=%s" % \
-            (input_prefix + filename, options.arch, options.target)
+        ispc_cmd = ispc_exe_rel + " --werror --nowrap %s --arch=%s --target=%s" % \
+            (filename, options.arch, options.target)
         (return_code, output) = run_command(ispc_cmd)
         got_error = (return_code != 0)
 
         # figure out the error message we're expecting
-        file = open(input_prefix + filename, 'r')
+        file = open(filename, 'r')
         firstline = file.readline()
         firstline = firstline.replace("//", "")
         firstline = firstline.lstrip()
@@ -228,22 +243,22 @@ def run_test(filename):
 
         if (output.find(firstline) == -1):
             sys.stderr.write("Didn't see expected error message %s from test %s.\nActual output:\n%s\n" % \
-                (firstline, filename, output))
+                (firstline, testname, output))
             return (1, 0)
         elif got_error == False:
-            sys.stderr.write("Unexpectedly no errors issued from test %s\n" % filename)
+            sys.stderr.write("Unexpectedly no errors issued from test %s\n" % testname)
             return (1, 0)
         else:
             return (0, 0)
     else:
         # do we expect this test to fail?
-        should_fail = (filename.find("failing_") != -1)
+        should_fail = (testname.find("failing_") != -1)
 
         # We need to figure out the signature of the test
         # function that this test has.
         sig2def = { "f_v(" : 0, "f_f(" : 1, "f_fu(" : 2, "f_fi(" : 3, 
                     "f_du(" : 4, "f_duf(" : 5, "f_di(" : 6 }
-        file = open(input_prefix + filename, 'r')
+        file = open(filename, 'r')
         match = -1
         for line in file:
             # look for lines with 'export'...
@@ -258,26 +273,27 @@ def run_test(filename):
         file.close()
         if match == -1:
             sys.stderr.write("Fatal error: unable to find function signature " + \
-                  "in test %s\n" % filename)
+                  "in test %s\n" % testname)
             return (1, 0)
         else:
             global is_generic_target
-            if is_generic_target:
-                obj_name = "%s.cpp" % filename
-
             if is_windows:
-                if not is_generic_target:
-                    obj_name = "%s%s.obj" % (input_prefix, filename)
-                exe_name = "%s%s.exe" % (input_prefix, filename)
+                if is_generic_target:
+                    obj_name = "%s.cpp" % os.path.basename(filename)
+                else:
+                    obj_name = "%s.obj" % os.path.basename(filename)
+                exe_name = "%s.exe" % os.path.basename(filename)
 
                 cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
                          (options.compiler_exe, match, input_prefix, obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
-                if not is_generic_target:
-                    obj_name = "%s.o" % filename
-                exe_name = "%s.run" % filename
+                if is_generic_target:
+                    obj_name = "%s.cpp" % testname
+                else:
+                    obj_name = "%s.o" % testname
+                exe_name = "%s.run" % testname
 
                 if options.arch == 'x86':
                     gcc_arch = '-m32'
@@ -300,25 +316,25 @@ def run_test(filename):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
 
-            ispc_cmd = ispc_exe + " --woff %s -o %s --arch=%s --target=%s" % \
-                       (input_prefix+filename, obj_name, options.arch, options.target)
+            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
+                       (filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % options.include_file
+                ispc_cmd += " --emit-c++ --c++-include-file=%s" % os.path.normpath(input_prefix + options.include_file)
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
                                               options.wrapexe + " " + exe_name, \
-                                              filename, should_fail)
+                                              testname, should_fail)
 
         # clean up after running the test
         try:
             if not run_error:
                 os.unlink(exe_name)
                 if is_windows:
-                    os.unlink("%s%s.pdb" % (input_prefix, filename))
-                    os.unlink("%s%s.ilk" % (input_prefix, filename))
+                    os.unlink("%s.pdb" % filename)
+                    os.unlink("%s.ilk" % filename)
             os.unlink(obj_name)
         except:
             None
@@ -381,8 +397,6 @@ if __name__ == '__main__':
     # put each of the test filenames into a queue
     q = multiprocessing.Queue()
     for fn in files:
-        if is_windows:
-            fn = fn.replace("\\",'/')
         q.put(fn)
     for x in range(nthreads):
         q.put('STOP')
