@@ -70,7 +70,7 @@ if not os.path.exists(ispc_exe):
 ispc_exe += " " + options.ispc_flags
 
 if __name__ == '__main__':
-    print "ispc compiler: %s\n" % ispc_exe
+    sys.stdout.write("ispc compiler: %s\n" % ispc_exe)
 
 is_generic_target = (options.target.find("generic-") != -1 and
                      options.target != "generic-1")
