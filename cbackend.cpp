@@ -2048,7 +2048,6 @@ static void generateCompilerSpecificCode(llvm::formatted_raw_ostream& Out,
                               "__builtin_prefetch(addr,rw,locality)\n"
       << "//#define __ATTRIBUTE_CTOR__ __attribute__((constructor))\n"
       << "//#define __ATTRIBUTE_DTOR__ __attribute__((destructor))\n"
-      << "//#define LLVM_ASM           __asm__\n"
       << "#elif defined(_MSC_VER) || defined(__INTEL_COMPILER)\n"
       << "#include <limits>\n"
       << "#define LLVM_NAN(NanStr)   std::numeric_limits<double>::quiet_NaN()\n"
@@ -2060,9 +2059,17 @@ static void generateCompilerSpecificCode(llvm::formatted_raw_ostream& Out,
       << "//#define LLVM_PREFETCH(addr,rw,locality)            /* PREFETCH */\n"
       << "//#define __ATTRIBUTE_CTOR__\n"
       << "//#define __ATTRIBUTE_DTOR__\n"
-      << "//#define LLVM_ASM(X)\n"
       << "#else\n"
       << "#error \"Not MSVC, clang, or g++?\"\n"
+      << "#endif\n\n";
+
+  // LLVM_ASM() is used to define mapping of the symbol to a different name,
+  // this is expected to be MacOS-only feature. So defining it only for
+  // gcc and clang (Intel Compiler on Linux/MacOS is also ok).
+  // For example, this feature is required to translate symbols described in
+  // "Symbol Variants Release Notes" document (on Apple website).
+  Out << "#if (defined(__GNUC__) || defined(__clang__))\n"
+      << "#define LLVM_ASM(X) __asm(X)\n"
       << "#endif\n\n";
 
   Out << "#if defined(__clang__) || defined(__INTEL_COMPILER) || "
@@ -2404,6 +2411,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
     if (I->hasHiddenVisibility())
       Out << " __HIDDEN__";
 
+    // This is MacOS specific feature, this should not appear on other platforms.
     if (I->hasName() && I->getName()[0] == 1)
       Out << " LLVM_ASM(\"" << I->getName().substr(1) << "\")";
 
