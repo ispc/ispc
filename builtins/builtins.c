@@ -50,6 +50,16 @@
     available to ispc programs at compile time automatically.
   */
 
+#ifdef _MSC_VER
+// We do want old school sprintf and don't want secure Microsoft extensions.
+// And we also don't want warnings about it, so the define.
+#define _CRT_SECURE_NO_WARNINGS
+#else
+// Some versions of glibc has "fortification" feature, which expands sprintf
+// to __builtin___sprintf_chk(..., __builtin_object_size(...), ...).
+// We don't want this kind of expansion, as we don't support these intrinsics.
+#define _FORTIFY_SOURCE 0
+#endif
 
 #ifndef _MSC_VER
 #include <unistd.h>
