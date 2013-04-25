@@ -2536,11 +2536,11 @@ ok:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; new/delete
 
-declare i8 * @malloc(i64)
+declare noalias i8 * @malloc(i64)
 declare void @free(i8 *)
 
-define i8 * @__new_uniform(i64 %size) {
-  %a = call i8 * @malloc(i64 %size)
+define noalias i8 * @__new_uniform(i64 %size) {
+  %a = call noalias i8 * @malloc(i64 %size)
   ret i8 * %a
 }
 
@@ -2552,7 +2552,7 @@ define <WIDTH x i64> @__new_varying32(<WIDTH x i32> %size, <WIDTH x MASK> %mask)
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
-    %ptr_LANE_ID = call i8 * @malloc(i64 %sz64_LANE_ID)
+    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz64_LANE_ID)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2568,7 +2568,7 @@ define <WIDTH x i64> @__new_varying64(<WIDTH x i64> %size, <WIDTH x MASK> %mask)
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
-    %ptr_LANE_ID = call i8 * @malloc(i64 %sz_LANE_ID)
+    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz_LANE_ID)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
