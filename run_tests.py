@@ -398,6 +398,7 @@ if __name__ == '__main__':
     run_error_files = [ ]
 
     nthreads = min(multiprocessing.cpu_count(), options.num_jobs)
+    nthreads = min(nthreads, len(files))
     sys.stdout.write("Running %d jobs in parallel. Running %d tests.\n" % (nthreads, total_tests))
 
     # put each of the test filenames into a queue
