@@ -339,8 +339,9 @@ def run_test(testname):
             if not run_error:
                 os.unlink(exe_name)
                 if is_windows:
-                    os.unlink("%s.pdb" % filename)
-                    os.unlink("%s.ilk" % filename)
+                    basename = os.path.basename(filename)
+                    os.unlink("%s.pdb" % basename)
+                    os.unlink("%s.ilk" % basename)
             os.unlink(obj_name)
         except:
             None
@@ -367,8 +368,12 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
             if is_windows:
                 try:
                     os.remove("test_static.obj")
-                    os.remove("/vc100.pdb")
+                    # vc*.pdb trick is in anticipaton of new versions of VS.
+                    vcpdb = glob.glob("vc*.pdb")[0]
+                    os.remove(vcpdb)
                     os.chdir("..")
+                    # This will fail if there were failing tests or
+                    # Windows is in bad mood.
                     os.rmdir(tmpdir)
                 except:
                     None
