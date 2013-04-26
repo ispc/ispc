@@ -2548,7 +2548,6 @@ ifelse(BUILD_OS, `UNIX',
 `
 
 declare i32 @posix_memalign(i8**, i32, i32)
-declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
