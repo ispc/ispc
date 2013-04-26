@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2012, Intel Corporation
+;;  Copyright (c) 2010-2013, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -2536,13 +2536,19 @@ ok:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; new/delete
 
-;; Set of function for 32 bit runtime
+;; Set of functions for 32 bit runtime.
+;; They are different for Windows and Unix (Linux/MacOS),
+;; on Windows we have to use _aligned_malloc/_aligned_free,
+;; while on Unix we use posix_memalign/free
+;;
+;; Note that this should be really two different libraries for 32 and 64
+;; environment and it should happen sooner or later
 
 ifelse(BUILD_OS, `UNIX', 
 `
 
-;; posix_memalign is for 32 bit runtime
 declare i32 @posix_memalign(i8**, i32, i32)
+declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
@@ -2567,10 +2573,62 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   ret <WIDTH x i64> %r
 }
 
+define void @__delete_uniform_32rt(i8 * %ptr) {
+  call void @free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
 ',
 BUILD_OS, `WINDOWS',
 `
-;; Windows version TBD
+declare i8* @_aligned_malloc(i32, i32)
+declare void @_aligned_free(i8 *)
+
+define noalias i8 * @__new_uniform_32rt(i64 %size) {
+  %conv = trunc i64 %size to i32
+  %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 16)
+  ret i8* %ptr
+}
+
+define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 16)
+    %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define void @__delete_uniform_32rt(i8 * %ptr) {
+  call void @_aligned_free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @_aligned_free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
 ',
 `
 errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
@@ -2578,10 +2636,11 @@ errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
 m4exit(`1')
 ')
 
-;; Set of function for 64 bit runtime
+;; Set of functions for 64 bit runtime
+;; We use the same standard malloc/free pair on all platforms (Windows/Linux/MacOS).
 
-;; malloc is for 64 bit runtime
 declare noalias i8 * @malloc(i64)
+declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
   %a = call noalias i8 * @malloc(i64 %size)
@@ -2621,17 +2680,12 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   ret <WIDTH x i64> %r
 }
 
-;; Functions for both 32 and 64 bit runtimes.
-
-;; free works fine with both 32 and 64 bit runtime
-declare void @free(i8 *)
-
-define void @__delete_uniform(i8 * %ptr) {
+define void @__delete_uniform_64rt(i8 * %ptr) {
   call void @free(i8 * %ptr)
   ret void
 }
 
-define void @__delete_varying(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
       %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
       %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
