@@ -477,6 +477,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
 
         // Set is32Bit
+        // This indicates if we are compiling for 32 bit platform
+        // and can assume 32 bit runtime.
+        // FIXME: all generic targets are handled as 64 bit, which is incorrect.
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2)

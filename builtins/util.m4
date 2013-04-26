@@ -2536,15 +2536,59 @@ ok:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; new/delete
 
-declare noalias i8 * @malloc(i64)
-declare void @free(i8 *)
+;; Set of function for 32 bit runtime
 
-define noalias i8 * @__new_uniform(i64 %size) {
+ifelse(BUILD_OS, `UNIX', 
+`
+
+;; posix_memalign is for 32 bit runtime
+declare i32 @posix_memalign(i8**, i32, i32)
+
+define noalias i8 * @__new_uniform_32rt(i64 %size) {
+  %ptr = alloca i8*
+  %conv = trunc i64 %size to i32
+  %call1 = call i32 @posix_memalign(i8** %ptr, i32 16, i32 %conv)
+  %ptr_val = load i8** %ptr
+  ret i8* %ptr_val
+}
+
+define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 16, i32 %sz_LANE_ID)')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+',
+BUILD_OS, `WINDOWS',
+`
+;; Windows version TBD
+',
+`
+errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
+')
+m4exit(`1')
+')
+
+;; Set of function for 64 bit runtime
+
+;; malloc is for 64 bit runtime
+declare noalias i8 * @malloc(i64)
+
+define noalias i8 * @__new_uniform_64rt(i64 %size) {
   %a = call noalias i8 * @malloc(i64 %size)
   ret i8 * %a
 }
 
-define <WIDTH x i64> @__new_varying32(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
@@ -2561,7 +2605,7 @@ define <WIDTH x i64> @__new_varying32(<WIDTH x i32> %size, <WIDTH x MASK> %mask)
   ret <WIDTH x i64> %r
 }
 
-define <WIDTH x i64> @__new_varying64(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
+define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
@@ -2576,6 +2620,11 @@ define <WIDTH x i64> @__new_varying64(<WIDTH x i64> %size, <WIDTH x MASK> %mask)
   %r = load <WIDTH x i64> * %ret
   ret <WIDTH x i64> %r
 }
+
+;; Functions for both 32 and 64 bit runtimes.
+
+;; free works fine with both 32 and 64 bit runtime
+declare void @free(i8 *)
 
 define void @__delete_uniform(i8 * %ptr) {
   call void @free(i8 * %ptr)

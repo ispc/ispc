@@ -182,7 +182,7 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 
 objs/builtins-%.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
-	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) $< | python bitcode2cpp.py $< > $@
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
 objs/builtins-c-32.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
