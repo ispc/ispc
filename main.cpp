@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2010-2012, Intel Corporation
+  Copyright (c) 2010-2013, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -272,6 +272,7 @@ int main(int Argc, char *Argv[]) {
             g->cppArgs.push_back(argv[i]);
         else if (!strncmp(argv[i], "--addressing=", 13)) {
             if (atoi(argv[i] + 13) == 64)
+                // FIXME: this doesn't make sense on 32 bit platform.
                 g->opt.force32BitAddressing = false;
             else if (atoi(argv[i] + 13) == 32)
                 g->opt.force32BitAddressing = true;
