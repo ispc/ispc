@@ -3234,7 +3234,12 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // __delete_uniform() from the builtins expects.
         exprValue = ctx->BitCastInst(exprValue, LLVMTypes::VoidPointerType,
                                      "ptr_to_void");
-        llvm::Function *func = m->module->getFunction("__delete_uniform");
+        llvm::Function *func;
+        if (g->target->is32Bit()) {
+            func = m->module->getFunction("__delete_uniform_32rt");
+        } else {
+            func = m->module->getFunction("__delete_uniform_64rt");
+        }
         AssertPos(pos, func != NULL);
 
         ctx->CallInst(func, NULL, exprValue, "");
@@ -3244,7 +3249,12 @@ DeleteStmt::EmitCode(FunctionEmitContext *ctx) const {
         // takes a vector of i64s (even for 32-bit targets).  Therefore, we
         // only need to extend to 64-bit values on 32-bit targets before
         // calling it.
-        llvm::Function *func = m->module->getFunction("__delete_varying");
+        llvm::Function *func;
+        if (g->target->is32Bit()) {
+            func = m->module->getFunction("__delete_varying_32rt");
+        } else {
+            func = m->module->getFunction("__delete_varying_64rt");
+        }
         AssertPos(pos, func != NULL);
         if (g->target->is32Bit())
             exprValue = ctx->ZExtInst(exprValue, LLVMTypes::Int64VectorType,

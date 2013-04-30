@@ -8214,16 +8214,24 @@ NewExpr::GetValue(FunctionEmitContext *ctx) const {
     // varying, and taking 32-bit or 64-bit allocation counts.
     llvm::Function *func;
     if (isVarying) {
-        if (do32Bit)
-            func = m->module->getFunction("__new_varying32");
-        else
-            func = m->module->getFunction("__new_varying64");
+        if (g->target->is32Bit()) {
+            func = m->module->getFunction("__new_varying32_32rt");
+        } else if (g->opt.force32BitAddressing) {
+            func = m->module->getFunction("__new_varying32_64rt");
+        } else {
+            func = m->module->getFunction("__new_varying64_64rt");
+        }
     }
     else {
+        // FIXME: __new_uniform_32rt should take i32
         if (allocSize->getType() != LLVMTypes::Int64Type)
             allocSize = ctx->SExtInst(allocSize, LLVMTypes::Int64Type,
                                       "alloc_size64");
-        func = m->module->getFunction("__new_uniform");
+        if (g->target->is32Bit()) {
+            func = m->module->getFunction("__new_uniform_32rt");
+        } else {
+            func = m->module->getFunction("__new_uniform_64rt");
+        }
     }
     AssertPos(pos, func != NULL);
 
