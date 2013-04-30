@@ -2906,8 +2906,11 @@ FunctionEmitContext::scatter(llvm::Value *value, llvm::Value *ptr,
 
     const PointerType *pt = CastType<PointerType>(valueType);
 
-    // And everything should be a pointer or atomic from here on out...
-    AssertPos(currentPos, pt != NULL || CastType<AtomicType>(valueType) != NULL);
+    // And everything should be a pointer or atomic (or enum) from here on out...
+    AssertPos(currentPos, 
+              pt != NULL 
+              || CastType<AtomicType>(valueType) != NULL
+              || CastType<EnumType>(valueType) != NULL);
 
     llvm::Type *type = value->getType();
     const char *funcName = NULL;
