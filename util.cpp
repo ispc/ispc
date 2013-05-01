@@ -232,6 +232,7 @@ static void
 lPrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #ifdef ISPC_IS_WINDOWS
     fputs(buf, out);
+    fputs("\n", out);
 #else
     int column = 0;
     int width = std::max(40, columnWidth - 2);
