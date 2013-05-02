@@ -968,7 +968,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
           return 1;
         }
         if (fileType != NULL)
-            Warning(SourcePos(), "Warning: emitting %s file, but filename \"%s\" "
+            Warning(SourcePos(), "Emitting %s file, but filename \"%s\" "
                     "has suffix \"%s\"?", fileType, outFileName, suffix);
     }
 
@@ -2325,7 +2325,7 @@ Module::CompileAndOutput(const char *srcFile,
     }
     else {
         if (outputType == CXX) {
-            Error(SourcePos(), "Illegal to specify more then one target when "
+            Error(SourcePos(), "Illegal to specify more than one target when "
                   "compiling C++ output.");
             return 1;
         }

@@ -974,7 +974,8 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
-      if (g->target->getISA() == Target::GENERIC&&g->target->getVectorWidth()!=1) { // 1 wide uses x86 stdlib
+        if (g->target->getISA() == Target::GENERIC &&
+            g->target->getVectorWidth() != 1) { // 1 wide uses x86 stdlib
             extern char stdlib_generic_code[];
             yy_scan_string(stdlib_generic_code);
             yyparse();
