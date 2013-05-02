@@ -34,8 +34,6 @@
 ;; builtins for various targets can use macros from this file to simplify
 ;; generating code for their implementations of those builtins.
 
-declare i1 @__is_compile_time_constant_uniform_int32(i32)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
@@ -820,6 +818,8 @@ define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
 ;; count trailing zeros
 
 define(`ctlztz', `
+declare_count_zeros()
+
 define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.cttz.i32(i32 %0)
   ret i32 %c
@@ -1548,6 +1548,7 @@ declare void @ISPCSync(i8*) nounwind
 declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
+declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
 define void @__pause() nounwind readnone {
@@ -3350,13 +3351,26 @@ done:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
-; count leading/trailing zeros
+;; count leading/trailing zeros
+;; Macros declares set of count-trailing and count-leading zeros.
+;; Macros behaves as a static functon - it works only at first invokation
+;; to avoid redifinition.
+define(`declare_count_zeros', `
+ifelse(count_zeros_are_defined, true, `',
+`
 declare i32 @llvm.ctlz.i32(i32)
 declare i64 @llvm.ctlz.i64(i64)
 declare i32 @llvm.cttz.i32(i32)
 declare i64 @llvm.cttz.i64(i64)
 
+define(`count_zeros_are_defined', true)
+')
+
+')
+
 define(`reduce_equal_aux', `
+declare_count_zeros()
+
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:
