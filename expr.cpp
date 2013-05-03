@@ -3486,10 +3486,38 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 
+llvm::Value *
+FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
+    if (GetLValueType() != NULL) {
+        return GetValue(ctx);
+    }
+    else {
+        // Only be a valid LValue type if the function
+        // returns a pointer or reference.
+        return NULL;
+    }
+}
+ 
+
 const Type *
 FunctionCallExpr::GetType() const {
     const FunctionType *ftype = lGetFunctionType(func);
     return ftype ? ftype->GetReturnType() : NULL;
+}
+
+
+const Type *
+FunctionCallExpr::GetLValueType() const {
+    const FunctionType *ftype = lGetFunctionType(func);
+    if (ftype && (ftype->GetReturnType()->IsPointerType() 
+                  || ftype->GetReturnType()->IsReferenceType())) {
+        return ftype->GetReturnType();
+    }
+    else {
+        // Only be a valid LValue type if the function
+        // returns a pointer or reference.
+        return NULL;
+    }
 }
 
 
@@ -4030,7 +4058,10 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        AssertPos(pos, baseSym != NULL);
+        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL) {
+            // Only check for non-function calls
+            AssertPos(pos, baseSym != NULL);
+        }
         mask = lMaskForSymbol(baseSym, ctx);
     }
 
@@ -4269,8 +4300,16 @@ IndexExpr::GetLValueType() const {
     else {
         const PointerType *pt =
             CastType<PointerType>(baseExprLValueType->GetBaseType());
-        AssertPos(pos, pt != NULL);
-        elementType = pt->GetBaseType();
+        // This assertion seems overly strict.
+        // Why does it need to be a pointer to a pointer?
+        // AssertPos(pos, pt != NULL);
+
+        if (pt != NULL) {
+            elementType = pt->GetBaseType();
+        }
+        else {
+            elementType = baseExprLValueType->GetBaseType();
+        }
     }
 
     // Are we indexing into a varying type, or are we indexing with a
@@ -6789,10 +6828,33 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
 }
 
 
+llvm::Value *
+TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
+    if (GetLValueType() != NULL) {
+        return GetValue(ctx);
+    }
+    else {
+        return NULL;
+    }
+}
+
+
 const Type *
 TypeCastExpr::GetType() const {
     AssertPos(pos, type->HasUnboundVariability() == false);
     return type;
+}
+
+
+const Type *
+TypeCastExpr::GetLValueType() const {
+    AssertPos(pos, type->HasUnboundVariability() == false);
+    if (CastType<PointerType>(GetType()) != NULL) {
+        return type;
+    }
+    else {
+        return NULL;
+    }
 }
 
 

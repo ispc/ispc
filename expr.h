@@ -249,7 +249,9 @@ public:
                      bool isLaunch = false, Expr *launchCountExpr = NULL);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     void Print() const;
 
     Expr *Optimize();
@@ -505,7 +507,9 @@ public:
     TypeCastExpr(const Type *t, Expr *e, SourcePos p);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
+    llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     void Print() const;
     Expr *TypeCheck();
     Expr *Optimize();
