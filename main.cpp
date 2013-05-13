@@ -68,6 +68,8 @@ lPrintVersion() {
            "3.2"
 #elif defined(LLVM_3_3)
            "3.3"
+#elif defined(LLVM_3_4)
+           "3.4"
 #else
 #error "Unhandled LLVM version"
 #endif

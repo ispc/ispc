@@ -88,14 +88,12 @@
 #include <llvm/Target/TargetOptions.h>
 #if defined(LLVM_3_1)
   #include <llvm/Target/TargetData.h>
-#else
-  #if defined(LLVM_3_2)
-    #include <llvm/DataLayout.h>
-    #include <llvm/TargetTransformInfo.h>
-  #else // LLVM 3.3+
-    #include <llvm/IR/DataLayout.h>
-    #include <llvm/Analysis/TargetTransformInfo.h>
-  #endif
+#elif defined(LLVM_3_2)
+  #include <llvm/DataLayout.h>
+  #include <llvm/TargetTransformInfo.h>
+#else // LLVM 3.3+
+  #include <llvm/IR/DataLayout.h>
+  #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Support/CFG.h>
@@ -768,14 +766,14 @@ Module::AddFunctionDeclaration(const std::string &name,
         isInline)
 #ifdef LLVM_3_2
         function->addFnAttr(llvm::Attributes::AlwaysInline);
-#else
+#else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
     if (functionType->isTask)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
-#else
+#else // LLVM 3.2+
         function->setDoesNotAlias(1);
 #endif
 
@@ -1817,7 +1815,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     // track the source file position by handling them ourselves.
     inst.getPreprocessorOutputOpts().ShowComments = 1;
 
-#if defined(LLVM_3_3)
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) // LLVM 3.3+
     inst.getPreprocessorOutputOpts().ShowCPP = 1;
 #endif
 
@@ -1829,7 +1827,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         headerOpts.Verbose = 1;
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
-#if !defined(LLVM_3_3)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
                            true /* is user supplied */,
 #endif
                            false /* not a framework */,

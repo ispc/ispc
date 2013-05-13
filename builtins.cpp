@@ -725,7 +725,7 @@ lDefineConstantIntFunc(const char *name, int val, llvm::Module *module,
     Assert(func != NULL); // it should be declared already...
 #if defined(LLVM_3_2)
     func->addFnAttr(llvm::Attributes::AlwaysInline);
-#else
+#else // LLVM 3.1 and 3.3+
     func->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
     llvm::BasicBlock *bblock = llvm::BasicBlock::Create(*g->ctx, "entry", func, 0);
