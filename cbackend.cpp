@@ -88,10 +88,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#if defined(LLVM_3_3)
-  #include "llvm/InstVisitor.h"
-#else
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Support/InstVisitor.h"
+#else // LLVM 3.3+
+  #include "llvm/InstVisitor.h"
 #endif
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TargetRegistry.h"

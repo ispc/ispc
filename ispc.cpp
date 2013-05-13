@@ -138,9 +138,9 @@ lGetSystemISA() {
 
 static const char *supportedCPUs[] = {
     "atom", "penryn", "core2", "corei7", "corei7-avx"
-#if defined(LLVM_3_2) || defined(LLVM_3_3)
+#if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
-#endif // LLVM_3_2 or LLVM_3_3
+#endif // LLVM 3.2+
 };
 
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
