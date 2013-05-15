@@ -3293,7 +3293,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if defined (LLVM_3_3)
+#if !defined (LLVM_3_1) && !defined (LLVM_3_2) // LLVM 3.3+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc &&
             cc->getCalledFunction() &&
