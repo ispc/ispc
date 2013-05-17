@@ -996,6 +996,11 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
                        module, symbolTable);
 
+    if (g->forceAlignment != -1) {
+        llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
+        alignment->setInitializer(LLVMInt32(g->forceAlignment));
+    }
+
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its

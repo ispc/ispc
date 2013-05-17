@@ -747,6 +747,7 @@ Globals::Globals() {
     if (getcwd(currentDirectory, sizeof(currentDirectory)) == NULL)
         FATAL("Current directory path too long!");
 #endif
+    forceAlignment = -1;
 }
 
 ///////////////////////////////////////////////////////////////////////////

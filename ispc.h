@@ -551,6 +551,10 @@ struct Globals {
     /** Additional user-provided directories to search when processing
         #include directives in the preprocessor. */
     std::vector<std::string> includePath;
+
+    /** Indicates that alignment in memory allocation routines should be
+        forced to have given value. -1 value means natural alignment for the platforms. */
+    int forceAlignment;
 };
 
 enum {
