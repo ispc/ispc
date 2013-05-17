@@ -553,8 +553,10 @@ FunctionEmitContext::EndIf() {
                                      breakLanes, "|break_lanes");
         }
 
-        llvm::Value *notBreakOrContinue =
-            NotOperator(bcLanes, "!(break|continue)_lanes");
+        llvm::Value *notBreakOrContinue = 
+            BinaryOperator(llvm::Instruction::Xor,
+                           bcLanes, LLVMMaskAllOn,
+                           "!(break|continue)_lanes");
         llvm::Value *oldMask = GetInternalMask();
         llvm::Value *newMask =
             BinaryOperator(llvm::Instruction::And, oldMask,
@@ -659,7 +661,9 @@ FunctionEmitContext::restoreMaskGivenReturns(llvm::Value *oldMask) {
     // newMask = (oldMask & ~returnedLanes)
     llvm::Value *returnedLanes = LoadInst(returnedLanesPtr,
                                           "returned_lanes");
-    llvm::Value *notReturned = NotOperator(returnedLanes, "~returned_lanes");
+    llvm::Value *notReturned = BinaryOperator(llvm::Instruction::Xor,
+                                              returnedLanes, LLVMMaskAllOn,
+                                              "~returned_lanes");
     llvm::Value *newMask = BinaryOperator(llvm::Instruction::And,
                                           oldMask, notReturned, "new_mask");
     SetInternalMask(newMask);

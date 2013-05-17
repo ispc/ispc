@@ -1796,8 +1796,7 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
             // For the instances where value0 was true, we need to inhibit
             // execution.
             ctx->SetCurrentBasicBlock(bbEvalValue1);
-            llvm::Value *not0 = ctx->NotOperator(value0);
-            ctx->SetInternalMaskAnd(oldMask, not0);
+            ctx->SetInternalMaskAndNot(oldMask, value0);
 
             llvm::Value *value1 = arg1->GetValue(ctx);
             if (value1 == NULL) {
