@@ -2547,7 +2547,19 @@ ok:
 ifelse(BUILD_OS, `UNIX', 
 `
 
+ifelse(RUNTIME, `32',
+`
+
+;; Unix 32 bit environment.
+;; Use: posix_memalign and free
+;; Define:
+;; - __new_uniform_32rt
+;; - __new_varying32_32rt
+;; - __delete_uniform_32rt
+;; - __delete_varying_32rt
+
 declare i32 @posix_memalign(i8**, i32, i32)
+declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
@@ -2587,8 +2599,94 @@ define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
 }
 
 ',
+RUNTIME, `64',
+`
+
+;; Unix 64 bit environment.
+;; Use: posix_memalign and free
+;; Define:
+;; - __new_uniform_64rt
+;; - __new_varying32_64rt
+;; - __new_varying64_64rt
+;; - __delete_uniform_64rt
+;; - __delete_varying_64rt
+
+declare i32 @posix_memalign(i8**, i64, i64)
+declare void @free(i8 *)
+
+define noalias i8 * @__new_uniform_64rt(i64 %size) {
+  %ptr = alloca i8*
+  %call1 = call i32 @posix_memalign(i8** %ptr, i64 16, i64 %size)
+  %ptr_val = load i8** %ptr
+  ret i8* %ptr_val
+}
+
+define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 16, i64 %sz64_LANE_ID)')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 16, i64 %sz64_LANE_ID)')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define void @__delete_uniform_64rt(i8 * %ptr) {
+  call void @free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
+', `
+errprint(`RUNTIME should be defined to either 32 or 64
+')
+m4exit(`1')
+')
+
+',
 BUILD_OS, `WINDOWS',
 `
+
+ifelse(RUNTIME, `32',
+`
+
+;; Windows 32 bit environment.
+;; Use: _aligned_malloc and _aligned_free
+;; Define:
+;; - __new_uniform_32rt
+;; - __new_varying32_32rt
+;; - __delete_uniform_32rt
+;; - __delete_varying_32rt
+
 declare i8* @_aligned_malloc(i32, i32)
 declare void @_aligned_free(i8 *)
 
@@ -2629,21 +2727,24 @@ define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
 }
 
 ',
+RUNTIME, `64',
 `
-errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
-')
-m4exit(`1')
-')
 
-;; Set of functions for 64 bit runtime
-;; We use the same standard malloc/free pair on all platforms (Windows/Linux/MacOS).
+;; Windows 64 bit environment.
+;; Use: _aligned_malloc and _aligned_free
+;; Define:
+;; - __new_uniform_64rt
+;; - __new_varying32_64rt
+;; - __new_varying64_64rt
+;; - __delete_uniform_64rt
+;; - __delete_varying_64rt
 
-declare noalias i8 * @malloc(i64)
-declare void @free(i8 *)
+declare i8* @_aligned_malloc(i64, i64)
+declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %a = call noalias i8 * @malloc(i64 %size)
-  ret i8 * %a
+  %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 16)
+  ret i8* %ptr
 }
 
 define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
@@ -2654,7 +2755,7 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
-    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz64_LANE_ID)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 16)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2669,8 +2770,8 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
-    %sz_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
-    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz_LANE_ID)
+    %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 16)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2680,7 +2781,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
 }
 
 define void @__delete_uniform_64rt(i8 * %ptr) {
-  call void @free(i8 * %ptr)
+  call void @_aligned_free(i8 * %ptr)
   ret void
 }
 
@@ -2688,11 +2789,23 @@ define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
       %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
       %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
-      call void @free(i8 * %ptr_LANE_ID)
+      call void @_aligned_free(i8 * %ptr_LANE_ID)
   ')
   ret void
 }
 
+', `
+errprint(`RUNTIME should be defined to either 32 or 64
+')
+m4exit(`1')
+')
+
+',
+`
+errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
+')
+m4exit(`1')
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
