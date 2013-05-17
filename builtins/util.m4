@@ -2544,6 +2544,10 @@ ok:
 ;; Note that this should be really two different libraries for 32 and 64
 ;; environment and it should happen sooner or later
 
+ifelse(WIDTH, 1, `define(`ALIGNMENT', `16')', `define(`ALIGNMENT', `eval(WIDTH*4)')')
+
+@memory_alignment = internal constant i32 ALIGNMENT
+
 ifelse(BUILD_OS, `UNIX', 
 `
 
@@ -2564,7 +2568,8 @@ declare void @free(i8 *)
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
   %conv = trunc i64 %size to i32
-  %call1 = call i32 @posix_memalign(i8** %ptr, i32 16, i32 %conv)
+  %alignment = load i32* @memory_alignment
+  %call1 = call i32 @posix_memalign(i8** %ptr, i32 %alignment, i32 %conv)
   %ptr_val = load i8** %ptr
   ret i8* %ptr_val
 }
@@ -2573,12 +2578,13 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 16, i32 %sz_LANE_ID)')
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 %alignment, i32 %sz_LANE_ID)')
 
   %r = load <WIDTH x i64> * %ret
   ret <WIDTH x i64> %r
@@ -2616,7 +2622,9 @@ declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
   %ptr = alloca i8*
-  %call1 = call i32 @posix_memalign(i8** %ptr, i64 16, i64 %size)
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+  %call1 = call i32 @posix_memalign(i8** %ptr, i64 %alignment64, i64 %size)
   %ptr_val = load i8** %ptr
   ret i8* %ptr_val
 }
@@ -2625,13 +2633,15 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 16, i64 %sz64_LANE_ID)')
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
 
   %r = load <WIDTH x i64> * %ret
   ret <WIDTH x i64> %r
@@ -2641,12 +2651,14 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 16, i64 %sz64_LANE_ID)')
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
 
   %r = load <WIDTH x i64> * %ret
   ret <WIDTH x i64> %r
@@ -2692,7 +2704,8 @@ declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %conv = trunc i64 %size to i32
-  %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 16)
+  %alignment = load i32* @memory_alignment
+  %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 %alignment)
   ret i8* %ptr
 }
 
@@ -2700,10 +2713,11 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
-    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 16)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 %alignment)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2743,7 +2757,9 @@ declare i8* @_aligned_malloc(i64, i64)
 declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 16)
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+  %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 %alignment64)
   ret i8* %ptr
 }
 
@@ -2751,11 +2767,13 @@ define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
-    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 16)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2768,10 +2786,12 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
-    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 16)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
