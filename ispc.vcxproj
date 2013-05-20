@@ -18,52 +18,52 @@
     <ClCompile Include="decl.cpp" />
     <ClCompile Include="expr.cpp" />
     <ClCompile Include="func.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx1-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx1-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx1-x2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx1-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx11-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx11-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx11-x2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx11-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx2-x2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-avx2-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-c-32.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-c-64.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-dispatch.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-1-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-1-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-4-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-4-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-8-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-8-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-16-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-16-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-32-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-32-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-64-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-generic-64-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse2-x2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse2-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse4-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse4-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse4-x2-32bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-bitcode-sse4-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)/gen-stdlib-generic.cpp" />
-    <ClCompile Include="$(Configuration)/gen-stdlib-x86.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-x2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-x2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-x2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-c-32.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-c-64.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-dispatch.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-1-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-1-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-4-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-4-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-8-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-8-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-16-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-16-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-32-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-32-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse2-x2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse2-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-x2-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-generic.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-x86.cpp" />
     <ClCompile Include="ispc.cpp" />
-    <ClCompile Include="lex.cc">
+    <ClCompile Include="$(Configuration)\lex.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
     </ClCompile>
     <ClCompile Include="llvmutil.cpp" />
     <ClCompile Include="module.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opt.cpp" />
-    <ClCompile Include="parse.cc">
+    <ClCompile Include="$(Configuration)\parse.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4065</DisableSpecificWarnings>
     </ClCompile>
     <CustomBuild Include="builtins\builtins.c">
@@ -402,17 +402,17 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="lex.ll">
+      <CustomBuild Include="lex.ll">
       <FileType>Document</FileType>
-      <Command>flex -t lex.ll &gt; lex.cc</Command>
-      <Outputs>lex.cc</Outputs>
-      <AdditionalInputs>ispc.h;decl.h;parse.hh;sym.h</AdditionalInputs>
+      <Command>flex -t lex.ll &gt; $(Configuration)\lex.cc</Command>
+      <Outputs>$(Configuration)\lex.cc</Outputs>
+      <AdditionalInputs>ispc.h;decl.h;$(Configuration)\parse.hh;sym.h</AdditionalInputs>
       <Message>Running flex on lex.ll</Message>
     </CustomBuild>
     <CustomBuild Include="parse.yy">
       <FileType>Document</FileType>
-      <Command>bison -d -v -t -o parse.cc parse.yy</Command>
-      <Outputs>parse.cc;parse.h</Outputs>
+      <Command>bison -d -v -t -o $(Configuration)/parse.cc parse.yy</Command>
+      <Outputs>$(Configuration)\parse.cc;$(Configuration)\parse.hh;$(Configuration)\parse.output</Outputs>
       <AdditionalInputs>ispc.h;type.h;decl.h;expr.h;sym.h;stmt.h</AdditionalInputs>
       <Message>Running bison on parse.yy</Message>
     </CustomBuild>
