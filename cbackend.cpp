@@ -2388,8 +2388,14 @@ bool CWriter::doInitialization(llvm::Module &M) {
         I->getName() == "memset" || I->getName() == "memset_pattern16" ||
         I->getName() == "puts" ||
         I->getName() == "printf" || I->getName() == "putchar" ||
-        I->getName() == "fflush" || I->getName() == "malloc" ||
-        I->getName() == "free")
+        I->getName() == "fflush" ||
+        // Memory allocation
+        I->getName() == "malloc" ||
+        I->getName() == "posix_memalign" ||
+        I->getName() == "free" ||
+        I->getName() == "_aligned_malloc" ||
+        I->getName() == "_aligned_free"
+        )
       continue;
 
     // Don't redeclare ispc's own intrinsics
@@ -3805,7 +3811,8 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
           Callee = RF;
         }
 
-    if (Callee->getName() == "malloc")
+    if (Callee->getName() == "malloc" ||
+        Callee->getName() == "_aligned_malloc")
         Out << "(uint8_t *)";
 
     if (NeedsCast) {
@@ -3844,7 +3851,13 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
   for (; AI != AE; ++AI, ++ArgNo) {
     if (PrintedArg) Out << ", ";
-    if (ArgNo < NumDeclaredParams &&
+    if (ArgNo == 0 && 
+        Callee->getName() == "posix_memalign") {
+        // uint8_t** is incompatible with void** without explicit cast.
+        // Should be do this any other functions?
+        Out << "(void **)";
+    }
+    else if (ArgNo < NumDeclaredParams &&
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
       Out << '(';
       printType(Out, FTy->getParamType(ArgNo),
@@ -3865,10 +3878,12 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 #else
                        llvm::Attribute::ByVal
 #endif
-                       ))
+                       )) {
       writeOperandDeref(*AI);
-    else
+    }
+    else {
       writeOperand(*AI);
+    }
     PrintedArg = true;
   }
   Out << ')';
