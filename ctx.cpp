@@ -1266,7 +1266,7 @@ FunctionEmitContext::CurrentLanesReturned(Expr *expr, bool doCoherenceCheck) {
             LoadInst(returnedLanesPtr, "old_returned_lanes");
         llvm::Value *newReturnedLanes =
             BinaryOperator(llvm::Instruction::Or, oldReturnedLanes,
-                           GetInternalMask(), "old_mask|returned_lanes");
+                           GetFullMask(), "old_mask|returned_lanes");
 
         // For 'coherent' return statements, emit code to check if all
         // lanes have returned
