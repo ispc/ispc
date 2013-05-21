@@ -841,6 +841,9 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
     if (breakLanesPtr == NULL) {
         llvm::Value *continued = LoadInst(continueLanesPtr,
                                           "continue_lanes");
+        continued = BinaryOperator(llvm::Instruction::And,
+                                   continued, GetFunctionMask(),
+                                   "continued&func");
         allDone = MasksAllEqual(continued, blockEntryMask);
     }
     else {
@@ -860,6 +863,10 @@ FunctionEmitContext::jumpIfAllLoopLanesAreDone(llvm::BasicBlock *target) {
             finishedLanes = BinaryOperator(llvm::Instruction::Or, finishedLanes,
                                            continued, "returned|breaked|continued");
         }
+        
+        finishedLanes = BinaryOperator(llvm::Instruction::And,
+                                       finishedLanes, GetFunctionMask(),
+                                       "finished&func");
 
         // Do we match the mask at loop or switch statement entry?
         allDone = MasksAllEqual(finishedLanes, blockEntryMask);

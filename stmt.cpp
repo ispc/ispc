@@ -374,6 +374,7 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
 
 /** Returns true if the "true" block for the if statement consists of a
     single 'break' statement, and the "false" block is empty. */
+/*
 static bool
 lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
     if (falseStmts != NULL) {
@@ -392,7 +393,7 @@ lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
     else
         return false;
 }
-
+*/
 
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
