@@ -374,6 +374,7 @@ lEmitIfStatements(FunctionEmitContext *ctx, Stmt *stmts, const char *trueOrFalse
 
 /** Returns true if the "true" block for the if statement consists of a
     single 'break' statement, and the "false" block is empty. */
+/*
 static bool
 lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
     if (falseStmts != NULL) {
@@ -392,7 +393,7 @@ lCanApplyBreakOptimization(Stmt *trueStmts, Stmt *falseStmts) {
     else
         return false;
 }
-
+*/
 
 void
 IfStmt::EmitCode(FunctionEmitContext *ctx) const {
@@ -447,6 +448,8 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         ctx->SetCurrentBasicBlock(bexit);
         ctx->EndIf();
     }
+    /*
+    // Disabled for performance reasons.  Change to an optional compile-time opt switch.
     else if (lCanApplyBreakOptimization(trueStmts, falseStmts)) {
         // If we have a simple break statement inside the 'if' and are
         // under varying control flow, just update the execution mask
@@ -456,6 +459,7 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
         // benefit in this case.
         ctx->SetInternalMaskAndNot(ctx->GetInternalMask(), testValue);
     }
+    */
     else
         emitVaryingIf(ctx, testValue);
 }
