@@ -195,6 +195,14 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             // debugging metadata organization on the LLVM side changed,
             // here is a bunch of asserting to make sure that element 12 of
             // the compile unit's MDNode has the subprograms array....
+            //
+            // Update: This is not an approved way of working with debug info
+            // metadata. It's not supposed to be deleted. But in out use-case
+            // it's quite useful thing, as we link in bunch of unnecessary
+            // stuff and remove it later on. Removing it is useful, as it
+            // reduces size of the binary significantly (manyfold for small
+            // programs).
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
             llvm::MDNode *nodeSPMD =
                 llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(12));
             Assert(nodeSPMD != NULL);
@@ -212,6 +220,21 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             llvm::MDNode *replNode =
                 llvm::MDNode::get(*g->ctx, llvm::ArrayRef<llvm::Value *>(usedSubprogramsArray));
             cuNode->replaceOperandWith(12, replNode);
+#else // LLVM 3.3+
+            llvm::MDNode *nodeSPMDArray =
+                llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(9));
+            Assert(nodeSPMDArray != NULL);
+            llvm::DIArray nodeSPs(nodeSPMDArray);
+            Assert(nodeSPs.getNumElements() == subprograms.getNumElements());
+            for (int i = 0; i < (int)nodeSPs.getNumElements(); ++i)
+                Assert(nodeSPs.getElement(i) == subprograms.getElement(i));
+
+            // And now we can go and stuff it into the node with some
+            // confidence...
+            llvm::MDNode *replNode =
+                m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(usedSubprograms));
+            cuNode->replaceOperandWith(9, replNode);
+#endif
         }
     }
 
