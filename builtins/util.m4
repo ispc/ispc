@@ -34,8 +34,6 @@
 ;; builtins for various targets can use macros from this file to simplify
 ;; generating code for their implementations of those builtins.
 
-declare i1 @__is_compile_time_constant_uniform_int32(i32)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; It is a bit of a pain to compute this in m4 for 32 and 64-wide targets...
@@ -820,6 +818,8 @@ define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
 ;; count trailing zeros
 
 define(`ctlztz', `
+declare_count_zeros()
+
 define i32 @__count_trailing_zeros_i32(i32) nounwind readnone alwaysinline {
   %c = call i32 @llvm.cttz.i32(i32 %0)
   ret i32 %c
@@ -1548,6 +1548,7 @@ declare void @ISPCSync(i8*) nounwind
 declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
+declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
 define void @__pause() nounwind readnone {
@@ -2543,15 +2544,32 @@ ok:
 ;; Note that this should be really two different libraries for 32 and 64
 ;; environment and it should happen sooner or later
 
+ifelse(WIDTH, 1, `define(`ALIGNMENT', `16')', `define(`ALIGNMENT', `eval(WIDTH*4)')')
+
+@memory_alignment = internal constant i32 ALIGNMENT
+
 ifelse(BUILD_OS, `UNIX', 
 `
 
+ifelse(RUNTIME, `32',
+`
+
+;; Unix 32 bit environment.
+;; Use: posix_memalign and free
+;; Define:
+;; - __new_uniform_32rt
+;; - __new_varying32_32rt
+;; - __delete_uniform_32rt
+;; - __delete_varying_32rt
+
 declare i32 @posix_memalign(i8**, i32, i32)
+declare void @free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %ptr = alloca i8*
   %conv = trunc i64 %size to i32
-  %call1 = call i32 @posix_memalign(i8** %ptr, i32 16, i32 %conv)
+  %alignment = load i32* @memory_alignment
+  %call1 = call i32 @posix_memalign(i8** %ptr, i32 %alignment, i32 %conv)
   %ptr_val = load i8** %ptr
   ret i8* %ptr_val
 }
@@ -2560,12 +2578,13 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 16, i32 %sz_LANE_ID)')
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 %alignment, i32 %sz_LANE_ID)')
 
   %r = load <WIDTH x i64> * %ret
   ret <WIDTH x i64> %r
@@ -2586,14 +2605,107 @@ define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
 }
 
 ',
+RUNTIME, `64',
+`
+
+;; Unix 64 bit environment.
+;; Use: posix_memalign and free
+;; Define:
+;; - __new_uniform_64rt
+;; - __new_varying32_64rt
+;; - __new_varying64_64rt
+;; - __delete_uniform_64rt
+;; - __delete_varying_64rt
+
+declare i32 @posix_memalign(i8**, i64, i64)
+declare void @free(i8 *)
+
+define noalias i8 * @__new_uniform_64rt(i64 %size) {
+  %ptr = alloca i8*
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+  %call1 = call i32 @posix_memalign(i8** %ptr, i64 %alignment64, i64 %size)
+  %ptr_val = load i8** %ptr
+  ret i8* %ptr_val
+}
+
+define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
+    %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
+  %ret = alloca <WIDTH x i64>
+  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
+  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+    %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
+    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
+    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
+
+  %r = load <WIDTH x i64> * %ret
+  ret <WIDTH x i64> %r
+}
+
+define void @__delete_uniform_64rt(i8 * %ptr) {
+  call void @free(i8 * %ptr)
+  ret void
+}
+
+define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
+  per_lane(WIDTH, <WIDTH x MASK> %mask, `
+      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
+      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
+      call void @free(i8 * %ptr_LANE_ID)
+  ')
+  ret void
+}
+
+', `
+errprint(`RUNTIME should be defined to either 32 or 64
+')
+m4exit(`1')
+')
+
+',
 BUILD_OS, `WINDOWS',
 `
+
+ifelse(RUNTIME, `32',
+`
+
+;; Windows 32 bit environment.
+;; Use: _aligned_malloc and _aligned_free
+;; Define:
+;; - __new_uniform_32rt
+;; - __new_varying32_32rt
+;; - __delete_uniform_32rt
+;; - __delete_varying_32rt
+
 declare i8* @_aligned_malloc(i32, i32)
 declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_32rt(i64 %size) {
   %conv = trunc i64 %size to i32
-  %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 16)
+  %alignment = load i32* @memory_alignment
+  %ptr = tail call i8* @_aligned_malloc(i32 %conv, i32 %alignment)
   ret i8* %ptr
 }
 
@@ -2601,10 +2713,11 @@ define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
-    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 16)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i32 %sz_LANE_ID, i32 %alignment)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2628,32 +2741,39 @@ define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
 }
 
 ',
+RUNTIME, `64',
 `
-errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
-')
-m4exit(`1')
-')
 
-;; Set of functions for 64 bit runtime
-;; We use the same standard malloc/free pair on all platforms (Windows/Linux/MacOS).
+;; Windows 64 bit environment.
+;; Use: _aligned_malloc and _aligned_free
+;; Define:
+;; - __new_uniform_64rt
+;; - __new_varying32_64rt
+;; - __new_varying64_64rt
+;; - __delete_uniform_64rt
+;; - __delete_varying_64rt
 
-declare noalias i8 * @malloc(i64)
-declare void @free(i8 *)
+declare i8* @_aligned_malloc(i64, i64)
+declare void @_aligned_free(i8 *)
 
 define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %a = call noalias i8 * @malloc(i64 %size)
-  ret i8 * %a
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
+  %ptr = tail call i8* @_aligned_malloc(i64 %size, i64 %alignment64)
+  ret i8* %ptr
 }
 
 define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
     %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
     %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
-    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz64_LANE_ID)
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2666,10 +2786,12 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
   %ret = alloca <WIDTH x i64>
   store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
   %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
+  %alignment = load i32* @memory_alignment
+  %alignment64 = sext i32 %alignment to i64
 
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
-    %sz_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
-    %ptr_LANE_ID = call noalias i8 * @malloc(i64 %sz_LANE_ID)
+    %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
+    %ptr_LANE_ID = call noalias i8 * @_aligned_malloc(i64 %sz64_LANE_ID, i64 %alignment64)
     %ptr_int_LANE_ID = ptrtoint i8 * %ptr_LANE_ID to i64
     %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
     store i64 %ptr_int_LANE_ID, i64 * %store_LANE_ID')
@@ -2679,7 +2801,7 @@ define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %
 }
 
 define void @__delete_uniform_64rt(i8 * %ptr) {
-  call void @free(i8 * %ptr)
+  call void @_aligned_free(i8 * %ptr)
   ret void
 }
 
@@ -2687,11 +2809,23 @@ define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
   per_lane(WIDTH, <WIDTH x MASK> %mask, `
       %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
       %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
-      call void @free(i8 * %ptr_LANE_ID)
+      call void @_aligned_free(i8 * %ptr_LANE_ID)
   ')
   ret void
 }
 
+', `
+errprint(`RUNTIME should be defined to either 32 or 64
+')
+m4exit(`1')
+')
+
+',
+`
+errprint(`BUILD_OS should be defined to either UNIX or WINDOWS
+')
+m4exit(`1')
+')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
@@ -3350,13 +3484,26 @@ done:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
-; count leading/trailing zeros
+;; count leading/trailing zeros
+;; Macros declares set of count-trailing and count-leading zeros.
+;; Macros behaves as a static functon - it works only at first invokation
+;; to avoid redifinition.
+define(`declare_count_zeros', `
+ifelse(count_zeros_are_defined, true, `',
+`
 declare i32 @llvm.ctlz.i32(i32)
 declare i64 @llvm.ctlz.i64(i64)
 declare i32 @llvm.cttz.i32(i32)
 declare i64 @llvm.cttz.i64(i64)
 
+define(`count_zeros_are_defined', true)
+')
+
+')
+
 define(`reduce_equal_aux', `
+declare_count_zeros()
+
 define i1 @__reduce_equal_$3(<$1 x $2> %v, $2 * %samevalue,
                              <$1 x MASK> %mask) nounwind alwaysinline {
 entry:

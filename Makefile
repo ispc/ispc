@@ -118,9 +118,14 @@ HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
 TARGETS=avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
-BUILTINS_SRC=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS))) \
-	builtins/dispatch.ll
-BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC:.ll=.o))) \
+# These files need to be compiled in two versions - 32 and 64 bits.
+BUILTINS_SRC_TARGET=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS)))
+# These are files to be compiled in single version.
+BUILTINS_SRC_COMMON=builtins/dispatch.ll
+BUILTINS_OBJS_32=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-32bit.o)))
+BUILTINS_OBJS_64=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-64bit.o)))
+BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_COMMON:.ll=.o))) \
+	$(BUILTINS_OBJS_32) $(BUILTINS_OBJS_64) \
 	builtins-c-32.cpp builtins-c-64.cpp 
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
@@ -212,17 +217,25 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-%.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
+
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
+	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
+
 objs/builtins-c-32.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-32 > $@
+	@$(CLANG) -m32 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c 32 > $@
 
 objs/builtins-c-64.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
-	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c-64 > $@
+	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c 64 > $@
 
 objs/stdlib_generic_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for generic
