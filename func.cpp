@@ -459,6 +459,8 @@ Function::GenerateIR() {
                 appFunction->setDoesNotThrow();
 #endif
 
+                g->target->markFuncWithTargetAttr(appFunction);
+
                 if (appFunction->getName() != functionName) {
                     // this was a redefinition for which we already emitted an
                     // error, so don't worry about this one...
