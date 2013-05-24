@@ -776,169 +776,195 @@ lDefineProgramIndex(llvm::Module *module, SymbolTable *symbolTable) {
 void
 DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *module,
              bool includeStdlibISPC) {
+    bool runtime32 = g->target->is32Bit();
+
+#define EXPORT_MODULE(export_module)                            \
+    extern unsigned char export_module[];                       \
+    extern int export_module##_length;                          \
+    AddBitcodeToModule(export_module, export_module##_length,   \
+                       module, symbolTable);
+
     // Add the definitions from the compiled builtins-c.c file
-    if (g->target->is32Bit()) {
-        extern unsigned char builtins_bitcode_c_32[];
-        extern int builtins_bitcode_c_32_length;
-        AddBitcodeToModule(builtins_bitcode_c_32, builtins_bitcode_c_32_length,
-                           module, symbolTable);
+    if (runtime32) {
+        EXPORT_MODULE(builtins_bitcode_c_32);
     }
     else {
-        extern unsigned char builtins_bitcode_c_64[];
-        extern int builtins_bitcode_c_64_length;
-        AddBitcodeToModule(builtins_bitcode_c_64, builtins_bitcode_c_64_length,
-                           module, symbolTable);
+        EXPORT_MODULE(builtins_bitcode_c_64);
     }
 
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
-    case Target::SSE2:
-        extern unsigned char builtins_bitcode_sse2[];
-        extern int builtins_bitcode_sse2_length;
-        extern unsigned char builtins_bitcode_sse2_x2[];
-        extern int builtins_bitcode_sse2_x2_length;
+    case Target::SSE2: {
         switch (g->target->getVectorWidth()) {
         case 4:
-            AddBitcodeToModule(builtins_bitcode_sse2, builtins_bitcode_sse2_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse2_64bit);
+            }
             break;
         case 8:
-            AddBitcodeToModule(builtins_bitcode_sse2_x2, builtins_bitcode_sse2_x2_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse2_x2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse2_x2_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
-    case Target::SSE4:
-        extern unsigned char builtins_bitcode_sse4[];
-        extern int builtins_bitcode_sse4_length;
-        extern unsigned char builtins_bitcode_sse4_x2[];
-        extern int builtins_bitcode_sse4_x2_length;
+    }
+    case Target::SSE4: {
         switch (g->target->getVectorWidth()) {
         case 4:
-            AddBitcodeToModule(builtins_bitcode_sse4,
-                               builtins_bitcode_sse4_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse4_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse4_64bit);
+            }
             break;
         case 8:
-            AddBitcodeToModule(builtins_bitcode_sse4_x2,
-                               builtins_bitcode_sse4_x2_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
-    case Target::AVX:
+    }
+    case Target::AVX: {
         switch (g->target->getVectorWidth()) {
         case 8:
-            extern unsigned char builtins_bitcode_avx1[];
-            extern int builtins_bitcode_avx1_length;
-            AddBitcodeToModule(builtins_bitcode_avx1,
-                               builtins_bitcode_avx1_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx1_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx1_64bit);
+            }
             break;
         case 16:
-            extern unsigned char builtins_bitcode_avx1_x2[];
-            extern int builtins_bitcode_avx1_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx1_x2,
-                               builtins_bitcode_avx1_x2_length,
-                               module,  symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx1_x2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx1_x2_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
-    case Target::AVX11:
+    }
+    case Target::AVX11: {
         switch (g->target->getVectorWidth()) {
         case 8:
-            extern unsigned char builtins_bitcode_avx11[];
-            extern int builtins_bitcode_avx11_length;
-            AddBitcodeToModule(builtins_bitcode_avx11,
-                               builtins_bitcode_avx11_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx11_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx11_64bit);
+            }
             break;
         case 16:
-            extern unsigned char builtins_bitcode_avx11_x2[];
-            extern int builtins_bitcode_avx11_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx11_x2,
-                               builtins_bitcode_avx11_x2_length,
-                               module,  symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx11_x2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx11_x2_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
-    case Target::AVX2:
+    }
+    case Target::AVX2: {
         switch (g->target->getVectorWidth()) {
         case 8:
-            extern unsigned char builtins_bitcode_avx2[];
-            extern int builtins_bitcode_avx2_length;
-            AddBitcodeToModule(builtins_bitcode_avx2,
-                               builtins_bitcode_avx2_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx2_64bit);
+            }
             break;
         case 16:
-            extern unsigned char builtins_bitcode_avx2_x2[];
-            extern int builtins_bitcode_avx2_x2_length;
-            AddBitcodeToModule(builtins_bitcode_avx2_x2,
-                               builtins_bitcode_avx2_x2_length,
-                               module,  symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx2_x2_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx2_x2_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
-    case Target::GENERIC:
+    }
+    case Target::GENERIC: {
         switch (g->target->getVectorWidth()) {
         case 4:
-            extern unsigned char builtins_bitcode_generic_4[];
-            extern int builtins_bitcode_generic_4_length;
-            AddBitcodeToModule(builtins_bitcode_generic_4,
-                               builtins_bitcode_generic_4_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_4_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_4_64bit);
+            }
             break;
         case 8:
-            extern unsigned char builtins_bitcode_generic_8[];
-            extern int builtins_bitcode_generic_8_length;
-            AddBitcodeToModule(builtins_bitcode_generic_8,
-                               builtins_bitcode_generic_8_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_8_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_8_64bit);
+            }
             break;
         case 16:
-            extern unsigned char builtins_bitcode_generic_16[];
-            extern int builtins_bitcode_generic_16_length;
-            AddBitcodeToModule(builtins_bitcode_generic_16,
-                               builtins_bitcode_generic_16_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_16_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_4_64bit);
+            }
             break;
         case 32:
-            extern unsigned char builtins_bitcode_generic_32[];
-            extern int builtins_bitcode_generic_32_length;
-            AddBitcodeToModule(builtins_bitcode_generic_32,
-                               builtins_bitcode_generic_32_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_32_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_32_64bit);
+            }
             break;
         case 64:
-            extern unsigned char builtins_bitcode_generic_64[];
-            extern int builtins_bitcode_generic_64_length;
-            AddBitcodeToModule(builtins_bitcode_generic_64,
-                               builtins_bitcode_generic_64_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_64_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_64_64bit);
+            }
             break;
         case 1:
-            extern unsigned char builtins_bitcode_generic_1[];
-            extern int builtins_bitcode_generic_1_length;
-            AddBitcodeToModule(builtins_bitcode_generic_1,
-                               builtins_bitcode_generic_1_length,
-                               module, symbolTable);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_generic_1_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_generic_1_64bit);
+            }
             break;
         default:
             FATAL("logic error in DefineStdlib");
         }
         break;
+    }
     default:
         FATAL("logic error");
     }
@@ -969,6 +995,11 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
                        module, symbolTable);
+
+    if (g->forceAlignment != -1) {
+        llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
+        alignment->setInitializer(LLVMInt32(g->forceAlignment));
+    }
 
     if (includeStdlibISPC) {
         // If the user wants the standard library to be included, parse the

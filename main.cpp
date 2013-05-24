@@ -98,6 +98,7 @@ usage(int ret) {
     printf("    [--emit-c++]\t\t\tEmit a C++ source file as output\n");
     printf("    [--emit-llvm]\t\t\tEmit LLVM bitode file as output\n");
     printf("    [--emit-obj]\t\t\tGenerate object file file as output (default)\n");
+    printf("    [--force-alignment=<value>]\t\tForce alignment in memory allocations routine to be <value>\n");
     printf("    [-g]\t\t\t\tGenerate debugging information\n");
     printf("    [--help]\t\t\t\tPrint help\n");
     printf("    [--help-dev]\t\t\tPrint help for developer options\n");
@@ -392,6 +393,9 @@ int main(int Argc, char *Argv[]) {
                 fprintf(stderr, "Unknown --opt= option \"%s\".\n", opt);
                 usage(1);
             }
+        }
+        else if (!strncmp(argv[i], "--force-alignment=", 18)) {
+            g->forceAlignment = atoi(argv[i] + 18);
         }
         else if (!strcmp(argv[i], "--woff") || !strcmp(argv[i], "-woff")) {
             g->disableWarnings = true;

@@ -10,6 +10,8 @@ import os
 length=0
 
 src=str(sys.argv[1])
+if (len(sys.argv) > 2):
+    runtime=str(sys.argv[2])
 
 target = re.sub("builtins/target-", "", src)
 target = re.sub(r"builtins\\target-", "", target)
@@ -29,8 +31,11 @@ except IOError:
     sys.stderr.write("Couldn't open " + src)
     sys.exit(1)
 
+name = target
+if (len(sys.argv) > 2):
+    name += "_" + runtime;
 width = 16;
-sys.stdout.write("unsigned char builtins_bitcode_" + target + "[] = {\n")
+sys.stdout.write("unsigned char builtins_bitcode_" + name + "[] = {\n")
 
 data = as_out.stdout.read()
 for i in range(0, len(data), 1):
@@ -40,7 +45,7 @@ for i in range(0, len(data), 1):
             sys.stdout.write("\n")
 
 sys.stdout.write("0x00 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + target + "_length = " + str(i+1) + ";\n")
+sys.stdout.write("int builtins_bitcode_" + name + "_length = " + str(i+1) + ";\n")
 
 as_out.wait()
 
