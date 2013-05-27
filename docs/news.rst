@@ -2,6 +2,14 @@
 ispc News
 =========
 
+ispc 1.4.0 is Released
+----------------------
+
+A major new version of ``ispc`` has been released with stability and
+performance improvements on all supported platforms (Windows, Linux and MacOS).
+This version supports LLVM 3.1, 3.2, 3.3 and 3.4. The released binaries are
+built with 3.2.
+
 ispc 1.3.0 is Released
 ----------------------
 
