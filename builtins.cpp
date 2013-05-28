@@ -933,7 +933,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                 EXPORT_MODULE(builtins_bitcode_generic_16_32bit);
             }
             else {
-                EXPORT_MODULE(builtins_bitcode_generic_4_64bit);
+                EXPORT_MODULE(builtins_bitcode_generic_16_64bit);
             }
             break;
         case 32:
