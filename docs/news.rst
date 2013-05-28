@@ -2,7 +2,7 @@
 ispc News
 =========
 
-ispc 1.4.0 is Released
+ispc 1.4.1 is Released
 ----------------------
 
 A major new version of ``ispc`` has been released with stability and

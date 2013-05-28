@@ -1,4 +1,4 @@
-=== v1.4.0 === (27 May 2013)
+=== v1.4.1 === (28 May 2013)
 
 A major new version of ispc has been released with stability and performance
 improvements on all supported platforms (Windows, Linux and MacOS). 
