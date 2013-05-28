@@ -38,7 +38,7 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.4.1"
+#define ISPC_VERSION "1.4.1dev"
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
 #error "Only LLVM 3.1, 3.2, 3.3 and the 3.4 development branch are supported"
