@@ -81,6 +81,9 @@ namespace llvm {
     class DIDescriptor;
     class DIFile;
     class DIType;
+#if defined(LLVM_3_4)
+    class DICompositeType;
+#endif
     class Function;
     class FunctionType;
     class LLVMContext;

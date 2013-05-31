@@ -336,11 +336,19 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         AssertPos(currentPos, scope.Verify());
 
         const FunctionType *functionType = function->GetType();
+#if defined(LLVM_3_4)
+        llvm::DICompositeType diSubprogramType;
+#else
         llvm::DIType diSubprogramType;
+#endif
         if (functionType == NULL)
             AssertPos(currentPos, m->errorCount > 0);
         else {
+#if defined(LLVM_3_4)
+            diSubprogramType = functionType->GetDICompositeType(scope);
+#else
             diSubprogramType = functionType->GetDIType(scope);
+#endif
             AssertPos(currentPos, diSubprogramType.Verify());
         }
 
