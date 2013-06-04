@@ -2879,7 +2879,11 @@ FunctionType::GetDIType(llvm::DIDescriptor scope) const {
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
         if (t == NULL)
+#if defined(LLVM_3_4)
+            return llvm::DICompositeType();
+#else
             return llvm::DIType();
+#endif
         retArgTypes.push_back(t->GetDIType(scope));
     }
 
