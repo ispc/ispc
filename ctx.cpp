@@ -336,7 +336,6 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         AssertPos(currentPos, scope.Verify());
 
         const FunctionType *functionType = function->GetType();
-
         llvm::DIType diSubprogramType;
         if (functionType == NULL)
             AssertPos(currentPos, m->errorCount > 0);

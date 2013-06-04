@@ -2870,6 +2870,7 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     return NULL;
 }
 
+
 llvm::DIType
 FunctionType::GetDIType(llvm::DIDescriptor scope) const {
     std::vector<llvm::Value *> retArgTypes;
