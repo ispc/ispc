@@ -875,9 +875,6 @@ public:
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;
-#if defined(LLVM_3_4)
-    llvm::DICompositeType GetDICompositeType(llvm::DIDescriptor scope) const;
-#endif
 
     const Type *GetReturnType() const { return returnType; }
 

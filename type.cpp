@@ -2870,40 +2870,21 @@ FunctionType::LLVMType(llvm::LLVMContext *ctx) const {
     return NULL;
 }
 
-
 llvm::DIType
 FunctionType::GetDIType(llvm::DIDescriptor scope) const {
-#if defined(LLVM_3_4)
-    return GetDICompositeType(scope);
-}
-
-
-llvm::DICompositeType
-FunctionType::GetDICompositeType(llvm::DIDescriptor scope) const {
-#endif
     std::vector<llvm::Value *> retArgTypes;
 
     retArgTypes.push_back(returnType->GetDIType(scope));
     for (int i = 0; i < GetNumParameters(); ++i) {
         const Type *t = GetParameterType(i);
         if (t == NULL)
-#if defined(LLVM_3_4)
-            return llvm::DICompositeType();
-#else
             return llvm::DIType();
-#endif
         retArgTypes.push_back(t->GetDIType(scope));
     }
 
     llvm::DIArray retArgTypesArray =
         m->diBuilder->getOrCreateArray(llvm::ArrayRef<llvm::Value *>(retArgTypes));
-#if defined(LLVM_3_4) //function createSubroutineType began to
-                      //return DICompositeType from LLVM_3_3
-                      //It is required from LLVM_3_4
-    llvm::DICompositeType diType =
-#else
     llvm::DIType diType =
-#endif
         // FIXME: DIFile
         m->diBuilder->createSubroutineType(llvm::DIFile(), retArgTypesArray);
     return diType;

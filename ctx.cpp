@@ -336,21 +336,22 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         AssertPos(currentPos, scope.Verify());
 
         const FunctionType *functionType = function->GetType();
-#if defined(LLVM_3_4)
-        llvm::DICompositeType diSubprogramType;
-#else
+
         llvm::DIType diSubprogramType;
-#endif
         if (functionType == NULL)
             AssertPos(currentPos, m->errorCount > 0);
         else {
-#if defined(LLVM_3_4)
-            diSubprogramType = functionType->GetDICompositeType(scope);
-#else
             diSubprogramType = functionType->GetDIType(scope);
-#endif
             AssertPos(currentPos, diSubprogramType.Verify());
         }
+
+#if defined(LLVM_3_4)
+        Assert(diSubprogramType.isCompositeType());
+        llvm::DICompositeType diSubprogramType_n =
+            static_cast<llvm::DICompositeType>(diSubprogramType);
+#else
+        llvm::DIType diSubprogramType_n = diSubprogramType;
+#endif
 
         std::string mangledName = llvmFunction->getName();
         if (mangledName == funSym->name)
@@ -364,7 +365,7 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         diSubprogram =
             m->diBuilder->createFunction(diFile /* scope */, funSym->name,
                                          mangledName,        diFile,
-                                         firstLine,          diSubprogramType,
+                                         firstLine,          diSubprogramType_n,
                                          isStatic,           true, /* is defn */
                                          firstLine,
                                          flags,
