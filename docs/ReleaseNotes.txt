@@ -1,3 +1,19 @@
+=== v1.4.2 === (11 June 2013)
+
+A minor version update with a few important changes:
+
+* Stability fix for AVX2 target (Haswell) - problem with gather instructions was
+  released in LLVM 3.4, if you build with LLVM 3.2 or 3.3, it's available in our
+  repository (llvm_patches/r183327-AVX2-GATHER.patch) and needs to be applied
+  manually.
+
+* Stability fix for widespread issue on Win32 platform (#503).
+
+* Performance improvements for Xeon Phi related to mask representation.
+
+Also LLVM 3.3 has been released and now it's the recommended version for building ISPC.
+Precompiled binaries are also built with LLVM 3.3. 
+
 === v1.4.1 === (28 May 2013)
 
 A major new version of ispc has been released with stability and performance
@@ -20,7 +36,7 @@ Important bug fixes/changes:
 
 * FMA instructions are enabled for AVX2 instruction set.
 
-* Support of RDRAND instruction when availible via library function rdrand (Ivy Bridge).
+* Support of RDRAND instruction when available via library function rdrand (Ivy Bridge).
 
 Release also contains numerous bug fixes and minor improvements.
 
