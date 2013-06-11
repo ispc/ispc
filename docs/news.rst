@@ -2,6 +2,17 @@
 ispc News
 =========
 
+ispc 1.4.2 is Released
+----------------------
+
+A minor update of ``ispc`` has been released with stability fix for AVX2
+(Haswell), fix for Win32 platform and performance improvements on Xeon Phi.
+As usual, it's available on all supported platforms (Windows, Linux and MacOS).
+This version supports LLVM 3.1, 3.2, 3.3 and 3.4, but now we are recommending
+to avoid 3.1, as it's known to contain a number of stability problems and we are
+planning to deprecate its support soon.
+The released binaries are built with 3.3.
+
 ispc 1.4.1 is Released
 ----------------------
 
