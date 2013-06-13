@@ -228,6 +228,7 @@ def add_prefix(path):
     else:
         input_prefix = ""
     path = input_prefix + path
+    path = os.path.normpath(path)
     return path
 
 
@@ -271,8 +272,8 @@ def run_test(testname):
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
-    filename = os.path.normpath(add_prefix(testname))
-    ispc_exe_rel = os.path.normpath(add_prefix(ispc_exe))
+    filename = add_prefix(testname)
+    ispc_exe_rel = add_prefix(ispc_exe)
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -370,7 +371,7 @@ def run_test(testname):
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % os.path.normpath(add_prefix(options.include_file))
+                ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
@@ -484,7 +485,7 @@ if __name__ == '__main__':
 
     elapsed_time = time.time() - start_time
     if options.time:
-        sys.stdout.write("elapsed time: %d s\n" % elapsed_time)
+        sys.stdout.write("Elapsed time: %d s\n" % elapsed_time)
 
     while not qret.empty():
         (c, r) = qret.get()
