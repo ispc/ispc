@@ -17,6 +17,7 @@ import shlex
 import platform
 import tempfile
 import os.path
+import time
 
 # disable fancy error/warning printing with ANSI colors, so grepping for error
 # messages doesn't get confused
@@ -52,6 +53,8 @@ parser.add_option('-v', '--verbose', dest='verbose', help='Enable verbose output
 parser.add_option('--wrap-exe', dest='wrapexe',
                   help='Executable to wrap test runs with (e.g. "valgrind")',
                   default="")
+parser.add_option('--time', dest='time', help='Enable time output',
+                  default=False, action="store_true")
 
 (options, args) = parser.parse_args()
 
@@ -217,6 +220,42 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         return (0, 0)
 
 
+def check_test(filename):
+    prev_arch = False
+    prev_os = False
+    done_arch = True
+    done_os = True
+    done = True
+    global is_windows
+    if is_windows:
+        os = "windows"
+    else:
+        os = "linux"
+    b = buffer(file(filename).read());
+    for run in re.finditer('// *rule: run on .*', b):
+        arch = re.match('.* arch=.*', run.group())
+        if arch != None:
+            if re.search('arch='+options.arch+'$', arch.group()) != None:
+                prev_arch = True
+            if re.search('arch='+options.arch+' ', arch.group()) != None:
+                prev_arch = True
+            done_arch = prev_arch
+        OS =   re.match('.* OS=.*', run.group())
+        if OS   != None:
+            if re.search('OS='+os, OS.group())   != None:
+                prev_os = True
+            done_os = prev_os
+    done = done_arch and done_os
+    for skip in re.finditer('// *rule: skip on .*', b):
+        if re.search(' arch=' + options.arch + '$', skip.group())!=None:
+            done = False
+        if re.search(' arch=' + options.arch + ' ', skip.group())!=None:
+            done = False
+        if re.search(' OS=' + OS, skip.group())!=None:
+            done = False
+    return done
+
+
 def run_test(testname):
     global is_windows
     if is_windows:
@@ -351,7 +390,7 @@ def run_test(testname):
 # pull tests to run from the given queue and run them.  Multiple copies of
 # this function will be running in parallel across all of the CPU cores of
 # the system.
-def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg, counter, mutex):
+def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test_length_arg, counter, mutex):
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
         os.mkdir(tmpdir)
@@ -380,14 +419,18 @@ def run_tasks_from_queue(queue, queue_ret, total_tests_arg, max_test_length_arg,
                 
             sys.exit(0)
 
-        (compile_error, run_error) = run_test(filename)
-        if compile_error != 0:
-            compile_error_files += [ filename ]
-        if run_error != 0:
-            run_error_files += [ filename ]
+        if check_test(filename):
+            (compile_error, run_error) = run_test(filename)
+            if compile_error != 0:
+                compile_error_files += [ filename ]
+            if run_error != 0:
+                run_error_files += [ filename ]
 
-        with mutex:
-            update_progress(filename, total_tests_arg, counter, max_test_length_arg)
+            with mutex:
+                update_progress(filename, total_tests_arg, counter, max_test_length_arg)
+        else:
+            queue_skip.put(filename)
+
 
 task_threads = []
 
@@ -413,6 +456,7 @@ if __name__ == '__main__':
     for x in range(nthreads):
         q.put('STOP')
     qret = multiprocessing.Queue()
+    qskip = multiprocessing.Queue()
 
     # need to catch sigint so that we can terminate all of the tasks if
     # we're interrupted
@@ -421,9 +465,10 @@ if __name__ == '__main__':
     finished_tests_counter = multiprocessing.Value(c_int)
     finished_tests_counter_lock = multiprocessing.Lock()
 
+    current_time = time.time()
     # launch jobs to run tests
     for x in range(nthreads):
-        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, total_tests, max_test_length, finished_tests_counter, finished_tests_counter_lock))
+        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests, max_test_length, finished_tests_counter, finished_tests_counter_lock))
         task_threads.append(t)
         t.start()
 
@@ -433,10 +478,20 @@ if __name__ == '__main__':
         t.join()
     sys.stdout.write("\n")
 
+    pass_time = time.time() - current_time
+    if options.time:
+        sys.stdout.write("elapsed time: %d s\n" % pass_time)
+
     while not qret.empty():
         (c, r) = qret.get()
         compile_error_files += c
         run_error_files += r
+
+    skip = 0
+    if qskip.qsize() > 0:
+        sys.stdout.write("%d / %d tests SKIPPED:\n" % (qskip.qsize(), total_tests))
+        while not qskip.empty():
+            sys.stdout.write("\t%s\n" % qskip.get())
 
     if len(compile_error_files) > 0:
         compile_error_files.sort()
