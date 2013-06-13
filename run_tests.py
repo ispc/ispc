@@ -220,6 +220,17 @@ def run_cmds(compile_cmds, run_cmd, filename, expect_failure):
         return (0, 0)
 
 
+def add_prefix(path):
+    global is_windows
+    if is_windows:
+    # On Windows we run tests in tmp dir, so the root is one level up.
+        input_prefix = "..\\"
+    else:
+        input_prefix = ""
+    path = input_prefix + path
+    return path
+
+
 def check_test(filename):
     prev_arch = False
     prev_os = False
@@ -228,21 +239,21 @@ def check_test(filename):
     done = True
     global is_windows
     if is_windows:
-        os = "windows"
+        oss = "windows"
     else:
-        os = "linux"
-    b = buffer(file(filename).read());
+        oss = "linux"
+    b = buffer(file(add_prefix(filename)).read());
     for run in re.finditer('// *rule: run on .*', b):
         arch = re.match('.* arch=.*', run.group())
         if arch != None:
-            if re.search('arch='+options.arch+'$', arch.group()) != None:
+            if re.search(' arch='+options.arch+'$', arch.group()) != None:
                 prev_arch = True
-            if re.search('arch='+options.arch+' ', arch.group()) != None:
+            if re.search(' arch='+options.arch+' ', arch.group()) != None:
                 prev_arch = True
             done_arch = prev_arch
-        OS =   re.match('.* OS=.*', run.group())
-        if OS   != None:
-            if re.search('OS='+os, OS.group())   != None:
+        OS = re.match('.* OS=.*', run.group())
+        if OS != None:
+            if re.search(' OS='+oss, OS.group()) != None:
                 prev_os = True
             done_os = prev_os
     done = done_arch and done_os
@@ -251,24 +262,17 @@ def check_test(filename):
             done = False
         if re.search(' arch=' + options.arch + ' ', skip.group())!=None:
             done = False
-        if re.search(' OS=' + OS, skip.group())!=None:
+        if re.search(' OS=' + oss, skip.group())!=None:
             done = False
     return done
 
 
 def run_test(testname):
-    global is_windows
-    if is_windows:
-        # On Windows we run tests in tmp dir, so the root is one level up.
-        input_prefix = "..\\"
-    else:
-        input_prefix = ""
-
     # testname is a path to the test from the root of ispc dir
     # filename is a path to the test from the current dir
     # ispc_exe_rel is a relative path to ispc
-    filename = os.path.normpath(input_prefix + testname)
-    ispc_exe_rel = os.path.normpath(input_prefix + ispc_exe)
+    filename = os.path.normpath(add_prefix(testname))
+    ispc_exe_rel = os.path.normpath(add_prefix(ispc_exe))
 
     # is this a test to make sure an error is issued?
     want_error = (filename.find("tests_errors") != -1)
@@ -329,8 +333,8 @@ def run_test(testname):
                     obj_name = "%s.obj" % os.path.basename(filename)
                 exe_name = "%s.exe" % os.path.basename(filename)
 
-                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %stest_static.cpp %s /Fe%s" % \
-                         (options.compiler_exe, match, input_prefix, obj_name, exe_name)
+                cc_cmd = "%s /I. /I../winstuff /Zi /nologo /DTEST_SIG=%d %s %s /Fe%s" % \
+                         (options.compiler_exe, match, add_prefix("test_static.cpp"), obj_name, exe_name)
                 if should_fail:
                     cc_cmd += " /DEXPECT_FAILURE"
             else:
@@ -366,7 +370,7 @@ def run_test(testname):
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
-                ispc_cmd += " --emit-c++ --c++-include-file=%s" % os.path.normpath(input_prefix + options.include_file)
+                ispc_cmd += " --emit-c++ --c++-include-file=%s" % os.path.normpath(add_prefix(options.include_file))
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
@@ -465,7 +469,7 @@ if __name__ == '__main__':
     finished_tests_counter = multiprocessing.Value(c_int)
     finished_tests_counter_lock = multiprocessing.Lock()
 
-    current_time = time.time()
+    start_time = time.time()
     # launch jobs to run tests
     for x in range(nthreads):
         t = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests, max_test_length, finished_tests_counter, finished_tests_counter_lock))
@@ -478,9 +482,9 @@ if __name__ == '__main__':
         t.join()
     sys.stdout.write("\n")
 
-    pass_time = time.time() - current_time
+    elapsed_time = time.time() - start_time
     if options.time:
-        sys.stdout.write("elapsed time: %d s\n" % pass_time)
+        sys.stdout.write("elapsed time: %d s\n" % elapsed_time)
 
     while not qret.empty():
         (c, r) = qret.get()
