@@ -1060,23 +1060,18 @@ static llvm::Value *
 lGetBasePointer(llvm::Value *v) {
     if (llvm::isa<llvm::InsertElementInst>(v) ||
         llvm::isa<llvm::ShuffleVectorInst>(v)) {
-        llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(v, g->target->getVectorWidth(), elements);
-
-        // Make sure none of the elements is undefined.
+        llvm::Value *element = LLVMFlattenInsertChain
+            (v, g->target->getVectorWidth(), true, false);
         // TODO: it's probably ok to allow undefined elements and return
         // the base pointer if all of the other elements have the same
         // value.
-        for (int i = 0; i < g->target->getVectorWidth(); ++i)
-            if (elements[i] == NULL)
-                return NULL;
-
-        // Do all of the elements have the same value?
-        for (int i = 0; i < g->target->getVectorWidth()-1; ++i)
-            if (elements[i] != elements[i+1])
-                return NULL;
-
-        return lCheckForActualPointer(elements[0]);
+        if (element != NULL) {
+            //all elements are the same and not NULLs
+            return lCheckForActualPointer(element);
+        }
+        else {
+            return NULL;
+        }
     }
 
     // This case comes up with global/static arrays
