@@ -600,9 +600,9 @@ lGetIntValue(llvm::Value *offset) {
 }
 
 
-llvm::Value * 
+llvm::Value *
 LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
-                        bool compare, bool undef) {
+                       bool compare, bool undef) {
     llvm::Value ** elements = new llvm::Value*[vectorWidth];
     for (int i = 0; i < vectorWidth; ++i) {
         elements[i] = NULL;
@@ -631,7 +631,7 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
             if (llvm::isa<llvm::UndefValue>(insertBase)) {
                 break;
             }
-    
+
             if (llvm::isa<llvm::ConstantVector>(insertBase) ||
                 llvm::isa<llvm::ConstantAggregateZero>(insertBase)) {
                 llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(insertBase);
@@ -648,17 +648,20 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
                 // They are not equal to each other so we should return NULL if compare
                 // and first element if we have it.
                 Assert(compare == true ||  elements[0] != NULL);
-                if (compare)
+                if (compare) {
                     return NULL;
-                else
+                }
+                else {
                     return elements[0];
+                }
             }
             // TODO: Also, should we handle some other values like
             // ConstantDataVectors.
         }
-        if (compare == false)
-            //We simply want first element 
+        if (compare == false) {
+            //We simply want first element
             return elements[0];
+        }
 
         int null_number = 0;
         int NonNull = 0;

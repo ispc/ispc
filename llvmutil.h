@@ -270,10 +270,9 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
        %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
                                                   <4 x i32> zeroinitializer
     Function returns:
-    First element of array if compare is false,
-    NonNull element only if all elements are equal or NULL if compare is true,
-    NonNull element only if all elements are equal if compare is true and undef is false,
-    NULL if all elements are NULLs
+    Compare all elements and return one of them if all are equal, otherwise NULL.
+    If compare argument is false, don't do compare and return first element instead.
+    If undef argument is true, ignore undef elements (but all undef yields NULL anyway).
  */
 extern llvm::Value * LLVMFlattenInsertChain (llvm::Value *inst, int vectorWidth,
     bool compare = true, bool undef = true);
