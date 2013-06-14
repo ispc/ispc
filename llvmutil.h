@@ -269,9 +269,14 @@ extern bool LLVMExtractVectorInts(llvm::Value *v, int64_t ret[], int *nElts);
        %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
        %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
                                                   <4 x i32> zeroinitializer
+    Function returns:
+    First element of array if compare is false,
+    NonNull element only if all elements are equal or NULL if compare is true,
+    NonNull element only if all elements are equal if compare is true and undef is false,
+    NULL if all elements are NULLs
  */
-extern void LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
-                                   llvm::Value **elements);
+extern llvm::Value * LLVMFlattenInsertChain (llvm::Value *inst, int vectorWidth,
+    bool compare = true, bool undef = true);
 
 /** This is a utility routine for debugging that dumps out the given LLVM
     value as well as (recursively) all of the other values that it depends
