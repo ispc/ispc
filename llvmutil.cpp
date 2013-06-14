@@ -600,9 +600,10 @@ lGetIntValue(llvm::Value *offset) {
 }
 
 
-void
+llvm::Value *
 LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
-                       llvm::Value **elements) {
+                       bool compare, bool undef) {
+    llvm::Value ** elements = new llvm::Value*[vectorWidth];
     for (int i = 0; i < vectorWidth; ++i) {
         elements[i] = NULL;
     }
@@ -610,43 +611,93 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
     // Catch a pattern of InsertElement chain.
     if (llvm::InsertElementInst *ie =
             llvm::dyn_cast<llvm::InsertElementInst>(inst)) {
+        //Gather elements of vector
         while (ie != NULL) {
             int64_t iOffset = lGetIntValue(ie->getOperand(2));
             Assert(iOffset >= 0 && iOffset < vectorWidth);
-            Assert(elements[iOffset] == NULL);
 
             // Get the scalar value from this insert
-            elements[iOffset] = ie->getOperand(1);
+            if (elements[iOffset] == NULL) {
+                elements[iOffset] = ie->getOperand(1);
+            }
 
             // Do we have another insert?
             llvm::Value *insertBase = ie->getOperand(0);
             ie = llvm::dyn_cast<llvm::InsertElementInst>(insertBase);
-            if (ie == NULL) {
-                if (llvm::isa<llvm::UndefValue>(insertBase)) {
-                    return;
+            if (ie != NULL) {
+                continue;
+            }
+
+            if (llvm::isa<llvm::UndefValue>(insertBase)) {
+                break;
+            }
+
+            if (llvm::isa<llvm::ConstantVector>(insertBase) ||
+                llvm::isa<llvm::ConstantAggregateZero>(insertBase)) {
+                llvm::Constant *cv = llvm::dyn_cast<llvm::Constant>(insertBase);
+                Assert(vectorWidth == (int)(cv->getNumOperands()));
+                for (int i=0; i<vectorWidth; i++) {
+                    if (elements[i] == NULL) {
+                        elements[i] = cv->getOperand(i);
+                    }
                 }
+                break;
+            }
+            else {
+                // Here chain ends in llvm::LoadInst or some other.
+                // They are not equal to each other so we should return NULL if compare
+                // and first element if we have it.
+                Assert(compare == true ||  elements[0] != NULL);
+                if (compare) {
+                    return NULL;
+                }
+                else {
+                    return elements[0];
+                }
+            }
+            // TODO: Also, should we handle some other values like
+            // ConstantDataVectors.
+        }
+        if (compare == false) {
+            //We simply want first element
+            return elements[0];
+        }
 
-                // Get the value out of a constant vector if that's what we
-                // have
-                llvm::ConstantVector *cv =
-                    llvm::dyn_cast<llvm::ConstantVector>(insertBase);
-
-                // FIXME: this assert is a little questionable; we probably
-                // shouldn't fail in this case but should just return an
-                // incomplete result.  But there aren't currently any known
-                // cases where we have anything other than an undef value or a
-                // constant vector at the base, so if that ever does happen,
-                // it'd be nice to know what happend so that perhaps we can
-                // handle it.
-                // FIXME: Also, should we handle ConstantDataVectors with
-                // LLVM3.1?  What about ConstantAggregateZero values??
-                Assert(cv != NULL);
-
-                Assert(iOffset < (int)cv->getNumOperands());
-                elements[iOffset] = cv->getOperand((int32_t)iOffset);
+        int null_number = 0;
+        int NonNull = 0;
+        for(int i = 0; i < vectorWidth; i++) {
+            if (elements[i] == NULL) {
+                null_number++;
+            }
+            else {
+                NonNull = i;
             }
         }
+        if (null_number == vectorWidth) {
+            //All of elements are NULLs
+            return NULL;
+        }
+        if ((undef == false) && (null_number != 0)) {
+            //We don't want NULLs in chain, but we have them
+            return NULL;
+        }
+
+        // Compare elements of vector
+        for (int i = 0; i < vectorWidth; i++) {
+            if (elements[i] == NULL) {
+                continue;
+            }
+
+            std::vector<llvm::PHINode *> seenPhi0;
+            std::vector<llvm::PHINode *> seenPhi1;
+            if (lValuesAreEqual(elements[NonNull], elements[i],
+                seenPhi0, seenPhi1) == false) {
+                return NULL;
+            }
+        }
+        return elements[NonNull];
     }
+
     // Catch a pattern of broadcast implemented as InsertElement + Shuffle:
     //   %broadcast_init.0 = insertelement <4 x i32> undef, i32 %val, i32 0
     //   %broadcast.1 = shufflevector <4 x i32> %smear.0, <4 x i32> undef,
@@ -663,14 +714,12 @@ LLVMFlattenInsertChain(llvm::Value *inst, int vectorWidth,
                     llvm::dyn_cast<llvm::ConstantInt>(ie->getOperand(2));
 
                 if (ci->isZero()) {
-                    for (int i = 0; i < vectorWidth; ++i) {
-                        elements[i] = ie->getOperand(1);
-                    }
-                    return;
+                    return ie->getOperand(1);
                 }
             }
         }
     }
+    return NULL;
 }
 
 
@@ -726,12 +775,10 @@ lIsExactMultiple(llvm::Value *val, int baseValue, int vectorLength,
 
     if (llvm::isa<llvm::InsertElementInst>(val) ||
         llvm::isa<llvm::ShuffleVectorInst>(val)) {
-        llvm::Value *elts[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(val, g->target->getVectorWidth(), elts);
+        llvm::Value *element = LLVMFlattenInsertChain(val, g->target->getVectorWidth());
         // We just need to check the scalar first value, since we know that
         // all elements are equal
-        return lIsExactMultiple(elts[0], baseValue, vectorLength,
-                                     seenPhis);
+        return lIsExactMultiple(element, baseValue, vectorLength, seenPhis);
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(val);
@@ -995,32 +1042,7 @@ lVectorValuesAllEqual(llvm::Value *v, int vectorLength,
 
     llvm::InsertElementInst *ie = llvm::dyn_cast<llvm::InsertElementInst>(v);
     if (ie != NULL) {
-        llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(ie, vectorLength, elements);
-
-        // We will ignore any values of elements[] that are NULL; as they
-        // correspond to undefined values--we just want to see if all of
-        // the defined values have the same value.
-        int lastNonNull = 0;
-        while (lastNonNull < vectorLength && elements[lastNonNull] == NULL)
-            ++lastNonNull;
-
-        if (lastNonNull == vectorLength)
-            // all of them are undef!
-            return true;
-
-        for (int i = lastNonNull; i < vectorLength; ++i) {
-            if (elements[i] == NULL)
-                continue;
-
-            std::vector<llvm::PHINode *> seenPhi0;
-            std::vector<llvm::PHINode *> seenPhi1;
-            if (lValuesAreEqual(elements[lastNonNull], elements[i], seenPhi0,
-                                seenPhi1) == false)
-                return false;
-            lastNonNull = i;
-        }
-        return true;
+        return (LLVMFlattenInsertChain(ie, vectorLength) != NULL);
     }
 
     llvm::PHINode *phi = llvm::dyn_cast<llvm::PHINode>(v);
@@ -1472,9 +1494,7 @@ lExtractFirstVectorElement(llvm::Value *v,
     // flatten them out and grab the value for the first one.
     if (llvm::isa<llvm::InsertElementInst>(v) ||
         llvm::isa<llvm::ShuffleVectorInst>(v)) {
-        llvm::Value *elements[ISPC_MAX_NVEC];
-        LLVMFlattenInsertChain(v, vt->getNumElements(), elements);
-        return elements[0];
+        return LLVMFlattenInsertChain(v, vt->getNumElements(), false);
     }
 
     // Worst case, for everything else, just do a regular extract element
