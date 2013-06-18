@@ -51,7 +51,17 @@ else
 endif
 ARCH_TYPE = $(shell arch)
 
-LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs engine ipo bitreader bitwriter instrumentation linker)
+LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
+LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
+LLVM_VERSION_DEF=-D$(LLVM_VERSION)
+
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker
+# Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
+# We check if it's available before adding it (to not break 3.2 and earlier).
+ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
+    LLVM_COMPONENTS+=option
+endif
+LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
 CLANG=clang
 CLANG_LIBS = -lclangFrontend -lclangDriver \
@@ -69,10 +79,6 @@ endif
 ifeq ($(ARCH_OS2),Msys)
 	ISPC_LIBS += -lshlwapi -limagehlp -lpsapi
 endif
-
-LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
-LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
-LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 # Define build time stamp and revision.
 # For revision we use GIT or SVN info.
