@@ -6802,7 +6802,23 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
         if (!conv)
             return NULL;
 
-        llvm::Value *cast = ctx->BroadcastValue(conv, toType->LLVMType(g->ctx));
+        llvm::Value *cast = NULL;
+        llvm::Type* toTypeLLVM = toType->LLVMType(g->ctx);
+        if (llvm::isa<llvm::VectorType>(toTypeLLVM)) {
+            // Example uniform float => uniform float<3>
+            cast = ctx->BroadcastValue(conv, toTypeLLVM);
+        }
+        else if (llvm::isa<llvm::ArrayType>(toTypeLLVM)) {
+            // Example varying float => varying float<3>
+            cast = llvm::UndefValue::get(toType->LLVMType(g->ctx));
+            for (int i = 0; i < toVector->GetElementCount(); ++i) {
+                // Here's InsertInst produces InsertValueInst.
+                cast = ctx->InsertInst(cast, conv, i);
+            }
+        }
+        else {
+            FATAL("TypeCastExpr::GetValue: problem with cast");
+        }
 
         return cast;
     }
