@@ -464,7 +464,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMipa.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition="'$(LLVM_VERSION)'=='LLVM_3_4'">LLVMOption.lib;LLVMSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_1'AND'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'">LLVMOption.lib;LLVMSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -485,7 +485,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(LLVM_INSTALL_DIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>clangFrontend.lib;clangDriver.lib;clangSerialization.lib;clangParse.lib;clangSema.lib;clangAnalysis.lib;clangEdit.lib;clangAST.lib;clangLex.lib;clangBasic.lib;LLVMAnalysis.lib;LLVMAsmParser.lib;LLVMAsmPrinter.lib;LLVMBitReader.lib;LLVMBitWriter.lib;LLVMCodeGen.lib;LLVMCore.lib;LLVMExecutionEngine.lib;LLVMInstCombine.lib;LLVMInstrumentation.lib;LLVMLinker.lib;LLVMMC.lib;LLVMMCParser.lib;LLVMObject.lib;LLVMScalarOpts.lib;LLVMSelectionDAG.lib;LLVMSupport.lib;LLVMTarget.lib;LLVMTransformUtils.lib;LLVMX86ASMPrinter.lib;LLVMX86ASMParser.lib;LLVMX86Utils.lib;LLVMX86CodeGen.lib;LLVMX86Desc.lib;LLVMX86Disassembler.lib;LLVMX86Info.lib;LLVMipa.lib;LLVMipo.lib;shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies Condition="'$(LLVM_VERSION)'=='LLVM_3_4'">LLVMOption.lib;LLVMSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(LLVM_VERSION)'!='LLVM_3_1'AND'$(LLVM_VERSION)'!='LLVM_3_2'AND'$(LLVM_VERSION)'!='LLVM_3_3'">LLVMOption.lib;LLVMSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
