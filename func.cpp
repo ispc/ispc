@@ -85,19 +85,19 @@ Function::Function(Symbol *s, Stmt *c) {
         code = TypeCheck(code);
 
         if (code != NULL && g->debugPrint) {
-            fprintf(stderr, "After typechecking function \"%s\":\n",
+            printf("After typechecking function \"%s\":\n",
                     sym->name.c_str());
             code->Print(0);
-            fprintf(stderr, "---------------------\n");
+            printf("---------------------\n");
         }
 
         if (code != NULL) {
             code = Optimize(code);
             if (g->debugPrint) {
-                fprintf(stderr, "After optimizing function \"%s\":\n",
+                printf("After optimizing function \"%s\":\n",
                         sym->name.c_str());
                 code->Print(0);
-                fprintf(stderr, "---------------------\n");
+                printf("---------------------\n");
             }
         }
     }
