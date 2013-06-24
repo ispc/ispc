@@ -505,7 +505,11 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+        // Starting from 3.4 this functionality was moved to
+        // InstructionCombiningPass. See r184459 for details.
         optPM.add(llvm::createSimplifyLibCallsPass());
+#endif
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCFGSimplificationPass());
