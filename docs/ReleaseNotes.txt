@@ -1,3 +1,17 @@
+=== v1.4.3 === (25 June 2013)
+
+A minor version update with several stability improvements:
+
+* Two bugs were fixed (including a bug in LLVM) to improve stability on 32 bit
+  platforms.
+
+* A bug affecting several examples was fixed.
+
+* --instrument switch is fixed.
+
+All tests and examples now properly compile and execute on native targets on
+Unix platforms (Linux and MacOS).
+
 === v1.4.2 === (11 June 2013)
 
 A minor version update with a few important changes:

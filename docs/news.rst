@@ -2,6 +2,14 @@
 ispc News
 =========
 
+ispc 1.4.3 is Released
+----------------------
+
+A minor update of ``ispc`` has been released with several stability improvements.
+All tests and examples now properly compile and execute on native targets on
+Unix platforms (Linux and MacOS).
+The released binaries are built with patched version of LLVM 3.3.
+
 ispc 1.4.2 is Released
 ----------------------
 
