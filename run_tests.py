@@ -405,10 +405,11 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
         
     compile_error_files = [ ]
     run_error_files = [ ]
+    skip_files = [ ]
     while True:
         filename = queue.get()
         if (filename == 'STOP'):
-            queue_ret.put((compile_error_files, run_error_files))
+            queue_ret.put((compile_error_files, run_error_files, skip_files))
             if is_windows:
                 try:
                     os.remove("test_static.obj")
@@ -434,7 +435,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
             with mutex:
                 update_progress(filename, total_tests_arg, counter, max_test_length_arg)
         else:
-            queue_skip.put(filename)
+            skip_files += [ filename ]
 
 
 task_threads = []
@@ -449,6 +450,7 @@ if __name__ == '__main__':
 
     compile_error_files = [ ]
     run_error_files = [ ]
+    skip_files = [ ]
 
     nthreads = min(multiprocessing.cpu_count(), options.num_jobs)
     nthreads = min(nthreads, len(files))
@@ -488,16 +490,16 @@ if __name__ == '__main__':
         sys.stdout.write("Elapsed time: %d s\n" % elapsed_time)
 
     while not qret.empty():
-        (c, r) = qret.get()
+        (c, r, s) = qret.get()
         compile_error_files += c
         run_error_files += r
+        skip_files += s
 
-    skip = 0
-    if qskip.qsize() > 0:
-        sys.stdout.write("%d / %d tests SKIPPED:\n" % (qskip.qsize(), total_tests))
-        while not qskip.empty():
-            sys.stdout.write("\t%s\n" % qskip.get())
-
+    if len(skip_files) > 0:
+        skip_files.sort()
+        sys.stdout.write("%d / %d tests SKIPPED:\n" % (len(skip_files), total_tests))
+        for f in skip_files:
+            sys.stdout.write("\t%s\n" % f)
     if len(compile_error_files) > 0:
         compile_error_files.sort()
         sys.stdout.write("%d / %d tests FAILED compilation:\n" % (len(compile_error_files), total_tests))
