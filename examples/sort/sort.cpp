@@ -31,6 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <algorithm>
 #include <iostream>
@@ -55,10 +56,9 @@ static inline void progressbar (unsigned int x, unsigned int n, unsigned int w =
   if ((x != n) && (x % (n/100) != 0)) return;
 
   using namespace std;
-       
   float ratio  =  x/(float)n;
   int c =  ratio * w;
-	        
+
   cout << setw(3) << (int)(ratio*100) << "% [";
   for (int x=0; x<c; x++) cout << "=";
   for (int x=c; x<w; x++) cout << " ";
@@ -72,10 +72,10 @@ int main (int argc, char *argv[])
   unsigned int *code = new unsigned int [n];
   int *order = new int [n];
 
+  srand (0);
+
   for (i = 0; i < m; i ++)
   {
-    srand (0);
-
     for (j = 0; j < n; j ++) code [j] = random() % l;
 
     reset_and_start_timer();
@@ -86,14 +86,13 @@ int main (int argc, char *argv[])
 
     progressbar (i, m);
   }
-              
 
   printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
 
+  srand (0);
+
   for (i = 0; i < m; i ++)
   {
-    srand (0);
-
     for (j = 0; j < n; j ++) code [j] = random() % l;
 
     reset_and_start_timer();
@@ -107,10 +106,10 @@ int main (int argc, char *argv[])
               
   printf("[sort ispc+tasks]:\t[%.3f] million cycles\n", tISPC2);
 
+  srand (0);
+
   for (i = 0; i < m; i ++)
   {
-    srand (0);
-
     for (j = 0; j < n; j ++) code [j] = random() % l;
 
     reset_and_start_timer();

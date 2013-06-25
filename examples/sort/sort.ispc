@@ -142,12 +142,54 @@ task void unpack (uniform int span, uniform int n, uniform int64 pair[], uniform
   }
 }
 
+task void addup (uniform int h[], uniform int g[])
+{
+  uniform int * uniform u = &h[256*programCount*taskIndex];
+  uniform int i, x, y = 0;
+
+  for (i = 0; i < 256*programCount; i ++)
+  {
+    x = u[i];
+    u[i] = y;
+    y += x;
+  }
+
+  g[taskIndex] = y;
+}
+
+task void bumpup (uniform int h[], uniform int g[])
+{
+  uniform int * uniform u = &h[256*programCount*taskIndex];
+  uniform int z = g[taskIndex];
+
+  foreach (i = 0 ... 256*programCount)
+  {
+    u[i] += z;
+  }
+}
+
+static void prefix_sum (uniform int num, uniform int h[])
+{
+  uniform int * uniform g = uniform new int [num+1];
+  uniform int i;
+
+  launch[num] addup (h, g+1);
+  sync;
+
+  for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
+
+  launch[num] bumpup (h, g);
+  sync;
+
+  delete g;
+}
+
 export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
 {
   uniform int num = ntasks < 1 ? num_cores () : ntasks;
   uniform int span = n / num;
   uniform int hsize = 256*programCount*num;
-  uniform int * uniform hist = uniform new int [hsize+1];
+  uniform int * uniform hist = uniform new int [hsize];
   uniform int64 * uniform pair = uniform new int64 [n];
   uniform int64 * uniform temp = uniform new int64 [n];
   uniform int pass, i;
@@ -166,11 +208,10 @@ export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int o
 
   for (pass = 0; pass < 4; pass ++)
   {
-    launch[num] histogram (span, n, pair, pass, hist+1);
+    launch[num] histogram (span, n, pair, pass, hist);
     sync;
 
-    /* TODO: parallelize and vectorize prefix sum */
-    for (hist[0] = 0, i = 1; i < hsize; i ++) hist[i] += hist[i-1];
+    prefix_sum (num, hist);
 
     launch[num] permutation (span, n, pair, pass, hist, temp);
     sync;
