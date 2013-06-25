@@ -60,7 +60,7 @@ int countbits(int i) {
 // Callback function that ispc compiler emits calls to when --instrument
 // command-line flag is given while compiling.
 void
-ISPCInstrument(const char *fn, const char *note, int line, int mask) {
+ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask) {
     char sline[16];
     sprintf(sline, "%04d", line);
     std::string s = std::string(fn) + std::string("(") + std::string(sline) +
