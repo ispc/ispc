@@ -23,8 +23,8 @@ Index: lib/CodeGen/SelectionDAG/DAGCombiner.cpp
        AddToWorkList(SmallShift.getNode());
 -      return DAG.getNode(ISD::ANY_EXTEND, N->getDebugLoc(), VT, SmallShift);
 +      APInt Mask = APInt::getAllOnesValue(VT.getSizeInBits()).lshr(ShiftAmt);
-+      return DAG.getNode(ISD::AND, SDLoc(N), VT,
-+                         DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SmallShift),
++      return DAG.getNode(ISD::AND, N->getDebugLoc(), VT,
++                         DAG.getNode(ISD::ANY_EXTEND, N->getDebugLoc(), VT, SmallShift),
 +                         DAG.getConstant(Mask, VT));
      }
    }
