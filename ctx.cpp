@@ -1414,7 +1414,7 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
-    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
+    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str, false);
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
                                                     true /*isConst*/,
@@ -1464,11 +1464,13 @@ FunctionEmitContext::I1VecToBoolVec(llvm::Value *b) {
 
 static llvm::Value *
 lGetStringAsValue(llvm::BasicBlock *bblock, const char *s) {
-    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s);
+    llvm::Constant *sConstant = llvm::ConstantDataArray::getString(*g->ctx, s, false);
+    std::string var_name = "_";
+    var_name = var_name + s;
     llvm::Value *sPtr = new llvm::GlobalVariable(*m->module, sConstant->getType(),
                                                  true /* const */,
                                                  llvm::GlobalValue::InternalLinkage,
-                                                 sConstant, s);
+                                                 sConstant, var_name.c_str());
     llvm::Value *indices[2] = { LLVMInt32(0), LLVMInt32(0) };
     llvm::ArrayRef<llvm::Value *> arrayRef(&indices[0], &indices[2]);
     return llvm::GetElementPtrInst::Create(sPtr, arrayRef, "sptr", bblock);

@@ -45,7 +45,7 @@ for i in range(0, len(data), 1):
             sys.stdout.write("\n")
 
 sys.stdout.write("0x00 };\n\n")
-sys.stdout.write("int builtins_bitcode_" + name + "_length = " + str(i+1) + ";\n")
+sys.stdout.write("int builtins_bitcode_" + name + "_length = " + str(len(data)) + ";\n")
 
 as_out.wait()
 
