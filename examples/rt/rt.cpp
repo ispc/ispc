@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
     }
     printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n", 
            minTimeSerial, width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2f from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCtasks);
 
     writeImage(id, image, width, height, "rt-serial.ppm");
