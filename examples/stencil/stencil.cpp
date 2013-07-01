@@ -132,7 +132,7 @@ int main() {
 
     printf("[stencil serial]:\t\t[%.3f] millon cycles\n", minTimeSerial);
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2f from ISPC + tasks)\n", 
+    printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
 
     // Check for agreement
