@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     printf("[mandelbrot serial]:\t\t[%.3f] millon cycles\n", minSerial);
     writePPM(buf, width, height, "mandelbrot-serial.ppm");
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);
+    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
 
     return 0;
 }
