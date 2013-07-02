@@ -8,11 +8,17 @@ import operator
 import time
 import glob
 import string
+import platform
 
 def build_test():
     global build_log
-    os.system("make clean >> "+build_log)
-    return os.system("make >> "+build_log+" 2>> "+build_log)
+    global is_windows
+    if is_windows == False:
+        os.system("make clean >> "+build_log)
+        return os.system("make >> "+build_log+" 2>> "+build_log)
+    else:
+        os.system("msbuild /t:clean >> " + build_log)
+        return os.system("msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /t:rebuild >> " + build_log)
 
 def execute_test(command):
     global perf_temp
@@ -38,7 +44,7 @@ def run_test(command, c1, c2, test):
     for line in open(perf_temp): # we take test output
         if "speedup" in line: # we are interested only in lines with speedup
             if j == c1: # we are interested only in lines with c1 numbers
-                print line
+                sys.stdout.write(line)
                 line = line.expandtabs(0)
                 line = line.replace("("," ")
                 line = line.split(",")
@@ -66,10 +72,22 @@ def cpu_get():
 
 #returns cpu_usage
 def cpu_check():
-    cpu1 = cpu_get()
-    time.sleep(1)
-    cpu2 = cpu_get()
-    cpu_percent = (float(cpu1[0] - cpu2[0])/float(cpu1[1] - cpu2[1]))*100
+    if is_windows == False:
+        cpu1 = cpu_get()
+        time.sleep(1)
+        cpu2 = cpu_get()
+        cpu_percent = (float(cpu1[0] - cpu2[0])/float(cpu1[1] - cpu2[1]))*100
+    else:
+	os.system("wmic cpu get loadpercentage /value > cpu_temp")
+	c = open("cpu_temp", 'r')
+        c_lines = c.readlines()
+	c.close()
+	os.remove("cpu_temp")
+	t = "0"
+	for i in c_lines[2]:
+            if i.isdigit():
+                t = t + i
+	cpu_percent = int(t)
     return cpu_percent
 
 #returns geomean of list
@@ -88,7 +106,7 @@ def geomean(par):
 #test[2] - list of results with tasks
 #test[1] or test[2] may be empty
 def print_answer(answer):
-    print "Name of test:\t\tISPC:\tISPC + tasks:"
+    sys.stdout.write("Name of test:\t\tISPC:\tISPC + tasks:\n")
     max_t = [0,0]
     diff_t = [0,0]
     geomean_t = [0,0]
@@ -122,30 +140,44 @@ parser.add_option('-p', '--path', dest='path',
     help='path to examples directory', default="./")
 (options, args) = parser.parse_args()
 
+global is_windows
+is_windows = (platform.system() == 'Windows' or
+              'CYGWIN_NT' in platform.system())
+
 # save corrent path
 pwd = os.getcwd()
 pwd = pwd + os.sep
+if is_windows:
+    pwd = "..\\"
 
 # check if cpu usage is low now
-cpu1 = cpu_get()
-time.sleep(1)
-cpu2 = cpu_get()
-cpu_percent = (float(cpu1[0] - cpu2[0])/float(cpu1[1] - cpu2[1]))*100
 cpu_percent = cpu_check()
 if cpu_percent > 20:
     sys.stdout.write("Warning: CPU Usage is very high.\n")
     sys.stdout.write("Close other applications.\n")
 
-# check that required compiler exists
+# check that required compilers exist
 PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
 compiler_exists = False
+ref_compiler_exists = False
+if is_windows == False:
+    compiler = "ispc"
+    ref_compiler = "g++"
+else:
+    compiler = "ispc.exe"
+    ref_compiler = "cl.exe"
 for counter in PATH_dir:
-    if os.path.exists(counter + os.sep + "ispc"):
+    if os.path.exists(counter + os.sep + compiler):
         compiler_exists = True
-    break
+    if os.path.exists(counter + os.sep + ref_compiler):
+        ref_compiler_exists = True
 if not compiler_exists:
     sys.stderr.write("Fatal error: ISPC compiler not found.\n")
     sys.stderr.write("Added path to ispc compiler to your PATH variable.\n")
+    sys.exit()
+if not ref_compiler_exists:
+    sys.stderr.write("Fatal error: reference compiler %s not found.\n" % ref_compiler)
+    sys.stderr.write("Added path to %s compiler to your PATH variable.\n" % ref_compiler)
     sys.exit()
 
 # checks that config file exists
@@ -168,8 +200,12 @@ length = len(lines)
 # prepare build.log and perf_temp files
 global build_log
 build_log = pwd + "build.log"
-if os.path.exists(build_log):
-    os.remove(build_log)
+if is_windows == False:
+    if os.path.exists(build_log):
+        os.remove(build_log)
+else:
+    if os.path.exists("build.log"):
+        os.remove("build.log")
 global perf_temp
 perf_temp = pwd + "perf_temp"
 
@@ -194,7 +230,10 @@ while i < length-2:
     # read parameters of test
     command = lines[i+2]
     command = command[:-1]
-    command = "./"+command + " >> " + perf_temp
+    if is_windows == False:
+        command = "./"+command + " >> " + perf_temp
+    else:
+        command = "x64\\Release\\"+command + " >> " + perf_temp
     # parsing config parameters
     next_line = lines[i+3]
     if next_line[0] == "!": # we should take only one part of test output

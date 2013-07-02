@@ -344,7 +344,7 @@ static inline void
 lMemFence() {
     // Windows atomic functions already contain the fence
     // KNC doesn't need the memory barrier
-#if !defined ISPC_IS_KNC || !defined ISPC_IS_WINDOWS
+#if !defined ISPC_IS_KNC && !defined ISPC_IS_WINDOWS
         __asm__ __volatile__("mfence":::"memory");
 #endif
 }
@@ -374,7 +374,7 @@ lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldValue) {
 static int32_t 
 lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue) {
 #ifdef ISPC_IS_WINDOWS
-    return InterlockedCompareExchange(v, newValue, oldValue);
+    return InterlockedCompareExchange((volatile LONG *)v, newValue, oldValue);
 #else
     int32_t result;
     __asm__ __volatile__("lock\ncmpxchgl %2,%1"
@@ -389,7 +389,7 @@ lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue)
 static inline int32_t 
 lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
-    return InterlockedAdd(v, delta);
+    return InterlockedAdd((volatile LONG *)v, delta);
 #else
     int32_t origValue;
     __asm__ __volatile__("lock\n"
