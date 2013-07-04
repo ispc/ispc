@@ -1414,7 +1414,7 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
 
 llvm::Value *
 FunctionEmitContext::GetStringPtr(const std::string &str) {
-    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str, false);
+    llvm::Constant *lstr = llvm::ConstantDataArray::getString(*g->ctx, str);
     llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::InternalLinkage;
     llvm::Value *lstrPtr = new llvm::GlobalVariable(*m->module, lstr->getType(),
                                                     true /*isConst*/,
