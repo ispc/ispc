@@ -4914,7 +4914,12 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
         pm.add(new llvm::TargetData(module));
 #endif
 
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
     int flags = 0;
+#else
+    llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_None;
+#endif
+
     std::string error;
     llvm::tool_output_file *of = new llvm::tool_output_file(fn, error, flags);
     if (error.size()) {
