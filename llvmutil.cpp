@@ -1207,6 +1207,40 @@ lCheckMulForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
 }
 
 
+/** Checks to see if (op0 << op1) is a linear vector where the result is a
+    vector with values that increase by stride.
+ */
+static bool
+lCheckShlForLinear(llvm::Value *op0, llvm::Value *op1, int vectorLength,
+                   int stride, std::vector<llvm::PHINode *> &seenPhis) {
+    // Is the second operand a constant integer value splatted across all of
+    // the lanes?
+    llvm::ConstantDataVector *cv = llvm::dyn_cast<llvm::ConstantDataVector>(op1);
+    if (cv == NULL)
+        return false;
+
+    llvm::Constant *csplat = cv->getSplatValue();
+    if (csplat == NULL)
+        return false;
+
+    llvm::ConstantInt *splat = llvm::dyn_cast<llvm::ConstantInt>(csplat);
+    if (splat == NULL)
+        return false;
+
+    // If (1 << the splat value) doesn't evenly divide the stride we're
+    // looking for, there's no way that we can get the linear sequence
+    // we're looking or.
+    int64_t equivalentMul = (1 << splat->getSExtValue());
+    if (equivalentMul > stride || (stride % equivalentMul) != 0)
+        return false;
+
+    // Check to see if the first operand is a linear vector with stride
+    // given by stride/splatVal.
+    return lVectorIsLinear(op0, vectorLength, (int)(stride / equivalentMul),
+                           seenPhis);
+}
+
+
 /** Given (op0 AND op1), try and see if we can determine if the result is a
     linear sequence with a step of "stride" between values.  Returns true
     if so and false otherwise.  This pattern comes up when accessing SOA
@@ -1289,6 +1323,12 @@ lVectorIsLinear(llvm::Value *v, int vectorLength, int stride,
                 return true;
             bool m1 = lCheckMulForLinear(op1, op0, vectorLength, stride, seenPhis);
             return m1;
+        }
+        else if (bop->getOpcode() == llvm::Instruction::Shl) {
+            // Sometimes multiplies come in as shift lefts (especially in
+            // LLVM 3.4+).
+            bool linear = lCheckShlForLinear(op0, op1, vectorLength, stride, seenPhis);
+            return linear;
         }
         else if (bop->getOpcode() == llvm::Instruction::And) {
             // Special case for some AND-related patterns that come up when
