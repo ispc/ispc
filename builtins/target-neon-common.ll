@@ -313,19 +313,6 @@ define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture %ptr,
   ret void
 }
 
-;; yuck.  We need declarations of these, even though we shouldnt ever
-;; actually generate calls to them for the NEON target...
-
-declare <WIDTH x float> @__svml_sin(<WIDTH x float>)
-declare <WIDTH x float> @__svml_cos(<WIDTH x float>)
-declare void @__svml_sincos(<WIDTH x float>, <WIDTH x float> *, <WIDTH x float> *)
-declare <WIDTH x float> @__svml_tan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan2(<WIDTH x float>, <WIDTH x float>)
-declare <WIDTH x float> @__svml_exp(<WIDTH x float>)
-declare <WIDTH x float> @__svml_log(<WIDTH x float>)
-declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
 

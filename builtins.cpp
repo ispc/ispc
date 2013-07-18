@@ -579,15 +579,6 @@ lSetInternalFunctions(llvm::Module *module) {
         "__stdlib_sinf",
         "__stdlib_tan",
         "__stdlib_tanf",
-        "__svml_sin",
-        "__svml_cos",
-        "__svml_sincos",
-        "__svml_tan",
-        "__svml_atan",
-        "__svml_atan2",
-        "__svml_exp",
-        "__svml_log",
-        "__svml_pow",
         "__undef_uniform",
         "__undef_varying",
         "__vec4_add_float",
@@ -1054,8 +1045,6 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__math_lib_ispc_fast", (int)Globals::Math_ISPCFast,
                        module, symbolTable);
-    lDefineConstantInt("__math_lib_svml", (int)Globals::Math_SVML, module,
-                       symbolTable);
     lDefineConstantInt("__math_lib_system", (int)Globals::Math_System, module,
                        symbolTable);
     lDefineConstantIntFunc("__fast_masked_vload", (int)g->opt.fastMaskedVload,
