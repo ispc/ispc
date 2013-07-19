@@ -331,21 +331,12 @@ TaskGroupBase::AllocMemory(int64_t size, int32_t alignment) {
 ///////////////////////////////////////////////////////////////////////////
 // Atomics and the like
 
-#if (__SIZEOF_POINTER__ == 4) || defined(__i386__) || defined(_WIN32)
-#define ISPC_POINTER_BYTES 4
-#elif (__SIZEOF_POINTER__ == 8) || defined(__x86_64__) || defined(__amd64__) || defined(_WIN64)
-#define ISPC_POINTER_BYTES 8
-#else
-#error "Pointer size unknown!"
-#endif // __SIZEOF_POINTER__
-
-
 static inline void
 lMemFence() {
     // Windows atomic functions already contain the fence
     // KNC doesn't need the memory barrier
 #if !defined ISPC_IS_KNC && !defined ISPC_IS_WINDOWS
-        __asm__ __volatile__("mfence":::"memory");
+    __sync_synchronize();
 #endif
 }
 
@@ -354,18 +345,7 @@ lAtomicCompareAndSwapPointer(void **v, void *newValue, void *oldValue) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedCompareExchangePointer(v, newValue, oldValue);
 #else
-    void *result;
-#if (ISPC_POINTER_BYTES == 4)
-    __asm__ __volatile__("lock\ncmpxchgl %2,%1"
-                          : "=a"(result), "=m"(*v)
-                          : "q"(newValue), "0"(oldValue)
-                          : "memory");
-#else
-    __asm__ __volatile__("lock\ncmpxchgq %2,%1"
-                          : "=a"(result), "=m"(*v)
-                          : "q"(newValue), "0"(oldValue)
-                          : "memory");
-#endif // ISPC_POINTER_BYTES
+    void *result = __sync_val_compare_and_swap(v, oldValue, newValue);
     lMemFence();
     return result;
 #endif // ISPC_IS_WINDOWS
@@ -376,11 +356,7 @@ lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue)
 #ifdef ISPC_IS_WINDOWS
     return InterlockedCompareExchange((volatile LONG *)v, newValue, oldValue);
 #else
-    int32_t result;
-    __asm__ __volatile__("lock\ncmpxchgl %2,%1"
-                          : "=a"(result), "=m"(*v)
-                          : "q"(newValue), "0"(oldValue)
-                          : "memory");
+    int32_t result = __sync_val_compare_and_swap(v, oldValue, newValue);
     lMemFence();
     return result;
 #endif // ISPC_IS_WINDOWS
@@ -391,12 +367,7 @@ lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
     return InterlockedAdd((volatile LONG *)v, delta);
 #else
-    int32_t origValue;
-    __asm__ __volatile__("lock\n"
-        "xaddl %0,%1"
-        : "=r"(origValue), "=m"(*v) : "0"(delta)
-        : "memory");
-    return origValue;
+    return __sync_fetch_and_add(v, delta);
 #endif
 }
 
