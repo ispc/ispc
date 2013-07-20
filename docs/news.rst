@@ -2,6 +2,13 @@
 ispc News
 =========
 
+ispc 1.4.4 is Released
+----------------------
+
+A minor update of ``ispc`` has been released with several stability improvements.
+The released binaries are built with patched version of LLVM 3.3. Since this
+release we also distribute 32 bit Linux binaries.
+
 ispc 1.4.3 is Released
 ----------------------
 
