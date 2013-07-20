@@ -576,22 +576,26 @@ Target::SupportedTargetISAs() {
 std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
-    // Start with the host triple as the default
-    triple.setTriple(llvm::sys::getDefaultTargetTriple());
+    if (m_arch == "arm") {
+        triple.setTriple("armv7-eabi");
+    }
+    else {
+        // Start with the host triple as the default
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
 
-    // And override the arch in the host triple based on what the user
-    // specified.  Here we need to deal with the fact that LLVM uses one
-    // naming convention for targets TargetRegistry, but wants some
-    // slightly different ones for the triple.  TODO: is there a way to
-    // have it do this remapping, which would presumably be a bit less
-    // error prone?
-    if (m_arch == "x86")
-        triple.setArchName("i386");
-    else if (m_arch == "x86-64")
-        triple.setArchName("x86_64");
-    else
-        triple.setArchName(m_arch);
-
+        // And override the arch in the host triple based on what the user
+        // specified.  Here we need to deal with the fact that LLVM uses one
+        // naming convention for targets TargetRegistry, but wants some
+        // slightly different ones for the triple.  TODO: is there a way to
+        // have it do this remapping, which would presumably be a bit less
+        // error prone?
+        if (m_arch == "x86")
+            triple.setArchName("i386");
+        else if (m_arch == "x86-64")
+            triple.setArchName("x86_64");
+        else
+            triple.setArchName(m_arch);
+    }
     return triple.str();
 }
 
