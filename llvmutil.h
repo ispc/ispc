@@ -38,7 +38,7 @@
 #ifndef ISPC_LLVMUTIL_H
 #define ISPC_LLVMUTIL_H 1
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Type.h>
   #include <llvm/DerivedTypes.h>

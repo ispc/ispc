@@ -48,7 +48,7 @@
 #include <set>
 
 #include <llvm/Pass.h>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
   #include <llvm/Intrinsics.h>
@@ -73,9 +73,7 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
@@ -85,11 +83,7 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-#else
-  #include <llvm/DebugInfo.h>
-#endif
+#include <llvm/DebugInfo.h>
 #include <llvm/Support/Dwarf.h>
 #ifdef ISPC_IS_LINUX
   #include <alloca.h>
@@ -415,18 +409,14 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(targetLibraryInfo);
 
 
-#if defined(LLVM_3_1)
-    optPM.add(new llvm::TargetData(*g->target->getDataLayout()));
-#else
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-  #ifdef LLVM_3_2
+#ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
-  #else // LLVM 3.3+
+#else // LLVM 3.3+
     targetMachine->addAnalysisPasses(optPM);
-  #endif
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
@@ -505,7 +495,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
 
         optPM.add(llvm::createArgumentPromotionPass());
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
         optPM.add(llvm::createSimplifyLibCallsPass());
