@@ -37,10 +37,10 @@ parser.add_option("-g", "--generics-include", dest="include_file", help="Filenam
 parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
 parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
+                  help='Set compilation target (neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
                   default="sse4")
 parser.add_option('-a', '--arch', dest='arch',
-                  help='Set architecture (x86, x86-64)',
+                  help='Set architecture (arm, x86, x86-64)',
                   default="x86-64")
 parser.add_option("-c", "--compiler", dest="compiler_exe", help="Compiler binary to use to run tests",
                   default=None)
@@ -57,6 +57,9 @@ parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")
 
 (options, args) = parser.parse_args()
+
+if options.target == 'neon':
+    options.arch = 'arm'
 
 # use relative path to not depend on host directory, which may possibly
 # have white spaces and unicode characters.
@@ -345,10 +348,13 @@ def run_test(testname):
                     obj_name = "%s.o" % testname
                 exe_name = "%s.run" % testname
 
-                if options.arch == 'x86':
-                    gcc_arch = '-m32'
+                if options.arch == 'arm':
+                     gcc_arch = '--with-fpu=hardfp -marm -mfpu=neon -mfloat-abi=hard'
                 else:
-                    gcc_arch = '-m64'
+                    if options.arch == 'x86':
+                        gcc_arch = '-m32'
+                    else:
+                        gcc_arch = '-m64'
 
                 gcc_isa=""
                 if options.target == 'generic-4':
