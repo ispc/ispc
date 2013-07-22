@@ -332,7 +332,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
         diFile = funcStartPos.GetDIFile();
         AssertPos(currentPos, diFile.Verify());
 
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
         llvm::DIScope scope = llvm::DIScope(m->diBuilder->getCU());
+#else // LLVM_3_4+
+        llvm::DIScope scope = llvm::DIScope(m->diCompileUnit);
+#endif
         AssertPos(currentPos, scope.Verify());
 
         const FunctionType *functionType = function->GetType();
