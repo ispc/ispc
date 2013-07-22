@@ -33,33 +33,47 @@
 
 #include <stdint.h>
 
+#ifdef __arm__
+#include <sys/time.h>
+// There's no easy way to get a hardware clock counter on ARM, so instead
+// we'll pretend it's a 1GHz processor and then compute pretend cycles
+// based on elapsed time from gettimeofday().
+__inline__ uint64_t rdtsc() {
+  static bool first = true;
+  static struct timeval tv_start;
+  if (first) {
+    gettimeofday(&tv_start, NULL);
+    first = false;
+    return 0;
+  }
+
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  tv.tv_sec -= tv_start.tv_sec;
+  tv.tv_usec -= tv_start.tv_usec;
+  return (1000000ull * tv.tv_sec + tv.tv_usec) * 1000ull;
+}
+
+#else // __arm__
 
 #ifdef WIN32
 #include <windows.h>
 #define rdtsc __rdtsc
-#else
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-    __inline__ uint64_t rdtsc() {
-        uint32_t low, high;
+#else // WIN32
+__inline__ uint64_t rdtsc() {
+  uint32_t low, high;
 #ifdef __x86_64
-        __asm__ __volatile__ (
-            "xorl %%eax,%%eax \n    cpuid"
-            ::: "%rax", "%rbx", "%rcx", "%rdx" );
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%rax", "%rbx", "%rcx", "%rdx" );
 #else
-        __asm__ __volatile__ (
-            "xorl %%eax,%%eax \n    cpuid"
-            ::: "%eax", "%ebx", "%ecx", "%edx" );
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%eax", "%ebx", "%ecx", "%edx" );
 #endif
-        __asm__ __volatile__ (
-                              "rdtsc" : "=a" (low), "=d" (high));
-        return (uint64_t)high << 32 | low;
-    }
-#ifdef __cplusplus
+  __asm__ __volatile__ ("rdtsc" : "=a" (low), "=d" (high));
+  return (uint64_t)high << 32 | low;
 }
-#endif /* __cplusplus */
-#endif            
+#endif // !WIN32
+#endif // !__arm__            
             
 static uint64_t start, end;
 

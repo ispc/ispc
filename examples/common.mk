@@ -4,15 +4,29 @@ TASK_LIB=-lpthread
 TASK_OBJ=objs/tasksys.o
 
 CXX=g++
-CXXFLAGS=-Iobjs/ -O2 -m64
+CXXFLAGS=-Iobjs/ -O2
 CC=gcc
-CCFLAGS=-Iobjs/ -O2 -m64
+CCFLAGS=-Iobjs/ -O2
 
 LIBS=-lm $(TASK_LIB) -lstdc++
-ISPC=ispc -O2 --arch=x86-64 $(ISPC_FLAGS)
-ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
-	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
+ISPC=ispc -O2 $(ISPC_FLAGS)
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
+
+ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
+
+ifeq ($(ARCH),x86)
+  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
+	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
+  ISPC_TARGETS=$(ISPC_IA_TARGETS)
+  ISPC_FLAGS += --arch=x86-64
+  CXXFLAGS += -m64
+  CCFLAGS += -m64
+else ifeq ($(ARCH),arm)
+  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=_ispc.o))
+  ISPC_TARGETS=$(ISPC_ARM_TARGETS)
+else
+  $(error Unknown architecture $(ARCH) from uname -m)
+endif
 
 CPP_OBJS=$(addprefix objs/, $(CPP_SRC:.cpp=.o))
 CC_OBJS=$(addprefix objs/, $(CC_SRC:.c=.o))

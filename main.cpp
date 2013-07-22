@@ -243,12 +243,24 @@ int main(int Argc, char *Argv[]) {
     llvm::sys::AddSignalHandler(lSignal, NULL);
 
     // initialize available LLVM targets
+#ifndef __arm__
+    // FIXME: LLVM build on ARM doesn't build the x86 targets by default.
+    // It's not clear that anyone's going to want to generate x86 from an
+    // ARM host, though...
     LLVMInitializeX86TargetInfo();
     LLVMInitializeX86Target();
     LLVMInitializeX86AsmPrinter();
     LLVMInitializeX86AsmParser();
     LLVMInitializeX86Disassembler();
     LLVMInitializeX86TargetMC();
+#endif // !__ARM__
+    // Generating ARM from x86 is more likely to be useful, though.
+    LLVMInitializeARMTargetInfo();
+    LLVMInitializeARMTarget();
+    LLVMInitializeARMAsmPrinter();
+    LLVMInitializeARMAsmParser();
+    LLVMInitializeARMDisassembler();
+    LLVMInitializeARMTargetMC();
 
     char *file = NULL;
     const char *headerFileName = NULL;

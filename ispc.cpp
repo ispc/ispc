@@ -85,7 +85,7 @@ Module *m;
 ///////////////////////////////////////////////////////////////////////////
 // Target
 
-#ifndef ISPC_IS_WINDOWS
+#if !defined(ISPC_IS_WINDOWS) && !defined(__arm__)
 static void __cpuid(int info[4], int infoType) {
     __asm__ __volatile__ ("cpuid"
                           : "=a" (info[0]), "=b" (info[1]), "=c" (info[2]), "=d" (info[3])
@@ -100,11 +100,14 @@ static void __cpuidex(int info[4], int level, int count) {
                         : "=a" (info[0]), "=r" (info[1]), "=c" (info[2]), "=d" (info[3])
                         : "0" (level), "2" (count));
 }
-#endif // ISPC_IS_WINDOWS
+#endif // !ISPC_IS_WINDOWS && !__ARM__
 
 
 static const char *
 lGetSystemISA() {
+#ifdef __arm__
+    return "neon";
+#else
     int info[4];
     __cpuid(info, 1);
 
@@ -133,10 +136,15 @@ lGetSystemISA() {
         fprintf(stderr, "Unable to detect supported SSE/AVX ISA.  Exiting.\n");
         exit(1);
     }
+#endif
 }
 
 
 static const char *supportedCPUs[] = {
+    // FIXME: LLVM supports a ton of different ARM CPU variants--not just
+    // cortex-a9 and a15.  We should be able to handle any of them that also
+    // have NEON support.
+    "cortex-a9", "cortex-a15",
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
@@ -177,6 +185,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             // possible ISA based on that.
             if (!strcmp(cpu, "core-avx2"))
                 isa = "avx2";
+            else if (!strcmp(cpu, "cortex-a9") ||
+                     !strcmp(cpu, "cortex-a15"))
+                isa = "neon";
             else if (!strcmp(cpu, "core-avx-i"))
                 isa = "avx1.1";
             else if (!strcmp(cpu, "sandybridge") ||
@@ -199,6 +210,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                     "Using system ISA \"%s\".", isa);
         }
     }
+
+#if !defined(__arm__)
+    if (cpu == NULL && !strcmp(isa, "neon"))
+        // If we're compiling NEON on an x86 host and the CPU wasn't
+        // supplied, don't go and set the CPU based on the host...
+        cpu = "cortex-a9";
+#endif
 
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
@@ -227,8 +245,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 
     this->m_cpu = cpu;
 
-    if (arch == NULL)
-        arch = "x86-64";
+    if (arch == NULL) {
+        if (!strcmp(isa, "neon"))
+            arch = "arm";
+        else
+            arch = "x86-64";
+    }
 
     bool error = false;
 
@@ -423,6 +445,15 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasGather = true;
 #endif
     }
+    else if (!strcasecmp(isa, "neon")) {
+        this->m_isa = Target::NEON;
+        this->m_nativeVectorWidth = 4;
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+neon,+fp16";
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+    }
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n",
                 isa, SupportedTargetISAs());
@@ -437,6 +468,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             llvm::Reloc::Default;
         std::string featuresString = m_attributes;
         llvm::TargetOptions options;
+        if (m_isa == Target::NEON)
+            options.FloatABIType = llvm::FloatABI::Hard;
 #if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
@@ -528,13 +561,13 @@ Target::SupportedTargetCPUs() {
 
 const char *
 Target::SupportedTargetArchs() {
-    return "x86, x86-64";
+    return "arm, x86, x86-64";
 }
 
 
 const char *
 Target::SupportedTargetISAs() {
-    return "sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
+    return "neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
         ", avx1.1, avx1.1-x2, avx2, avx2-x2"
         ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
@@ -543,28 +576,34 @@ Target::SupportedTargetISAs() {
 std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
-    // Start with the host triple as the default
-    triple.setTriple(llvm::sys::getDefaultTargetTriple());
+    if (m_arch == "arm") {
+        triple.setTriple("armv7-eabi");
+    }
+    else {
+        // Start with the host triple as the default
+        triple.setTriple(llvm::sys::getDefaultTargetTriple());
 
-    // And override the arch in the host triple based on what the user
-    // specified.  Here we need to deal with the fact that LLVM uses one
-    // naming convention for targets TargetRegistry, but wants some
-    // slightly different ones for the triple.  TODO: is there a way to
-    // have it do this remapping, which would presumably be a bit less
-    // error prone?
-    if (m_arch == "x86")
-        triple.setArchName("i386");
-    else if (m_arch == "x86-64")
-        triple.setArchName("x86_64");
-    else
-        triple.setArchName(m_arch);
-
+        // And override the arch in the host triple based on what the user
+        // specified.  Here we need to deal with the fact that LLVM uses one
+        // naming convention for targets TargetRegistry, but wants some
+        // slightly different ones for the triple.  TODO: is there a way to
+        // have it do this remapping, which would presumably be a bit less
+        // error prone?
+        if (m_arch == "x86")
+            triple.setArchName("i386");
+        else if (m_arch == "x86-64")
+            triple.setArchName("x86_64");
+        else
+            triple.setArchName(m_arch);
+    }
     return triple.str();
 }
 
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
+    case Target::NEON:
+        return "neon";
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
