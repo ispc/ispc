@@ -1196,7 +1196,7 @@ lEmitEnumDecls(const std::vector<const EnumType *> &enumTypes, FILE *file) {
             const Symbol *e = enumTypes[i]->GetEnumerator(j);
             Assert(e->constValue != NULL);
             unsigned int enumValue;
-            int count = e->constValue->AsUInt32(&enumValue);
+            int count = e->constValue->GetValues(&enumValue);
             Assert(count == 1);
 
             // Always print an initializer to set the value.  We could be
