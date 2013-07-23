@@ -112,10 +112,7 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
 
     // varying
-    if (LLVMTypes::MaskType != LLVMTypes::Int32VectorType &&
-        t == LLVMTypes::MaskType)
-        return AtomicType::VaryingBool;
-    else if (t == LLVMTypes::Int8VectorType)
+    if (t == LLVMTypes::Int8VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8;
     else if (t == LLVMTypes::Int16VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16;
@@ -127,6 +124,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return AtomicType::VaryingDouble;
     else if (t == LLVMTypes::Int64VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
+    else if (t == LLVMTypes::MaskType)
+        return AtomicType::VaryingBool;
 
     // pointers to uniform
     else if (t == LLVMTypes::Int8PointerType)
@@ -1038,16 +1037,30 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
+        extern char stdlib_mask1_code[], stdlib_mask8_code[];
+        extern char stdlib_mask16_code[], stdlib_mask32_code[];
         if (g->target->getISA() == Target::GENERIC &&
-            g->target->getVectorWidth() != 1) { // 1 wide uses x86 stdlib
-            extern char stdlib_generic_code[];
-            yy_scan_string(stdlib_generic_code);
-            yyparse();
+            g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
+            yy_scan_string(stdlib_mask32_code);
         }
         else {
-            extern char stdlib_x86_code[];
-            yy_scan_string(stdlib_x86_code);
-            yyparse();
+            switch (g->target->getMaskBitCount()) {
+            case 1:
+                yy_scan_string(stdlib_mask1_code);
+                break;
+            case 8:
+                yy_scan_string(stdlib_mask8_code);
+                break;
+            case 16:
+                yy_scan_string(stdlib_mask16_code);
+                break;
+            case 32:
+                yy_scan_string(stdlib_mask32_code);
+                break;
+            default:
+                FATAL("Unhandled mask bit size for stdlib.ispc");
+            }
         }
+        yyparse();
     }
 }

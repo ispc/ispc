@@ -38,12 +38,20 @@
            ispc code 
 */
 
-#ifdef ISPC_TARGET_GENERIC
-#define IntMaskType bool
-#define UIntMaskType bool
+#if (ISPC_MASK_BITS == 1)
+  #define IntMaskType bool
+  #define UIntMaskType bool
+#elif (ISPC_MASK_BITS == 8)
+  #define IntMaskType int8
+  #define UIntMaskType unsigned int8
+#elif (ISPC_MASK_BITS == 16)
+  #define IntMaskType int16
+  #define UIntMaskType unsigned int16
+#elif (ISPC_MASK_BITS == 32)
+  #define IntMaskType int32
+  #define UIntMaskType unsigned int32
 #else
-#define IntMaskType int32
-#define UIntMaskType unsigned int32
+  #error Unknown value of ISPC_MASK_BITS
 #endif
 
 ///////////////////////////////////////////////////////////////////////////
@@ -335,14 +343,15 @@ static inline int32 sign_extend(bool v) {
     return __sext_varying_bool(v);
 }
 
+
 __declspec(safe) 
 static inline uniform bool any(bool v) {
     // We only care about whether "any" is true for the active program instances,
     // so we have to make v with the current program mask.
-#ifdef ISPC_TARGET_GENERIC
+#if (ISPC_MASK_BITS == 1)
     return __any(v & __mask);
 #else
-    return __any(__sext_varying_bool(v) & __mask);
+    return __any((UIntMaskType)__sext_varying_bool(v) & __mask);
 #endif
 }
 
@@ -350,11 +359,10 @@ __declspec(safe)
 static inline uniform bool all(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
-
-#ifdef ISPC_TARGET_GENERIC
+#if (ISPC_MASK_BITS == 1)
     return __all(v | !__mask);
 #else
-    return __all(__sext_varying_bool(v) | !__mask);
+    return __all((UIntMaskType)__sext_varying_bool(v) | !__mask);
 #endif
 }
 
@@ -362,11 +370,10 @@ __declspec(safe)
 static inline uniform bool none(bool v) {
     // As with any(), we need to explicitly mask v with the current program mask
     // so we're only looking at the current lanes
-
-#ifdef ISPC_TARGET_GENERIC
+#if (ISPC_MASK_BITS == 1)
     return __none(v & __mask);
 #else
-    return __none(__sext_varying_bool(v) & __mask);
+    return __none((UIntMaskType)__sext_varying_bool(v) & __mask);
 #endif
 }
 
@@ -399,10 +406,10 @@ static inline int popcnt(int64 v) {
 __declspec(safe) 
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
-#ifdef ISPC_TARGET_GENERIC
+#if (ISPC_MASK_BITS == 1)
     return __popcnt_int64(__movmsk(v & __mask));
 #else
-    return __popcnt_int64(__movmsk(__sext_varying_bool(v) & __mask));
+    return __popcnt_int64(__movmsk((UIntMaskType)__sext_varying_bool(v) & __mask));
 #endif
 }
 

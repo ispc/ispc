@@ -2148,8 +2148,24 @@ lAddFunctionParams(Declarator *decl) {
 
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
-    const Type *t = g->target->getMaskBitCount() == 1 ?
-        AtomicType::VaryingBool : AtomicType::VaryingUInt32;
+    const Type *t;
+    switch (g->target->getMaskBitCount()) {
+    case 1:
+        t = AtomicType::VaryingBool;
+        break;
+    case 8:
+        t = AtomicType::VaryingUInt8;
+        break;
+    case 16:
+        t = AtomicType::VaryingUInt16;
+        break;
+    case 32:
+        t = AtomicType::VaryingUInt32;
+        break;
+    default:
+        FATAL("Unhandled mask bitsize in lAddMaskToSymbolTable");
+    }
+
     t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
     m->symbolTable->AddVariable(maskSymbol);

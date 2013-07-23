@@ -6161,9 +6161,9 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // If we have a bool vector of i32 elements, first truncate
-                // down to a single bit
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // If we have a bool vector of non-i1 elements, first
+                // truncate down to a single bit.
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
@@ -6205,8 +6205,8 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // truncate i32 bool vector values to i1s
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // truncate bool vector values to i1s
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
@@ -6243,7 +6243,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6279,7 +6279,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6321,7 +6321,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6361,7 +6361,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6407,7 +6407,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6447,7 +6447,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6493,7 +6493,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6531,7 +6531,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6625,12 +6625,12 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
         if (fromType->IsUniformType()) {
             if (toType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType) {
-                // extend out to i32 bool values from i1 here.  then we'll
-                // turn into a vector below, the way it does for everyone
-                // else...
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
+                // extend out to an bool as an i8/i16/i32 from the i1 here.
+                // Then we'll turn that into a vector below, the way it
+                // does for everyone else...
                 cast = ctx->SExtInst(cast, LLVMTypes::BoolVectorType->getElementType(),
-                                     LLVMGetName(cast, "to_i32bool"));
+                                     LLVMGetName(cast, "to_i_bool"));
             }
         }
         else

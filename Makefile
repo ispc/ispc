@@ -137,7 +137,7 @@ BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
 OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
-	stdlib_generic_ispc.o stdlib_x86_ispc.o \
+	stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o \
 	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
 default: ispc
@@ -243,12 +243,23 @@ objs/builtins-c-64.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
 	@$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c 64 > $@
 
-objs/stdlib_generic_ispc.cpp: stdlib.ispc
-	@echo Creating C++ source from $< for generic
-	@$(CLANG) -E -x c -DISPC_TARGET_GENERIC=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		python stdlib2cpp.py generic > $@
+objs/stdlib_mask1_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask1
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		python stdlib2cpp.py mask1 > $@
 
-objs/stdlib_x86_ispc.cpp: stdlib.ispc
-	@echo Creating C++ source from $< for x86
-	@$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		python stdlib2cpp.py x86 > $@
+objs/stdlib_mask8_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask8
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		python stdlib2cpp.py mask8 > $@
+
+objs/stdlib_mask16_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask16
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		python stdlib2cpp.py mask16 > $@
+
+objs/stdlib_mask32_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask32
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+		python stdlib2cpp.py mask32 > $@
+
