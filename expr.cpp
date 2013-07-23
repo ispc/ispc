@@ -1911,6 +1911,40 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 }
 
 
+/* Returns true if shifting right by the given amount will lead to
+   inefficient code.  (Assumes x86 target.  May also warn inaccurately if
+   later optimization simplify the shift amount more than we are able to
+   see at this point.) */
+static bool
+lIsDifficultShiftAmount(Expr *expr) {
+    // Uniform shifts (of uniform values) are no problem.
+    if (expr->GetType()->IsVaryingType() == false)
+        return false;
+
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    if (ce) {
+        // If the shift is by a constant amount, *and* it's the same amount
+        // in all vector lanes, we're in good shape.
+        uint32_t amount[ISPC_MAX_NVEC];
+        int count = ce->GetValues(amount);
+        for (int i = 1; i < count; ++i)
+            if (amount[i] != amount[0])
+              return true;
+        return false;
+    }
+
+    TypeCastExpr *tce = dynamic_cast<TypeCastExpr *>(expr);
+    if (tce && tce->expr) {
+        // Finally, if the shift amount is given by a uniform value that's
+        // been smeared out into a varying, we have the same shift for all
+        // lanes and are also in good shape.
+        return (tce->expr->GetType()->IsUniformType() == false);
+    }
+
+    return true;
+}
+
+
 llvm::Value *
 BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
@@ -1951,9 +1985,8 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case BitAnd:
     case BitXor:
     case BitOr: {
-        if (op == Shr && arg1->GetType()->IsVaryingType() &&
-            dynamic_cast<ConstExpr *>(arg1) == NULL)
-            PerformanceWarning(pos, "Shift right is extremely inefficient for "
+        if (op == Shr && lIsDifficultShiftAmount(arg1))
+            PerformanceWarning(pos, "Shift right is inefficient for "
                                "varying shift amounts.");
         return lEmitBinaryBitOp(op, value0, value1,
                                 arg0->GetType()->IsUnsignedType(), ctx);
