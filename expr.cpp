@@ -2240,6 +2240,49 @@ lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1,
 }
 
 
+/* Returns true if the given arguments (which are assumed to be the
+   operands of a divide) represent a divide that can be performed by one of
+   the __fast_idiv functions.
+ */
+static bool
+lCanImproveVectorDivide(Expr *arg0, Expr *arg1, int *divisor) {
+    const Type *type = arg0->GetType();
+    if (!type)
+        return false;
+
+    // The value being divided must be an int8/16/32.
+    if (!(Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt32) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)))
+        return false;
+
+    // The divisor must be the same compile-time constant value for all of
+    // the vector lanes.
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(arg1);
+    if (!ce)
+        return false;
+    int64_t div[ISPC_MAX_NVEC];
+    int count = ce->GetValues(div);
+    for (int i = 1; i < count; ++i)
+        if (div[i] != div[0])
+          return false;
+    *divisor = div[0];
+
+    // And finally, the divisor must be >= 2 and <128 (for 8-bit divides),
+    // and <256 otherwise.
+    if (*divisor < 2)
+        return false;
+    if (Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+        Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8))
+        return *divisor < 128;
+    else
+        return *divisor < 256;
+}
+
+
 Expr *
 BinaryExpr::Optimize() {
     if (arg0 == NULL || arg1 == NULL)
@@ -2300,6 +2343,32 @@ BinaryExpr::Optimize() {
                             "fast-math rcp optimization.");
             }
         }
+    }
+
+    int divisor;
+    if (op == Div && lCanImproveVectorDivide(arg0, arg1, &divisor)) {
+        Debug(pos, "Improving vector divide by constant %d", divisor);
+
+        std::vector<Symbol *> idivFuns;
+        m->symbolTable->LookupFunction("__fast_idiv", &idivFuns);
+        if (idivFuns.size() == 0) {
+            Warning(pos, "Couldn't find __fast_idiv to optimize integer divide. "
+                    "Are you compiling with --nostdlib?");
+            return this;
+        }
+
+        Expr *idivSymExpr = new FunctionSymbolExpr("__fast_idiv", idivFuns, pos);
+        ExprList *args = new ExprList(arg0, pos);
+        args->exprs.push_back(new ConstExpr(AtomicType::UniformInt32, divisor, arg1->pos));
+        Expr *idivCall = new FunctionCallExpr(idivSymExpr, args, pos);
+
+        idivCall = ::TypeCheck(idivCall);
+        if (idivCall == NULL)
+          return NULL;
+
+        Assert(Type::EqualIgnoringConst(GetType(), idivCall->GetType()));
+        idivCall = new TypeCastExpr(GetType(), idivCall, pos);
+        return ::Optimize(idivCall);
     }
 
     // From here on out, we're just doing constant folding, so if both args
