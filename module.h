@@ -41,6 +41,9 @@
 
 #include "ispc.h"
 #include "ast.h"
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+  #include <llvm/DebugInfo.h>
+#endif
 
 namespace llvm
 {
@@ -152,6 +155,10 @@ public:
 
     /** The diBuilder manages generating debugging information */
     llvm::DIBuilder *diBuilder;
+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+    llvm::DICompileUnit diCompileUnit;
+#endif // LLVM_3_4+
 
 private:
     const char *filename;
