@@ -175,7 +175,7 @@ public:
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
+    enum ISA { NEON, SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
 
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the

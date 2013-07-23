@@ -307,6 +307,9 @@ Module::Module(const char *fn) {
             sprintf(producerString, "ispc version %s (built on %s)",
                     ISPC_VERSION, __DATE__);
 #endif
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+            diCompileUnit = 
+#endif // LLVM_3_4+            
             diBuilder->createCompileUnit(llvm::dwarf::DW_LANG_C99,  /* lang */
                                          name,  /* filename */
                                          directory, /* directory */
