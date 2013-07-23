@@ -1332,88 +1332,88 @@ static inline uniform double max(uniform double a, uniform double b) {
 
 // int8
 
-__declspec(safe,cost2) 
+__declspec(safe,cost1)
 static inline uniform unsigned int8 min(uniform unsigned int8 a,
                                         uniform unsigned int8 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2) 
+__declspec(safe,cost1)
 static inline uniform unsigned int8 max(uniform unsigned int8 a, 
                                         uniform unsigned int8 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform int8 min(uniform int8 a, uniform int8 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform int8 max(uniform int8 a, uniform int8 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline unsigned int8 min(unsigned int8 a, unsigned int8 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline unsigned int8 max(unsigned int8 a, unsigned int8 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline int8 min(int8 a, int8 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline int8 max(int8 a, int8 b) {
     return (a > b) ? a : b;
 }
 
 // int16
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform unsigned int16 min(uniform unsigned int16 a, 
                                          uniform unsigned int16 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform unsigned int16 max(uniform unsigned int16 a, 
                                          uniform unsigned int16 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform int16 min(uniform int16 a, uniform int16 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline uniform int16 max(uniform int16 a, uniform int16 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline unsigned int16 min(unsigned int16 a, unsigned int16 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline unsigned int16 max(unsigned int16 a, unsigned int16 b) {
     return (a > b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline int16 min(int16 a, int16 b) {
     return (a < b) ? a : b;
 }
 
-__declspec(safe,cost2)
+__declspec(safe,cost1)
 static inline int16 max(int16 a, int16 b) {
     return (a > b) ? a : b;
 }
