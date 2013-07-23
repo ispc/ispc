@@ -2287,7 +2287,7 @@ lFinalizeEnumeratorSymbols(std::vector<Symbol *> &enums,
         enums[i]->type = enumType;
         if (enums[i]->constValue != NULL) {
             /* Already has a value, so first update nextVal with it. */
-            int count = enums[i]->constValue->AsUInt32(&nextVal);
+            int count = enums[i]->constValue->GetValues(&nextVal);
             AssertPos(enums[i]->pos, count == 1);
             ++nextVal;
 

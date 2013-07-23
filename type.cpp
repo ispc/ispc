@@ -804,7 +804,7 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
     for (unsigned int i = 0; i < enumerators.size(); ++i) {
         unsigned int enumeratorValue;
         Assert(enumerators[i]->constValue != NULL);
-        int count = enumerators[i]->constValue->AsUInt32(&enumeratorValue);
+        int count = enumerators[i]->constValue->GetValues(&enumeratorValue);
         Assert(count == 1);
 
         llvm::Value *descriptor =
