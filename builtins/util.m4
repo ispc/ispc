@@ -411,6 +411,42 @@ define(`unary2to8', `
 '
 )
 
+define(`unary2to16', `
+  %$1_0 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0)
+  %$1_1 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1)
+  %$1_2 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2)
+  %$1_3 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3)
+  %$1_4 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
+  %v$1_4 = call <2 x $2> $3(<2 x $2> %$1_4)
+  %$1_5 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
+  %v$1_5 = call <2 x $2> $3(<2 x $2> %$1_5)
+  %$1_6 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
+  %v$1_6 = call <2 x $2> $3(<2 x $2> %$1_6)
+  %$1_7 = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
+  %v$1_7 = call <2 x $2> $3(<2 x $2> %$1_7)
+  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1ab = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %$1c = shufflevector <2 x $2> %v$1_4, <2 x $2> %v$1_5,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1d = shufflevector <2 x $2> %v$1_6, <2 x $2> %v$1_7,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1cd = shufflevector <4 x $2> %$1c, <4 x $2> %$1d,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %$1 = shufflevector <8 x $2> %$1ab, <8 x $2> %$1cd,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+'
+)
+
 ;; Maps an 2-wide binary function to two 8-wide vector operands
 ;; $1: name of variable into which the final result should go
 ;; $2: scalar type of the vector elements
@@ -432,12 +468,58 @@ define(`binary2to8', `
   %$1_3b = shufflevector <8 x $2> $5, <8 x $2> undef, <2 x i32> <i32 6, i32 7>
   %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3a, <2 x $2> %$1_3b)
 
+  %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1 = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+'
+)
+
+define(`binary2to16', `
+  %$1_0a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %$1_0b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 0, i32 1>
+  %v$1_0 = call <2 x $2> $3(<2 x $2> %$1_0a, <2 x $2> %$1_0b)
+  %$1_1a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %$1_1b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 2, i32 3>
+  %v$1_1 = call <2 x $2> $3(<2 x $2> %$1_1a, <2 x $2> %$1_1b)
+  %$1_2a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %$1_2b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 4, i32 5>
+  %v$1_2 = call <2 x $2> $3(<2 x $2> %$1_2a, <2 x $2> %$1_2b)
+  %$1_3a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %$1_3b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 6, i32 7>
+  %v$1_3 = call <2 x $2> $3(<2 x $2> %$1_3a, <2 x $2> %$1_3b)
+  %$1_4a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
+  %$1_4b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 8, i32 9>
+  %v$1_4 = call <2 x $2> $3(<2 x $2> %$1_4a, <2 x $2> %$1_4b)
+  %$1_5a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
+  %$1_5b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 10, i32 11>
+  %v$1_5 = call <2 x $2> $3(<2 x $2> %$1_5a, <2 x $2> %$1_5b)
+  %$1_6a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
+  %$1_6b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 12, i32 13>
+  %v$1_6 = call <2 x $2> $3(<2 x $2> %$1_6a, <2 x $2> %$1_6b)
+  %$1_7a = shufflevector <16 x $2> $4, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
+  %$1_7b = shufflevector <16 x $2> $5, <16 x $2> undef, <2 x i32> <i32 14, i32 15>
+  %v$1_7 = call <2 x $2> $3(<2 x $2> %$1_7a, <2 x $2> %$1_7b)
+
   %$1a = shufflevector <2 x $2> %v$1_0, <2 x $2> %v$1_1, 
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %$1b = shufflevector <2 x $2> %v$1_2, <2 x $2> %v$1_3, 
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %$1 = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
+  %$1ab = shufflevector <4 x $2> %$1a, <4 x $2> %$1b,
            <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>           
+
+  %$1c = shufflevector <2 x $2> %v$1_4, <2 x $2> %v$1_5,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1d = shufflevector <2 x $2> %v$1_6, <2 x $2> %v$1_7,
+           <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %$1cd = shufflevector <4 x $2> %$1c, <4 x $2> %$1d,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+
+  %$1 = shufflevector <8 x $2> %$1ab, <8 x $2> %$1cd,
+           <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                       i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 '
 )
 
@@ -457,6 +539,26 @@ define(`round4to8', `
 %ret = shufflevector <4 x float> %r0, <4 x float> %r1, 
          <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ret <8 x float> %ret
+'
+)
+
+define(`round4to16', `
+%v0 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+%v1 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+%v2 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+%v3 = shufflevector <16 x float> $1, <16 x float> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+%r0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v0, i32 $2)
+%r1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v1, i32 $2)
+%r2 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v2, i32 $2)
+%r3 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %v3, i32 $2)
+%ret01 = shufflevector <4 x float> %r0, <4 x float> %r1,
+         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret23 = shufflevector <4 x float> %r2, <4 x float> %r3,
+         <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+%ret = shufflevector <8 x float> %ret01, <8 x float> %ret23,
+         <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                     i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+ret <16 x float> %ret
 '
 )
 

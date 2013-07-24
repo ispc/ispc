@@ -868,6 +868,15 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                 EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
             }
             break;
+        case 16:
+            Assert(g->target->getMaskBitCount() == 8);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse4_8_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse4_8_64bit);
+            }
+            break;
         default:
             FATAL("logic error in DefineStdlib");
         }

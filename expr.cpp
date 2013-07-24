@@ -3123,6 +3123,10 @@ static llvm::Value *
 lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
                    llvm::Value *expr1, llvm::Value *expr2,
                    const Type *type) {
+#if !defined(LLVM_3_1)
+    test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
+    return ctx->SelectInst(test, expr1, expr2, "select");
+#else
     llvm::Value *resultPtr = ctx->AllocaInst(expr1->getType(), "selectexpr_tmp");
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr);
@@ -3131,6 +3135,7 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
            PointerType::GetUniform(type)->LLVMType(g->ctx));
     ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
     return ctx->LoadInst(resultPtr, "selectexpr_final");
+#endif // !LLVM_3_1
 }
 
 

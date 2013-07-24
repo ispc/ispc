@@ -310,6 +310,14 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
+    else if (!strcasecmp(isa, "sse4-8")) {
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+    }
     else if (!strcasecmp(isa, "generic-4")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;

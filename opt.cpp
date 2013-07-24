@@ -670,14 +670,17 @@ IntrinsicsOpt::IntrinsicsOpt()
     // All of the mask instructions we may encounter.  Note that even if
     // compiling for AVX, we may still encounter the regular 4-wide SSE
     // MOVMSK instruction.
-    llvm::Function *sseMovmsk =
+    llvm::Function *ssei8Movmsk =
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse2_pmovmskb_128);
+    maskInstructions.push_back(ssei8Movmsk);
+    llvm::Function *sseFloatMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
-    maskInstructions.push_back(sseMovmsk);
+    maskInstructions.push_back(sseFloatMovmsk);
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
-    llvm::Function *avxMovmsk =
+    llvm::Function *avxFloatMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
-    Assert(avxMovmsk != NULL);
-    maskInstructions.push_back(avxMovmsk);
+    Assert(avxFloatMovmsk != NULL);
+    maskInstructions.push_back(avxFloatMovmsk);
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
