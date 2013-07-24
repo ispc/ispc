@@ -2891,17 +2891,11 @@ m4exit(`1')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
+declare i64 @llvm.readcyclecounter()
+
 define i64 @__clock() nounwind {
-entry:
-  tail call void asm sideeffect "xorl %eax,%eax \0A    cpuid", "~{rax},~{rbx},~{rcx},~{rdx},~{dirflag},~{fpsr},~{flags}"() nounwind
-  %0 = tail call { i32, i32 } asm sideeffect "rdtsc", "={ax},={dx},~{dirflag},~{fpsr},~{flags}"() nounwind
-  %asmresult = extractvalue { i32, i32 } %0, 0
-  %asmresult1 = extractvalue { i32, i32 } %0, 1
-  %conv = zext i32 %asmresult1 to i64
-  %shl = shl nuw i64 %conv, 32
-  %conv2 = zext i32 %asmresult to i64
-  %or = or i64 %shl, %conv2
-  ret i64 %or
+  %r = call i64 @llvm.readcyclecounter()
+  ret i64 %r
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
