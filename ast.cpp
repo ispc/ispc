@@ -446,7 +446,7 @@ lCheckAllOffSafety(ASTNode *node, void *data) {
         }
 
         int32_t indices[ISPC_MAX_NVEC];
-        int count = ce->AsInt32(indices);
+        int count = ce->GetValues(indices);
         for (int i = 0; i < count; ++i) {
             if (indices[i] < 0 || indices[i] >= nElements) {
                 // Index is out of bounds -> not safe
