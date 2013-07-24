@@ -3,7 +3,7 @@ export uniform int width() { return programCount; }
 
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    int32 i = (1 << (programIndex % 28));
+    int32 i = (1ul << (programIndex % 28));
     RET[programIndex] = count_leading_zeros(i);
 }
 

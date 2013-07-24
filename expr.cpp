@@ -180,7 +180,7 @@ lIsAllIntZeros(Expr *expr) {
         return false;
 
     uint64_t vals[ISPC_MAX_NVEC];
-    int count = ce->AsUInt64(vals);
+    int count = ce->GetValues(vals);
     if (count == 1)
         return (vals[0] == 0);
     else {
@@ -1161,6 +1161,16 @@ UnaryExpr::GetType() const {
 }
 
 
+template <typename T> static Expr *
+lOptimizeBitNot(ConstExpr *constExpr, const Type *type, SourcePos pos) {
+    T v[ISPC_MAX_NVEC];
+    int count = constExpr->GetValues(v);
+    for (int i = 0; i < count; ++i)
+      v[i] = ~v[i];
+    return new ConstExpr(type, v, pos);
+}
+
+
 Expr *
 UnaryExpr::Optimize() {
     ConstExpr *constExpr = dynamic_cast<ConstExpr *>(expr);
@@ -1172,17 +1182,6 @@ UnaryExpr::Optimize() {
     const Type *type = constExpr->GetType();
     bool isEnumType = CastType<EnumType>(type) != NULL;
 
-    const Type *baseType = type->GetAsNonConstType()->GetAsUniformType();
-    if (Type::Equal(baseType, AtomicType::UniformInt8) ||
-        Type::Equal(baseType, AtomicType::UniformUInt8) ||
-        Type::Equal(baseType, AtomicType::UniformInt16) ||
-        Type::Equal(baseType, AtomicType::UniformUInt16) ||
-        Type::Equal(baseType, AtomicType::UniformInt64) ||
-        Type::Equal(baseType, AtomicType::UniformUInt64))
-        // FIXME: should handle these at some point; for now we only do
-        // constant folding for bool, int32 and float types...
-        return this;
-
     switch (op) {
     case PreInc:
     case PreDec:
@@ -1192,42 +1191,76 @@ UnaryExpr::Optimize() {
         // An error will be issued elsewhere...
         return this;
     case Negate: {
-        // Since we currently only handle int32, floats, and doubles here,
-        // it's safe to stuff whatever we have into a double, do the negate
-        // as a double, and then return a ConstExpr with the same type as
-        // the original...
-        double v[ISPC_MAX_NVEC];
-        int count = constExpr->AsDouble(v);
-        for (int i = 0; i < count; ++i)
-            v[i] = -v[i];
-        return new ConstExpr(constExpr, v);
+        if (Type::EqualIgnoringConst(type, AtomicType::UniformInt64) ||
+            Type::EqualIgnoringConst(type, AtomicType::VaryingInt64)) {
+            int64_t v[ISPC_MAX_NVEC];
+            int count = constExpr->GetValues(v);
+            for (int i = 0; i < count; ++i)
+                v[i] = -v[i];
+            return new ConstExpr(type, v, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64)) {
+            uint64_t v[ISPC_MAX_NVEC];
+            int count = constExpr->GetValues(v);
+            for (int i = 0; i < count; ++i)
+                v[i] = -v[i];
+            return new ConstExpr(type, v, pos);
+        }
+        else {
+            // For all the other types, it's safe to stuff whatever we have
+            // into a double, do the negate as a double, and then return a
+            // ConstExpr with the same type as the original...
+          double v[ISPC_MAX_NVEC];
+          int count = constExpr->GetValues(v);
+          for (int i = 0; i < count; ++i)
+              v[i] = -v[i];
+          return new ConstExpr(constExpr, v);
+        }
     }
     case BitNot: {
-        if (Type::EqualIgnoringConst(type, AtomicType::UniformInt32) ||
-            Type::EqualIgnoringConst(type, AtomicType::VaryingInt32)) {
-            int32_t v[ISPC_MAX_NVEC];
-            int count = constExpr->AsInt32(v);
-            for (int i = 0; i < count; ++i)
-                v[i] = ~v[i];
-            return new ConstExpr(type, v, pos);
+        if (Type::EqualIgnoringConst(type, AtomicType::UniformInt8) ||
+            Type::EqualIgnoringConst(type, AtomicType::VaryingInt8)) {
+            return lOptimizeBitNot<int8_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt8) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8)) {
+            return lOptimizeBitNot<uint8_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt16) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingInt16)) {
+            return lOptimizeBitNot<int16_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt16) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16)) {
+            return lOptimizeBitNot<uint16_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt32) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingInt32)) {
+            return lOptimizeBitNot<int32_t>(constExpr, type, pos);
         }
         else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt32) ||
                  Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32) ||
                  isEnumType == true) {
-            uint32_t v[ISPC_MAX_NVEC];
-            int count = constExpr->AsUInt32(v);
-            for (int i = 0; i < count; ++i)
-                v[i] = ~v[i];
-            return new ConstExpr(type, v, pos);
+            return lOptimizeBitNot<uint32_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformInt64) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingInt64)) {
+            return lOptimizeBitNot<int64_t>(constExpr, type, pos);
+        }
+        else if (Type::EqualIgnoringConst(type, AtomicType::UniformUInt64) ||
+                 Type::EqualIgnoringConst(type, AtomicType::VaryingUInt64) ||
+                 isEnumType == true) {
+            return lOptimizeBitNot<uint64_t>(constExpr, type, pos);
         }
         else
             FATAL("unexpected type in UnaryExpr::Optimize() / BitNot case");
     }
     case LogicalNot: {
         AssertPos(pos, Type::EqualIgnoringConst(type, AtomicType::UniformBool) ||
-               Type::EqualIgnoringConst(type, AtomicType::VaryingBool));
+                  Type::EqualIgnoringConst(type, AtomicType::VaryingBool));
         bool v[ISPC_MAX_NVEC];
-        int count = constExpr->AsBool(v);
+        int count = constExpr->GetValues(v);
         for (int i = 0; i < count; ++i)
             v[i] = !v[i];
         return new ConstExpr(type, v, pos);
@@ -1878,6 +1911,40 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 }
 
 
+/* Returns true if shifting right by the given amount will lead to
+   inefficient code.  (Assumes x86 target.  May also warn inaccurately if
+   later optimization simplify the shift amount more than we are able to
+   see at this point.) */
+static bool
+lIsDifficultShiftAmount(Expr *expr) {
+    // Uniform shifts (of uniform values) are no problem.
+    if (expr->GetType()->IsVaryingType() == false)
+        return false;
+
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    if (ce) {
+        // If the shift is by a constant amount, *and* it's the same amount
+        // in all vector lanes, we're in good shape.
+        uint32_t amount[ISPC_MAX_NVEC];
+        int count = ce->GetValues(amount);
+        for (int i = 1; i < count; ++i)
+            if (amount[i] != amount[0])
+              return true;
+        return false;
+    }
+
+    TypeCastExpr *tce = dynamic_cast<TypeCastExpr *>(expr);
+    if (tce && tce->expr) {
+        // Finally, if the shift amount is given by a uniform value that's
+        // been smeared out into a varying, we have the same shift for all
+        // lanes and are also in good shape.
+        return (tce->expr->GetType()->IsUniformType() == false);
+    }
+
+    return true;
+}
+
+
 llvm::Value *
 BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
@@ -1918,9 +1985,8 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case BitAnd:
     case BitXor:
     case BitOr: {
-        if (op == Shr && arg1->GetType()->IsVaryingType() &&
-            dynamic_cast<ConstExpr *>(arg1) == NULL)
-            PerformanceWarning(pos, "Shift right is extremely inefficient for "
+        if (op == Shr && lIsDifficultShiftAmount(arg1))
+            PerformanceWarning(pos, "Shift right is inefficient for "
                                "varying shift amounts.");
         return lEmitBinaryBitOp(op, value0, value1,
                                 arg0->GetType()->IsUnsignedType(), ctx);
@@ -2016,25 +2082,37 @@ BinaryExpr::GetType() const {
 
 #define FOLD_OP(O, E)                           \
     case O:                                     \
-        for (int i = 0; i < count; ++i)         \
-            result[i] = (v0[i] E v1[i]);        \
-        break
+    for (int i = 0; i < count; ++i)             \
+        result[i] = (v0[i] E v1[i]);            \
+    break
+
+#define FOLD_OP_REF(O, E, TRef)                 \
+    case O:                                     \
+    for (int i = 0; i < count; ++i) {           \
+        result[i] = (v0[i] E v1[i]);            \
+        TRef r = (TRef)v0[i] E (TRef)v1[i];     \
+        if (result[i] != r) \
+            Warning(pos, "Binary expression with type \"%s\" can't represent value.", \
+                    carg0->GetType()->GetString().c_str()); \
+    } \
+    break
 
 /** Constant fold the binary integer operations that aren't also applicable
     to floating-point types.
 */
-template <typename T> static ConstExpr *
-lConstFoldBinIntOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0) {
+template <typename T, typename TRef> static ConstExpr *
+lConstFoldBinaryIntOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0,
+                      SourcePos pos) {
     T result[ISPC_MAX_NVEC];
     int count = carg0->Count();
 
     switch (op) {
-        FOLD_OP(BinaryExpr::Mod, %);
-        FOLD_OP(BinaryExpr::Shl, <<);
-        FOLD_OP(BinaryExpr::Shr, >>);
-        FOLD_OP(BinaryExpr::BitAnd, &);
-        FOLD_OP(BinaryExpr::BitXor, ^);
-        FOLD_OP(BinaryExpr::BitOr, |);
+        FOLD_OP_REF(BinaryExpr::Mod, %, TRef);
+        FOLD_OP_REF(BinaryExpr::Shl, <<, TRef);
+        FOLD_OP_REF(BinaryExpr::Shr, >>, TRef);
+        FOLD_OP_REF(BinaryExpr::BitAnd, &, TRef);
+        FOLD_OP_REF(BinaryExpr::BitXor, ^, TRef);
+        FOLD_OP_REF(BinaryExpr::BitOr, |, TRef);
     default:
         return NULL;
     }
@@ -2046,7 +2124,8 @@ lConstFoldBinIntOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0
 /** Constant fold the binary logical ops.
  */
 template <typename T> static ConstExpr *
-lConstFoldBinLogicalOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0) {
+lConstFoldBinaryLogicalOp(BinaryExpr::Op op, const T *v0, const T *v1,
+                          ConstExpr *carg0) {
     bool result[ISPC_MAX_NVEC];
     int count = carg0->Count();
 
@@ -2071,16 +2150,16 @@ lConstFoldBinLogicalOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *c
 
 /** Constant fold binary arithmetic ops.
  */
-template <typename T> static ConstExpr *
-lConstFoldBinArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0,
-                     SourcePos pos) {
+template <typename T, typename TRef> static ConstExpr *
+lConstFoldBinaryArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *carg0,
+                        SourcePos pos) {
     T result[ISPC_MAX_NVEC];
     int count = carg0->Count();
 
     switch (op) {
-        FOLD_OP(BinaryExpr::Add, +);
-        FOLD_OP(BinaryExpr::Sub, -);
-        FOLD_OP(BinaryExpr::Mul, *);
+        FOLD_OP_REF(BinaryExpr::Add, +, TRef);
+        FOLD_OP_REF(BinaryExpr::Sub, -, TRef);
+        FOLD_OP_REF(BinaryExpr::Mul, *, TRef);
     case BinaryExpr::Div:
         for (int i = 0; i < count; ++i) {
             if (v1[i] == 0) {
@@ -2102,8 +2181,8 @@ lConstFoldBinArithOp(BinaryExpr::Op op, const T *v0, const T *v1, ConstExpr *car
 /** Constant fold the various boolean binary ops.
  */
 static ConstExpr *
-lConstFoldBoolBinOp(BinaryExpr::Op op, const bool *v0, const bool *v1,
-                    ConstExpr *carg0) {
+lConstFoldBoolBinaryOp(BinaryExpr::Op op, const bool *v0, const bool *v1,
+                       ConstExpr *carg0) {
     bool result[ISPC_MAX_NVEC];
     int count = carg0->Count();
 
@@ -2127,6 +2206,83 @@ lConstFoldBoolBinOp(BinaryExpr::Op op, const bool *v0, const bool *v1,
 }
 
 
+template <typename T> static Expr *
+lConstFoldBinaryFPOp(ConstExpr *constArg0, ConstExpr *constArg1,
+                     BinaryExpr::Op op, BinaryExpr *origExpr, SourcePos pos) {
+    T v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
+    constArg0->GetValues(v0);
+    constArg1->GetValues(v1);
+    ConstExpr *ret;
+    if ((ret = lConstFoldBinaryArithOp<T, T>(op, v0, v1, constArg0, pos)) != NULL)
+        return ret;
+    else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != NULL)
+        return ret;
+    else
+        return origExpr;
+}
+
+
+template <typename T, typename TRef> static Expr *
+lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1,
+                      BinaryExpr::Op op, BinaryExpr *origExpr, SourcePos pos) {
+    T v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
+    constArg0->GetValues(v0);
+    constArg1->GetValues(v1);
+    ConstExpr *ret;
+    if ((ret = lConstFoldBinaryArithOp<T, TRef>(op, v0, v1, constArg0, pos)) != NULL)
+        return ret;
+    else if ((ret = lConstFoldBinaryIntOp<T, TRef>(op, v0, v1, constArg0, pos)) != NULL)
+        return ret;
+    else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != NULL)
+        return ret;
+    else
+        return origExpr;
+}
+
+
+/* Returns true if the given arguments (which are assumed to be the
+   operands of a divide) represent a divide that can be performed by one of
+   the __fast_idiv functions.
+ */
+static bool
+lCanImproveVectorDivide(Expr *arg0, Expr *arg1, int *divisor) {
+    const Type *type = arg0->GetType();
+    if (!type)
+        return false;
+
+    // The value being divided must be an int8/16/32.
+    if (!(Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt32) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)))
+        return false;
+
+    // The divisor must be the same compile-time constant value for all of
+    // the vector lanes.
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(arg1);
+    if (!ce)
+        return false;
+    int64_t div[ISPC_MAX_NVEC];
+    int count = ce->GetValues(div);
+    for (int i = 1; i < count; ++i)
+        if (div[i] != div[0])
+          return false;
+    *divisor = div[0];
+
+    // And finally, the divisor must be >= 2 and <128 (for 8-bit divides),
+    // and <256 otherwise.
+    if (*divisor < 2)
+        return false;
+    if (Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+        Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8))
+        return *divisor < 128;
+    else
+        return *divisor < 256;
+}
+
+
 Expr *
 BinaryExpr::Optimize() {
     if (arg0 == NULL || arg1 == NULL)
@@ -2144,7 +2300,7 @@ BinaryExpr::Optimize() {
             if (Type::EqualIgnoringConst(type1, AtomicType::UniformFloat) ||
                 Type::EqualIgnoringConst(type1, AtomicType::VaryingFloat)) {
                 float inv[ISPC_MAX_NVEC];
-                int count = constArg1->AsFloat(inv);
+                int count = constArg1->GetValues(inv);
                 for (int i = 0; i < count; ++i)
                     inv[i] = 1.f / inv[i];
                 Expr *einv = new ConstExpr(type1, inv, constArg1->pos);
@@ -2189,6 +2345,32 @@ BinaryExpr::Optimize() {
         }
     }
 
+    int divisor;
+    if (op == Div && lCanImproveVectorDivide(arg0, arg1, &divisor)) {
+        Debug(pos, "Improving vector divide by constant %d", divisor);
+
+        std::vector<Symbol *> idivFuns;
+        m->symbolTable->LookupFunction("__fast_idiv", &idivFuns);
+        if (idivFuns.size() == 0) {
+            Warning(pos, "Couldn't find __fast_idiv to optimize integer divide. "
+                    "Are you compiling with --nostdlib?");
+            return this;
+        }
+
+        Expr *idivSymExpr = new FunctionSymbolExpr("__fast_idiv", idivFuns, pos);
+        ExprList *args = new ExprList(arg0, pos);
+        args->exprs.push_back(new ConstExpr(AtomicType::UniformInt32, divisor, arg1->pos));
+        Expr *idivCall = new FunctionCallExpr(idivSymExpr, args, pos);
+
+        idivCall = ::TypeCheck(idivCall);
+        if (idivCall == NULL)
+          return NULL;
+
+        Assert(Type::EqualIgnoringConst(GetType(), idivCall->GetType()));
+        idivCall = new TypeCastExpr(GetType(), idivCall, pos);
+        return ::Optimize(idivCall);
+    }
+
     // From here on out, we're just doing constant folding, so if both args
     // aren't constants then we're done...
     if (constArg0 == NULL || constArg1 == NULL)
@@ -2198,70 +2380,53 @@ BinaryExpr::Optimize() {
     const Type *type = arg0->GetType()->GetAsNonConstType();
     if (Type::Equal(type, AtomicType::UniformFloat) ||
         Type::Equal(type, AtomicType::VaryingFloat)) {
-        float v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
-        constArg0->AsFloat(v0);
-        constArg1->AsFloat(v1);
-        ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else
-            return this;
+        return lConstFoldBinaryFPOp<float>(constArg0, constArg1, op, this, pos);
     }
-    if (Type::Equal(type, AtomicType::UniformDouble) ||
-        Type::Equal(type, AtomicType::VaryingDouble)) {
-        double v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
-        constArg0->AsDouble(v0);
-        constArg1->AsDouble(v1);
-        ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else
-            return this;
+    else if (Type::Equal(type, AtomicType::UniformDouble) ||
+             Type::Equal(type, AtomicType::VaryingDouble)) {
+        return lConstFoldBinaryFPOp<double>(constArg0, constArg1, op, this, pos);
     }
-    if (Type::Equal(type, AtomicType::UniformInt32) ||
-        Type::Equal(type, AtomicType::VaryingInt32)) {
-        int32_t v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
-        constArg0->AsInt32(v0);
-        constArg1->AsInt32(v1);
-        ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinIntOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else
-            return this;
+    else if (Type::Equal(type, AtomicType::UniformInt8) ||
+             Type::Equal(type, AtomicType::VaryingInt8)) {
+      return lConstFoldBinaryIntOp<int8_t, int64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformUInt8) ||
+             Type::Equal(type, AtomicType::VaryingUInt8)) {
+      return lConstFoldBinaryIntOp<uint8_t, uint64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformInt16) ||
+             Type::Equal(type, AtomicType::VaryingInt16)) {
+      return lConstFoldBinaryIntOp<int16_t, int64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformUInt16) ||
+             Type::Equal(type, AtomicType::VaryingUInt16)) {
+      return lConstFoldBinaryIntOp<uint16_t, uint64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformInt32) ||
+             Type::Equal(type, AtomicType::VaryingInt32)) {
+      return lConstFoldBinaryIntOp<int32_t, int64_t>(constArg0, constArg1, op, this, pos);
     }
     else if (Type::Equal(type, AtomicType::UniformUInt32) ||
-             Type::Equal(type, AtomicType::VaryingUInt32) ||
-             CastType<EnumType>(type) != NULL) {
-        uint32_t v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
-        constArg0->AsUInt32(v0);
-        constArg1->AsUInt32(v1);
-        ConstExpr *ret;
-        if ((ret = lConstFoldBinArithOp(op, v0, v1, constArg0, pos)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinIntOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
-            return ret;
-        else
-            return this;
+             Type::Equal(type, AtomicType::VaryingUInt32)) {
+      return lConstFoldBinaryIntOp<uint32_t, uint64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformInt64) ||
+             Type::Equal(type, AtomicType::VaryingInt64)) {
+      return lConstFoldBinaryIntOp<int64_t, int64_t>(constArg0, constArg1, op, this, pos);
+    }
+    else if (Type::Equal(type, AtomicType::UniformUInt64) ||
+             Type::Equal(type, AtomicType::VaryingUInt64)) {
+      return lConstFoldBinaryIntOp<uint64_t, uint64_t>(constArg0, constArg1, op, this, pos);
     }
     else if (Type::Equal(type, AtomicType::UniformBool) ||
              Type::Equal(type, AtomicType::VaryingBool)) {
         bool v0[ISPC_MAX_NVEC], v1[ISPC_MAX_NVEC];
-        constArg0->AsBool(v0);
-        constArg1->AsBool(v1);
+        constArg0->GetValues(v0);
+        constArg1->GetValues(v1);
         ConstExpr *ret;
-        if ((ret = lConstFoldBoolBinOp(op, v0, v1, constArg0)) != NULL)
+        if ((ret = lConstFoldBoolBinaryOp(op, v0, v1, constArg0)) != NULL)
             return ret;
-        else if ((ret = lConstFoldBinLogicalOp(op, v0, v1, constArg0)) != NULL)
+        else if ((ret = lConstFoldBinaryLogicalOp(op, v0, v1, constArg0)) != NULL)
             return ret;
         else
             return this;
@@ -2958,6 +3123,10 @@ static llvm::Value *
 lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
                    llvm::Value *expr1, llvm::Value *expr2,
                    const Type *type) {
+#if !defined(LLVM_3_1)
+    test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
+    return ctx->SelectInst(test, expr1, expr2, "select");
+#else
     llvm::Value *resultPtr = ctx->AllocaInst(expr1->getType(), "selectexpr_tmp");
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr);
@@ -2966,6 +3135,7 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
            PointerType::GetUniform(type)->LLVMType(g->ctx));
     ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
     return ctx->LoadInst(resultPtr, "selectexpr_final");
+#endif // !LLVM_3_1
 }
 
 
@@ -3159,6 +3329,19 @@ SelectExpr::GetType() const {
 }
 
 
+template <typename T> Expr *
+lConstFoldSelect(const bool bv[], ConstExpr *constExpr1, ConstExpr *constExpr2,
+                 const Type *exprType, SourcePos pos) {
+    T v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
+    T result[ISPC_MAX_NVEC];
+    int count = constExpr1->GetValues(v1);
+    constExpr2->GetValues(v2);
+    for (int i = 0; i < count; ++i)
+      result[i] = bv[i] ? v1[i] : v2[i];
+    return new ConstExpr(exprType, result, pos);
+}
+
+
 Expr *
 SelectExpr::Optimize() {
     if (test == NULL || expr1 == NULL || expr2 == NULL)
@@ -3171,7 +3354,7 @@ SelectExpr::Optimize() {
     // The test is a constant; see if we can resolve to one of the
     // expressions..
     bool bv[ISPC_MAX_NVEC];
-    int count = constTest->AsBool(bv);
+    int count = constTest->GetValues(bv);
     if (count == 1)
         // Uniform test value; return the corresponding expression
         return (bv[0] == true) ? expr1 : expr2;
@@ -3200,71 +3383,38 @@ SelectExpr::Optimize() {
         const Type *exprType = constExpr1->GetType()->GetAsNonConstType();
         AssertPos(pos, exprType->IsVaryingType());
 
-        // FIXME: it's annoying to have to have all of this replicated code.
-        // FIXME: for completeness, it would also be nice to handle 8 and
-        // 16 bit types...
-        if (Type::Equal(exprType, AtomicType::VaryingInt32)) {
-            int32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            int32_t result[ISPC_MAX_NVEC];
-            constExpr1->AsInt32(v1);
-            constExpr2->AsInt32(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+        if (Type::Equal(exprType, AtomicType::VaryingInt8)) {
+            return lConstFoldSelect<int8_t>(bv, constExpr1, constExpr2, exprType, pos);
         }
-        if (Type::Equal(exprType, AtomicType::VaryingUInt32)) {
-            uint32_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            uint32_t result[ISPC_MAX_NVEC];
-            constExpr1->AsUInt32(v1);
-            constExpr2->AsUInt32(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+        else if (Type::Equal(exprType, AtomicType::VaryingUInt8)) {
+            return lConstFoldSelect<uint8_t>(bv, constExpr1, constExpr2, exprType, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingInt16)) {
+            return lConstFoldSelect<int16_t>(bv, constExpr1, constExpr2, exprType, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingUInt16)) {
+            return lConstFoldSelect<uint16_t>(bv, constExpr1, constExpr2, exprType, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingInt32)) {
+            return lConstFoldSelect<int32_t>(bv, constExpr1, constExpr2, exprType, pos);
+        }
+        else if (Type::Equal(exprType, AtomicType::VaryingUInt32)) {
+            return lConstFoldSelect<uint32_t>(bv, constExpr1, constExpr2, exprType, pos);
         }
         else if (Type::Equal(exprType, AtomicType::VaryingInt64)) {
-            int64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            int64_t result[ISPC_MAX_NVEC];
-            constExpr1->AsInt64(v1);
-            constExpr2->AsInt64(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+            return lConstFoldSelect<int64_t>(bv, constExpr1, constExpr2, exprType, pos);
         }
         else if (Type::Equal(exprType, AtomicType::VaryingUInt64)) {
-            uint64_t v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            uint64_t result[ISPC_MAX_NVEC];
-            constExpr1->AsUInt64(v1);
-            constExpr2->AsUInt64(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+            return lConstFoldSelect<uint64_t>(bv, constExpr1, constExpr2, exprType, pos);
         }
         else if (Type::Equal(exprType, AtomicType::VaryingFloat)) {
-            float v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            float result[ISPC_MAX_NVEC];
-            constExpr1->AsFloat(v1);
-            constExpr2->AsFloat(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+            return lConstFoldSelect<float>(bv, constExpr1, constExpr2, exprType, pos);
         }
         else if (Type::Equal(exprType, AtomicType::VaryingDouble)) {
-            double v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            double result[ISPC_MAX_NVEC];
-            constExpr1->AsDouble(v1);
-            constExpr2->AsDouble(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+            return lConstFoldSelect<bool>(bv, constExpr1, constExpr2, exprType, pos);
         }
         else if (Type::Equal(exprType, AtomicType::VaryingBool)) {
-            bool v1[ISPC_MAX_NVEC], v2[ISPC_MAX_NVEC];
-            bool result[ISPC_MAX_NVEC];
-            constExpr1->AsBool(v1);
-            constExpr2->AsBool(v2);
-            for (int i = 0; i < count; ++i)
-                result[i] = bv[i] ? v1[i] : v2[i];
-            return new ConstExpr(exprType, result, pos);
+            return lConstFoldSelect<double>(bv, constExpr1, constExpr2, exprType, pos);
         }
 
         return this;
@@ -4171,7 +4321,7 @@ lCheckIndicesVersusBounds(const Type *baseExprType, Expr *index) {
         return;
 
     int32_t indices[ISPC_MAX_NVEC];
-    int count = ce->AsInt32(indices);
+    int count = ce->GetValues(indices);
     for (int i = 0; i < count; ++i) {
         if (indices[i] < 0 || indices[i] >= nElements)
             Warning(index->pos, "Array index \"%d\" may be out of bounds for %d "
@@ -5532,7 +5682,7 @@ lConvert(const From *from, To *to, int count, bool forceVarying) {
 
 
 int
-ConstExpr::AsInt64(int64_t *ip, bool forceVarying) const {
+ConstExpr::GetValues(int64_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
@@ -5553,7 +5703,7 @@ ConstExpr::AsInt64(int64_t *ip, bool forceVarying) const {
 
 
 int
-ConstExpr::AsUInt64(uint64_t *up, bool forceVarying) const {
+ConstExpr::GetValues(uint64_t *up, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
@@ -5574,7 +5724,7 @@ ConstExpr::AsUInt64(uint64_t *up, bool forceVarying) const {
 
 
 int
-ConstExpr::AsDouble(double *d, bool forceVarying) const {
+ConstExpr::GetValues(double *d, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   d, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   d, Count(), forceVarying); break;
@@ -5595,7 +5745,7 @@ ConstExpr::AsDouble(double *d, bool forceVarying) const {
 
 
 int
-ConstExpr::AsFloat(float *fp, bool forceVarying) const {
+ConstExpr::GetValues(float *fp, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   fp, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   fp, Count(), forceVarying); break;
@@ -5616,7 +5766,7 @@ ConstExpr::AsFloat(float *fp, bool forceVarying) const {
 
 
 int
-ConstExpr::AsBool(bool *b, bool forceVarying) const {
+ConstExpr::GetValues(bool *b, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   b, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   b, Count(), forceVarying); break;
@@ -5637,7 +5787,7 @@ ConstExpr::AsBool(bool *b, bool forceVarying) const {
 
 
 int
-ConstExpr::AsInt8(int8_t *ip, bool forceVarying) const {
+ConstExpr::GetValues(int8_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
@@ -5658,7 +5808,7 @@ ConstExpr::AsInt8(int8_t *ip, bool forceVarying) const {
 
 
 int
-ConstExpr::AsUInt8(uint8_t *up, bool forceVarying) const {
+ConstExpr::GetValues(uint8_t *up, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
@@ -5679,7 +5829,7 @@ ConstExpr::AsUInt8(uint8_t *up, bool forceVarying) const {
 
 
 int
-ConstExpr::AsInt16(int16_t *ip, bool forceVarying) const {
+ConstExpr::GetValues(int16_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
@@ -5700,7 +5850,7 @@ ConstExpr::AsInt16(int16_t *ip, bool forceVarying) const {
 
 
 int
-ConstExpr::AsUInt16(uint16_t *up, bool forceVarying) const {
+ConstExpr::GetValues(uint16_t *up, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
@@ -5721,7 +5871,7 @@ ConstExpr::AsUInt16(uint16_t *up, bool forceVarying) const {
 
 
 int
-ConstExpr::AsInt32(int32_t *ip, bool forceVarying) const {
+ConstExpr::GetValues(int32_t *ip, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   ip, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   ip, Count(), forceVarying); break;
@@ -5742,7 +5892,7 @@ ConstExpr::AsInt32(int32_t *ip, bool forceVarying) const {
 
 
 int
-ConstExpr::AsUInt32(uint32_t *up, bool forceVarying) const {
+ConstExpr::GetValues(uint32_t *up, bool forceVarying) const {
     switch (getBasicType()) {
     case AtomicType::TYPE_BOOL:   lConvert(boolVal,   up, Count(), forceVarying); break;
     case AtomicType::TYPE_INT8:   lConvert(int8Val,   up, Count(), forceVarying); break;
@@ -5779,7 +5929,7 @@ ConstExpr::GetConstant(const Type *type) const {
     if (Type::Equal(type, AtomicType::UniformBool) ||
         Type::Equal(type, AtomicType::VaryingBool)) {
         bool bv[ISPC_MAX_NVEC];
-        AsBool(bv, type->IsVaryingType());
+        GetValues(bv, type->IsVaryingType());
         if (type->IsUniformType())
             return bv[0] ? LLVMTrue : LLVMFalse;
         else
@@ -5788,7 +5938,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformInt8) ||
              Type::Equal(type, AtomicType::VaryingInt8)) {
         int8_t iv[ISPC_MAX_NVEC];
-        AsInt8(iv, type->IsVaryingType());
+        GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMInt8(iv[0]);
         else
@@ -5797,7 +5947,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformUInt8) ||
              Type::Equal(type, AtomicType::VaryingUInt8)) {
         uint8_t uiv[ISPC_MAX_NVEC];
-        AsUInt8(uiv, type->IsVaryingType());
+        GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMUInt8(uiv[0]);
         else
@@ -5806,7 +5956,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformInt16) ||
              Type::Equal(type, AtomicType::VaryingInt16)) {
         int16_t iv[ISPC_MAX_NVEC];
-        AsInt16(iv, type->IsVaryingType());
+        GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMInt16(iv[0]);
         else
@@ -5815,7 +5965,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformUInt16) ||
              Type::Equal(type, AtomicType::VaryingUInt16)) {
         uint16_t uiv[ISPC_MAX_NVEC];
-        AsUInt16(uiv, type->IsVaryingType());
+        GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMUInt16(uiv[0]);
         else
@@ -5824,7 +5974,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformInt32) ||
              Type::Equal(type, AtomicType::VaryingInt32)) {
         int32_t iv[ISPC_MAX_NVEC];
-        AsInt32(iv, type->IsVaryingType());
+        GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMInt32(iv[0]);
         else
@@ -5834,7 +5984,7 @@ ConstExpr::GetConstant(const Type *type) const {
              Type::Equal(type, AtomicType::VaryingUInt32) ||
              CastType<EnumType>(type) != NULL) {
         uint32_t uiv[ISPC_MAX_NVEC];
-        AsUInt32(uiv, type->IsVaryingType());
+        GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMUInt32(uiv[0]);
         else
@@ -5843,7 +5993,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformFloat) ||
              Type::Equal(type, AtomicType::VaryingFloat)) {
         float fv[ISPC_MAX_NVEC];
-        AsFloat(fv, type->IsVaryingType());
+        GetValues(fv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMFloat(fv[0]);
         else
@@ -5852,7 +6002,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformInt64) ||
              Type::Equal(type, AtomicType::VaryingInt64)) {
         int64_t iv[ISPC_MAX_NVEC];
-        AsInt64(iv, type->IsVaryingType());
+        GetValues(iv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMInt64(iv[0]);
         else
@@ -5861,7 +6011,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformUInt64) ||
              Type::Equal(type, AtomicType::VaryingUInt64)) {
         uint64_t uiv[ISPC_MAX_NVEC];
-        AsUInt64(uiv, type->IsVaryingType());
+        GetValues(uiv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMUInt64(uiv[0]);
         else
@@ -5870,7 +6020,7 @@ ConstExpr::GetConstant(const Type *type) const {
     else if (Type::Equal(type, AtomicType::UniformDouble) ||
              Type::Equal(type, AtomicType::VaryingDouble)) {
         double dv[ISPC_MAX_NVEC];
-        AsDouble(dv, type->IsVaryingType());
+        GetValues(dv, type->IsVaryingType());
         if (type->IsUniformType())
             return LLVMDouble(dv[0]);
         else
@@ -5887,7 +6037,7 @@ ConstExpr::GetConstant(const Type *type) const {
         }
 
         int64_t iv[ISPC_MAX_NVEC];
-        AsInt64(iv, type->IsVaryingType());
+        GetValues(iv, type->IsVaryingType());
         for (int i = 0; i < Count(); ++i)
             if (iv[i] != 0)
                 // We'll issue an error about this later--trying to assign
@@ -6016,9 +6166,9 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // If we have a bool vector of i32 elements, first truncate
-                // down to a single bit
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // If we have a bool vector of non-i1 elements, first
+                // truncate down to a single bit.
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
@@ -6060,8 +6210,8 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // truncate i32 bool vector values to i1s
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // truncate bool vector values to i1s
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
@@ -6098,7 +6248,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6134,7 +6284,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6176,7 +6326,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6216,7 +6366,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6262,7 +6412,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6302,7 +6452,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6348,7 +6498,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6386,7 +6536,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6480,12 +6630,12 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
         if (fromType->IsUniformType()) {
             if (toType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType) {
-                // extend out to i32 bool values from i1 here.  then we'll
-                // turn into a vector below, the way it does for everyone
-                // else...
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
+                // extend out to an bool as an i8/i16/i32 from the i1 here.
+                // Then we'll turn that into a vector below, the way it
+                // does for everyone else...
                 cast = ctx->SExtInst(cast, LLVMTypes::BoolVectorType->getElementType(),
-                                     LLVMGetName(cast, "to_i32bool"));
+                                     LLVMGetName(cast, "to_i_bool"));
             }
         }
         else
@@ -6976,64 +7126,64 @@ TypeCastExpr::Optimize() {
     bool forceVarying = toType->IsVaryingType();
 
     // All of the type conversion smarts we need is already in the
-    // ConstExpr::AsBool(), etc., methods, so we just need to call the
+    // ConstExpr::GetValues(), etc., methods, so we just need to call the
     // appropriate one for the type that this cast is converting to.
     AtomicType::BasicType basicType = toAtomic ? toAtomic->basicType :
         AtomicType::TYPE_UINT32;
     switch (basicType) {
     case AtomicType::TYPE_BOOL: {
         bool bv[ISPC_MAX_NVEC];
-        constExpr->AsBool(bv, forceVarying);
+        constExpr->GetValues(bv, forceVarying);
         return new ConstExpr(toType, bv, pos);
     }
     case AtomicType::TYPE_INT8: {
         int8_t iv[ISPC_MAX_NVEC];
-        constExpr->AsInt8(iv, forceVarying);
+        constExpr->GetValues(iv, forceVarying);
         return new ConstExpr(toType, iv, pos);
     }
     case AtomicType::TYPE_UINT8: {
         uint8_t uv[ISPC_MAX_NVEC];
-        constExpr->AsUInt8(uv, forceVarying);
+        constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
     }
     case AtomicType::TYPE_INT16: {
         int16_t iv[ISPC_MAX_NVEC];
-        constExpr->AsInt16(iv, forceVarying);
+        constExpr->GetValues(iv, forceVarying);
         return new ConstExpr(toType, iv, pos);
     }
     case AtomicType::TYPE_UINT16: {
         uint16_t uv[ISPC_MAX_NVEC];
-        constExpr->AsUInt16(uv, forceVarying);
+        constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
     }
     case AtomicType::TYPE_INT32: {
         int32_t iv[ISPC_MAX_NVEC];
-        constExpr->AsInt32(iv, forceVarying);
+        constExpr->GetValues(iv, forceVarying);
         return new ConstExpr(toType, iv, pos);
     }
     case AtomicType::TYPE_UINT32: {
         uint32_t uv[ISPC_MAX_NVEC];
-        constExpr->AsUInt32(uv, forceVarying);
+        constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
     }
     case AtomicType::TYPE_FLOAT: {
         float fv[ISPC_MAX_NVEC];
-        constExpr->AsFloat(fv, forceVarying);
+        constExpr->GetValues(fv, forceVarying);
         return new ConstExpr(toType, fv, pos);
     }
     case AtomicType::TYPE_INT64: {
         int64_t iv[ISPC_MAX_NVEC];
-        constExpr->AsInt64(iv, forceVarying);
+        constExpr->GetValues(iv, forceVarying);
         return new ConstExpr(toType, iv, pos);
     }
     case AtomicType::TYPE_UINT64: {
         uint64_t uv[ISPC_MAX_NVEC];
-        constExpr->AsUInt64(uv, forceVarying);
+        constExpr->GetValues(uv, forceVarying);
         return new ConstExpr(toType, uv, pos);
     }
     case AtomicType::TYPE_DOUBLE: {
         double dv[ISPC_MAX_NVEC];
-        constExpr->AsDouble(dv, forceVarying);
+        constExpr->GetValues(dv, forceVarying);
         return new ConstExpr(toType, dv, pos);
     }
     default:
