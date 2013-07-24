@@ -398,11 +398,13 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
   ret void
 }
 
+declare <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
+
 define void @__masked_store_blend_i8(<16 x i8>* nocapture, <16 x i8>,
                                      <16 x MASK> %mask) nounwind alwaysinline {
-  %mask_as_i1 = trunc <16 x MASK> %mask to <16 x i1>
   %old = load <16 x i8>* %0, align 4
-  %blend = select <16 x i1> %mask_as_i1, <16 x i8> %1, <16 x i8> %old
+  %blend = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %old, <16 x i8> %1,
+                                                   <16 x i8> %mask)
   store <16 x i8> %blend, <16 x i8>* %0, align 4
   ret void
 }
