@@ -1,4 +1,4 @@
-// syntax error, unexpected '-', expecting int32 constant
+// syntax error, unexpected '-', expecting int
 
 struct F { float a, b, c; };
 

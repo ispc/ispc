@@ -3126,7 +3126,7 @@ static inline void __range_reduce_log(float input, varying float * uniform reduc
     static const int nonexponent_mask = 0x807FFFFF;
 
     // We want the reduced version to have an exponent of -1 which is -1 + 127 after biasing or 126
-    static const int exponent_neg1 = (126 << 23);
+    static const int exponent_neg1 = (126l << 23);
     // NOTE(boulos): We don't need to mask anything out since we know
     // the sign bit has to be 0. If it's 1, we need to return infinity/nan
     // anyway (log(x), x = +-0 -> infinity, x < 0 -> NaN).
@@ -3149,7 +3149,7 @@ static inline void __range_reduce_log(uniform float input, uniform float * unifo
     uniform int int_version = intbits(input);
     static const uniform int nonexponent_mask = 0x807FFFFF;
 
-    static const uniform int exponent_neg1 = (126 << 23);
+    static const uniform int exponent_neg1 = (126ul << 23);
     uniform int biased_exponent = int_version >> 23;
     uniform int offset_exponent = biased_exponent + 1;
     *exponent = offset_exponent - 127; // get the real value
@@ -3647,18 +3647,18 @@ static inline uniform float half_to_float(uniform unsigned int16 h) {
     else {
         // https://gist.github.com/2144712
         // Fabian "ryg" Giesen.
-        static const uniform unsigned int32 shifted_exp = 0x7c00 << 13; // exponent mask after shift
+        static const uniform unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
 
         uniform int32 o = ((int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
         uniform unsigned int32 exp = shifted_exp & o;   // just the exponent
-        o += (127 - 15) << 23;        // exponent adjust
+        o += (uniform int32)(127 - 15) << 23;        // exponent adjust
 
         // handle exponent special cases
         if (exp == shifted_exp) // Inf/NaN?
-            o += (128 - 16) << 23;    // extra exp adjust
+            o += (uniform unsigned int32)(128 - 16) << 23;    // extra exp adjust
         else if (exp == 0) { // Zero/Denormal?
-            o += 1 << 23;             // extra exp adjust
-            o = intbits(floatbits(o) - floatbits(113 << 23)); // renormalize
+            o += 1ul << 23;             // extra exp adjust
+            o = intbits(floatbits(o) - floatbits(113ul << 23)); // renormalize
         }
 
         o |= ((int32)(h & 0x8000)) << 16;    // sign bit
@@ -3675,17 +3675,17 @@ static inline float half_to_float(unsigned int16 h) {
         // https://gist.github.com/2144712
         // Fabian "ryg" Giesen.
 
-        const unsigned int32 shifted_exp = 0x7c00 << 13; // exponent mask after shift
+        const unsigned int32 shifted_exp = 0x7c00ul << 13; // exponent mask after shift
 
-        int32 o = ((int32)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+        int32 o = ((int32)(h & 0x7ffful)) << 13;     // exponent/mantissa bits
         unsigned int32 exp = shifted_exp & o;   // just the exponent
-        o += (127 - 15) << 23;        // exponent adjust
+        o += (int32)(127 - 15) << 23;        // exponent adjust
 
-        int32 infnan_val = o + ((128 - 16) << 23);
-        int32 zerodenorm_val = intbits(floatbits(o + (1<<23)) - floatbits(113 << 23));
+        int32 infnan_val = o + ((int32)(128 - 16) << 23);
+        int32 zerodenorm_val = intbits(floatbits(o + (1ul<<23)) - floatbits(113ul << 23));
         int32 reg_val = (exp == 0) ? zerodenorm_val : o;
 
-        int32 sign_bit = ((int32)(h & 0x8000)) << 16;
+        int32 sign_bit = ((int32)(h & 0x8000ul)) << 16;
         return floatbits(((exp == shifted_exp) ? infnan_val : reg_val) | sign_bit);
     }
 }
@@ -3715,16 +3715,16 @@ static inline uniform int16 float_to_half(uniform float f) {
         // NaN->qNaN and Inf->Inf
         // unconditional assignment here, will override with right value for
         // the regular case below.
-        uniform int32 f32infty = 255 << 23;
-        o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+        uniform int32 f32infty = 255ul << 23;
+        o = (fint > f32infty) ? 0x7e00u : 0x7c00u; 
 
         // (De)normalized number or zero
         // update fint unconditionally to save the blending; we don't need it
         // anymore for the Inf/NaN case anyway.
 
-        const uniform unsigned int32 round_mask = ~0xfffu; 
-        const uniform int32 magic = 15 << 23;
-        const uniform int32 f16infty = 31 << 23;
+        const uniform unsigned int32 round_mask = ~0xffful;
+        const uniform int32 magic = 15ul << 23;
+        const uniform int32 f16infty = 31ul << 23;
 
         uniform int32 fint2 = intbits(floatbits(fint & round_mask) * floatbits(magic)) - round_mask;
         fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
@@ -3761,16 +3761,16 @@ static inline int16 float_to_half(float f) {
         // NaN->qNaN and Inf->Inf
         // unconditional assignment here, will override with right value for
         // the regular case below.
-        int32 f32infty = 255 << 23;
-        o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
+        int32 f32infty = 255ul << 23;
+        o = (fint > f32infty) ? 0x7e00u : 0x7c00u;
 
         // (De)normalized number or zero
         // update fint unconditionally to save the blending; we don't need it
         // anymore for the Inf/NaN case anyway.
 
-        const unsigned int32 round_mask = ~0xfffu; 
-        const int32 magic = 15 << 23;
-        const int32 f16infty = 31 << 23;
+        const unsigned int32 round_mask = ~0xffful;
+        const int32 magic = 15ul << 23;
+        const int32 f16infty = 31ul << 23;
 
         // Shift exponent down, denormalize if necessary.
         // NOTE This represents half-float denormals using single precision denormals.
@@ -3789,7 +3789,7 @@ static inline int16 float_to_half(float f) {
         //   FP16 denormals are rare in practice, I don't know. Whatever slow path your HW
         //   may or may not have for denormals, this may well hit it.
         float fscale = floatbits(fint & round_mask) * floatbits(magic);
-        fscale = min(fscale, floatbits((31 << 23) - 0x1000));
+        fscale = min(fscale, floatbits((31ul << 23) - 0x1000ul));
         int32 fint2 = intbits(fscale) - round_mask;
 
         if (fint < f32infty)
@@ -3956,7 +3956,7 @@ float_to_srgb8(float inval)
     // Do the table lookup and unpack bias, scale
     unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
     unsigned int bias = (tab >> 16) << 9;
-    unsigned int scale = tab & 0xffff;
+    unsigned int scale = tab & 0xfffful;
 
     // Grab next-highest mantissa bits and perform linear interpolation
     unsigned int t = (intbits(inval) >> 12) & 0xff;
@@ -4006,7 +4006,7 @@ float_to_srgb8(uniform float inval)
     // Do the table lookup and unpack bias, scale
     uniform unsigned int tab = table[(intbits(inval) - 0x39000000u) >> 20];
     uniform unsigned int bias = (tab >> 16) << 9;
-    uniform unsigned int scale = tab & 0xffff;
+    uniform unsigned int scale = tab & 0xfffful;
 
     // Grab next-highest mantissa bits and perform linear interpolation
     uniform unsigned int t = (intbits(inval) >> 12) & 0xff;
@@ -4053,14 +4053,14 @@ static inline uniform unsigned int random(uniform RNGState * uniform state)
 static inline float frandom(varying RNGState * uniform state)
 {
     unsigned int irand = random(state);
-    irand &= (1<<23)-1;
+    irand &= (1ul<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
 static inline uniform float frandom(uniform RNGState * uniform state)
 {
     uniform unsigned int irand = random(state);
-    irand &= (1<<23)-1;
+    irand &= (1ul<<23)-1;
     return floatbits(0x3F800000 | irand)-1.0f;
 }
 
@@ -4068,18 +4068,18 @@ static inline void seed_rng(varying RNGState * uniform state,
                             unsigned int seed) {
     state->z1 = seed;
     state->z2 = seed ^ 0xbeeff00d;
-    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
-    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
+    state->z3 = ((seed & 0xfffful) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xfful) << 24) | ((seed & 0xff00ul)  << 8) |
+                 ((seed & 0xff0000ul) >> 8) | (seed & 0xff000000ul) >> 24);
 }
 
 static inline void seed_rng(uniform RNGState * uniform state, 
                             uniform unsigned int seed) {
     state->z1 = seed;
     state->z2 = seed ^ 0xbeeff00d;
-    state->z3 = ((seed & 0xffff) << 16) | (seed >> 16);
-    state->z4 = (((seed & 0xff) << 24) | ((seed & 0xff00)  << 8) |
-                 ((seed & 0xff0000) >> 8) | (seed & 0xff000000) >> 24);
+    state->z3 = ((seed & 0xfffful) << 16) | (seed >> 16);
+    state->z4 = (((seed & 0xfful) << 24) | ((seed & 0xff00ul)  << 8) |
+                 ((seed & 0xff0000ul) >> 8) | (seed & 0xff000000ul) >> 24);
 }
 
 
@@ -4097,7 +4097,7 @@ static inline uniform bool rdrand(float * uniform ptr) {
         uniform int32 irand;
         uniform bool success = __rdrand_i32(&irand);
         if (success) {
-            irand &= (1<<23)-1;
+            irand &= (1ul<<23)-1;
             *ptr = floatbits(0x3F800000 | irand)-1.0f;
         }
         return success;
@@ -4117,7 +4117,7 @@ static inline bool rdrand(varying float * uniform ptr) {
                 // in vector form.  However, we need to be careful to not
                 // clobber any existing already-set values in *ptr with
                 // inactive lanes here...
-                irand &= (1<<23)-1;
+                irand &= (1ul<<23)-1;
                 *ptr = floatbits(0x3F800000 | irand)-1.0f;
                 success = true;
             }
@@ -4137,7 +4137,7 @@ static inline bool rdrand(float * ptr) {
         foreach_active (index) {
             uniform int32 irand;
             if (__rdrand_i32(&irand)) {
-                irand &= (1<<23)-1;
+                irand &= (1ul<<23)-1;
                 *ptrs[index] = floatbits(0x3F800000 | irand)-1.0f;
                 success = true;
             }

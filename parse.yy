@@ -179,6 +179,8 @@ struct ForeachDimension {
 }
 
 
+%token TOKEN_INT8_CONSTANT TOKEN_UINT8_CONSTANT
+%token TOKEN_INT16_CONSTANT TOKEN_UINT16_CONSTANT
 %token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
@@ -290,6 +292,22 @@ primary_expression
             std::string alts = lGetAlternates(alternates);
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
+    }
+    | TOKEN_INT8_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
+                           (int8_t)yylval.intVal, @1);
+    }
+    | TOKEN_UINT8_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt8->GetAsConstType(),
+                           (uint8_t)yylval.intVal, @1);
+    }
+    | TOKEN_INT16_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt16->GetAsConstType(),
+                           (int16_t)yylval.intVal, @1);
+    }
+    | TOKEN_UINT16_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt16->GetAsConstType(),
+                           (uint16_t)yylval.intVal, @1);
     }
     | TOKEN_INT32_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
@@ -1233,7 +1251,10 @@ declarator
     ;
 
 int_constant
-    : TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    : TOKEN_INT8_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT16_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT64_CONSTANT { $$ = yylval.intVal; }
     ;
 
 direct_declarator

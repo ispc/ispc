@@ -1,4 +1,4 @@
-// Can't convert argument of type "void * uniform" to type "varying float" for function call argument.
+// Can't convert argument of type "void \* uniform" to type "varying float" for function call argument.
 
 float bar(float a, float b);
 

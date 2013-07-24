@@ -1,4 +1,4 @@
-// Assignment operator "+=" is illegal with struct type
+// Assignment operator "\+=" is illegal with struct type
 
 struct Point { float x, y, z; };
 
