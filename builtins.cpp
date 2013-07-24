@@ -862,10 +862,22 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+                if (g->target->getMaskBitCount() == 16) {
+                    EXPORT_MODULE(builtins_bitcode_sse4_16_32bit);
+                }
+                else {
+                    Assert(g->target->getMaskBitCount() == 32);
+                    EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+                }
             }
             else {
-                EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+                if (g->target->getMaskBitCount() == 16) {
+                    EXPORT_MODULE(builtins_bitcode_sse4_16_64bit);
+                }
+                else {
+                    Assert(g->target->getMaskBitCount() == 32);
+                    EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+                }
             }
             break;
         case 16:

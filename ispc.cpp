@@ -318,6 +318,14 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
     }
+    else if (!strcasecmp(isa, "sse4-16")) {
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+    }
     else if (!strcasecmp(isa, "generic-4")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;
@@ -575,9 +583,9 @@ Target::SupportedTargetArchs() {
 
 const char *
 Target::SupportedTargetISAs() {
-    return "neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
-        ", avx1.1, avx1.1-x2, avx2, avx2-x2"
-        ", generic-1, generic-4, generic-8, generic-16, generic-32";
+    return "neon, sse2, sse2-x2, sse4, sse4-8, sse4-16, sse4-x2, "
+        "avx, avx-x2, avx1.1, avx1.1-x2, avx2, avx2-x2,"
+        "generic-1, generic-4, generic-8, generic-16, generic-32";
 }
 
 
