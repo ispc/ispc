@@ -2278,7 +2278,11 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
             Error(pos, "%s must be representable with a 32-bit integer.", usage);
             return false;
         }
-        *value = (int)ci->getZExtValue();
+        const Type *type = expr->GetType();
+        if (type->IsUnsignedType())
+            *value = (int)ci->getZExtValue();
+        else
+            *value = (int)ci->getSExtValue();
         return true;
     }
 }
