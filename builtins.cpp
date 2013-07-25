@@ -501,6 +501,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__rdrand_i64",
         "__reduce_add_double",
         "__reduce_add_float",
+        "__reduce_add_int8",
+        "__reduce_add_int16",
         "__reduce_add_int32",
         "__reduce_add_int64",
         "__reduce_equal_double",

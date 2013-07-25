@@ -2528,6 +2528,22 @@ static FORCEINLINE int64_t __count_leading_zeros_i64(uint64_t v) {
 ///////////////////////////////////////////////////////////////////////////
 // reductions
 
+static FORCEINLINE int16_t __reduce_add_int8(__vec4_i8 v) {
+    // TODO: improve
+    int16_t ret = 0;
+    for (int i = 0; i < 4; ++i)
+        ret += v.v[i];
+    return ret;
+}
+
+static FORCEINLINE int32_t __reduce_add_int16(__vec4_i16 v) {
+    // TODO: improve
+    int32_t ret = 0;
+    for (int i = 0; i < 4; ++i)
+        ret += v.v[i];
+    return ret;
+}
+
 static FORCEINLINE float __reduce_add_float(__vec4_f v) {
     float r = bits_as_float(_mm_extract_ps(v.v, 0));
     r += bits_as_float(_mm_extract_ps(v.v, 1));

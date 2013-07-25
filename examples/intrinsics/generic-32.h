@@ -1231,19 +1231,20 @@ REDUCE_ADD(double, __vec32_d, __reduce_add_double)
 REDUCE_MINMAX(double, __vec32_d, __reduce_min_double, <)
 REDUCE_MINMAX(double, __vec32_d, __reduce_max_double, >)
 
-REDUCE_ADD(uint32_t, __vec32_i32, __reduce_add_int32)
+REDUCE_ADD(int16_t, __vec16_i8, __reduce_add_int8)
+REDUCE_ADD(int32_t, __vec16_i16, __reduce_add_int16)
+
+REDUCE_ADD(int64_t, __vec32_i32, __reduce_add_int32)
 REDUCE_MINMAX(int32_t, __vec32_i32, __reduce_min_int32, <)
 REDUCE_MINMAX(int32_t, __vec32_i32, __reduce_max_int32, >)
 
-REDUCE_ADD(uint32_t, __vec32_i32, __reduce_add_uint32)
 REDUCE_MINMAX(uint32_t, __vec32_i32, __reduce_min_uint32, <)
 REDUCE_MINMAX(uint32_t, __vec32_i32, __reduce_max_uint32, >)
 
-REDUCE_ADD(uint64_t, __vec32_i64, __reduce_add_int64)
+REDUCE_ADD(int64_t, __vec32_i64, __reduce_add_int64)
 REDUCE_MINMAX(int64_t, __vec32_i64, __reduce_min_int64, <)
 REDUCE_MINMAX(int64_t, __vec32_i64, __reduce_max_int64, >)
 
-REDUCE_ADD(uint64_t, __vec32_i64, __reduce_add_uint64)
 REDUCE_MINMAX(uint64_t, __vec32_i64, __reduce_min_uint64, <)
 REDUCE_MINMAX(uint64_t, __vec32_i64, __reduce_max_uint64, >)
 

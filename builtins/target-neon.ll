@@ -509,15 +509,38 @@ define float @__reduce_max_float(<4 x float>) nounwind readnone {
   neon_reduce(float, @llvm.arm.neon.vpmaxs.v2f32, @max_f32)
 }
 
-define internal i32 @add_i32(i32, i32) {
-  %r = add i32 %0, %1
+declare <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone {
+  %v8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
+           <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  %a16 = call <4 x i16> @llvm.arm.neon.vpaddls.v4i16.v8i8(<8 x i8> %v8)
+  %a32 = call <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16> %a16)
+  %a0 = extractelement <2 x i32> %a32, i32 0
+  %a1 = extractelement <2 x i32> %a32, i32 1
+  %r = add i32 %a0, %a1
+  %r16 = trunc i32 %r to i16
+  ret i16 %r16
+}
+
+declare <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16>) nounwind readnone
+
+define i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone {
+  %a32 = call <2 x i32> @llvm.arm.neon.vpaddlu.v2i32.v4i16(<4 x i16> %0)
+  %a0 = extractelement <2 x i32> %a32, i32 0
+  %a1 = extractelement <2 x i32> %a32, i32 1
+  %r = add i32 %a0, %a1
   ret i32 %r
 }
 
-declare <2 x i32> @llvm.arm.neon.vpadd.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
+declare <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32>) nounwind readnone
 
-define i32 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
-  neon_reduce(i32, @llvm.arm.neon.vpadd.v2i32, @add_i32)
+define i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone {
+  %a64 = call <2 x i64> @llvm.arm.neon.vpaddlu.v2i64.v4i32(<4 x i32> %0)
+  %a0 = extractelement <2 x i64> %a64, i32 0
+  %a1 = extractelement <2 x i64> %a64, i32 1
+  %r = add i64 %a0, %a1
+  ret i64 %r
 }
 
 declare <2 x i32> @llvm.arm.neon.vpmins.v2i32(<2 x i32>, <2 x i32>) nounwind readnone

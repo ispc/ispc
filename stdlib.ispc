@@ -887,12 +887,31 @@ static inline uniform double select(uniform bool c, uniform double a,
 ///////////////////////////////////////////////////////////////////////////
 // Horizontal ops / reductions
 
+__declspec(safe)
+static inline uniform int16 reduce_add(int8 x) {
+    return __reduce_add_int8(__mask ? x : (int8)0);
+}
+
+__declspec(safe)
+static inline uniform unsigned int16 reduce_add(unsigned int8 x) {
+    return __reduce_add_int8(__mask ? x : (int8)0);
+}
+
+__declspec(safe)
+static inline uniform int32 reduce_add(int16 x) {
+    return __reduce_add_int16(__mask ? x : (int16)0);
+}
+
+__declspec(safe)
+static inline uniform unsigned int32 reduce_add(unsigned int16 x) {
+    return __reduce_add_int16(__mask ? x : (int16)0);
+}
+
 __declspec(safe) 
 static inline uniform float reduce_add(float x) {
     // zero the lanes where the mask is off
     return __reduce_add_float(__mask ? x : 0.);
 }
-
 
 __declspec(safe) 
 static inline uniform float reduce_min(float v) {
@@ -915,7 +934,7 @@ static inline uniform float reduce_max(float v) {
 }
 
 __declspec(safe) 
-static inline uniform int reduce_add(int x) {
+static inline uniform int64 reduce_add(int32 x) {
     // Zero out the values for lanes that aren't running
     return __reduce_add_int32(__mask ? x : 0);
 }
@@ -937,7 +956,7 @@ static inline uniform int reduce_max(int v) {
 }
 
 __declspec(safe) 
-static inline uniform unsigned int reduce_add(unsigned int x) {
+static inline uniform unsigned int64 reduce_add(unsigned int32 x) {
     // Set values for non-running lanes to zero so they don't affect the
     // result.
     return __reduce_add_int32(__mask ? x : 0);

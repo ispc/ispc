@@ -3711,28 +3711,43 @@ instances are added together by the ``reduce_add()`` function.
 
 ::
 
-    uniform float reduce_add(float x)
-    uniform int reduce_add(int x)
-    uniform unsigned int reduce_add(unsigned int x)
+    uniform int16 reduce_add(int8 x)
+    uniform unsigned int16 reduce_add(unsigned int8 x)
+    uniform int32 reduce_add(int16 x)
+    uniform unsigned int32 reduce_add(unsigned 16int x)
+    uniform int64 reduce_add(int32 x)
+    uniform unsigned int64 reduce_add(unsigned int32 x)
+    uniform int64 reduce_add(int64 x)
+    uniform unsigned int64 reduce_add(unsigned int64 x)
 
-You can also use functions to compute the minimum and maximum value of the
-given value across all of the currently-executing program instances.
+    uniform float reduce_add(float x)
+    uniform double reduce_add(double x)
+
+You can also use functions to compute the minimum value of the given value
+across all of the currently-executing program instances.
 
 ::
 
-    uniform float reduce_min(float a)
     uniform int32 reduce_min(int32 a)
     uniform unsigned int32 reduce_min(unsigned int32 a)
-    uniform double reduce_min(double a)
     uniform int64 reduce_min(int64 a)
     uniform unsigned int64 reduce_min(unsigned int64 a)
 
-    uniform float reduce_max(float a)
+    uniform float reduce_min(float a)
+    uniform double reduce_min(double a)
+
+Equivalent functions are available to comptue the maximum of the given
+varying variable over the active program instances.
+
+::
+
     uniform int32 reduce_max(int32 a)
     uniform unsigned int32 reduce_max(unsigned int32 a)
-    uniform double reduce_max(double a)
     uniform int64 reduce_max(int64 a)
     uniform unsigned int64 reduce_max(unsigned int64 a)
+
+    uniform float reduce_max(float a)
+    uniform double reduce_max(double a)
 
 Finally, you can check to see if a particular value has the same value in
 all of the currently-running program instances:
@@ -3741,9 +3756,10 @@ all of the currently-running program instances:
 
     uniform bool reduce_equal(int32 v)
     uniform bool reduce_equal(unsigned int32 v)
-    uniform bool reduce_equal(float v)
     uniform bool reduce_equal(int64 v)
     uniform bool reduce_equal(unsigned int64 v)
+
+    uniform bool reduce_equal(float v)
     uniform bool reduce_equal(double)
 
 There are also variants of these functions that return the value as a
@@ -3758,10 +3774,11 @@ performance in the `Performance Guide`_.
     uniform bool reduce_equal(int32 v, uniform int32 * uniform sameval)
     uniform bool reduce_equal(unsigned int32 v,
                               uniform unsigned int32 * uniform sameval)
-    uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(int64 v, uniform int64 * uniform sameval)
     uniform bool reduce_equal(unsigned int64 v,
                               uniform unsigned int64 * uniform sameval)
+
+    uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(double, uniform double * uniform sameval)
 
 If called when none of the program instances are running,

@@ -1607,6 +1607,9 @@ static FORCEINLINE int64_t __count_leading_zeros_i64(uint64_t v) {
 ///////////////////////////////////////////////////////////////////////////
 // reductions
 
+REDUCE_ADD(int16_t, __vec32_i8, __reduce_add_int8)
+REDUCE_ADD(int32_t, __vec32_i16, __reduce_add_int16)
+
 static FORCEINLINE float __reduce_add_float(__vec32_f v) {
     return _mm512_reduce_add_ps(v.v1) + _mm512_reduce_add_ps(v.v2);
 }
