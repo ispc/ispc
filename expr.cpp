@@ -3124,7 +3124,8 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
                    llvm::Value *expr1, llvm::Value *expr2,
                    const Type *type) {
 #if !defined(LLVM_3_1)
-    test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
+    if (test->getType() != LLVMTypes::Int1VectorType)
+        test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
     return ctx->SelectInst(test, expr1, expr2, "select");
 #else
     llvm::Value *resultPtr = ctx->AllocaInst(expr1->getType(), "selectexpr_tmp");
