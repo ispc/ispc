@@ -156,6 +156,7 @@ devUsage(int ret) {
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
+    printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. --debug-phase=start,5:9,10,17,20:end\n");
     exit(ret);
 }
 
@@ -209,6 +210,36 @@ static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) {
 static void
 lSignal(void *) {
     FATAL("Unhandled signal sent to process; terminating.");
+}
+
+
+static int ParsingPhaseNames(char * stage) {
+    if (!(strncmp(stage, "start", 5))) {
+        return 0;
+    }
+    else if (!(strncmp(stage, "end", 3))) {
+        return NUMBER_OF_OPTS;
+    }
+    else return atoi(stage);
+}
+
+
+static void ParsingDebugPhases(char * stages) {
+    int begin = ParsingPhaseNames(stages);
+    int end = begin;
+
+    for (unsigned i = 0; i < strlen(stages); i++) {
+        if ((stages[i] == ',') || (i == strlen(stages) - 1)) {
+            for (int j = begin; j < end + 1; j++) {
+                g->debug_stages[j] = true;
+            }
+            begin = ParsingPhaseNames(stages + i + 1);
+            end = begin;
+        }
+        else if (stages[i] == ':') {
+            end = ParsingPhaseNames(stages + i + 1);
+        }
+    }
 }
 
 
@@ -488,6 +519,9 @@ int main(int Argc, char *Argv[]) {
             usage(1);
           }
           hostStubFileName = argv[i];
+        }
+        else if (!strncmp(argv[i], "--debug-phase=", 14)) {
+            ParsingDebugPhases(argv[i] + strlen("--debug-phase="));
         }
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();
