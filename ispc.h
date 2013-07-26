@@ -66,6 +66,9 @@
  */
 #define ISPC_MAX_NVEC 64
 
+// Number of optimization phases
+#define NUMBER_OF_OPTS 100
+
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
     class AttributeSet;
@@ -493,6 +496,9 @@ struct Globals {
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
+
+    /** Indicates which stages of optimization we want to dump. */
+    bool debug_stages[NUMBER_OF_OPTS];
 
     /** Indicates whether all warning messages should be surpressed. */
     bool disableWarnings;
