@@ -319,6 +319,8 @@ declare float     @llvm.exp.f32(float %Val)
 declare float     @llvm.log.f32(float %Val)
 declare float     @llvm.pow.f32(float %f, float %e)
 
+declare float     @llvm.nvvm.rsqrt.approx.f(float %f) nounwind readonly alwaysinline
+
 
 
 
@@ -624,6 +626,8 @@ define  <1 x float> @__sqrt_varying_float(<1 x float>) nounwind readonly alwaysi
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; rsqrt
 
+
+
 define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alwaysinline {
   ;  float is = __rsqrt_v(v);
   ;%is = call <1 x float> @llvm.x86.sse.rsqrt.ps(<1 x float> %v)
@@ -635,10 +639,14 @@ define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alw
   ;%is_mul = fmul <1 x float> %is, %three_sub
   ;%half_scale = fmul <1 x float> <float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
   ;ret <1 x float> %half_scale
-  %s = call <1 x float> @__sqrt_varying_float(<1 x float> %v)
-  %r = call <1 x float> @__rcp_varying_float(<1 x float> %s)
-  ret <1 x float> %r
-  
+  ;%s = call <1 x float> @__sqrt_varying_float(<1 x float> %v)
+  ;%r = call <1 x float> @__rcp_varying_float(<1 x float> %s)
+  ;ret <1 x float> %r
+  %vs = extractelement <1 x float> %v, i32 0
+  %rs = call float @llvm.nvvm.rsqrt.approx.f(float %vs)
+;  %rs = call float asm "rsqrt.approx.f32 $0,$0", "=f,f"(float %vs)
+  %rv = insertelement <1 x float> undef , float %rs, i32 0
+  ret <1 x float> %rv
 }
 
 
