@@ -262,6 +262,15 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeARMDisassembler();
     LLVMInitializeARMTargetMC();
 
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXAsmPrinter();
+#if 0
+    LLVMInitializeNVPTXAsmParser();
+    LLVMInitializeNVPTXDisassembler();
+#endif
+    LLVMInitializeNVPTXTargetMC();
+
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;

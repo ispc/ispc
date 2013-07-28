@@ -144,7 +144,7 @@ static const char *supportedCPUs[] = {
     // FIXME: LLVM supports a ton of different ARM CPU variants--not just
     // cortex-a9 and a15.  We should be able to handle any of them that also
     // have NEON support.
-    "cortex-a9", "cortex-a15",
+    "sm_35", "cortex-a9", "cortex-a15",
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
@@ -187,7 +187,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                 isa = "avx2";
             else if (!strcmp(cpu, "cortex-a9") ||
                      !strcmp(cpu, "cortex-a15"))
-                isa = "neon";
+              isa = "neon";
+            else if (!strcmp(cpu, "sm_35"))
+              isa = "nvptx64";
             else if (!strcmp(cpu, "core-avx-i"))
                 isa = "avx1.1";
             else if (!strcmp(cpu, "sandybridge") ||
@@ -217,6 +219,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // supplied, don't go and set the CPU based on the host...
         cpu = "cortex-a9";
 #endif
+
+    if (cpu == NULL && !strcmp(isa, "nvptx64"))
+      cpu = "sm_35";
 
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
@@ -248,6 +253,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     if (arch == NULL) {
         if (!strcmp(isa, "neon"))
             arch = "arm";
+        else if (!strcmp(isa, "nvptx64"))
+            arch = "nvptx64";
         else
             arch = "x86-64";
     }
@@ -454,6 +461,22 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
+    else if (!strcasecmp(isa, "nvptx64")) {
+        this->m_isa = Target::NVPTX64;
+        this->m_nativeVectorWidth = 1;
+        this->m_vectorWidth = 1;
+        this->m_attributes = "+sm_35";
+#if 0
+        this->m_hasHalf = false;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasTranscendentals = true;
+        this->m_hasGather = this->m_hasScatter = true;
+#else
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+#endif
+    }
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n",
                 isa, SupportedTargetISAs());
@@ -561,13 +584,13 @@ Target::SupportedTargetCPUs() {
 
 const char *
 Target::SupportedTargetArchs() {
-    return "arm, x86, x86-64";
+    return "nvptx64, arm, x86, x86-64";
 }
 
 
 const char *
 Target::SupportedTargetISAs() {
-    return "neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
+    return "nvptx64, neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
         ", avx1.1, avx1.1-x2, avx2, avx2-x2"
         ", generic-1, generic-4, generic-8, generic-16, generic-32";
 }
@@ -578,6 +601,10 @@ Target::GetTripleString() const {
     llvm::Triple triple;
     if (m_arch == "arm") {
         triple.setTriple("armv7-eabi");
+    }
+    else if (m_arch == "nvptx64")
+    {
+      triple.setTriple("nvptx64");
     }
     else {
         // Start with the host triple as the default
@@ -604,6 +631,8 @@ Target::ISAToString(ISA isa) {
     switch (isa) {
     case Target::NEON:
         return "neon";
+    case Target::NVPTX64:
+        return "nvptx64";
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
