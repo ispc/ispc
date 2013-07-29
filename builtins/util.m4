@@ -1795,11 +1795,6 @@ declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)
 
-define void @__pause() nounwind readnone {
-  call void asm sideeffect "pause", "~{dirflag},~{fpsr},~{flags}"() nounwind
-  ret void
-}
-
 ; This function declares placeholder masked store functions for the
 ;  front-end to use.
 ;
