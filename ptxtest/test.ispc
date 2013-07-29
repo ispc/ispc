@@ -2,9 +2,11 @@ export void saxpy(const uniform float a, const uniform float x_[], const uniform
 {
   foreach (i = 0 ... n)
   {
-     const float x = x_[i];
-     const float y = y_[i];
-     const float z = y + a*x;
+     const double x = x_[i];
+     const double y = y_[i];
+     const double dz = y + a*x;
+     const double dz1 = 1.0/sqrt(dz);
+     const float z = dz1;
      z_[i] = rsqrt(z);
   }
 }
