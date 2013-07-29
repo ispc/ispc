@@ -657,7 +657,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // the values for an ARM target.  This maybe won't cause problems
         // in the generated code, since bulitins.c doesn't do anything too
         // complex w.r.t. struct layouts, etc.
-        if (g->target->getISA() != Target::NEON)
+        if (g->target->getISA() != Target::NEON32 &&
+            g->target->getISA() != Target::NEON16 &&
+            g->target->getISA() != Target::NEON8)
 #endif // !__arm__
         {
             Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
@@ -820,12 +822,30 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
-    case Target::NEON: {
+    case Target::NEON8: {
         if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_32bit);
+            EXPORT_MODULE(builtins_bitcode_neon_8_32bit);
         }
         else {
-            EXPORT_MODULE(builtins_bitcode_neon_64bit);
+            EXPORT_MODULE(builtins_bitcode_neon_8_64bit);
+        }
+        break;
+    }
+    case Target::NEON16: {
+        if (runtime32) {
+            EXPORT_MODULE(builtins_bitcode_neon_16_32bit);
+        }
+        else {
+            EXPORT_MODULE(builtins_bitcode_neon_16_64bit);
+        }
+        break;
+    }
+    case Target::NEON32: {
+        if (runtime32) {
+            EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
+        }
+        else {
+            EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
         }
         break;
     }

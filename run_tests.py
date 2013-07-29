@@ -37,7 +37,7 @@ parser.add_option("-g", "--generics-include", dest="include_file", help="Filenam
 parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
 parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (neon, sse2, sse2-x2, sse4, sse4-x2, sse4-8, sse4-16, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
+                  help='Set compilation target (neon8, neon16, neon32, sse2, sse2-x2, sse4, sse4-x2, sse4-8, sse4-16, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
                   default="sse4")
 parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',

@@ -106,7 +106,7 @@ static void __cpuidex(int info[4], int level, int count) {
 static const char *
 lGetSystemISA() {
 #ifdef __arm__
-    return "neon";
+    return "neon-32";
 #else
     int info[4];
     __cpuid(info, 1);
@@ -187,7 +187,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                 isa = "avx2";
             else if (!strcmp(cpu, "cortex-a9") ||
                      !strcmp(cpu, "cortex-a15"))
-                isa = "neon";
+                isa = "neon-32";
             else if (!strcmp(cpu, "core-avx-i"))
                 isa = "avx1.1";
             else if (!strcmp(cpu, "sandybridge") ||
@@ -212,7 +212,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     }
 
 #if !defined(__arm__)
-    if (cpu == NULL && !strcmp(isa, "neon"))
+    if (cpu == NULL && !strncmp(isa, "neon", 4))
         // If we're compiling NEON on an x86 host and the CPU wasn't
         // supplied, don't go and set the CPU based on the host...
         cpu = "cortex-a9";
@@ -246,7 +246,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     this->m_cpu = cpu;
 
     if (arch == NULL) {
-        if (!strcmp(isa, "neon"))
+        if (!strncmp(isa, "neon", 4))
             arch = "arm";
         else
             arch = "x86-64";
@@ -461,8 +461,26 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasGather = true;
 #endif
     }
-    else if (!strcasecmp(isa, "neon")) {
-        this->m_isa = Target::NEON;
+    else if (!strcasecmp(isa, "neon-8")) {
+        this->m_isa = Target::NEON8;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+neon,+fp16";
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+    }
+    else if (!strcasecmp(isa, "neon-16")) {
+        this->m_isa = Target::NEON16;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+neon,+fp16";
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+    }
+    else if (!strcasecmp(isa, "neon-32") || !strcasecmp(isa, "neon")) {
+        this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
         this->m_attributes = "+neon,+fp16";
@@ -484,7 +502,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             llvm::Reloc::Default;
         std::string featuresString = m_attributes;
         llvm::TargetOptions options;
-        if (m_isa == Target::NEON)
+        if (m_isa == Target::NEON8 || m_isa == Target::NEON16 ||
+            m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
 #if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
@@ -618,8 +637,12 @@ Target::GetTripleString() const {
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
-    case Target::NEON:
-        return "neon";
+    case Target::NEON8:
+        return "neon-8";
+    case Target::NEON16:
+        return "neon-16";
+    case Target::NEON32:
+        return "neon-32";
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:

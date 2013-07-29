@@ -45,8 +45,12 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-32-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-generic-64-64bit.cpp" />
-    <ClCompile Include="$(Configuration)\gen-bitcode-neon-32bit.cpp" />
-    <ClCompile Include="$(Configuration)\gen-bitcode-neon-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-8-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-8-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-16-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-16-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-32-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-neon-32-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-x2-32bit.cpp" />
@@ -188,16 +192,57 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="builtins\target-neon.ll">
+    <CustomBuild Include="builtins\target-neon-8.ll">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-neon.ll | python bitcode2cpp.py builtins\target-neon.ll &gt; gen-bitcode-neon.cpp</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">gen-bitcode-neon.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">builtins\util.m4</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins\target-neon.ll | python bitcode2cpp.py builtins\target-neon.ll &gt; gen-bitcode-neon.cpp</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">gen-bitcode-neon.cpp</Outputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">builtins\util.m4</AdditionalInputs>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Building gen-bitcode-neon.cpp</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Building gen-bitcode-neon.cpp</Message>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-8.ll | python bitcode2cpp.py builtins\target-neon-8.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-8-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-8-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-8-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-8.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-8.ll | python bitcode2cpp.py builtins\target-neon-8.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-8-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-8-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-8-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-16.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-16.ll | python bitcode2cpp.py builtins\target-neon-16.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-16-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-16-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-16-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-16.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-16.ll | python bitcode2cpp.py builtins\target-neon-16.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-16-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-16-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-16-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-32.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-neon-32.ll | python bitcode2cpp.py builtins\target-neon-32.ll 32bit &gt; $(Configuration)/gen-bitcode-neon-32-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-32-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-32-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-neon-32.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-neon-32.ll | python bitcode2cpp.py builtins\target-neon-32.ll 64bit &gt; $(Configuration)/gen-bitcode-neon-32-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-neon-32-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-neon-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-neon-32-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
