@@ -29,7 +29,7 @@
 
 #include "llvmutil.h"
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/Constants.h"
   #include "llvm/DerivedTypes.h"
   #include "llvm/CallingConv.h"
@@ -38,6 +38,7 @@
   #include "llvm/Intrinsics.h"
   #include "llvm/IntrinsicInst.h"
   #include "llvm/InlineAsm.h"
+  #include "llvm/TypeFinder.h"
 #else
   #include "llvm/IR/Constants.h"
   #include "llvm/IR/DerivedTypes.h"
@@ -47,16 +48,10 @@
   #include "llvm/IR/Intrinsics.h"
   #include "llvm/IR/IntrinsicInst.h"
   #include "llvm/IR/InlineAsm.h"
+  #include "llvm/IR/TypeFinder.h"
 #endif
 #include "llvm/Pass.h"
 #include "llvm/PassManager.h"
-#if !defined(LLVM_3_1)
-  #if defined(LLVM_3_2)
-    #include "llvm/TypeFinder.h"
-  #else // LLVM_3_3 +
-    #include "llvm/IR/TypeFinder.h"
-  #endif
-#endif // LLVM_3_2 +
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/STLExtras.h"
@@ -76,9 +71,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#if defined(LLVM_3_1)
-  #include "llvm/Target/TargetData.h"
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/DataLayout.h"
 #else // LLVM 3.3+
   #include "llvm/IR/DataLayout.h"
@@ -88,7 +81,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/GetElementPtrTypeIterator.h"
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/Support/InstVisitor.h"
 #else // LLVM 3.3+
   #include "llvm/InstVisitor.h"
@@ -258,14 +251,10 @@ namespace {
     const llvm::MCRegisterInfo *MRI;
     const llvm::MCObjectFileInfo *MOFI;
     llvm::MCContext *TCtx;
-#if defined(LLVM_3_1)
-    const llvm::TargetData* TD;
-#else
     // FIXME: it's ugly to have the name be "TD" here, but it saves us
     // lots of ifdefs in the below since the new DataLayout and the old
     // TargetData have generally similar interfaces...
     const llvm::DataLayout* TD;
-#endif
 
     std::map<const llvm::ConstantFP *, unsigned> FPConstantMap;
     std::map<const llvm::ConstantDataVector *, unsigned> VectorConstantMap;
@@ -352,7 +341,7 @@ namespace {
                            bool isSigned = false,
                            const std::string &VariableName = "",
                            bool IgnoreName = false,
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                            const llvm::AttrListPtr &PAL = llvm::AttrListPtr()
 #else
                            const llvm::AttributeSet &PAL = llvm::AttributeSet()
@@ -363,7 +352,7 @@ namespace {
                            const std::string &NameSoFar = "");
 
     void printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                                               const llvm::AttrListPtr &PAL,
 #else
                                               const llvm::AttributeSet &PAL,
@@ -586,7 +575,7 @@ std::string CWriter::getArrayName(llvm::ArrayType *AT) {
 /// return type, except, instead of printing the type as void (*)(Struct*, ...)
 /// print it as "Struct (*)(...)", for struct return functions.
 void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                                                    const llvm::AttrListPtr &PAL,
 #else
                                                    const llvm::AttributeSet &PAL,
@@ -605,20 +594,16 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
     if (PrintedType)
       FunctionInnards << ", ";
     llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_1)
-    if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
     if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
+    if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
       assert(ArgTy->isPointerTy());
       ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
     }
     printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_1)
-              /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
               PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
               PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
@@ -635,9 +620,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
   }
   FunctionInnards << ')';
   printType(Out, RetTy,
-#if defined(LLVM_3_1)
-            /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
             PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
@@ -737,7 +720,7 @@ CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
 llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
                                 bool isSigned, const std::string &NameSoFar,
                                 bool IgnoreName,
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                                 const llvm::AttrListPtr &PAL
 #else
                                 const llvm::AttributeSet &PAL
@@ -759,9 +742,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     for (llvm::FunctionType::param_iterator I = FTy->param_begin(),
            E = FTy->param_end(); I != E; ++I) {
       llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_1)
-      if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
           if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
@@ -772,9 +753,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
       if (I != FTy->param_begin())
         FunctionInnards << ", ";
       printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_1)
-                /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
@@ -791,9 +770,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
     }
     FunctionInnards << ')';
     printType(Out, FTy->getReturnType(),
-#if defined(LLVM_3_1)
-              /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
               PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
               PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
@@ -1972,11 +1949,7 @@ void CWriter::writeOperandWithCast(llvm::Value* Operand, const llvm::ICmpInst &C
 // directives to cater to specific compilers as need be.
 //
 static void generateCompilerSpecificCode(llvm::formatted_raw_ostream& Out,
-#if defined(LLVM_3_1)
-                                         const llvm::TargetData *TD) {
-#else
                                          const llvm::DataLayout *TD) {
-#endif
   // We output GCC specific attributes to preserve 'linkonce'ness on globals.
   // If we aren't being compiled with GCC, just drop these attributes.
   Out << "#ifndef __GNUC__  /* Can only support \"linkonce\" vars with GCC */\n"
@@ -2169,11 +2142,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
   // Initialize
   TheModule = &M;
 
-#if defined(LLVM_3_1)
-  TD = new llvm::TargetData(&M);
-#else
   TD = new llvm::DataLayout(&M);
-#endif
   IL = new llvm::IntrinsicLowering(*TD);
   IL->AddPrototypes(M);
 
@@ -2656,15 +2625,11 @@ void CWriter::printModuleTypes() {
 
   // Get all of the struct types used in the module.
   std::vector<llvm::StructType*> StructTypes;
-#if defined(LLVM_3_1)
-  TheModule->findUsedStructTypes(StructTypes);
-#else
   llvm::TypeFinder typeFinder;
   typeFinder.run(*TheModule, false);
   for (llvm::TypeFinder::iterator iter = typeFinder.begin();
        iter != typeFinder.end(); ++iter)
       StructTypes.push_back(*iter);
-#endif
 
   // Get all of the array types used in the module
   std::vector<llvm::ArrayType*> ArrayTypes;
@@ -2785,7 +2750,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
   // Loop over the arguments, printing them...
   llvm::FunctionType *FT = llvm::cast<llvm::FunctionType>(F->getFunctionType());
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   const llvm::AttrListPtr &PAL = F->getAttributes();
 #else
   const llvm::AttributeSet &PAL = F->getAttributes();
@@ -2819,20 +2784,16 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         else
           ArgName = "";
         llvm::Type *ArgTy = I->getType();
-#if defined(LLVM_3_1)
-        if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
         if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
-            if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
+        if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
 #endif
           ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
           ByValParams.insert(I);
         }
         printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_1)
-                  /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                   PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt),
 #else
                   PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt),
@@ -2858,9 +2819,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
     for (; I != E; ++I) {
       if (PrintedArg) FunctionInnards << ", ";
       llvm::Type *ArgTy = *I;
-#if defined(LLVM_3_1)
-      if (PAL.paramHasAttr(Idx, llvm::Attribute::ByVal)) {
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
       if (PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::ByVal)) {
 #else
           if (PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::ByVal)) {
@@ -2869,9 +2828,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
         ArgTy = llvm::cast<llvm::PointerType>(ArgTy)->getElementType();
       }
       printType(FunctionInnards, ArgTy,
-#if defined(LLVM_3_1)
-                /*isSigned=*/PAL.paramHasAttr(Idx, llvm::Attribute::SExt)
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::Attributes::SExt)
 #else
                 PAL.getParamAttributes(Idx).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
@@ -2908,9 +2865,7 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
 
   // Print out the return type and the signature built above.
   printType(Out, RetTy,
-#if defined(LLVM_3_1)
-            /*isSigned=*/PAL.paramHasAttr(0, llvm::Attribute::SExt),
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
             PAL.getParamAttributes(0).hasAttribute(llvm::Attributes::SExt),
 #else
             PAL.getParamAttributes(0).hasAttribute(llvm::AttributeSet::ReturnIndex, llvm::Attribute::SExt),
@@ -3712,7 +3667,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/Intrinsics.gen"
 #else
   #include "llvm/IR/Intrinsics.gen"
@@ -3777,7 +3732,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
 
   // If this is a call to a struct-return function, assign to the first
   // parameter instead of passing it to the call.
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   const llvm::AttrListPtr &PAL = I.getAttributes();
 #else
   const llvm::AttributeSet &PAL = I.getAttributes();
@@ -3865,9 +3820,7 @@ void CWriter::visitCallInst(llvm::CallInst &I) {
         (*AI)->getType() != FTy->getParamType(ArgNo)) {
       Out << '(';
       printType(Out, FTy->getParamType(ArgNo),
-#if defined(LLVM_3_1)
-                /*isSigned=*/PAL.paramHasAttr(ArgNo+1, llvm::Attribute::SExt)
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                 PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::Attributes::SExt)
 #else
                 PAL.getParamAttributes(ArgNo+1).hasAttribute(llvm::AttributeSet::FunctionIndex, llvm::Attribute::SExt)
@@ -3905,7 +3858,7 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     const char *BuiltinName = "";
 #define GET_GCC_BUILTIN_NAME
 #define Intrinsic llvm::Intrinsic
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/Intrinsics.gen"
 #else
   #include "llvm/IR/Intrinsics.gen"
@@ -4555,13 +4508,8 @@ SmearCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                 smearType, NULL);
                 smearFunc = llvm::dyn_cast<llvm::Function>(sf);
                 assert(smearFunc != NULL);
-#if defined(LLVM_3_1)
-                smearFunc->setDoesNotThrow(true);
-                smearFunc->setDoesNotAccessMemory(true);
-#else
                 smearFunc->setDoesNotThrow();
                 smearFunc->setDoesNotAccessMemory();
-#endif
             }
 
             assert(smearFunc != NULL);
@@ -4703,13 +4651,8 @@ AndCmpCleanupPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                    LLVMTypes::MaskType, NULL);
                 andCmpFunc = llvm::dyn_cast<llvm::Function>(acf);
                 Assert(andCmpFunc != NULL);
-#if defined(LLVM_3_1)
-                andCmpFunc->setDoesNotThrow(true);
-                andCmpFunc->setDoesNotAccessMemory(true);
-#else
                 andCmpFunc->setDoesNotThrow();
                 andCmpFunc->setDoesNotAccessMemory();
-#endif
             }
 
             // Set up the function call to the *_and_mask function; the
@@ -4914,7 +4857,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
         pm.add(new llvm::TargetData(module));
 #endif
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
     int flags = 0;
 #else
     llvm::sys::fs::OpenFlags flags = llvm::sys::fs::F_None;
@@ -4939,7 +4882,7 @@ WriteCXXFile(llvm::Module *module, const char *fn, int vectorWidth,
     pm.add(llvm::createDeadCodeEliminationPass()); // clean up after smear pass
 //CO    pm.add(llvm::createPrintModulePass(&fos));
     pm.add(new CWriter(fos, includeName, vectorWidth));
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
     // This interface is depricated for 3.3+
     pm.add(llvm::createGCInfoDeleter());
 #endif

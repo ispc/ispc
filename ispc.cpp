@@ -48,7 +48,7 @@
   #include <sys/types.h>
   #include <unistd.h>
 #endif
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -57,19 +57,12 @@
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Instructions.h>
 #endif
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-  #include <llvm/Analysis/DIBuilder.h>
-#else
-  #include <llvm/DebugInfo.h>
-  #include <llvm/DIBuilder.h>
-#endif
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
 #include <llvm/Support/Dwarf.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
 #else // LLVM 3.3+
   #include <llvm/IR/DataLayout.h>
@@ -145,27 +138,20 @@ static const char *supportedCPUs[] = {
     // cortex-a9 and a15.  We should be able to handle any of them that also
     // have NEON support.
     "cortex-a9", "cortex-a15",
-    "atom", "penryn", "core2", "corei7", "corei7-avx"
-#if !defined(LLVM_3_1)
-    , "core-avx-i", "core-avx2"
-#endif // LLVM 3.2+
+    "atom", "penryn", "core2", "corei7", "corei7-avx", "core-avx-i", "core-avx2"
 };
 
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_target(NULL),
     m_targetMachine(NULL),
-#if defined(LLVM_3_1)
-    m_targetData(NULL),
-#else
     m_dataLayout(NULL),
-#endif
     m_valid(false),
     m_isa(SSE2),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),
     m_attributes(""),
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
     m_tf_attributes(NULL),
 #endif
     m_nativeVectorWidth(-1),
@@ -407,10 +393,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
-#if !defined(LLVM_3_1)
-        // LLVM 3.2+ only
         this->m_hasRand = true;
-#endif
     }
     else if (!strcasecmp(isa, "avx1.1-x2")) {
         this->m_isa = Target::AVX11;
@@ -420,46 +403,29 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
-#if !defined(LLVM_3_1)
-        // LLVM 3.2+ only
         this->m_hasRand = true;
-#endif
     }
     else if (!strcasecmp(isa, "avx2")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
-#ifndef LLVM_3_1
-            ",+fma"
-#endif // !LLVM_3_1
-            ;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand,+fma";
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
-#if !defined(LLVM_3_1)
-        // LLVM 3.2+ only
         this->m_hasRand = true;
         this->m_hasGather = true;
-#endif
     }
     else if (!strcasecmp(isa, "avx2-x2")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
         this->m_vectorWidth = 16;
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
-#ifndef LLVM_3_1
-            ",+fma"
-#endif // !LLVM_3_1
-            ;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand,+fma";
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
-#if !defined(LLVM_3_1)
-        // LLVM 3.2+ only
         this->m_hasRand = true;
         this->m_hasGather = true;
-#endif
     }
     else if (!strcasecmp(isa, "neon-8")) {
         this->m_isa = Target::NEON8;
@@ -505,10 +471,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         if (m_isa == Target::NEON8 || m_isa == Target::NEON16 ||
             m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
-#if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-#endif // !LLVM_3_1
 
 #ifdef ISPC_IS_WINDOWS
         if (strcmp("x86", arch) == 0) {
@@ -526,12 +490,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 
         // Initialize TargetData/DataLayout in 3 steps.
         // 1. Get default data layout first
-        std::string dl_string;
-#if defined(LLVM_3_1)
-        dl_string = m_targetMachine->getTargetData()->getStringRepresentation();
-#else
-        dl_string = m_targetMachine->getDataLayout()->getStringRepresentation();
-#endif
+        std::string dl_string =
+          m_targetMachine->getDataLayout()->getStringRepresentation();
 
         // 2. Adjust for generic
         if (m_isa == Target::GENERIC) {
@@ -546,11 +506,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         }
 
         // 3. Finally set member data
-#if defined(LLVM_3_1)
-        m_targetData = new llvm::TargetData(dl_string);
-#else
         m_dataLayout = new llvm::DataLayout(dl_string);
-#endif
 
         // Set is32Bit
         // This indicates if we are compiling for 32 bit platform
@@ -558,7 +514,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // FIXME: all generic targets are handled as 64 bit, which is incorrect.
         this->m_is32Bit = (getDataLayout()->getPointerSize() == 4);
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         // This is LLVM 3.3+ feature.
         // Initialize target-specific "target-feature" attribute.
         if (!m_attributes.empty()) {
@@ -772,7 +728,7 @@ Target::StructOffset(llvm::Type *type, int element,
 }
 
 void Target::markFuncWithTargetAttr(llvm::Function* func) {
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
     if (m_tf_attributes) {
         func->addAttributes(llvm::AttributeSet::FunctionIndex, *m_tf_attributes);
     }

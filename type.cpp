@@ -43,20 +43,15 @@
 
 #include <stdio.h>
 #include <map>
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/Value.h>
   #include <llvm/Module.h>
 #else
   #include <llvm/IR/Value.h>
   #include <llvm/IR/Module.h>
 #endif
-#if defined(LLVM_3_1)
-  #include <llvm/Analysis/DebugInfo.h>
-  #include <llvm/Analysis/DIBuilder.h>
-#else
-  #include <llvm/DebugInfo.h>
-  #include <llvm/DIBuilder.h>
-#endif
+#include <llvm/DebugInfo.h>
+#include <llvm/DIBuilder.h>
 #include <llvm/Support/Dwarf.h>
 
 
@@ -819,11 +814,8 @@ EnumType::GetDIType(llvm::DIDescriptor scope) const {
         m->diBuilder->createEnumerationType(scope, name, diFile, pos.first_line,
                                             32 /* size in bits */,
                                             32 /* align in bits */,
-                                            elementArray
-#if !defined(LLVM_3_1)
-                                            , llvm::DIType()
-#endif
-                                            );
+                                            elementArray,
+                                            llvm::DIType());
 
 
     switch (variability.type) {
@@ -2139,7 +2131,7 @@ StructType::GetDIType(llvm::DIDescriptor scope) const {
         currentSize,    // Size in bits
         align,          // Alignment in bits
         0,              // Flags
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         llvm::DIType(), // DerivedFrom
 #endif
         elements);
@@ -2382,7 +2374,7 @@ UndefinedStructType::GetDIType(llvm::DIDescriptor scope) const {
         0,              // Size
         0,              // Align
         0,              // Flags
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+#if !defined(LLVM_3_2)
         llvm::DIType(), // DerivedFrom
 #endif
         elements);
@@ -2645,12 +2637,8 @@ ReferenceType::GetDIType(llvm::DIDescriptor scope) const {
     }
 
     llvm::DIType diTargetType = targetType->GetDIType(scope);
-#if defined(LLVM_3_1)
-    return m->diBuilder->createReferenceType(diTargetType);
-#else
     return m->diBuilder->createReferenceType(llvm::dwarf::DW_TAG_reference_type,
                                              diTargetType);
-#endif
 }
 
 

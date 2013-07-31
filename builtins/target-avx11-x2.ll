@@ -31,9 +31,7 @@
 
 include(`target-avx-x2.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
-       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
-       `rdrand_definition()')
+rdrand_definition()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max

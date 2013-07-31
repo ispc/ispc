@@ -64,7 +64,7 @@
 #define strcasecmp stricmp
 #endif
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -86,9 +86,7 @@
 #include <llvm/Support/FileUtilities.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
-#if defined(LLVM_3_1)
-  #include <llvm/Target/TargetData.h>
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include <llvm/DataLayout.h>
   #include <llvm/TargetTransformInfo.h>
 #else // LLVM 3.3+
@@ -202,7 +200,7 @@ lStripUnusedDebugInfo(llvm::Module *module) {
             // stuff and remove it later on. Removing it is useful, as it
             // reduces size of the binary significantly (manyfold for small
             // programs).
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
             llvm::MDNode *nodeSPMD =
                 llvm::dyn_cast<llvm::MDNode>(cuNode->getOperand(12));
             Assert(nodeSPMD != NULL);
@@ -797,11 +795,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 #endif
     if (functionType->isTask)
         // This also applies transitively to members I think?
-#if defined(LLVM_3_1)
-        function->setDoesNotAlias(1, true);
-#else // LLVM 3.2+
         function->setDoesNotAlias(1);
-#endif
 
     g->target->markFuncWithTargetAttr(function);
 
@@ -850,12 +844,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 
             // NOTE: LLVM indexes function parameters starting from 1.
             // This is unintuitive.
-#if defined(LLVM_3_1)
-            function->setDoesNotAlias(i+1, true);
-#else
             function->setDoesNotAlias(i+1);
-#endif
-
 #if 0
             int align = 4 * RoundUpPow2(g->target->nativeVectorWidth);
             function->addAttribute(i+1, llvm::Attribute::constructAlignmentFromInt(align));
@@ -1067,7 +1056,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     llvm::TargetMachine::CodeGenFileType fileType = (outputType == Object) ?
         llvm::TargetMachine::CGFT_ObjectFile : llvm::TargetMachine::CGFT_AssemblyFile;
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
-#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+#if defined(LLVM_3_2) || defined(LLVM_3_3)
     unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
 #else
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_Binary :
@@ -1082,11 +1071,7 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if defined(LLVM_3_1)
-    pm.add(new llvm::TargetData(*g->target->getDataLayout()));
-#else
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
-#endif
 
     llvm::formatted_raw_ostream fos(of->os());
 
@@ -1800,22 +1785,12 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     llvm::raw_fd_ostream stderrRaw(2, false);
 
-#if defined(LLVM_3_1)
-    clang::TextDiagnosticPrinter *diagPrinter =
-        new clang::TextDiagnosticPrinter(stderrRaw, clang::DiagnosticOptions());
-#else
     clang::DiagnosticOptions *diagOptions = new clang::DiagnosticOptions();
     clang::TextDiagnosticPrinter *diagPrinter =
         new clang::TextDiagnosticPrinter(stderrRaw, diagOptions);
-#endif
     llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs(new clang::DiagnosticIDs);
-#if defined(LLVM_3_1)
-    clang::DiagnosticsEngine *diagEngine =
-        new clang::DiagnosticsEngine(diagIDs, diagPrinter);
-#else
     clang::DiagnosticsEngine *diagEngine =
         new clang::DiagnosticsEngine(diagIDs, diagOptions, diagPrinter);
-#endif
     inst.setDiagnostics(diagEngine);
 
     clang::TargetOptions &options = inst.getTargetOpts();
@@ -1825,7 +1800,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     }
     options.Triple = triple.getTriple();
 
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
     clang::TargetInfo *target =
         clang::TargetInfo::CreateTargetInfo(inst.getDiagnostics(), options);
 #else // LLVM 3.3+
@@ -1835,18 +1810,14 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
 
     inst.setTarget(target);
     inst.createSourceManager(inst.getFileManager());
-#if defined(LLVM_3_1)
-    inst.InitializeSourceManager(infilename);
-#else
     clang::FrontendInputFile inputFile(infilename, clang::IK_None);
     inst.InitializeSourceManager(inputFile);
-#endif
 
     // Don't remove comments in the preprocessor, so that we can accurately
     // track the source file position by handling them ourselves.
     inst.getPreprocessorOutputOpts().ShowComments = 1;
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) // LLVM 3.3+
+#if !defined(LLVM_3_2) // LLVM 3.3+
     inst.getPreprocessorOutputOpts().ShowCPP = 1;
 #endif
 
@@ -1858,7 +1829,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         headerOpts.Verbose = 1;
     for (int i = 0; i < (int)g->includePath.size(); ++i) {
         headerOpts.AddPath(g->includePath[i], clang::frontend::Angled,
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
+#if defined(LLVM_3_2)
                            true /* is user supplied */,
 #endif
                            false /* not a framework */,
@@ -1913,11 +1884,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         }
     }
 
-#if defined(LLVM_3_1)
-    inst.getLangOpts().BCPLComment = 1;
-#else
     inst.getLangOpts().LineComment = 1;
-#endif
     inst.createPreprocessor();
 
     diagPrinter->BeginSourceFile(inst.getLangOpts(), &inst.getPreprocessor());

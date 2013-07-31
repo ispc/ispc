@@ -49,8 +49,6 @@
 #include <stdlib.h>
 #if defined(LLVM_3_2)
   #include <llvm/Attributes.h>
-#endif
-#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
