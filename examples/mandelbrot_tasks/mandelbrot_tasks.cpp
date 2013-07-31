@@ -42,7 +42,7 @@
 #include <algorithm>
 #include <string.h>
 #include "../timing.h"
-#include "mandelbrot_ispc.h"
+#include "mandelbrot_tasks_ispc.h"
 using namespace ispc;
 
 extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
