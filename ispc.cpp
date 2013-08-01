@@ -558,8 +558,8 @@ Target::SupportedTargetArchs() {
 
 const char *
 Target::SupportedTargetISAs() {
-    return "neon, sse2, sse2-x2, sse4, sse4-8, sse4-16, sse4-x2, "
-        "avx, avx-x2, avx1.1, avx1.1-x2, avx2, avx2-x2,"
+    return "neon-8, neon-16, neon-32, sse2, sse2-x2, sse4, sse4-8, sse4-16, sse4-x2, "
+        "avx, avx-x2, avx1.1, avx1.1-x2, avx2, avx2-x2, "
         "generic-1, generic-4, generic-8, generic-16, generic-32";
 }
 

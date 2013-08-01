@@ -467,31 +467,68 @@ There are three options that affect the compilation target: ``--arch``,
 which sets the target architecture, ``--cpu``, which sets the target CPU,
 and ``--target``, which sets the target instruction set.
 
-By default, the ``ispc`` compiler generates code for the 64-bit x86-64
-architecture (i.e. ``--arch=x86-64``.)  To compile to a 32-bit x86 target,
-supply ``--arch=x86`` on the command line:
+If none of these options is specified, ``ispc`` generates code for the
+architecture of the system the compiler is running on (i.e. 64-bit x86-64
+(``--arch=x86-64``) on x86 systems and ARM NEON on ARM systems.
+
+To compile to a 32-bit x86 target, for example, supply ``--arch=x86`` on
+the command line:
 
 ::
 
    ispc foo.ispc -o foo.obj --arch=x86
 
-No other architectures are currently supported.
+Currently-supported architectures are ``x86-64``, ``x86``, and ``arm``.
 
 The target CPU determines both the default instruction set used as well as
 which CPU architecture the code is tuned for.  ``ispc --help`` provides a
-list of a number of the supported CPUs.  By default, the CPU type of the
-system on which you're running ``ispc`` is used to determine the target
-CPU.
+list of all of the supported CPUs.  By default, the CPU type of the system
+on which you're running ``ispc`` is used to determine the target CPU.
 
 ::
 
    ispc foo.ispc -o foo.obj --cpu=corei7-avx
 
-Finally, ``--target`` selects between the SSE2, SSE4, and AVX, and AVX2
+Finally, ``--target`` selects the target instruction set.  The following
+targets are currently supported:
+
+=========== ========= =======================================
+Target      Gang Size Description
+----------- --------- ---------------------------------------
+avx         8         AVX (2010-2011 era Intel CPUs)
+avx-x2      16        "Double-pumped" AVX target, running
+                      twice as many program instances as the
+                      native vector width.
+avx1.1      8         AVX 1.1 target (2012 era "Ivybridge"
+                      Intel CPUs).
+avx1.1-x2   16        Double-pumped AVX 1.1 target.
+avx2        8         AVX 2 target (2013- Intel "Haswell"
+                      CPUs.)
+avx2-x2     16        Double-pumped AVX 2 target.
+neon-8      16        ARM NEON target, targeting computation
+                      on 8-bit data types. 
+neon-16     8         ARM NEON target, targeting computation
+                      on 16-bit data types.
+neon-32     4         ARM NEON target, targeting computation
+                      on 32-bit data types.
+sse2        4         SSE2 (early 2000s era x86 CPUs).
+sse2-x2     8         Double-pumped SSE2.
+sse4        4         SSE4 (generally 2008-2010 Intel CPUs).
+sse4-x2     8         Double-pumped SSE4.
+sse4-8      16        SSE4 target targeting computation on
+                      8-bit data types. 
+sse4-16     8         SSE4 target targeting computation on
+                      16-bit data types.
+=========== ========= =======================================
+
+See `Basic Concepts: Program Instances and Gangs of Program Instances`_ for
+more discussion of the "gang size" and its implications for program
+execution.
+
 instruction sets.  (As general context, SSE2 was first introduced in
 processors that shipped in 2001, SSE4 was introduced in 2007, and
-processors with AVX were introduced in 2010.  AVX2 will be supported on
-future CPUs based on Intel's "Haswell" architecture.  Consult your CPU's
+processors with AVX were introduced in 2010, and AVX2 arrived in 2013.
+Consult your CPU's
 manual for specifics on which vector instruction set it supports.)
 
 By default, the target instruction set is chosen based on the most capable
@@ -505,7 +542,7 @@ Generating Generic C++ Output
 -----------------------------
 
 In addition to generating object files or assembly output for specific
-targets like SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
+targets like NEON, SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
 "generic" C++ output.  This
 
 As an example, consider the following simple ``ispc`` program:
@@ -659,7 +696,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{SSE2,SSE4,AVX,AVX2}
+  * - ISPC_TARGET_{NEON_8,NEON_16,NEON_32,SSE2,SSE4,AVX,AVX11,AVX2,GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
