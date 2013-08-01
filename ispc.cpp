@@ -774,6 +774,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
+    debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;
     quiet = false;
