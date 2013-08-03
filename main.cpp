@@ -300,6 +300,8 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeX86Disassembler();
     LLVMInitializeX86TargetMC();
 #endif // !__ARM__
+
+#ifdef ISPC_ARM_ENABLED
     // Generating ARM from x86 is more likely to be useful, though.
     LLVMInitializeARMTargetInfo();
     LLVMInitializeARMTarget();
@@ -307,6 +309,7 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeARMAsmParser();
     LLVMInitializeARMDisassembler();
     LLVMInitializeARMTargetMC();
+#endif
 
     char *file = NULL;
     const char *headerFileName = NULL;
