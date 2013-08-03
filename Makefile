@@ -39,6 +39,10 @@
 LLVM_CONFIG=$(shell which llvm-config)
 CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
 
+# Enable ARM by request
+# To enable: make ARM_ENABLED=ON
+ARM_ENABLED=OFF
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -55,11 +59,14 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
-LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker arm
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker
 # Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
 # We check if it's available before adding it (to not break 3.2 and earlier).
 ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
     LLVM_COMPONENTS+=option
+endif
+ifeq ($(ARM_ENABLED), ON)
+    LLVM_COMPONENTS+=arm
 endif
 LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
@@ -104,6 +111,9 @@ OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	-Wall $(LLVM_VERSION_DEF) \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
+ifeq ($(ARM_ENABLED), ON)
+    CXXFLAGS+=-DISPC_ARM_ENABLED
+endif
 
 LDFLAGS=
 ifeq ($(ARCH_OS),Linux)
@@ -122,8 +132,11 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=neon avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 \
+TARGETS=avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
+ifeq ($(ARM_ENABLED), ON)
+    TARGETS+=neon
+endif
 # These files need to be compiled in two versions - 32 and 64 bits.
 BUILTINS_SRC_TARGET=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS)))
 # These are files to be compiled in single version.
