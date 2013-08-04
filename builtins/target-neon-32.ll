@@ -426,3 +426,62 @@ define i64 @__reduce_min_uint64(<4 x i64>) nounwind readnone {
 define i64 @__reduce_max_uint64(<4 x i64>) nounwind readnone {
   reduce4(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16
+
+declare <4 x i8> @llvm.arm.neon.vrhaddu.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
+
+define <4 x i8> @__avg_up_uint8(<4 x i8>, <4 x i8>) nounwind readnone {
+  %r = call <4 x i8> @llvm.arm.neon.vrhaddu.v4i8(<4 x i8> %0, <4 x i8> %1)
+  ret <4 x i8> %r
+}
+
+declare <4 x i8> @llvm.arm.neon.vrhadds.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
+
+define <4 x i8> @__avg_up_int8(<4 x i8>, <4 x i8>) nounwind readnone {
+  %r = call <4 x i8> @llvm.arm.neon.vrhadds.v4i8(<4 x i8> %0, <4 x i8> %1)
+  ret <4 x i8> %r
+}
+
+declare <4 x i8> @llvm.arm.neon.vhaddu.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
+
+define <4 x i8> @__avg_down_uint8(<4 x i8>, <4 x i8>) nounwind readnone {
+  %r = call <4 x i8> @llvm.arm.neon.vhaddu.v4i8(<4 x i8> %0, <4 x i8> %1)
+  ret <4 x i8> %r
+}
+
+declare <4 x i8> @llvm.arm.neon.vhadds.v4i8(<4 x i8>, <4 x i8>) nounwind readnone
+
+define <4 x i8> @__avg_down_int8(<4 x i8>, <4 x i8>) nounwind readnone {
+  %r = call <4 x i8> @llvm.arm.neon.vhadds.v4i8(<4 x i8> %0, <4 x i8> %1)
+  ret <4 x i8> %r
+}
+
+declare <4 x i16> @llvm.arm.neon.vrhaddu.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
+
+define <4 x i16> @__avg_up_uint16(<4 x i16>, <4 x i16>) nounwind readnone {
+  %r = call <4 x i16> @llvm.arm.neon.vrhaddu.v4i16(<4 x i16> %0, <4 x i16> %1)
+  ret <4 x i16> %r
+}
+
+declare <4 x i16> @llvm.arm.neon.vrhadds.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
+
+define <4 x i16> @__avg_up_int16(<4 x i16>, <4 x i16>) nounwind readnone {
+  %r = call <4 x i16> @llvm.arm.neon.vrhadds.v4i16(<4 x i16> %0, <4 x i16> %1)
+  ret <4 x i16> %r
+}
+
+declare <4 x i16> @llvm.arm.neon.vhaddu.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
+
+define <4 x i16> @__avg_down_uint16(<4 x i16>, <4 x i16>) nounwind readnone {
+  %r = call <4 x i16> @llvm.arm.neon.vhaddu.v4i16(<4 x i16> %0, <4 x i16> %1)
+  ret <4 x i16> %r
+}
+
+declare <4 x i16> @llvm.arm.neon.vhadds.v4i16(<4 x i16>, <4 x i16>) nounwind readnone
+
+define <4 x i16> @__avg_down_int16(<4 x i16>, <4 x i16>) nounwind readnone {
+  %r = call <4 x i16> @llvm.arm.neon.vhadds.v4i16(<4 x i16> %0, <4 x i16> %1)
+  ret <4 x i16> %r
+}

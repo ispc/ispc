@@ -277,3 +277,9 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
   sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
   ret double %ret
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+

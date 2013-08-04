@@ -4343,6 +4343,14 @@ char MakeInternalFuncsStaticPass::ID = 0;
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     const char *names[] = {
+        "__avg_up_uint8",
+        "__avg_up_int8",
+        "__avg_up_uint16",
+        "__avg_up_int16",
+        "__avg_down_uint8",
+        "__avg_down_int8",
+        "__avg_down_uint16",
+        "__avg_down_int16",
         "__fast_masked_vload",
         "__gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i16",
         "__gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i64",

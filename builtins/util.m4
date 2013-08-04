@@ -49,9 +49,9 @@ define(`MASK_HIGH_BIT_ON',
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; vector assembly and deconstruction utilities
+;; vector deconstruction utilities
 ;; split 8-wide vector into 2 4-wide vectors
-;; 
+;;
 ;; $1: vector element type
 ;; $2: 8-wide vector
 ;; $3: first 4-wide vector
@@ -71,10 +71,6 @@ define(`v16tov8', `
     <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ')
 
-;; 4-wide into 2 2-wide
-;; args as above
-;;
-
 define(`v4tov2', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef, <2 x i32> <i32 0, i32 1>
   $4 = shufflevector <4 x $1> $2, <4 x $1> undef, <2 x i32> <i32 2, i32 3>
@@ -92,6 +88,20 @@ define(`v16tov4', `
   $4 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   $5 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
   $6 = shufflevector <16 x $1> $2, <16 x $1> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; vector assembly: wider vector from two narrower vectors
+;;
+;; $1: vector element type
+;; $2: first n-wide vector
+;; $3: second n-wide vector
+;; $4: result 2*n-wide vector
+define(`v8tov16', `
+  $4 = shufflevector <8 x $1> $2, <8 x $1> $3,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4275,4 +4285,110 @@ define i1 @__rdrand_i64(i64 * %ptr) {
   %good = icmp ne i32 %v1, 0
   ret i1 %good
 }
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define(`define_avg_up_uint8', `
+define <WIDTH x i8> @__avg_up_uint8(<WIDTH x i8>, <WIDTH x i8>) {
+  %a16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %b16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
+  %sum1 = add <WIDTH x i16> %a16, %b16
+  %sum = add <WIDTH x i16> %sum1, < forloop(i, 1, eval(WIDTH-1), `i16 1, ') i16 1 >
+  %avg = lshr <WIDTH x i16> %sum, < forloop(i, 1, eval(WIDTH-1), `i16 1, ') i16 1 >
+  %r = trunc <WIDTH x i16> %avg to <WIDTH x i8>
+  ret <WIDTH x i8> %r
+}')
+
+define(`define_avg_up_int8', `
+define <WIDTH x i8> @__avg_up_int8(<WIDTH x i8>, <WIDTH x i8>) {
+  %a16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
+  %b16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
+  %sum1 = add <WIDTH x i16> %a16, %b16
+  %sum = add <WIDTH x i16> %sum1, < forloop(i, 1, eval(WIDTH-1), `i16 1, ') i16 1 >
+  %avg = sdiv <WIDTH x i16> %sum, < forloop(i, 1, eval(WIDTH-1), `i16 2, ') i16 2 >
+  %r = trunc <WIDTH x i16> %avg to <WIDTH x i8>
+  ret <WIDTH x i8> %r
+}')
+
+define(`define_avg_up_uint16', `
+define <WIDTH x i16> @__avg_up_uint16(<WIDTH x i16>, <WIDTH x i16>) {
+  %a32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  %b32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
+  %sum1 = add <WIDTH x i32> %a32, %b32
+  %sum = add <WIDTH x i32> %sum1, < forloop(i, 1, eval(WIDTH-1), `i32 1, ') i32 1 >
+  %avg = lshr <WIDTH x i32> %sum, < forloop(i, 1, eval(WIDTH-1), `i32 1, ') i32 1 >
+  %r = trunc <WIDTH x i32> %avg to <WIDTH x i16>
+  ret <WIDTH x i16> %r
+}')
+
+define(`define_avg_up_int16', `
+define <WIDTH x i16> @__avg_up_int16(<WIDTH x i16>, <WIDTH x i16>) {
+  %a32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
+  %b32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
+  %sum1 = add <WIDTH x i32> %a32, %b32
+  %sum = add <WIDTH x i32> %sum1, < forloop(i, 1, eval(WIDTH-1), `i32 1, ') i32 1 >
+  %avg = sdiv <WIDTH x i32> %sum, < forloop(i, 1, eval(WIDTH-1), `i32 2, ') i32 2 >
+  %r = trunc <WIDTH x i32> %avg to <WIDTH x i16>
+  ret <WIDTH x i16> %r
+}')
+
+define(`define_avg_down_uint8', `
+define <WIDTH x i8> @__avg_down_uint8(<WIDTH x i8>, <WIDTH x i8>) {
+  %a16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %b16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
+  %sum = add <WIDTH x i16> %a16, %b16
+  %avg = lshr <WIDTH x i16> %sum, < forloop(i, 1, eval(WIDTH-1), `i16 1, ') i16 1 >
+  %r = trunc <WIDTH x i16> %avg to <WIDTH x i8>
+  ret <WIDTH x i8> %r
+}')
+
+define(`define_avg_down_int8', `
+define <WIDTH x i8> @__avg_down_int8(<WIDTH x i8>, <WIDTH x i8>) {
+  %a16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
+  %b16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
+  %sum = add <WIDTH x i16> %a16, %b16
+  %avg = sdiv <WIDTH x i16> %sum, < forloop(i, 1, eval(WIDTH-1), `i16 2, ') i16 2 >
+  %r = trunc <WIDTH x i16> %avg to <WIDTH x i8>
+  ret <WIDTH x i8> %r
+}')
+
+define(`define_avg_down_uint16', `
+define <WIDTH x i16> @__avg_down_uint16(<WIDTH x i16>, <WIDTH x i16>) {
+  %a32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  %b32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
+  %sum = add <WIDTH x i32> %a32, %b32
+  %avg = lshr <WIDTH x i32> %sum, < forloop(i, 1, eval(WIDTH-1), `i32 1, ') i32 1 >
+  %r = trunc <WIDTH x i32> %avg to <WIDTH x i16>
+  ret <WIDTH x i16> %r
+}')
+
+define(`define_avg_down_int16', `
+define <WIDTH x i16> @__avg_down_int16(<WIDTH x i16>, <WIDTH x i16>) {
+  %a32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
+  %b32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
+  %sum = add <WIDTH x i32> %a32, %b32
+  %avg = sdiv <WIDTH x i32> %sum, < forloop(i, 1, eval(WIDTH-1), `i32 2, ') i32 2 >
+  %r = trunc <WIDTH x i32> %avg to <WIDTH x i16>
+  ret <WIDTH x i16> %r
+}')
+
+define(`define_up_avgs', `
+define_avg_up_uint8()
+define_avg_up_int8()
+define_avg_up_uint16()
+define_avg_up_int16()
+')
+
+define(`define_down_avgs', `
+define_avg_down_uint8()
+define_avg_down_int8()
+define_avg_down_uint16()
+define_avg_down_int16()
+')
+
+define(`define_avgs', `
+define_up_avgs()
+define_down_avgs()
 ')

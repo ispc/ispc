@@ -3399,6 +3399,31 @@ The ``isnan()`` functions test whether the given value is a floating-point
     uniform bool isnan(uniform double v)
 
 
+A number of functions are also available for performing operations on 8- and
+16-bit quantities; these map to specialized instructions that perform these
+operations on targets that support them.  ``avg_up()`` computes the average
+of the two values, rounding up if their average is halfway between two
+integers (i.e., it computes ``(a+b+1)/2``).
+
+::
+
+   int8 avg_up(int8 a, int8 b)
+   unsigned int8 avg_up(unsigned int8 a, unsigned int8 b)
+   int16 avg_up(int16 a, int16 b)
+   unsigned int16 avg_up(unsigned int16 a, unsigned int16 b)
+
+
+``avg_down()`` computes the average of the two values, rounding down (i.e.,
+it computes ``(a+b)/2``).
+
+::
+
+   int8 avg_down(int8 a, int8 b)
+   unsigned int8 avg_down(unsigned int8 a, unsigned int8 b)
+   int16 avg_down(int16 a, int16 b)
+   unsigned int16 avg_down(unsigned int16 a, unsigned int16 b)
+
+
 Transcendental Functions
 ------------------------
 

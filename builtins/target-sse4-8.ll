@@ -456,3 +456,28 @@ gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+define <16 x i8> @__avg_up_uint8(<16 x i8>, <16 x i8>) nounwind readnone {
+  %r = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %0, <16 x i8> %1)
+  ret <16 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <16 x i16> @__avg_up_uint16(<16 x i16>, <16 x i16>) nounwind readnone {
+  v16tov8(i16, %0, %a0, %b0)
+  v16tov8(i16, %1, %a1, %b1)
+  %r0 = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %a0, <8 x i16> %a1)
+  %r1 = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %b0, <8 x i16> %b1)
+  v8tov16(i16, %r0, %r1, %r)
+  ret <16 x i16> %r
+}
+
+define_avg_up_int8()
+define_avg_up_int16()
+define_down_avgs()

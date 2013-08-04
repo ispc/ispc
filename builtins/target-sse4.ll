@@ -473,3 +473,9 @@ gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+

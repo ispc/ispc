@@ -573,3 +573,9 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
   binary2to8(ret, double, @llvm.x86.sse2.max.pd, %0, %1)
   ret <8 x double> %ret
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+

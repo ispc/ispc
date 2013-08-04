@@ -4812,8 +4812,8 @@ static const uniform int64 __idiv_table_s32[][3] = {
 };
 
 __declspec(safe)
-static unmasked unsigned int8 __fast_idiv(unsigned int8 numerator,
-                                          uniform unsigned int8 divisor) {
+static unmasked inline unsigned int8
+__fast_idiv(unsigned int8 numerator, uniform unsigned int8 divisor) {
   uniform int64 method = __idiv_table_u8[divisor-2][0];
   uniform int64 multiplier = __idiv_table_u8[divisor-2][1];
   uniform int64 shift = __idiv_table_u8[divisor-2][2];
@@ -4833,7 +4833,7 @@ static unmasked unsigned int8 __fast_idiv(unsigned int8 numerator,
 }
 
 __declspec(safe)
-static unmasked int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
+static unmasked inline int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
   uniform int8 method = __idiv_table_s8[divisor-2][0];
   uniform int16 multiplier = __idiv_table_s8[divisor-2][1];
   uniform int8 shift = __idiv_table_s8[divisor-2][2];
@@ -4850,8 +4850,8 @@ static unmasked int8 __fast_idiv(int8 numerator, uniform int8 divisor) {
 }
 
 __declspec(safe)
-static unmasked unsigned int16 __fast_idiv(unsigned int16 numerator,
-                                           uniform unsigned int16 divisor) {
+static unmasked inline unsigned int16 __fast_idiv(unsigned int16 numerator,
+                                                  uniform unsigned int16 divisor) {
   uniform int64 method = __idiv_table_u16[divisor-2][0];
   uniform int64 multiplier = __idiv_table_u16[divisor-2][1];
   uniform int64 shift = __idiv_table_u16[divisor-2][2];
@@ -4871,7 +4871,7 @@ static unmasked unsigned int16 __fast_idiv(unsigned int16 numerator,
 }
 
 __declspec(safe)
-static unmasked int16 __fast_idiv(int16 numerator, uniform int16 divisor) {
+static unmasked inline int16 __fast_idiv(int16 numerator, uniform int16 divisor) {
   uniform int64 method = __idiv_table_s16[divisor-2][0];
   uniform int64 multiplier = __idiv_table_s16[divisor-2][1];
   uniform int64 shift = __idiv_table_s16[divisor-2][2];
@@ -4889,8 +4889,8 @@ static unmasked int16 __fast_idiv(int16 numerator, uniform int16 divisor) {
 }
 
 __declspec(safe)
-static unmasked inline unsigned int32 __fast_idiv(unsigned int32 numerator,
-                                                  uniform unsigned int32 divisor) {
+static unmasked inline inline unsigned int32 __fast_idiv(unsigned int32 numerator,
+                                                         uniform unsigned int32 divisor) {
   uniform int64 method = __idiv_table_u32[divisor-2][0];
   uniform int64 multiplier = __idiv_table_u32[divisor-2][1];
   uniform int64 shift = __idiv_table_u32[divisor-2][2];
@@ -4910,7 +4910,7 @@ static unmasked inline unsigned int32 __fast_idiv(unsigned int32 numerator,
 }
 
 __declspec(safe)
-static unmasked int32 __fast_idiv(int32 numerator, uniform int32 divisor) {
+static unmasked inline int32 __fast_idiv(int32 numerator, uniform int32 divisor) {
   uniform int64 method = __idiv_table_s32[divisor-2][0];
   uniform int64 multiplier = __idiv_table_s32[divisor-2][1];
   uniform int64 shift = __idiv_table_s32[divisor-2][2];
@@ -4927,3 +4927,45 @@ static unmasked int32 __fast_idiv(int32 numerator, uniform int32 divisor) {
   }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// Saturating int8/int16 ops
+
+__declspec(safe)
+static unmasked inline unsigned int8 avg_up(unsigned int8 a, unsigned int8 b) {
+    return __avg_up_uint8(a, b);
+}
+
+__declspec(safe)
+static unmasked inline int8 avg_up(int8 a, int8 b) {
+    return __avg_up_int8(a, b);
+}
+
+__declspec(safe)
+static unmasked inline unsigned int16 avg_up(unsigned int16 a, unsigned int16 b) {
+    return __avg_up_uint16(a, b);
+}
+
+__declspec(safe)
+static unmasked inline int16 avg_up(int16 a, int16 b) {
+    return __avg_up_int16(a, b);
+}
+
+__declspec(safe)
+static unmasked inline unsigned int8 avg_down(unsigned int8 a, unsigned int8 b) {
+    return __avg_down_uint8(a, b);
+}
+
+__declspec(safe)
+static unmasked inline int8 avg_down(int8 a, int8 b) {
+    return __avg_down_int8(a, b);
+}
+
+__declspec(safe)
+static unmasked inline unsigned int16 avg_down(unsigned int16 a, unsigned int16 b) {
+    return __avg_down_uint16(a, b);
+}
+
+__declspec(safe)
+static unmasked inline int16 avg_down(int16 a, int16 b) {
+    return __avg_down_int16(a, b);
+}

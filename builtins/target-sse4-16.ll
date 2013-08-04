@@ -449,3 +449,34 @@ gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+declare <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8>, <16 x i8>) nounwind readnone
+
+define <8 x i8> @__avg_up_uint8(<8 x i8>, <8 x i8>) {
+  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                i32 undef, i32 undef, i32 undef, i32 undef,
+                i32 undef, i32 undef, i32 undef, i32 undef>
+  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                i32 undef, i32 undef, i32 undef, i32 undef,
+                i32 undef, i32 undef, i32 undef, i32 undef>
+  %r16 = call <16 x i8> @llvm.x86.sse2.pavg.b(<16 x i8> %v0, <16 x i8> %v1)
+  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
+    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16>, <8 x i16>) nounwind readnone
+
+define <8 x i16> @__avg_up_uint16(<8 x i16>, <8 x i16>) {
+  %r = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> %0, <8 x i16> %1)
+  ret <8 x i16> %r
+}
+
+define_avg_up_int8()
+define_avg_up_int16()
+define_down_avgs()
