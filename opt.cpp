@@ -63,6 +63,9 @@
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
 #endif
+#if defined (LLVM_3_4)
+  #include <llvm/Transforms/Instrumentation.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Assembly/PrintModulePass.h>
@@ -118,6 +121,8 @@ static llvm::Pass *CreateReplacePseudoMemoryOpsPass();
 
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
+
+static llvm::Pass *CreateDebugPass(char * output);
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -396,6 +401,54 @@ lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// This is a wrap over class llvm::PassManager. This duplicates PassManager function run()
+//   and change PassManager function add by adding some checks and debug passes.
+//   This wrap can control:
+//   - If we want to switch off optimization with given number.
+//   - If we want to dump LLVM IR after optimization with given number.
+//   - If we want to generate LLVM IR debug for gdb after optimization with given number.
+class DebugPassManager {
+public:
+    DebugPassManager():number(0){}
+    void add(llvm::Pass * P, int stage);
+    bool run(llvm::Module& M) {return PM.run(M);}
+    llvm::PassManager& getPM() {return PM;}
+
+private:
+    llvm::PassManager PM;
+    int number;
+};
+
+void
+DebugPassManager::add(llvm::Pass * P, int stage = -1) {
+    // taking number of optimization
+    if (stage == -1) {
+        number++;
+    }
+    else {
+        number = stage;
+    }
+    if (g->off_stages.find(number) == g->off_stages.end()) {
+        // adding optimization (not switched off)
+        PM.add(P);
+        if (g->debug_stages.find(number) != g->debug_stages.end()) {
+            // adding dump of LLVM IR after optimization
+            char buf[100];
+            sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n",
+                number, P->getPassName());
+            PM.add(CreateDebugPass(buf));
+        }
+#ifdef LLVM_3_4
+        if (g->debugIR == number) {
+            // adding generating of LLVM IR debug after optimization
+            char buf[100];
+            sprintf(buf, "Debug_IR_after_%d_phase.bc", number);
+            PM.add(llvm::createDebugIRPass(true, true, ".", buf));
+        }
+#endif
+    }
+}
+///////////////////////////////////////////////////////////////////////////
 
 void
 Optimize(llvm::Module *module, int optLevel) {
@@ -403,14 +456,8 @@ Optimize(llvm::Module *module, int optLevel) {
         printf("*** Code going into optimization ***\n");
         module->dump();
     }
-
-    llvm::PassManager optPM;
-    optPM.add(llvm::createVerifierPass());
-
-#if 0
-    std::string err;
-    optPM.add(llvm::createPrintModulePass(new llvm::raw_fd_ostream("-", err)));
-#endif
+    DebugPassManager optPM;
+    optPM.add(llvm::createVerifierPass(),0);
 
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
@@ -427,7 +474,7 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
   #else // LLVM 3.3+
-    targetMachine->addAnalysisPasses(optPM);
+    targetMachine->addAnalysisPasses(optPM.getPM());
   #endif
 #endif
 
@@ -439,11 +486,11 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        optPM.add(CreateImproveMemoryOpsPass());
+        optPM.add(CreateImproveMemoryOpsPass(), 100);
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateReplacePseudoMemoryOpsPass());
 
-        optPM.add(CreateIntrinsicsOptPass());
+        optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
@@ -462,7 +509,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        optPM.add(llvm::createGlobalDCEPass());
+        optPM.add(llvm::createGlobalDCEPass(), 200);
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
@@ -476,14 +523,14 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 210);
             optPM.add(CreateImproveMemoryOpsPass());
         }
         if (!g->opt.disableMaskAllOnOptimizations) {
-            optPM.add(CreateIntrinsicsOptPass());
+            optPM.add(CreateIntrinsicsOptPass(), 215);
             optPM.add(CreateInstructionSimplifyPass());
         }
-        optPM.add(llvm::createDeadInstEliminationPass());
+        optPM.add(llvm::createDeadInstEliminationPass(), 220);
 
         // Max struct size threshold for scalar replacement is
         //    1) 4 fields (r,g,b,w)
@@ -513,10 +560,10 @@ Optimize(llvm::Module *module, int optLevel) {
 #if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
-        optPM.add(llvm::createSimplifyLibCallsPass());
+        optPM.add(llvm::createSimplifyLibCallsPass(), 240);
 #endif
         optPM.add(llvm::createAggressiveDCEPass());
-        optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(llvm::createInstructionCombiningPass(), 241);
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
@@ -524,44 +571,45 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createTailCallEliminationPass());
 
         if (!g->opt.disableMaskAllOnOptimizations) {
-            optPM.add(CreateIntrinsicsOptPass());
+            optPM.add(CreateIntrinsicsOptPass(), 250);
             optPM.add(CreateInstructionSimplifyPass());
         }
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 255);
             optPM.add(CreateImproveMemoryOpsPass());
 
             if (g->opt.disableCoalescing == false &&
                 g->target->getISA() != Target::GENERIC) {
                 // It is important to run this here to make it easier to
                 // finding matching gathers we can coalesce..
-                optPM.add(llvm::createEarlyCSEPass());
+                optPM.add(llvm::createEarlyCSEPass(), 260);
                 optPM.add(CreateGatherCoalescePass());
             }
         }
 
-        optPM.add(llvm::createFunctionInliningPass());
+        optPM.add(llvm::createFunctionInliningPass(), 265);
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 270);
             optPM.add(CreateImproveMemoryOpsPass());
         }
 
-        optPM.add(llvm::createIPSCCPPass());
+        optPM.add(llvm::createIPSCCPPass(), 275);
         optPM.add(llvm::createDeadArgEliminationPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
-        if (g->opt.disableHandlePseudoMemoryOps == false)
-            optPM.add(CreateReplacePseudoMemoryOpsPass());
-        optPM.add(CreateIntrinsicsOptPass());
+        if (g->opt.disableHandlePseudoMemoryOps == false) {
+            optPM.add(CreateReplacePseudoMemoryOpsPass(),280);
+        }
+        optPM.add(CreateIntrinsicsOptPass(),281);
         optPM.add(CreateInstructionSimplifyPass());
 
         optPM.add(llvm::createFunctionInliningPass());
@@ -579,9 +627,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createIndVarSimplifyPass());
         optPM.add(llvm::createLoopIdiomPass());
         optPM.add(llvm::createLoopDeletionPass());
-        if (g->opt.unrollLoops)
-            optPM.add(llvm::createLoopUnrollPass());
-        optPM.add(llvm::createGVNPass());
+        if (g->opt.unrollLoops) {
+            optPM.add(llvm::createLoopUnrollPass(), 300);
+        }
+        optPM.add(llvm::createGVNPass(), 301);
 
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
@@ -609,7 +658,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
     // Finish up by making sure we didn't mess anything up in the IR along
     // the way.
-    optPM.add(llvm::createVerifierPass());
+    optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
     optPM.run(*module);
 
     if (g->debugPrint) {
@@ -4328,6 +4377,42 @@ IsCompileTimeConstantPass::runOnBasicBlock(llvm::BasicBlock &bb) {
 static llvm::Pass *
 CreateIsCompileTimeConstantPass(bool isLastTry) {
     return new IsCompileTimeConstantPass(isLastTry);
+}
+
+//////////////////////////////////////////////////////////////////////////
+// DebugPass
+
+/** This pass is added in list of passes after optimizations which
+    we want to debug and print dump of LLVM IR in stderr. Also it
+    prints name and number of previous optimization.
+ */
+class DebugPass : public llvm::ModulePass {
+public:
+    static char ID;
+    DebugPass(char * output) : ModulePass(ID) {
+        sprintf(str_output, "%s", output);
+    }
+
+    const char *getPassName() const { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m);
+
+private:
+    char str_output[100];
+};
+
+char DebugPass::ID = 0;
+
+bool
+DebugPass::runOnModule(llvm::Module &module) {
+    fprintf(stderr, "%s", str_output);
+    fflush(stderr);
+    module.dump();
+    return true;
+}
+
+static llvm::Pass *
+CreateDebugPass(char * output) {
+    return new DebugPass(output);
 }
 
 ///////////////////////////////////////////////////////////////////////////

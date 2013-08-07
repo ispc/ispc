@@ -59,12 +59,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
+#include <set>
 #include <string>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
 #define ISPC_MAX_NVEC 64
+
+// Number of final optimization phase
+#define LAST_OPT_NUMBER 1000
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
@@ -175,7 +179,11 @@ public:
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { NEON32, NEON16, NEON8, SSE2, SSE4, AVX, AVX11, AVX2, GENERIC,
+    enum ISA {
+#ifdef ISPC_ARM_ENABLED
+               NEON32, NEON16, NEON8,
+#endif
+               SSE2, SSE4, AVX, AVX11, AVX2, GENERIC,
                NUM_ISAS };
 
     /** Initializes the given Target pointer for a target of the given
@@ -494,6 +502,16 @@ struct Globals {
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
+
+    /** Indicates which stages of optimization we want to dump. */
+    std::set<int> debug_stages;
+
+    /** Indicates after which optimization we want to generate
+        DebugIR information. */
+    int debugIR;
+
+    /** Indicates which phases of optimization we want to switch off. */
+    std::set<int> off_stages;
 
     /** Indicates whether all warning messages should be surpressed. */
     bool disableWarnings;

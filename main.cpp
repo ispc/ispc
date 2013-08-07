@@ -155,6 +155,11 @@ devUsage(int ret) {
     printf("        disable-uniform-control-flow\t\tDisable uniform control flow optimizations\n");
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
+    printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. --debug-phase=first,210:220,300,305,310:last\n");
+#ifdef LLVM_3_4
+    printf("    [--debug-ir=<value>]\t\tSet optimization phase to generate debugIR after it\n");
+#endif
+    printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
     exit(ret);
 }
 
@@ -211,6 +216,47 @@ lSignal(void *) {
 }
 
 
+static int ParsingPhaseName(char * stage) {
+    if (strncmp(stage, "first", 5) == 0) {
+        return 0;
+    }
+    else if (strncmp(stage, "last", 4) == 0) {
+        return LAST_OPT_NUMBER;
+    }
+    else {
+        int t = atoi(stage);
+        if (t < 0 || t > LAST_OPT_NUMBER) {
+            fprintf(stderr, "Phases must be from 0 to %d. %s is incorrect.\n", LAST_OPT_NUMBER, stage);
+            exit(0);
+        }
+        else {
+            return t;
+        }
+    }
+}
+
+
+static std::set<int> ParsingPhases(char * stages) {
+    std::set<int> phases;
+    int begin = ParsingPhaseName(stages);
+    int end = begin;
+
+    for (unsigned i = 0; i < strlen(stages); i++) {
+        if ((stages[i] == ',') || (i == strlen(stages) - 1)) {
+            for (int j = begin; j < end + 1; j++) {
+                phases.insert(j);
+            }
+            begin = ParsingPhaseName(stages + i + 1);
+            end = begin;
+        }
+        else if (stages[i] == ':') {
+            end = ParsingPhaseName(stages + i + 1);
+        }
+    }
+    return phases;
+}
+
+
 static void
 lParseInclude(const char *path) {
 #ifdef ISPC_IS_WINDOWS
@@ -253,6 +299,8 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeX86Disassembler();
     LLVMInitializeX86TargetMC();
 #endif // !__ARM__
+
+#ifdef ISPC_ARM_ENABLED
     // Generating ARM from x86 is more likely to be useful, though.
     LLVMInitializeARMTargetInfo();
     LLVMInitializeARMTarget();
@@ -260,6 +308,7 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeARMAsmParser();
     LLVMInitializeARMDisassembler();
     LLVMInitializeARMTargetMC();
+#endif
 
     char *file = NULL;
     const char *headerFileName = NULL;
@@ -485,6 +534,20 @@ int main(int Argc, char *Argv[]) {
             usage(1);
           }
           hostStubFileName = argv[i];
+        }
+        else if (strncmp(argv[i], "--debug-phase=", 14) == 0) {
+            fprintf(stderr, "WARNING: Adding debug phases may change the way PassManager"
+                            "handles the phases and it may possibly make some bugs go"
+                            "away or introduce the new ones.\n");
+            g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
+        }
+#ifdef LLVM_3_4
+        else if (strncmp(argv[i], "--debug-ir=", 11) == 0) {
+            g->debugIR = ParsingPhaseName(argv[i] + strlen("--debug-ir="));
+        }
+#endif
+        else if (strncmp(argv[i], "--off-phase=", 12) == 0) {
+            g->off_stages = ParsingPhases(argv[i] + strlen("--off-phase="));
         }
         else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
             lPrintVersion();

@@ -141,10 +141,12 @@ lGetSystemISA() {
 
 
 static const char *supportedCPUs[] = {
+#ifdef ISPC_ARM_ENABLED
     // FIXME: LLVM supports a ton of different ARM CPU variants--not just
     // cortex-a9 and a15.  We should be able to handle any of them that also
     // have NEON support.
     "cortex-a9", "cortex-a15",
+#endif
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
@@ -185,9 +187,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             // possible ISA based on that.
             if (!strcmp(cpu, "core-avx2"))
                 isa = "avx2";
+#ifdef ISPC_ARM_ENABLED
             else if (!strcmp(cpu, "cortex-a9") ||
                      !strcmp(cpu, "cortex-a15"))
                 isa = "neon-32";
+#endif
             else if (!strcmp(cpu, "core-avx-i"))
                 isa = "avx1.1";
             else if (!strcmp(cpu, "sandybridge") ||
@@ -211,7 +215,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         }
     }
 
-#if !defined(__arm__)
+#if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
     if (cpu == NULL && !strncmp(isa, "neon", 4))
         // If we're compiling NEON on an x86 host and the CPU wasn't
         // supplied, don't go and set the CPU based on the host...
@@ -246,9 +250,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     this->m_cpu = cpu;
 
     if (arch == NULL) {
+#ifdef ISPC_ARM_ENABLED
         if (!strncmp(isa, "neon", 4))
             arch = "arm";
         else
+#endif
             arch = "x86-64";
     }
 
@@ -461,6 +467,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasGather = true;
 #endif
     }
+#ifdef ISPC_ARM_ENABLED
     else if (!strcasecmp(isa, "neon-8")) {
         this->m_isa = Target::NEON8;
         this->m_nativeVectorWidth = 16;
@@ -488,6 +495,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
+#endif
     else {
         fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n",
                 isa, SupportedTargetISAs());
@@ -502,9 +510,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             llvm::Reloc::Default;
         std::string featuresString = m_attributes;
         llvm::TargetOptions options;
+#ifdef ISPC_ARM_ENABLED
         if (m_isa == Target::NEON8 || m_isa == Target::NEON16 ||
             m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
+#endif
 #if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
@@ -596,13 +606,21 @@ Target::SupportedTargetCPUs() {
 
 const char *
 Target::SupportedTargetArchs() {
-    return "arm, x86, x86-64";
+    return
+#ifdef ISPC_ARM_ENABLED
+        "arm, "
+#endif
+        "x86, x86-64";
 }
 
 
 const char *
 Target::SupportedTargetISAs() {
-    return "neon-8, neon-16, neon-32, sse2, sse2-x2, sse4, sse4-8, sse4-16, sse4-x2, "
+    return
+#ifdef ISPC_ARM_ENABLED
+        "neon-8, neon-16, neon-32, "
+#endif
+        "sse2, sse2-x2, sse4, sse4-8, sse4-16, sse4-x2, "
         "avx, avx-x2, avx1.1, avx1.1-x2, avx2, avx2-x2, "
         "generic-1, generic-4, generic-8, generic-16, generic-32";
 }
@@ -611,10 +629,13 @@ Target::SupportedTargetISAs() {
 std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
+#ifdef ISPC_ARM_ENABLED
     if (m_arch == "arm") {
         triple.setTriple("armv7-eabi");
     }
-    else {
+    else
+#endif
+    {
         // Start with the host triple as the default
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
 
@@ -637,12 +658,14 @@ Target::GetTripleString() const {
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
+#ifdef ISPC_ARM_ENABLED
     case Target::NEON8:
         return "neon-8";
     case Target::NEON16:
         return "neon-16";
     case Target::NEON32:
         return "neon-32";
+#endif
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
@@ -813,6 +836,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
+    debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;
     quiet = false;

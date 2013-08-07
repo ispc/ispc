@@ -631,7 +631,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         llvm::Triple bcTriple(bcModule->getTargetTriple());
         Debug(SourcePos(), "module triple: %s\nbitcode triple: %s\n",
               mTriple.str().c_str(), bcTriple.str().c_str());
-#ifndef __arm__
+#if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
         // FIXME: More ugly and dangerous stuff.  We really haven't set up
         // proper build and runtime infrastructure for ispc to do
         // cross-compilation, yet it's at minimum useful to be able to emit
@@ -812,6 +812,8 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
+
+#ifdef ISPC_ARM_ENABLED
     case Target::NEON8: {
         if (runtime32) {
             EXPORT_MODULE(builtins_bitcode_neon_8_32bit);
@@ -839,6 +841,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         }
         break;
     }
+#endif
     case Target::SSE2: {
         switch (g->target->getVectorWidth()) {
         case 4:
