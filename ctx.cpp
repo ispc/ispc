@@ -46,7 +46,7 @@
 #include "sym.h"
 #include <map>
 #include <llvm/Support/Dwarf.h>
-#if defined(LLVM_3_2)
+#if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include <llvm/Metadata.h>
   #include <llvm/Module.h>
   #include <llvm/Instructions.h>
@@ -3312,7 +3312,7 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         // alias analysis.
         // TODO: what other attributes needs to be copied?
         // TODO: do the same for varing path.
-#if !defined (LLVM_3_2) // LLVM 3.3+
+#if !defined (LLVM_3_1) && !defined (LLVM_3_2) // LLVM 3.3+
         llvm::CallInst *cc = llvm::dyn_cast<llvm::CallInst>(ci);
         if (cc &&
             cc->getCalledFunction() &&

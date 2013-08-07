@@ -29,11 +29,15 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-define(`HAVE_GATHER', `1')
+ifelse(LLVM_VERSION, `LLVM_3_0', `',
+       LLVM_VERSION, `LLVM_3_1', `',
+       `define(`HAVE_GATHER', `1')')
 
 include(`target-avx-x2.ll')
 
-rdrand_definition()
+ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
+       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
+       `rdrand_definition()')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
@@ -171,6 +175,21 @@ define(`assemble_4s', `
                     <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   assemble_8s($1, $2, $2_1, $2_2)
 ')
+
+ifelse(LLVM_VERSION, `LLVM_3_0', `
+gen_gather_factored(i8)
+gen_gather_factored(i16)
+gen_gather_factored(i32)
+gen_gather_factored(float)
+gen_gather_factored(i64)
+gen_gather_factored(double)',
+LLVM_VERSION, `LLVM_3_1', `
+gen_gather_factored(i8)
+gen_gather_factored(i16)
+gen_gather_factored(i32)
+gen_gather_factored(float)
+gen_gather_factored(i64)
+gen_gather_factored(double)', `
 
 gen_gather(i8)
 gen_gather(i16)
@@ -538,3 +557,5 @@ define <16 x double> @__gather64_double(<16 x i64> %ptrs,
 
   ret <16 x double> %v
 }
+
+')

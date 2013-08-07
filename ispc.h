@@ -40,8 +40,8 @@
 
 #define ISPC_VERSION "1.4.5dev"
 
-#if !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
-#error "Only LLVM 3.2, 3.3 and the 3.4 development branch are supported"
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
+#error "Only LLVM 3.1, 3.2, 3.3 and the 3.4 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -72,7 +72,11 @@ namespace llvm {
     class BasicBlock;
     class Constant;
     class ConstantValue;
+#if defined(LLVM_3_1)
+    class TargetData;
+#else
     class DataLayout;
+#endif
     class DIBuilder;
     class DIDescriptor;
     class DIFile;
@@ -222,7 +226,11 @@ public:
 
     // Note the same name of method for 3.1 and 3.2+, this allows
     // to reduce number ifdefs on client side.
+#if defined(LLVM_3_1)
+    llvm::TargetData *getDataLayout() const {return m_targetData;}
+#else
     llvm::DataLayout *getDataLayout() const {return m_dataLayout;}
+#endif
 
     /** Reports if Target object has valid state. */
     bool isValid() const {return m_valid;}
@@ -270,7 +278,11 @@ private:
         */
     llvm::TargetMachine *m_targetMachine;
 
+#if defined(LLVM_3_1)
+    llvm::TargetData *m_targetData;
+#else
     llvm::DataLayout *m_dataLayout;
+#endif
 
     /** flag to report invalid state after construction
         (due to bad parameters passed to constructor). */
@@ -291,7 +303,7 @@ private:
     /** Target-specific attribute string to pass along to the LLVM backend */
     std::string m_attributes;
 
-#if !defined(LLVM_3_2)
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
     /** Target-specific LLVM attribute, which has to be attached to every
         function to ensure that it is generated for correct target architecture.
         This is requirement was introduced in LLVM 3.3 */
