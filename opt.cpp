@@ -4556,6 +4556,8 @@ PeepholePass::PeepholePass()
     : BasicBlockPass(ID) {
 }
 
+#ifndef LLVM_3_1
+
 using namespace llvm::PatternMatch;
 
 template<typename Op_t, unsigned Opcode>
@@ -4706,6 +4708,7 @@ inline SDiv2_match<V>
 m_SDiv2(const V &v) {
     return SDiv2_match<V>(v);
 }
+
 // Returns true if the given function has a call to an intrinsic function
 // in its definition.
 static bool
@@ -4874,6 +4877,7 @@ lMatchAvgDownInt16(llvm::Value *inst) {
     }
     return NULL;
 }
+#endif // !LLVM_3_1
 
 bool
 PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
@@ -4885,6 +4889,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*iter;
 
         llvm::Instruction *builtinCall = NULL;
+#ifndef LLVM_3_1
         if (!builtinCall)
           builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
@@ -4901,7 +4906,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
           builtinCall = lMatchAvgDownInt8(inst);
         if (!builtinCall)
           builtinCall = lMatchAvgDownInt16(inst);
-
+#endif // LLVM_3_1
         if (builtinCall != NULL) {
           llvm::ReplaceInstWithInst(inst, builtinCall);
           modifiedAny = true;
