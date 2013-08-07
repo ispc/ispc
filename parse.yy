@@ -2169,7 +2169,7 @@ lAddFunctionParams(Declarator *decl) {
 
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
-    const Type *t;
+    const Type *t = NULL;
     switch (g->target->getMaskBitCount()) {
     case 1:
         t = AtomicType::VaryingBool;

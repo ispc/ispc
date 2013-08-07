@@ -4756,7 +4756,7 @@ lMatchAvgUpUInt8(llvm::Value *inst) {
         m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_ZExt8To16(m_Value(opb))),
               m_APInt(delta))))))) {
         if (delta->isIntN(1) == false)
-            return false;
+            return NULL;
 
         return lGetBinaryIntrinsic("__avg_up_uint8", opa, opb);
     }
@@ -4790,7 +4790,7 @@ lMatchAvgUpUInt16(llvm::Value *inst) {
         m_Add(m_Add(m_ZExt16To32(m_Value(opa)), m_ZExt16To32(m_Value(opb))),
               m_APInt(delta))))))) {
         if (delta->isIntN(1) == false)
-            return false;
+            return NULL;
 
         return lGetBinaryIntrinsic("__avg_up_uint16", opa, opb);
     }
@@ -4825,7 +4825,7 @@ lMatchAvgUpInt8(llvm::Value *inst) {
         m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_SExt8To16(m_Value(opb))),
               m_APInt(delta))))))) {
         if (delta->isIntN(1) == false)
-            return false;
+            return NULL;
 
         return lGetBinaryIntrinsic("__avg_up_int8", opa, opb);
     }
@@ -4859,7 +4859,7 @@ lMatchAvgUpInt16(llvm::Value *inst) {
         m_Add(m_Add(m_SExt16To32(m_Value(opa)), m_SExt16To32(m_Value(opb))),
               m_APInt(delta))))))) {
         if (delta->isIntN(1) == false)
-            return false;
+            return NULL;
 
         return lGetBinaryIntrinsic("__avg_up_int16", opa, opb);
     }
