@@ -489,54 +489,72 @@ on which you're running ``ispc`` is used to determine the target CPU.
 
    ispc foo.ispc -o foo.obj --cpu=corei7-avx
 
-Finally, ``--target`` selects the target instruction set.  The following
-targets are currently supported:
+Finally, ``--target`` selects the target instruction set.  The target
+string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,
+``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
+a mask size of 32 bits, and a gang size of 16.
 
-=========== ========= =======================================
-Target      Gang Size Description
------------ --------- ---------------------------------------
-avx         8         AVX (2010-2011 era Intel CPUs)
-avx-x2      16        "Double-pumped" AVX target, running
-                      twice as many program instances as the
-                      native vector width.
-avx1.1      8         AVX 1.1 target (2012 era "Ivybridge"
-                      Intel CPUs).
-avx1.1-x2   16        Double-pumped AVX 1.1 target.
-avx2        8         AVX 2 target (2013- Intel "Haswell"
-                      CPUs.)
-avx2-x2     16        Double-pumped AVX 2 target.
-neon-8      16        ARM NEON target, targeting computation
-                      on 8-bit data types. 
-neon-16     8         ARM NEON target, targeting computation
-                      on 16-bit data types.
-neon-32     4         ARM NEON target, targeting computation
-                      on 32-bit data types.
-sse2        4         SSE2 (early 2000s era x86 CPUs).
-sse2-x2     8         Double-pumped SSE2.
-sse4        4         SSE4 (generally 2008-2010 Intel CPUs).
-sse4-x2     8         Double-pumped SSE4.
-sse4-8      16        SSE4 target targeting computation on
-                      8-bit data types. 
-sse4-16     8         SSE4 target targeting computation on
-                      16-bit data types.
-=========== ========= =======================================
+The following target ISAs are supported:
+
+============ ==========================================
+Target       Description
+------------ ------------------------------------------
+avx, avx1    AVX (2010-2011 era Intel CPUs)
+avx1.1       AVX 1.1 (2012 era "Ivybridge" Intel CPUs)
+avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
+neon         ARM NEON
+sse2         SSE2 (early 2000s era x86 CPUs)
+sse4         SSE4 (generally 2008-2010 Intel CPUs)
+============ ==========================================
+
+Consult your CPU's manual for specifics on which vector instruction set it
+supports.
+
+The mask size may be 8, 16, or 32 bits, though not all combinations of ISAs
+and mask sizes are supported.  For best performance, the best general
+approach is to choose a mask size equal to the size of the most common
+datatype in your programs.  For example, if most of your computation is on
+32-bit floating-point values, an ``i32`` target is appropriate.  However,
+if you're mostly doing computation on 8-bit images, ``i8`` is a better choice.
 
 See `Basic Concepts: Program Instances and Gangs of Program Instances`_ for
 more discussion of the "gang size" and its implications for program
 execution.
 
-instruction sets.  (As general context, SSE2 was first introduced in
-processors that shipped in 2001, SSE4 was introduced in 2007, and
-processors with AVX were introduced in 2010, and AVX2 arrived in 2013.
-Consult your CPU's
-manual for specifics on which vector instruction set it supports.)
+Running ``ispc --help`` and looking at the output for the ``--target``
+option gives the most up-to-date documentation about which targets your
+compiler binary supports.
+
+The naming scheme for compilation targets changed in August 2013; the
+following table shows the relationship between names in the old scheme and
+in the new scheme:
+
+============= ===========
+Target        Former Name
+------------- -----------
+avx1-i32x8    avx, avx1
+avx1-i32x16   avx-x2
+avx1.1-i32x8  avx1.1
+avx1.1-i32x16 avx1.1-x2
+avx2-i32x8    avx2
+avx2-i32x16   avx2-x2
+neon-8        n/a
+neon-16       n/a
+neon-32       n/a
+sse2-i32x4    sse2
+sse2-i32x8    sse2-x2
+sse4-i32x4    sse4
+sse4-i32x8    sse4-x2
+sse4-i8x16    n/a
+sse4-i16x8    n/a
+============= ===========
 
 By default, the target instruction set is chosen based on the most capable
 one supported by the system on which you're running ``ispc``.  You can
 override this choice with the ``--target`` flag; for example, to select
-Intel® SSE2, use ``--target=sse2``.  (As with the other options in this
-section, see the output of ``ispc --help`` for a full list of supported
-targets.)
+Intel® SSE2 with a 32-bit mask and 4 program instances in a gang, use
+``--target=sse2-i32x4``.  (As with the other options in this section, see
+the output of ``ispc --help`` for a full list of supported targets.)
 
 Generating Generic C++ Output
 -----------------------------

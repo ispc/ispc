@@ -192,16 +192,16 @@ public:
     Target(const char *arch, const char *cpu, const char *isa, bool pic);
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target ISAs. */
-    static const char *SupportedTargetISAs();
+        supported compilation targets. */
+    static const char *SupportedTargets();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target CPUs. */
-    static std::string SupportedTargetCPUs();
+        supported CPUs. */
+    static std::string SupportedCPUs();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target architectures. */
-    static const char *SupportedTargetArchs();
+        supported architectures. */
+    static const char *SupportedArchs();
 
     /** Returns a triple string specifying the target architecture, vendor,
         and environment. */
