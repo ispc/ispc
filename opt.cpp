@@ -4556,7 +4556,7 @@ PeepholePass::PeepholePass()
     : BasicBlockPass(ID) {
 }
 
-#ifndef LLVM_3_1
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
 
 using namespace llvm::PatternMatch;
 
@@ -4877,7 +4877,7 @@ lMatchAvgDownInt16(llvm::Value *inst) {
     }
     return NULL;
 }
-#endif // !LLVM_3_1
+#endif // !LLVM_3_1 && !LLVM_3_2
 
 bool
 PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
@@ -4889,7 +4889,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
         llvm::Instruction *inst = &*iter;
 
         llvm::Instruction *builtinCall = NULL;
-#ifndef LLVM_3_1
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
         if (!builtinCall)
           builtinCall = lMatchAvgUpUInt8(inst);
         if (!builtinCall)
@@ -4906,7 +4906,7 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
           builtinCall = lMatchAvgDownInt8(inst);
         if (!builtinCall)
           builtinCall = lMatchAvgDownInt16(inst);
-#endif // LLVM_3_1
+#endif // !LLVM_3_1 && !LLVM_3_2
         if (builtinCall != NULL) {
           llvm::ReplaceInstWithInst(inst, builtinCall);
           modifiedAny = true;

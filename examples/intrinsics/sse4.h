@@ -2532,7 +2532,7 @@ static FORCEINLINE int16_t __reduce_add_int8(__vec4_i8 v) {
     // TODO: improve
     int16_t ret = 0;
     for (int i = 0; i < 4; ++i)
-        ret += v.v[i];
+        ret += __extract_element(v, i);
     return ret;
 }
 
@@ -2540,7 +2540,7 @@ static FORCEINLINE int32_t __reduce_add_int16(__vec4_i16 v) {
     // TODO: improve
     int32_t ret = 0;
     for (int i = 0; i < 4; ++i)
-        ret += v.v[i];
+        ret += __extract_element(v, i);
     return ret;
 }
 
