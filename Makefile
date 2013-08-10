@@ -79,6 +79,10 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
 ISPC_LIBS=$(shell $(LLVM_CONFIG) --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread
 
+ifeq ($(LLVM_VERSION),LLVM_3_4)
+    ISPC_LIBS += -lcurses
+endif
+
 ifeq ($(ARCH_OS),Linux)
 	ISPC_LIBS += -ldl
 endif
