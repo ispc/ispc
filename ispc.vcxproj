@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -203,26 +203,6 @@
       <Message>Building gen-bitcode-avx1-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
-=======
-  <ItemGroup>
-    <CustomBuild Include="builtins\target-avx1.ll">
-      <FileType>Document</FileType>
-      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx1.ll | python bitcode2cpp.py builtins\target-avx1.ll 32bit &gt; $(Configuration)/gen-bitcode-avx1-32bit.cpp</Command>
-      <Outputs>$(Configuration)/gen-bitcode-avx1-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
-      <Message>Building gen-bitcode-avx1-32bit.cpp</Message>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="builtins\target-avx1.ll">
-      <FileType>Document</FileType>
-      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx1.ll | python bitcode2cpp.py builtins\target-avx1.ll 64bit &gt; $(Configuration)/gen-bitcode-avx1-64bit.cpp</Command>
-      <Outputs>$(Configuration)/gen-bitcode-avx1-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
-      <Message>Building gen-bitcode-avx1-64bit.cpp</Message>
-    </CustomBuild>
-  </ItemGroup>
->>>>>>> master
   <ItemGroup>
     <CustomBuild Include="builtins\target-avx1-x2.ll">
       <FileType>Document</FileType>
