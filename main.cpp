@@ -571,12 +571,6 @@ int main(int Argc, char *Argv[]) {
         }
     }
 
-    // If the user specified -g, then the default optimization level is 0.
-    // If -g wasn't specified, the default optimization level is 1 (full
-    // optimization).
-    if (debugSet && !optSet)
-        g->opt.level = 0;
-
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {
 #ifdef ISPC_IS_WINDOWS
