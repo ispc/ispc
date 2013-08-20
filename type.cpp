@@ -1426,6 +1426,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     }
 
     int soaWidth = base->GetSOAWidth();
+    int vWidth = (base->IsVaryingType()) ? g->target->getNativeVectorWidth() : 0;
     base = base->GetAsUniformType();
 
     std::string s = base->GetCDeclaration(name);
@@ -1444,6 +1445,12 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     if (soaWidth > 0) {
         char buf[16];
         sprintf(buf, "[%d]", soaWidth);
+        s += buf;
+    }
+
+    if (vWidth > 0) {
+        char buf[16];
+        sprintf(buf, "[%d]", vWidth);
         s += buf;
     }
 
