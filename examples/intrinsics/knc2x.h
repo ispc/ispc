@@ -2055,7 +2055,24 @@ static FORCEINLINE void __aos_to_soa4_float(float *ptr, __vec32_f *out0, __vec32
 }
 */
 
+#ifdef WIN32
+#include <windows.h>
+#define __clock __rdtsc
+#else // WIN32
+static FORCEINLINE uint64_t __clock() {
+  uint32_t low, high;
+#ifdef __x86_64
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%rax", "%rbx", "%rcx", "%rdx" );
+#else
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%eax", "%ebx", "%ecx", "%edx" );
+#endif
+  __asm__ __volatile__ ("rdtsc" : "=a" (low), "=d" (high));
+  return (uint64_t)high << 32 | low;
+}
+#endif // !WIN32
+
 #undef FORCEINLINE
 #undef PRE_ALIGN
 #undef POST_ALIGN
-
