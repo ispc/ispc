@@ -567,9 +567,7 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
 
 /** Given an arbitrary type, see if it or any of the leaf types contained
     in it has a type that's illegal to have exported to C/C++
-    code--specifically, that it has a varying value in memory, or a pointer
-    to SOA data (which has a different representation than a regular
-    pointer.
+    code.
 
     (Note that it's fine for the original struct or a contained struct to
     be varying, so long as all of its members have bound 'uniform'
@@ -601,15 +599,10 @@ lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
 
     const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL) {
-        if (pt->IsSlice() || pt->IsVaryingType())
-            return false;
         return lRecursiveCheckValidParamType(pt->GetBaseType(), true);
     }
 
-    if (t->IsVaryingType())
-        return false;
-    else
-        return true;
+    return true;
 }
 
 
@@ -622,17 +615,14 @@ static void
 lCheckExportedParameterTypes(const Type *type, const std::string &name,
                              SourcePos pos) {
     if (lRecursiveCheckValidParamType(type, false) == false) {
-        if (CastType<PointerType>(type))
-            Error(pos, "Varying pointer type parameter \"%s\" is illegal "
-                  "in an exported function.", name.c_str());
-        else if (CastType<StructType>(type->GetBaseType()))
-            Error(pos, "Struct parameter \"%s\" with varying or vector typed "
+        if (CastType<StructType>(type->GetBaseType()))
+            Error(pos, "Struct parameter \"%s\" with vector typed "
                   "member(s) is illegal in an exported function.", name.c_str());
         else if (CastType<VectorType>(type))
             Error(pos, "Vector-typed parameter \"%s\" is illegal in an exported "
                   "function.", name.c_str());
         else
-            Error(pos, "Varying parameter \"%s\" is illegal in an exported function.",
+            Error(pos, "\"%s\" is illegal in an exported function.",
                   name.c_str());
     }
 }
@@ -830,9 +820,11 @@ Module::AddFunctionDeclaration(const std::string &name,
         const SourcePos &argPos = functionType->GetParameterSourcePos(i);
 
         // If the function is exported, make sure that the parameter
-        // doesn't have any varying stuff going on in it.
-        if (functionType->isExported)
+        // doesn't have any funky stuff going on in it.
+        // JCB nomosoa - Varying is now a-ok.
+		if (functionType->isExported) {
             lCheckExportedParameterTypes(argType, argName, argPos);
+        }
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the

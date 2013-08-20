@@ -429,8 +429,7 @@ AtomicType::Mangle() const {
 std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
-    if (variability != Variability::Uniform &&
-        variability != Variability::SOA) {
+    if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
         return ret;
     }
@@ -457,9 +456,14 @@ AtomicType::GetCDeclaration(const std::string &name) const {
         ret += name;
     }
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::Varying ||
+        variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+		// get program count
+        int vWidth = (variability == Variability::Varying) ? 
+                        g->target->getNativeVectorWidth() :
+                        variability.soaWidth;
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
