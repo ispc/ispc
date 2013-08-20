@@ -44,7 +44,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
   // randomly sample int32s...
   uniform RNGState state;
   seed_rng(&state, 1234);
-  for (uniform int i = 0; i < 1M; ++i) {
+  for (uniform int i = 0; i < 64k; ++i) {
     unsigned int32 num = random(&state);
     for (uniform unsigned int32 div = 2; div < 256; ++div) {
       if (__fast_idiv(num, div) != num/div) {
@@ -54,7 +54,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     }
   }
 
-  for (uniform int64 i = 0; i < 1M; ++i) {  
+  for (uniform int64 i = 0; i < 64k; ++i) {
     int32 num = random(&state);
     if (num < 0)
       continue;
