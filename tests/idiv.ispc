@@ -4,12 +4,13 @@ export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
   uniform int errorCount = 0;
- 
+
   for (unsigned int8 num = 0; num < 255; ++num) {
     for (uniform unsigned int8 div = 2; div < 255; ++div) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 32) break;
       }
     }
   }
@@ -19,6 +20,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 64) break;
       }
     }
   }
@@ -28,6 +30,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 96) break;
       }
     }
   }
@@ -37,6 +40,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 128) break;
       }
     }
   }
@@ -50,6 +54,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("ui32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 160) break;
       }
     }
   }
@@ -62,6 +67,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
       if (__fast_idiv(num, div) != num/div) {
         ++errorCount;
         print("si32 error %/% = %, got %\n", num, div, num/div, __fast_idiv(num,div));
+        if (errorCount > 192) break;
       }
     }
   }
