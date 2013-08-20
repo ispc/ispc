@@ -2414,9 +2414,13 @@ Module::CompileAndOutput(const char *srcFile,
 
             // Only write the generate header file, if desired, the first
             // time through the loop here.
-            if (i == 0 && headerFileName != NULL)
-                if (!m->writeOutput(Module::Header, headerFileName))
+            if (headerFileName != NULL) {
+                const char *isaName = g->target->GetISAString();
+                std::string targetHeaderFileName = 
+                    lGetTargetFileName(headerFileName, isaName);
+                if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str()))
                     return 1;
+            }
 
             delete g->target;
             g->target = NULL;
