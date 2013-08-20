@@ -533,15 +533,15 @@ static FORCEINLINE uint64_t __movmsk(__vec64_i1 mask) {
     return (uint64_t)mask.v;
 }
 
-static FORCEINLINE __vec64_i1 __any(__vec64_i1 mask) {
+static FORCEINLINE bool __any(__vec64_i1 mask) {
     return (mask.v!=0);
 }
 
-static FORCEINLINE __vec64_i1 __all(__vec64_i1 mask) {
-    return (mask.v==0xFFFFFFFFFFFFFFFF);
+static FORCEINLINE bool __all(__vec64_i1 mask) {
+    return (mask.v==0xFFFFFFFFFFFFFFFFull);
 }
 
-static FORCEINLINE __vec64_i1 __none(__vec64_i1 mask) {
+static FORCEINLINE bool __none(__vec64_i1 mask) {
     return (mask.v==0);
 }
 
@@ -1364,8 +1364,8 @@ REDUCE_ADD(double, __vec64_d, __reduce_add_double)
 REDUCE_MINMAX(double, __vec64_d, __reduce_min_double, <)
 REDUCE_MINMAX(double, __vec64_d, __reduce_max_double, >)
 
-REDUCE_ADD(int16_t, __vec16_i8, __reduce_add_int8)
-REDUCE_ADD(int32_t, __vec16_i16, __reduce_add_int16)
+//REDUCE_ADD(int16_t, __vec16_i8, __reduce_add_int8)
+//REDUCE_ADD(int32_t, __vec16_i16, __reduce_add_int16)
 
 REDUCE_ADD(int64_t, __vec64_i32, __reduce_add_int32)
 REDUCE_MINMAX(int32_t, __vec64_i32, __reduce_min_int32, <)
