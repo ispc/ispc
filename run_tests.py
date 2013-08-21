@@ -234,7 +234,7 @@ def add_prefix(path):
     else:
         input_prefix = ""
     path = input_prefix + path
-    path = os.path.normpath(path)
+    path = os.path.abspath(path)
     return path
 
 
