@@ -495,6 +495,8 @@ if __name__ == '__main__':
     if options.non_interactive == False:
         sys.stdout.write("\n")
 
+    elapsed_time = time.time() - start_time
+
     while not qret.empty():
         (c, r, s) = qret.get()
         compile_error_files += c
@@ -519,7 +521,6 @@ if __name__ == '__main__':
         for f in run_error_files:
             sys.stdout.write("\t%s\n" % f)
 
-    elapsed_time = time.time() - start_time
     if options.time:
         sys.stdout.write("Elapsed time: %d s\n" % elapsed_time)
 
