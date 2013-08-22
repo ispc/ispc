@@ -461,7 +461,7 @@ AtomicType::GetCDeclaration(const std::string &name) const {
         char buf[32];
 		// get program count
         int vWidth = (variability == Variability::Varying) ? 
-                        g->target->getNativeVectorWidth() :
+                        g->target->getVectorWidth() :
                         variability.soaWidth;
         sprintf(buf, "[%d]", vWidth);
         ret += buf;
@@ -755,8 +755,7 @@ EnumType::Mangle() const {
 
 std::string
 EnumType::GetCDeclaration(const std::string &varName) const {
-    if (variability != Variability::Uniform &&
-        variability != Variability::SOA) {
+    if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -772,9 +771,13 @@ EnumType::GetCDeclaration(const std::string &varName) const {
         ret += varName;
     }
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::SOA ||
+        variability == Variability::Varying) {
+        int vWidth = (variability == Variability::Varying) ?
+            g->target->getVectorWidth() :
+            variability.soaWidth;
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1081,8 +1084,7 @@ PointerType::Mangle() const {
 std::string
 PointerType::GetCDeclaration(const std::string &name) const {
     if (isSlice ||
-        (variability != Variability::Uniform &&
-         variability != Variability::SOA)) {
+        (variability == Variability::Unbound)) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1098,9 +1100,13 @@ PointerType::GetCDeclaration(const std::string &name) const {
     ret += std::string(" ");
     ret += name;
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::SOA ||
+        variability == Variability::Varying) {
+        int vWidth = (variability == Variability::Varying) ?
+            g->target->getVectorWidth() :
+            variability.soaWidth;
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1426,7 +1432,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     }
 
     int soaWidth = base->GetSOAWidth();
-    int vWidth = (base->IsVaryingType()) ? g->target->getNativeVectorWidth() : 0;
+    int vWidth = (base->IsVaryingType()) ? g->target->getVectorWidth() : 0;
     base = base->GetAsUniformType();
 
     std::string s = base->GetCDeclaration(name);

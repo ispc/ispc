@@ -2418,8 +2418,15 @@ Module::CompileAndOutput(const char *srcFile,
                 const char *isaName = g->target->GetISAString();
                 std::string targetHeaderFileName = 
                     lGetTargetFileName(headerFileName, isaName);
-                if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str()))
+                if (i == 0) {
+                    // write out a header w/o target name for the first target only
+                    if (!m->writeOutput(Module::Header, headerFileName)) {
+                        return 1;
+                    }
+                }
+                if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str())) {
                     return 1;
+                }
             }
 
             delete g->target;
