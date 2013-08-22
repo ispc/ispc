@@ -37,7 +37,7 @@ parser.add_option("-g", "--generics-include", dest="include_file", help="Filenam
 parser.add_option("-f", "--ispc-flags", dest="ispc_flags", help="Additional flags for ispc (-g, -O1, ...)",
                   default="")
 parser.add_option('-t', '--target', dest='target',
-                  help='Set compilation target (neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2, generic-4, generic-8, generic-16, generic-32)',
+                  help='Set compilation target (sse2-i32x4, sse2-i32x8, sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, avx1-i32x8, avx1-i32x16, avx1.1-i32x8, avx1.1-i32x16, avx2-i32x8, avx2-i32x16, generic-x1, generic-x4, generic-x8, generic-x16, generic-x32, generic-x64)',
                   default="sse4")
 parser.add_option('-a', '--arch', dest='arch',
                   help='Set architecture (arm, x86, x86-64)',
@@ -297,7 +297,7 @@ def run_test(testname):
         firstline = firstline.rstrip()
         file.close()
 
-        if (output.find(firstline) == -1):
+        if re.search(firstline, output) == None:
             sys.stderr.write("Didn't see expected error message %s from test %s.\nActual output:\n%s\n" % \
                 (firstline, testname, output))
             return (1, 0)

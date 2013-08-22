@@ -533,15 +533,15 @@ static FORCEINLINE uint64_t __movmsk(__vec64_i1 mask) {
     return (uint64_t)mask.v;
 }
 
-static FORCEINLINE __vec64_i1 __any(__vec64_i1 mask) {
+static FORCEINLINE bool __any(__vec64_i1 mask) {
     return (mask.v!=0);
 }
 
-static FORCEINLINE __vec64_i1 __all(__vec64_i1 mask) {
-    return (mask.v==0xFFFFFFFFFFFFFFFF);
+static FORCEINLINE bool __all(__vec64_i1 mask) {
+    return (mask.v==0xFFFFFFFFFFFFFFFFull);
 }
 
-static FORCEINLINE __vec64_i1 __none(__vec64_i1 mask) {
+static FORCEINLINE bool __none(__vec64_i1 mask) {
     return (mask.v==0);
 }
 
@@ -1364,19 +1364,20 @@ REDUCE_ADD(double, __vec64_d, __reduce_add_double)
 REDUCE_MINMAX(double, __vec64_d, __reduce_min_double, <)
 REDUCE_MINMAX(double, __vec64_d, __reduce_max_double, >)
 
-REDUCE_ADD(uint32_t, __vec64_i32, __reduce_add_int32)
+//REDUCE_ADD(int16_t, __vec16_i8, __reduce_add_int8)
+//REDUCE_ADD(int32_t, __vec16_i16, __reduce_add_int16)
+
+REDUCE_ADD(int64_t, __vec64_i32, __reduce_add_int32)
 REDUCE_MINMAX(int32_t, __vec64_i32, __reduce_min_int32, <)
 REDUCE_MINMAX(int32_t, __vec64_i32, __reduce_max_int32, >)
 
-REDUCE_ADD(uint32_t, __vec64_i32, __reduce_add_uint32)
 REDUCE_MINMAX(uint32_t, __vec64_i32, __reduce_min_uint32, <)
 REDUCE_MINMAX(uint32_t, __vec64_i32, __reduce_max_uint32, >)
 
-REDUCE_ADD(uint64_t, __vec64_i64, __reduce_add_int64)
+REDUCE_ADD(int64_t, __vec64_i64, __reduce_add_int64)
 REDUCE_MINMAX(int64_t, __vec64_i64, __reduce_min_int64, <)
 REDUCE_MINMAX(int64_t, __vec64_i64, __reduce_max_int64, >)
 
-REDUCE_ADD(uint64_t, __vec64_i64, __reduce_add_uint64)
 REDUCE_MINMAX(uint64_t, __vec64_i64, __reduce_min_uint64, <)
 REDUCE_MINMAX(uint64_t, __vec64_i64, __reduce_max_uint64, >)
 
@@ -1959,3 +1960,23 @@ static FORCEINLINE uint64_t __atomic_cmpxchg(uint64_t *p, uint64_t cmpval,
     return __sync_val_compare_and_swap(p, cmpval, newval);
 #endif
 }
+
+#ifdef WIN32
+#include <windows.h>
+#define __clock __rdtsc
+#else // WIN32
+static FORCEINLINE uint64_t __clock() {
+  uint32_t low, high;
+#ifdef __x86_64
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%rax", "%rbx", "%rcx", "%rdx" );
+#else
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%eax", "%ebx", "%ecx", "%edx" );
+#endif
+  __asm__ __volatile__ ("rdtsc" : "=a" (low), "=d" (high));
+  return (uint64_t)high << 32 | low;
+}
+#endif
+
+#undef FORCEINLINE

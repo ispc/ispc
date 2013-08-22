@@ -103,92 +103,6 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; svml stuff
-
-declare <4 x float> @__svml_sinf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_cosf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_sincosf4(<4 x float> *, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_tanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atan2f4(<4 x float>, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_expf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_logf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_powf4(<4 x float>, <4 x float>) nounwind readnone
-
-
-define <8 x float> @__svml_sin(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_sinf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_cos(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_cosf4, %0)
-  ret <8 x float> %ret
-}
-
-define void @__svml_sincos(<8 x float>, <8 x float> *,
-                                    <8 x float> *) nounwind readnone alwaysinline {
-  ; call svml_sincosf4 two times with the two 4-wide sub-vectors
-  %a = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %b = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-
-  %cospa = alloca <4 x float>
-  %sa = call <4 x float> @__svml_sincosf4(<4 x float> * %cospa, <4 x float> %a)
-
-  %cospb = alloca <4 x float>
-  %sb = call <4 x float> @__svml_sincosf4(<4 x float> * %cospb, <4 x float> %b)
-
-  %sin = shufflevector <4 x float> %sa, <4 x float> %sb,
-         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
-                    i32 4, i32 5, i32 6, i32 7>
-  store <8 x float> %sin, <8 x float> * %1
-
-  %cosa = load <4 x float> * %cospa
-  %cosb = load <4 x float> * %cospb
-  %cos = shufflevector <4 x float> %cosa, <4 x float> %cosb,
-         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
-                    i32 4, i32 5, i32 6, i32 7>
-  store <8 x float> %cos, <8 x float> * %2
-
-  ret void
-}
-
-define <8 x float> @__svml_tan(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_tanf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_atan(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_atanf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_atan2(<8 x float>,
-                                          <8 x float>) nounwind readnone alwaysinline {
-  binary4to8(ret, float, @__svml_atan2f4, %0, %1)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_exp(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_expf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_log(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_logf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_pow(<8 x float>,
-                                        <8 x float>) nounwind readnone alwaysinline {
-  binary4to8(ret, float, @__svml_powf4, %0, %1)
-  ret <8 x float> %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
 declare <4 x float> @llvm.x86.sse.max.ps(<4 x float>, <4 x float>) nounwind readnone
@@ -365,6 +279,36 @@ define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
   %v = or i32 %v0, %v1s
   %cmp = icmp eq i32 %v, 0
   ret i1 %cmp
+}
+
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
+  %wide8 = shufflevector <8 x i8> %0, <8 x i8> zeroinitializer,
+      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                  i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %wide8,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
+
+define internal <8 x i16> @__add_varying_i16(<8 x i16>,
+                                  <8 x i16>) nounwind readnone alwaysinline {
+  %r = add <8 x i16> %0, %1
+  ret <8 x i16> %r
+}
+
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<8 x i16>) nounwind readnone alwaysinline {
+  reduce8(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
 define <4 x float> @__vec4_add_float(<4 x float> %v0,

@@ -1,4 +1,4 @@
-// Can't convert between types "const uniform int32" and "soa<4> float" with different SOA widths
+// Can't convert between types "const uniform int[0-9]*" and "soa<4> float" with different SOA widths
 
 struct Pt { float x, y, z; };
 

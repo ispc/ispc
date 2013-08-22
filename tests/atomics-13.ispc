@@ -7,7 +7,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
     float a = aFOO[programIndex]; 
     int32 b = 0;
     if (programIndex < 32 && programIndex & 1)
-        b = atomic_or_global(&s, (1 << programIndex));
+        b = atomic_or_global(&s, (1ul << programIndex));
     RET[programIndex] = popcnt(reduce_max((int32)b));
 }
 

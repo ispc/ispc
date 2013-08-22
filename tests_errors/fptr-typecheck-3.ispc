@@ -1,4 +1,4 @@
-// Too few parameter values provided in function call (1 provided, 2 expected).
+// Too few parameter values provided in function call \(1 provided, 2 expected\).
 
 float bar(float a, float b);
 

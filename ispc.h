@@ -181,9 +181,10 @@ public:
         added or the enumerant values are reordered.  */
     enum ISA {
 #ifdef ISPC_ARM_ENABLED
-        NEON,
+               NEON32, NEON16, NEON8,
 #endif
-        SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
+               SSE2, SSE4, AVX, AVX11, AVX2, GENERIC,
+               NUM_ISAS };
 
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
@@ -191,16 +192,16 @@ public:
     Target(const char *arch, const char *cpu, const char *isa, bool pic);
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target ISAs. */
-    static const char *SupportedTargetISAs();
+        supported compilation targets. */
+    static const char *SupportedTargets();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target CPUs. */
-    static std::string SupportedTargetCPUs();
+        supported CPUs. */
+    static std::string SupportedCPUs();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target architectures. */
-    static const char *SupportedTargetArchs();
+        supported architectures. */
+    static const char *SupportedArchs();
 
     /** Returns a triple string specifying the target architecture, vendor,
         and environment. */
@@ -487,7 +488,7 @@ struct Globals {
 
     /** There are a number of math libraries that can be used for
         transcendentals and the like during program compilation. */
-    enum MathLib { Math_ISPC, Math_ISPCFast, Math_SVML, Math_System };
+    enum MathLib { Math_ISPC, Math_ISPCFast, Math_System };
     MathLib mathLib;
 
     /** Records whether the ispc standard library should be made available
