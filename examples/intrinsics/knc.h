@@ -1511,6 +1511,22 @@ static FORCEINLINE int64_t __count_trailing_zeros_i64(const __vec1_i64 mask) {
 // reductions
 ///////////////////////////////////////////////////////////////////////////
 
+static FORCEINLINE int16_t __reduce_add_i8(__vec16_i8 v) {
+  // TODO: improve this!
+  int16_t ret = 0;
+  for (int i = 0; i < 16; ++i)
+    ret += v.v[i];
+  return ret;
+}
+
+static FORCEINLINE int32_t __reduce_add_i16(__vec16_i16 v) {
+  // TODO: improve this!
+  int32_t ret = 0;
+  for (int i = 0; i < 16; ++i)
+    ret += v.v[i];
+  return ret;
+}
+
 static FORCEINLINE uint32_t __reduce_add_i32(__vec16_i32 v) {
     return _mm512_reduce_add_epi32(v);
 }
@@ -2105,9 +2121,24 @@ static FORCEINLINE uint64_t __atomic_cmpxchg(uint64_t *p, uint64_t cmpval,
 #endif
 }
 
+#ifdef WIN32
+#include <windows.h>
+#define __clock __rdtsc
+#else // WIN32
+static FORCEINLINE uint64_t __clock() {
+  uint32_t low, high;
+#ifdef __x86_64
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%rax", "%rbx", "%rcx", "%rdx" );
+#else
+  __asm__ __volatile__ ("xorl %%eax,%%eax \n    cpuid"
+                        ::: "%eax", "%ebx", "%ecx", "%edx" );
+#endif
+  __asm__ __volatile__ ("rdtsc" : "=a" (low), "=d" (high));
+  return (uint64_t)high << 32 | low;
+}
+#endif // !WIN32
+
 #undef FORCEINLINE
 #undef PRE_ALIGN
 #undef POST_ALIGN
-
-
-

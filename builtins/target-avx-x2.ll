@@ -135,23 +135,6 @@ define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly always
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
-
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones 4x with our 16-wide
-; vectors...
-
-declare <16 x float> @__svml_sin(<16 x float>)
-declare <16 x float> @__svml_cos(<16 x float>)
-declare void @__svml_sincos(<16 x float>, <16 x float> *, <16 x float> *)
-declare <16 x float> @__svml_tan(<16 x float>)
-declare <16 x float> @__svml_atan(<16 x float>)
-declare <16 x float> @__svml_atan2(<16 x float>, <16 x float>)
-declare <16 x float> @__svml_exp(<16 x float>)
-declare <16 x float> @__svml_log(<16 x float>)
-declare <16 x float> @__svml_pow(<16 x float>, <16 x float>)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone
@@ -270,6 +253,33 @@ reduce_equal(16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
+
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
+
+define internal <16 x i16> @__add_varying_i16(<16 x i16>,
+                                  <16 x i16>) nounwind readnone alwaysinline {
+  %r = add <16 x i16> %0, %1
+  ret <16 x i16> %r
+}
+
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
+  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
+}
 
 define <16 x i32> @__add_varying_int32(<16 x i32>,
                                        <16 x i32>) nounwind readnone alwaysinline {

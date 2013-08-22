@@ -51,10 +51,16 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-sse2-x2-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse4-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse4-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-8-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-8-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-16-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-sse4-16-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse4-x2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-sse4-x2-64bit.cpp" />
-    <ClCompile Include="$(Configuration)\gen-stdlib-generic.cpp" />
-    <ClCompile Include="$(Configuration)\gen-stdlib-x86.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-mask1.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-mask8.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-mask16.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-mask32.cpp" />
     <ClCompile Include="ispc.cpp" />
     <ClCompile Include="$(Configuration)\lex.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
@@ -97,11 +103,13 @@
   <ItemGroup>
     <CustomBuild Include="stdlib.ispc">
       <FileType>Document</FileType>
-      <Command>%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py x86 &gt; $(Configuration)/gen-stdlib-x86.cpp;
-%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC=1 -DISPC_TARGET_GENERIC=1 -DPI=3.1415926535 | python stdlib2cpp.py generic &gt; $(Configuration)/gen-stdlib-generic.cpp;
+      <Command>%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask1 &gt; $(Configuration)/gen-stdlib-mask1.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask8 &gt; $(Configuration)/gen-stdlib-mask8.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask16 &gt; $(Configuration)/gen-stdlib-mask16.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask32 &gt; $(Configuration)/gen-stdlib-mask32.cpp;
 </Command>
-      <Outputs>$(Configuration)/gen-stdlib-generic.cpp;$(Configuration)/gen-stdlib-x86.cpp</Outputs>
-      <Message>Building gen-stdlib-{generic,x86}.cpp</Message>
+      <Outputs>$(Configuration)/gen-stdlib-mask1.cpp;$(Configuration)/gen-stdlib-mask8.cpp;$(Configuration)/gen-stdlib-mask16.cpp;$(Configuration)/gen-stdlib-mask32.cpp</Outputs>
+      <Message>Building gen-stdlib-{mask1,8,16,32}.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -129,6 +137,42 @@
       <Outputs>$(Configuration)/gen-bitcode-sse4-64bit.cpp</Outputs>
       <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-sse4-8.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4-8.ll | python bitcode2cpp.py builtins\target-sse4-8.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-8-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-sse4-8-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-sse4-8-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-sse4-8.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4-8.ll | python bitcode2cpp.py builtins\target-sse4-8.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-8-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-sse4-8-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-sse4-8-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-sse4-16.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4-16.ll | python bitcode2cpp.py builtins\target-sse4-16.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-16-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-sse4-16-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-sse4-16-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-sse4-16.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4-16.ll | python bitcode2cpp.py builtins\target-sse4-16.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-16-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-sse4-16-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-sse4-16-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
