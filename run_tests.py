@@ -55,6 +55,8 @@ parser.add_option('--wrap-exe', dest='wrapexe',
                   default="")
 parser.add_option('--time', dest='time', help='Enable time output',
                   default=False, action="store_true")
+parser.add_option('--non-interactive', dest='non_interactive', help='Disable interactive status updates',
+                  default=False, action="store_true")
 
 (options, args) = parser.parse_args()
 
@@ -162,14 +164,15 @@ total_tests = 0
 # finished.  Should be called with the lock held..
 def update_progress(fn, total_tests_arg, counter, max_test_length_arg):
     counter.value += 1
-    progress_str = " Done %d / %d [%s]" % (counter.value, total_tests_arg, fn)
-    # spaces to clear out detrius from previous printing...
-    spaces_needed = max_test_length_arg - len(fn)
-    for x in range(spaces_needed):
-        progress_str += ' '
-    progress_str += '\r'
-    sys.stdout.write(progress_str)
-    sys.stdout.flush()
+    if options.non_interactive == False:
+        progress_str = " Done %d / %d [%s]" % (counter.value, total_tests_arg, fn)
+        # spaces to clear out detrius from previous printing...
+        spaces_needed = max_test_length_arg - len(fn)
+        for x in range(spaces_needed):
+            progress_str += ' '
+        progress_str += '\r'
+        sys.stdout.write(progress_str)
+        sys.stdout.flush()
 
 def run_command(cmd):
     if options.verbose:
@@ -231,7 +234,7 @@ def add_prefix(path):
     else:
         input_prefix = ""
     path = input_prefix + path
-    path = os.path.normpath(path)
+    path = os.path.abspath(path)
     return path
 
 
@@ -489,11 +492,10 @@ if __name__ == '__main__':
     # (i.e. return 0 if all is ok)
     for t in task_threads:
         t.join()
-    sys.stdout.write("\n")
+    if options.non_interactive == False:
+        sys.stdout.write("\n")
 
     elapsed_time = time.time() - start_time
-    if options.time:
-        sys.stdout.write("Elapsed time: %d s\n" % elapsed_time)
 
     while not qret.empty():
         (c, r, s) = qret.get()
@@ -501,6 +503,8 @@ if __name__ == '__main__':
         run_error_files += r
         skip_files += s
 
+    if options.non_interactive:
+        sys.stdout.write(" Done %d / %d\n" % (finished_tests_counter.value, total_tests))
     if len(skip_files) > 0:
         skip_files.sort()
         sys.stdout.write("%d / %d tests SKIPPED:\n" % (len(skip_files), total_tests))
@@ -516,5 +520,8 @@ if __name__ == '__main__':
         sys.stdout.write("%d / %d tests FAILED execution:\n" % (len(run_error_files), total_tests))
         for f in run_error_files:
             sys.stdout.write("\t%s\n" % f)
+
+    if options.time:
+        sys.stdout.write("Elapsed time: %d s\n" % elapsed_time)
 
     sys.exit(len(compile_error_files) + len(run_error_files))
