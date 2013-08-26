@@ -328,7 +328,6 @@ int main(int Argc, char *Argv[]) {
     // as we're parsing below
     g = new Globals;
 
-    bool debugSet = false, optSet = false;
     Module::OutputType ot = Module::Object;
     bool generatePIC = false;
     const char *arch = NULL, *cpu = NULL, *target = NULL;
@@ -371,7 +370,6 @@ int main(int Argc, char *Argv[]) {
             g->emitInstrumentation = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
-            debugSet = true;
         }
         else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
@@ -496,12 +494,10 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
-            optSet = true;
         }
         else if (!strcmp(argv[i], "-O") ||  !strcmp(argv[i], "-O1") ||
                  !strcmp(argv[i], "-O2") || !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
-            optSet = true;
         }
         else if (!strcmp(argv[i], "-"))
             ;
