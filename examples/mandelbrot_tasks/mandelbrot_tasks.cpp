@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         minSerial = std::min(minSerial, dt);
     }
 
-    printf("[mandelbrot serial]:\t\t[%.3f] millon cycles\n", minSerial);
+    printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "mandelbrot-serial.ppm");
 
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
