@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
         minSerial = std::min(minSerial, dt);
     }
 
-    printf("[volume serial]:\t\t[%.3f] millon cycles\n", minSerial);
+    printf("[volume serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(image, width, height, "volume-serial.ppm");
 
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 

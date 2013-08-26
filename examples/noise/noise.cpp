@@ -106,7 +106,7 @@ int main() {
         minSerial = std::min(minSerial, dt);
     }
 
-    printf("[noise serial]:\t\t\t[%.3f] millon cycles\n", minSerial);
+    printf("[noise serial]:\t\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "noise-serial.ppm");
 
     printf("\t\t\t\t(%.2fx speedup from ISPC)\n", minSerial/minISPC);

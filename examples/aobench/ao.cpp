@@ -138,7 +138,7 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc]:\t\t\t[%.3f] M cycles (%d x %d image)\n", 
+    printf("[aobench ispc]:\t\t\t[%.3f] million cycles (%d x %d image)\n", 
            minTimeISPC, width, height);
     savePPM("ao-ispc.ppm", width, height); 
 
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
     }
 
     // Report results and save image
-    printf("[aobench ispc + tasks]:\t\t[%.3f] M cycles (%d x %d image)\n", 
+    printf("[aobench ispc + tasks]:\t\t[%.3f] million cycles (%d x %d image)\n", 
            minTimeISPCTasks, width, height);
     savePPM("ao-ispc-tasks.ppm", width, height); 
 
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     }
 
     // Report more results, save another image...
-    printf("[aobench serial]:\t\t[%.3f] M cycles (%d x %d image)\n", minTimeSerial, 
+    printf("[aobench serial]:\t\t[%.3f] million cycles (%d x %d image)\n", minTimeSerial, 
            width, height);
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);

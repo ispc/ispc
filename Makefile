@@ -113,8 +113,10 @@ CXX=g++
 CPP=cpp
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
-	-Wall $(LLVM_VERSION_DEF) \
-	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
+	$(LLVM_VERSION_DEF) \
+	-Wall \
+	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
+	-Werror -Wno-sign-compare
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED
 endif

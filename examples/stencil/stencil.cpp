@@ -130,7 +130,7 @@ int main() {
         minTimeSerial = std::min(minTimeSerial, dt);
     }
 
-    printf("[stencil serial]:\t\t[%.3f] millon cycles\n", minTimeSerial);
+    printf("[stencil serial]:\t\t[%.3f] million cycles\n", minTimeSerial);
 
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
            minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
