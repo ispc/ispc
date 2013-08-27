@@ -288,11 +288,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
+        this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-popcnt";
+        ",-sse4.1,-sse4.2"
 #else
-        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        ",-sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
@@ -301,11 +303,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-popcnt";
+        ",-sse4.1,-sse4.2"
 #else
-        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        ",-sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
@@ -315,11 +319,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
         // TODO: why not sse42 and popcnt?
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,+sse3,+sse4.1,-sse4.2,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse4.1,-sse4.2"        
 #else
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
@@ -329,11 +335,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,+sse3,+sse4.1,-sse4.2,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse4.1,-sse4.2"        
 #else
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
@@ -341,11 +349,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
         this->m_vectorWidth = 16;
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,+sse3,+sse4.1,-sse4.2,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse4.1,-sse4.2"        
 #else
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 8;
     }
@@ -353,11 +363,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+sse,+sse2,+sse3,+sse4.1,-sse4.2,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse4.1,-sse4.2"        
 #else
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        ",+sse41,-sse42"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 16;
     }
@@ -449,11 +461,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrnd";
+        ",+rdrnd"
 #else
-        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        ",+rdrand"
 #endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
@@ -467,7 +481,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 16;
-        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
+        ;           
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
@@ -481,10 +501,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrnd"
+        ",+rdrnd"
 #else
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        ",+rdrand"
 #endif
 #ifndef LLVM_3_1
             ",+fma"
@@ -504,10 +525,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
         this->m_vectorWidth = 16;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrnd"
+        ",+rdrnd"
 #else
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        ",+rdrand"
 #endif
 #ifndef LLVM_3_1
             ",+fma"
