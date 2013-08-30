@@ -918,9 +918,14 @@ static inline uniform float reduce_min(float v) {
     // For the lanes where the mask is off, replace the given value with
     // infinity, so that it doesn't affect the result.
     int iflt_max = 0x7f800000; // infinity
-    // Must use __floatbits_varying_int32, not floatbits(), since with the
-    // latter the current mask enters into the returned result...
-    return __reduce_min_float(__mask ? v : __floatbits_varying_int32(iflt_max));
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_float() are calculated without a mask.
+    bool test = __mask;
+    uniform float result;
+    unmasked {
+        result = __reduce_min_float(test ? v : floatbits(iflt_max));
+    }
+    return result;
 }
 
 __declspec(safe) 
@@ -928,9 +933,14 @@ static inline uniform float reduce_max(float v) {
     // For the lanes where the mask is off, replace the given value with
     // negative infinity, so that it doesn't affect the result.
     const int iflt_neg_max = 0xff800000; // -infinity
-    // Must use __floatbits_varying_int32, not floatbits(), since with the
-    // latter the current mask enters into the returned result...
-    return __reduce_max_float(__mask ? v : __floatbits_varying_int32(iflt_neg_max));
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_float() are calculated without a mask.
+    bool test = __mask;
+    uniform float result;
+    unmasked {
+        result = __reduce_max_float(test ? v : floatbits(iflt_neg_max));
+    }
+    return result;
 }
 
 __declspec(safe) 
@@ -986,17 +996,27 @@ static inline uniform double reduce_add(double x) {
 __declspec(safe) 
 static inline uniform double reduce_min(double v) {
     int64 iflt_max = 0x7ff0000000000000; // infinity
-    // Must use __doublebits_varying_int64, not doublebits(), since with the
-    // latter the current mask enters into the returned result...
-    return __reduce_min_double(__mask ? v : __doublebits_varying_int64(iflt_max));
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_min_double() are calculated without a mask.
+    bool test = __mask;
+    uniform double result;
+    unmasked {
+        result = __reduce_min_double(test ? v : doublebits(iflt_max));
+    }
+    return result;
 }
 
 __declspec(safe) 
 static inline uniform double reduce_max(double v) {
     const int64 iflt_neg_max = 0xfff0000000000000; // -infinity
-    // Must use __doublebits_varying_int64, not doublebits(), since with the
-    // latter the current mask enters into the returned result...
-    return __reduce_max_double(__mask ? v : __doublebits_varying_int64(iflt_neg_max));
+    // unmasked block is needed to make sure that argument for unmasked
+    // function __reduce_max_double() are calculated without a mask.
+    bool test = __mask;
+    uniform double result;
+    unmasked {
+        result = __reduce_max_double(test ? v : doublebits(iflt_neg_max));
+    }
+    return result;
 }
 
 __declspec(safe) 
