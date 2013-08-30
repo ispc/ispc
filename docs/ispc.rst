@@ -3659,7 +3659,7 @@ command-line argument.
 Cross-Program Instance Operations
 ---------------------------------
 
-``ispc`` programs are often used to expresses independently-executing
+``ispc`` programs are often used to express independently-executing
 programs performing computation on separate data elements.  (i.e. pure
 data-parallelism).  However, it's often the case where it's useful for the
 program instances to be able to cooperate in computing results.  The
@@ -3690,7 +3690,7 @@ the running program instances.
 
 The ``rotate()`` function allows each program instance to find the value of
 the given value that their neighbor ``offset`` steps away has.  For
-example, on an 8-wide target, if ``offset`` has the value (1, 2, 3, 4, 5,
+example, on an 8-wide target, if ``value`` has the value (1, 2, 3, 4, 5,
 6, 7, 8) across the gang of running program instances, then ``rotate(value,
 -1)`` causes the first program instance to get the value 8, the second
 program instance to get the value 1, the third 2, and so forth.  The
@@ -3769,7 +3769,7 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 Reductions
 ----------
 
-A number routines are available to evaluate conditions across the
+A number of routines are available to evaluate conditions across the
 running program instances.  For example, ``any()`` returns ``true`` if
 the given value ``v`` is ``true`` for any of the SPMD program
 instances currently running, ``all()`` returns ``true`` if it true
