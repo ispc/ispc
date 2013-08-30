@@ -214,6 +214,17 @@ SymbolTable::LookupType(const char *name) const {
     return NULL;
 }
 
+bool
+SymbolTable::ContainsType(const Type *type) const {
+    TypeMapType::const_iterator iter = types.begin();
+    while (iter != types.end()) {
+        if (iter->second == type) {
+            return true;
+        }
+        iter++;
+    }
+    return false;
+}
 
 std::vector<std::string>
 SymbolTable::ClosestVariableOrFunctionMatch(const char *str) const {

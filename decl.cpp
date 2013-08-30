@@ -69,8 +69,15 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
     if (type == NULL)
         return NULL;
 
-    if ((typeQualifiers & TYPEQUAL_CONST) != 0)
+    if ((typeQualifiers & TYPEQUAL_CONST) != 0) {
         type = type->GetAsConstType();
+    }
+
+    if ( ((typeQualifiers & TYPEQUAL_UNIFORM) != 0)
+         && ((typeQualifiers & TYPEQUAL_VARYING) != 0) ) {
+        Error(pos, "Type \"%s\" cannot be qualified with both uniform and varying.", 
+              type->GetString().c_str());
+    }
 
     if ((typeQualifiers & TYPEQUAL_UNIFORM) != 0) {
         if (Type::Equal(type, AtomicType::Void))
@@ -84,9 +91,10 @@ lApplyTypeQualifiers(int typeQualifiers, const Type *type, SourcePos pos) {
         else
             type = type->GetAsVaryingType();
     }
-    else
+    else {
         if (Type::Equal(type, AtomicType::Void) == false)
             type = type->GetAsUnboundVariabilityType();
+    }
 
     if ((typeQualifiers & TYPEQUAL_UNSIGNED) != 0) {
         if ((typeQualifiers & TYPEQUAL_SIGNED) != 0)
@@ -124,6 +132,17 @@ DeclSpecs::DeclSpecs(const Type *t, StorageClass sc, int tq) {
     typeQualifiers = tq;
     soaWidth = 0;
     vectorSize = 0;
+    if (t != NULL) {
+        if (m->symbolTable->ContainsType(t)) {
+            // Typedefs might have uniform/varying qualifiers inside.
+            if (t->IsVaryingType()) {
+                typeQualifiers |= TYPEQUAL_VARYING;
+            }
+            else if (t->IsUniformType()) {
+                typeQualifiers |= TYPEQUAL_UNIFORM;
+            }
+        }
+    }
 }
 
 
@@ -229,6 +248,7 @@ Declarator::Declarator(DeclaratorKind dk, SourcePos p)
 void
 Declarator::InitFromDeclSpecs(DeclSpecs *ds) {
     const Type *baseType = ds->GetBaseType(pos);
+
     InitFromType(baseType, ds);
 
     if (type == NULL) {
@@ -589,6 +609,7 @@ Declaration::Declaration(DeclSpecs *ds, Declarator *d) {
         declarators.push_back(d);
     }
 }
+
 
 
 std::vector<VariableDeclaration>
