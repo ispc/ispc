@@ -219,6 +219,12 @@ public:
         @return Pointer to the Type, if found; otherwise NULL is returned.
     */
     const Type *LookupType(const char *name) const;
+    
+    /** Look for a type given a pointer.
+
+        @return True if found, False otherwise.
+    */
+    bool ContainsType(const Type * type) const;
 
     /** This method returns zero or more strings with the names of symbols
         in the symbol table that nearly (but not exactly) match the given
