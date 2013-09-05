@@ -2179,7 +2179,10 @@ static inline uniform float frexp(uniform float x, uniform int * uniform pw2) {
 
 __declspec(safe)
 static inline float sin(float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_sin(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_sinf(extract(x_full, i));
@@ -2238,7 +2241,8 @@ static inline float sin(float x_full) {
 
 __declspec(safe)
 static inline uniform float sin(uniform float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_sinf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2309,7 +2313,8 @@ static inline float asin(float x) {
     bool isnan = (x > 1);
 
     float v;
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_asinf(extract(x, i));
@@ -2365,7 +2370,8 @@ static inline uniform float asin(uniform float x) {
     uniform bool isnan = (x > 1);
 
     uniform float v;
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml ||
+        __math_lib == __math_lib_system) {
         return __stdlib_asinf(x);
     }
     else if (__math_lib == __math_lib_ispc)
@@ -2410,7 +2416,10 @@ static inline uniform float asin(uniform float x) {
 
 __declspec(safe)
 static inline float cos(float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_cos(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_cosf(extract(x_full, i));
@@ -2468,7 +2477,8 @@ static inline float cos(float x_full) {
 
 __declspec(safe)
 static inline uniform float cos(uniform float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_cosf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2545,7 +2555,10 @@ static inline uniform float acos(uniform float v) {
 __declspec(safe)
 static inline void sincos(float x_full, varying float * uniform sin_result, 
                           varying float * uniform cos_result) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        __svml_sincos(x_full, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_system) {
         foreach_active (i) {
             uniform float s, c;
             __stdlib_sincosf(extract(x_full, i), &s, &c);
@@ -2612,7 +2625,8 @@ static inline void sincos(float x_full, varying float * uniform sin_result,
 __declspec(safe)
 static inline void sincos(uniform float x_full, uniform float * uniform sin_result,
                           uniform float * uniform cos_result) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         __stdlib_sincosf(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2673,7 +2687,10 @@ static inline void sincos(uniform float x_full, uniform float * uniform sin_resu
 
 __declspec(safe)
 static inline float tan(float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_tan(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_tanf(extract(x_full, i));
@@ -2749,7 +2766,8 @@ static inline float tan(float x_full) {
 
 __declspec(safe)
 static inline uniform float tan(uniform float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_tanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2820,7 +2838,10 @@ static inline uniform float tan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan(float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_atan(x_full);
+    }
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_atanf(extract(x_full, i));
@@ -2868,7 +2889,8 @@ static inline float atan(float x_full) {
 
 __declspec(safe)
 static inline uniform float atan(uniform float x_full) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_atanf(x_full);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2911,7 +2933,10 @@ static inline uniform float atan(uniform float x_full) {
 
 __declspec(safe)
 static inline float atan2(float y, float x) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_atan2(y, x);
+    }
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_atan2f(extract(y, i), extract(x, i));
@@ -2947,7 +2972,8 @@ static inline float atan2(float y, float x) {
 
 __declspec(safe)
 static inline uniform float atan2(uniform float y, uniform float x) {
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_atan2f(y, x);
     }
     else if (__math_lib == __math_lib_ispc || 
@@ -2969,6 +2995,9 @@ __declspec(safe)
 static inline float exp(float x_full) {
     if (__have_native_transcendentals) {
         return __exp_varying_float(x_full);
+    }
+    else if (__math_lib == __math_lib_svml) {
+        return __svml_exp(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3049,7 +3078,8 @@ static inline uniform float exp(uniform float x_full) {
     if (__have_native_transcendentals) {
         return __exp_uniform_float(x_full);
     }
-    else if (__math_lib == __math_lib_system) {
+    else if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_expf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
@@ -3173,6 +3203,9 @@ static inline float log(float x_full) {
     if (__have_native_transcendentals) {
         return __log_varying_float(x_full);
     }
+    else if (__math_lib == __math_lib_svml) {
+        return __svml_log(x_full);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3261,7 +3294,8 @@ static inline uniform float log(uniform float x_full) {
     if (__have_native_transcendentals) {
         return __log_uniform_float(x_full);
     }
-    else if (__math_lib == __math_lib_system) {
+    else if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_logf(x_full);
     }
     else if (__math_lib == __math_lib_ispc_fast) {
@@ -3344,6 +3378,9 @@ static inline float pow(float a, float b) {
     if (__have_native_transcendentals) {
         return __pow_varying_float(a, b);
     }
+    else if (__math_lib == __math_lib_svml) {
+        return __svml_pow(a, b);
+    }
     else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
@@ -3363,7 +3400,8 @@ static inline uniform float pow(uniform float a, uniform float b) {
     if (__have_native_transcendentals) {
         return __pow_uniform_float(a, b);
     }
-    if (__math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_system ||
+        __math_lib == __math_lib_svml) {
         return __stdlib_powf(a, b);
     }
     else if (__math_lib == __math_lib_ispc || 
