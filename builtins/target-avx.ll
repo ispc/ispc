@@ -135,6 +135,23 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; svml
+
+; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
+; or, use the macro to call the 4-wide ones twice with our 8-wide
+; vectors...
+
+declare <8 x float> @__svml_sin(<8 x float>)
+declare <8 x float> @__svml_cos(<8 x float>)
+declare void @__svml_sincos(<8 x float>, <8 x float> *, <8 x float> *)
+declare <8 x float> @__svml_tan(<8 x float>)
+declare <8 x float> @__svml_atan(<8 x float>)
+declare <8 x float> @__svml_atan2(<8 x float>, <8 x float>)
+declare <8 x float> @__svml_exp(<8 x float>)
+declare <8 x float> @__svml_log(<8 x float>)
+declare <8 x float> @__svml_pow(<8 x float>, <8 x float>)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
 
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone
