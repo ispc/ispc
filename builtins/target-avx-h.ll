@@ -155,10 +155,13 @@ define <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
 ;; svml
 
 include(`svml.m4')
-svmlf_declare(4)
-svmlf_define(4)
-svmld_declare(4)
-svmld_define(4)
+;; single precision
+svml_declare(float,f4,4)
+svml_define(float,f4,4,f)
+
+;; double precision
+svml_declare(double,4,4)
+svml_define(double,4,4,d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

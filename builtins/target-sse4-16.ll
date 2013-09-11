@@ -210,8 +210,8 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 
 ; FIXME
 include(`svml.m4')
-svmlf_stubs(8)
-svmld_stubs(8)
+svml_stubs(float,8,f)
+svml_stubs(double,8,d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

@@ -497,10 +497,14 @@ define <4 x float> @__sqrt_varying_float(<4 x float>) nounwind readonly alwaysin
 ; svml stuff
 
 include(`svml.m4')
-svmlf_declare(4)
-svmld_declare(2)
-svmlf_define(4)
-svmld_stubs(4)
+;; single precision
+svml_declare(float,f4,4)
+svml_define(float,f4,4,f)
+
+;; double precision
+svml_declare(double,2,2)
+svml_define_x2(double,2,2,d,4)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

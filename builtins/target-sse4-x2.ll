@@ -106,9 +106,12 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 ; svml stuff
 
 include(`svml.m4')
-svmlf_declare(4)
-svmld_declare(2)
-svmld_stubs(8)
+;; single precision
+svml_declare(float,f4,4)
+
+;; double precision
+svml_declare(double,2,2)
+svml_define_x4(double,2,2,d,8)
 
 
 define <8 x float> @__svml_sinf(<8 x float>) nounwind readnone alwaysinline {

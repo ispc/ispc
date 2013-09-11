@@ -138,8 +138,13 @@ define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly always
 ;; svml
 
 include(`svml.m4')
-svmlf_stubs(16)
-svmld_stubs(16)
+;; single precision
+svml_declare(float,f8,8)
+svml_define_x2(float,f8,8,f,16)
+
+;; double precision
+svml_declare(double,4,4)
+svml_define_x2(double,4,4,d,16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
