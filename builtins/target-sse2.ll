@@ -503,7 +503,7 @@ svml_define(float,f4,4,f)
 
 ;; double precision
 svml_declare(double,2,2)
-svml_define_x2(double,2,2,d,4)
+svml_define_x(double,2,2,d,4)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

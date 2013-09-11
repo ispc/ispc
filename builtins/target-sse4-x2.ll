@@ -108,87 +108,11 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 include(`svml.m4')
 ;; single precision
 svml_declare(float,f4,4)
+svml_define_x(float,f4,4,f,8)
 
 ;; double precision
 svml_declare(double,2,2)
-svml_define_x4(double,2,2,d,8)
-
-
-define <8 x float> @__svml_sinf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_sinf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_asinf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_asinf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_cosf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_cosf4, %0)
-  ret <8 x float> %ret
-}
-
-define void @__svml_sincosf(<8 x float>, <8 x float> *,
-                                    <8 x float> *) nounwind readnone alwaysinline {
-  ; call svml_sincosf4 two times with the two 4-wide sub-vectors
-  %a = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %b = shufflevector <8 x float> %0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-
-  %cospa = alloca <4 x float>
-  %sa = call <4 x float> @__svml_sincosf4(<4 x float> * %cospa, <4 x float> %a)
-
-  %cospb = alloca <4 x float>
-  %sb = call <4 x float> @__svml_sincosf4(<4 x float> * %cospb, <4 x float> %b)
-
-  %sin = shufflevector <4 x float> %sa, <4 x float> %sb,
-         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
-                    i32 4, i32 5, i32 6, i32 7>
-  store <8 x float> %sin, <8 x float> * %1
-
-  %cosa = load <4 x float> * %cospa
-  %cosb = load <4 x float> * %cospb
-  %cos = shufflevector <4 x float> %cosa, <4 x float> %cosb,
-         <8 x i32> <i32 0, i32 1, i32 2, i32 3,
-                    i32 4, i32 5, i32 6, i32 7>
-  store <8 x float> %cos, <8 x float> * %2
-
-  ret void
-}
-
-define <8 x float> @__svml_tanf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_tanf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_atanf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_atanf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_atan2f(<8 x float>,
-                                          <8 x float>) nounwind readnone alwaysinline {
-  binary4to8(ret, float, @__svml_atan2f4, %0, %1)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_expf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_expf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_logf(<8 x float>) nounwind readnone alwaysinline {
-  unary4to8(ret, float, @__svml_logf4, %0)
-  ret <8 x float> %ret
-}
-
-define <8 x float> @__svml_powf(<8 x float>,
-                                        <8 x float>) nounwind readnone alwaysinline {
-  binary4to8(ret, float, @__svml_powf4, %0, %1)
-  ret <8 x float> %ret
-}
+svml_define_x(double,2,2,d,8)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

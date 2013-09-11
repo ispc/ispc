@@ -83,11 +83,43 @@ define(`svml_define',`
 
 
 ;; define x2 __svml calls
-define(`svml_define_x2',`
-   svml_stubs($1,$3,$4)
+define(`svml_define_x',`
+  define <$5 x $1> @__svml_sin$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_sin$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_asin$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_asin$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_cos$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_cos$2, %0)
+    ret <$5 x $1> %ret
+  }
+  declare void @__svml_sincos$4(<$5 x $1>,<$5 x $1>*,<$5 x $1>*) nounwind readnone alwaysinline 
+  define <$5 x $1> @__svml_tan$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_tan$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_atan$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_atan$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_atan2$4(<$5 x $1>,<$5 x $1>) nounwind readnone alwaysinline {
+    binary$3to$5(ret, $1, @__svml_atan2$2, %0, %1)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_exp$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_exp$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_log$4(<$5 x $1>) nounwind readnone alwaysinline {
+    unary$3to$5(ret, $1, @__svml_log$2, %0)
+    ret <$5 x $1> %ret
+  }
+  define <$5 x $1> @__svml_pow$4(<$5 x $1>,<$5 x $1>) nounwind readnone alwaysinline {
+    binary$3to$5(ret, $1, @__svml_pow$2, %0, %1)
+    ret <$5 x $1> %ret
+  }
 ')
 
-;; define x4 __svml calls
-define(`svml_define_x4',`
-   svml_stubs($1,$3,$4)
-')

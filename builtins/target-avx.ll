@@ -144,7 +144,7 @@ svml_define(float,f8,8,f)
 
 ;; double precision
 svml_declare(double,4,4)
-svml_define_x2(double,4,4,d,8)
+svml_define_x(double,4,4,d,8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
