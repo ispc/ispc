@@ -920,6 +920,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     }
     case Target::AVX: {
         switch (g->target->getVectorWidth()) {
+        case 4:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avxh_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avxh_64bit);
+            }
+            break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx1_32bit);
