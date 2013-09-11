@@ -222,15 +222,9 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 
 ; FIXME
 
-declare <16 x float> @__svml_sin(<16 x float>)
-declare <16 x float> @__svml_cos(<16 x float>)
-declare void @__svml_sincos(<16 x float>, <16 x float> *, <16 x float> *)
-declare <16 x float> @__svml_tan(<16 x float>)
-declare <16 x float> @__svml_atan(<16 x float>)
-declare <16 x float> @__svml_atan2(<16 x float>, <16 x float>)
-declare <16 x float> @__svml_exp(<16 x float>)
-declare <16 x float> @__svml_log(<16 x float>)
-declare <16 x float> @__svml_pow(<16 x float>, <16 x float>)
+include(`svml.m4')
+svmlf_stubs(16)
+svmld_stubs(16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

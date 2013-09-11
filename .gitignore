@@ -11,5 +11,9 @@ tests*/*run
 examples/*/*.png
 examples/*/*.ppm
 examples/*/objs/*
+*.swp
+.*
+!.gitignore
+
 
 

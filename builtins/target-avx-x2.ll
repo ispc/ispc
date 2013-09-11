@@ -137,19 +137,9 @@ define <16 x float> @__sqrt_varying_float(<16 x float>) nounwind readonly always
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones 4x with our 16-wide
-; vectors...
-
-declare <16 x float> @__svml_sin(<16 x float>)
-declare <16 x float> @__svml_cos(<16 x float>)
-declare void @__svml_sincos(<16 x float>, <16 x float> *, <16 x float> *)
-declare <16 x float> @__svml_tan(<16 x float>)
-declare <16 x float> @__svml_atan(<16 x float>)
-declare <16 x float> @__svml_atan2(<16 x float>, <16 x float>)
-declare <16 x float> @__svml_exp(<16 x float>)
-declare <16 x float> @__svml_log(<16 x float>)
-declare <16 x float> @__svml_pow(<16 x float>, <16 x float>)
+include(`svml.m4')
+svmlf_stubs(16)
+svmld_stubs(16)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max

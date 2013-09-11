@@ -3160,6 +3160,7 @@ define float @__stdlib_powf(float, float) nounwind readnone alwaysinline {
 }
 
 declare double @sin(double) nounwind readnone
+declare double @asin(double) nounwind readnone
 declare double @cos(double) nounwind readnone
 declare void @sincos(double, double *, double *) nounwind readnone
 declare double @tan(double) nounwind readnone
@@ -3171,6 +3172,11 @@ declare double @pow(double, double) nounwind readnone
 
 define double @__stdlib_sin(double) nounwind readnone alwaysinline {
   %r = call double @sin(double %0)
+  ret double %r
+}
+
+define double @__stdlib_asin(double) nounwind readnone alwaysinline {
+  %r = call double @asin(double %0)
   ret double %r
 }
 

@@ -154,28 +154,11 @@ define <4 x double> @__sqrt_varying_double(<4 x double>) nounwind alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones twice with our 8-wide
-; vectors...
-
-;;declare <4 x double> @__svml_sin4(<4 x double>)
-;;declare <4 x double> @__svml_cos4(<4 x double>)
-;;declare void @__svml_sincos4(<4 x double>, <4 x double> *, <4 x double> *)
-;;declare <4 x double> @__svml_tan4(<4 x double>)
-;;declare <4 x double> @__svml_atan4(<4 x double>)
-;;declare <4 x double> @__svml_atan24(<4 x double>, <4 x double>)
-;;declare <4 x double> @__svml_exp4(<4 x double>)
-;;declare <4 x double> @__svml_log4(<4 x double>)
-;;declare <4 x double> @__svml_pow4(<4 x double>, <4 x double>)
-declare <4 x float> @__svml_sin(<4 x float>)
-declare <4 x float> @__svml_cos(<4 x float>)
-declare void @__svml_sincos(<4 x float>, <4 x float> *, <4 x float> *)
-declare <4 x float> @__svml_tan(<4 x float>)
-declare <4 x float> @__svml_atan(<4 x float>)
-declare <4 x float> @__svml_atan2(<4 x float>, <4 x float>)
-declare <4 x float> @__svml_exp(<4 x float>)
-declare <4 x float> @__svml_log(<4 x float>)
-declare <4 x float> @__svml_pow(<4 x float>, <4 x float>)
+include(`svml.m4')
+svmlf_declare(4)
+svmlf_define(4)
+svmld_declare(4)
+svmld_define(4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
