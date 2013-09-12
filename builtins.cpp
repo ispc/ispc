@@ -302,6 +302,7 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         // check the llvm.x86.* intrinsics for now...
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
+            if (id == 0) fprintf(stderr, "FATAL: intrinsic is not found: %s  \n", funcName.c_str());
             Assert(id != 0);
             llvm::Type *intrinsicType =
                 llvm::Intrinsic::getType(*g->ctx, id);
@@ -936,10 +937,10 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         switch (g->target->getVectorWidth()) {
         case 4:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avxh_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx_i64x4_32bit);
             }
             else {
-                EXPORT_MODULE(builtins_bitcode_avxh_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx_i64x4_64bit);
             }
             break;
         case 8:
@@ -1105,7 +1106,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
         extern char stdlib_mask1_code[], stdlib_mask8_code[];
-        extern char stdlib_mask16_code[], stdlib_mask32_code[];
+        extern char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
         if (g->target->getISA() == Target::GENERIC &&
             g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
             yy_scan_string(stdlib_mask32_code);
@@ -1123,6 +1124,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                 break;
             case 32:
                 yy_scan_string(stdlib_mask32_code);
+                break;
+            case 64:
+                yy_scan_string(stdlib_mask64_code);
                 break;
             default:
                 FATAL("Unhandled mask bit size for stdlib.ispc");

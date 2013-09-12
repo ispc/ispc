@@ -33,7 +33,7 @@
 ;; Basic 4-wide definitions
 
 define(`WIDTH',`4')
-define(`MASK',`i32')
+define(`MASK',`i64')
 include(`util.m4')
 
 stdlib_core()
@@ -185,32 +185,32 @@ define <4 x float> @__min_varying_float(<4 x float>, <4 x float>) nounwind reado
 ; horizontal ops
 
 ;; sse intrinsic 
-declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone
+declare i32 @llvm.x86.avx.movmsk.pd.256(<4 x double>) nounwind readnone
 
-define i64 @__movmsk(<4 x i32>) nounwind readnone alwaysinline {
-  %floatmask = bitcast <4 x i32> %0 to <4 x float>
-  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+define i64 @__movmsk(<4 x i64>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i64> %0 to <4 x double>
+  %v = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %floatmask) nounwind readnone
   %v64 = zext i32 %v to i64
   ret i64 %v64
 }
 
-define i1 @__any(<4 x i32>) nounwind readnone alwaysinline {
-  %floatmask = bitcast <4 x i32> %0 to <4 x float>
-  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+define i1 @__any(<4 x i64>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i64> %0 to <4 x double>
+  %v = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %floatmask) nounwind readnone
   %cmp = icmp ne i32 %v, 0
   ret i1 %cmp
 }
 
-define i1 @__all(<4 x i32>) nounwind readnone alwaysinline {
-  %floatmask = bitcast <4 x i32> %0 to <4 x float>
-  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+define i1 @__all(<4 x i64>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i64> %0 to <4 x double>
+  %v = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %floatmask) nounwind readnone
   %cmp = icmp eq i32 %v, 15
   ret i1 %cmp
 }
 
-define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
-  %floatmask = bitcast <4 x i32> %0 to <4 x float>
-  %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
+define i1 @__none(<4 x i64>) nounwind readnone alwaysinline {
+  %floatmask = bitcast <4 x i64> %0 to <4 x double>
+  %v = call i32 @llvm.x86.avx.movmsk.pd.256(<4 x double> %floatmask) nounwind readnone
   %cmp = icmp eq i32 %v, 0
   ret i1 %cmp
 }
@@ -392,7 +392,8 @@ masked_load(i16, 2)
 declare <4 x float> @llvm.x86.avx.maskload.ps(i8 *, <4 x float> %mask)
 declare <4 x double> @llvm.x86.avx.maskload.pd.256(i8 *, <4 x double> %mask)
  
-define <4 x i32> @__masked_load_i32(i8 *, <4 x i32> %mask) nounwind alwaysinline {
+define <4 x i32> @__masked_load_i32(i8 *, <4 x i64> %mask64) nounwind alwaysinline {
+  %mask      = trunc <4 x i64> %mask64 to <4 x i32>
   %floatmask = bitcast <4 x i32> %mask to <4 x float>
   %floatval = call <4 x float> @llvm.x86.avx.maskload.ps(i8 * %0, <4 x float> %floatmask)
   %retval = bitcast <4 x float> %floatval to <4 x i32>
@@ -400,18 +401,11 @@ define <4 x i32> @__masked_load_i32(i8 *, <4 x i32> %mask) nounwind alwaysinline
 }
 
 
-define <4 x i64> @__masked_load_i64(i8 *, <4 x i32> %mask) nounwind alwaysinline {
-  ; double up masks, bitcast to doubles
-  %mask0 = shufflevector <4 x i32> %mask, <4 x i32> undef,
-     <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-  %mask0d = bitcast <8 x i32> %mask0 to <4 x double>
-
-  %val0d = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %0, <4 x double> %mask0d)
-
-  %vald = shufflevector <4 x double> %val0d, <4 x double> undef,
-      <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %val = bitcast <4 x double> %vald to <4 x i64>
-  ret <4 x i64> %val
+define <4 x i64> @__masked_load_i64(i8 *, <4 x i64> %mask) nounwind alwaysinline {
+  %doublemask = bitcast <4 x i64> %mask to <4 x double>
+  %doubleval  = call <4 x double> @llvm.x86.avx.maskload.pd.256(i8 * %0, <4 x double> %doublemask)
+  %retval = bitcast <4 x double> %doubleval to <4 x i64>
+  ret <4 x i64> %retval
 }
 
 masked_load_float_double()
@@ -428,83 +422,62 @@ declare void @llvm.x86.avx.maskstore.ps    (i8 *, <4 x float>,  <4 x float>)
 declare void @llvm.x86.avx.maskstore.pd.256(i8 *, <4 x double>, <4 x double>)
 
 define void @__masked_store_i32(<4 x i32>* nocapture, <4 x i32>, 
-                                <4 x i32>) nounwind alwaysinline {
-  %ptr = bitcast <4 x i32> * %0 to i8 *
-  %val = bitcast <4 x i32> %1 to <4 x float>
-  %mask = bitcast <4 x i32> %2 to <4 x float>
+                                <4 x i64>) nounwind alwaysinline {
+  %mask32 = trunc <4 x i64> %2 to <4 x i32>
+
+  %ptr    = bitcast <4 x i32> * %0 to i8 *
+  %val    = bitcast <4 x i32> %1 to <4 x float>
+  %mask   = bitcast <4 x i32> %mask32 to <4 x float>
   call void @llvm.x86.avx.maskstore.ps(i8 * %ptr, <4 x float> %mask, <4 x float> %val)
   ret void
 }
 
 define void @__masked_store_i64(<4 x i64>* nocapture, <4 x i64>,
-                                <4 x i32> %mask) nounwind alwaysinline {
-  %ptr = bitcast <4 x i64> * %0 to i8 *
-  %val = bitcast <4 x i64> %1 to <4 x double>
-
-  %mask0 = shufflevector <4 x i32> %mask, <4 x i32> undef,
-     <8 x i32> <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
-
-  %mask0d = bitcast <8 x i32> %mask0 to <4 x double>
-
-  %val0 = shufflevector <4 x double> %val, <4 x double> undef,
-     <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-
-  call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x double> %mask0d, <4 x double> %val0)
+                                <4 x i64>) nounwind alwaysinline {
+  %ptr  = bitcast <4 x i64> * %0 to i8 *
+  %val  = bitcast <4 x i64> %1 to <4 x double>
+  %mask = bitcast <4 x i64> %2 to <4 x double>
+  call void @llvm.x86.avx.maskstore.pd.256(i8 * %ptr, <4 x double> %mask, <4 x double> %val)
   ret void
 }
 
 
-masked_store_blend_8_16_by_4()
+masked_store_blend_8_16_by_4_mask64()
 
 ;; sse intrinsic
-declare <4 x float> @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
+declare <4 x float>  @llvm.x86.sse41.blendvps(<4 x float>, <4 x float>,
                                              <4 x float>) nounwind readnone
 
-
 define void @__masked_store_blend_i32(<4 x i32>* nocapture, <4 x i32>, 
-                                      <4 x i32> %mask) nounwind alwaysinline {
+                                      <4 x i64>) nounwind alwaysinline {
+  %mask          = trunc   <4 x i64> %2 to <4 x i32>
   %mask_as_float = bitcast <4 x i32> %mask to <4 x float>
-  %oldValue = load <4 x i32>* %0, align 4
-  %oldAsFloat = bitcast <4 x i32> %oldValue to <4 x float>
-  %newAsFloat = bitcast <4 x i32> %1 to <4 x float>
-  %blend = call <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %oldAsFloat,
-                                                     <4 x float> %newAsFloat,
-                                                     <4 x float> %mask_as_float)
+  %oldValue      = load    <4 x i32>* %0, align 4
+  %oldAsFloat    = bitcast <4 x i32> %oldValue to <4 x float>
+  %newAsFloat    = bitcast <4 x i32> %1 to <4 x float>
+  %blend         = call    <4 x float> @llvm.x86.sse41.blendvps(<4 x float> %oldAsFloat,
+                                                             <4 x float> %newAsFloat,
+                                                             <4 x float> %mask_as_float)
   %blendAsInt = bitcast <4 x float> %blend to <4 x i32>
   store <4 x i32> %blendAsInt, <4 x i32>* %0, align 4
   ret void
 }
 
 ;; avx intrinsic
-declare <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float>, <8 x float>,
-                                                <8 x float>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double>, <4 x double>,
+                                                <4 x double>) nounwind readnone
 
-define void @__masked_store_blend_i64(<4 x i64>* nocapture %ptr, <4 x i64> %new, 
-                                      <4 x i32> %i32mask) nounwind alwaysinline {
-  %oldValue = load <4 x i64>* %ptr, align 8
-  %mask = bitcast <4 x i32> %i32mask to <4 x float>
-
-  ; Do 4x64-bit blends by doing two <8 x i32> blends, where the <8 x i32> values
-  ; are actually bitcast <4 x i64> values
-  ;
-  ; set up the first four 64-bit values
-  %old01  = bitcast <4 x i64> %oldValue to <4 x i64>
-  %old01f = bitcast <4 x i64> %old01 to <8 x float>
-  %new01  = bitcast <4 x i64> %new  to <4 x i64>
-  %new01f = bitcast <4 x i64> %new01 to <8 x float>
-  ; compute mask--note that the indices are all doubled-up
-  %mask01 = shufflevector <4 x float> %mask, <4 x float> undef,
-                          <8 x i32> <i32 0, i32 0, i32 1, i32 1,
-                                     i32 2, i32 2, i32 3, i32 3>
-  ; and blend them
-  %result01f = call <8 x float> @llvm.x86.avx.blendv.ps.256(<8 x float> %old01f,
-                                                            <8 x float> %new01f,
-                                                            <8 x float> %mask01)
-  %result01 = bitcast <8 x float> %result01f to <4 x i64>
-
-
-  %final = bitcast <4 x i64> %result01 to <4 x i64>
-  store <4 x i64> %final, <4 x i64> * %ptr, align 8
+define void @__masked_store_blend_i64(<4 x i64>* nocapture , <4 x i64>,
+                                      <4 x i64>) nounwind alwaysinline {
+  %mask_as_double = bitcast <4 x i64>  %2 to <4 x double>
+  %oldValue       = load    <4 x i64>* %0, align 4
+  %oldAsDouble    = bitcast <4 x i64>  %oldValue to <4 x double>
+  %newAsDouble    = bitcast <4 x i64>  %1 to <4 x double>
+  %blend          = call    <4 x double> @llvm.x86.avx.blendv.pd.256(<4 x double> %oldAsDouble,
+                                                                        <4 x double> %newAsDouble,
+                                                                        <4 x double> %mask_as_double)
+  %blendAsInt = bitcast <4 x double> %blend to <4 x i64>
+  store <4 x i64> %blendAsInt, <4 x i64>* %0, align 4
   ret void
 }
 

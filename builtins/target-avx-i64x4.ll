@@ -29,7 +29,7 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-include(`target-avx-h.ll')
+include(`target-avx-i64x4base.ll')
 
 rdrand_decls()
 

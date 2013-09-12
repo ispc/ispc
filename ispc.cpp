@@ -446,14 +446,13 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avxh") ) {
-        fprintf(stderr, " ISA is avxh \n");
+    else if (!strcasecmp(isa, "avx-i64x4") ) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov";
         this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
+        this->m_maskBitCount = 64;
     }
     else if (!strcasecmp(isa, "avx-x2") ||
              !strcasecmp(isa, "avx1-x2") ||

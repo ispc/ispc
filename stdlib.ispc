@@ -50,6 +50,9 @@
 #elif (ISPC_MASK_BITS == 32)
   #define IntMaskType int32
   #define UIntMaskType unsigned int32
+#elif (ISPC_MASK_BITS == 64)
+  #define IntMaskType int64
+  #define UIntMaskType unsigned int64
 #else
   #error Unknown value of ISPC_MASK_BITS
 #endif
