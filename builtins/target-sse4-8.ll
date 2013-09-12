@@ -223,8 +223,8 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 ; FIXME
 
 include(`svml.m4')
-svml_stubs(float,16,f)
-svml_stubs(double,16,d)
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

@@ -209,8 +209,8 @@ declare i64 @__count_leading_zeros_i64(i64) nounwind readnone
 ;; svml
 
 include(`svml.m4')
-svml_stubs(float,  WIDTH, f)
-svml_stubs(double, WIDTH, d)
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

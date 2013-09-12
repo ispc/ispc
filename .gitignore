@@ -12,8 +12,5 @@ examples/*/*.png
 examples/*/*.ppm
 examples/*/objs/*
 *.swp
-.*
-!.gitignore
-
 
 

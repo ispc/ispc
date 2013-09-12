@@ -189,7 +189,7 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target& target) {
         break;
     case 64:
         onMask = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*ctx), -1,
-                                    true /*signed*/); // 0xffffffff
+                                    true /*signed*/); // 0xffffffffffffffffull
         break;
     default:
         FATAL("Unhandled mask width for onMask");

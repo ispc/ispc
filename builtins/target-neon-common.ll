@@ -318,8 +318,8 @@ define void @__masked_store_blend_i64(<WIDTH x i64>* nocapture %ptr,
 
 
 include(`svml.m4')
-svmlf_stubs(WIDTH)
-svmld_stubs(WIDTH)
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
