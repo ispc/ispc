@@ -75,7 +75,7 @@ if not os.path.exists(ispc_exe):
     sys.stderr.write("Fatal error: missing ispc compiler: %s\n" % ispc_exe)
     sys.exit()
 
-ispc_exe += " -g " + options.ispc_flags
+ispc_exe += " " + options.ispc_flags
 
 if __name__ == '__main__':
     sys.stdout.write("ispc compiler: %s\n" % ispc_exe)

@@ -448,7 +448,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     }
     else if (!strcasecmp(isa, "avx-i64x4") ) {
         this->m_isa = Target::AVX;
-        this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov";
         this->m_maskingIsFree = false;
