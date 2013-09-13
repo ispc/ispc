@@ -149,7 +149,7 @@ struct ForeachDimension {
 
 %union {
     uint64_t intVal;
-    float floatVal;
+    double floatVal;
     std::string *stringVal;
     const char *constCharPtr;
 
@@ -326,8 +326,8 @@ primary_expression
                            (uint64_t)yylval.intVal, @1);
     }
     | TOKEN_FLOAT_CONSTANT {
-        $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
-                           (float)yylval.floatVal, @1);
+        $$ = new ConstExpr(AtomicType::UniformDouble->GetAsConstType(),
+                           yylval.floatVal, @1);
     }
     | TOKEN_TRUE {
         $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);

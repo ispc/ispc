@@ -440,13 +440,13 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 
 {FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = (float)atof(yytext);
+    yylval.floatVal = atof(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
 
 {HEX_FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = (float)lParseHexFloat(yytext);
+    yylval.floatVal = lParseHexFloat(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
 
