@@ -2183,6 +2183,9 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
     case 32:
         t = AtomicType::VaryingUInt32;
         break;
+    case 64:
+        t = AtomicType::VaryingUInt64;
+        break;
     default:
         FATAL("Unhandled mask bitsize in lAddMaskToSymbolTable");
     }

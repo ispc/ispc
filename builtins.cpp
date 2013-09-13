@@ -302,6 +302,7 @@ lCheckModuleIntrinsics(llvm::Module *module) {
         // check the llvm.x86.* intrinsics for now...
         if (!strncmp(funcName.c_str(), "llvm.x86.", 9)) {
             llvm::Intrinsic::ID id = (llvm::Intrinsic::ID)func->getIntrinsicID();
+            if (id == 0) fprintf(stderr, "FATAL: intrinsic is not found: %s  \n", funcName.c_str());
             Assert(id != 0);
             llvm::Type *intrinsicType =
                 llvm::Intrinsic::getType(*g->ctx, id);
@@ -576,20 +577,34 @@ lSetInternalFunctions(llvm::Module *module) {
         "__stdlib_pow",
         "__stdlib_powf",
         "__stdlib_sin",
+        "__stdlib_asin",
         "__stdlib_sincos",
         "__stdlib_sincosf",
         "__stdlib_sinf",
         "__stdlib_tan",
         "__stdlib_tanf",
-        "__svml_sin",
-        "__svml_cos",
-        "__svml_sincos",
-        "__svml_tan",
-        "__svml_atan",
-        "__svml_atan2",
-        "__svml_exp",
-        "__svml_log",
-        "__svml_pow",
+        "__svml_sind",
+        "__svml_asind",
+        "__svml_cosd",
+        "__svml_acosd",
+        "__svml_sincosd",
+        "__svml_tand",
+        "__svml_atand",
+        "__svml_atan2d",
+        "__svml_expd",
+        "__svml_logd",
+        "__svml_powd",
+        "__svml_sinf",
+        "__svml_asinf",
+        "__svml_cosf",
+        "__svml_acosf",
+        "__svml_sincosf",
+        "__svml_tanf",
+        "__svml_atanf",
+        "__svml_atan2f",
+        "__svml_expf",
+        "__svml_logf",
+        "__svml_powf",
         "__undef_uniform",
         "__undef_varying",
         "__vec4_add_float",
@@ -920,6 +935,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     }
     case Target::AVX: {
         switch (g->target->getVectorWidth()) {
+        case 4:
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
+            }
+            break;
         case 8:
             if (runtime32) {
                 EXPORT_MODULE(builtins_bitcode_avx1_32bit);
@@ -1083,7 +1106,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
         extern char stdlib_mask1_code[], stdlib_mask8_code[];
-        extern char stdlib_mask16_code[], stdlib_mask32_code[];
+        extern char stdlib_mask16_code[], stdlib_mask32_code[], stdlib_mask64_code[];
         if (g->target->getISA() == Target::GENERIC &&
             g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
             yy_scan_string(stdlib_mask32_code);
@@ -1101,6 +1124,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                 break;
             case 32:
                 yy_scan_string(stdlib_mask32_code);
+                break;
+            case 64:
+                yy_scan_string(stdlib_mask64_code);
                 break;
             default:
                 FATAL("Unhandled mask bit size for stdlib.ispc");

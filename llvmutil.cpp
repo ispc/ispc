@@ -132,6 +132,10 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target& target) {
         LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
             llvm::VectorType::get(llvm::Type::getInt32Ty(*ctx), target.getVectorWidth());
         break;
+    case 64:
+        LLVMTypes::MaskType = LLVMTypes::BoolVectorType =
+            llvm::VectorType::get(llvm::Type::getInt64Ty(*ctx), target.getVectorWidth());
+        break;
     default:
         FATAL("Unhandled mask width for initializing MaskType");
     }
@@ -183,6 +187,10 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target& target) {
         onMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), -1,
                                     true /*signed*/); // 0xffffffff
         break;
+    case 64:
+        onMask = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*ctx), -1,
+                                    true /*signed*/); // 0xffffffffffffffffull
+        break;
     default:
         FATAL("Unhandled mask width for onMask");
     }
@@ -208,6 +216,10 @@ InitLLVMUtil(llvm::LLVMContext *ctx, Target& target) {
         break;
     case 32:
         offMask = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx), 0,
+                                         true /*signed*/);
+        break;
+    case 64:
+        offMask = llvm::ConstantInt::get(llvm::Type::getInt64Ty(*ctx), 0,
                                          true /*signed*/);
         break;
     default:
@@ -480,7 +492,10 @@ LLVMUInt64Vector(const uint64_t *ivec) {
 llvm::Constant *
 LLVMBoolVector(bool b) {
     llvm::Constant *v;
-    if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+    if (LLVMTypes::BoolVectorType == LLVMTypes::Int64VectorType)
+        v = llvm::ConstantInt::get(LLVMTypes::Int64Type, b ? 0xffffffffffffffffull : 0,
+                                   false /*unsigned*/);
+    else if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
         v = llvm::ConstantInt::get(LLVMTypes::Int32Type, b ? 0xffffffff : 0,
                                    false /*unsigned*/);
     else if (LLVMTypes::BoolVectorType == LLVMTypes::Int16VectorType)
@@ -506,7 +521,10 @@ LLVMBoolVector(const bool *bvec) {
     std::vector<llvm::Constant *> vals;
     for (int i = 0; i < g->target->getVectorWidth(); ++i) {
         llvm::Constant *v;
-        if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+        if (LLVMTypes::BoolVectorType == LLVMTypes::Int64VectorType)
+            v = llvm::ConstantInt::get(LLVMTypes::Int64Type, bvec[i] ? 0xffffffffffffffffull : 0,
+                                       false /*unsigned*/);
+        else if (LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
             v = llvm::ConstantInt::get(LLVMTypes::Int32Type, bvec[i] ? 0xffffffff : 0,
                                        false /*unsigned*/);
         else if (LLVMTypes::BoolVectorType == LLVMTypes::Int16VectorType)

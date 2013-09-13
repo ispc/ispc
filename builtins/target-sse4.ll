@@ -209,62 +209,14 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; svml stuff
 
-declare <4 x float> @__svml_sinf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_cosf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_sincosf4(<4 x float> *, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_tanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atan2f4(<4 x float>, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_expf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_logf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_powf4(<4 x float>, <4 x float>) nounwind readnone
+include(`svml.m4')
+;; single precision
+svml_declare(float,f4,4)
+svml_define(float,f4,4,f)
 
-
-define <4 x float> @__svml_sin(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_sinf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_cos(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_cosf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define void @__svml_sincos(<4 x float>, <4 x float> *, <4 x float> *) nounwind readnone alwaysinline {
-  %s = call <4 x float> @__svml_sincosf4(<4 x float> * %2, <4 x float> %0)
-  store <4 x float> %s, <4 x float> * %1
-  ret void
-}
-
-define <4 x float> @__svml_tan(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_tanf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_atan(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_atanf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_atan2(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_atan2f4(<4 x float> %0, <4 x float> %1)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_exp(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_expf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_log(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_logf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_pow(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_powf4(<4 x float> %0, <4 x float> %1)
-  ret <4 x float> %ret
-}
+;; double precision
+svml_declare(double,2,2)
+svml_define_x(double,2,2,d,4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
