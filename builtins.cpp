@@ -937,10 +937,10 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         switch (g->target->getVectorWidth()) {
         case 4:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx_i64x4_32bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
             }
             else {
-                EXPORT_MODULE(builtins_bitcode_avx_i64x4_64bit);
+                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
             }
             break;
         case 8:
