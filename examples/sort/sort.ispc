@@ -172,7 +172,7 @@ task void bumpup (uniform int h[], uniform int g[])
 
 static void prefix_sum (uniform int num, uniform int h[])
 {
-  uniform int * uniform g = uniform new int [num+1];
+  uniform int * uniform g = uniform new uniform int [num+1];
   uniform int i;
 
   launch[num] addup (h, g+1);
@@ -191,9 +191,9 @@ export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int o
   uniform int num = ntasks < 1 ? num_cores () : ntasks;
   uniform int span = n / num;
   uniform int hsize = 256*programCount*num;
-  uniform int * uniform hist = uniform new int [hsize];
-  uniform int64 * uniform pair = uniform new int64 [n];
-  uniform int64 * uniform temp = uniform new int64 [n];
+  uniform int * uniform hist = uniform new uniform int [hsize];
+  uniform int64 * uniform pair = uniform new uniform int64 [n];
+  uniform int64 * uniform temp = uniform new uniform int64 [n];
   uniform int pass, i;
 
 #if DEBUG
