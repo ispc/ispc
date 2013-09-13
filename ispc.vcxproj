@@ -22,6 +22,8 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-x2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx1-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-i64x4-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx1-i64x4-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-x2-32bit.cpp" />
@@ -61,6 +63,7 @@
     <ClCompile Include="$(Configuration)\gen-stdlib-mask8.cpp" />
     <ClCompile Include="$(Configuration)\gen-stdlib-mask16.cpp" />
     <ClCompile Include="$(Configuration)\gen-stdlib-mask32.cpp" />
+    <ClCompile Include="$(Configuration)\gen-stdlib-mask64.cpp" />
     <ClCompile Include="ispc.cpp" />
     <ClCompile Include="$(Configuration)\lex.cc">
       <DisableSpecificWarnings>4146;4800;4996;4355;4624;4005;4003;4018</DisableSpecificWarnings>
@@ -103,13 +106,14 @@
   <ItemGroup>
     <CustomBuild Include="stdlib.ispc">
       <FileType>Document</FileType>
-      <Command>%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask1 &gt; $(Configuration)/gen-stdlib-mask1.cpp;
-%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask8 &gt; $(Configuration)/gen-stdlib-mask8.cpp;
-%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask16 &gt; $(Configuration)/gen-stdlib-mask16.cpp;
-%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.1415926535 | python stdlib2cpp.py mask32 &gt; $(Configuration)/gen-stdlib-mask32.cpp;
+      <Command>%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.14159265358979 | python stdlib2cpp.py mask1 &gt; $(Configuration)/gen-stdlib-mask1.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.14159265358979 | python stdlib2cpp.py mask8 &gt; $(Configuration)/gen-stdlib-mask8.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.14159265358979 | python stdlib2cpp.py mask16 &gt; $(Configuration)/gen-stdlib-mask16.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.14159265358979 | python stdlib2cpp.py mask32 &gt; $(Configuration)/gen-stdlib-mask32.cpp;
+%LLVM_INSTALL_DIR%\bin\clang -E -x c %(Filename).ispc -DISPC_MASK_BITS=64 -DISPC=1 -DPI=3.14159265358979 | python stdlib2cpp.py mask64 &gt; $(Configuration)/gen-stdlib-mask64.cpp;
 </Command>
-      <Outputs>$(Configuration)/gen-stdlib-mask1.cpp;$(Configuration)/gen-stdlib-mask8.cpp;$(Configuration)/gen-stdlib-mask16.cpp;$(Configuration)/gen-stdlib-mask32.cpp</Outputs>
-      <Message>Building gen-stdlib-{mask1,8,16,32}.cpp</Message>
+      <Outputs>$(Configuration)/gen-stdlib-mask1.cpp;$(Configuration)/gen-stdlib-mask8.cpp;$(Configuration)/gen-stdlib-mask16.cpp;$(Configuration)/gen-stdlib-mask32.cpp;$(Configuration)/gen-stdlib-mask64.cpp</Outputs>
+      <Message>Building gen-stdlib-{mask1,8,16,32,64}.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -117,7 +121,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% builtins/dispatch.ll | python bitcode2cpp.py dispatch.ll &gt; $(Configuration)/gen-bitcode-dispatch.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-dispatch.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4</AdditionalInputs>
       <Message>Building gen-bitcode-dispatch.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -126,7 +130,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4.ll | python bitcode2cpp.py builtins\target-sse4.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -135,7 +139,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4.ll | python bitcode2cpp.py builtins\target-sse4.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -144,7 +148,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4-8.ll | python bitcode2cpp.py builtins\target-sse4-8.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-8-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-8-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-8-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -153,7 +157,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4-8.ll | python bitcode2cpp.py builtins\target-sse4-8.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-8-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-8-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-8-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -162,7 +166,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4-16.ll | python bitcode2cpp.py builtins\target-sse4-16.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-16-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-16-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-16-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -171,7 +175,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4-16.ll | python bitcode2cpp.py builtins\target-sse4-16.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-16-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-16-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-16-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -180,7 +184,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse4-x2.ll | python bitcode2cpp.py builtins\target-sse4-x2.ll 32bit &gt; $(Configuration)/gen-bitcode-sse4-x2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-x2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-x2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -189,7 +193,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse4-x2.ll | python bitcode2cpp.py builtins\target-sse4-x2.ll 64bit &gt; $(Configuration)/gen-bitcode-sse4-x2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse4-x2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse4-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse4-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse4-x2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -198,7 +202,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse2.ll | python bitcode2cpp.py builtins\target-sse2.ll 32bit &gt; $(Configuration)/gen-bitcode-sse2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse2-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse2-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -207,7 +211,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse2.ll | python bitcode2cpp.py builtins\target-sse2.ll 64bit &gt; $(Configuration)/gen-bitcode-sse2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse2-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse2-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -216,7 +220,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-sse2-x2.ll | python bitcode2cpp.py builtins\target-sse2-x2.ll 32bit &gt; $(Configuration)/gen-bitcode-sse2-x2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse2-x2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse2-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse2-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse2-x2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -225,7 +229,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-sse2-x2.ll | python bitcode2cpp.py builtins\target-sse2-x2.ll 64bit &gt; $(Configuration)/gen-bitcode-sse2-x2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-sse2-x2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-sse2-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-sse2-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-sse2-x2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -234,7 +238,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx1.ll | python bitcode2cpp.py builtins\target-avx1.ll 32bit &gt; $(Configuration)/gen-bitcode-avx1-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx1-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx1-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -243,7 +247,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx1.ll | python bitcode2cpp.py builtins\target-avx1.ll 64bit &gt; $(Configuration)/gen-bitcode-avx1-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx1-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx1-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -252,7 +256,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx1-x2.ll | python bitcode2cpp.py builtins\target-avx1-x2.ll 32bit &gt; $(Configuration)/gen-bitcode-avx1-x2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx1-x2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx1-x2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -261,8 +265,26 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx1-x2.ll | python bitcode2cpp.py builtins\target-avx1-x2.ll 64bit &gt; $(Configuration)/gen-bitcode-avx1-x2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx1-x2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx1-x2-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx1-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx1-i64x4.ll | python bitcode2cpp.py builtins\target-avx1-i64x4.ll 32bit &gt; $(Configuration)/gen-bitcode-avx1-i64x4-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx1-i64x4-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx1-i64x4-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx1-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx1-i64x4.ll | python bitcode2cpp.py builtins\target-avx1-i64x4.ll 64bit &gt; $(Configuration)/gen-bitcode-avx1-i64x4-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx1-i64x4-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx1-i64x4-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -270,7 +292,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx11.ll | python bitcode2cpp.py builtins\target-avx11.ll 32bit &gt; $(Configuration)/gen-bitcode-avx11-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx11-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx11-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -279,7 +301,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx11.ll | python bitcode2cpp.py builtins\target-avx11.ll 64bit &gt; $(Configuration)/gen-bitcode-avx11-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx11-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx11-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -288,7 +310,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx11-x2.ll | python bitcode2cpp.py builtins\target-avx11-x2.ll 32bit &gt; $(Configuration)/gen-bitcode-avx11-x2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx11-x2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx11-x2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -297,7 +319,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx11-x2.ll | python bitcode2cpp.py builtins\target-avx11-x2.ll 64bit &gt; $(Configuration)/gen-bitcode-avx11-x2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx11-x2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx11-x2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -306,7 +328,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx2.ll | python bitcode2cpp.py builtins\target-avx2.ll 32bit &gt; $(Configuration)/gen-bitcode-avx2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -315,7 +337,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx2.ll | python bitcode2cpp.py builtins\target-avx2.ll 64bit &gt; $(Configuration)/gen-bitcode-avx2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -324,7 +346,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx2-x2.ll | python bitcode2cpp.py builtins\target-avx2-x2.ll 32bit &gt; $(Configuration)/gen-bitcode-avx2-x2-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx2-x2-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-x2-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -333,7 +355,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx2-x2.ll | python bitcode2cpp.py builtins\target-avx2-x2.ll 64bit &gt; $(Configuration)/gen-bitcode-avx2-x2-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-avx2-x2-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-x2-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -342,7 +364,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-1.ll | python bitcode2cpp.py builtins\target-generic-1.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-1-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-1-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-1-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -351,7 +373,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-1.ll | python bitcode2cpp.py builtins\target-generic-1.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-1-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-1-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-1-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -360,7 +382,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-4.ll | python bitcode2cpp.py builtins\target-generic-4.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-4-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-4-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-4-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -369,7 +391,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-4.ll | python bitcode2cpp.py builtins\target-generic-4.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-4-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-4-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-4-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -378,7 +400,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-8.ll | python bitcode2cpp.py builtins\target-generic-8.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-8-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-8-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-8-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -387,7 +409,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-8.ll | python bitcode2cpp.py builtins\target-generic-8.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-8-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-8-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-8-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -396,7 +418,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-16.ll | python bitcode2cpp.py builtins\target-generic-16.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-16-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-16-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-16-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -405,7 +427,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-16.ll | python bitcode2cpp.py builtins\target-generic-16.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-16-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-16-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-16-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -414,7 +436,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-32.ll | python bitcode2cpp.py builtins\target-generic-32.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-32-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-32-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-32-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -423,7 +445,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-32.ll | python bitcode2cpp.py builtins\target-generic-32.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-32-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-32-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-32-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -432,7 +454,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-generic-64.ll | python bitcode2cpp.py builtins\target-generic-64.ll 32bit &gt; $(Configuration)/gen-bitcode-generic-64-32bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-64-32bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-64-32bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
@@ -441,7 +463,7 @@
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-generic-64.ll | python bitcode2cpp.py builtins\target-generic-64.ll 64bit &gt; $(Configuration)/gen-bitcode-generic-64-64bit.cpp</Command>
       <Outputs>$(Configuration)/gen-bitcode-generic-64-64bit.cpp</Outputs>
-      <AdditionalInputs>builtins\util.m4;builtins\target-generic-common.ll</AdditionalInputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-generic-common.ll</AdditionalInputs>
       <Message>Building gen-bitcode-generic-64-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
