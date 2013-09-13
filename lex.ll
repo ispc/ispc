@@ -76,7 +76,7 @@ static int allTokens[] = {
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
-  TOKEN_FLOAT_CONSTANT,
+  TOKEN_FLOAT_CONSTANT, TOKEN_DOUBLE_CONSTANT,
   TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
   TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
   TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT,
@@ -152,6 +152,7 @@ void ParserInit() {
     tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
     tokenToName[TOKEN_DOTDOTDOT] = "...";
     tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
+    tokenToName[TOKEN_DOUBLE_CONSTANT] = "TOKEN_DOUBLE_CONSTANT";
     tokenToName[TOKEN_INT8_CONSTANT] = "TOKEN_INT8_CONSTANT";
     tokenToName[TOKEN_UINT8_CONSTANT] = "TOKEN_UINT8_CONSTANT";
     tokenToName[TOKEN_INT16_CONSTANT] = "TOKEN_INT16_CONSTANT";
@@ -266,6 +267,7 @@ void ParserInit() {
     tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
     tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
     tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
+    tokenNameRemap["TOKEN_DOUBLE_CONSTANT"] = "double constant";
     tokenNameRemap["TOKEN_INT8_CONSTANT"] = "int8 constant";
     tokenNameRemap["TOKEN_UINT8_CONSTANT"] = "unsigned int8 constant";
     tokenNameRemap["TOKEN_INT16_CONSTANT"] = "int16 constant";
@@ -341,6 +343,8 @@ inline int ispcRand() {
 WHITESPACE [ \t\r]+
 INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
+DOUBLE_NUMBER (([0-9]+|(([0-9]+\.[0-9]*?)|(\.[0-9]+)))([eE][-+]?[0-9]+)??)
+HEX_DOUBLE_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+?)
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
 
@@ -438,15 +442,28 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
 }
 
 
+
+{DOUBLE_NUMBER} {
+    RT;
+    yylval.doubleVal = atof(yytext);
+    return TOKEN_DOUBLE_CONSTANT;
+}
+
+{HEX_DOUBLE_NUMBER} {
+    RT;
+    yylval.doubleVal = lParseHexFloat(yytext);
+    return TOKEN_DOUBLE_CONSTANT;
+}
+
 {FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = atof(yytext);
+    yylval.floatVal = (float)atof(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
 
 {HEX_FLOAT_NUMBER} {
     RT;
-    yylval.floatVal = lParseHexFloat(yytext);
+    yylval.floatVal = (float)lParseHexFloat(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
 
