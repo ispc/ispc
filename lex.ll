@@ -345,8 +345,7 @@ INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
-DOUBLE_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[dD]?)|(\.[0-9]+)))([dD][-+]?[0-9]+)?[dD]?)
-HEX_DOUBLE_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[dD]?)
+FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9])|([0-9]+[dD][-+]?[0-9]))
 
 IDENT [a-zA-Z_][a-zA-Z_0-9]*
 ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
@@ -455,15 +454,16 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     return TOKEN_FLOAT_CONSTANT;
 }
 
-{DOUBLE_NUMBER} {
+{FORTRAN_DOUBLE_NUMBER} {
     RT;
+    {
+      int i = 0;
+      while (yytext[i] != 'd') i++;
+      if ((yytext[i+1] >= '0' && yytext[i+1] <= '9') 
+          || yytext[i+1] == '+' || yytext[i+1] == '-')
+        yytext[i] = 'E';
+    }
     yylval.doubleVal = atof(yytext);
-    return TOKEN_DOUBLE_CONSTANT;
-}
-
-{HEX_DOUBLE_NUMBER} {
-    RT;
-    yylval.doubleVal = lParseHexFloat(yytext);
     return TOKEN_DOUBLE_CONSTANT;
 }
 
