@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013, Intel Corporation
+  Copyright (c) 2013, Durham University
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
 
-    * Neither the name of Intel Corporation nor the names of its
+    * Neither the name of Durham University nor the names of its
       contributors may be used to endorse or promote products derived from
       this software without specific prior written permission.
 
@@ -172,7 +172,7 @@ task void bumpup (uniform int h[], uniform int g[])
 
 static void prefix_sum (uniform int num, uniform int h[])
 {
-  uniform int * uniform g = uniform new int [num+1];
+  uniform int * uniform g = uniform new uniform int [num+1];
   uniform int i;
 
   launch[num] addup (h, g+1);
@@ -191,9 +191,9 @@ export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int o
   uniform int num = ntasks < 1 ? num_cores () : ntasks;
   uniform int span = n / num;
   uniform int hsize = 256*programCount*num;
-  uniform int * uniform hist = uniform new int [hsize];
-  uniform int64 * uniform pair = uniform new int64 [n];
-  uniform int64 * uniform temp = uniform new int64 [n];
+  uniform int * uniform hist = uniform new uniform int [hsize];
+  uniform int64 * uniform pair = uniform new uniform int64 [n];
+  uniform int64 * uniform temp = uniform new uniform int64 [n];
   uniform int pass, i;
 
 #if DEBUG
