@@ -1559,6 +1559,18 @@ static inline uniform float clamp(uniform float v, uniform float low, uniform fl
     return min(max(v, low), high);
 }
 
+// double
+
+__declspec(safe,cost2)
+static inline double clamp(double v, double low, double high) {
+    return min(max(v, low), high);
+}
+
+__declspec(safe,cost2)
+static inline uniform double clamp(uniform double v, uniform double low, uniform double high) {
+    return min(max(v, low), high);
+}
+
 // int8
 
 __declspec(safe,cost2)
