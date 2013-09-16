@@ -446,7 +446,7 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     RT;
     {
       int i = 0;
-      while (yytext[i] != 'd') i++;
+      while (yytext[i] != 'd' && yytext[i] != 'D') i++;
       yytext[i] = 'E';
     }
     yylval.doubleVal = atof(yytext);
