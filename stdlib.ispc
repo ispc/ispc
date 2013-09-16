@@ -2564,7 +2564,7 @@ static inline float acos(float v) {
 
 __declspec(safe)
 static inline double acos(const double v) {
-    return 1.57079637050628662109375 - asin(v);
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 
@@ -2575,7 +2575,7 @@ static inline uniform float acos(uniform float v) {
 
 __declspec(safe)
 static inline uniform double acos(const uniform double v) {
-    return 1.57079637050628662109375 - asin(v);
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 
