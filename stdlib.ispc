@@ -1559,6 +1559,18 @@ static inline uniform float clamp(uniform float v, uniform float low, uniform fl
     return min(max(v, low), high);
 }
 
+// double
+
+__declspec(safe,cost2)
+static inline double clamp(double v, double low, double high) {
+    return min(max(v, low), high);
+}
+
+__declspec(safe,cost2)
+static inline uniform double clamp(uniform double v, uniform double low, uniform double high) {
+    return min(max(v, low), high);
+}
+
 // int8
 
 __declspec(safe,cost2)
@@ -2552,7 +2564,7 @@ static inline float acos(float v) {
 
 __declspec(safe)
 static inline double acos(const double v) {
-    return 1.57079637050628662109375 - asin(v);
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 
@@ -2563,7 +2575,7 @@ static inline uniform float acos(uniform float v) {
 
 __declspec(safe)
 static inline uniform double acos(const uniform double v) {
-    return 1.57079637050628662109375 - asin(v);
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 
