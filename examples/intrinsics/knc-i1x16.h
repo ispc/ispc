@@ -496,22 +496,9 @@ static FORCEINLINE bool __none(__vec16_i1 mask) {
     return _mm512_kortestz(mask, mask);
 }
 
-#if 0
 static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {
-#if 0
-    return _mm512_kand(a,b);   /* this fails some short circut tests */
-#else
-    return _mm512_knot( _mm512_kandn(a, b));  /* this fails some asin test */
-#endif
+    return _mm512_kxnor(a,b);
 }
-#else /* passes all the tests */
-static FORCEINLINE __vec16_i1 __equal_i1(__vec16_i1 a, __vec16_i1 b) {
-    __vec16_i1 r;
-    r.v = (a.v & b.v) | (~a.v & ~b.v);
-    return r;
-}
-#endif
-
 static FORCEINLINE __vec16_i1 __and(__vec16_i1 a, __vec16_i1 b) {
     return _mm512_kand(a, b);
 }
@@ -524,7 +511,6 @@ static FORCEINLINE __vec16_i1 __or(__vec16_i1 a, __vec16_i1 b) {
     return _mm512_kor(a, b);
 }
 
-#if 0
 static FORCEINLINE __vec16_i1 __not(__vec16_i1 a) {
     return _mm512_knot(a);
 }
@@ -536,30 +522,11 @@ static FORCEINLINE __vec16_i1 __and_not1(__vec16_i1 a, __vec16_i1 b) {
 static FORCEINLINE __vec16_i1 __and_not2(__vec16_i1 a, __vec16_i1 b) {
     return _mm512_kandnr(a, b);
 }
-#else
-static FORCEINLINE __vec16_i1 __not(__vec16_i1 v) {
-    __vec16_i1 r;
-    r.v = ~v.v;
-    return r;
-}
-
-static FORCEINLINE __vec16_i1 __and_not1(__vec16_i1 a, __vec16_i1 b) {
-    __vec16_i1 r;
-    r.v = ~a.v & b.v;
-    return r;
-}
-
-static FORCEINLINE __vec16_i1 __and_not2(__vec16_i1 a, __vec16_i1 b) {
-    __vec16_i1 r;
-    r.v = a.v & ~b.v;
-    return r;
-}
-#endif
 
 static FORCEINLINE __vec16_i1 __select(__vec16_i1 mask, __vec16_i1 a, 
                                        __vec16_i1 b) {
-    return ((a & mask) | (b & ~mask));
-    //return __or(__and(a, mask), __andnr(b, mask));
+//    return ((a & mask) | (b & ~mask));
+    return __or(__and(a, mask), __and_not2(b, mask));
 }
 
 static FORCEINLINE __vec16_i1 __select(bool cond, __vec16_i1 a, __vec16_i1 b) {
