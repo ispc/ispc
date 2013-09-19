@@ -73,9 +73,9 @@ typedef int64_t __vec1_i64;
 
 struct __vec8_i1 {
     __vec8_i1() { }
-    __vec8_i1(const __mmask16 &vv) : v(vv) { }
+    __vec8_i1(const __mmask8 &vv) : v(vv) { }
     __vec8_i1(bool v0, bool v1, bool v2, bool v3,
-               bool v4, bool v5, bool v6, bool v7) {
+              bool v4, bool v5, bool v6, bool v7) {
         v = ((v0 & 1) |
              ((v1 & 1) << 1) |
              ((v2 & 1) << 2) |
@@ -87,7 +87,7 @@ struct __vec8_i1 {
     }
              
     __mmask8 v;
-    FORCEINLINE operator __mmask8() const { return v; }
+    FORCEINLINE operator __mmask8() const { return v; }//0xFF & v; }
 };
 
 
@@ -105,89 +105,66 @@ struct vec8 {
 
 /****************/
 
-#ifndef __ZMM64BIT__
-struct PRE_ALIGN(32) __vec8_i32  : public vec8<int32_t> { 
+struct PRE_ALIGN(32) __vec8_i32  
+{
+#ifdef __ZMM64BIT__
+  __m512i _data;
+  FORCEINLINE __vec8_i32(const __m512i &in) : _data(in) {}
+  FORCEINLINE operator __m512i() const   { return _data; }
+#else /* __ZMM64BIT__ */
+  typedef int32_t  _v8si  __attribute__((vector_size(32)));
+  _v8si _data;
+  FORCEINLINE __vec8_i32(const __m512i &in) 
+  {
+    _mm512_mask_extpackstorelo_epi32((__m512i*)&_data,  0xFF, in, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  }
+  FORCEINLINE operator __m512i() const   
+  { 
+    return _mm512_extloadunpacklo_epi32(_mm512_setzero_epi32(), (uint8_t*)&_data, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE); 
+  }
+#endif /* __ZMM64BIT__ */
+  
   __vec8_i32() { }
   FORCEINLINE __vec8_i32(int32_t v0, int32_t v1, int32_t v2, int32_t v3, 
-      int32_t v4, int32_t v5, int32_t v6, int32_t v7)
-    : vec8<int32_t>(v0, v1, v2, v3, v4, v5, v6, v7) { }
-  FORCEINLINE __vec8_i32(__m512i v) 
+      int32_t v4, int32_t v5, int32_t v6, int32_t v7) 
   {
-    union { __m512i v; int32_t s[8]; } val = {v};
-    data[0] = val.s[0];
-    data[1] = val.s[1];
-    data[2] = val.s[2];
-    data[3] = val.s[3];
-    data[4] = val.s[4];
-    data[5] = val.s[5];
-    data[6] = val.s[6];
-    data[7] = val.s[7];
+    const __m512i v  = _mm512_set_16to16_pi(0,0,0,0,0,0,0,0, v7, v6, v5, v4, v3, v2, v1, v0);
+    *this = __vec8_i32(v);
   }
-  FORCEINLINE operator __m512i() const 
-  { 
-    return _mm512_set_16to16_pi(
-        0,0,0,0, 0,0,0,0,
-        data[7],data[6],data[5],data[4],data[3],data[2],data[1],data[0]);
-  }
-} POST_ALIGN(32);
-#else /* __ZMM64BIT__ */
-struct PRE_ALIGN(32) __vec8_i32 
-{
-  __m512i v;
-  FORCEINLINE operator __m512i() const { return v; }
-  FORCEINLINE __vec8_i32() : v(_mm512_undefined_epi32()) {}
-  FORCEINLINE __vec8_i32(const __m512i &in) : v(in) {}
-  FORCEINLINE __vec8_i32(const __vec8_i32 &o) : v(o.v) {}
-  FORCEINLINE __vec8_i32& operator =(const __vec8_i32 &o) { v=o.v; return *this; }
-  FORCEINLINE __vec8_i32(int32_t v00, int32_t v01, int32_t v02, int32_t v03, 
-                        int32_t v04, int32_t v05, int32_t v06, int32_t v07) :
-    v ( _mm512_set_16to16_pi(0,0,0,0,0,0,0,0, v07, v06, v05, v04, v03, v02, v01, v00) ) {}
-    FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
-    FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
-} POST_ALIGN(32);
-#endif /* __ZMM64BIT__ */
 
-#ifndef __ZMM64BIT__ /* __ZMM64BIT__ */
-PRE_ALIGN(32) struct __vec8_f : public vec8<float> { 
-    __vec8_f() { }
-  FORCEINLINE  __vec8_f(float v0, float v1, float v2, float v3, 
-             float v4, float v5, float v6, float v7) 
-        : vec8<float>(v0, v1, v2, v3, v4, v5, v6, v7) { }
-  FORCEINLINE operator __m512() const 
-  { 
-    return _mm512_set_16to16_ps(
-        0,0,0,0,0,0,0,0,
-        data[7],data[6],data[5],data[4],data[3],data[2],data[1],data[0]);
-  }
-  FORCEINLINE __vec8_f(__m512 v) 
-  {
-    union { __m512 v; float s[8]; } val = {v};
-    data[0] = val.s[0];
-    data[1] = val.s[1];
-    data[2] = val.s[2];
-    data[3] = val.s[3];
-    data[4] = val.s[4];
-    data[5] = val.s[5];
-    data[6] = val.s[6];
-    data[7] = val.s[7];
-  }
+  FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
+  FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
 } POST_ALIGN(32);
-#else /* __ZMM64BIT__ */
+
 PRE_ALIGN(32) struct __vec8_f 
 {
-    __m512 v;
-    FORCEINLINE operator __m512() const { return v; }
-    FORCEINLINE __vec8_f() : v(_mm512_undefined_ps()) { }
-    FORCEINLINE __vec8_f(const __m512 &in) : v(in) {}
-    FORCEINLINE __vec8_f(const __vec8_f &o) : v(o.v) {}
-    FORCEINLINE __vec8_f& operator =(const __vec8_f &o) { v=o.v; return *this; }
-    FORCEINLINE __vec8_f(float v00, float v01, float v02, float v03, 
-                          float v04, float v05, float v06, float v07) :
-        v ( _mm512_set_16to16_ps(0,0,0,0,0,0,0,0, v07, v06, v05, v04, v03, v02, v01, v00) )  {}
-    FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
-    FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
-} POST_ALIGN(32);
+#ifdef __ZMM64BIT__
+  __m512 _data;
+  FORCEINLINE __vec8_f(const __m512 &in) : _data(in) {}
+  FORCEINLINE operator __m512() const   { return _data; }
+#else /* __ZMM64BIT__ */
+  typedef float  _v8sf  __attribute__((vector_size(32)));
+  _v8sf _data;
+  FORCEINLINE __vec8_f(const __m512 &in) 
+  {
+    _mm512_mask_extpackstorelo_ps((__m512*)&_data,  0xFF, in, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  }
+  FORCEINLINE operator __m512() const   
+  { 
+    return _mm512_extloadunpacklo_ps(_mm512_setzero_ps(), (uint8_t*)&_data, _MM_UPCONV_PS_NONE, _MM_HINT_NONE); 
+  }
 #endif /* __ZMM64BIT__ */
+  FORCEINLINE __vec8_f() { }
+  FORCEINLINE __vec8_f(float v0, float v1, float v2, float v3, 
+                       float v4, float v5, float v6, float v7) 
+  {
+    const __m512 v  = _mm512_set_16to16_ps(0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0, v7, v6, v5, v4, v3, v2, v1, v0);
+    *this = __vec8_f(v);
+  }
+
+  FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
+  FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
+} POST_ALIGN(32);
 
 struct PRE_ALIGN(64) __vec8_d 
 {
@@ -438,8 +415,8 @@ INSERT_EXTRACT(__vec1_d, double)
 ///////////////////////////////////////////////////////////////////////////
 // mask ops
 
-static FORCEINLINE uint64_t __movmsk(__vec8_i1 mask) {
-    return (uint64_t)mask.v;
+static FORCEINLINE __vec8_i1 __movmsk(__vec8_i1 mask) {
+    return mask.v;
 }
 
 static FORCEINLINE bool __any(__vec8_i1 mask) {
@@ -455,52 +432,36 @@ static FORCEINLINE bool __none(__vec8_i1 mask) {
 }
 
 static FORCEINLINE __vec8_i1 __equal_i1(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = (a.v & b.v) | (~a.v & ~b.v);
-    return r;
+    return (a.v & b.v) | (~a.v & ~b.v);
 }
 
 static FORCEINLINE __vec8_i1 __and(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = a.v & b.v;
-    return r;
+    return  a.v & b.v;
 }
 
 static FORCEINLINE __vec8_i1 __xor(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = a.v ^ b.v;
-    return r;
+    return a.v ^ b.v;
 }
 
 static FORCEINLINE __vec8_i1 __or(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = a.v | b.v;
-    return r;
+    return  a.v | b.v;
 }
 
 static FORCEINLINE __vec8_i1 __not(__vec8_i1 v) {
-    __vec8_i1 r;
-    r.v = ~v.v;
-    return r;
+    return ~v;
 }
 
 static FORCEINLINE __vec8_i1 __and_not1(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = ~a.v & b.v;
-    return r;
+    return  ~a.v & b.v;
 }
 
 static FORCEINLINE __vec8_i1 __and_not2(__vec8_i1 a, __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = a.v & ~b.v;
-    return r;
+    return  a.v & ~b.v;
 }
 
 static FORCEINLINE __vec8_i1 __select(__vec8_i1 mask, __vec8_i1 a, 
                                        __vec8_i1 b) {
-    __vec8_i1 r;
-    r.v = (a.v & mask.v) | (b.v & ~mask.v);
-    return r;
+    return  (a.v & mask.v) | (b.v & ~mask.v);
 }
 
 static FORCEINLINE __vec8_i1 __select(bool cond, __vec8_i1 a, __vec8_i1 b) {
