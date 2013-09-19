@@ -21,6 +21,8 @@ syn keyword	ispcType	export uniform varying int8 int16 int32 int64
 
 "double precision floating point number, with dot, optional exponent
 syn match	cFloat		display contained "\d\+\.\d*d[-+]\=\d*\>"
+"double precision floating point number, starting with dot, optional exponent
+syn match	cFloat		display contained ".\d*d[-+]\=\d*\>"
 "double precision floating point number, without dot, with exponent
 syn match	cFloat		display contained "\d\+d[-+]\=\d\+\>"
 
