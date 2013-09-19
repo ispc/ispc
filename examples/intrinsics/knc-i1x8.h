@@ -38,11 +38,6 @@
 #include <immintrin.h>
 #include <zmmintrin.h>
 
-#if 0
-#define __ZMM32BIT__
-#endif
-
-
 #ifdef _MSC_VER
 #define FORCEINLINE __forceinline
 #define PRE_ALIGN(x)  /*__declspec(align(x))*/
@@ -110,7 +105,7 @@ struct vec8 {
 
 /****************/
 
-#ifndef __ZMM32BIT__
+#ifndef __ZMM64BIT__
 struct PRE_ALIGN(32) __vec8_i32  : public vec8<int32_t> { 
   __vec8_i32() { }
   FORCEINLINE __vec8_i32(int32_t v0, int32_t v1, int32_t v2, int32_t v3, 
@@ -135,7 +130,7 @@ struct PRE_ALIGN(32) __vec8_i32  : public vec8<int32_t> {
         data[7],data[6],data[5],data[4],data[3],data[2],data[1],data[0]);
   }
 } POST_ALIGN(32);
-#else /* __ZMM32BIT__ */
+#else /* __ZMM64BIT__ */
 struct PRE_ALIGN(32) __vec8_i32 
 {
   __m512i v;
@@ -150,9 +145,9 @@ struct PRE_ALIGN(32) __vec8_i32
     FORCEINLINE const int32_t& operator[](const int i) const {  return ((int32_t*)this)[i]; }
     FORCEINLINE       int32_t& operator[](const int i)       {  return ((int32_t*)this)[i]; }
 } POST_ALIGN(32);
-#endif /* __ZMM32BIT__ */
+#endif /* __ZMM64BIT__ */
 
-#ifndef __ZMM32BIT__ /* __ZMM32BIT__ */
+#ifndef __ZMM64BIT__ /* __ZMM64BIT__ */
 PRE_ALIGN(32) struct __vec8_f : public vec8<float> { 
     __vec8_f() { }
   FORCEINLINE  __vec8_f(float v0, float v1, float v2, float v3, 
@@ -177,7 +172,7 @@ PRE_ALIGN(32) struct __vec8_f : public vec8<float> {
     data[7] = val.s[7];
   }
 } POST_ALIGN(32);
-#else /* __ZMM32BIT__ */
+#else /* __ZMM64BIT__ */
 PRE_ALIGN(32) struct __vec8_f 
 {
     __m512 v;
@@ -192,7 +187,7 @@ PRE_ALIGN(32) struct __vec8_f
     FORCEINLINE const float& operator[](const int i) const {  return ((float*)this)[i]; }
     FORCEINLINE       float& operator[](const int i)       {  return ((float*)this)[i]; }
 } POST_ALIGN(32);
-#endif /* __ZMM32BIT__ */
+#endif /* __ZMM64BIT__ */
 
 struct PRE_ALIGN(64) __vec8_d 
 {

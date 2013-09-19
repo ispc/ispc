@@ -1,4 +1,4 @@
-#define __ZMM32BIT__
+#define __ZMM64BIT__
 #include "knc-i1x8.h"
 
 /* the following tests fails because vec8_i32 and vec8_float are 512 and not 256 bit in size.
