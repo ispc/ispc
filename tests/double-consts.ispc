@@ -13,7 +13,7 @@ export void f_f(uniform float RET[], uniform float aFOO[]) {
 
     // All the constants should be equal and if it's evaluated as "float",
     // then sqrt will evaluate to +inf.
-    if (d1 == d2 && d1 == d3 && d1 == d4 && d1 == d5 && d1 == d6
+    if (d1 == d2 && d1 == d3 && d1 == d4 && d1 == d5 && d1 == d6 &&
         ((float)sqrt(d1)) < 2e20) {
         RET[programIndex] = a;
     }
