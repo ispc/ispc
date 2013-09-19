@@ -367,7 +367,7 @@ def validation_run(only, only_targets, reference_branch, notify, update):
         if len(archs) == 0:
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
-            LLVM = ["3.1", "3.2", "3.3", "head"]
+            LLVM = ["3.3", "head"]
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
