@@ -81,7 +81,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
     llvm_home = os.environ["LLVM_HOME"]
     os.chdir(llvm_home)
     FOLDER_NAME=version_LLVM
-    if  version_LLVM == "head":
+    if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.3":
         SVN_PATH="tags/RELEASE_33/final"
@@ -334,7 +334,7 @@ def validation_run(only, only_targets, reference_branch, notify, update):
             archs.append("x86-64")
         if "native" in only:
             sde_targets_t = []
-        for i in ["3.1", "3.2", "3.3", "head"]:
+        for i in ["3.1", "3.2", "3.3", "trunk"]:
             if i in only:
                 LLVM.append(i)
         if "current" in only:
@@ -367,7 +367,7 @@ def validation_run(only, only_targets, reference_branch, notify, update):
         if len(archs) == 0:
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
-            LLVM = ["3.3", "head"]
+            LLVM = ["3.3", "trunk"]
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
@@ -562,9 +562,9 @@ parser = OptionParser()
 parser.add_option('-b', '--build-llvm', dest='build_llvm',
     help='ask to build LLVM', default=False, action="store_true")
 parser.add_option('--version', dest='version',
-    help='version of llvm to build', default="head")
+    help='version of llvm to build: 3.1 3.2 3.3 trunk', default="trunk")
 parser.add_option('--revision', dest='revision',
-    help='revision of llvm to build', default="")
+    help='revision of llvm to build in format r172870', default="")
 parser.add_option('--debug', dest='debug',
     help='debug build of LLVM?', default=False, action="store_true")
 parser.add_option('--folder', dest='folder',
@@ -592,7 +592,7 @@ parser.add_option('--notify', dest='notify',
 parser.add_option('--only', dest='only',
     help='set types of tests. Possible values:\n' + 
         '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
-        'build (only build with different LLVM), 3.1, 3.2, 3.3, head, native (do not use SDE), current (do not rebuild ISPC).\n' +
+        'build (only build with different LLVM), 3.1, 3.2, 3.3, trunk, native (do not use SDE), current (do not rebuild ISPC).\n' +
         'Example: --only="3.2 -O0 stability 3.3"', default="")
 parser.add_option('--update-errors', dest='update',
     help='rewrite fail_db.txt file according to received results (F or FP)', default="")
