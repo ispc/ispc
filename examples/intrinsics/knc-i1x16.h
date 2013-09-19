@@ -45,13 +45,13 @@
 #define roundf(x) (floorf(x + .5f))
 #define round(x) (floor(x + .5))
 #else
-#define FORCEINLINE __attribute__((always_inline))
+#define FORCEINLINE __forceinline
 #define PRE_ALIGN(x)
 #define POST_ALIGN(x)  __attribute__ ((aligned(x)))
 #endif
 
-#if 0
 #define KNC 1
+#if 0
 extern "C" 
 {
   int printf(const unsigned char *, ...);
