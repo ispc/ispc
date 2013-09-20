@@ -149,7 +149,7 @@ static const char *supportedCPUs[] = {
 #endif
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
-    , "core-avx-i", "core-avx2", "slm"
+    , "core-avx-i", "core-avx2"
 #endif // LLVM 3.2+
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
     , "slm" 
