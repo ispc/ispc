@@ -126,7 +126,7 @@ lGetSystemISA() {
                 return "avx1.1-i32x8";
         }
         // Regular AVX
-        return "avx-i32x8";
+        return "avx1-i32x8";
     }
     else if ((info[2] & (1 << 19)) != 0)
         return "sse4-i32x4";
@@ -149,8 +149,11 @@ static const char *supportedCPUs[] = {
 #endif
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
-    , "core-avx-i", "core-avx2"
+    , "core-avx-i", "core-avx2", "slm"
 #endif // LLVM 3.2+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+    , "slm" 
+#endif // LLVM 3.4+
 };
 
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
@@ -196,9 +199,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
                 isa = "avx1.1-i32x8";
             else if (!strcmp(cpu, "sandybridge") ||
                 !strcmp(cpu, "corei7-avx"))
-                isa = "avx-i32x8";
+                isa = "avx1-i32x8";
             else if (!strcmp(cpu, "corei7") ||
-                     !strcmp(cpu, "penryn"))
+                     !strcmp(cpu, "penryn") ||
+                     !strcmp(cpu, "slm"))
                 isa = "sse4-i32x4";
             else
                 isa = "sse2-i32x4";
@@ -660,6 +664,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // Initialize target-specific "target-feature" attribute.
         if (!m_attributes.empty()) {
             llvm::AttrBuilder attrBuilder;
+            attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(
