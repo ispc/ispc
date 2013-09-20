@@ -247,11 +247,11 @@ def compare(A, B):
             p1 = 0
         else:
             p1 = 100 - 100 * A[3][i]/B[3][i]
-        print_debug("%21s:  %10.2f %10.2f %10.2f" % (A[0][i], A[3][i], B[3][i], p1), False, "")
+        print_debug("%21s:  %10.2f %10.2f %10.2f" % (A[0][i], A[3][i], B[3][i], abs(p1)), False, "")
         if p1 < -1:
-            print_debug(" <-", False, "")
-        if p1 > 1:
             print_debug(" <+", False, "")
+        if p1 > 1:
+            print_debug(" <-", False, "")
         print_debug("\n", False, "")
     print_debug("\n", False, "")
 
@@ -261,11 +261,11 @@ def compare(A, B):
             p2 = 0
         else:
             p2 = 100 - 100 * A[4][i]/B[4][i]
-        print_debug("%21s:  %10.2f %10.2f %10.2f" % (A[0][i], A[4][i], B[4][i], p2), False, "")
+        print_debug("%21s:  %10.2f %10.2f %10.2f" % (A[0][i], A[4][i], B[4][i], abs(p2)), False, "")
         if p2 < -1:
-            print_debug(" <-", False, "")
-        if p2 > 1:
             print_debug(" <+", False, "")
+        if p2 > 1:
+            print_debug(" <-", False, "")
         print_debug("\n", False, "")
     if "performance.log" in options.in_file:
         print_debug("\n\n_________________Watch performance.log for details________________\n", False, "")

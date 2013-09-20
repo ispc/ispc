@@ -50,21 +50,24 @@ def remove_if_exists(filename):
             os.remove(filename)
 
 # detect version which is printed after command
-def detect_version(command):
+def take_lines(command, which):
     os.system(command + " > " + "temp_detect_version")
     version = open("temp_detect_version")
-    answer = version.readline()
+    if which == "first":
+        answer = version.readline()
+    if which == "all":
+        answer = version.readlines()
     version.close()
     remove_if_exists("temp_detect_version")
     return answer
 
 # print versions of compilers
 def print_version(ispc_test, ispc_ref, ref_compiler, s, perf_log, is_windows):
-    print_debug("\nUsing test compiler: " + detect_version(ispc_test + " --version"), s, perf_log)
+    print_debug("\nUsing test compiler: " + take_lines(ispc_test + " --version", "first"), s, perf_log)
     if ispc_ref != "":
-        print_debug("Using ref compiler:  " + detect_version(ispc_ref + " --version"), s, perf_log)
+        print_debug("Using ref compiler:  " + take_lines(ispc_ref + " --version", "first"), s, perf_log)
     if is_windows == False:
-        temp1 = detect_version(ref_compiler + " --version")
+        temp1 = take_lines(ref_compiler + " --version", "first")
     else:
         os.system(ref_compiler + " 2>&1" + " 2> temp_detect_version > temp_detect_version1" )
         version = open("temp_detect_version")
@@ -80,7 +83,7 @@ def print_debug(line, silent, filename):
         sys.stdout.write(line)
         sys.stdout.flush()
         if os.environ.get("ISPC_HOME") != None:
-            write_to_file(os.environ["ISPC_HOME"] + os.sep + "all_answer.txt", line)
+            write_to_file(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", line)
     if filename != "":
         write_to_file(filename, line)
 
@@ -102,9 +105,9 @@ def check_tools(m):
     input_tools=[[[1,4],"m4 --version", "bad m4 version"],
                  [[2,4],"bison --version", "bad bison version"],
                  [[2,5], "flex --version", "bad flex version"]]
- 
+    ret = 1 
     for t in range(0,len(input_tools)):
-        t1 = ((detect_version(input_tools[t][1]))[:-1].split(" "))
+        t1 = ((take_lines(input_tools[t][1], "first"))[:-1].split(" "))
         for i in range(0,len(t1)):
             t11 = t1[i].split(".")
             f = True
@@ -116,5 +119,5 @@ def check_tools(m):
                     if j < len(input_tools[t][0]):
                         if int(t11[j])<input_tools[t][0][j]:
                             error(input_tools[t][2], m)
-                            return 0
-    return 1
+                            ret = 0
+    return ret

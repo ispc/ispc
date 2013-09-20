@@ -39,7 +39,7 @@ import os
 import string
 print_debug = common.print_debug
 error = common.error
-detect_version = common.detect_version
+take_lines = common.take_lines
 
 exists = [False, False, False, False, False, False, False, False]
 names = ["m4", "bison", "flex", "sde", "ispc", "clang", "gcc", "icc"]
@@ -54,26 +54,26 @@ print_debug("=== in PATH: ===\n", False, "")
 print_debug("Tools:\n", False, "")
 for i in range(0,3):
     if exists[i]:
-        print_debug(detect_version(names[i] + " --version"), False, "")
+        print_debug(take_lines(names[i] + " --version", "first"), False, "")
     else:
         error("you don't have " + names[i], 0)
 if exists[0] and exists[1] and exists[2]:
     if common.check_tools(2):
-        print_debug("versions are ok\n", False, "")
+        print_debug("Tools' versions are ok\n", False, "")
 print_debug("\nSDE:\n", False, "")
 if exists[3]:
-    print_debug(detect_version(names[3] + " --version"), False, "")
+    print_debug(take_lines(names[3] + " --version", "first"), False, "")
 else:
     error("you don't have " + names[3], 2)
 print_debug("\nISPC:\n", False, "")
 if exists[4]:
-    print_debug(detect_version(names[4] + " --version"), False, "")
+    print_debug(take_lines(names[4] + " --version", "first"), False, "")
 else:
     error("you don't have " + names[4], 2)
 print_debug("\nC/C++ compilers:\n", False, "")
 for i in range(5,8):
     if exists[i]:
-        print_debug(detect_version(names[i] + " --version"), False, "")
+        print_debug(take_lines(names[i] + " --version", "first"), False, "")
     else:
         error("you don't have " + names[i], 2)
 
@@ -88,7 +88,7 @@ else:
     print_debug("Your ISPC_HOME:" + os.environ.get("ISPC_HOME") + "\n", False, "")
     if os.path.exists(os.environ.get("ISPC_HOME") + os.sep + "ispc"):
         print_debug("You have ISPC in your ISPC_HOME: " +
-        detect_version(os.environ.get("ISPC_HOME") + os.sep + "ispc" + " --version"), False, "")
+        take_lines(os.environ.get("ISPC_HOME") + os.sep + "ispc" + " --version", "first"), False, "")
     else:
         error("you don't have ISPC in your ISPC_HOME", 2)
 if os.environ.get("SDE_HOME") == None:
@@ -97,6 +97,6 @@ else:
     print_debug("Your SDE_HOME:" + os.environ.get("SDE_HOME") + "\n", False, "")
     if os.path.exists(os.environ.get("SDE_HOME") + os.sep + "sde"):
         print_debug("You have sde in your SDE_HOME: " +
-        detect_version(os.environ.get("SDE_HOME") + os.sep + "sde" + " --version"), False, "")
+        take_lines(os.environ.get("SDE_HOME") + os.sep + "sde" + " --version", "first"), False, "")
     else:
         error("you don't have any SDE in your ISPC_HOME", 2)
