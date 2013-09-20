@@ -1120,7 +1120,6 @@ SHIFT_UNIFORM(__vec16_i64, int64_t, __shl, <<)
 
 #if 1
 CMP_OP(__vec16_i64, i64, int64_t,  __equal, ==)
-CMP_OP(__vec16_i64, i64, int64_t,  __not_equal, !=)
 #else /* evghenii::fails         ./tests/reduce-equal-8.ispc, some other test hang... */
 static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &_a, const __vec16_i64 &_b) {
   const __vec16_i64 a = _a.cvt2hilo();
@@ -1128,6 +1127,14 @@ static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &_a, const __vec16_i
   const __mmask16 lo_match = _mm512_cmpeq_epi32_mask(a.v_lo,b.v_lo);
   return _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
 }
+static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
+    return __not(__equal_i64(a,b));
+}
+#endif
+
+#if 1
+CMP_OP(__vec16_i64, i64, int64_t,  __not_equal, !=)
+#else /* evghenii::fails         ./tests/reduce-equal-8.ispc, some other test hang... */
 static FORCEINLINE __vec16_i1 __equal_i64_and_mask(const __vec16_i64 &_a, const __vec16_i64 &_b,
                                                    __vec16_i1 mask) {
   const __vec16_i64 a = _a.cvt2hilo();
@@ -1136,15 +1143,12 @@ static FORCEINLINE __vec16_i1 __equal_i64_and_mask(const __vec16_i64 &_a, const 
   __mmask16 full_match = _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
   return _mm512_kand(full_match, (__mmask16)mask);
 }
-
-static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
-    return __not(__equal_i64(a,b));
-}
 static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
                                                        __vec16_i1 mask) {
     return __and(__not(__equal_i64(a,b)), mask);
 }
 #endif
+
 
 
 CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_equal, <=)
@@ -1843,7 +1847,14 @@ static FORCEINLINE TO FUNC(TO, FROM val) {      \
 }
 
 // sign extension conversions
+#if 1
 CAST(__vec16_i64, int64_t, __vec16_i32, int32_t, __cast_sext)
+#else /* evghenii::fails on soa-9 soa-13 soa-10 soa-29 soa-3 ... and others  */
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(_mm512_srai_epi32(val.v,31), val.v).cvt2zmm();
+}
+#endif
 CAST(__vec16_i64, int64_t, __vec16_i16, int16_t, __cast_sext)
 CAST(__vec16_i64, int64_t, __vec16_i8,  int8_t,  __cast_sext)
 CAST(__vec16_i32, int32_t, __vec16_i16, int16_t, __cast_sext)
@@ -1868,15 +1879,23 @@ CAST_SEXT_I1(__vec16_i32)
 #else
 static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
 {
-    __vec16_i32 ret = _mm512_setzero_epi32();
-    __vec16_i32 one = _mm512_set1_epi32(-1);
-    return _mm512_mask_mov_epi32(ret, val, one);
+  __vec16_i32 ret = _mm512_setzero_epi32();
+  __vec16_i32 one = _mm512_set1_epi32(-1);
+  return _mm512_mask_mov_epi32(ret, val, one);
 }
 #endif
 CAST_SEXT_I1(__vec16_i64)
 
 // zero extension
+#if 0
 CAST(__vec16_i64, uint64_t, __vec16_i32, uint32_t, __cast_zext)
+#else
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(_mm512_setzero_epi32(), val.v).cvt2zmm();
+}
+
+#endif
 CAST(__vec16_i64, uint64_t, __vec16_i16, uint16_t, __cast_zext)
 CAST(__vec16_i64, uint64_t, __vec16_i8,  uint8_t,  __cast_zext)
 CAST(__vec16_i32, uint32_t, __vec16_i16, uint16_t, __cast_zext)
@@ -2714,8 +2733,34 @@ static FORCEINLINE __vec16_i8 __gather_base_offsets32_i8(uint8_t *base, uint32_t
     _mm512_extstore_epi32(ret.data,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
     return ret;
 }
-#endif
+#if 0 /* evghenii::fails on gather-int8-2 & gather-int8-4 */
+static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i1 mask) 
+{ 
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  __vec16_i1 still_to_do = mask;
+  __vec16_i32 tmp;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    tmp = _mm512_mask_i32extgather_epi32(tmp, match, offsets.v_lo, base,
+        _MM_UPCONV_EPI32_SINT8, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+  __vec16_i8 ret;
+  _mm512_extstore_epi32(ret.data,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __gather_base_offsets64_i8)
+#endif
+#endif
 /****************/
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
@@ -2729,8 +2774,35 @@ static FORCEINLINE __vec16_i32 __gather_base_offsets32_i32(uint8_t *base, uint32
                                           base, _MM_UPCONV_EPI32_NONE, scale,
                                           _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on gather-int32-2 & gather-int32-4 */
+static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1  still_to_do = mask;
+  __vec16_i32 ret;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));
+    ret = _mm512_mask_i32extgather_epi32(ret, match, offsets.v_lo, base,
+        _MM_UPCONV_EPI32_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
+#endif
+#endif
 /****************/
 #if 0
 GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __gather_base_offsets32_float)
@@ -2741,8 +2813,35 @@ static FORCEINLINE __vec16_f __gather_base_offsets32_float(uint8_t *base, uint32
                                        base, _MM_UPCONV_PS_NONE, scale,
                                        _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on gather-float-2 gather-float-4 & soa-14 */
+static FORCEINLINE __vec16_f __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1 still_to_do = mask;
+  __vec16_f ret;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));
+    ret = _mm512_mask_i32extgather_ps(ret, match, offsets.v_lo, base,
+        _MM_UPCONV_PS_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __gather_base_offsets64_float)
+#endif
+#endif
 /****************/
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
@@ -2824,6 +2923,7 @@ SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64
 /*****************/
 #if 0
 SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __scatter_base_offsets32_i32)
+SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
 #else
 static FORCEINLINE void __scatter_base_offsets32_i32(uint8_t *b, uint32_t scale, __vec16_i32 offsets,  __vec16_i32 val, __vec16_i1 mask)
 {
@@ -2831,8 +2931,28 @@ static FORCEINLINE void __scatter_base_offsets32_i32(uint8_t *b, uint32_t scale,
                                     _MM_DOWNCONV_EPI32_NONE, scale, 
                                     _MM_HINT_NONE);
 }
+static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i32 value, __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+
+  __vec16_i1 still_to_do = mask;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
+        value,
+        _MM_DOWNCONV_EPI32_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+}
 #endif
-SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
 /*****************/
 #if 0
 SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __scatter_base_offsets32_float)
@@ -2844,8 +2964,32 @@ static FORCEINLINE void __scatter_base_offsets32_float(void *base, uint32_t scal
                                  _MM_DOWNCONV_PS_NONE, scale,
                                  _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on soa-10 & soa-13 , it is very similar to __scatter_base_offsets64_it32, but that passes tests, why ?!? */
+static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_f value, __vec16_i1 mask) 
+{ 
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+
+  __vec16_i1 still_to_do = mask;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
+        value,
+        _MM_DOWNCONV_PS_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+}
+#else
 SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __scatter_base_offsets64_float)
+#endif
+#endif
 /*****************/
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
