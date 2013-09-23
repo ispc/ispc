@@ -101,8 +101,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
     LLVM_BUILD="build-" + folder
     LLVM_BIN="bin-" + folder
     if os.path.exists(LLVM_BIN) and not force:
-        print_debug("You have folder " + LLVM_BIN + ". If you want to rebuild use --force\n", False, "")
-        exit(0)
+        error("you have folder " + LLVM_BIN + ".\nIf you want to rebuild use --force", 1)
     LLVM_BUILD_selfbuild = LLVM_BUILD + "_temp"
     LLVM_BIN_selfbuild = LLVM_BIN + "_temp"
     common.remove_if_exists(LLVM_SRC)
@@ -188,26 +187,45 @@ def check_targets():
     AVX = False;
     AVX11 = False;
     AVX2 = False;
-    cpu = open("/proc/cpuinfo")
-    f_lines = cpu.readlines()
-    cpu.close()
-    # check what native targets do we have
-    for i in range(0,len(f_lines)):
-        if SSE2 == False and "sse2" in f_lines[i]:
+    if current_OS == "Linux":
+        cpu = open("/proc/cpuinfo")
+        f_lines = cpu.readlines()
+        cpu.close()
+        # check what native targets do we have
+        for i in range(0,len(f_lines)):
+            if SSE2 == False and "sse2" in f_lines[i]:
+                SSE2 = True;
+                answer = answer + ["sse2-i32x4", "sse2-i32x8"]
+            if SSE4 == False and "sse4_1" in f_lines[i]:
+                SSE4 = True;
+                answer = answer + ["sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16"]
+            if AVX == False and "avx" in f_lines[i]:
+                AVX = True;
+                answer = answer + ["avx1-i32x8", "avx1-i32x16"]
+            if AVX11 == False and "rdrand" in f_lines[i]:
+                AVX11 = True;
+                answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
+            if AVX2 == False and "avx2" in f_lines[i]:
+                AVX2 = True;
+                answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+    if current_OS == "MacOS":
+        f_lines = take_lines("sysctl machdep.cpu.features", "first")
+        if "SSE2" in f_lines:
             SSE2 = True;
             answer = answer + ["sse2-i32x4", "sse2-i32x8"]
-        if SSE4 == False and "sse4_1" in f_lines[i]:
+        if "SSE4.1" in f_lines:
             SSE4 = True;
             answer = answer + ["sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16"]
-        if AVX == False and "avx" in f_lines[i]:
+        if "AVX1.0" in f_lines:
             AVX = True;
             answer = answer + ["avx1-i32x8", "avx1-i32x16"]
-        if AVX11 == False and "rdrand" in f_lines[i]:
+        if "RDRAND" in f_lines:
             AVX11 = True;
             answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
-        if AVX2 == False and "avx2" in f_lines[i]:
+        if "AVX2.0" in f_lines:
             AVX2 = True;
             answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+
     answer = answer + ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
     sde_exists = ""
@@ -224,17 +242,14 @@ def check_targets():
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
         return [answer, answer_sde]
     # here we have SDE
-    os.system(sde_exists + " -help > " + temp_alloy_file)
-    cpu = open(temp_alloy_file)
-    f_lines = cpu.readlines()
-    cpu.close()
+    f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
         if SSE4 == False and "wsm" in f_lines[i]:
             answer_sde = answer_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
         if AVX == False and "snb" in f_lines[i]:
             answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"]]
         if AVX11 == False and "ivb" in f_lines[i]:
-            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["ivb", "avx1.1-i32x16"]]
+            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"]]
         if AVX2 == False and "hsw" in f_lines[i]:
             answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"]]
     return [answer, answer_sde]
@@ -271,14 +286,11 @@ def execute_stability(stability, R, print_version):
 def run_special_tests():
    i = 5 
 
-def validation_run(only, only_targets, reference_branch, notify, update):
-    current_path = os.getcwd()
+def validation_run(only, only_targets, reference_branch, number, notify, update):
     os.chdir(os.environ["ISPC_HOME"])
     os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
-        if os.environ.get("SMTP_ISPC") == None:
-            error("you have no SMTP_ISPC in your environment for option notify", 1)
-        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "all_answer.txt")
+        common.remove_if_exists(os.environ["ISPC_HOME"] + os.sep + "notify_log.log")
         smtp_server = os.environ["SMTP_ISPC"]
         msg = MIMEMultipart()
         msg['Subject'] = 'ISPC test system results'
@@ -437,7 +449,7 @@ def validation_run(only, only_targets, reference_branch, notify, update):
         print_debug("\n\nPerformance validation run\n\n", False, "")
         performance = options_for_drivers()
 # performance constant options
-        performance.number = 5
+        performance.number = number
         performance.config = "./perf.ini"
         performance.path = "./"
         performance.silent = True
@@ -450,16 +462,13 @@ def validation_run(only, only_targets, reference_branch, notify, update):
         if len(need_LLVM) != 0:
             build_LLVM(need_LLVM[i], "", "", "", False, False, True, False)
 # prepare reference point. build both test and reference compilers
-        os.system("git branch > " + temp_alloy_file)
-        br = open(temp_alloy_file)
-        temp4 = br.readlines()
-        br.close()
+        temp4 = take_lines("git branch", "all")
         for line in temp4:
             if "*" in line:
                 current_branch = line[2:-1]
         stashing = True
         sys.stdout.write("Please, don't interrupt script here! You can have not sync git status after interruption!\n")
-        if "No local changes" in detect_version("git stash"):
+        if "No local changes" in take_lines("git stash", "first"):
             stashing = False
         #try_do_LLVM("stash current branch ", "git stash", True)
         try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
@@ -478,11 +487,9 @@ def validation_run(only, only_targets, reference_branch, notify, update):
             attach_mail_file(msg, performance.in_file, "performance.log")
             attach_mail_file(msg, "." + os.sep + "logs" + os.sep + "perf_build.log", "perf_build.log")
 
-    print_debug("Logs are in alloy_results_[date]", False, "")
-
 # sending e-mail with results
     if options.notify != "":
-        fp = open(os.environ["ISPC_HOME"] + os.sep + "all_answer.txt", 'rb')
+        fp = open(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", 'rb')
         f_lines = fp.readlines()
         fp.close()
         line = ""
@@ -495,46 +502,56 @@ def validation_run(only, only_targets, reference_branch, notify, update):
         s = smtplib.SMTP(smtp_server)
         s.sendmail('ISPC_test_system', options.notify, msg.as_string())
         s.quit()
-# exit of validation routine
-    common.remove_if_exists(temp_alloy_file)
-    os.chdir(current_path)
 
 def Main():
+    global current_OS
     if (platform.system() == 'Windows' or 'CYGWIN_NT' in platform.system()) == True:
+        current_OS = "Windows"
         error("Windows isn't supported now", 1)
-    if (options.build_llvm == False and
-       options.validation_run == False and
-       options.llvm_home == "" and
-       options.ispc_home == "" and
-       options.sde_home == ""):
+    else:
+        if (platform.system() == 'Darwin'):
+            current_OS = "MacOS"
+        else:
+            current_OS = "Linux" 
+
+    if (options.build_llvm == False and options.validation_run == False):
         parser.print_help()
         exit(0)
-    global f_date
-    f_date = "logs"
-    common.remove_if_exists(f_date)
-    os.makedirs(f_date)
-    global temp_alloy_file
-    temp_alloy_file = os.getcwd() + os.sep + f_date + os.sep + "temp_detect_version"
-    global alloy_build
-    alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
-    common.remove_if_exists(alloy_build) 
-    global stability_log
-    stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
-    common.remove_if_exists(stability_log)
+
     setting_paths(options.llvm_home, options.ispc_home, options.sde_home)
     if os.environ.get("LLVM_HOME") == None:
         error("you have no LLVM_HOME", 1)
     if os.environ.get("ISPC_HOME") == None:
         error("you have no ISPC_HOME", 1)
-    if options.build_llvm:
-        build_LLVM(options.version, options.revision, options.folder, options.tarball,
+    if options.notify != "":
+        if os.environ.get("SMTP_ISPC") == None:
+            error("you have no SMTP_ISPC in your environment for option notify", 1)
+
+    global f_date
+    f_date = "logs"
+    common.remove_if_exists(f_date)
+    os.makedirs(f_date)
+    global alloy_build
+    alloy_build = os.getcwd() + os.sep + f_date + os.sep + "alloy_build.log"
+    global stability_log
+    stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
+    current_path = os.getcwd()
+    try:
+        if options.build_llvm:
+            build_LLVM(options.version, options.revision, options.folder, options.tarball,
                     options.debug, options.selfbuild, False, options.force)
-    if options.validation_run:
-        validation_run(options.only, options.only_targets, options.branch, options.notify, options.update)
-    os.rename(f_date, "alloy_results_" + datetime.datetime.now().strftime('%H_%M_%d_%m_%Y'))
+        if options.validation_run:
+            validation_run(options.only, options.only_targets, options.branch,
+                    options.number_for_performance, options.notify, options.update)
+    finally:
+        os.chdir(current_path)
+        date_name = "alloy_results_" + datetime.datetime.now().strftime('%H_%M_%d_%m_%Y')
+        os.rename(f_date, date_name)
+        print_debug("Logs are in " + date_name + "\n", False, "")
 
 ###Main###
 from optparse import OptionParser
+from optparse import OptionGroup
 import sys
 import os
 import operator
@@ -554,47 +571,73 @@ import run_tests
 import perf
 import common
 error = common.error
-detect_version = common.detect_version
+take_lines = common.take_lines
 print_debug = common.print_debug
 # parsing options
-parser = OptionParser()
-# options for activity "build LLVM"
+class MyParser(OptionParser):
+    def format_epilog(self, formatter):
+        return self.epilog
+examples =  ("Examples:\n" +
+"Load and build LLVM from trunk\n\talloy.py -b\n" +
+"Load and build LLVM 3.3. Rewrite LLVM folders\n\talloy.py -b --version=3.3 --force\n" +
+"Untar files llvm.tgz clang.tgz, build LLVM from them in folder bin-from_tar\n\talloy.py -b --tarball='llvm.tgz clang.tgz' --folder=from_tar\n" +
+"Load LLVM from trunk, revision r172870. Build it. Do selfbuild\n\talloy.py -b --revision=r172870 --selfbuild\n" +
+"Validation run with LLVM 3.3, trunk; x86, x86-64; -O2;\nall supported targets; performance\n\talloy.py -r\n" + 
+"Validation run with all avx targets and sse4-i8x16 without performance\n\talloy.py -r --only=stability --only-targets='avx sse4-i8x16'\n" +
+"Validation run with avx2-i32x8, all sse4 and sse2 targets\nand all targets with i32x16\n\talloy.py -r --only-targets='avx2-i32x8 sse4 i32x16 sse2'\n" +
+"Stability validation run with LLVM 3.2, 3.3; -O0; x86,\nupdate fail_db.txt with passes and fails\n\talloy.py -r --only='3.2 -O0 stability 3.3 x86' --update-errors=FP\n" +
+"Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
+"Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
+"Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n")
+parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)
 parser.add_option('-b', '--build-llvm', dest='build_llvm',
     help='ask to build LLVM', default=False, action="store_true")
-parser.add_option('--version', dest='version',
-    help='version of llvm to build: 3.1 3.2 3.3 trunk', default="trunk")
-parser.add_option('--revision', dest='revision',
-    help='revision of llvm to build in format r172870', default="")
-parser.add_option('--debug', dest='debug',
-    help='debug build of LLVM?', default=False, action="store_true")
-parser.add_option('--folder', dest='folder',
-    help='folder to build LLVM in', default="")
-parser.add_option('--tarball', dest='tarball',
-    help='"llvm_tarball clang_tarball"', default="")
-parser.add_option('--selfbuild', dest='selfbuild',
-    help='make selfbuild of LLVM and clang', default=False, action="store_true")
-parser.add_option('--force', dest='force',
-    help='rebuild LLVM', default=False, action='store_true')
-# options for activity "setup PATHS"
-parser.add_option('--llvm_home', dest='llvm_home',help='path to LLVM',default="")
-parser.add_option('--ispc_home', dest='ispc_home',help='path to ISPC',default="")
-parser.add_option('--sde_home', dest='sde_home',help='path to SDE',default="")
-# options for activity "validation run"
 parser.add_option('-r', '--run', dest='validation_run',
     help='ask for validation run', default=False, action="store_true")
-parser.add_option('--compare-with', dest='branch',
-    help='set performance reference point', default="master")
-parser.add_option('--only-targets', dest='only_targets',
-    help='set list of targets to test. Possible values - all subnames of targets.\n' +
-        'Example: --only-targets="avx2-i32x8 sse4 i32x16 sse2"', default="")
-parser.add_option('--notify', dest='notify',
-    help='sent results to email', default="")
-parser.add_option('--only', dest='only',
+# options for activity "build LLVM"
+llvm_group = OptionGroup(parser, "Options for building LLVM",
+                    "These options must be used with -b option.")
+llvm_group.add_option('--version', dest='version',
+    help='version of llvm to build: 3.1 3.2 3.3 trunk. Default: trunk', default="trunk")
+llvm_group.add_option('--revision', dest='revision',
+    help='revision of llvm to build in format r172870', default="")
+llvm_group.add_option('--debug', dest='debug',
+    help='debug build of LLVM?', default=False, action="store_true")
+llvm_group.add_option('--folder', dest='folder',
+    help='folder to build LLVM in', default="")
+llvm_group.add_option('--tarball', dest='tarball',
+    help='"llvm_tarball clang_tarball"', default="")
+llvm_group.add_option('--selfbuild', dest='selfbuild',
+    help='make selfbuild of LLVM and clang', default=False, action="store_true")
+llvm_group.add_option('--force', dest='force',
+    help='rebuild LLVM', default=False, action='store_true')
+parser.add_option_group(llvm_group)
+# options for activity "validation run"
+run_group = OptionGroup(parser, "Options for validation run",
+                    "These options must be used with -r option.")
+run_group.add_option('--compare-with', dest='branch',
+    help='set performance reference point. Dafault: master', default="master")
+run_group.add_option('--number', dest='number_for_performance',
+    help='number of performance runs for each test. Default: 5', default=5)
+run_group.add_option('--notify', dest='notify',
+    help='email to sent results to', default="")
+run_group.add_option('--update-errors', dest='update',
+    help='rewrite fail_db.txt file according to received results (F or FP)', default="")
+run_group.add_option('--only-targets', dest='only_targets',
+    help='set list of targets to test. Possible values - all subnames of targets.',
+    default="")
+run_group.add_option('--only', dest='only',
     help='set types of tests. Possible values:\n' + 
         '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
-        'build (only build with different LLVM), 3.1, 3.2, 3.3, trunk, native (do not use SDE), current (do not rebuild ISPC).\n' +
-        'Example: --only="3.2 -O0 stability 3.3"', default="")
-parser.add_option('--update-errors', dest='update',
-    help='rewrite fail_db.txt file according to received results (F or FP)', default="")
+        'build (only build with different LLVM), 3.1, 3.2, 3.3, trunk, native (do not use SDE), current (do not rebuild ISPC).',
+        default="")
+parser.add_option_group(run_group)
+# options for activity "setup PATHS"
+setup_group = OptionGroup(parser, "Options for setup",
+                    "These options must be use with -r or -b to setup environment variables")
+setup_group.add_option('--llvm_home', dest='llvm_home',help='path to LLVM',default="")
+setup_group.add_option('--ispc_home', dest='ispc_home',help='path to ISPC',default="")
+setup_group.add_option('--sde_home', dest='sde_home',help='path to SDE',default="")
+parser.add_option_group(setup_group)
 (options, args) = parser.parse_args()
 Main()
