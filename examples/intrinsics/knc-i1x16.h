@@ -208,7 +208,7 @@ struct PRE_ALIGN(128) __vec16_d
 } POST_ALIGN(128);
 #endif /* evghenii::d */
 
-#if 1 /* evghenii::i64 */
+#if 0 /* evghenii::i64 */
 PRE_ALIGN(128) struct __vec16_i64  : public vec16<int64_t> { 
     __vec16_i64() { }
     __vec16_i64(int64_t v0, int64_t v1, int64_t v2, int64_t v3, 
@@ -219,34 +219,66 @@ PRE_ALIGN(128) struct __vec16_i64  : public vec16<int64_t> {
                          v8, v9, v10, v11, v12, v13, v14, v15) { }
 } POST_ALIGN(128);
 #else /* evghenii::i64 */
-struct PRE_ALIGN(64) __vec16_i64 {
-    FORCEINLINE __vec16_i64() : v_lo(_mm512_undefined_epi32()),  v_hi(_mm512_undefined_epi32()) {}
-    FORCEINLINE __vec16_i64(const __vec16_i64 &o) : v_lo(o.v_lo), v_hi(o.v_hi) {}
-    FORCEINLINE __vec16_i64(__m512i l, __m512i h) : v_lo(l), v_hi(h) {}
-    FORCEINLINE __vec16_i64& operator =(const __vec16_i64 &o) { v_lo=o.v_lo; v_hi=o.v_hi; return *this; }
-    FORCEINLINE __vec16_i64(int64_t v00, int64_t v01, int64_t v02, int64_t v03, 
-                            int64_t v04, int64_t v05, int64_t v06, int64_t v07,
-                            int64_t v08, int64_t v09, int64_t v10, int64_t v11,
-                            int64_t v12, int64_t v13, int64_t v14, int64_t v15) {
-        __m512i v1 = _mm512_set_8to8_epi64(v15, v14, v13, v12, v11, v10, v09, v08);
-        __m512i v2 = _mm512_set_8to8_epi64(v07, v06, v05, v04, v03, v02, v01, v00);
-        v_hi = _mm512_mask_permutevar_epi32(v_hi, 0xFF00, 
-                      _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-                      v1);
-        v_hi = _mm512_mask_permutevar_epi32(v_hi, 0x00FF, 
-                      _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-                      v2);
-        v_lo = _mm512_mask_permutevar_epi32(v_lo, 0xFF00,
-                      _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
-                      v1);
-        v_lo = _mm512_mask_permutevar_epi32(v_lo, 0x00FF,
-                      _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
-                      v2);
-    }
+struct PRE_ALIGN(128) __vec16_i64 
+{
+  union {
+    __m512i v1;
     __m512i v_hi;
+  };
+  union
+  {
+    __m512i v2;
     __m512i v_lo;
-} POST_ALIGN(64);
+  };
+  FORCEINLINE __vec16_i64() : v1(_mm512_undefined_epi32()), v2(_mm512_undefined_epi32()) {}
+  FORCEINLINE __vec16_i64(const __m512i _v1, const __m512i _v2) : v1(_v1), v2(_v2) {}
+  FORCEINLINE __vec16_i64(const __vec16_i64 &o) : v1(o.v1), v2(o.v2) {}
+  FORCEINLINE __vec16_i64& operator =(const __vec16_i64 &o) { v1=o.v1; v2=o.v2; return *this; }
+  FORCEINLINE __vec16_i64(int64_t v00, int64_t v01, int64_t v02, int64_t v03, 
+      int64_t v04, int64_t v05, int64_t v06, int64_t v07,
+      int64_t v08, int64_t v09, int64_t v10, int64_t v11,
+      int64_t v12, int64_t v13, int64_t v14, int64_t v15) {
+    v2 = _mm512_set_8to8_epi64(v15, v14, v13, v12, v11, v10, v09, v08);
+    v1 = _mm512_set_8to8_epi64(v07, v06, v05, v04, v03, v02, v01, v00);
+  }
+  FORCEINLINE const int64_t& operator[](const int i) const {  return ((int64_t*)this)[i]; }
+  FORCEINLINE       int64_t& operator[](const int i)       {  return ((int64_t*)this)[i]; }
+  FORCEINLINE __vec16_i64 cvt2hilo()  const
+  {
+    __m512i _hi, _lo;
+    _hi = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00, 
+        _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+        v1);
+    _hi = _mm512_mask_permutevar_epi32(_hi, 0x00FF, 
+        _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+        v2);
+    _lo = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
+        _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+        v1);
+    _lo = _mm512_mask_permutevar_epi32(_lo, 0x00FF,
+        _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+        v2);
+    return __vec16_i64(_hi, _lo);
+  }
+  FORCEINLINE __vec16_i64 cvt2zmm() const
+  {
+    __m512i _v1, _v2;
+    _v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        v_hi);
+    _v1 = _mm512_mask_permutevar_epi32(_v1, 0x5555,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        v_lo);
 
+    _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        v_hi);
+    _v2 = _mm512_mask_permutevar_epi32(_v2, 0x5555,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        v_lo);
+    return __vec16_i64(_v1, _v2);
+  }
+} POST_ALIGN(128);
 #endif /* evghenii::i64 */
 
 PRE_ALIGN(16) struct __vec16_i8   : public vec16<int8_t> { 
@@ -959,30 +991,166 @@ template <> static FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 
 ///////////////////////////////////////////////////////////////////////////
 // int64
+// evghenii::int64
 
+#if 0
 BINARY_OP(__vec16_i64, __add, +)
 BINARY_OP(__vec16_i64, __sub, -)
 BINARY_OP(__vec16_i64, __mul, *)
+#else
+static FORCEINLINE __vec16_i64 __add(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_add_epi64(a.v1, b.v1), _mm512_add_epi64(a.v2,b.v2));
+}
 
+static FORCEINLINE __vec16_i64 __sub(__vec16_i64 _a, __vec16_i64 _b) {
+//    return __vec16_i64(_mm512_sub_epi64(_a.v1, _b.v1), _mm512_sub_epi64(_a.v2,_b.v2));
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  __vec16_i64 ret;
+  __mmask16 borrow = 0;
+  ret.v_lo = _mm512_subsetb_epi32(a.v_lo, b.v_lo, &borrow);
+  ret.v_hi = _mm512_sbb_epi32    (a.v_hi, borrow, b.v_hi, &borrow);
+  return ret.cvt2zmm();
+}
+
+static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &_b)
+{
+  const __vec16_i64 b = _b.cvt2hilo();
+  return __vec16_i64(_mm512_mullo_epi32(a.v,b.v_lo),
+      _mm512_add_epi32(_mm512_mullo_epi32(a.v, b.v_hi),
+        _mm512_mulhi_epi32(a.v, b.v_lo))).cvt2zmm();
+}
+
+static FORCEINLINE __vec16_i64 __mul(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_mullox_epi64(a.v1, b.v1), _mm512_mullox_epi64(a.v2,b.v2));
+}
+#endif
+
+#if 0
 BINARY_OP(__vec16_i64, __or, |)
 BINARY_OP(__vec16_i64, __and, &)
 BINARY_OP(__vec16_i64, __xor, ^)
 BINARY_OP(__vec16_i64, __shl, <<)
+#else
+static FORCEINLINE __vec16_i64 __or(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_or_epi64(a.v1, b.v1), _mm512_or_epi64(a.v2, b.v2));
+}
 
+static FORCEINLINE __vec16_i64 __and(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_and_epi64(a.v1, b.v1), _mm512_and_epi64(a.v2, b.v2));
+}
+
+static FORCEINLINE __vec16_i64 __xor(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_xor_epi64(a.v1, b.v1), _mm512_xor_epi64(a.v2, b.v2));
+}
+
+static FORCEINLINE __vec16_i64 __shl(__vec16_i64 _a, __vec16_i64 _b) {
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  __vec16_i32 xfer = _mm512_srlv_epi32(a.v_lo, _mm512_sub_epi32(__ispc_thirty_two, b.v_lo));
+  __vec16_i32 hi = _mm512_or_epi32(_mm512_sllv_epi32(a.v_hi, b.v_lo), xfer);
+  __vec16_i32 lo = _mm512_sllv_epi32(a.v_lo, b.v_lo);
+  return __vec16_i64(hi,lo).cvt2zmm();
+}
+#endif
+
+#if 0
 BINARY_OP_CAST(__vec16_i64, uint64_t, __udiv, /)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __sdiv, /)
+#else
+static FORCEINLINE __vec16_i64 __udiv(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_div_epu64(a.v1,b.v1), _mm512_div_epu64(a.v2,b.v2));
+}
+static FORCEINLINE __vec16_i64 __sdiv(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_div_epi64(a.v1,b.v1), _mm512_div_epi64(a.v2,b.v2));
+}
+#endif
 
+#if 0
 BINARY_OP_CAST(__vec16_i64, uint64_t, __urem, %)
 BINARY_OP_CAST(__vec16_i64, int64_t,  __srem, %)
+#else
+static FORCEINLINE __vec16_i64 __urem(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_rem_epu64(a.v1,b.v1), _mm512_rem_epu64(a.v2,b.v2));
+}
+static FORCEINLINE __vec16_i64 __srem(__vec16_i64 a, __vec16_i64 b) {
+  return __vec16_i64(_mm512_rem_epi64(a.v1,b.v1), _mm512_rem_epi64(a.v2,b.v2));
+}
+#endif
+
+#if 1
 BINARY_OP_CAST(__vec16_i64, uint64_t, __lshr, >>)
+#else /* evghenii::fails idiv.ispc */
+static FORCEINLINE __vec16_i64 __lshr(__vec16_i64 _a, __vec16_i64 _b) {
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  __vec16_i32 shift = _mm512_sub_epi32(__ispc_thirty_two, b.v_lo);
+#if 0
+  __vec16_i32 xfer = _mm512_and_epi32(_mm512_sllv_epi32(__ispc_ffffffff, shift), _mm512_sllv_epi32(a.v_hi, shift));
+#else
+  __vec16_i32 xfer = _mm512_sllv_epi32(_mm512_and_epi32(a.v_hi, 
+        _mm512_sub_epi32(_mm512_sllv_epi32(__ispc_one, b.v_lo), __ispc_one)), 
+      _mm512_sub_epi32(__ispc_thirty_two, b.v_lo));
+#endif
+  __vec16_i32 hi = _mm512_srlv_epi32(a.v_hi, b.v_lo);
+  __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srlv_epi32(a.v_lo, b.v_lo));
+  return __vec16_i64(hi,lo).cvt2zmm();
+}
+
+#endif
+
+#if 1
 BINARY_OP_CAST(__vec16_i64, int64_t,  __ashr, >>)
+#else /* evghenii::fails idiv.ispc */
+static FORCEINLINE __vec16_i64 __ashr(__vec16_i64 _a, __vec16_i64 _b) {
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  __vec16_i32 xfer = _mm512_sllv_epi32(_mm512_and_epi32(a.v_hi, 
+        _mm512_sub_epi32(_mm512_sllv_epi32(__ispc_one, b.v_lo), __ispc_one)), 
+      _mm512_sub_epi32(__ispc_thirty_two, b.v_lo));
+  __vec16_i32 hi = _mm512_srav_epi32(a.v_hi, b.v_lo);
+  __vec16_i32 lo = _mm512_or_epi32(xfer, _mm512_srlv_epi32(a.v_lo, b.v_lo));
+  return __vec16_i64(hi,lo).cvt2zmm();
+}
+#endif
 
 SHIFT_UNIFORM(__vec16_i64, uint64_t, __lshr, >>)
 SHIFT_UNIFORM(__vec16_i64, int64_t, __ashr, >>)
 SHIFT_UNIFORM(__vec16_i64, int64_t, __shl, <<)
 
+#if 1
 CMP_OP(__vec16_i64, i64, int64_t,  __equal, ==)
+#else /* evghenii::fails         ./tests/reduce-equal-8.ispc, some other test hang... */
+static FORCEINLINE __vec16_i1 __equal_i64(const __vec16_i64 &_a, const __vec16_i64 &_b) {
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  const __mmask16 lo_match = _mm512_cmpeq_epi32_mask(a.v_lo,b.v_lo);
+  return _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
+}
+static FORCEINLINE __vec16_i1 __not_equal_i64(const __vec16_i64 &a, const __vec16_i64 &b) {
+    return __not(__equal_i64(a,b));
+}
+#endif
+
+#if 1
 CMP_OP(__vec16_i64, i64, int64_t,  __not_equal, !=)
+#else /* evghenii::fails         ./tests/reduce-equal-8.ispc, some other test hang... */
+static FORCEINLINE __vec16_i1 __equal_i64_and_mask(const __vec16_i64 &_a, const __vec16_i64 &_b,
+                                                   __vec16_i1 mask) {
+  const __vec16_i64 a = _a.cvt2hilo();
+  const __vec16_i64 b = _b.cvt2hilo();
+  __mmask16 lo_match = _mm512_cmpeq_epi32_mask(a.v_lo,b.v_lo);
+  __mmask16 full_match = _mm512_mask_cmpeq_epi32_mask(lo_match,a.v_hi,b.v_hi);
+  return _mm512_kand(full_match, (__mmask16)mask);
+}
+static FORCEINLINE __vec16_i1 __not_equal_i64_and_mask(const __vec16_i64 &a, const __vec16_i64 &b,
+                                                       __vec16_i1 mask) {
+    return __and(__not(__equal_i64(a,b)), mask);
+}
+#endif
+
+
+
 CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_less_equal, <=)
 CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_equal, <=)
 CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_equal, >=)
@@ -992,15 +1160,84 @@ CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_than, <)
 CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_than, >)
 
+#if 0
 SELECT(__vec16_i64)
+#else
+static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
+                                        __vec16_i64 a, __vec16_i64 b) {
+  __vec16_i64 ret;
+  ret.v_hi = _mm512_mask_mov_epi64(b.v_hi, mask, a.v_hi);
+  ret.v_lo = _mm512_mask_mov_epi64(b.v_lo, mask >> 8, a.v_lo);
+  return ret;
+}
+#endif
+
 INSERT_EXTRACT(__vec16_i64, int64_t)
+#if 0
 SMEAR(__vec16_i64, i64, int64_t)
 SETZERO(__vec16_i64, i64)
 UNDEF(__vec16_i64, i64)
 BROADCAST(__vec16_i64, i64, int64_t)
+#else
+template <class RetVecType> RetVecType __smear_i64(const int64_t &l);
+template <> FORCEINLINE  __vec16_i64 __smear_i64<__vec16_i64>(const int64_t &l) {    return __vec16_i64(_mm512_set1_epi64(l), _mm512_set1_epi64(l)); }
+
+template <class RetVecType> RetVecType __setzero_i64();
+template <> FORCEINLINE  __vec16_i64 __setzero_i64<__vec16_i64>() {    return __vec16_i64(_mm512_setzero_epi32(), _mm512_setzero_epi32()); }
+
+template <class RetVecType> RetVecType __undef_i64();
+template <> FORCEINLINE  __vec16_i64 __undef_i64<__vec16_i64>() {    return __vec16_i64(_mm512_undefined_epi32(), _mm512_undefined_epi32()); }
+
+static FORCEINLINE __vec16_i64 __broadcast_i64(__vec16_i64 v, int index) {
+    int64_t val = __extract_element(v, index & 0xf);
+    return __smear_i64<__vec16_i64>(val);
+}
+#endif
 ROTATE(__vec16_i64, i64, int64_t)
 SHUFFLES(__vec16_i64, i64, int64_t)
+#if 0
 LOAD_STORE(__vec16_i64, int64_t)
+#else
+template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) 
+{
+  __vec16_i32 v1;
+  __vec16_i32 v2;
+  v2 = _mm512_extloadunpacklo_epi32(v2, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  v2 = _mm512_extloadunpackhi_epi32(v2, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  v1 = _mm512_extloadunpacklo_epi32(v1, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  v1 = _mm512_extloadunpackhi_epi32(v1, (uint8_t*)p+128, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
+  return __vec16_i64(v2,v1);
+}
+
+template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) 
+{
+  __m512i v2 = _mm512_load_epi32(p);
+  __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
+  return __vec16_i64(v2,v1);
+}
+
+template <> static FORCEINLINE __vec16_i64 __load<128>(const __vec16_i64 *p) {    return __load<64>(p); }
+
+template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) 
+{
+  __m512i v1 = v.v2;
+  __m512i v2 = v.v1;
+  _mm512_extpackstorelo_epi32(p, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_extpackstorehi_epi32((uint8_t*)p+64, v2, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_extpackstorelo_epi32((uint8_t*)p+64, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_extpackstorehi_epi32((uint8_t*)p+128, v1, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+}
+
+template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v) 
+{
+  __m512i v1 = v.v2;
+  __m512i v2 = v.v1;
+  _mm512_store_epi64(p, v2);
+  _mm512_store_epi64(((uint8_t*)p)+64, v1);
+}
+
+template <> static FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {    __store<64>(p, v); }
+#endif
 
 
 #if 0 /* evghenii::float */
@@ -1062,7 +1299,6 @@ static FORCEINLINE __vec16_f __sub(__vec16_f a, __vec16_f b) {
     return _mm512_sub_ps(a, b);
 }
 
-#if 1 /* evghenii::this two fails assert-3.ispc test */
 static FORCEINLINE __vec16_f __mul(__vec16_f a, __vec16_f b) {
     return _mm512_mul_ps(a, b);
 }
@@ -1070,10 +1306,6 @@ static FORCEINLINE __vec16_f __mul(__vec16_f a, __vec16_f b) {
 static FORCEINLINE __vec16_f __div(__vec16_f a, __vec16_f b) {
     return _mm512_div_ps(a, b);
 }
-#else
-BINARY_OP(__vec16_f, __mul, *)
-BINARY_OP(__vec16_f, __div, /)
-#endif
 
 
 static FORCEINLINE __vec16_i1 __equal_float(__vec16_f a, __vec16_f b) {
@@ -1615,7 +1847,14 @@ static FORCEINLINE TO FUNC(TO, FROM val) {      \
 }
 
 // sign extension conversions
+#if 1
 CAST(__vec16_i64, int64_t, __vec16_i32, int32_t, __cast_sext)
+#else /* evghenii::fails on soa-9 soa-13 soa-10 soa-29 soa-3 ... and others  */
+static FORCEINLINE __vec16_i64 __cast_sext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(_mm512_srai_epi32(val.v,31), val.v).cvt2zmm();
+}
+#endif
 CAST(__vec16_i64, int64_t, __vec16_i16, int16_t, __cast_sext)
 CAST(__vec16_i64, int64_t, __vec16_i8,  int8_t,  __cast_sext)
 CAST(__vec16_i32, int32_t, __vec16_i16, int16_t, __cast_sext)
@@ -1640,15 +1879,23 @@ CAST_SEXT_I1(__vec16_i32)
 #else
 static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
 {
-    __vec16_i32 ret = _mm512_setzero_epi32();
-    __vec16_i32 one = _mm512_set1_epi32(-1);
-    return _mm512_mask_mov_epi32(ret, val, one);
+  __vec16_i32 ret = _mm512_setzero_epi32();
+  __vec16_i32 one = _mm512_set1_epi32(-1);
+  return _mm512_mask_mov_epi32(ret, val, one);
 }
 #endif
 CAST_SEXT_I1(__vec16_i64)
 
 // zero extension
+#if 0
 CAST(__vec16_i64, uint64_t, __vec16_i32, uint32_t, __cast_zext)
+#else
+static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i32 &val)
+{
+  return __vec16_i64(_mm512_setzero_epi32(), val.v).cvt2zmm();
+}
+
+#endif
 CAST(__vec16_i64, uint64_t, __vec16_i16, uint16_t, __cast_zext)
 CAST(__vec16_i64, uint64_t, __vec16_i8,  uint8_t,  __cast_zext)
 CAST(__vec16_i32, uint32_t, __vec16_i16, uint16_t, __cast_zext)
@@ -2486,8 +2733,34 @@ static FORCEINLINE __vec16_i8 __gather_base_offsets32_i8(uint8_t *base, uint32_t
     _mm512_extstore_epi32(ret.data,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
     return ret;
 }
-#endif
+#if 0 /* evghenii::fails on gather-int8-2 & gather-int8-4 */
+static FORCEINLINE __vec16_i8 __gather_base_offsets64_i8(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i1 mask) 
+{ 
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  __vec16_i1 still_to_do = mask;
+  __vec16_i32 tmp;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    tmp = _mm512_mask_i32extgather_epi32(tmp, match, offsets.v_lo, base,
+        _MM_UPCONV_EPI32_SINT8, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+  __vec16_i8 ret;
+  _mm512_extstore_epi32(ret.data,tmp,_MM_DOWNCONV_EPI32_SINT8,_MM_HINT_NONE);
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_i8,  int8_t,  __vec16_i64, __gather_base_offsets64_i8)
+#endif
+#endif
 /****************/
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i32, __gather_base_offsets32_i16)
 GATHER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __gather_base_offsets64_i16)
@@ -2501,8 +2774,35 @@ static FORCEINLINE __vec16_i32 __gather_base_offsets32_i32(uint8_t *base, uint32
                                           base, _MM_UPCONV_EPI32_NONE, scale,
                                           _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on gather-int32-2 & gather-int32-4 */
+static FORCEINLINE __vec16_i32 __gather_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1  still_to_do = mask;
+  __vec16_i32 ret;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));
+    ret = _mm512_mask_i32extgather_epi32(ret, match, offsets.v_lo, base,
+        _MM_UPCONV_EPI32_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __gather_base_offsets64_i32)
+#endif
+#endif
 /****************/
 #if 0
 GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __gather_base_offsets32_float)
@@ -2513,8 +2813,35 @@ static FORCEINLINE __vec16_f __gather_base_offsets32_float(uint8_t *base, uint32
                                        base, _MM_UPCONV_PS_NONE, scale,
                                        _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on gather-float-2 gather-float-4 & soa-14 */
+static FORCEINLINE __vec16_f __gather_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets,  __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+  // There is no gather instruction with 64-bit offsets in KNC.
+  // We have to manually iterate over the upper 32 bits ;-)
+  __vec16_i1 still_to_do = mask;
+  __vec16_f ret;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));
+    ret = _mm512_mask_i32extgather_ps(ret, match, offsets.v_lo, base,
+        _MM_UPCONV_PS_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match, still_to_do);
+  }
+
+  return ret;
+}
+#else
 GATHER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __gather_base_offsets64_float)
+#endif
+#endif
 /****************/
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __gather_base_offsets32_i64)
 GATHER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __gather_base_offsets64_i64)
@@ -2596,6 +2923,7 @@ SCATTER_BASE_OFFSETS(__vec16_i16, int16_t, __vec16_i64, __scatter_base_offsets64
 /*****************/
 #if 0
 SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i32, __scatter_base_offsets32_i32)
+SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
 #else
 static FORCEINLINE void __scatter_base_offsets32_i32(uint8_t *b, uint32_t scale, __vec16_i32 offsets,  __vec16_i32 val, __vec16_i1 mask)
 {
@@ -2603,8 +2931,28 @@ static FORCEINLINE void __scatter_base_offsets32_i32(uint8_t *b, uint32_t scale,
                                     _MM_DOWNCONV_EPI32_NONE, scale, 
                                     _MM_HINT_NONE);
 }
+static FORCEINLINE void __scatter_base_offsets64_i32(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_i32 value, __vec16_i1 mask) 
+{
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+
+  __vec16_i1 still_to_do = mask;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    _mm512_mask_i32extscatter_epi32(base, match, offsets.v_lo, 
+        value,
+        _MM_DOWNCONV_EPI32_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+}
 #endif
-SCATTER_BASE_OFFSETS(__vec16_i32, int32_t, __vec16_i64, __scatter_base_offsets64_i32)
 /*****************/
 #if 0
 SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i32, __scatter_base_offsets32_float)
@@ -2616,8 +2964,32 @@ static FORCEINLINE void __scatter_base_offsets32_float(void *base, uint32_t scal
                                  _MM_DOWNCONV_PS_NONE, scale,
                                  _MM_HINT_NONE);
 }
-#endif
+#if 0 /* evghenii::fails on soa-10 & soa-13 , it is very similar to __scatter_base_offsets64_it32, but that passes tests, why ?!? */
+static FORCEINLINE void __scatter_base_offsets64_float(uint8_t *_base, uint32_t scale, __vec16_i64 _offsets, __vec16_f value, __vec16_i1 mask) 
+{ 
+  const __vec16_i64 offsets = _offsets.cvt2hilo();
+
+  __vec16_i1 still_to_do = mask;
+  while (still_to_do) {
+    int first_active_lane = _mm_tzcnt_32((int)still_to_do);
+    const uint &hi32 = ((uint*)&offsets.v_hi)[first_active_lane];
+    __vec16_i1 match = _mm512_mask_cmp_epi32_mask(mask,offsets.v_hi,
+        __smear_i32<__vec16_i32>((int32_t)hi32),
+        _MM_CMPINT_EQ);
+
+    void * base = (void*)((unsigned long)_base  +
+        ((scale*(unsigned long)hi32) << 32));    
+    _mm512_mask_i32extscatter_ps(base, match, offsets.v_lo, 
+        value,
+        _MM_DOWNCONV_PS_NONE, scale,
+        _MM_HINT_NONE);
+    still_to_do = _mm512_kxor(match,still_to_do);
+  }
+}
+#else
 SCATTER_BASE_OFFSETS(__vec16_f,   float,   __vec16_i64, __scatter_base_offsets64_float)
+#endif
+#endif
 /*****************/
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i32, __scatter_base_offsets32_i64)
 SCATTER_BASE_OFFSETS(__vec16_i64, int64_t, __vec16_i64, __scatter_base_offsets64_i64)
