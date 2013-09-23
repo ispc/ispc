@@ -364,11 +364,11 @@ def file_check(compfails, runfails):
     else:
         opt = "-O2"
 # Detect LLVM version
-    temp1 = common.detect_version(ispc_exe + " --version")
+    temp1 = common.take_lines(ispc_exe + " --version", "first")
     llvm_version = temp1[-10:-2]
-#Detect compiler version
+# Detect compiler version
     if is_windows == False:
-        temp1 = common.detect_version(options.compiler_exe + " --version")
+        temp1 = common.take_lines(options.compiler_exe + " --version", "first")
         temp2 = temp1.split(" ")
         compiler_version = temp2[0] + temp2[2][0:4]
     else:
