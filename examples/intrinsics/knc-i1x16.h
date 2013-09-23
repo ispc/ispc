@@ -1478,23 +1478,101 @@ static FORCEINLINE float __floatbits(int v) {
     return u.f;
 }
 
+/* source : 
+ * http://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion */
+class Float16Compressor
+{
+  union Bits
+  {
+    float f;
+    int32_t si;
+    uint32_t ui;
+  };
+
+  static int const shift = 13;
+  static int const shiftSign = 16;
+
+  static int32_t const infN = 0x7F800000; // flt32 infinity
+  static int32_t const maxN = 0x477FE000; // max flt16 normal as a flt32
+  static int32_t const minN = 0x38800000; // min flt16 normal as a flt32
+  static int32_t const signN = 0x80000000; // flt32 sign bit
+
+  static int32_t const infC = infN >> shift;
+  static int32_t const nanN = (infC + 1) << shift; // minimum flt16 nan as a flt32
+  static int32_t const maxC = maxN >> shift;
+  static int32_t const minC = minN >> shift;
+  static int32_t const signC = signN >> shiftSign; // flt16 sign bit
+
+  static int32_t const mulN = 0x52000000; // (1 << 23) / minN
+  static int32_t const mulC = 0x33800000; // minN / (1 << (23 - shift))
+
+  static int32_t const subC = 0x003FF; // max flt32 subnormal down shifted
+  static int32_t const norC = 0x00400; // min flt32 normal down shifted
+
+  static int32_t const maxD = infC - maxC - 1;
+  static int32_t const minD = minC - subC - 1;
+
+  public:
+
+  static uint16_t compress(float value)
+  {
+    Bits v, s;
+    v.f = value;
+    uint32_t sign = v.si & signN;
+    v.si ^= sign;
+    sign >>= shiftSign; // logical shift
+    s.si = mulN;
+    s.si = s.f * v.f; // correct subnormals
+    v.si ^= (s.si ^ v.si) & -(minN > v.si);
+    v.si ^= (infN ^ v.si) & -((infN > v.si) & (v.si > maxN));
+    v.si ^= (nanN ^ v.si) & -((nanN > v.si) & (v.si > infN));
+    v.ui >>= shift; // logical shift
+    v.si ^= ((v.si - maxD) ^ v.si) & -(v.si > maxC);
+    v.si ^= ((v.si - minD) ^ v.si) & -(v.si > subC);
+    return v.ui | sign;
+  }
+
+  static float decompress(uint16_t value)
+  {
+    Bits v;
+    v.ui = value;
+    int32_t sign = v.si & signC;
+    v.si ^= sign;
+    sign <<= shiftSign;
+    v.si ^= ((v.si + minD) ^ v.si) & -(v.si > subC);
+    v.si ^= ((v.si + maxD) ^ v.si) & -(v.si > maxC);
+    Bits s;
+    s.si = mulC;
+    s.f *= v.si;
+    int32_t mask = -(norC > v.si);
+    v.si <<= shift;
+    v.si ^= (s.si ^ v.si) & mask;
+    v.si |= sign;
+    return v.f;
+  }
+};
+
 static FORCEINLINE float __half_to_float_uniform(int16_t h) {
-    static const uint32_t shifted_exp = 0x7c00 << 13; // exponent mask after shift
+#if 0
+  static const uint32_t shifted_exp = 0x7c00 << 13; // exponent mask after shift
 
-    int32_t o = ((int32_t)(h & 0x7fff)) << 13;     // exponent/mantissa bits
-    uint32_t exp = shifted_exp & o;   // just the exponent
-    o += (127 - 15) << 23;        // exponent adjust
+  int32_t o = ((int32_t)(h & 0x7fff)) << 13;     // exponent/mantissa bits
+  uint32_t exp = shifted_exp & o;   // just the exponent
+  o += (127 - 15) << 23;        // exponent adjust
 
-    // handle exponent special cases
-    if (exp == shifted_exp) // Inf/NaN?
-        o += (128 - 16) << 23;    // extra exp adjust
-    else if (exp == 0) { // Zero/Denormal?
-        o += 1 << 23;             // extra exp adjust
-        o = __intbits(__floatbits(o) - __floatbits(113 << 23)); // renormalize
-    }
+  // handle exponent special cases
+  if (exp == shifted_exp) // Inf/NaN?
+    o += (128 - 16) << 23;    // extra exp adjust
+  else if (exp == 0) { // Zero/Denormal?
+    o += 1 << 23;             // extra exp adjust
+    o = __intbits(__floatbits(o) - __floatbits(113 << 23)); // renormalize
+  }
 
-    o |= ((int32_t)(h & 0x8000)) << 16;    // sign bit
-    return __floatbits(o);
+  o |= ((int32_t)(h & 0x8000)) << 16;    // sign bit
+  return __floatbits(o);
+#else
+  return Float16Compressor::decompress(h);
+#endif
 }
 
 
@@ -1507,6 +1585,7 @@ static FORCEINLINE __vec16_f __half_to_float_varying(__vec16_i16 v) {
 
 
 static FORCEINLINE int16_t __float_to_half_uniform(float f) {
+#if 0
     uint32_t sign_mask = 0x80000000u;
     int32_t o;
 
@@ -1531,6 +1610,9 @@ static FORCEINLINE int16_t __float_to_half_uniform(float f) {
         o = fint2 >> 13; // Take the bits!
 
     return (o | (sign >> 16));
+#else
+  return Float16Compressor::compress(f);
+#endif
 }
 
 
@@ -2075,9 +2157,8 @@ CAST(__vec16_i32, uint32_t, __vec16_d, double, __cast_fptoui)
 CAST(__vec16_i64, uint64_t, __vec16_d, double, __cast_fptoui)
 
 // float/double conversions
-#if 1
+#if 0
 CAST(__vec16_f, float,  __vec16_d, double, __cast_fptrunc)
-CAST(__vec16_d, double, __vec16_f, float,  __cast_fpext)
 #else
 static FORCEINLINE __vec16_f __cast_fptrunc(__vec16_f, __vec16_d val) {
     __m512i r0i = _mm512_castps_si512(_mm512_cvtpd_pslo(val.v1));
@@ -2085,11 +2166,16 @@ static FORCEINLINE __vec16_f __cast_fptrunc(__vec16_f, __vec16_d val) {
 
     return _mm512_mask_permute4f128_epi32(r0i, 0xFF00, r1i, _MM_PERM_BABA);
 }
+#endif
+
+#if 0
+CAST(__vec16_d, double, __vec16_f, float,  __cast_fpext)
+#else
 static FORCEINLINE __vec16_d __cast_fpext(__vec16_d, __vec16_f val) {
     __vec16_d ret;
-    ret.v2 = _mm512_cvtpslo_pd(val.v);
+    ret.v1 = _mm512_cvtpslo_pd(val.v);
     __vec16_f other8 = _mm512_permute4f128_epi32(_mm512_castps_si512(val.v), _MM_PERM_DCDC);
-    ret.v1 = _mm512_cvtpslo_pd(other8);
+    ret.v2 = _mm512_cvtpslo_pd(other8);
     return ret;
 }
 #endif
@@ -2325,14 +2411,24 @@ static FORCEINLINE __vec16_d __sqrt_varying_double(__vec16_d v) {    return __ve
 // svml
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE __vec16_f __svml_logf(__vec16_f v)              { return _mm512_log_ps(v); }
-static FORCEINLINE __vec16_f __svml_expf(__vec16_f v)              { return _mm512_exp_ps(v); }
+static FORCEINLINE __vec16_f __svml_sinf(__vec16_f v)              { return _mm512_sin_ps(v); }
+static FORCEINLINE __vec16_f __svml_asinf(__vec16_f v)              { return _mm512_asin_ps(v); }
 static FORCEINLINE __vec16_f __svml_cosf(__vec16_f v)              { return _mm512_cos_ps(v); }
+static FORCEINLINE __vec16_f __svml_tanf(__vec16_f v)              { return _mm512_tan_ps(v); }
+static FORCEINLINE __vec16_f __svml_atanf(__vec16_f v)              { return _mm512_atan_ps(v); }
+static FORCEINLINE __vec16_f __svml_atan2f(__vec16_f a, __vec16_f b) { return _mm512_atan2_ps(a,b); }
+static FORCEINLINE __vec16_f __svml_expf(__vec16_f v)              { return _mm512_exp_ps(v); }
+static FORCEINLINE __vec16_f __svml_logf(__vec16_f v)              { return _mm512_log_ps(v); }
 static FORCEINLINE __vec16_f __svml_powf(__vec16_f a, __vec16_f b) { return _mm512_pow_ps(a,b); }
 
-static FORCEINLINE __vec16_d __svml_logd(__vec16_d v)              { return __vec16_d(_mm512_log_pd(v.v1), _mm512_log_pd(v.v2)); }
-static FORCEINLINE __vec16_d __svml_expd(__vec16_d v)              { return __vec16_d(_mm512_exp_pd(v.v1), _mm512_exp_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_sind(__vec16_d v)              { return __vec16_d(_mm512_sin_pd(v.v1), _mm512_sin_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_asind(__vec16_d v)              { return __vec16_d(_mm512_asin_pd(v.v1), _mm512_asin_pd(v.v2)); }
 static FORCEINLINE __vec16_d __svml_cosd(__vec16_d v)              { return __vec16_d(_mm512_cos_pd(v.v1), _mm512_cos_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_tand(__vec16_d v)              { return __vec16_d(_mm512_tan_pd(v.v1), _mm512_tan_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_atand(__vec16_d v)              { return __vec16_d(_mm512_atan_pd(v.v1), _mm512_atan_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_atan2d(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_atan2_pd(a.v1,b.v1), _mm512_atan2_pd(a.v2,b.v2)); }
+static FORCEINLINE __vec16_d __svml_expd(__vec16_d v)              { return __vec16_d(_mm512_exp_pd(v.v1), _mm512_exp_pd(v.v2)); }
+static FORCEINLINE __vec16_d __svml_logd(__vec16_d v)              { return __vec16_d(_mm512_log_pd(v.v1), _mm512_log_pd(v.v2)); }
 static FORCEINLINE __vec16_d __svml_powd(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_pow_pd(a.v1,b.v1), _mm512_pow_pd(a.v2,b.v2)); }
 
 ///////////////////////////////////////////////////////////////////////////
