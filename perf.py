@@ -190,7 +190,7 @@ def print_answer(answer):
     filelist = []
     print_debug("--------------------------------------------------------------------------\n", s, perf_log)
     print_debug("test name:\t    ISPC speedup: ISPC + tasks speedup: | " + 
-        "ISPC time:    ISPC + tasks time:  serial:\n", s, perf_log)
+        "    ISPC time:    ISPC + tasks time:  serial:\n", s, perf_log)
     filelist.append("test name,ISPC speedup,diff," +
         "ISPC + tasks speedup,diff,ISPC time,diff,ISPC + tasks time,diff,serial,diff\n")
     max_t = [0,0,0,0,0]
@@ -215,9 +215,9 @@ def print_answer(answer):
                 list_of_max[t-1].append(mm)
                 diff_t[t-1] = '%.2f' % (max(answer[i][t]) - min(answer[i][t]))
         print_debug("%s:\n" % answer[i][0], s, perf_log)
-        print_debug("\t\tmax:\t%5s\t\t%10s\t|%10s\t%10s\t%10s\n" %
+        print_debug("\t\tmax:\t%5s\t\t%10s\t|min:%10s\t%10s\t%10s\n" %
             (max_t[0], max_t[1], max_t[2], max_t[3], max_t[4]), s, perf_log)
-        print_debug("\t\tdiff:\t%5s\t\t%10s\t|%10s\t%10s\t%10s\n" %
+        print_debug("\t\tdiff:\t%5s\t\t%10s\t|%14s\t%10s\t%10s\n" %
             (diff_t[0], diff_t[1], diff_t[2], diff_t[3], diff_t[4]), s, perf_log)
         for t in range(0,5):
             if max_t[t] == "n/a":
@@ -231,7 +231,7 @@ def print_answer(answer):
     for i in range(0,5):
         geomean_t[i] = geomean(list_of_max[i])
     print_debug("---------------------------------------------------------------------------------\n", s, perf_log)
-    print_debug("Geomean:\t\t%5s\t\t%10s\t|%10s\t%10s\t%10s\n" %
+    print_debug("Geomean:\t\t%5s\t\t%10s\t|%14s\t%10s\t%10s\n" %
         (geomean_t[0], geomean_t[1], geomean_t[2], geomean_t[3], geomean_t[4]), s, perf_log)
     filelist.append("Geomean," + str(geomean_t[0]) + ",," + str(geomean_t[1])
         + ",," + str(geomean_t[2]) + ",," + str(geomean_t[3]) + ",," + str(geomean_t[4]) + "\n")
@@ -474,7 +474,7 @@ if __name__ == "__main__":
     parser.add_option('-c', '--config', dest='config',
         help='config file of tests', default="./perf.ini")
     parser.add_option('-p', '--path', dest='path',
-        help='path to test_system directory', default=".")
+        help='path to ispc root', default=".")
     parser.add_option('-s', '--silent', dest='silent',
         help='silent mode, only table output', default=False, action="store_true")
     parser.add_option('-o', '--output', dest='output',

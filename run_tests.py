@@ -369,8 +369,12 @@ def file_check(compfails, runfails):
 # Detect compiler version
     if is_windows == False:
         temp1 = common.take_lines(options.compiler_exe + " --version", "first")
-        temp2 = temp1.split(" ")
-        compiler_version = temp2[0] + temp2[2][0:4]
+        temp2 = re.search("[0-9]*\.[0-9]*\.[0-9]", temp1)
+        if temp2 == None:
+            temp3 = re.search("[0-9]*\.[0-9]*", temp1)
+        else:
+            temp3 = re.search("[0-9]*\.[0-9]*", temp2.group())
+        compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl" 
     new_line = " "+options.arch.rjust(6)+" "+options.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
@@ -464,7 +468,7 @@ def run_tests(options1, args, print_version):
     global s
     s = options.silent
     
-    # prepare run_tests_log and test_states files
+    # prepare run_tests_log and fail_db files
     global run_tests_log
     if options.in_file:
         run_tests_log = os.getcwd() + os.sep + options.in_file
@@ -715,7 +719,7 @@ if __name__ == "__main__":
                   default=False, action="store_true")
     parser.add_option('--non-interactive', dest='non_interactive', help='Disable interactive status updates',
                   default=False, action="store_true")
-    parser.add_option('-u', "--update", dest='update', help='Update file with fails (F of FP)', default="")
+    parser.add_option('-u', "--update-errors", dest='update', help='Update file with fails (F of FP)', default="")
     parser.add_option('-s', "--silent", dest='silent', help='enable silent mode without any output', default=False,
                   action = "store_true")
     parser.add_option("--file", dest='in_file', help='file to save run_tests output', default="")
