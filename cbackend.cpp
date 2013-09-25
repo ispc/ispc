@@ -3704,6 +3704,7 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
           case llvm::Intrinsic::sadd_with_overflow:
           case llvm::Intrinsic::trap:
           case llvm::Intrinsic::objectsize:
+          case llvm::Intrinsic::readcyclecounter:
               // We directly implement these intrinsics
             break;
           default:
@@ -4055,6 +4056,9 @@ bool CWriter::visitBuiltinCall(llvm::CallInst &I, llvm::Intrinsic::ID ID,
     Out << "abort()";
     return true;
   case llvm::Intrinsic::objectsize:
+    return true;
+  case llvm::Intrinsic::readcyclecounter:
+    Out << "__clock()";
     return true;
   }
 }

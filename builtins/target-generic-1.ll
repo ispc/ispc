@@ -471,6 +471,15 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %call
 }
 
+define i8 @__reduce_add_int8(<1 x i8> %v) nounwind readonly alwaysinline {
+  %r = extractelement <1 x i8> %v, i32 0
+  ret i8 %r
+}
+
+define i16 @__reduce_add_int16(<1 x i16> %v) nounwind readonly alwaysinline {
+  %r = extractelement <1 x i16> %v, i32 0
+  ret i16 %r
+}
 
 define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline {
   %r = extractelement <1 x float> %v, i32 0
@@ -953,3 +962,9 @@ declare float @__half_to_float_uniform(i16 %v) nounwind readnone
 declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
 declare i16 @__float_to_half_uniform(float %v) nounwind readnone
 declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+

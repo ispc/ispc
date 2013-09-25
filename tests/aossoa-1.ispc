@@ -2,8 +2,8 @@
 export uniform int width() { return programCount; }
 
 export void f_v(uniform float RET[]) {
-#define width 3
-#define maxProgramCount 64
+#define width 3ul
+#define maxProgramCount 64ul
     assert(programCount <= maxProgramCount);
 
 //CO    const uniform int width = 3;

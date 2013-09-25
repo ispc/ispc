@@ -130,7 +130,7 @@ int main(int argc, char** argv) {
     printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", 
            serialCycles/ispcCycles, serialCycles/dynamicCilkCycles);
 #else
-    printf("\t\t\t\t(%.2fx speedup from ISPC)\n", serialCycles/ispcCycles);
+    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles/ispcCycles);
 #endif // __cilk
 
     DeleteInputData(input);

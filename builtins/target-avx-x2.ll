@@ -271,6 +271,33 @@ reduce_equal(16)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
 
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<16 x i8>) nounwind readnone alwaysinline {
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %0,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
+
+define internal <16 x i16> @__add_varying_i16(<16 x i16>,
+                                  <16 x i16>) nounwind readnone alwaysinline {
+  %r = add <16 x i16> %0, %1
+  ret <16 x i16> %r
+}
+
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<16 x i16>) nounwind readnone alwaysinline {
+  reduce16(i16, @__add_varying_i16, @__add_uniform_i16)
+}
+
 define <16 x i32> @__add_varying_int32(<16 x i32>,
                                        <16 x i32>) nounwind readnone alwaysinline {
   %s = add <16 x i32> %0, %1

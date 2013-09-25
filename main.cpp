@@ -85,13 +85,16 @@ usage(int ret) {
     printf("                          \t\taddressing calculations are done by default, even\n");
     printf("                          \t\ton 64-bit target architectures.)\n");
     printf("    [--arch={%s}]\t\tSelect target architecture\n",
-           Target::SupportedTargetArchs());
+           Target::SupportedArchs());
     printf("    [--c++-include-file=<name>]\t\tSpecify name of file to emit in #include statement in generated C++ code.\n");
 #ifndef ISPC_IS_WINDOWS
     printf("    [--colored-output]\t\tAlways use terminal colors in error/warning messages.\n");
 #endif
-    printf("    [--cpu=<cpu>]\t\t\tSelect target CPU type\n");
-    printf("         <cpu>={%s}\n", Target::SupportedTargetCPUs().c_str());
+    printf("    ");
+    char cpuHelp[2048];
+    sprintf(cpuHelp, "[--cpu=<cpu>]\t\t\tSelect target CPU type\n<cpu>={%s}\n",
+            Target::SupportedCPUs().c_str());
+    PrintWithWordBreaks(cpuHelp, 16, TerminalWidth(), stdout);
     printf("    [-D<foo>]\t\t\t\t#define given value when running preprocessor\n");
     printf("    [--dev-stub <filename>]\t\tEmit device-side offload stub functions to file\n");
     printf("    [--emit-asm]\t\t\tGenerate assembly language file as output\n");
@@ -127,7 +130,11 @@ usage(int ret) {
     printf("    [--pic]\t\t\t\tGenerate position-independent code\n");
 #endif // !ISPC_IS_WINDOWS
     printf("    [--quiet]\t\t\t\tSuppress all output\n");
-    printf("    [--target=<isa>]\t\t\tSelect target ISA. <isa>={%s}\n", Target::SupportedTargetISAs());
+    printf("    ");
+    char targetHelp[2048];
+    sprintf(targetHelp, "[--target=<t>]\t\t\tSelect target ISA and width.\n"
+            "<t>={%s}", Target::SupportedTargets());
+    PrintWithWordBreaks(targetHelp, 24, TerminalWidth(), stdout);
     printf("    [--version]\t\t\t\tPrint ispc version\n");
     printf("    [--werror]\t\t\t\tTreat warnings as errors\n");
     printf("    [--woff]\t\t\t\tDisable warnings\n");
@@ -322,7 +329,6 @@ int main(int Argc, char *Argv[]) {
     // as we're parsing below
     g = new Globals;
 
-    bool debugSet = false, optSet = false;
     Module::OutputType ot = Module::Object;
     bool generatePIC = false;
     const char *arch = NULL, *cpu = NULL, *target = NULL;
@@ -365,7 +371,6 @@ int main(int Argc, char *Argv[]) {
             g->emitInstrumentation = true;
         else if (!strcmp(argv[i], "-g")) {
             g->generateDebuggingSymbols = true;
-            debugSet = true;
         }
         else if (!strcmp(argv[i], "--emit-asm"))
             ot = Module::Asm;
@@ -492,12 +497,10 @@ int main(int Argc, char *Argv[]) {
         }
         else if (!strcmp(argv[i], "-O0")) {
             g->opt.level = 0;
-            optSet = true;
         }
         else if (!strcmp(argv[i], "-O") ||  !strcmp(argv[i], "-O1") ||
                  !strcmp(argv[i], "-O2") || !strcmp(argv[i], "-O3")) {
             g->opt.level = 1;
-            optSet = true;
         }
         else if (!strcmp(argv[i], "-"))
             ;
@@ -570,12 +573,6 @@ int main(int Argc, char *Argv[]) {
                 file = argv[i];
         }
     }
-
-    // If the user specified -g, then the default optimization level is 0.
-    // If -g wasn't specified, the default optimization level is 1 (full
-    // optimization).
-    if (debugSet && !optSet)
-        g->opt.level = 0;
 
     if (g->enableFuzzTest) {
         if (g->fuzzTestSeed == -1) {

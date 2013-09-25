@@ -1911,6 +1911,40 @@ lEmitLogicalOp(BinaryExpr::Op op, Expr *arg0, Expr *arg1,
 }
 
 
+/* Returns true if shifting right by the given amount will lead to
+   inefficient code.  (Assumes x86 target.  May also warn inaccurately if
+   later optimization simplify the shift amount more than we are able to
+   see at this point.) */
+static bool
+lIsDifficultShiftAmount(Expr *expr) {
+    // Uniform shifts (of uniform values) are no problem.
+    if (expr->GetType()->IsVaryingType() == false)
+        return false;
+
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(expr);
+    if (ce) {
+        // If the shift is by a constant amount, *and* it's the same amount
+        // in all vector lanes, we're in good shape.
+        uint32_t amount[ISPC_MAX_NVEC];
+        int count = ce->GetValues(amount);
+        for (int i = 1; i < count; ++i)
+            if (amount[i] != amount[0])
+              return true;
+        return false;
+    }
+
+    TypeCastExpr *tce = dynamic_cast<TypeCastExpr *>(expr);
+    if (tce && tce->expr) {
+        // Finally, if the shift amount is given by a uniform value that's
+        // been smeared out into a varying, we have the same shift for all
+        // lanes and are also in good shape.
+        return (tce->expr->GetType()->IsUniformType() == false);
+    }
+
+    return true;
+}
+
+
 llvm::Value *
 BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     if (!arg0 || !arg1) {
@@ -1951,9 +1985,8 @@ BinaryExpr::GetValue(FunctionEmitContext *ctx) const {
     case BitAnd:
     case BitXor:
     case BitOr: {
-        if (op == Shr && arg1->GetType()->IsVaryingType() &&
-            dynamic_cast<ConstExpr *>(arg1) == NULL)
-            PerformanceWarning(pos, "Shift right is extremely inefficient for "
+        if (op == Shr && lIsDifficultShiftAmount(arg1))
+            PerformanceWarning(pos, "Shift right is inefficient for "
                                "varying shift amounts.");
         return lEmitBinaryBitOp(op, value0, value1,
                                 arg0->GetType()->IsUnsignedType(), ctx);
@@ -2207,6 +2240,49 @@ lConstFoldBinaryIntOp(ConstExpr *constArg0, ConstExpr *constArg1,
 }
 
 
+/* Returns true if the given arguments (which are assumed to be the
+   operands of a divide) represent a divide that can be performed by one of
+   the __fast_idiv functions.
+ */
+static bool
+lCanImproveVectorDivide(Expr *arg0, Expr *arg1, int *divisor) {
+    const Type *type = arg0->GetType();
+    if (!type)
+        return false;
+
+    // The value being divided must be an int8/16/32.
+    if (!(Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt16) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingInt32) ||
+          Type::EqualIgnoringConst(type, AtomicType::VaryingUInt32)))
+        return false;
+
+    // The divisor must be the same compile-time constant value for all of
+    // the vector lanes.
+    ConstExpr *ce = dynamic_cast<ConstExpr *>(arg1);
+    if (!ce)
+        return false;
+    int64_t div[ISPC_MAX_NVEC];
+    int count = ce->GetValues(div);
+    for (int i = 1; i < count; ++i)
+        if (div[i] != div[0])
+          return false;
+    *divisor = div[0];
+
+    // And finally, the divisor must be >= 2 and <128 (for 8-bit divides),
+    // and <256 otherwise.
+    if (*divisor < 2)
+        return false;
+    if (Type::EqualIgnoringConst(type, AtomicType::VaryingInt8) ||
+        Type::EqualIgnoringConst(type, AtomicType::VaryingUInt8))
+        return *divisor < 128;
+    else
+        return *divisor < 256;
+}
+
+
 Expr *
 BinaryExpr::Optimize() {
     if (arg0 == NULL || arg1 == NULL)
@@ -2267,6 +2343,32 @@ BinaryExpr::Optimize() {
                             "fast-math rcp optimization.");
             }
         }
+    }
+
+    int divisor;
+    if (op == Div && lCanImproveVectorDivide(arg0, arg1, &divisor)) {
+        Debug(pos, "Improving vector divide by constant %d", divisor);
+
+        std::vector<Symbol *> idivFuns;
+        m->symbolTable->LookupFunction("__fast_idiv", &idivFuns);
+        if (idivFuns.size() == 0) {
+            Warning(pos, "Couldn't find __fast_idiv to optimize integer divide. "
+                    "Are you compiling with --nostdlib?");
+            return this;
+        }
+
+        Expr *idivSymExpr = new FunctionSymbolExpr("__fast_idiv", idivFuns, pos);
+        ExprList *args = new ExprList(arg0, pos);
+        args->exprs.push_back(new ConstExpr(AtomicType::UniformInt32, divisor, arg1->pos));
+        Expr *idivCall = new FunctionCallExpr(idivSymExpr, args, pos);
+
+        idivCall = ::TypeCheck(idivCall);
+        if (idivCall == NULL)
+          return NULL;
+
+        Assert(Type::EqualIgnoringConst(GetType(), idivCall->GetType()));
+        idivCall = new TypeCastExpr(GetType(), idivCall, pos);
+        return ::Optimize(idivCall);
     }
 
     // From here on out, we're just doing constant folding, so if both args
@@ -3021,6 +3123,14 @@ static llvm::Value *
 lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
                    llvm::Value *expr1, llvm::Value *expr2,
                    const Type *type) {
+#if 0 // !defined(LLVM_3_1)
+    // Though it should be equivalent, this seems to cause non-trivial
+    // performance regressions versus the below.  This may be related to
+    // http://llvm.org/bugs/show_bug.cgi?id=16941.
+    if (test->getType() != LLVMTypes::Int1VectorType)
+        test = ctx->TruncInst(test, LLVMTypes::Int1VectorType);
+    return ctx->SelectInst(test, expr1, expr2, "select");
+#else
     llvm::Value *resultPtr = ctx->AllocaInst(expr1->getType(), "selectexpr_tmp");
     // Don't need to worry about masking here
     ctx->StoreInst(expr2, resultPtr);
@@ -3029,6 +3139,7 @@ lEmitVaryingSelect(FunctionEmitContext *ctx, llvm::Value *test,
            PointerType::GetUniform(type)->LLVMType(g->ctx));
     ctx->StoreInst(expr1, resultPtr, test, type, PointerType::GetUniform(type));
     return ctx->LoadInst(resultPtr, "selectexpr_final");
+#endif // !LLVM_3_1
 }
 
 
@@ -6059,9 +6170,9 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // If we have a bool vector of i32 elements, first truncate
-                // down to a single bit
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // If we have a bool vector of non-i1 elements, first
+                // truncate down to a single bit.
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             // And then do an unisgned int->float cast
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int
@@ -6103,8 +6214,8 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
-                // truncate i32 bool vector values to i1s
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
+                // truncate bool vector values to i1s
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->CastInst(llvm::Instruction::UIToFP, // unsigned int to double
                                  exprVal, targetType, cOpName);
@@ -6141,7 +6252,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6177,7 +6288,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6219,7 +6330,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6259,7 +6370,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6305,7 +6416,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6345,7 +6456,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6391,7 +6502,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6429,7 +6540,7 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
         switch (fromType->basicType) {
         case AtomicType::TYPE_BOOL:
             if (fromType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType)
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType)
                 exprVal = ctx->TruncInst(exprVal, LLVMTypes::Int1VectorType, cOpName);
             cast = ctx->ZExtInst(exprVal, targetType, cOpName);
             break;
@@ -6523,12 +6634,12 @@ lTypeConvAtomic(FunctionEmitContext *ctx, llvm::Value *exprVal,
 
         if (fromType->IsUniformType()) {
             if (toType->IsVaryingType() &&
-                LLVMTypes::BoolVectorType == LLVMTypes::Int32VectorType) {
-                // extend out to i32 bool values from i1 here.  then we'll
-                // turn into a vector below, the way it does for everyone
-                // else...
+                LLVMTypes::BoolVectorType != LLVMTypes::Int1VectorType) {
+                // extend out to an bool as an i8/i16/i32 from the i1 here.
+                // Then we'll turn that into a vector below, the way it
+                // does for everyone else...
                 cast = ctx->SExtInst(cast, LLVMTypes::BoolVectorType->getElementType(),
-                                     LLVMGetName(cast, "to_i32bool"));
+                                     LLVMGetName(cast, "to_i_bool"));
             }
         }
         else

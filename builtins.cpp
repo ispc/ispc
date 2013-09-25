@@ -112,10 +112,7 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return intAsUnsigned ? AtomicType::UniformUInt64 : AtomicType::UniformInt64;
 
     // varying
-    if (LLVMTypes::MaskType != LLVMTypes::Int32VectorType &&
-        t == LLVMTypes::MaskType)
-        return AtomicType::VaryingBool;
-    else if (t == LLVMTypes::Int8VectorType)
+    if (t == LLVMTypes::Int8VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt8 : AtomicType::VaryingInt8;
     else if (t == LLVMTypes::Int16VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt16 : AtomicType::VaryingInt16;
@@ -127,6 +124,8 @@ lLLVMTypeToISPCType(const llvm::Type *t, bool intAsUnsigned) {
         return AtomicType::VaryingDouble;
     else if (t == LLVMTypes::Int64VectorType)
         return intAsUnsigned ? AtomicType::VaryingUInt64 : AtomicType::VaryingInt64;
+    else if (t == LLVMTypes::MaskType)
+        return AtomicType::VaryingBool;
 
     // pointers to uniform
     else if (t == LLVMTypes::Int8PointerType)
@@ -488,7 +487,6 @@ lSetInternalFunctions(llvm::Module *module) {
         "__num_cores",
         "__packed_load_active",
         "__packed_store_active",
-        "__pause",
         "__popcnt_int32",
         "__popcnt_int64",
         "__prefetch_read_uniform_1",
@@ -502,6 +500,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__rdrand_i64",
         "__reduce_add_double",
         "__reduce_add_float",
+        "__reduce_add_int8",
+        "__reduce_add_int16",
         "__reduce_add_int32",
         "__reduce_add_int64",
         "__reduce_equal_double",
@@ -656,7 +656,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         // the values for an ARM target.  This maybe won't cause problems
         // in the generated code, since bulitins.c doesn't do anything too
         // complex w.r.t. struct layouts, etc.
-        if (g->target->getISA() != Target::NEON)
+        if (g->target->getISA() != Target::NEON32 &&
+            g->target->getISA() != Target::NEON16 &&
+            g->target->getISA() != Target::NEON8)
 #endif // !__arm__
         {
             Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
@@ -819,13 +821,32 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
+
 #ifdef ISPC_ARM_ENABLED
-    case Target::NEON: {
+    case Target::NEON8: {
         if (runtime32) {
-            EXPORT_MODULE(builtins_bitcode_neon_32bit);
+            EXPORT_MODULE(builtins_bitcode_neon_8_32bit);
         }
         else {
-            EXPORT_MODULE(builtins_bitcode_neon_64bit);
+            EXPORT_MODULE(builtins_bitcode_neon_8_64bit);
+        }
+        break;
+    }
+    case Target::NEON16: {
+        if (runtime32) {
+            EXPORT_MODULE(builtins_bitcode_neon_16_32bit);
+        }
+        else {
+            EXPORT_MODULE(builtins_bitcode_neon_16_64bit);
+        }
+        break;
+    }
+    case Target::NEON32: {
+        if (runtime32) {
+            EXPORT_MODULE(builtins_bitcode_neon_32_32bit);
+        }
+        else {
+            EXPORT_MODULE(builtins_bitcode_neon_32_64bit);
         }
         break;
     }
@@ -865,10 +886,31 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
             break;
         case 8:
             if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+                if (g->target->getMaskBitCount() == 16) {
+                    EXPORT_MODULE(builtins_bitcode_sse4_16_32bit);
+                }
+                else {
+                    Assert(g->target->getMaskBitCount() == 32);
+                    EXPORT_MODULE(builtins_bitcode_sse4_x2_32bit);
+                }
             }
             else {
-                EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+                if (g->target->getMaskBitCount() == 16) {
+                    EXPORT_MODULE(builtins_bitcode_sse4_16_64bit);
+                }
+                else {
+                    Assert(g->target->getMaskBitCount() == 32);
+                    EXPORT_MODULE(builtins_bitcode_sse4_x2_64bit);
+                }
+            }
+            break;
+        case 16:
+            Assert(g->target->getMaskBitCount() == 8);
+            if (runtime32) {
+                EXPORT_MODULE(builtins_bitcode_sse4_8_32bit);
+            }
+            else {
+                EXPORT_MODULE(builtins_bitcode_sse4_8_64bit);
             }
             break;
         default:
@@ -1040,16 +1082,30 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
         // If the user wants the standard library to be included, parse the
         // serialized version of the stdlib.ispc file to get its
         // definitions added.
+        extern char stdlib_mask1_code[], stdlib_mask8_code[];
+        extern char stdlib_mask16_code[], stdlib_mask32_code[];
         if (g->target->getISA() == Target::GENERIC &&
-            g->target->getVectorWidth() != 1) { // 1 wide uses x86 stdlib
-            extern char stdlib_generic_code[];
-            yy_scan_string(stdlib_generic_code);
-            yyparse();
+            g->target->getVectorWidth() == 1) { // 1 wide uses 32 stdlib
+            yy_scan_string(stdlib_mask32_code);
         }
         else {
-            extern char stdlib_x86_code[];
-            yy_scan_string(stdlib_x86_code);
-            yyparse();
+            switch (g->target->getMaskBitCount()) {
+            case 1:
+                yy_scan_string(stdlib_mask1_code);
+                break;
+            case 8:
+                yy_scan_string(stdlib_mask8_code);
+                break;
+            case 16:
+                yy_scan_string(stdlib_mask16_code);
+                break;
+            case 32:
+                yy_scan_string(stdlib_mask32_code);
+                break;
+            default:
+                FATAL("Unhandled mask bit size for stdlib.ispc");
+            }
         }
+        yyparse();
     }
 }
