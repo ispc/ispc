@@ -44,7 +44,7 @@ dirs:
 objs/%.cpp objs/%.o objs/%.h: dirs
 
 clean:
-	/bin/rm -rf objs *~ $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16
+	/bin/rm -rf objs *~ $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16 ref test
 
 $(EXAMPLE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)

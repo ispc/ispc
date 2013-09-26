@@ -70,7 +70,7 @@ def try_do_LLVM(text, command, from_validation):
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_validation, force):
+def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_validation, force, make):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
         print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
@@ -100,7 +100,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
     LLVM_SRC="llvm-" + folder
     LLVM_BUILD="build-" + folder
     LLVM_BIN="bin-" + folder
-    if os.path.exists(LLVM_BIN) and not force:
+    if os.path.exists(LLVM_BIN + os.sep + "bin") and not force:
         error("you have folder " + LLVM_BIN + ".\nIf you want to rebuild use --force", 1)
     LLVM_BUILD_selfbuild = LLVM_BUILD + "_temp"
     LLVM_BIN_selfbuild = LLVM_BIN + "_temp"
@@ -110,7 +110,6 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
     if selfbuild:
         common.remove_if_exists(LLVM_BUILD_selfbuild)
         common.remove_if_exists(LLVM_BIN_selfbuild)
-    MAKE = "gmake"
     print_debug("Using folders: " + LLVM_SRC + " " + LLVM_BUILD + " " + LLVM_BIN + " in " + 
         llvm_home + "\n", from_validation, alloy_build)
     # load llvm
@@ -156,9 +155,9 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
                     LLVM_BIN_selfbuild + " --enable-optimized",
                     from_validation)
         try_do_LLVM("build release version for selfbuild ",
-                    MAKE + " -j32", from_validation)
+                    make, from_validation)
         try_do_LLVM("install release version for selfbuild ",
-                    MAKE + " install",
+                    "make install",
                     from_validation)
         os.chdir("../")
         selfbuild_compiler = " CC="+llvm_home+ "/" + LLVM_BIN_selfbuild + "/bin/clang"
@@ -175,8 +174,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
                     " --enable-debug-runtime --enable-debug-symbols --enable-keep-symbols" + selfbuild_compiler,
                     from_validation)
     # building llvm
-    try_do_LLVM("build LLVM ", MAKE + " -j32", from_validation)
-    try_do_LLVM("install LLVM ", MAKE + " install", from_validation)
+    try_do_LLVM("build LLVM ", make, from_validation)
+    try_do_LLVM("install LLVM ", "make install", from_validation)
     os.chdir(current_path) 
 
 def check_targets():
@@ -254,13 +253,13 @@ def check_targets():
             answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"]]
     return [answer, answer_sde]
 
-def build_ispc(version_LLVM):
+def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
     os.chdir(os.environ["ISPC_HOME"])
     p_temp = os.getenv("PATH")
     os.environ["PATH"] = os.environ["LLVM_HOME"] + "/bin-" + version_LLVM + "/bin:" + os.environ["PATH"]
-    os.system("make clean >> " + alloy_build)
-    try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", "make -j32", True)
+    try_do_LLVM("clean ISPC for building", "make clean", True)
+    try_do_LLVM("build ISPC with LLVM version " + version_LLVM + " ", make, True)
     os.environ["PATH"] = p_temp
     os.chdir(current_path)
 
@@ -286,7 +285,7 @@ def execute_stability(stability, R, print_version):
 def run_special_tests():
    i = 5 
 
-def validation_run(only, only_targets, reference_branch, number, notify, update):
+def validation_run(only, only_targets, reference_branch, number, notify, update, make):
     os.chdir(os.environ["ISPC_HOME"])
     os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
@@ -327,7 +326,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
         stability.no_opt = False
         stability.wrapexe = ""
 # prepare parameters of run
-        common.check_tools(1)
         [targets_t, sde_targets_t] = check_targets()
         rebuild = True
         opts = []
@@ -352,6 +350,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
         if "current" in only:
             LLVM = [" "]
             rebuild = False
+        else:
+            common.check_tools(1)
         if only_targets != "":
             only_targets_t = only_targets.split(" ")
             for i in only_targets_t:
@@ -383,7 +383,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
-            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False, make)
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -391,7 +391,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
         for i in range(0,len(LLVM)):
             print_version = 2
             if rebuild:
-                build_ispc(LLVM[i])
+                build_ispc(LLVM[i], make)
             for j in range(0,len(targets)):
                 stability.target = targets[j]
                 stability.wrapexe = ""
@@ -447,6 +447,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
 # *** *** ***
     if ((("performance" in only) == True) or ("stability" in only) == False):
         print_debug("\n\nPerformance validation run\n\n", False, "")
+        common.check_tools(1)
         performance = options_for_drivers()
 # performance constant options
         performance.number = number
@@ -460,8 +461,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
 # prepare LLVM 3.3 as newest LLVM
         need_LLVM = check_LLVM(["3.3"])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False, make)
 # prepare reference point. build both test and reference compilers
+        try_do_LLVM("apply git", "git branch", True)
         temp4 = take_lines("git branch", "all")
         for line in temp4:
             if "*" in line:
@@ -473,14 +475,14 @@ def validation_run(only, only_targets, reference_branch, number, notify, update)
         #try_do_LLVM("stash current branch ", "git stash", True)
         try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
         sys.stdout.write(".\n")
-        build_ispc("3.3")
+        build_ispc("3.3", make)
         sys.stdout.write(".\n")
         os.rename("ispc", "ispc_ref")
         try_do_LLVM("checkout test branch " + current_branch + " ", "git checkout " + current_branch, True)
         if stashing:
             try_do_LLVM("return current branch ", "git stash pop", True)
         sys.stdout.write("You can interrupt script now.\n")
-        build_ispc("3.3")
+        build_ispc("3.3", make)
 # begin validation run for performance. output is inserted into perf()
         perf.perf(performance, [])
         if options.notify != "":
@@ -526,6 +528,12 @@ def Main():
     if options.notify != "":
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
+    if options.only != "":
+        test_only_r = " 3.1 3.2 3.3 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only = options.only.split(" ")
+        for iterator in test_only:
+            if not (" " + iterator + " " in test_only_r):
+                error("unknow option for only: " + iterator, 1)
 
     global f_date
     f_date = "logs"
@@ -536,16 +544,19 @@ def Main():
     global stability_log
     stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
     current_path = os.getcwd()
+    make = "make -j" + options.speed
     try:
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, False, options.force)
+                    options.debug, options.selfbuild, False, options.force, make)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
-                    options.number_for_performance, options.notify, options.update)
+                    options.number_for_performance, options.notify, options.update, make)
     finally:
         os.chdir(current_path)
-        date_name = "alloy_results_" + datetime.datetime.now().strftime('%H_%M_%d_%m_%Y')
+        date_name = "alloy_results_" + datetime.datetime.now().strftime('%d_%m_%Y_%H_%M_%S')
+        if os.path.exists(date_name):
+            error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
         print_debug("Logs are in " + date_name + "\n", False, "")
 
@@ -594,6 +605,8 @@ parser.add_option('-b', '--build-llvm', dest='build_llvm',
     help='ask to build LLVM', default=False, action="store_true")
 parser.add_option('-r', '--run', dest='validation_run',
     help='ask for validation run', default=False, action="store_true")
+parser.add_option('-j', dest='speed',
+    help='set -j for make', default="8")
 # options for activity "build LLVM"
 llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
