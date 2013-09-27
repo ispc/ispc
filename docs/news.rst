@@ -2,6 +2,14 @@
 ispc News
 =========
 
+ispc 1.5.0 is Released
+----------------------
+
+A major update of ``ispc`` has been released with several new targets available
+and bunch of performance and stability fixes. The released binaries are built
+with patched version of LLVM 3.3. Please refer to Release Notes for complete
+set of changes.
+
 ispc 1.4.4 is Released
 ----------------------
 
