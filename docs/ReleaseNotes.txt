@@ -1,3 +1,63 @@
+=== v1.5.0 === (27 September 2013)
+
+A major new version of ISPC with several new targets and important bug fixes.
+Here's a list of the most important changes, if you are using pre-built
+binaries (which are based on patched version of LLVM 3.3):
+
+* The naming of targets was changed to explicitly include data type width and
+  a number of threads in the gang. For example, avx2-i32x8 is avx2 target,
+  which uses 32 bit types as a base and has 8 threads in a gang. Old naming
+  scheme is still supported, but depricated.
+
+* New SSE4 targets for calculations based on 8 bit and 16 bit data types:
+  sse4-i8x16 and sse4-i16x8.
+
+* New AVX1 target for calculations based on 64 bit data types: avx1-i64x4.
+
+* SVML support was extended and improved.
+
+* Behavior of -g switch was changed to not affect optimization level.
+
+* ISPC debug infrastructure was redesigned. See --help-dev for more info and
+  enjoy capabilities of new --debug-phase=<value> and --off-phase=<value>
+  switches.
+
+* Fixed an auto-dispatch bug, which caused AVX code execution when OS doesn't
+  support AVX (but hardware does).
+
+* Fixed a bug, which discarded uniform/varying keyword in typedefs.
+
+* Several performance regressions were fixed.
+
+If you are building ISPC yourself, then following changes are also available
+to you:
+
+* --cpu=slm for targeting Intel Atom codename Silvermont (if LLVM 3.4 is used).
+
+* ARM NEON targets are available (if enabled in build system).
+
+* --debug-ir=<value> is available to generate debug information based on LLVM
+  IR (if LLVM 3.4 is used). In debugger you'll see LLVM IR instead of source
+  code.
+
+* A redesigned and improved test and configuration management system is
+  available to facilitate the process of building LLVM and testing ISPC
+  compiler.
+
+Standard library changes/fixes:
+
+* __pause() function was removed from standard library.
+
+* Fixed reduce_[min|max]_[float|double] intrinsics, which were producing
+  incorrect code under some conditions.
+
+Language changes:
+
+* By default a floating point constant without a suffix is a single precision
+  constant (32 bit). A new suffix "d" was introduced to allow double precision
+  constant (64 bit). Please refer to tests/double-consts.ispc for syntax
+  examples.
+
 === v1.4.4 === (19 July 2013)
 
 A minor version update with several stability fixes requested by the customers.
