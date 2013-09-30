@@ -270,8 +270,8 @@ new reserved words: ``unmasked``, ``foreach_unique``, ``foreach_active``,
 and ``in``.  Any program that happens to have a variable or function with
 one of these names must be modified to rename that symbol.
 
-Updating ISPC Programs For Changes In ISPC 1.4.5
-----------------------------------------------
+Updating ISPC Programs For Changes In ISPC 1.5.0
+------------------------------------------------
 
 This release adds support for double precision floating point constants.
 Double precision floating point constants are floating point number with
