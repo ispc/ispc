@@ -1021,9 +1021,13 @@ static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &_b
         _mm512_mulhi_epi32(a.v, b.v_lo))).cvt2zmm();
 }
 
+#if __ICC_VERSION == 1400
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 a, __vec16_i64 b) {
   return __vec16_i64(_mm512_mullox_epi64(a.v1, b.v1), _mm512_mullox_epi64(a.v2,b.v2));
 }
+#else
+BINARY_OP(__vec16_i64, __mul, *)
+#endif
 #endif
 
 #if 0
@@ -2164,7 +2168,7 @@ static FORCEINLINE __vec16_f __cast_fptrunc(__vec16_f, __vec16_d val) {
     __m512i r0i = _mm512_castps_si512(_mm512_cvtpd_pslo(val.v1));
     __m512i r1i = _mm512_castps_si512(_mm512_cvtpd_pslo(val.v2));
 
-    return _mm512_mask_permute4f128_epi32(r0i, 0xFF00, r1i, _MM_PERM_BABA);
+    return _mm512_castsi512_ps(_mm512_mask_permute4f128_epi32(r0i, 0xFF00, r1i, _MM_PERM_BABA));
 }
 #endif
 
@@ -2174,7 +2178,7 @@ CAST(__vec16_d, double, __vec16_f, float,  __cast_fpext)
 static FORCEINLINE __vec16_d __cast_fpext(__vec16_d, __vec16_f val) {
     __vec16_d ret;
     ret.v1 = _mm512_cvtpslo_pd(val.v);
-    __vec16_f other8 = _mm512_permute4f128_epi32(_mm512_castps_si512(val.v), _MM_PERM_DCDC);
+    __vec16_f other8 = _mm512_castsi512_ps(_mm512_permute4f128_epi32(_mm512_castps_si512(val.v), _MM_PERM_DCDC));
     ret.v2 = _mm512_cvtpslo_pd(other8);
     return ret;
 }
