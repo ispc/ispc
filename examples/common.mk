@@ -9,7 +9,8 @@ CC=gcc
 CCFLAGS=-Iobjs/ -O2
 
 LIBS=-lm $(TASK_LIB) -lstdc++
-ISPC=ispc -O2 $(ISPC_FLAGS)
+ISPC=ispc
+ISPC_FLAGS=-O2
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
 
 ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
@@ -68,10 +69,10 @@ objs/%.o: ../%.cpp dirs
 objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h
 
 objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o: %.ispc
-	$(ISPC) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
+	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-4 --emit-c++ --c++-include-file=sse4.h
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-4 --emit-c++ --c++-include-file=sse4.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.o: objs/$(ISPC_SRC:.ispc=)_sse4.cpp
 	$(CXX) -I../intrinsics -msse4.2 $< $(CXXFLAGS) -c -o $@
@@ -80,7 +81,7 @@ $(EXAMPLE)-sse4: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_sse4.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 objs/$(ISPC_SRC:.ispc=)_generic16.cpp: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-16 --emit-c++ --c++-include-file=generic-16.h
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-16 --emit-c++ --c++-include-file=generic-16.h
 
 objs/$(ISPC_SRC:.ispc=)_generic16.o: objs/$(ISPC_SRC:.ispc=)_generic16.cpp
 	$(CXX) -I../intrinsics $< $(CXXFLAGS) -c -o $@
@@ -89,7 +90,7 @@ $(EXAMPLE)-generic16: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_generic16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 objs/$(ISPC_SRC:.ispc=)_scalar.o: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-1
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-1
 
 $(EXAMPLE)-scalar: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_scalar.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
