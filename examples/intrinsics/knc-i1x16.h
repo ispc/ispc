@@ -1021,12 +1021,24 @@ static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &_b
         _mm512_mulhi_epi32(a.v, b.v_lo))).cvt2zmm();
 }
 
-#if __ICC_VERSION == 1400
+#if __ICC_VERSION >= 1400
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 a, __vec16_i64 b) {
   return __vec16_i64(_mm512_mullox_epi64(a.v1, b.v1), _mm512_mullox_epi64(a.v2,b.v2));
 }
 #else
-BINARY_OP(__vec16_i64, __mul, *)
+static FORCEINLINE __vec16_i64 __mul(const __vec16_i64 &_a, const __vec16_i64 &_b)
+{
+    const __vec16_i64 a = _a.cvt2hilo();
+    const __vec16_i64 b = _b.cvt2hilo();
+    __vec16_i32 lo = _mm512_mullo_epi32(a.v_lo,b.v_lo);
+    __vec16_i32 hi_m1 = _mm512_mulhi_epi32(a.v_lo, b.v_lo);
+    __vec16_i32 hi_m2 = _mm512_mullo_epi32(a.v_hi, b.v_lo);
+    __vec16_i32 hi_m3 = _mm512_mullo_epi32(a.v_lo, b.v_hi);
+    __mmask16 carry = 0;
+    __vec16_i32 hi_p23 = _mm512_addsetc_epi32(hi_m2, hi_m1, &carry);
+    __vec16_i32 hi = _mm512_adc_epi32(hi_m3, carry, hi_p23, &carry);
+    return __vec16_i64(hi,lo).cvt2zmm();
+}
 #endif
 #endif
 
