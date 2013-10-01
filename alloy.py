@@ -353,8 +353,12 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         else:
             common.check_tools(1)
         if only_targets != "":
+            only_targets += " "
+            only_targets = only_targets.replace("generic "," generic-4 generic-16 ")
             only_targets_t = only_targets.split(" ")
             for i in only_targets_t:
+                if i == "":
+                    continue
                 err = True
                 for j in range(0,len(targets_t)):
                     if i in targets_t[j]:

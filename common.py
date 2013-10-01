@@ -83,7 +83,8 @@ def print_debug(line, silent, filename):
         sys.stdout.write(line)
         sys.stdout.flush()
         if os.environ.get("ISPC_HOME") != None:
-            write_to_file(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", line)
+            if os.path.exists(os.environ.get("ISPC_HOME")):
+                write_to_file(os.environ["ISPC_HOME"] + os.sep + "notify_log.log", line)
     if filename != "":
         write_to_file(filename, line)
 
