@@ -12,15 +12,22 @@ LIBS=-lm $(TASK_LIB) -lstdc++
 ISPC=ispc -O2 $(ISPC_FLAGS)
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
 
-ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
+ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
 
 ifeq ($(ARCH),x86)
   ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
 	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
   ISPC_TARGETS=$(ISPC_IA_TARGETS)
-  ISPC_FLAGS += --arch=x86-64
-  CXXFLAGS += -m64
-  CCFLAGS += -m64
+  ARCH_BIT:=$(shell getconf LONG_BIT)
+  ifeq ($(ARCH_BIT),32)
+    ISPC_FLAGS += --arch=x86
+    CXXFLAGS += -m32
+    CCFLAGS += -m32
+  else
+    ISPC_FLAGS += --arch=x86-64
+    CXXFLAGS += -m64
+    CCFLAGS += -m64
+  endif
 else ifeq ($(ARCH),arm)
   ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=_ispc.o))
   ISPC_TARGETS=$(ISPC_ARM_TARGETS)
