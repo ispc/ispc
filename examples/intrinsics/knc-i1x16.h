@@ -940,217 +940,113 @@ template <> static FORCEINLINE void __store<64>(__vec16_i64 *p, __vec16_i64 v)
 template <> static FORCEINLINE void __store<128>(__vec16_i64 *p, __vec16_i64 v) {    __store<64>(p, v); }
 
 
-#if 0 /* evghenii::float */
-///////////////////////////////////////////////////////////////////////////
-// float
-
-BINARY_OP(__vec16_f, __add, +)
-BINARY_OP(__vec16_f, __sub, -)
-BINARY_OP(__vec16_f, __mul, *)
-BINARY_OP(__vec16_f, __div, /)
-
-CMP_OP(__vec16_f, float, float, __equal, ==)
-CMP_OP(__vec16_f, float, float, __not_equal, !=)
-CMP_OP(__vec16_f, float, float, __less_than, <)
-CMP_OP(__vec16_f, float, float, __less_equal, <=)
-CMP_OP(__vec16_f, float, float, __greater_than, >)
-CMP_OP(__vec16_f, float, float, __greater_equal, >=)
-
-static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
-    __vec16_i1 ret;
-    ret.v = 0;
-    for (int i = 0; i < 16; ++i)
-        ret.v |= ((a[i] == a[i]) && (b[i] == b[i])) ? (1 << i) : 0;
-    return ret;
-}
-
-static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
-    __vec16_i1 ret;
-    ret.v = 0;
-    for (int i = 0; i < 16; ++i)
-        ret.v |= ((a[i] != a[i]) || (b[i] != b[i])) ? (1 << i) : 0;
-    return ret;
-}
-
-#if 0
-      case Instruction::FRem: intrinsic = "__frem"; break;
-#endif
-
-SELECT(__vec16_f)
-INSERT_EXTRACT(__vec16_f, float)
-SMEAR(__vec16_f, float, float)
-SETZERO(__vec16_f, float)
-UNDEF(__vec16_f, float)
-BROADCAST(__vec16_f, float, float)
-ROTATE(__vec16_f, float, float)
-SHUFFLES(__vec16_f, float, float)
-LOAD_STORE(__vec16_f, float)
-#else /* evghenii::float */
-
 ///////////////////////////////////////////////////////////////////////////
 // float
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE __vec16_f __add(__vec16_f a, __vec16_f b) { 
-    return _mm512_add_ps(a, b);
-}
+static FORCEINLINE __vec16_f __add(__vec16_f a, __vec16_f b) { return _mm512_add_ps(a,b); }
+static FORCEINLINE __vec16_f __sub(__vec16_f a, __vec16_f b) { return _mm512_sub_ps(a,b); }
+static FORCEINLINE __vec16_f __mul(__vec16_f a, __vec16_f b) { return _mm512_mul_ps(a,b); }
+static FORCEINLINE __vec16_f __div(__vec16_f a, __vec16_f b) { return _mm512_div_ps(a,b); }
 
-static FORCEINLINE __vec16_f __sub(__vec16_f a, __vec16_f b) {
-    return _mm512_sub_ps(a, b);
-}
+static FORCEINLINE __vec16_i1 __equal_float        (__vec16_f a, __vec16_f b) { return _mm512_cmpeq_ps_mask (a,b);            }
+static FORCEINLINE __vec16_i1 __not_equal_float    (__vec16_f a, __vec16_f b) { return _mm512_cmpneq_ps_mask(a,b);            }
+static FORCEINLINE __vec16_i1 __less_than_float    (__vec16_f a, __vec16_f b) { return _mm512_cmplt_ps_mask (a,b);            }
+static FORCEINLINE __vec16_i1 __less_equal_float   (__vec16_f a, __vec16_f b) { return _mm512_cmple_ps_mask (a,b);            }
+static FORCEINLINE __vec16_i1 __greater_than_float (__vec16_f a, __vec16_f b) { return _mm512_cmp_ps_mask   (a,b,_CMP_GT_OS); }
+static FORCEINLINE __vec16_i1 __greater_equal_float(__vec16_f a, __vec16_f b) { return _mm512_cmp_ps_mask   (a,b,_CMP_GE_OS); }
 
-static FORCEINLINE __vec16_f __mul(__vec16_f a, __vec16_f b) {
-    return _mm512_mul_ps(a, b);
-}
+static FORCEINLINE __vec16_i1 __equal_float_and_mask        (__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmpeq_ps_mask (m,a,b);            }
+static FORCEINLINE __vec16_i1 __not_equal_float_and_mask    (__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmpneq_ps_mask(m,a,b);            }
+static FORCEINLINE __vec16_i1 __less_than_float_and_mask    (__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmplt_ps_mask (m,a,b);            }
+static FORCEINLINE __vec16_i1 __less_equal_float_and_mask   (__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmple_ps_mask (m,a,b);            }
+static FORCEINLINE __vec16_i1 __greater_than_float_and_mask (__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmp_ps_mask   (m,a,b,_CMP_GT_OS); }
+static FORCEINLINE __vec16_i1 __greater_equal_float_and_mask(__vec16_f a, __vec16_f b, __vec16_i1 m) { return _mm512_mask_cmp_ps_mask   (m,a,b,_CMP_GE_OS); }
 
-static FORCEINLINE __vec16_f __div(__vec16_f a, __vec16_f b) {
-    return _mm512_div_ps(a, b);
-}
+static FORCEINLINE __vec16_i1   __ordered_float(__vec16_f a, __vec16_f b) { return _mm512_cmpord_ps_mask  (a,b); }
+static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) { return _mm512_cmpunord_ps_mask(a,b); }
 
+static FORCEINLINE __vec16_f __select(__vec16_i1 mask, __vec16_f a, __vec16_f b) { return _mm512_mask_mov_ps(b, mask, a); }
+static FORCEINLINE __vec16_f __select(      bool cond, __vec16_f a, __vec16_f b) { return cond ? a : b; }
 
-static FORCEINLINE __vec16_i1 __equal_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmpeq_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_i1 __equal_float_and_mask(__vec16_f a, __vec16_f b,
-                                                     __vec16_i1 m) {
-    return _mm512_mask_cmpeq_ps_mask(m, a, b);
-}
-
-static FORCEINLINE __vec16_i1 __not_equal_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmpneq_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_i1 __not_equal_float_and_mask(__vec16_f a, __vec16_f b,
-                                                         __vec16_i1 m) {
-    return _mm512_mask_cmpneq_ps_mask(m, a, b);
-}
-
-static FORCEINLINE __vec16_i1 __less_than_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmplt_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_i1 __less_than_float_and_mask(__vec16_f a, __vec16_f b,
-                                                         __vec16_i1 m) {
-    return _mm512_mask_cmplt_ps_mask(m, a, b);
-}
-
-static FORCEINLINE __vec16_i1 __less_equal_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmple_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_i1 __less_equal_float_and_mask(__vec16_f a, __vec16_f b,
-                                                          __vec16_i1 m) {
-    return _mm512_mask_cmple_ps_mask(m, a, b);
-}
-
-static FORCEINLINE __vec16_i1 __greater_than_float(__vec16_f a, __vec16_f b) {
-//    return _mm512_cmpnle_ps_mask(a, b);
-    return _mm512_cmp_ps_mask(a, b,_CMP_GT_OS);
-}
-
-static FORCEINLINE __vec16_i1 __greater_than_float_and_mask(__vec16_f a, __vec16_f b,
-                                                            __vec16_i1 m) {
-//    return _mm512_mask_cmpnle_ps_mask(m, a, b);
-    return _mm512_mask_cmp_ps_mask(m,a, b,_CMP_GT_OS);
-}
-
-static FORCEINLINE __vec16_i1 __greater_equal_float(__vec16_f a, __vec16_f b) {
-//    return _mm512_cmpnlt_ps_mask(a, b);
-    return _mm512_cmp_ps_mask(a, b,_CMP_GE_OS);
-}
-
-static FORCEINLINE __vec16_i1 __greater_equal_float_and_mask(__vec16_f a, __vec16_f b,
-                                                             __vec16_i1 m) {
-//    return _mm512_mask_cmpnlt_ps_mask(m, a, b);
-    return _mm512_mask_cmp_ps_mask(m,a, b,_CMP_GE_OS);
-}
-
-static FORCEINLINE __vec16_i1 __ordered_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmpord_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_i1 __unordered_float(__vec16_f a, __vec16_f b) {
-    return _mm512_cmpunord_ps_mask(a, b);
-}
-
-static FORCEINLINE __vec16_f __select(__vec16_i1 mask, __vec16_f a, __vec16_f b) {
-    return _mm512_mask_mov_ps(b, mask, a);
-}
-
-static FORCEINLINE __vec16_f __select(bool cond, __vec16_f a, __vec16_f b) {
-    return cond ? a : b;
-}
-
-static FORCEINLINE float __extract_element(__vec16_f v, uint32_t index) {
-  return v[index];
- //   return ((float *)&v)[index];
-}
-
-static FORCEINLINE void  __insert_element(__vec16_f *v, uint32_t index, float val) {
-  (*v)[index] = val;
-//    ((float *)v)[index] = val;
-}
+static FORCEINLINE float __extract_element(__vec16_f  v, uint32_t index)            { return v[index];   }
+static FORCEINLINE void   __insert_element(__vec16_f *v, uint32_t index, float val) { (*v)[index] = val; }
 
 template <class RetVecType> RetVecType __smear_float(float f);
-template <> static FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) {
-    return _mm512_set_1to16_ps(f);
-}
+template <> static FORCEINLINE __vec16_f __smear_float<__vec16_f>(float f) { return _mm512_set_1to16_ps(f); }
 
 template <class RetVecType> RetVecType __setzero_float();
-template <> static FORCEINLINE __vec16_f __setzero_float<__vec16_f>() {
-    return _mm512_setzero_ps();
-}
+template <> static FORCEINLINE __vec16_f __setzero_float<__vec16_f>() { return _mm512_setzero_ps(); }
 
 template <class RetVecType> RetVecType __undef_float();
-template <> static FORCEINLINE __vec16_f __undef_float<__vec16_f>() {
-    return __vec16_f();
-}
+template <> static FORCEINLINE __vec16_f __undef_float<__vec16_f>() { return __vec16_f(); }
 
-static FORCEINLINE __vec16_f __broadcast_float(__vec16_f v, int index) {
-    float val = __extract_element(v, index & 0xf);
-    return _mm512_set1_ps(val);
+static FORCEINLINE __vec16_f __broadcast_float(__vec16_f _v, int index) 
+{
+  const __vec16_i32 v = _mm512_castps_si512(_v);
+  return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(v, 0xFFFF, _mm512_set1_epi32(index), v));
 }
  
-#if 1
-static FORCEINLINE __vec16_f __shuffle_float(__vec16_f v, __vec16_i32 index) {
-    return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(_mm512_castps_si512(v), 0xffff, index, _mm512_castps_si512(v)));
+static FORCEINLINE __vec16_f __rotate_float(__vec16_f _v, int index) 
+{
+  const __vec16_i32 v =  _mm512_castps_si512(_v);
+  const __vec16_i32 idx = __smear_i32<__vec16_i32>(index);
+  const __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xF));
+  return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(v, 0xFFFF, shuffle, v));
 }
-#endif
-ROTATE(__vec16_f, float, float)
-SHUFFLE2(__vec16_f, float, float)
+static FORCEINLINE __vec16_f __shuffle_float(__vec16_f v, __vec16_i32 index) 
+{
+  return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(_mm512_castps_si512(v), 0xffff, index, _mm512_castps_si512(v)));
+}
+static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f _v0, __vec16_f _v1, __vec16_i32 index)
+{
+  const __vec16_i32 v0 =  _mm512_castps_si512(_v0);
+  const __vec16_i32 v1 =  _mm512_castps_si512(_v1);
+  const __vec16_i1 mask = __signed_less_than_i32(index, __smear_i32<__vec16_i32>(0x10));
+  index  = __and(index, __smear_i32<__vec16_i32>(0xF));
+  __vec16_i32 ret = __undef_i32<__vec16_i32>();
+  ret = _mm512_mask_permutevar_epi32(ret,       mask,  index, v0);
+  ret = _mm512_mask_permutevar_epi32(ret, __not(mask), index, v1);
+  return _mm512_castsi512_ps(ret);
+}
 
-template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) {
+template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) 
+{
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
-    return _mm512_load_ps(p);
+  return __load<64>(p);
 #else
-    __vec16_f v;
-    v = _mm512_extloadunpacklo_ps(v,           p,    _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    v = _mm512_extloadunpackhi_ps(v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-    return v;
+  __vec16_f v;
+  v = _mm512_extloadunpacklo_ps(v,           p,    _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+  v = _mm512_extloadunpackhi_ps(v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
+  return v;
 #endif
 }
 
-template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) {
+template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
+{
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
-    _mm512_store_ps(p, v);
+  __store<64>(p,v);
 #else
-    _mm512_extpackstorelo_ps(          p,    v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-    _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  _mm512_extpackstorelo_ps(          p,    v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
 #endif
 }
 
-#if 0
-template <> static FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) {
-    _mm512_store_ps(p, v);
-}
-template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) {
+#if 0 /* knc::fails  ./tests/gs-improve-progindex.ispc with segfault */
+template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) 
+{
     return _mm512_load_ps(p);
 }
+/* this one doesn't fail but it is  commented out for completenes, no aligned load/stores */
+template <> static FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v) 
+{
+  _mm512_store_ps(p, v);
+}
 #endif
 
-#endif /* evghenii::float */
+/******** math ******/
 
+/*** float ***/
 static FORCEINLINE float __exp_uniform_float(float v) {    return expf(v);}
 static FORCEINLINE __vec16_f __exp_varying_float(__vec16_f v) { return _mm512_exp_ps(v); }
 
@@ -1159,6 +1055,18 @@ static FORCEINLINE __vec16_f __log_varying_float(__vec16_f v) { return _mm512_lo
 
 static FORCEINLINE float __pow_uniform_float(float a, float b) {    return powf(a, b);}
 static FORCEINLINE __vec16_f __pow_varying_float(__vec16_f a, __vec16_f b) { return _mm512_pow_ps(a,b); }
+
+/*** double ***/
+static FORCEINLINE double __exp_uniform_double(double v) {    return exp(v);}
+static FORCEINLINE __vec16_d __exp_varying_double(__vec16_d v) { return __vec16_d(_mm512_exp_pd(v.v1),_mm512_exp_pd(v.v2)); }
+
+static FORCEINLINE double __log_uniform_double(double v) {    return log(v);}
+static FORCEINLINE __vec16_d __log_varying_double(__vec16_d v) { return __vec16_d(_mm512_log_pd(v.v1),_mm512_log_pd(v.v2)); }
+
+static FORCEINLINE double __pow_uniform_double(double a, double b) {    return pow(a,b);}
+static FORCEINLINE __vec16_d __pow_varying_double(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_pow_pd(a.v1,b.v1),_mm512_pow_pd(a.v2,b.v2)); }
+
+/******** bitcast ******/
 
 static FORCEINLINE int __intbits(float v) {
     union {
@@ -1178,8 +1086,11 @@ static FORCEINLINE float __floatbits(int v) {
     return u.f;
 }
 
-/* source : 
- * http://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion */
+///////////////////////////////////////////////////////////////////////////
+// half<->float : this one passes the tests 
+// source : 
+// http://stackoverflow.com/questions/1659440/32-bit-to-16-bit-floating-point-conversion 
+///////////////////////////////////////////////////////////////////////////
 class Float16Compressor
 {
   union Bits
@@ -1252,81 +1163,36 @@ class Float16Compressor
   }
 };
 
-static FORCEINLINE float __half_to_float_uniform(int16_t h) {
-#if 0
-  static const uint32_t shifted_exp = 0x7c00 << 13; // exponent mask after shift
-
-  int32_t o = ((int32_t)(h & 0x7fff)) << 13;     // exponent/mantissa bits
-  uint32_t exp = shifted_exp & o;   // just the exponent
-  o += (127 - 15) << 23;        // exponent adjust
-
-  // handle exponent special cases
-  if (exp == shifted_exp) // Inf/NaN?
-    o += (128 - 16) << 23;    // extra exp adjust
-  else if (exp == 0) { // Zero/Denormal?
-    o += 1 << 23;             // extra exp adjust
-    o = __intbits(__floatbits(o) - __floatbits(113 << 23)); // renormalize
-  }
-
-  o |= ((int32_t)(h & 0x8000)) << 16;    // sign bit
-  return __floatbits(o);
-#else
+static FORCEINLINE float __half_to_float_uniform(int16_t h) 
+{
   return Float16Compressor::decompress(h);
-#endif
+}
+static FORCEINLINE __vec16_f __half_to_float_varying(__vec16_i16 v) 
+{
+  __vec16_f ret;
+  for (int i = 0; i < 16; ++i)
+    ret[i] = __half_to_float_uniform(v[i]);
+  return ret;
 }
 
 
-static FORCEINLINE __vec16_f __half_to_float_varying(__vec16_i16 v) {
-    __vec16_f ret;
-    for (int i = 0; i < 16; ++i)
-        ret[i] = __half_to_float_uniform(v[i]);
-    return ret;
-}
-
-
-static FORCEINLINE int16_t __float_to_half_uniform(float f) {
-#if 0
-    uint32_t sign_mask = 0x80000000u;
-    int32_t o;
-
-    int32_t fint = __intbits(f);
-    int32_t sign = fint & sign_mask;
-    fint ^= sign;
-
-    int32_t f32infty = 255 << 23;
-    o = (fint > f32infty) ? 0x7e00 : 0x7c00; 
-
-    // (De)normalized number or zero
-    // update fint unconditionally to save the blending; we don't need it
-    // anymore for the Inf/NaN case anyway.
-    const uint32_t round_mask = ~0xfffu; 
-    const int32_t magic = 15 << 23;
-    const int32_t f16infty = 31 << 23;
-
-    int32_t fint2 = __intbits(__floatbits(fint & round_mask) * __floatbits(magic)) - round_mask;
-    fint2 = (fint2 > f16infty) ? f16infty : fint2; // Clamp to signed infinity if overflowed
-
-    if (fint < f32infty)
-        o = fint2 >> 13; // Take the bits!
-
-    return (o | (sign >> 16));
-#else
+static FORCEINLINE int16_t __float_to_half_uniform(float f) 
+{
   return Float16Compressor::compress(f);
-#endif
 }
-
-
-static FORCEINLINE __vec16_i16 __float_to_half_varying(__vec16_f v) {
-    __vec16_i16 ret;
-    for (int i = 0; i < 16; ++i)
-        ret[i] = __float_to_half_uniform(v[i]);
-    return ret;
+static FORCEINLINE __vec16_i16 __float_to_half_varying(__vec16_f v) 
+{
+  __vec16_i16 ret;
+  for (int i = 0; i < 16; ++i)
+    ret[i] = __float_to_half_uniform(v[i]);
+  return ret;
 }
 
 
 #if 0 /* evghenii::double */
 ///////////////////////////////////////////////////////////////////////////
 // double
+///////////////////////////////////////////////////////////////////////////
 
 BINARY_OP(__vec16_d, __add, +)
 BINARY_OP(__vec16_d, __sub, -)
