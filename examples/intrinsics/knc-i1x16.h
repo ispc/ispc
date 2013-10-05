@@ -143,8 +143,14 @@ PRE_ALIGN(64) struct __vec16_f
 
 struct PRE_ALIGN(128) __vec16_d 
 {
-  __m512d v1;
-  __m512d v2;
+  union {
+    __m512d v1;
+    __m512d v_hi;
+  };
+  union {
+    __m512d v2;
+    __m512d v_lo;
+  };
   FORCEINLINE __vec16_d() : v1(_mm512_undefined_pd()), v2(_mm512_undefined_pd()) {}
   FORCEINLINE __vec16_d(const __m512d _v1, const __m512d _v2) : v1(_v1), v2(_v2) {}
   FORCEINLINE __vec16_d(const __vec16_d &o) : v1(o.v1), v2(o.v2) {}
@@ -158,6 +164,40 @@ struct PRE_ALIGN(128) __vec16_d
   }
   FORCEINLINE const double& operator[](const int i) const {  return ((double*)this)[i]; }
   FORCEINLINE       double& operator[](const int i)       {  return ((double*)this)[i]; }
+  FORCEINLINE __vec16_d cvt2hilo()  const
+  {
+    __m512i _hi, _lo;
+    _hi = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00, 
+        _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+        _mm512_castpd_si512(v1));
+    _hi = _mm512_mask_permutevar_epi32(_hi, 0x00FF, 
+        _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+        _mm512_castpd_si512(v2));
+    _lo = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xFF00,
+        _mm512_set_16to16_pi(14,12,10,8,6,4,2,0,15,13,11,9,7,5,3,1),
+        _mm512_castpd_si512(v1));
+    _lo = _mm512_mask_permutevar_epi32(_lo, 0x00FF,
+        _mm512_set_16to16_pi(15,13,11,9,7,5,3,1,14,12,10,8,6,4,2,0),
+        _mm512_castpd_si512(v2));
+    return __vec16_d(_mm512_castsi512_pd(_hi), _mm512_castsi512_pd(_lo));
+  }
+  FORCEINLINE __vec16_d cvt2zmm() const
+  {
+    __m512i _v1, _v2;
+    _v1 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        _mm512_castpd_si512(v_hi));
+    _v1 = _mm512_mask_permutevar_epi32(_v1, 0x5555,
+        _mm512_set_16to16_pi(15,15,14,14,13,13,12,12,11,11,10,10,9,9,8,8),
+        _mm512_castpd_si512(v_lo));
+    _v2 = _mm512_mask_permutevar_epi32(_mm512_undefined_epi32(), 0xAAAA,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        _mm512_castpd_si512(v_hi));
+    _v2 = _mm512_mask_permutevar_epi32(_v2, 0x5555,
+        _mm512_set_16to16_pi(7,7,6,6,5,5,4,4,3,3,2,2,1,1,0,0),
+        _mm512_castpd_si512(v_lo));
+    return __vec16_d(_mm512_castsi512_pd(_v1), _mm512_castsi512_pd(_v2));
+  }
 } POST_ALIGN(128);
 
 struct PRE_ALIGN(128) __vec16_i64 
@@ -1247,8 +1287,49 @@ static FORCEINLINE __vec16_d __broadcast_double(__vec16_d v, int index)
   return ret;
 }
 
+#define CASTD2F(_v_, _v_hi_, _v_lo_) \
+  __vec16_f _v_hi_, _v_lo_;  \
+  { \
+  const __vec16_d v      = _v_.cvt2hilo(); \
+  _v_hi_   = _mm512_castpd_ps(v.v_hi); \
+  _v_lo_   = _mm512_castpd_ps(v.v_lo); }
+#define CASTF2D(_ret_hi_, _ret_lo_) \
+  __vec16_d(_mm512_castps_pd(_ret_hi_), _mm512_castps_pd(_ret_lo_)).cvt2zmm()
+
+#if 0 /* knc::testme  there appears to be no tests in ./tests for checking this functionality */
+static FORCEINLINE __vec16_d __rotate_double(const __vec16_d _v, const int index) 
+{
+//  return _v; /* this one passes all tests , but most not */
+  CASTD2F(_v, v_hi, v_lo);
+  const __vec16_f ret_hi = __rotate_float(v_hi, index);
+  const __vec16_f ret_lo = __rotate_float(v_lo, index);
+  return CASTF2D(ret_hi, ret_lo);
+}
+#else
 ROTATE(__vec16_d, double, double)
+#endif
+
+#if 0 /* knc::fails  ./tests/shuffle2-4.ispc ./tests/shuffle2-5.ispc */
+static FORCEINLINE __vec16_d __shuffle_double(__vec16_d _v, const __vec16_i32 index) 
+{
+  CASTD2F(_v, v_hi, v_lo);
+  const __vec16_f ret_hi = __shuffle_float(v_hi, index);
+  const __vec16_f ret_lo = __shuffle_float(v_lo, index);
+  return CASTF2D(ret_hi, ret_lo);
+}
+static FORCEINLINE __vec16_d __shuffle2_double(__vec16_d _v0, __vec16_d _v1, const __vec16_i32 index)
+{
+  CASTD2F(_v0, v0_hi, v0_lo);
+  CASTD2F(_v1, v1_hi, v1_lo);
+  const __vec16_f ret_hi = __shuffle2_float(v0_hi, v1_hi, index);
+  const __vec16_f ret_lo = __shuffle2_float(v0_lo, v1_lo, index);
+  return CASTF2D(ret_hi, ret_lo);
+}
+#else
 SHUFFLES(__vec16_d, double, double)
+#endif
+#undef CASTD2F
+#undef CASTF2D
 
 template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) \
 {
