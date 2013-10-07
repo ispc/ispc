@@ -200,7 +200,7 @@ def check_targets():
                 answer = answer + ["sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16"]
             if AVX == False and "avx" in f_lines[i]:
                 AVX = True;
-                answer = answer + ["avx1-i32x8", "avx1-i32x16"]
+                answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
             if AVX11 == False and "rdrand" in f_lines[i]:
                 AVX11 = True;
                 answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
@@ -217,7 +217,7 @@ def check_targets():
             answer = answer + ["sse4-i32x4", "sse4-i32x8", "sse4-i16x8", "sse4-i8x16"]
         if "AVX1.0" in f_lines:
             AVX = True;
-            answer = answer + ["avx1-i32x8", "avx1-i32x16"]
+            answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
         if "RDRAND" in f_lines:
             AVX11 = True;
             answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
@@ -246,7 +246,7 @@ def check_targets():
         if SSE4 == False and "wsm" in f_lines[i]:
             answer_sde = answer_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
         if AVX == False and "snb" in f_lines[i]:
-            answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"]]
+            answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
         if AVX11 == False and "ivb" in f_lines[i]:
             answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"]]
         if AVX2 == False and "hsw" in f_lines[i]:
@@ -353,8 +353,12 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         else:
             common.check_tools(1)
         if only_targets != "":
+            only_targets += " "
+            only_targets = only_targets.replace("generic "," generic-4 generic-16 ")
             only_targets_t = only_targets.split(" ")
             for i in only_targets_t:
+                if i == "":
+                    continue
                 err = True
                 for j in range(0,len(targets_t)):
                     if i in targets_t[j]:

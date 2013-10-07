@@ -335,8 +335,6 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
             skip_files += [ filename ]
 
 
-task_threads = []
-
 def sigint(signum, frame):
     for t in task_threads:
         t.terminate()
@@ -426,6 +424,8 @@ def file_check(compfails, runfails):
         for i in range (0,len(new_compfails)):
             new_f_lines.append(new_compfails[i] + " compfail " + new_line)
             print_debug("\t" + new_compfails[i] + "\n", s, run_tests_log)
+    if len(new_runfails) == 0 and len(new_compfails) == 0:
+        print_debug("No new fails\n", s, run_tests_log)
     if len(new_passes_runfails) != 0:
         print_debug("NEW PASSES after RUNFAILS:\n", s, run_tests_log)
         for i in range (0,len(new_passes_runfails)):
@@ -449,7 +449,7 @@ def verify():
     check = [["g++", "clang", "cl"],["-O0", "-O2"],["x86","x86-64"],
              ["Linux","Windows","Mac"],["LLVM 3.1","LLVM 3.2","LLVM 3.3","LLVM head"],
              ["sse2-i32x4", "sse2-i32x8", "sse4-i32x4", "sse4-i32x8", "sse4-i16x8",
-              "sse4-i8x16", "avx1-i32x8", "avx1-i32x16", "avx1.1-i32x8", "avx1.1-i32x16",
+              "sse4-i8x16", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8", "avx1.1-i32x16",
               "avx2-i32x8", "avx2-i32x16", "generic-1", "generic-4", "generic-8",
               "generic-16", "generic-32", "generic-64"]]
     for i in range (0,len(f_lines)):
@@ -564,7 +564,6 @@ def run_tests(options1, args, print_version):
     # failing_tests/, and tests_errors/
     if len(args) == 0:
         files = glob.glob(ispc_root + os.sep + "tests" + os.sep + "*ispc") + \
-            glob.glob(ispc_root + os.sep + "failing_tests" + os.sep + "*ispc") + \
             glob.glob(ispc_root + os.sep + "tests_errors" + os.sep + "*ispc")
     else:
         if is_windows:
@@ -625,12 +624,12 @@ def run_tests(options1, args, print_version):
     start_time = time.time()
     # launch jobs to run tests
     glob_var = [is_windows, options, s, ispc_exe, is_generic_target, run_tests_log]
+    global task_threads
+    task_threads = [0] * nthreads
     for x in range(nthreads):
-        t = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests,
+        task_threads[x] = multiprocessing.Process(target=run_tasks_from_queue, args=(q, qret, qskip, total_tests,
             max_test_length, finished_tests_counter, finished_tests_counter_lock, glob_var))
-        task_threads.append(t)
-        t.start()
-
+        task_threads[x].start()
     # wait for them to all finish and then return the number that failed
     # (i.e. return 0 if all is ok)
     for t in task_threads:
@@ -663,6 +662,8 @@ def run_tests(options1, args, print_version):
         print_debug("%d / %d tests FAILED execution:\n" % (len(run_error_files), total_tests), s, run_tests_log)
         for f in run_error_files:
             print_debug("\t%s\n" % f, s, run_tests_log)
+    if len(compile_error_files) == 0 and len(run_error_files) == 0:
+        print_debug("No fails\n", s, run_tests_log)
 
     R = file_check(compile_error_files, run_error_files)
 

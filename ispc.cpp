@@ -714,11 +714,11 @@ Target::SupportedTargets() {
 #endif
         "sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
-        "avx1-i32x8, avx1-i32x16, "
+        "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
         "avx1.1-i32x8, avx1.1-i32x16, "
         "avx2-i32x8, avx2-i32x16, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-            "generic-x32, generic-x64";
+        "generic-x32, generic-x64";
 }
 
 
