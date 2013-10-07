@@ -767,30 +767,55 @@ static FORCEINLINE __vec16_i64 __mul(const __vec16_i32 &a, const __vec16_i64 &_b
         _mm512_mulhi_epi32(a.v, b.v_lo))).cvt2zmm();
 }
 
+static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask, __vec16_i64 a, __vec16_i64 b) 
+{
+  __vec16_i64 ret;
+  ret.v1 = _mm512_mask_mov_epi64(b.v1, mask,      a.v1);
+  ret.v2 = _mm512_mask_mov_epi64(b.v2, mask >> 8, a.v2);
+  return ret;
+}
+
 #if __ICC >= 1400 /* compiler gate, icc >= 14.0.0 support _mm512_mullox_epi64 */
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 a, __vec16_i64 b) 
 {
   return __vec16_i64(_mm512_mullox_epi64(a.v1,b.v1), _mm512_mullox_epi64(a.v2,b.v2));
 }
 #else  /* __ICC >= 1400 */
-#if 0  /* knc::fails  ./tests/int64-min-1.ispc ./tests/idiv.ispc  cause: if one or both numbers are negative multiplication fails */
+static FORCEINLINE void __abs_i32i64(__m512i &_hi, __m512i &_lo)
+{
+  /*   abs(x) : 
+   * mask  = x >> 32;
+   * abs(x) = (x^mask) - mask
+   */ 
+  const __vec16_i32 mask = __ashr(_hi, __ispc_thirty_two);
+  __vec16_i32 hi = __xor(_hi, mask);
+  __vec16_i32 lo = __xor(_lo, mask);
+  __mmask16 borrow = 0;
+  _lo = _mm512_subsetb_epi32(lo, mask, &borrow);
+  _hi = _mm512_sbb_epi32    (hi, borrow, mask, &borrow);
+}
 static FORCEINLINE __vec16_i64 __mul(__vec16_i64 _a, __vec16_i64 _b) 
 {
-  const __vec16_i64 a = _a.cvt2hilo();
-  const __vec16_i64 b = _b.cvt2hilo();
-  const __vec16_i32    lo = _mm512_mullo_epi32(a.v_lo, b.v_lo);
-  const __vec16_i32 hi_m1 = _mm512_mulhi_epi32(a.v_lo, b.v_lo);
+  __vec16_i64 a = _a.cvt2hilo();
+  __vec16_i64 b = _b.cvt2hilo();
+  /* sign = (a^b) >> 32, if sign == 0 then a*b >= 0, otherwise a*b < 0 */
+  const __vec16_i1 sign = __not_equal_i32(__ashr(__xor(a.v_hi, b.v_hi), __ispc_thirty_two), __ispc_zero);
+  __abs_i32i64(a.v_hi, a.v_lo);  /* abs(a) */
+  __abs_i32i64(b.v_hi, b.v_lo);  /* abs(b) */
+  const __vec16_i32 lo_m1 = _mm512_mullo_epi32(a.v_lo, b.v_lo);
+  const __vec16_i32 hi_m1 = _mm512_mulhi_epu32(a.v_lo, b.v_lo);
   const __vec16_i32 hi_m2 = _mm512_mullo_epi32(a.v_hi, b.v_lo);
   const __vec16_i32 hi_m3 = _mm512_mullo_epi32(a.v_lo, b.v_hi);
   __mmask16 carry;
   const __vec16_i32 hi_p23 = _mm512_addsetc_epi32(hi_m2, hi_m3, &carry);
   const __vec16_i32 hi = _mm512_adc_epi32(hi_p23, carry, hi_m1, &carry);
-  return __vec16_i64(hi,lo).cvt2zmm();
+  const __vec16_i32 lo = lo_m1;
+  const __vec16_i64 ret_abs = __vec16_i64(hi,lo).cvt2zmm();
+  /* if sign != 0, means either a or b is negative, then negate the result */
+  return __select(sign, __sub(__vec16_i64(__ispc_zero, __ispc_zero), ret_abs), ret_abs);
 }
-#else
-BINARY_OP(__vec16_i64, __mul, *)
-#endif
 #endif  /* __ICC >= 1400 */
+
 
 static FORCEINLINE __vec16_i64 __or (__vec16_i64 a, __vec16_i64 b) { return __vec16_i64(_mm512_or_epi64 (a.v1, b.v1), _mm512_or_epi64 (a.v2, b.v2)); }
 static FORCEINLINE __vec16_i64 __and(__vec16_i64 a, __vec16_i64 b) { return __vec16_i64(_mm512_and_epi64(a.v1, b.v1), _mm512_and_epi64(a.v2, b.v2)); }
@@ -891,13 +916,6 @@ CMP_OP(__vec16_i64, i64, int64_t,  __signed_less_than, <)
 CMP_OP(__vec16_i64, i64, uint64_t, __unsigned_greater_than, >)
 CMP_OP(__vec16_i64, i64, int64_t,  __signed_greater_than, >)
 
-static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask, __vec16_i64 a, __vec16_i64 b) 
-{
-  __vec16_i64 ret;
-  ret.v_hi = _mm512_mask_mov_epi64(b.v_hi, mask, a.v_hi);
-  ret.v_lo = _mm512_mask_mov_epi64(b.v_lo, mask >> 8, a.v_lo);
-  return ret;
-}
 
 INSERT_EXTRACT(__vec16_i64, int64_t)
 
