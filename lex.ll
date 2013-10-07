@@ -419,6 +419,14 @@ while { RT; return TOKEN_WHILE; }
 \"C\" { RT; return TOKEN_STRING_C_LITERAL; }
 \.\.\. { RT; return TOKEN_DOTDOTDOT; }
 
+"operator*"  { return TOKEN_IDENTIFIER; }
+"operator+"  { return TOKEN_IDENTIFIER; }
+"operator-"  { return TOKEN_IDENTIFIER; }
+"operator<<" { return TOKEN_IDENTIFIER; }
+"operator>>" { return TOKEN_IDENTIFIER; }
+"operator/" { return TOKEN_IDENTIFIER; }
+"operator%" { return TOKEN_IDENTIFIER; }
+
 L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERAL; }
 
 {IDENT} {

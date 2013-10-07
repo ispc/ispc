@@ -468,27 +468,27 @@ cast_expression
 multiplicative_expression
     : cast_expression
     | multiplicative_expression '*' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '/' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '%' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
     ;
 
 additive_expression
     : multiplicative_expression
     | additive_expression '+' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
     | additive_expression '-' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
     ;
 
 shift_expression
     : additive_expression
     | shift_expression TOKEN_LEFT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1, @3)); }
     | shift_expression TOKEN_RIGHT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1, @3)); }
     ;
 
 relational_expression
