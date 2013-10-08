@@ -936,7 +936,7 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
-    if (diBuilder != NULL && outputType != Header) {
+    if (diBuilder != NULL && (outputType != Header && outputType != Deps)) {
         diBuilder->finalize();
 
         lStripUnusedDebugInfo(module);
