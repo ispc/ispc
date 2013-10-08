@@ -106,7 +106,7 @@ static void __cpuidex(int info[4], int level, int count) {
 static const char *
 lGetSystemISA() {
 #ifdef __arm__
-    return "neon";
+    return "neon-i32x4";
 #else
     int info[4];
     __cpuid(info, 1);
@@ -121,19 +121,19 @@ lGetSystemISA() {
             int info2[4];
             __cpuidex(info2, 7, 0);
             if ((info2[1] & (1 << 5)) != 0)
-                return "avx2";
+                return "avx2-i32x8";
             else
-                return "avx1.1";
+                return "avx1.1-i32x8";
         }
         // Regular AVX
-        return "avx";
+        return "avx1-i32x8";
     }
     else if ((info[2] & (1 << 19)) != 0)
-        return "sse4";
+        return "sse4-i32x4";
     else if ((info[3] & (1 << 26)) != 0)
-        return "sse2";
+        return "sse2-i32x4";
     else {
-        fprintf(stderr, "Unable to detect supported SSE/AVX ISA.  Exiting.\n");
+        Error(SourcePos(), "Unable to detect supported SSE/AVX ISA.  Exiting.");
         exit(1);
     }
 #endif
@@ -141,14 +141,20 @@ lGetSystemISA() {
 
 
 static const char *supportedCPUs[] = {
+    "sm_35", 
+#ifdef ISPC_ARM_ENABLED
     // FIXME: LLVM supports a ton of different ARM CPU variants--not just
     // cortex-a9 and a15.  We should be able to handle any of them that also
     // have NEON support.
-    "sm_35", "cortex-a9", "cortex-a15",
+    "cortex-a9", "cortex-a15",
+#endif
     "atom", "penryn", "core2", "corei7", "corei7-avx"
 #if !defined(LLVM_3_1)
     , "core-avx-i", "core-avx2"
 #endif // LLVM 3.2+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
+    , "slm" 
+#endif // LLVM 3.4+
 };
 
 Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
@@ -184,22 +190,25 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             // If a CPU was specified explicitly, try to pick the best
             // possible ISA based on that.
             if (!strcmp(cpu, "core-avx2"))
-                isa = "avx2";
-            else if (!strcmp(cpu, "cortex-a9") ||
-                     !strcmp(cpu, "cortex-a15"))
-              isa = "neon";
+                isa = "avx2-i32x8";
             else if (!strcmp(cpu, "sm_35"))
               isa = "nvptx64";
+#ifdef ISPC_ARM_ENABLED
+            else if (!strcmp(cpu, "cortex-a9") ||
+                     !strcmp(cpu, "cortex-a15"))
+                isa = "neon-i32x4";
+#endif
             else if (!strcmp(cpu, "core-avx-i"))
-                isa = "avx1.1";
+                isa = "avx1.1-i32x8";
             else if (!strcmp(cpu, "sandybridge") ||
                 !strcmp(cpu, "corei7-avx"))
-                isa = "avx";
+                isa = "avx1-i32x8";
             else if (!strcmp(cpu, "corei7") ||
-                     !strcmp(cpu, "penryn"))
-                isa = "sse4";
+                     !strcmp(cpu, "penryn") ||
+                     !strcmp(cpu, "slm"))
+                isa = "sse4-i32x4";
             else
-                isa = "sse2";
+                isa = "sse2-i32x4";
             Warning(SourcePos(), "No --target specified on command-line.  "
                     "Using ISA \"%s\" based on specified CPU \"%s\".", isa,
                     cpu);
@@ -209,12 +218,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             // supports.
             isa = lGetSystemISA();
             Warning(SourcePos(), "No --target specified on command-line.  "
-                    "Using system ISA \"%s\".", isa);
+                    "Using default system target \"%s\".", isa);
         }
     }
 
-#if !defined(__arm__)
-    if (cpu == NULL && !strcmp(isa, "neon"))
+#if defined(ISPC_ARM_ENABLED) && !defined(__arm__)
+    if (cpu == NULL && !strncmp(isa, "neon", 4))
         // If we're compiling NEON on an x86 host and the CPU wasn't
         // supplied, don't go and set the CPU based on the host...
         cpu = "cortex-a9";
@@ -242,8 +251,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             }
         }
         if (foundCPU == false) {
-            fprintf(stderr, "Error: CPU type \"%s\" unknown. Supported CPUs: "
-                    "%s.\n", cpu, SupportedTargetCPUs().c_str());
+            Error(SourcePos(), "Error: CPU type \"%s\" unknown. Supported CPUs: "
+                    "%s.", cpu, SupportedCPUs().c_str());
             return;
         }
     }
@@ -251,10 +260,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     this->m_cpu = cpu;
 
     if (arch == NULL) {
-        if (!strcmp(isa, "neon"))
-            arch = "arm";
-        else if (!strcmp(isa, "nvptx64"))
+        if (!strcmp(isa, "nvptx64"))
             arch = "nvptx64";
+#ifdef ISPC_ARM_ENABLED
+        else if (!strncmp(isa, "neon", 4))
+            arch = "arm";
+#endif
         else
             arch = "x86-64";
     }
@@ -284,40 +295,98 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     }
 
     // Check default LLVM generated targets
-    if (!strcasecmp(isa, "sse2")) {
+    if (!strcasecmp(isa, "sse2") ||
+        !strcasecmp(isa, "sse2-i32x4")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
-        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
+#if defined(LLVM_3_4)
+        ",-sse4.1,-sse4.2"
+#else
+        ",-sse41,-sse42"
+#endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "sse2-x2")) {
+    else if (!strcasecmp(isa, "sse2-x2") ||
+             !strcasecmp(isa, "sse2-i32x8")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+sse,+sse2,-sse3,-sse41,-sse42,-sse4a,-ssse3,-popcnt";
+        this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
+#if defined(LLVM_3_4)
+        ",-sse4.1,-sse4.2"
+#else
+        ",-sse41,-sse42"
+#endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "sse4")) {
+    else if (!strcasecmp(isa, "sse4") ||
+             !strcasecmp(isa, "sse4-i32x4")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
         // TODO: why not sse42 and popcnt?
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
+#if defined(LLVM_3_4)
+        ",+sse4.1,-sse4.2"        
+#else
+        ",+sse41,-sse42"
+#endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "sse4x2") || !strcasecmp(isa, "sse4-x2")) {
+    else if (!strcasecmp(isa, "sse4x2") ||
+             !strcasecmp(isa, "sse4-x2") ||
+             !strcasecmp(isa, "sse4-i32x8")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+sse,+sse2,+sse3,+sse41,-sse42,-sse4a,+ssse3,-popcnt,+cmov";
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
+#if defined(LLVM_3_4)
+        ",+sse4.1,-sse4.2"        
+#else
+        ",+sse41,-sse42"
+#endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "generic-4")) {
+    else if (!strcasecmp(isa, "sse4-i8x16")) {
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
+#if defined(LLVM_3_4)
+        ",+sse4.1,-sse4.2"        
+#else
+        ",+sse41,-sse42"
+#endif
+        ;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+    }
+    else if (!strcasecmp(isa, "sse4-i16x8")) {
+        this->m_isa = Target::SSE4;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
+#if defined(LLVM_3_4)
+        ",+sse4.1,-sse4.2"        
+#else
+        ",+sse41,-sse42"
+#endif
+        ;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+    }
+    else if (!strcasecmp(isa, "generic-4") ||
+             !strcasecmp(isa, "generic-x4")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
@@ -327,7 +396,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
     }
-    else if (!strcasecmp(isa, "generic-8")) {
+    else if (!strcasecmp(isa, "generic-8") ||
+             !strcasecmp(isa, "generic-x8")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
@@ -337,7 +407,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
     }
-    else if (!strcasecmp(isa, "generic-16")) {
+    else if (!strcasecmp(isa, "generic-16") ||
+             !strcasecmp(isa, "generic-x16")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 16;
         this->m_vectorWidth = 16;
@@ -347,7 +418,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
     }
-    else if (!strcasecmp(isa, "generic-32")) {
+    else if (!strcasecmp(isa, "generic-32") ||
+             !strcasecmp(isa, "generic-x32")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 32;
         this->m_vectorWidth = 32;
@@ -357,7 +429,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
     }
-    else if (!strcasecmp(isa, "generic-64")) {
+    else if (!strcasecmp(isa, "generic-64") ||
+             !strcasecmp(isa, "generic-x64")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 64;
         this->m_vectorWidth = 64;
@@ -367,14 +440,17 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
     }
-    else if (!strcasecmp(isa, "generic-1")) {
+    else if (!strcasecmp(isa, "generic-1") ||
+             !strcasecmp(isa, "generic-x1")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 1;
         this->m_vectorWidth = 1;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avx") || !strcasecmp(isa, "avx1")) {
+    else if (!strcasecmp(isa, "avx") ||
+             !strcasecmp(isa, "avx1") ||
+             !strcasecmp(isa, "avx1-i32x8")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
@@ -382,7 +458,18 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avx-x2") || !strcasecmp(isa, "avx1-x2")) {
+    else if (!strcasecmp(isa, "avx-i64x4") ||
+             !strcasecmp(isa, "avx1-i64x4")) {
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+avx,+popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 64;
+    }
+    else if (!strcasecmp(isa, "avx-x2") ||
+             !strcasecmp(isa, "avx1-x2") ||
+             !strcasecmp(isa, "avx1-i32x16")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 16;
@@ -390,11 +477,18 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
-    else if (!strcasecmp(isa, "avx1.1")) {
+    else if (!strcasecmp(isa, "avx1.1") ||
+             !strcasecmp(isa, "avx1.1-i32x8")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
@@ -403,11 +497,18 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasRand = true;
 #endif
     }
-    else if (!strcasecmp(isa, "avx1.1-x2")) {
+    else if (!strcasecmp(isa, "avx1.1-x2") ||
+             !strcasecmp(isa, "avx1.1-i32x16")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 16;
-        this->m_attributes = "+avx,+popcnt,+cmov,+f16c,+rdrand";
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
+        ;           
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
@@ -416,11 +517,17 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasRand = true;
 #endif
     }
-    else if (!strcasecmp(isa, "avx2")) {
+    else if (!strcasecmp(isa, "avx2") ||
+             !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
         this->m_vectorWidth = 8;
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
 #ifndef LLVM_3_1
             ",+fma"
 #endif // !LLVM_3_1
@@ -434,11 +541,17 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasGather = true;
 #endif
     }
-    else if (!strcasecmp(isa, "avx2-x2")) {
+    else if (!strcasecmp(isa, "avx2-x2") ||
+             !strcasecmp(isa, "avx2-i32x16")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
         this->m_vectorWidth = 16;
-        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c,+rdrand"
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
 #ifndef LLVM_3_1
             ",+fma"
 #endif // !LLVM_3_1
@@ -452,8 +565,28 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasGather = true;
 #endif
     }
-    else if (!strcasecmp(isa, "neon")) {
-        this->m_isa = Target::NEON;
+#ifdef ISPC_ARM_ENABLED
+    else if (!strcasecmp(isa, "neon-i8x16")) {
+        this->m_isa = Target::NEON8;
+        this->m_nativeVectorWidth = 16;
+        this->m_vectorWidth = 16;
+        this->m_attributes = "+neon,+fp16";
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 8;
+    }
+    else if (!strcasecmp(isa, "neon-i16x8")) {
+        this->m_isa = Target::NEON16;
+        this->m_nativeVectorWidth = 8;
+        this->m_vectorWidth = 8;
+        this->m_attributes = "+neon,+fp16";
+        this->m_hasHalf = true; // ??
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 16;
+    }
+    else if (!strcasecmp(isa, "neon") ||
+             !strcasecmp(isa, "neon-i32x4")) {
+        this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
         this->m_vectorWidth = 4;
         this->m_attributes = "+neon,+fp16";
@@ -461,6 +594,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
+#endif
     else if (!strcasecmp(isa, "nvptx64")) {
         this->m_isa = Target::NVPTX64;
         this->m_nativeVectorWidth = 1;
@@ -478,8 +612,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     }
     else {
-        fprintf(stderr, "Target ISA \"%s\" is unknown.  Choices are: %s\n",
-                isa, SupportedTargetISAs());
+        Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.",
+                isa, SupportedTargets());
         error = true;
     }
 
@@ -491,8 +625,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             llvm::Reloc::Default;
         std::string featuresString = m_attributes;
         llvm::TargetOptions options;
-        if (m_isa == Target::NEON)
+#ifdef ISPC_ARM_ENABLED
+        if (m_isa == Target::NEON8 || m_isa == Target::NEON16 ||
+            m_isa == Target::NEON32)
             options.FloatABIType = llvm::FloatABI::Hard;
+#endif
 #if !defined(LLVM_3_1)
         if (g->opt.disableFMA == false)
             options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
@@ -551,6 +688,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // Initialize target-specific "target-feature" attribute.
         if (!m_attributes.empty()) {
             llvm::AttrBuilder attrBuilder;
+            if (m_isa != Target::NVPTX64)
+              attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(
@@ -570,7 +709,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 
 
 std::string
-Target::SupportedTargetCPUs() {
+Target::SupportedCPUs() {
     std::string ret;
     int count = sizeof(supportedCPUs) / sizeof(supportedCPUs[0]);
     for (int i = 0; i < count; ++i) {
@@ -583,30 +722,45 @@ Target::SupportedTargetCPUs() {
 
 
 const char *
-Target::SupportedTargetArchs() {
-    return "nvptx64, arm, x86, x86-64";
+Target::SupportedArchs() {
+    return "nvptx64, "
+#ifdef ISPC_ARM_ENABLED
+        "arm, "
+#endif
+        "x86, x86-64";
 }
 
 
 const char *
-Target::SupportedTargetISAs() {
-    return "nvptx64, neon, sse2, sse2-x2, sse4, sse4-x2, avx, avx-x2"
-        ", avx1.1, avx1.1-x2, avx2, avx2-x2"
-        ", generic-1, generic-4, generic-8, generic-16, generic-32";
+Target::SupportedTargets() {
+    return "nvptx64, "
+#ifdef ISPC_ARM_ENABLED
+        "neon-i8x16, neon-16x8, neon-32x4, "
+#endif
+        "sse2-i32x4, sse2-i32x8, "
+        "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
+        "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
+        "avx1.1-i32x8, avx1.1-i32x16, "
+        "avx2-i32x8, avx2-i32x16, "
+        "generic-x1, generic-x4, generic-x8, generic-x16, "
+        "generic-x32, generic-x64";
 }
 
 
 std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
-    if (m_arch == "arm") {
-        triple.setTriple("armv7-eabi");
-    }
-    else if (m_arch == "nvptx64")
+    if (m_arch == "nvptx64")
     {
       triple.setTriple("nvptx64");
     }
-    else {
+#ifdef ISPC_ARM_ENABLED
+    else if (m_arch == "arm") {
+        triple.setTriple("armv7-eabi");
+    }
+#endif
+    else
+    {
         // Start with the host triple as the default
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
 
@@ -629,10 +783,16 @@ Target::GetTripleString() const {
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
-    case Target::NEON:
-        return "neon";
     case Target::NVPTX64:
         return "nvptx64";
+#ifdef ISPC_ARM_ENABLED
+    case Target::NEON8:
+        return "neon-8";
+    case Target::NEON16:
+        return "neon-16";
+    case Target::NEON32:
+        return "neon-32";
+#endif
     case Target::SSE2:
         return "sse2";
     case Target::SSE4:
@@ -803,6 +963,7 @@ Globals::Globals() {
     includeStdlib = true;
     runCPP = true;
     debugPrint = false;
+    debugIR = -1;
     disableWarnings = false;
     warningsAsErrors = false;
     quiet = false;

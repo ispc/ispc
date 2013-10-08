@@ -209,62 +209,14 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; svml stuff
 
-declare <4 x float> @__svml_sinf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_cosf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_sincosf4(<4 x float> *, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_tanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atanf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_atan2f4(<4 x float>, <4 x float>) nounwind readnone
-declare <4 x float> @__svml_expf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_logf4(<4 x float>) nounwind readnone
-declare <4 x float> @__svml_powf4(<4 x float>, <4 x float>) nounwind readnone
+include(`svml.m4')
+;; single precision
+svml_declare(float,f4,4)
+svml_define(float,f4,4,f)
 
-
-define <4 x float> @__svml_sin(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_sinf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_cos(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_cosf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define void @__svml_sincos(<4 x float>, <4 x float> *, <4 x float> *) nounwind readnone alwaysinline {
-  %s = call <4 x float> @__svml_sincosf4(<4 x float> * %2, <4 x float> %0)
-  store <4 x float> %s, <4 x float> * %1
-  ret void
-}
-
-define <4 x float> @__svml_tan(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_tanf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_atan(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_atanf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_atan2(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_atan2f4(<4 x float> %0, <4 x float> %1)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_exp(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_expf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_log(<4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_logf4(<4 x float> %0)
-  ret <4 x float> %ret
-}
-
-define <4 x float> @__svml_pow(<4 x float>, <4 x float>) nounwind readnone alwaysinline {
-  %ret = call <4 x float> @__svml_powf4(<4 x float> %0, <4 x float> %1)
-  ret <4 x float> %ret
-}
+;; double precision
+svml_declare(double,2,2)
+svml_define_x(double,2,2,d,4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions
@@ -297,6 +249,36 @@ define i1 @__none(<4 x i32>) nounwind readnone alwaysinline {
   %v = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %floatmask) nounwind readnone
   %cmp = icmp eq i32 %v, 0
   ret i1 %cmp
+}
+
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<4 x i8>) nounwind readnone alwaysinline {
+  %wide8 = shufflevector <4 x i8> %0, <4 x i8> zeroinitializer,
+      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4,
+                  i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4, i32 4>
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %wide8,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
+
+define internal <4 x i16> @__add_varying_i16(<4 x i16>,
+                                  <4 x i16>) nounwind readnone alwaysinline {
+  %r = add <4 x i16> %0, %1
+  ret <4 x i16> %r
+}
+
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<4 x i16>) nounwind readnone alwaysinline {
+  reduce4(i16, @__add_varying_i16, @__add_uniform_i16)
 }
 
 declare <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float>, <4 x float>) nounwind readnone
@@ -503,3 +485,9 @@ gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+

@@ -365,7 +365,7 @@ lAtomicCompareAndSwap32(volatile int32_t *v, int32_t newValue, int32_t oldValue)
 static inline int32_t 
 lAtomicAdd(volatile int32_t *v, int32_t delta) {
 #ifdef ISPC_IS_WINDOWS
-    return InterlockedAdd((volatile LONG *)v, delta);
+    return InterlockedExchangeAdd((volatile LONG *)v, delta)+delta;
 #else
     return __sync_fetch_and_add(v, delta);
 #endif

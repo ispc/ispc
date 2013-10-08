@@ -270,6 +270,14 @@ new reserved words: ``unmasked``, ``foreach_unique``, ``foreach_active``,
 and ``in``.  Any program that happens to have a variable or function with
 one of these names must be modified to rename that symbol.
 
+Updating ISPC Programs For Changes In ISPC 1.5.0
+------------------------------------------------
+
+This release adds support for double precision floating point constants.
+Double precision floating point constants are floating point number with
+``d`` suffix and optional exponent part. Here are some examples: 3.14d,
+31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
+treated as single precision constant.
 
 Getting Started with ISPC
 =========================
@@ -467,45 +475,100 @@ There are three options that affect the compilation target: ``--arch``,
 which sets the target architecture, ``--cpu``, which sets the target CPU,
 and ``--target``, which sets the target instruction set.
 
-By default, the ``ispc`` compiler generates code for the 64-bit x86-64
-architecture (i.e. ``--arch=x86-64``.)  To compile to a 32-bit x86 target,
-supply ``--arch=x86`` on the command line:
+If none of these options is specified, ``ispc`` generates code for the
+architecture of the system the compiler is running on (i.e. 64-bit x86-64
+(``--arch=x86-64``) on x86 systems and ARM NEON on ARM systems.
+
+To compile to a 32-bit x86 target, for example, supply ``--arch=x86`` on
+the command line:
 
 ::
 
    ispc foo.ispc -o foo.obj --arch=x86
 
-No other architectures are currently supported.
+Currently-supported architectures are ``x86-64``, ``x86``, and ``arm``.
 
 The target CPU determines both the default instruction set used as well as
 which CPU architecture the code is tuned for.  ``ispc --help`` provides a
-list of a number of the supported CPUs.  By default, the CPU type of the
-system on which you're running ``ispc`` is used to determine the target
-CPU.
+list of all of the supported CPUs.  By default, the CPU type of the system
+on which you're running ``ispc`` is used to determine the target CPU.
 
 ::
 
    ispc foo.ispc -o foo.obj --cpu=corei7-avx
 
-Finally, ``--target`` selects between the SSE2, SSE4, and AVX, and AVX2
-instruction sets.  (As general context, SSE2 was first introduced in
-processors that shipped in 2001, SSE4 was introduced in 2007, and
-processors with AVX were introduced in 2010.  AVX2 will be supported on
-future CPUs based on Intel's "Haswell" architecture.  Consult your CPU's
-manual for specifics on which vector instruction set it supports.)
+Finally, ``--target`` selects the target instruction set.  The target
+string is of the form ``[ISA]-i[mask size]x[gang size]``.  For example,
+``--target=avx2-i32x16`` specifies a target with the AVX2 instruction set,
+a mask size of 32 bits, and a gang size of 16.
+
+The following target ISAs are supported:
+
+============ ==========================================
+Target       Description
+------------ ------------------------------------------
+avx, avx1    AVX (2010-2011 era Intel CPUs)
+avx1.1       AVX 1.1 (2012 era "Ivybridge" Intel CPUs)
+avx2         AVX 2 target (2013- Intel "Haswell" CPUs)
+neon         ARM NEON
+sse2         SSE2 (early 2000s era x86 CPUs)
+sse4         SSE4 (generally 2008-2010 Intel CPUs)
+============ ==========================================
+
+Consult your CPU's manual for specifics on which vector instruction set it
+supports.
+
+The mask size may be 8, 16, or 32 bits, though not all combinations of ISAs
+and mask sizes are supported.  For best performance, the best general
+approach is to choose a mask size equal to the size of the most common
+datatype in your programs.  For example, if most of your computation is on
+32-bit floating-point values, an ``i32`` target is appropriate.  However,
+if you're mostly doing computation on 8-bit images, ``i8`` is a better choice.
+
+See `Basic Concepts: Program Instances and Gangs of Program Instances`_ for
+more discussion of the "gang size" and its implications for program
+execution.
+
+Running ``ispc --help`` and looking at the output for the ``--target``
+option gives the most up-to-date documentation about which targets your
+compiler binary supports.
+
+The naming scheme for compilation targets changed in August 2013; the
+following table shows the relationship between names in the old scheme and
+in the new scheme:
+
+============= ===========
+Target        Former Name
+------------- -----------
+avx1-i32x8    avx, avx1
+avx1-i32x16   avx-x2
+avx1.1-i32x8  avx1.1
+avx1.1-i32x16 avx1.1-x2
+avx2-i32x8    avx2
+avx2-i32x16   avx2-x2
+neon-8        n/a
+neon-16       n/a
+neon-32       n/a
+sse2-i32x4    sse2
+sse2-i32x8    sse2-x2
+sse4-i32x4    sse4
+sse4-i32x8    sse4-x2
+sse4-i8x16    n/a
+sse4-i16x8    n/a
+============= ===========
 
 By default, the target instruction set is chosen based on the most capable
 one supported by the system on which you're running ``ispc``.  You can
 override this choice with the ``--target`` flag; for example, to select
-Intel® SSE2, use ``--target=sse2``.  (As with the other options in this
-section, see the output of ``ispc --help`` for a full list of supported
-targets.)
+Intel® SSE2 with a 32-bit mask and 4 program instances in a gang, use
+``--target=sse2-i32x4``.  (As with the other options in this section, see
+the output of ``ispc --help`` for a full list of supported targets.)
 
 Generating Generic C++ Output
 -----------------------------
 
 In addition to generating object files or assembly output for specific
-targets like SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
+targets like NEON, SSE2, SSE4, and AVX, ``ispc`` provides an option to generate
 "generic" C++ output.  This
 
 As an example, consider the following simple ``ispc`` program:
@@ -659,7 +722,7 @@ preprocessor runs:
   * - ISPC
     - 1
     - Detecting that the ``ispc`` compiler is processing the file
-  * - ISPC_TARGET_{SSE2,SSE4,AVX,AVX2}
+  * - ISPC_TARGET_{NEON_8,NEON_16,NEON_32,SSE2,SSE4,AVX,AVX11,AVX2,GENERIC}
     - 1
     - One of these will be set, depending on the compilation target.
   * - ISPC_POINTER_SIZE
@@ -1294,7 +1357,8 @@ but are likely to be supported in future releases:
 * Bitfield members of ``struct`` types
 * Variable numbers of arguments to functions
 * Literal floating-point constants (even without a ``f`` suffix) are
-  currently treated as being ``float`` type, not ``double``
+  currently treated as being ``float`` type, not ``double``. To have a double
+  precision floating point constant use ``d`` suffix.
 * The ``volatile`` qualifier
 * The ``register`` storage class for variables.  (Will be ignored).
 
@@ -3365,6 +3429,31 @@ The ``isnan()`` functions test whether the given value is a floating-point
     uniform bool isnan(uniform double v)
 
 
+A number of functions are also available for performing operations on 8- and
+16-bit quantities; these map to specialized instructions that perform these
+operations on targets that support them.  ``avg_up()`` computes the average
+of the two values, rounding up if their average is halfway between two
+integers (i.e., it computes ``(a+b+1)/2``).
+
+::
+
+   int8 avg_up(int8 a, int8 b)
+   unsigned int8 avg_up(unsigned int8 a, unsigned int8 b)
+   int16 avg_up(int16 a, int16 b)
+   unsigned int16 avg_up(unsigned int16 a, unsigned int16 b)
+
+
+``avg_down()`` computes the average of the two values, rounding down (i.e.,
+it computes ``(a+b)/2``).
+
+::
+
+   int8 avg_down(int8 a, int8 b)
+   unsigned int8 avg_down(unsigned int8 a, unsigned int8 b)
+   int16 avg_down(int16 a, int16 b)
+   unsigned int16 avg_down(unsigned int16 a, unsigned int16 b)
+
+
 Transcendental Functions
 ------------------------
 
@@ -3582,7 +3671,7 @@ command-line argument.
 Cross-Program Instance Operations
 ---------------------------------
 
-``ispc`` programs are often used to expresses independently-executing
+``ispc`` programs are often used to express independently-executing
 programs performing computation on separate data elements.  (i.e. pure
 data-parallelism).  However, it's often the case where it's useful for the
 program instances to be able to cooperate in computing results.  The
@@ -3613,7 +3702,7 @@ the running program instances.
 
 The ``rotate()`` function allows each program instance to find the value of
 the given value that their neighbor ``offset`` steps away has.  For
-example, on an 8-wide target, if ``offset`` has the value (1, 2, 3, 4, 5,
+example, on an 8-wide target, if ``value`` has the value (1, 2, 3, 4, 5,
 6, 7, 8) across the gang of running program instances, then ``rotate(value,
 -1)`` causes the first program instance to get the value 8, the second
 program instance to get the value 1, the third 2, and so forth.  The
@@ -3692,7 +3781,7 @@ where the ``i`` th element of ``x`` has been replaced with the value ``v``
 Reductions
 ----------
 
-A number routines are available to evaluate conditions across the
+A number of routines are available to evaluate conditions across the
 running program instances.  For example, ``any()`` returns ``true`` if
 the given value ``v`` is ``true`` for any of the SPMD program
 instances currently running, ``all()`` returns ``true`` if it true
@@ -3711,28 +3800,43 @@ instances are added together by the ``reduce_add()`` function.
 
 ::
 
-    uniform float reduce_add(float x)
-    uniform int reduce_add(int x)
-    uniform unsigned int reduce_add(unsigned int x)
+    uniform int16 reduce_add(int8 x)
+    uniform unsigned int16 reduce_add(unsigned int8 x)
+    uniform int32 reduce_add(int16 x)
+    uniform unsigned int32 reduce_add(unsigned 16int x)
+    uniform int64 reduce_add(int32 x)
+    uniform unsigned int64 reduce_add(unsigned int32 x)
+    uniform int64 reduce_add(int64 x)
+    uniform unsigned int64 reduce_add(unsigned int64 x)
 
-You can also use functions to compute the minimum and maximum value of the
-given value across all of the currently-executing program instances.
+    uniform float reduce_add(float x)
+    uniform double reduce_add(double x)
+
+You can also use functions to compute the minimum value of the given value
+across all of the currently-executing program instances.
 
 ::
 
-    uniform float reduce_min(float a)
     uniform int32 reduce_min(int32 a)
     uniform unsigned int32 reduce_min(unsigned int32 a)
-    uniform double reduce_min(double a)
     uniform int64 reduce_min(int64 a)
     uniform unsigned int64 reduce_min(unsigned int64 a)
 
-    uniform float reduce_max(float a)
+    uniform float reduce_min(float a)
+    uniform double reduce_min(double a)
+
+Equivalent functions are available to comptue the maximum of the given
+varying variable over the active program instances.
+
+::
+
     uniform int32 reduce_max(int32 a)
     uniform unsigned int32 reduce_max(unsigned int32 a)
-    uniform double reduce_max(double a)
     uniform int64 reduce_max(int64 a)
     uniform unsigned int64 reduce_max(unsigned int64 a)
+
+    uniform float reduce_max(float a)
+    uniform double reduce_max(double a)
 
 Finally, you can check to see if a particular value has the same value in
 all of the currently-running program instances:
@@ -3741,9 +3845,10 @@ all of the currently-running program instances:
 
     uniform bool reduce_equal(int32 v)
     uniform bool reduce_equal(unsigned int32 v)
-    uniform bool reduce_equal(float v)
     uniform bool reduce_equal(int64 v)
     uniform bool reduce_equal(unsigned int64 v)
+
+    uniform bool reduce_equal(float v)
     uniform bool reduce_equal(double)
 
 There are also variants of these functions that return the value as a
@@ -3758,10 +3863,11 @@ performance in the `Performance Guide`_.
     uniform bool reduce_equal(int32 v, uniform int32 * uniform sameval)
     uniform bool reduce_equal(unsigned int32 v,
                               uniform unsigned int32 * uniform sameval)
-    uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(int64 v, uniform int64 * uniform sameval)
     uniform bool reduce_equal(unsigned int64 v,
                               uniform unsigned int64 * uniform sameval)
+
+    uniform bool reduce_equal(float v, uniform float * uniform sameval)
     uniform bool reduce_equal(double, uniform double * uniform sameval)
 
 If called when none of the program instances are running,

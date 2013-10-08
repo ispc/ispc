@@ -39,6 +39,10 @@
 LLVM_CONFIG=$(shell which /usr/local/llvm-3.3/bin/llvm-config)
 CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
 
+# Enable ARM by request
+# To enable: make ARM_ENABLED=1
+ARM_ENABLED=0
+
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
 export PATH:=$(LLVM_BIN):$(PATH)
@@ -55,11 +59,14 @@ LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
 LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
-LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker arm nvptx
+LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker nvptx
 # Component "option" was introduced in 3.3 and starting with 3.4 it is required for the link step.
 # We check if it's available before adding it (to not break 3.2 and earlier).
 ifeq ($(shell $(LLVM_CONFIG) --components |grep -c option), 1)
     LLVM_COMPONENTS+=option
+endif
+ifneq ($(ARM_ENABLED), 0)
+    LLVM_COMPONENTS+=arm
 endif
 LLVM_LIBS=$(shell $(LLVM_CONFIG) --libs $(LLVM_COMPONENTS))
 
@@ -71,6 +78,10 @@ CLANG_LIBS = -lclangFrontend -lclangDriver \
 
 ISPC_LIBS=$(shell $(LLVM_CONFIG) --ldflags) $(CLANG_LIBS) $(LLVM_LIBS) \
 	-lpthread
+
+ifeq ($(LLVM_VERSION),LLVM_3_4)
+    ISPC_LIBS += -lcurses
+endif
 
 ifeq ($(ARCH_OS),Linux)
 	ISPC_LIBS += -ldl
@@ -102,8 +113,16 @@ CXX=g++
 CPP=cpp
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
-	-Wall $(LLVM_VERSION_DEF) \
-	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\""
+	$(LLVM_VERSION_DEF) \
+	-Wall \
+	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
+	-Wno-sign-compare
+ifneq ($(LLVM_VERSION),LLVM_3_1)
+	CXXFLAGS+=-Werror
+endif
+ifneq ($(ARM_ENABLED), 0)
+    CXXFLAGS+=-DISPC_ARM_ENABLED
+endif
 
 LDFLAGS=
 ifeq ($(ARCH_OS),Linux)
@@ -122,8 +141,12 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=nvptx64 neon avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 sse2 sse2-x2 sse4 sse4-x2 \
+TARGETS=nvptx64 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
+	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
+ifneq ($(ARM_ENABLED), 0)
+    TARGETS+=neon-32 neon-16 neon-8
+endif
 # These files need to be compiled in two versions - 32 and 64 bits.
 BUILTINS_SRC_TARGET=$(addprefix builtins/target-, $(addsuffix .ll, $(TARGETS)))
 # These are files to be compiled in single version.
@@ -132,12 +155,12 @@ BUILTINS_OBJS_32=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-32bi
 BUILTINS_OBJS_64=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_TARGET:.ll=-64bit.o)))
 BUILTINS_OBJS=$(addprefix builtins-, $(notdir $(BUILTINS_SRC_COMMON:.ll=.o))) \
 	$(BUILTINS_OBJS_32) $(BUILTINS_OBJS_64) \
-	builtins-c-32.cpp builtins-c-64.cpp 
+	builtins-c-32.cpp builtins-c-64.cpp
 BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
 OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
-	stdlib_generic_ispc.o stdlib_x86_ispc.o \
+       stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o stdlib_mask64_ispc.o \
 	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
 default: ispc
@@ -223,15 +246,15 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
-objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
 
-objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
 
@@ -243,12 +266,27 @@ objs/builtins-c-64.cpp: builtins/builtins.c
 	@echo Creating C++ source from builtins definition file $<
 	$(CLANG) -m64 -emit-llvm -c $< -o - | llvm-dis - | python bitcode2cpp.py c 64 > $@
 
-objs/stdlib_generic_ispc.cpp: stdlib.ispc
-	@echo Creating C++ source from $< for generic
-	$(CLANG) -E -x c -DISPC_TARGET_GENERIC=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		python stdlib2cpp.py generic > $@
+objs/stdlib_mask1_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask1
+	$(CLANG) -E -x c -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask1 > $@
 
-objs/stdlib_x86_ispc.cpp: stdlib.ispc
-	@echo Creating C++ source from $< for x86
-	$(CLANG) -E -x c -DISPC=1 -DPI=3.1415926536 $< -o - | \
-		python stdlib2cpp.py x86 > $@
+objs/stdlib_mask8_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask8
+	$(CLANG) -E -x c -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask8 > $@
+
+objs/stdlib_mask16_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask16
+	$(CLANG) -E -x c -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask16 > $@
+
+objs/stdlib_mask32_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask32
+	$(CLANG) -E -x c -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask32 > $@
+
+objs/stdlib_mask64_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask64
+	$(CLANG) -E -x c -DISPC_MASK_BITS=64 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask64 > $@

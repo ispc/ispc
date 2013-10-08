@@ -1,4 +1,4 @@
-;;  Copyright (c) 2011, Intel Corporation
+;;  Copyright (c) 2011-2013, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -41,15 +41,13 @@
 
 @__system_best_isa = internal global i32 -1
 
-declare void @abort() noreturn
-
 ;; The below is the result of running "clang -O2 -emit-llvm -c -o -" on the
 ;; following code...  Specifically, __get_system_isa should return a value
 ;; corresponding to one of the Target::ISA enumerant values that gives the
 ;; most capable ISA that the curremt system can run.
 ;;
-;; Note: clang from LLVM 3.0 should be used if this is updated, for maximum
-;; backwards compatibility for anyone building ispc with LLVM 3.0
+;; Note: clang from LLVM 3.1 should be used if this is updated, for maximum
+;; backwards compatibility for anyone building ispc with LLVM 3.1
 ;;
 ;; #include <stdint.h>
 ;; #include <stdlib.h>
@@ -60,7 +58,7 @@ declare void @abort() noreturn
 ;;                           : "0" (infoType));
 ;; }
 ;; 
-;; /* Save %ebx in case it's the PIC register */
+;; // Save %ebx in case it's the PIC register.
 ;; static void __cpuid_count(int info[4], int level, int count) {
 ;;   __asm__ __volatile__ ("xchg{l}\t{%%}ebx, %1\n\t"
 ;;                         "cpuid\n\t"
@@ -69,13 +67,23 @@ declare void @abort() noreturn
 ;;                         : "0" (level), "2" (count));
 ;; }
 ;; 
+;; static int __os_has_avx_support() {
+;;     // Check xgetbv; this uses a .byte sequence instead of the instruction
+;;     // directly because older assemblers do not include support for xgetbv and
+;;     // there is no easy way to conditionally compile based on the assembler used.
+;;     int rEAX, rEDX;
+;;     __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+;;     return (rEAX & 6) == 6;
+;; }
+;; 
 ;; int32_t __get_system_isa() {
 ;;     int info[4];
 ;;     __cpuid(info, 1);
 ;; 
-;;     /* NOTE: the values returned below must be the same as the
-;;        corresponding enumerant values in Target::ISA. */
-;;     if ((info[2] & (1 << 28)) != 0) {
+;;     // NOTE: the values returned below must be the same as the
+;;     // corresponding enumerant values in Target::ISA.
+;;     if ((info[2] & (1 << 28)) != 0 &&
+;;         __os_has_avx_support()) {
 ;;        if ((info[2] & (1 << 29)) != 0 &&  // F16C
 ;;            (info[2] & (1 << 30)) != 0) {  // RDRAND
 ;;            // So far, so good.  AVX2?
@@ -98,46 +106,55 @@ declare void @abort() noreturn
 ;;         abort();
 ;; }
 
-define i32 @__get_system_isa() nounwind uwtable ssp {
+define i32 @__get_system_isa() nounwind uwtable {
 entry:
   %0 = tail call { i32, i32, i32, i32 } asm sideeffect "cpuid", "={ax},={bx},={cx},={dx},0,~{dirflag},~{fpsr},~{flags}"(i32 1) nounwind
   %asmresult5.i = extractvalue { i32, i32, i32, i32 } %0, 2
   %asmresult6.i = extractvalue { i32, i32, i32, i32 } %0, 3
   %and = and i32 %asmresult5.i, 268435456
   %cmp = icmp eq i32 %and, 0
-  br i1 %cmp, label %if.else13, label %if.then
+  br i1 %cmp, label %if.else14, label %land.lhs.true
 
-if.then:                                          ; preds = %entry
-  %1 = and i32 %asmresult5.i, 1610612736
-  %2 = icmp eq i32 %1, 1610612736
-  br i1 %2, label %if.then7, label %return
+land.lhs.true:                                    ; preds = %entry
+  %1 = tail call { i32, i32 } asm sideeffect ".byte 0x0f, 0x01, 0xd0", "={ax},={dx},{cx},~{dirflag},~{fpsr},~{flags}"(i32 0) nounwind
+  %asmresult.i25 = extractvalue { i32, i32 } %1, 0
+  %and.i = and i32 %asmresult.i25, 6
+  %cmp.i = icmp eq i32 %and.i, 6
+  br i1 %cmp.i, label %if.then, label %if.else14
 
-if.then7:                                         ; preds = %if.then
-  %3 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
-  %asmresult4.i28 = extractvalue { i32, i32, i32, i32 } %3, 1
-  %and10 = lshr i32 %asmresult4.i28, 5
-  %4 = and i32 %and10, 1
-  %5 = add i32 %4, 3
+if.then:                                          ; preds = %land.lhs.true
+  %2 = and i32 %asmresult5.i, 1610612736
+  %3 = icmp eq i32 %2, 1610612736
+  br i1 %3, label %if.then8, label %return
+
+if.then8:                                         ; preds = %if.then
+  %4 = tail call { i32, i32, i32, i32 } asm sideeffect "xchg$(l$)\09$(%$)ebx, $1\0A\09cpuid\0A\09xchg$(l$)\09$(%$)ebx, $1\0A\09", "={ax},=r,={cx},={dx},0,2,~{dirflag},~{fpsr},~{flags}"(i32 7, i32 0) nounwind
+  %asmresult4.i30 = extractvalue { i32, i32, i32, i32 } %4, 1
+  %and11 = lshr i32 %asmresult4.i30, 5
+  %5 = and i32 %and11, 1
+  %6 = add i32 %5, 3
   br label %return
 
-if.else13:                                        ; preds = %entry
-  %and15 = and i32 %asmresult5.i, 524288
-  %cmp16 = icmp eq i32 %and15, 0
-  br i1 %cmp16, label %if.else18, label %return
+if.else14:                                        ; preds = %land.lhs.true, %entry
+  %and16 = and i32 %asmresult5.i, 524288
+  %cmp17 = icmp eq i32 %and16, 0
+  br i1 %cmp17, label %if.else19, label %return
 
-if.else18:                                        ; preds = %if.else13
-  %and20 = and i32 %asmresult6.i, 67108864
-  %cmp21 = icmp eq i32 %and20, 0
-  br i1 %cmp21, label %if.else23, label %return
+if.else19:                                        ; preds = %if.else14
+  %and21 = and i32 %asmresult6.i, 67108864
+  %cmp22 = icmp eq i32 %and21, 0
+  br i1 %cmp22, label %if.else24, label %return
 
-if.else23:                                        ; preds = %if.else18
+if.else24:                                        ; preds = %if.else19
   tail call void @abort() noreturn nounwind
   unreachable
 
-return:                                           ; preds = %if.else18, %if.else13, %if.then7, %if.then
-  %retval.0 = phi i32 [ %5, %if.then7 ], [ 2, %if.then ], [ 1, %if.else13 ], [ 0, %if.else18 ]
+return:                                           ; preds = %if.else19, %if.else14, %if.then8, %if.then
+  %retval.0 = phi i32 [ %6, %if.then8 ], [ 2, %if.then ], [ 1, %if.else14 ], [ 0, %if.else19 ]
   ret i32 %retval.0
 }
+
+declare void @abort() noreturn nounwind
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; This function is called by each of the dispatch functions we generate;

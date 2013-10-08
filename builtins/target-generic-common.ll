@@ -202,21 +202,15 @@ declare i64 @__count_trailing_zeros_i64(i64) nounwind readnone
 declare i32 @__count_leading_zeros_i32(i32) nounwind readnone
 declare i64 @__count_leading_zeros_i64(i64) nounwind readnone
 
-;; svml
-
 ; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
 ; or, use the macro to call the 4-wide ones twice with our 8-wide
 ; vectors...
 
-declare <WIDTH x float> @__svml_sin(<WIDTH x float>)
-declare <WIDTH x float> @__svml_cos(<WIDTH x float>)
-declare void @__svml_sincos(<WIDTH x float>, <WIDTH x float> *, <WIDTH x float> *)
-declare <WIDTH x float> @__svml_tan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan2(<WIDTH x float>, <WIDTH x float>)
-declare <WIDTH x float> @__svml_exp(<WIDTH x float>)
-declare <WIDTH x float> @__svml_log(<WIDTH x float>)
-declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
+;; svml
+
+include(`svml.m4')
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions
@@ -226,14 +220,16 @@ declare i1 @__any(<WIDTH x i1>) nounwind readnone
 declare i1 @__all(<WIDTH x i1>) nounwind readnone 
 declare i1 @__none(<WIDTH x i1>) nounwind readnone 
 
+declare i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone
+declare i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone
+
 declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
 declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone 
 declare float @__reduce_max_float(<WIDTH x float>) nounwind readnone 
 
-declare i32 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone 
+declare i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone
 declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone 
-
 declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone 
 declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone 
 
@@ -244,7 +240,6 @@ declare double @__reduce_max_double(<WIDTH x double>) nounwind readnone
 declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone 
-
 declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
 declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
 
@@ -378,4 +373,9 @@ declare void @__prefetch_read_uniform_1(i8 * nocapture) nounwind
 declare void @__prefetch_read_uniform_2(i8 * nocapture) nounwind 
 declare void @__prefetch_read_uniform_3(i8 * nocapture) nounwind 
 declare void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
 

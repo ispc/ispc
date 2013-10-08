@@ -38,7 +38,7 @@
 #ifndef ISPC_H
 #define ISPC_H
 
-#define ISPC_VERSION "1.4.5dev"
+#define ISPC_VERSION "1.5.1dev"
 
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
 #error "Only LLVM 3.1, 3.2, 3.3 and the 3.4 development branch are supported"
@@ -59,12 +59,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <vector>
+#include <set>
 #include <string>
 
 /** @def ISPC_MAX_NVEC maximum vector size of any of the compliation
     targets.
  */
 #define ISPC_MAX_NVEC 64
+
+// Number of final optimization phase
+#define LAST_OPT_NUMBER 1000
 
 // Forward declarations of a number of widely-used LLVM types
 namespace llvm {
@@ -175,7 +179,12 @@ public:
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { NVPTX64, NEON, SSE2, SSE4, AVX, AVX11, AVX2, GENERIC, NUM_ISAS };
+    enum ISA { NVPTX64,
+#ifdef ISPC_ARM_ENABLED
+               NEON32, NEON16, NEON8,
+#endif
+               SSE2, SSE4, AVX, AVX11, AVX2, GENERIC,
+               NUM_ISAS };
 
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
@@ -183,16 +192,16 @@ public:
     Target(const char *arch, const char *cpu, const char *isa, bool pic);
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target ISAs. */
-    static const char *SupportedTargetISAs();
+        supported compilation targets. */
+    static const char *SupportedTargets();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target CPUs. */
-    static std::string SupportedTargetCPUs();
+        supported CPUs. */
+    static std::string SupportedCPUs();
 
     /** Returns a comma-delimited string giving the names of the currently
-        supported target architectures. */
-    static const char *SupportedTargetArchs();
+        supported architectures. */
+    static const char *SupportedArchs();
 
     /** Returns a triple string specifying the target architecture, vendor,
         and environment. */
@@ -493,6 +502,16 @@ struct Globals {
     /** When \c true, voluminous debugging output will be printed during
         ispc's execution. */
     bool debugPrint;
+
+    /** Indicates which stages of optimization we want to dump. */
+    std::set<int> debug_stages;
+
+    /** Indicates after which optimization we want to generate
+        DebugIR information. */
+    int debugIR;
+
+    /** Indicates which phases of optimization we want to switch off. */
+    std::set<int> off_stages;
 
     /** Indicates whether all warning messages should be surpressed. */
     bool disableWarnings;

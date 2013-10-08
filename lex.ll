@@ -76,7 +76,9 @@ static int allTokens[] = {
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
-  TOKEN_FLOAT_CONSTANT,
+  TOKEN_FLOAT_CONSTANT, TOKEN_DOUBLE_CONSTANT,
+  TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
+  TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
   TOKEN_INT32_CONSTANT, TOKEN_UINT32_CONSTANT,
   TOKEN_INT64_CONSTANT, TOKEN_UINT64_CONSTANT,
   TOKEN_INC_OP, TOKEN_DEC_OP, TOKEN_LEFT_OP, TOKEN_RIGHT_OP, TOKEN_LE_OP,
@@ -150,6 +152,11 @@ void ParserInit() {
     tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
     tokenToName[TOKEN_DOTDOTDOT] = "...";
     tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
+    tokenToName[TOKEN_DOUBLE_CONSTANT] = "TOKEN_DOUBLE_CONSTANT";
+    tokenToName[TOKEN_INT8_CONSTANT] = "TOKEN_INT8_CONSTANT";
+    tokenToName[TOKEN_UINT8_CONSTANT] = "TOKEN_UINT8_CONSTANT";
+    tokenToName[TOKEN_INT16_CONSTANT] = "TOKEN_INT16_CONSTANT";
+    tokenToName[TOKEN_UINT16_CONSTANT] = "TOKEN_UINT16_CONSTANT";
     tokenToName[TOKEN_INT32_CONSTANT] = "TOKEN_INT32_CONSTANT";
     tokenToName[TOKEN_UINT32_CONSTANT] = "TOKEN_UINT32_CONSTANT";
     tokenToName[TOKEN_INT64_CONSTANT] = "TOKEN_INT64_CONSTANT";
@@ -260,6 +267,11 @@ void ParserInit() {
     tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
     tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
     tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
+    tokenNameRemap["TOKEN_DOUBLE_CONSTANT"] = "double constant";
+    tokenNameRemap["TOKEN_INT8_CONSTANT"] = "int8 constant";
+    tokenNameRemap["TOKEN_UINT8_CONSTANT"] = "unsigned int8 constant";
+    tokenNameRemap["TOKEN_INT16_CONSTANT"] = "int16 constant";
+    tokenNameRemap["TOKEN_UINT16_CONSTANT"] = "unsigned int16 constant";
     tokenNameRemap["TOKEN_INT32_CONSTANT"] = "int32 constant";
     tokenNameRemap["TOKEN_UINT32_CONSTANT"] = "unsigned int32 constant";
     tokenNameRemap["TOKEN_INT64_CONSTANT"] = "int64 constant";
@@ -333,6 +345,9 @@ INT_NUMBER (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*
 INT_NUMBER_DOTDOTDOT (([0-9]+)|(0x[0-9a-fA-F]+)|(0b[01]+))[uUlL]*[kMG]?[uUlL]*\.\.\.
 FLOAT_NUMBER (([0-9]+|(([0-9]+\.[0-9]*[fF]?)|(\.[0-9]+)))([eE][-+]?[0-9]+)?[fF]?)
 HEX_FLOAT_NUMBER (0x[01](\.[0-9a-fA-F]*)?p[-+]?[0-9]+[fF]?)
+FORTRAN_DOUBLE_NUMBER (([0-9]+\.[0-9]*[dD])|([0-9]+\.[0-9]*[dD][-+]?[0-9]+)|([0-9]+[dD][-+]?[0-9]+)|(\.[0-9]*[dD][-+]?[0-9]+))
+
+
 
 IDENT [a-zA-Z_][a-zA-Z_0-9]*
 ZO_SWIZZLE ([01]+[w-z]+)+|([01]+[rgba]+)+|([01]+[uv]+)+
@@ -427,6 +442,17 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     return lParseInteger(true);
 }
 
+{FORTRAN_DOUBLE_NUMBER} {
+    RT;
+    {
+      int i = 0;
+      while (yytext[i] != 'd' && yytext[i] != 'D') i++;
+      yytext[i] = 'E';
+    }
+    yylval.doubleVal = atof(yytext);
+    return TOKEN_DOUBLE_CONSTANT;
+}
+
 
 {FLOAT_NUMBER} {
     RT;
@@ -439,6 +465,8 @@ L?\"(\\.|[^\\"])*\" { lStringConst(&yylval, &yylloc); return TOKEN_STRING_LITERA
     yylval.floatVal = (float)lParseHexFloat(yytext);
     return TOKEN_FLOAT_CONSTANT;
 }
+
+
 
 "++" { RT; return TOKEN_INC_OP; }
 "--" { RT; return TOKEN_DEC_OP; }
@@ -599,7 +627,22 @@ lParseInteger(bool dotdotdot) {
         }
         else {
             // No u or l suffix
-            // First, see if we can fit this into a 32-bit integer...
+            // If we're compiling to an 8-bit mask target and the constant
+            // fits into 8 bits, return an 8-bit int.
+            if (g->target->getMaskBitCount() == 8) {
+                if (yylval.intVal <= 0x7fULL)
+                    return TOKEN_INT8_CONSTANT;
+                else if (yylval.intVal <= 0xffULL)
+                    return TOKEN_UINT8_CONSTANT;
+            }
+            // And similarly for 16-bit masks and constants
+            if (g->target->getMaskBitCount() == 16) {
+                if (yylval.intVal <= 0x7fffULL)
+                    return TOKEN_INT16_CONSTANT;
+                else if (yylval.intVal <= 0xffffULL)
+                    return TOKEN_UINT16_CONSTANT;
+            }
+            // Otherwise, see if we can fit this into a 32-bit integer...
             if (yylval.intVal <= 0x7fffffffULL)
                 return TOKEN_INT32_CONSTANT;
             else if (yylval.intVal <= 0xffffffffULL)

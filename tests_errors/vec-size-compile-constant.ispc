@@ -1,4 +1,4 @@
-// syntax error, unexpected identifier, expecting int32 constant
+// syntax error, unexpected identifier, expecting int
 
 void foo(uniform int i) {
     float<i> a;

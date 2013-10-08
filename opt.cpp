@@ -63,6 +63,9 @@
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
 #endif
+#if defined (LLVM_3_4)
+  #include <llvm/Transforms/Instrumentation.h>
+#endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
 #include <llvm/Assembly/PrintModulePass.h>
@@ -85,6 +88,7 @@
 #include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/PatternMatch.h>
 #if defined(LLVM_3_1)
   #include <llvm/Analysis/DebugInfo.h>
 #else
@@ -108,7 +112,8 @@
 #endif
 
 static llvm::Pass *CreateIntrinsicsOptPass();
-static llvm::Pass *CreateVSelMovmskOptPass();
+static llvm::Pass *CreateInstructionSimplifyPass();
+static llvm::Pass *CreatePeepholePass();
 
 static llvm::Pass *CreateImproveMemoryOpsPass();
 static llvm::Pass *CreateGatherCoalescePass();
@@ -116,6 +121,8 @@ static llvm::Pass *CreateReplacePseudoMemoryOpsPass();
 
 static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
+
+static llvm::Pass *CreateDebugPass(char * output);
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -394,6 +401,54 @@ lGetMaskStatus(llvm::Value *mask, int vecWidth = -1) {
 
 
 ///////////////////////////////////////////////////////////////////////////
+// This is a wrap over class llvm::PassManager. This duplicates PassManager function run()
+//   and change PassManager function add by adding some checks and debug passes.
+//   This wrap can control:
+//   - If we want to switch off optimization with given number.
+//   - If we want to dump LLVM IR after optimization with given number.
+//   - If we want to generate LLVM IR debug for gdb after optimization with given number.
+class DebugPassManager {
+public:
+    DebugPassManager():number(0){}
+    void add(llvm::Pass * P, int stage);
+    bool run(llvm::Module& M) {return PM.run(M);}
+    llvm::PassManager& getPM() {return PM;}
+
+private:
+    llvm::PassManager PM;
+    int number;
+};
+
+void
+DebugPassManager::add(llvm::Pass * P, int stage = -1) {
+    // taking number of optimization
+    if (stage == -1) {
+        number++;
+    }
+    else {
+        number = stage;
+    }
+    if (g->off_stages.find(number) == g->off_stages.end()) {
+        // adding optimization (not switched off)
+        PM.add(P);
+        if (g->debug_stages.find(number) != g->debug_stages.end()) {
+            // adding dump of LLVM IR after optimization
+            char buf[100];
+            sprintf(buf, "\n\n*****LLVM IR after phase %d: %s*****\n\n",
+                number, P->getPassName());
+            PM.add(CreateDebugPass(buf));
+        }
+#ifdef LLVM_3_4
+        if (g->debugIR == number) {
+            // adding generating of LLVM IR debug after optimization
+            char buf[100];
+            sprintf(buf, "Debug_IR_after_%d_phase.bc", number);
+            PM.add(llvm::createDebugIRPass(true, true, ".", buf));
+        }
+#endif
+    }
+}
+///////////////////////////////////////////////////////////////////////////
 
 void
 Optimize(llvm::Module *module, int optLevel) {
@@ -401,14 +456,8 @@ Optimize(llvm::Module *module, int optLevel) {
         printf("*** Code going into optimization ***\n");
         module->dump();
     }
-
-    llvm::PassManager optPM;
-    optPM.add(llvm::createVerifierPass());
-
-#if 0
-    std::string err;
-    optPM.add(llvm::createPrintModulePass(new llvm::raw_fd_ostream("-", err)));
-#endif
+    DebugPassManager optPM;
+    optPM.add(llvm::createVerifierPass(),0);
 
     llvm::TargetLibraryInfo *targetLibraryInfo =
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
@@ -425,7 +474,7 @@ Optimize(llvm::Module *module, int optLevel) {
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
   #else // LLVM 3.3+
-    targetMachine->addAnalysisPasses(optPM);
+    targetMachine->addAnalysisPasses(optPM.getPM());
   #endif
 #endif
 
@@ -437,11 +486,11 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        optPM.add(CreateImproveMemoryOpsPass());
+        optPM.add(CreateImproveMemoryOpsPass(), 100);
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateReplacePseudoMemoryOpsPass());
 
-        optPM.add(CreateIntrinsicsOptPass());
+        optPM.add(CreateIntrinsicsOptPass(), 102);
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
@@ -460,7 +509,7 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        optPM.add(llvm::createGlobalDCEPass());
+        optPM.add(llvm::createGlobalDCEPass(), 200);
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
@@ -469,16 +518,19 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
+        optPM.add(llvm::createPromoteMemoryToRegisterPass());
+        optPM.add(llvm::createAggressiveDCEPass());
+
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 210);
             optPM.add(CreateImproveMemoryOpsPass());
         }
         if (!g->opt.disableMaskAllOnOptimizations) {
-            optPM.add(CreateIntrinsicsOptPass());
-            optPM.add(CreateVSelMovmskOptPass());
+            optPM.add(CreateIntrinsicsOptPass(), 215);
+            optPM.add(CreateInstructionSimplifyPass());
         }
-        optPM.add(llvm::createDeadInstEliminationPass());
+        optPM.add(llvm::createDeadInstEliminationPass(), 220);
 
         // Max struct size threshold for scalar replacement is
         //    1) 4 fields (r,g,b,w)
@@ -508,9 +560,10 @@ Optimize(llvm::Module *module, int optLevel) {
 #if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
         // Starting from 3.4 this functionality was moved to
         // InstructionCombiningPass. See r184459 for details.
-        optPM.add(llvm::createSimplifyLibCallsPass());
+        optPM.add(llvm::createSimplifyLibCallsPass(), 240);
 #endif
-        optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(llvm::createAggressiveDCEPass());
+        optPM.add(llvm::createInstructionCombiningPass(), 241);
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold));
@@ -518,75 +571,85 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createTailCallEliminationPass());
 
         if (!g->opt.disableMaskAllOnOptimizations) {
-            optPM.add(CreateIntrinsicsOptPass());
-            optPM.add(CreateVSelMovmskOptPass());
+            optPM.add(CreateIntrinsicsOptPass(), 250);
+            optPM.add(CreateInstructionSimplifyPass());
         }
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 255);
             optPM.add(CreateImproveMemoryOpsPass());
 
             if (g->opt.disableCoalescing == false &&
                 g->target->getISA() != Target::GENERIC) {
                 // It is important to run this here to make it easier to
                 // finding matching gathers we can coalesce..
-                optPM.add(llvm::createEarlyCSEPass());
+                optPM.add(llvm::createEarlyCSEPass(), 260);
                 optPM.add(CreateGatherCoalescePass());
             }
         }
 
-        optPM.add(llvm::createFunctionInliningPass());
+        optPM.add(llvm::createFunctionInliningPass(), 265);
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(CreateIntrinsicsOptPass());
-        optPM.add(CreateVSelMovmskOptPass());
+        optPM.add(CreateInstructionSimplifyPass());
 
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
-            optPM.add(llvm::createInstructionCombiningPass());
+            optPM.add(llvm::createInstructionCombiningPass(), 270);
             optPM.add(CreateImproveMemoryOpsPass());
         }
 
-        optPM.add(llvm::createIPSCCPPass());
+        optPM.add(llvm::createIPSCCPPass(), 275);
         optPM.add(llvm::createDeadArgEliminationPass());
+        optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
 
-        if (g->opt.disableHandlePseudoMemoryOps == false)
-            optPM.add(CreateReplacePseudoMemoryOpsPass());
-        optPM.add(CreateIntrinsicsOptPass());
-        optPM.add(CreateVSelMovmskOptPass());
+        if (g->opt.disableHandlePseudoMemoryOps == false) {
+            optPM.add(CreateReplacePseudoMemoryOpsPass(),280);
+        }
+        optPM.add(CreateIntrinsicsOptPass(),281);
+        optPM.add(CreateInstructionSimplifyPass());
 
         optPM.add(llvm::createFunctionInliningPass());
         optPM.add(llvm::createArgumentPromotionPass());
         optPM.add(llvm::createScalarReplAggregatesPass(sr_threshold, false));
         optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createLoopRotatePass());
         optPM.add(llvm::createLICMPass());
         optPM.add(llvm::createLoopUnswitchPass(false));
         optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createIndVarSimplifyPass());
         optPM.add(llvm::createLoopIdiomPass());
         optPM.add(llvm::createLoopDeletionPass());
-        if (g->opt.unrollLoops)
-            optPM.add(llvm::createLoopUnrollPass());
-        optPM.add(llvm::createGVNPass());
+        if (g->opt.unrollLoops) {
+            optPM.add(llvm::createLoopUnrollPass(), 300);
+        }
+        optPM.add(llvm::createGVNPass(), 301);
 
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
-        optPM.add(CreateVSelMovmskOptPass());
+        optPM.add(CreateInstructionSimplifyPass());
 
         optPM.add(llvm::createMemCpyOptPass());
         optPM.add(llvm::createSCCPPass());
         optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(CreateInstructionSimplifyPass());
         optPM.add(llvm::createJumpThreadingPass());
         optPM.add(llvm::createCorrelatedValuePropagationPass());
         optPM.add(llvm::createDeadStoreEliminationPass());
         optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createInstructionCombiningPass());
+        optPM.add(CreateInstructionSimplifyPass());
+        optPM.add(CreatePeepholePass());
+        optPM.add(llvm::createFunctionInliningPass());
+        optPM.add(llvm::createAggressiveDCEPass());
         optPM.add(llvm::createStripDeadPrototypesPass());
         optPM.add(CreateMakeInternalFuncsStaticPass());
         optPM.add(llvm::createGlobalDCEPass());
@@ -595,7 +658,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
     // Finish up by making sure we didn't mess anything up in the IR along
     // the way.
-    optPM.add(llvm::createVerifierPass());
+    optPM.add(llvm::createVerifierPass(), LAST_OPT_NUMBER);
     optPM.run(*module);
 
     if (g->debugPrint) {
@@ -670,14 +733,17 @@ IntrinsicsOpt::IntrinsicsOpt()
     // All of the mask instructions we may encounter.  Note that even if
     // compiling for AVX, we may still encounter the regular 4-wide SSE
     // MOVMSK instruction.
-    llvm::Function *sseMovmsk =
+    llvm::Function *ssei8Movmsk =
+        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse2_pmovmskb_128);
+    maskInstructions.push_back(ssei8Movmsk);
+    llvm::Function *sseFloatMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
-    maskInstructions.push_back(sseMovmsk);
+    maskInstructions.push_back(sseFloatMovmsk);
     maskInstructions.push_back(m->module->getFunction("__movmsk"));
-    llvm::Function *avxMovmsk =
+    llvm::Function *avxFloatMovmsk =
         llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
-    Assert(avxMovmsk != NULL);
-    maskInstructions.push_back(avxMovmsk);
+    Assert(avxFloatMovmsk != NULL);
+    maskInstructions.push_back(avxFloatMovmsk);
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
@@ -924,80 +990,153 @@ CreateIntrinsicsOptPass() {
     @todo The better thing to do would be to submit a patch to LLVM to get
     these; they're presumably pretty simple patterns to match.
 */
-class VSelMovmskOpt : public llvm::BasicBlockPass {
+class InstructionSimplifyPass : public llvm::BasicBlockPass {
 public:
-    VSelMovmskOpt()
+    InstructionSimplifyPass()
         : BasicBlockPass(ID) { }
 
     const char *getPassName() const { return "Vector Select Optimization"; }
     bool runOnBasicBlock(llvm::BasicBlock &BB);
 
     static char ID;
+
+private:
+    static bool simplifySelect(llvm::SelectInst *selectInst,
+                               llvm::BasicBlock::iterator iter);
+    static llvm::Value *simplifyBoolVec(llvm::Value *value);
+    static bool simplifyCall(llvm::CallInst *callInst,
+                               llvm::BasicBlock::iterator iter);
 };
 
-char VSelMovmskOpt::ID = 0;
+char InstructionSimplifyPass::ID = 0;
+
+
+llvm::Value *
+InstructionSimplifyPass::simplifyBoolVec(llvm::Value *value) {
+    llvm::TruncInst *trunc = llvm::dyn_cast<llvm::TruncInst>(value);
+    if (trunc != NULL) {
+        // Convert trunc({sext,zext}(i1 vector)) -> (i1 vector)
+        llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(value);
+        if (sext && 
+            sext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
+            return sext->getOperand(0);
+
+        llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(value);
+        if (zext && 
+            zext->getOperand(0)->getType() == LLVMTypes::Int1VectorType)
+            return zext->getOperand(0);
+    }
+
+    llvm::ICmpInst *icmp = llvm::dyn_cast<llvm::ICmpInst>(value);
+    if (icmp != NULL) {
+        // icmp(ne, {sext,zext}(foo), zeroinitializer) -> foo
+        if (icmp->getSignedPredicate() == llvm::CmpInst::ICMP_NE) {
+            llvm::Value *op1 = icmp->getOperand(1);
+            if (llvm::isa<llvm::ConstantAggregateZero>(op1)) {
+                llvm::Value *op0 = icmp->getOperand(0);
+                llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(op0);
+                if (sext)
+                    return sext->getOperand(0);
+                llvm::ZExtInst *zext = llvm::dyn_cast<llvm::ZExtInst>(op0);
+                if (zext)
+                    return zext->getOperand(0);
+            }
+        }
+    }
+    return NULL;
+}
 
 
 bool
-VSelMovmskOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
-    DEBUG_START_PASS("VSelMovmaskOpt");
+InstructionSimplifyPass::simplifySelect(llvm::SelectInst *selectInst,
+                                        llvm::BasicBlock::iterator iter) {
+    if (selectInst->getType()->isVectorTy() == false)
+        return false;
+
+    llvm::Value *factor = selectInst->getOperand(0);
+
+    // Simplify all-on or all-off mask values
+    MaskStatus maskStatus = lGetMaskStatus(factor);
+    llvm::Value *value = NULL;
+    if (maskStatus == ALL_ON)
+        // Mask all on -> replace with the first select value
+        value = selectInst->getOperand(1);
+    else if (maskStatus == ALL_OFF)
+        // Mask all off -> replace with the second select value
+        value = selectInst->getOperand(2);
+    if (value != NULL) {
+        llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
+                                   iter, value);
+        return true;
+    }
+
+    // Sometimes earlier LLVM optimization passes generate unnecessarily
+    // complex expressions for the selection vector, which in turn confuses
+    // the code generators and leads to sub-optimal code (particularly for
+    // 8 and 16-bit masks).  We'll try to simplify them out here so that
+    // the code generator patterns match..
+    if ((factor = simplifyBoolVec(factor)) != NULL) {
+        llvm::Instruction *newSelect =
+            llvm::SelectInst::Create(factor, selectInst->getOperand(1),
+                                     selectInst->getOperand(2),
+                                     selectInst->getName());
+        llvm::ReplaceInstWithInst(selectInst, newSelect);
+        return true;
+    }
+
+    return false;
+}
+
+
+bool
+InstructionSimplifyPass::simplifyCall(llvm::CallInst *callInst,
+                                      llvm::BasicBlock::iterator iter) {
+    llvm::Function *calledFunc = callInst->getCalledFunction();
+
+    // Turn a __movmsk call with a compile-time constant vector into the
+    // equivalent scalar value.
+    if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
+        return false;
+
+    uint64_t mask;
+    if (lGetMask(callInst->getArgOperand(0), &mask) == true) {
+        llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
+                                   iter, LLVMInt64(mask));
+        return true;
+    }
+    return false;
+}
+
+
+bool
+InstructionSimplifyPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("InstructionSimplify");
 
     bool modifiedAny = false;
 
  restart:
     for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
         llvm::SelectInst *selectInst = llvm::dyn_cast<llvm::SelectInst>(&*iter);
-        if (selectInst != NULL && selectInst->getType()->isVectorTy()) {
-            llvm::Value *factor = selectInst->getOperand(0);
-
-            MaskStatus maskStatus = lGetMaskStatus(factor);
-            llvm::Value *value = NULL;
-            if (maskStatus == ALL_ON)
-                // Mask all on -> replace with the first select value
-                value = selectInst->getOperand(1);
-            else if (maskStatus == ALL_OFF)
-                // Mask all off -> replace with the second select value
-                value = selectInst->getOperand(2);
-
-            if (value != NULL) {
-                llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
-                                           iter, value);
-                modifiedAny = true;
-                goto restart;
-            }
+        if (selectInst && simplifySelect(selectInst, iter)) {
+            modifiedAny = true;
+            goto restart;
         }
-
         llvm::CallInst *callInst = llvm::dyn_cast<llvm::CallInst>(&*iter);
-        if (callInst == NULL)
-            continue;
-
-        llvm::Function *calledFunc = callInst->getCalledFunction();
-        if (calledFunc == NULL || calledFunc != m->module->getFunction("__movmsk"))
-            continue;
-
-        uint64_t mask;
-        if (lGetMask(callInst->getArgOperand(0), &mask) == true) {
-#if 0
-            fprintf(stderr, "mask %d\n", mask);
-            callInst->getArgOperand(0)->dump();
-            fprintf(stderr, "-----------\n");
-#endif
-            llvm::ReplaceInstWithValue(iter->getParent()->getInstList(),
-                                       iter, LLVMInt64(mask));
+        if (callInst && simplifyCall(callInst, iter)) {
             modifiedAny = true;
             goto restart;
         }
     }
 
-    DEBUG_END_PASS("VSelMovMskOpt");
+    DEBUG_END_PASS("InstructionSimplify");
 
     return modifiedAny;
 }
 
 
 static llvm::Pass *
-CreateVSelMovmskOptPass() {
-    return new VSelMovmskOpt;
+CreateInstructionSimplifyPass() {
+    return new InstructionSimplifyPass;
 }
 
 
@@ -4240,6 +4379,42 @@ CreateIsCompileTimeConstantPass(bool isLastTry) {
     return new IsCompileTimeConstantPass(isLastTry);
 }
 
+//////////////////////////////////////////////////////////////////////////
+// DebugPass
+
+/** This pass is added in list of passes after optimizations which
+    we want to debug and print dump of LLVM IR in stderr. Also it
+    prints name and number of previous optimization.
+ */
+class DebugPass : public llvm::ModulePass {
+public:
+    static char ID;
+    DebugPass(char * output) : ModulePass(ID) {
+        sprintf(str_output, "%s", output);
+    }
+
+    const char *getPassName() const { return "Dump LLVM IR"; }
+    bool runOnModule(llvm::Module &m);
+
+private:
+    char str_output[100];
+};
+
+char DebugPass::ID = 0;
+
+bool
+DebugPass::runOnModule(llvm::Module &module) {
+    fprintf(stderr, "%s", str_output);
+    fflush(stderr);
+    module.dump();
+    return true;
+}
+
+static llvm::Pass *
+CreateDebugPass(char * output) {
+    return new DebugPass(output);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // MakeInternalFuncsStaticPass
 
@@ -4273,6 +4448,14 @@ char MakeInternalFuncsStaticPass::ID = 0;
 bool
 MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
     const char *names[] = {
+        "__avg_up_uint8",
+        "__avg_up_int8",
+        "__avg_up_uint16",
+        "__avg_up_int16",
+        "__avg_down_uint8",
+        "__avg_down_int8",
+        "__avg_down_uint16",
+        "__avg_down_int16",
         "__fast_masked_vload",
         "__gather_factored_base_offsets32_i8", "__gather_factored_base_offsets32_i16",
         "__gather_factored_base_offsets32_i32", "__gather_factored_base_offsets32_i64",
@@ -4351,4 +4534,392 @@ MakeInternalFuncsStaticPass::runOnModule(llvm::Module &module) {
 static llvm::Pass *
 CreateMakeInternalFuncsStaticPass() {
     return new MakeInternalFuncsStaticPass;
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// PeepholePass
+
+class PeepholePass : public llvm::BasicBlockPass {
+public:
+    PeepholePass();
+
+    const char *getPassName() const { return "Peephole Optimizations"; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+    static char ID;
+};
+
+char PeepholePass::ID = 0;
+
+PeepholePass::PeepholePass()
+    : BasicBlockPass(ID) {
+}
+
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+
+using namespace llvm::PatternMatch;
+
+template<typename Op_t, unsigned Opcode>
+struct CastClassTypes_match {
+    Op_t Op;
+    const llvm::Type *fromType, *toType;
+
+    CastClassTypes_match(const Op_t &OpMatch, const llvm::Type *f,
+                         const llvm::Type *t)
+        : Op(OpMatch), fromType(f), toType(t) {}
+
+    template<typename OpTy>
+    bool match(OpTy *V) {
+        if (llvm::Operator *O = llvm::dyn_cast<llvm::Operator>(V))
+            return (O->getOpcode() == Opcode && Op.match(O->getOperand(0)) &&
+                    O->getType() == toType &&
+                    O->getOperand(0)->getType() == fromType);
+        return false;
+    }
+};
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::SExt>
+m_SExt8To16(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::SExt>(
+        Op,
+        LLVMTypes::Int8VectorType,
+        LLVMTypes::Int16VectorType);
+}
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::ZExt>
+m_ZExt8To16(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::ZExt>(
+        Op,
+        LLVMTypes::Int8VectorType,
+        LLVMTypes::Int16VectorType);
+}
+
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::Trunc>
+m_Trunc16To8(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::Trunc>(
+        Op,
+        LLVMTypes::Int16VectorType,
+        LLVMTypes::Int8VectorType);
+}
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::SExt>
+m_SExt16To32(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::SExt>(
+        Op,
+        LLVMTypes::Int16VectorType,
+        LLVMTypes::Int32VectorType);
+}
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::ZExt>
+m_ZExt16To32(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::ZExt>(
+        Op,
+        LLVMTypes::Int16VectorType,
+        LLVMTypes::Int32VectorType);
+}
+
+
+template<typename OpTy>
+inline CastClassTypes_match<OpTy, llvm::Instruction::Trunc>
+m_Trunc32To16(const OpTy &Op) {
+    return CastClassTypes_match<OpTy, llvm::Instruction::Trunc>(
+        Op,
+        LLVMTypes::Int32VectorType,
+        LLVMTypes::Int16VectorType);
+}
+
+template<typename Op_t>
+struct UDiv2_match {
+    Op_t Op;
+
+    UDiv2_match(const Op_t &OpMatch)
+        : Op(OpMatch) {}
+
+    template<typename OpTy>
+    bool match(OpTy *V) {
+        llvm::BinaryOperator *bop;
+        llvm::ConstantDataVector *cdv;
+        if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
+            (cdv = llvm::dyn_cast<llvm::ConstantDataVector>(bop->getOperand(1))) &&
+            cdv->getSplatValue() != NULL) {
+            const llvm::APInt &apInt = cdv->getUniqueInteger();
+
+            switch (bop->getOpcode()) {
+            case llvm::Instruction::UDiv:
+                // divide by 2
+                return (apInt.isIntN(2) && Op.match(bop->getOperand(0)));
+            case llvm::Instruction::LShr:
+                // shift left by 1
+                return (apInt.isIntN(1) && Op.match(bop->getOperand(0)));
+            default:
+                return false;
+            }
+        }
+        return false;
+    }
+};
+
+template<typename V>
+inline UDiv2_match<V>
+m_UDiv2(const V &v) {
+    return UDiv2_match<V>(v);
+}
+
+template<typename Op_t>
+struct SDiv2_match {
+    Op_t Op;
+
+    SDiv2_match(const Op_t &OpMatch)
+        : Op(OpMatch) {}
+
+    template<typename OpTy>
+    bool match(OpTy *V) {
+        llvm::BinaryOperator *bop;
+        llvm::ConstantDataVector *cdv;
+        if ((bop = llvm::dyn_cast<llvm::BinaryOperator>(V)) &&
+            (cdv = llvm::dyn_cast<llvm::ConstantDataVector>(bop->getOperand(1))) &&
+            cdv->getSplatValue() != NULL) {
+            const llvm::APInt &apInt = cdv->getUniqueInteger();
+
+            switch (bop->getOpcode()) {
+            case llvm::Instruction::SDiv:
+                // divide by 2
+                return (apInt.isIntN(2) && Op.match(bop->getOperand(0)));
+            case llvm::Instruction::AShr:
+                // shift left by 1
+                return (apInt.isIntN(1) && Op.match(bop->getOperand(0)));
+            default:
+                return false;
+            }
+        }
+        return false;
+    }
+};
+
+template<typename V>
+inline SDiv2_match<V>
+m_SDiv2(const V &v) {
+    return SDiv2_match<V>(v);
+}
+
+// Returns true if the given function has a call to an intrinsic function
+// in its definition.
+static bool
+lHasIntrinsicInDefinition(llvm::Function *func) {
+  llvm::Function::iterator bbiter = func->begin();
+  for (; bbiter != func->end(); ++bbiter) {
+    for (llvm::BasicBlock::iterator institer = bbiter->begin();
+         institer != bbiter->end(); ++institer) {
+      if (llvm::isa<llvm::IntrinsicInst>(institer))
+        return true;
+    }
+  }
+  return false;
+}
+
+static llvm::Instruction *
+lGetBinaryIntrinsic(const char *name, llvm::Value *opa, llvm::Value *opb) {
+  llvm::Function *func = m->module->getFunction(name);
+  Assert(func != NULL);
+
+  // Make sure that the definition of the llvm::Function has a call to an
+  // intrinsic function in its instructions; otherwise we will generate
+  // infinite loops where we "helpfully" turn the default implementations
+  // of target builtins like __avg_up_uint8 that are implemented with plain
+  // arithmetic ops into recursive calls to themselves.
+  if (lHasIntrinsicInDefinition(func))
+    return lCallInst(func, opa, opb, name);
+  else
+    return NULL;
+}
+
+//////////////////////////////////////////////////
+
+static llvm::Instruction *
+lMatchAvgUpUInt8(llvm::Value *inst) {
+    // (unsigned int8)(((unsigned int16)a + (unsigned int16)b + 1)/2)
+    llvm::Value *opa, *opb;
+    const llvm::APInt *delta;
+    if (match(inst, m_Trunc16To8(m_UDiv2(m_CombineOr(
+        m_CombineOr(
+            m_Add(m_ZExt8To16(m_Value(opa)),
+                  m_Add(m_ZExt8To16(m_Value(opb)), m_APInt(delta))),
+            m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_APInt(delta)),
+                  m_ZExt8To16(m_Value(opb)))),
+        m_Add(m_Add(m_ZExt8To16(m_Value(opa)), m_ZExt8To16(m_Value(opb))),
+              m_APInt(delta))))))) {
+        if (delta->isIntN(1) == false)
+            return NULL;
+
+        return lGetBinaryIntrinsic("__avg_up_uint8", opa, opb);
+    }
+    return NULL;
+}
+
+
+static llvm::Instruction *
+lMatchAvgDownUInt8(llvm::Value *inst) {
+    // (unsigned int8)(((unsigned int16)a + (unsigned int16)b)/2)
+    llvm::Value *opa, *opb;
+    if (match(inst, m_Trunc16To8(m_UDiv2(
+                    m_Add(m_ZExt8To16(m_Value(opa)),
+                          m_ZExt8To16(m_Value(opb))))))) {
+        return lGetBinaryIntrinsic("__avg_down_uint8", opa, opb);
+    }
+    return NULL;
+}
+
+static llvm::Instruction *
+lMatchAvgUpUInt16(llvm::Value *inst) {
+    // (unsigned int16)(((unsigned int32)a + (unsigned int32)b + 1)/2)
+    llvm::Value *opa, *opb;
+    const llvm::APInt *delta;
+    if (match(inst, m_Trunc32To16(m_UDiv2(m_CombineOr(
+        m_CombineOr(
+            m_Add(m_ZExt16To32(m_Value(opa)),
+                  m_Add(m_ZExt16To32(m_Value(opb)), m_APInt(delta))),
+            m_Add(m_Add(m_ZExt16To32(m_Value(opa)), m_APInt(delta)),
+                  m_ZExt16To32(m_Value(opb)))),
+        m_Add(m_Add(m_ZExt16To32(m_Value(opa)), m_ZExt16To32(m_Value(opb))),
+              m_APInt(delta))))))) {
+        if (delta->isIntN(1) == false)
+            return NULL;
+
+        return lGetBinaryIntrinsic("__avg_up_uint16", opa, opb);
+    }
+    return NULL;
+}
+
+
+static llvm::Instruction *
+lMatchAvgDownUInt16(llvm::Value *inst) {
+    // (unsigned int16)(((unsigned int32)a + (unsigned int32)b)/2)
+    llvm::Value *opa, *opb;
+    if (match(inst, m_Trunc32To16(m_UDiv2(
+                    m_Add(m_ZExt16To32(m_Value(opa)),
+                          m_ZExt16To32(m_Value(opb))))))) {
+        return lGetBinaryIntrinsic("__avg_down_uint16", opa, opb);
+    }
+    return NULL;
+}
+
+
+static llvm::Instruction *
+lMatchAvgUpInt8(llvm::Value *inst) {
+    // (int8)(((int16)a + (int16)b + 1)/2)
+    llvm::Value *opa, *opb;
+    const llvm::APInt *delta;
+    if (match(inst, m_Trunc16To8(m_SDiv2(m_CombineOr(
+        m_CombineOr(
+            m_Add(m_SExt8To16(m_Value(opa)),
+                  m_Add(m_SExt8To16(m_Value(opb)), m_APInt(delta))),
+            m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_APInt(delta)),
+                  m_SExt8To16(m_Value(opb)))),
+        m_Add(m_Add(m_SExt8To16(m_Value(opa)), m_SExt8To16(m_Value(opb))),
+              m_APInt(delta))))))) {
+        if (delta->isIntN(1) == false)
+            return NULL;
+
+        return lGetBinaryIntrinsic("__avg_up_int8", opa, opb);
+    }
+    return NULL;
+}
+
+
+static llvm::Instruction *
+lMatchAvgDownInt8(llvm::Value *inst) {
+    // (int8)(((int16)a + (int16)b)/2)
+    llvm::Value *opa, *opb;
+    if (match(inst, m_Trunc16To8(m_SDiv2(
+                    m_Add(m_SExt8To16(m_Value(opa)),
+                          m_SExt8To16(m_Value(opb))))))) {
+        return lGetBinaryIntrinsic("__avg_down_int8", opa, opb);
+    }
+    return NULL;
+}
+
+static llvm::Instruction *
+lMatchAvgUpInt16(llvm::Value *inst) {
+    // (int16)(((int32)a + (int32)b + 1)/2)
+    llvm::Value *opa, *opb;
+    const llvm::APInt *delta;
+    if (match(inst, m_Trunc32To16(m_SDiv2(m_CombineOr(
+        m_CombineOr(
+            m_Add(m_SExt16To32(m_Value(opa)),
+                  m_Add(m_SExt16To32(m_Value(opb)), m_APInt(delta))),
+            m_Add(m_Add(m_SExt16To32(m_Value(opa)), m_APInt(delta)),
+                  m_SExt16To32(m_Value(opb)))),
+        m_Add(m_Add(m_SExt16To32(m_Value(opa)), m_SExt16To32(m_Value(opb))),
+              m_APInt(delta))))))) {
+        if (delta->isIntN(1) == false)
+            return NULL;
+
+        return lGetBinaryIntrinsic("__avg_up_int16", opa, opb);
+    }
+    return NULL;
+}
+
+static llvm::Instruction *
+lMatchAvgDownInt16(llvm::Value *inst) {
+    // (int16)(((int32)a + (int32)b)/2)
+    llvm::Value *opa, *opb;
+    if (match(inst, m_Trunc32To16(m_SDiv2(
+                    m_Add(m_SExt16To32(m_Value(opa)),
+                          m_SExt16To32(m_Value(opb))))))) {
+        return lGetBinaryIntrinsic("__avg_down_int16", opa, opb);
+    }
+    return NULL;
+}
+#endif // !LLVM_3_1 && !LLVM_3_2
+
+bool
+PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("PeepholePass");
+
+    bool modifiedAny = false;
+ restart:
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        llvm::Instruction *inst = &*iter;
+
+        llvm::Instruction *builtinCall = NULL;
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2)
+        if (!builtinCall)
+          builtinCall = lMatchAvgUpUInt8(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgUpUInt16(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgDownUInt8(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgDownUInt16(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgUpInt8(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgUpInt16(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgDownInt8(inst);
+        if (!builtinCall)
+          builtinCall = lMatchAvgDownInt16(inst);
+#endif // !LLVM_3_1 && !LLVM_3_2
+        if (builtinCall != NULL) {
+          llvm::ReplaceInstWithInst(inst, builtinCall);
+          modifiedAny = true;
+          goto restart;
+        }
+    }
+
+    DEBUG_END_PASS("PeepholePass");
+
+    return modifiedAny;
+}
+
+static llvm::Pass *
+CreatePeepholePass() {
+  return new PeepholePass;
 }

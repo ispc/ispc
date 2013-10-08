@@ -149,7 +149,8 @@ struct ForeachDimension {
 
 %union {
     uint64_t intVal;
-    float floatVal;
+    float  floatVal;
+    double doubleVal;
     std::string *stringVal;
     const char *constCharPtr;
 
@@ -179,11 +180,13 @@ struct ForeachDimension {
 }
 
 
+%token TOKEN_INT8_CONSTANT TOKEN_UINT8_CONSTANT
+%token TOKEN_INT16_CONSTANT TOKEN_UINT16_CONSTANT
 %token TOKEN_INT32_CONSTANT TOKEN_UINT32_CONSTANT
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
-%token TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -291,6 +294,22 @@ primary_expression
             Error(@1, "Undeclared symbol \"%s\".%s", name, alts.c_str());
         }
     }
+    | TOKEN_INT8_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt8->GetAsConstType(),
+                           (int8_t)yylval.intVal, @1);
+    }
+    | TOKEN_UINT8_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt8->GetAsConstType(),
+                           (uint8_t)yylval.intVal, @1);
+    }
+    | TOKEN_INT16_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformInt16->GetAsConstType(),
+                           (int16_t)yylval.intVal, @1);
+    }
+    | TOKEN_UINT16_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformUInt16->GetAsConstType(),
+                           (uint16_t)yylval.intVal, @1);
+    }
     | TOKEN_INT32_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformInt32->GetAsConstType(),
                            (int32_t)yylval.intVal, @1);
@@ -309,7 +328,11 @@ primary_expression
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
-                           (float)yylval.floatVal, @1);
+                           yylval.floatVal, @1);
+    }
+    | TOKEN_DOUBLE_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformDouble->GetAsConstType(),
+                           yylval.doubleVal, @1);
     }
     | TOKEN_TRUE {
         $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
@@ -1233,7 +1256,10 @@ declarator
     ;
 
 int_constant
-    : TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    : TOKEN_INT8_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT16_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT32_CONSTANT { $$ = yylval.intVal; }
+    | TOKEN_INT64_CONSTANT { $$ = yylval.intVal; }
     ;
 
 direct_declarator
@@ -2148,8 +2174,27 @@ lAddFunctionParams(Declarator *decl) {
 
 /** Add a symbol for the built-in mask variable to the symbol table */
 static void lAddMaskToSymbolTable(SourcePos pos) {
-    const Type *t = g->target->getMaskBitCount() == 1 ?
-        AtomicType::VaryingBool : AtomicType::VaryingUInt32;
+    const Type *t = NULL;
+    switch (g->target->getMaskBitCount()) {
+    case 1:
+        t = AtomicType::VaryingBool;
+        break;
+    case 8:
+        t = AtomicType::VaryingUInt8;
+        break;
+    case 16:
+        t = AtomicType::VaryingUInt16;
+        break;
+    case 32:
+        t = AtomicType::VaryingUInt32;
+        break;
+    case 64:
+        t = AtomicType::VaryingUInt64;
+        break;
+    default:
+        FATAL("Unhandled mask bitsize in lAddMaskToSymbolTable");
+    }
+
     t = t->GetAsConstType();
     Symbol *maskSymbol = new Symbol("__mask", pos, t);
     m->symbolTable->AddVariable(maskSymbol);
@@ -2241,7 +2286,11 @@ lGetConstantInt(Expr *expr, int *value, SourcePos pos, const char *usage) {
             Error(pos, "%s must be representable with a 32-bit integer.", usage);
             return false;
         }
-        *value = (int)ci->getZExtValue();
+        const Type *type = expr->GetType();
+        if (type->IsUnsignedType())
+            *value = (int)ci->getZExtValue();
+        else
+            *value = (int)ci->getSExtValue();
         return true;
     }
 }

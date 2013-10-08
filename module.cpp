@@ -1877,6 +1877,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     char *p = targetMacro;
     while (*p) {
         *p = toupper(*p);
+        if (*p == '-') *p = '_';
         ++p;
     }
     opts.addMacroDef(targetMacro);

@@ -79,8 +79,8 @@
     compiler under a debuffer; in this case, just return a reasonable
     default.
  */
-static int
-lTerminalWidth() {
+int
+TerminalWidth() {
     if (g->disableLineWrap)
         return 1<<30;
 
@@ -228,8 +228,8 @@ lFindIndent(int numColons, const char *buf) {
 /** Print the given string to the given FILE, assuming the given output
     column width.  Break words as needed to avoid words spilling past the
     last column.  */
-static void
-lPrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
+void
+PrintWithWordBreaks(const char *buf, int indent, int columnWidth, FILE *out) {
 #ifdef ISPC_IS_WINDOWS
     fputs(buf, out);
     fputs("\n", out);
@@ -375,7 +375,7 @@ lPrint(const char *type, bool isError, SourcePos p, const char *fmt,
         return;
     printed.insert(formattedBuf);
 
-    lPrintWithWordBreaks(formattedBuf, indent, lTerminalWidth(), stderr);
+    PrintWithWordBreaks(formattedBuf, indent, TerminalWidth(), stderr);
     lPrintFileLineContext(p);
 
     free(errorBuf);

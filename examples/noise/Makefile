@@ -1,6 +1,6 @@
 
 EXAMPLE=noise
-CPP_SRC=$(EXAMPLE).cpp $(EXAMPLE)_serial.cpp
+CPP_SRC=noise.cpp noise_serial.cpp
 ISPC_SRC=noise.ispc
 ISPC_IA_TARGETS=sse2,sse4,avx-x2
 ISPC_ARM_TARGETS=neon

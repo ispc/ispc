@@ -3,13 +3,20 @@
 depend
 ispc
 ispc_test
+ispc_ref
 objs
 docs/doxygen
 docs/*.html
 tests*/*cpp
 tests*/*run
+logs/
+notify_log.log
+alloy_results_*
 examples/*/*.png
 examples/*/*.ppm
 examples/*/objs/*
+examples/*/ref
+examples/*/test
+*.swp
 
 

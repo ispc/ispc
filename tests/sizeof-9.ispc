@@ -2,7 +2,7 @@
 export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    RET[programIndex] = sizeof 1;
+  RET[programIndex] = sizeof 1u;
 }
 
 export void result(uniform float RET[]) {

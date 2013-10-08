@@ -137,19 +137,14 @@ define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; svml
 
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones twice with our 8-wide
-; vectors...
+include(`svml.m4')
+;; single precision
+svml_declare(float,f8,8)
+svml_define(float,f8,8,f)
 
-declare <8 x float> @__svml_sin(<8 x float>)
-declare <8 x float> @__svml_cos(<8 x float>)
-declare void @__svml_sincos(<8 x float>, <8 x float> *, <8 x float> *)
-declare <8 x float> @__svml_tan(<8 x float>)
-declare <8 x float> @__svml_atan(<8 x float>)
-declare <8 x float> @__svml_atan2(<8 x float>, <8 x float>)
-declare <8 x float> @__svml_exp(<8 x float>)
-declare <8 x float> @__svml_log(<8 x float>)
-declare <8 x float> @__svml_pow(<8 x float>, <8 x float>)
+;; double precision
+svml_declare(double,4,4)
+svml_define_x(double,4,4,d,8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -217,7 +212,6 @@ define float @__reduce_add_float(<8 x float>) nounwind readonly alwaysinline {
   ret float %sum
 }
 
-
 define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8(float, @__min_varying_float, @__min_uniform_float)
 }
@@ -228,6 +222,42 @@ define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
 }
 
 reduce_equal(8)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal int8 ops
+
+declare <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8>, <16 x i8>) nounwind readnone
+
+define i16 @__reduce_add_int8(<8 x i8>) nounwind readnone alwaysinline {
+  %wide8 = shufflevector <8 x i8> %0, <8 x i8> zeroinitializer,
+      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+                  i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
+  %rv = call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %wide8,
+                                              <16 x i8> zeroinitializer)
+  %r0 = extractelement <2 x i64> %rv, i32 0
+  %r1 = extractelement <2 x i64> %rv, i32 1
+  %r = add i64 %r0, %r1
+  %r16 = trunc i64 %r to i16
+  ret i16 %r16
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal int16 ops
+
+define internal <8 x i16> @__add_varying_i16(<8 x i16>,
+                                  <8 x i16>) nounwind readnone alwaysinline {
+  %r = add <8 x i16> %0, %1
+  ret <8 x i16> %r
+}
+
+define internal i16 @__add_uniform_i16(i16, i16) nounwind readnone alwaysinline {
+  %r = add i16 %0, %1
+  ret i16 %r
+}
+
+define i16 @__reduce_add_int16(<8 x i16>) nounwind readnone alwaysinline {
+  reduce8(i16, @__add_varying_i16, @__add_uniform_i16)
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
@@ -257,19 +287,13 @@ define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_int32, @__max_uniform_int32)
 }
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; horizontal uint32 ops
-
 define i32 @__reduce_min_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_uint32, @__min_uniform_uint32)
 }
 
-
 define i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal double ops
@@ -328,9 +352,6 @@ define i64 @__reduce_max_int64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__max_varying_int64, @__max_uniform_int64)
 }
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; horizontal uint64 ops
 
 define i64 @__reduce_min_uint64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__min_varying_uint64, @__min_uniform_uint64)

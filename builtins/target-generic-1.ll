@@ -310,6 +310,7 @@ declare double @round (double) nounwind readnone
 ;declare float     @llvm.sqrt.f32(float %Val)
 declare double    @llvm.sqrt.f64(double %Val)
 declare float     @llvm.sin.f32(float %Val)
+declare float     @llvm.asin.f32(float %Val)
 declare float     @llvm.cos.f32(float %Val)
 declare float     @llvm.sqrt.f32(float %Val)
 declare float     @llvm.exp.f32(float %Val)
@@ -471,6 +472,15 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %call
 }
 
+define i8 @__reduce_add_int8(<1 x i8> %v) nounwind readonly alwaysinline {
+  %r = extractelement <1 x i8> %v, i32 0
+  ret i8 %r
+}
+
+define i16 @__reduce_add_int16(<1 x i16> %v) nounwind readonly alwaysinline {
+  %r = extractelement <1 x i16> %v, i32 0
+  ret i16 %r
+}
 
 define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline {
   %r = extractelement <1 x float> %v, i32 0
@@ -642,7 +652,18 @@ define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; svml stuff
 
-define  <1 x float> @__svml_sin(<1 x float>) nounwind readnone alwaysinline {
+declare  <1 x float> @__svml_sind(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_asind(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_cosd(<1 x float>) nounwind readnone alwaysinline 
+declare  void @__svml_sincosd(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_tand(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_atand(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_atan2d(<1 x float>, <1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_expd(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_logd(<1 x float>) nounwind readnone alwaysinline 
+declare  <1 x float> @__svml_powd(<1 x float>, <1 x float>) nounwind readnone alwaysinline 
+
+define  <1 x float> @__svml_sinf(<1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_sinf4(<1 x float> %0)
   ;ret <1 x float> %ret
   ;%r = extractelement <1 x float> %0, i32 0
@@ -653,7 +674,18 @@ define  <1 x float> @__svml_sin(<1 x float>) nounwind readnone alwaysinline {
    
 }
 
-define  <1 x float> @__svml_cos(<1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_asinf(<1 x float>) nounwind readnone alwaysinline {
+  ;%ret = call <1 x float> @__svml_asinf4(<1 x float> %0)
+  ;ret <1 x float> %ret
+  ;%r = extractelement <1 x float> %0, i32 0
+  ;%s = call float @llvm.asin.f32(float %r)
+  ;%rv = insertelement <1 x float> undef, float %r, i32 0
+  ;ret <1 x float> %rv
+  unary1to1(float,@llvm.asin.f32)
+   
+}
+
+define  <1 x float> @__svml_cosf(<1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_cosf4(<1 x float> %0)
   ;ret <1 x float> %ret
   ;%r = extractelement <1 x float> %0, i32 0
@@ -664,18 +696,18 @@ define  <1 x float> @__svml_cos(<1 x float>) nounwind readnone alwaysinline {
 
 }
 
-define  void @__svml_sincos(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline {
+define  void @__svml_sincosf(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline {
 ;  %s = call <1 x float> @__svml_sincosf4(<1 x float> * %2, <1 x float> %0)
 ;  store <1 x float> %s, <1 x float> * %1
 ;  ret void
-   %sin = call <1 x float> @__svml_sin (<1 x float> %0)
-   %cos = call <1 x float> @__svml_cos (<1 x float> %0)
+   %sin = call <1 x float> @__svml_sinf(<1 x float> %0)
+   %cos = call <1 x float> @__svml_cosf(<1 x float> %0)
    store <1 x float> %sin, <1 x float> * %1
    store <1 x float> %cos, <1 x float> * %2
    ret void
 }
 
-define  <1 x float> @__svml_tan(<1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_tanf(<1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_tanf4(<1 x float> %0)
   ;ret <1 x float> %ret
   ;%r = extractelement <1 x float> %0, i32 0
@@ -687,7 +719,7 @@ define  <1 x float> @__svml_tan(<1 x float>) nounwind readnone alwaysinline {
   ret <1 x float > %0
 }
 
-define  <1 x float> @__svml_atan(<1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_atanf(<1 x float>) nounwind readnone alwaysinline {
 ;  %ret = call <1 x float> @__svml_atanf4(<1 x float> %0)
 ;  ret <1 x float> %ret
   ;%r = extractelement <1 x float> %0, i32 0
@@ -700,7 +732,7 @@ define  <1 x float> @__svml_atan(<1 x float>) nounwind readnone alwaysinline {
 
 }
 
-define  <1 x float> @__svml_atan2(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_atan2f(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_atan2f4(<1 x float> %0, <1 x float> %1)
   ;ret <1 x float> %ret
   ;%y = extractelement <1 x float> %0, i32 0
@@ -713,19 +745,19 @@ define  <1 x float> @__svml_atan2(<1 x float>, <1 x float>) nounwind readnone al
   ret <1 x float > %0
 }
 
-define  <1 x float> @__svml_exp(<1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_expf(<1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_expf4(<1 x float> %0)
   ;ret <1 x float> %ret
   unary1to1(float, @llvm.exp.f32)
 }
 
-define  <1 x float> @__svml_log(<1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_logf(<1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_logf4(<1 x float> %0)
   ;ret <1 x float> %ret
   unary1to1(float, @llvm.log.f32)
 }
 
-define  <1 x float> @__svml_pow(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
+define  <1 x float> @__svml_powf(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
   ;%ret = call <1 x float> @__svml_powf4(<1 x float> %0, <1 x float> %1)
   ;ret <1 x float> %ret
   %r = extractelement <1 x float> %0, i32 0
@@ -953,3 +985,9 @@ declare float @__half_to_float_uniform(i16 %v) nounwind readnone
 declare <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone
 declare i16 @__float_to_half_uniform(float %v) nounwind readnone
 declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind readnone
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; int8/int16 builtins
+
+define_avgs()
+
