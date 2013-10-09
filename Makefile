@@ -109,8 +109,7 @@ else
     BUILD_VERSION:=$(GIT_REVISION)
 endif
 
-CXX=g++
-CPP=cpp
+CXX=clang++
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
@@ -202,8 +201,13 @@ ispc: print_llvm_src dirs $(OBJS)
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
+# This is default now.
 clang: ispc
 clang: CXX=clang++
+
+# Use gcc as a default compiler, instead of gcc
+gcc: ispc
+gcc: CXX=clang++
 
 # Build ispc with address sanitizer instrumentation using clang compiler
 # Note that this is not portable build
