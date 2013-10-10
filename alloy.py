@@ -70,7 +70,7 @@ def try_do_LLVM(text, command, from_validation):
         error("can't " + text, 1)
     print_debug("DONE.\n", from_validation, alloy_build)
 
-def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_validation, force, make):
+def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra, from_validation, force, make):
     print_debug("Building LLVM. Version: " + version_LLVM + ". ", from_validation, alloy_build)
     if revision != "":
         print_debug("Revision: " + revision + ".\n", from_validation, alloy_build)
@@ -120,6 +120,15 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, from_v
         os.chdir(LLVM_SRC + "/tools")
         try_do_LLVM("load clang from http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " ",
                     "svn co " + revision + " http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " clang",
+                    from_validation)
+        if extra == True:
+            os.chdir("./clang/tools")
+            try_do_LLVM("load extra clang extra tools ",
+                    "svn co " + revision + " http://llvm.org/svn/llvm-project/clang-tools-extra/" + SVN_PATH + " extra",
+                    from_validation)
+            os.chdir("../../../projects")
+            try_do_LLVM("load extra clang compiler-rt ",
+                    "svn co " + revision + " http://llvm.org/svn/llvm-project/compiler-rt/" + SVN_PATH + " compiler-rt",
                     from_validation)
         os.chdir("../")
     else:
@@ -286,6 +295,8 @@ def run_special_tests():
    i = 5 
 
 def validation_run(only, only_targets, reference_branch, number, notify, update, make):
+    if os.environ["ISPC_HOME"] != os.getcwd():
+        error("you ISPC_HOME and your current pass are different!\n", 2)
     os.chdir(os.environ["ISPC_HOME"])
     os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
@@ -387,7 +398,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
-            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False, make)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make)
 # begin validation run for stabitily
         common.remove_if_exists(stability.in_file)
         R = [[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -465,7 +476,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # prepare LLVM 3.3 as newest LLVM
         need_LLVM = check_LLVM(["3.3"])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[i], "", "", "", False, False, True, False, make)
+            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make)
 # prepare reference point. build both test and reference compilers
         try_do_LLVM("apply git", "git branch", True)
         temp4 = take_lines("git branch", "all")
@@ -552,7 +563,7 @@ def Main():
     try:
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
-                    options.debug, options.selfbuild, False, options.force, make)
+                    options.debug, options.selfbuild, options.extra, False, options.force, make)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, make)
@@ -628,6 +639,8 @@ llvm_group.add_option('--selfbuild', dest='selfbuild',
     help='make selfbuild of LLVM and clang', default=False, action="store_true")
 llvm_group.add_option('--force', dest='force',
     help='rebuild LLVM', default=False, action='store_true')
+llvm_group.add_option('--extra', dest='extra',
+    help='load extra clang tools', default=False, action='store_true')
 parser.add_option_group(llvm_group)
 # options for activity "validation run"
 run_group = OptionGroup(parser, "Options for validation run",
