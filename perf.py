@@ -326,8 +326,8 @@ def perf(options1, args):
     ref_compiler_exists = False
     if is_windows == False:
         ispc_test = "ispc"
-        ref_compiler = "g++"
-        refc_compiler = "gcc"
+        ref_compiler = "clang++"
+        refc_compiler = "clang"
         if options.compiler != "":
             if options.compiler == "clang" or options.compiler == "clang++":
                 ref_compiler = "clang++"
@@ -335,6 +335,9 @@ def perf(options1, args):
             if options.compiler == "icc" or options.compiler == "icpc":
                 ref_compiler = "icpc"
                 refc_compiler = "icc"
+            if options.compiler == "gcc" or options.compiler == "g++":
+                ref_compiler = "g++"
+                refc_compiler = "gcc"
     else:
         ispc_test = "ispc.exe"
         ref_compiler = "cl.exe"
