@@ -3066,7 +3066,7 @@ void CWriter::visitReturnInst(llvm::ReturnInst &I) {
   // Don't output a void return if this is the last basic block in the function
   if (I.getNumOperands() == 0 &&
       &*--I.getParent()->getParent()->end() == I.getParent() &&
-      !I.getParent()->size() == 1) {
+      (!I.getParent()->size()) == 1) {
     return;
   }
 
