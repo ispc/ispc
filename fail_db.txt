@@ -37,10 +37,6 @@
 ./tests/reduce-equal-13.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.4 -O2 *
 ./tests/reduce-equal-5.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.4 -O2 *
 ./tests/reduce-equal-6.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.4 -O2 *
-./tests/avg-down-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.3     g++4.4 -O2 *
-./tests/avg-up-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.3     g++4.4 -O2 *
-./tests/avg-down-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.3     g++4.4 -O2 *
-./tests/avg-up-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.3     g++4.4 -O2 *
 ./tests/atomics-4.ispc runfail  x86-64      generic-4   Linux LLVM 3.3     g++4.4 -O2 *
 ./tests/atomics-6.ispc runfail  x86-64      generic-4   Linux LLVM 3.3     g++4.4 -O2 *
 ./tests/atomics-swap.ispc runfail  x86-64      generic-4   Linux LLVM 3.3     g++4.4 -O2 *
@@ -158,10 +154,6 @@
 ./tests/funcptr-null-4.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.4 -O2 *
 ./tests/funcptr-null-5.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.4 -O2 *
 ./tests/funcptr-null-6.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.4 -O2 *
-./tests/avg-down-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.4     g++4.4 -O2 *
-./tests/avg-up-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.4     g++4.4 -O2 *
-./tests/avg-down-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.4     g++4.4 -O2 *
-./tests/avg-up-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.4     g++4.4 -O2 *
 ./tests/array-gather-ifs.ispc runfail  x86-64      generic-4   Linux LLVM 3.4     g++4.4 -O2 *
 ./tests/array-gather-multi-unif.ispc runfail  x86-64      generic-4   Linux LLVM 3.4     g++4.4 -O2 *
 ./tests/array-gather-unif.ispc runfail  x86-64      generic-4   Linux LLVM 3.4     g++4.4 -O2 *
@@ -362,10 +354,6 @@
 ./tests/reduce-equal-13.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.7 -O2 *
 ./tests/reduce-equal-5.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.7 -O2 *
 ./tests/reduce-equal-6.ispc compfail  x86-64     sse4-i8x16   Linux LLVM 3.3     g++4.7 -O2 *
-./tests/avg-down-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
-./tests/avg-up-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
-./tests/avg-down-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
-./tests/avg-up-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
 ./tests/avg-down-int8.ispc compfail     x86  avx1.1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
 ./tests/avg-up-int8.ispc compfail     x86  avx1.1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
 ./tests/avg-down-int8.ispc compfail  x86-64  avx1.1-i32x16   Linux LLVM 3.3     g++4.7 -O2 *
@@ -425,10 +413,6 @@
 ./tests/funcptr-null-4.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.7 -O2 *
 ./tests/funcptr-null-5.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.7 -O2 *
 ./tests/funcptr-null-6.ispc runfail  x86-64     sse4-i8x16   Linux LLVM 3.4     g++4.7 -O2 *
-./tests/avg-down-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
-./tests/avg-up-int8.ispc compfail     x86    avx1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
-./tests/avg-down-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
-./tests/avg-up-int8.ispc compfail  x86-64    avx1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
 ./tests/avg-down-int8.ispc compfail     x86  avx1.1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
 ./tests/avg-up-int8.ispc compfail     x86  avx1.1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
 ./tests/avg-down-int8.ispc compfail  x86-64  avx1.1-i32x16   Linux LLVM 3.4     g++4.7 -O2 *
