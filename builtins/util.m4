@@ -3834,9 +3834,9 @@ domixed:
   %first = call i64 @llvm.cttz.i64(i64 %mm)
   %first32 = trunc i64 %first to i32
   %baseval = extractelement <$1 x $2> %v, i32 %first32
-  %basev1 = bitcast $2 %baseval to <1 x $2>
+  %basev1 = insertelement <$1 x $2> undef, $2 %baseval, i32 0
   ; get a vector that is that value smeared across all elements
-  %basesmear = shufflevector <1 x $2> %basev1, <1 x $2> undef,
+  %basesmear = shufflevector <$1 x $2> %basev1, <$1 x $2> undef,
         <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
 
   ; now to a blend of that vector with the original vector, such that the
