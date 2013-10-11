@@ -1,5 +1,5 @@
 
-CXX=g++ -m64
+CXX=clang++ -m64
 CXXFLAGS=-Iobjs/ -g3 -Wall
 ISPC=ispc
 ISPCFLAGS=-O2 --instrument --arch=x86-64 --target=sse2

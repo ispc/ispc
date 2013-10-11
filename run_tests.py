@@ -446,7 +446,7 @@ def verify():
     f = open(test_states, 'r')
     f_lines = f.readlines()
     f.close()
-    check = [["g++", "clang", "cl"],["-O0", "-O2"],["x86","x86-64"],
+    check = [["g++", "clang++", "cl"],["-O0", "-O2"],["x86","x86-64"],
              ["Linux","Windows","Mac"],["LLVM 3.1","LLVM 3.2","LLVM 3.3","LLVM head"],
              ["sse2-i32x4", "sse2-i32x8", "sse4-i32x4", "sse4-i32x8", "sse4-i16x8",
               "sse4-i8x16", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8", "avx1.1-i32x16",
@@ -550,7 +550,7 @@ def run_tests(options1, args, print_version):
         if is_windows:
             options.compiler_exe = "cl.exe"
         else:
-            options.compiler_exe = "g++"
+            options.compiler_exe = "clang++"
  
     # checks the required compiler otherwise prints an error message
     PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 
