@@ -735,7 +735,7 @@ const char *
 Target::SupportedTargets() {
     return "nvptx64, "
 #ifdef ISPC_ARM_ENABLED
-        "neon-i8x16, neon-16x8, neon-32x4, "
+        "neon-i8x16, neon-i16x8, neon-i32x4, "
 #endif
         "sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "

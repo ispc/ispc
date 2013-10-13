@@ -446,7 +446,7 @@ def verify():
     f = open(test_states, 'r')
     f_lines = f.readlines()
     f.close()
-    check = [["g++", "clang", "cl"],["-O0", "-O2"],["x86","x86-64"],
+    check = [["g++", "clang++", "cl"],["-O0", "-O2"],["x86","x86-64"],
              ["Linux","Windows","Mac"],["LLVM 3.1","LLVM 3.2","LLVM 3.3","LLVM head"],
              ["sse2-i32x4", "sse2-i32x8", "sse4-i32x4", "sse4-i32x8", "sse4-i16x8",
               "sse4-i8x16", "avx1-i32x8", "avx1-i32x16", "avx1-i64x4", "avx1.1-i32x8", "avx1.1-i32x16",
@@ -501,16 +501,26 @@ def run_tests(options1, args, print_version):
     # use relative path to not depend on host directory, which may possibly
     # have white spaces and unicode characters.
     global ispc_exe
+    ispc_exe = ""
     if not is_windows:
-        ispc_exe = "./ispc"
+        if os.environ.get("ISPC_HOME") != None:
+            if os.path.exists(os.environ["ISPC_HOME"] + os.sep + "ispc"):
+                ispc_exe = os.environ["ISPC_HOME"] + os.sep + "ispc"
+            else:
+                PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
+                for counter in PATH_dir:
+                    if os.path.exists(counter + os.sep + "ispc"):
+                        ispc_exe = counter + os.sep + "ispc"
     else:
-        ispc_exe = ".\\Release\\ispc.exe"
- 
+        if os.path.exists(".\\Release\\ispc.exe"):
+            ispc_exe = ".\\Release\\ispc.exe"
+        else:
+            error("You don't have ispc.exe compiler in .\\Release.\n", 1)
     # checks the required ispc compiler otherwise prints an error message
-    if not os.path.exists(ispc_exe):
-        error("missing ispc compiler: %s\n" % ispc_exe, 1)
+    if ispc_exe == "":
+        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
+    print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
     ispc_exe += " " + options.ispc_flags
-    print_debug("ispc compiler: %s\n" % ispc_exe, s, run_tests_log)
 
     global is_generic_target 
     is_generic_target = (options.target.find("generic-") != -1 and
@@ -540,7 +550,7 @@ def run_tests(options1, args, print_version):
         if is_windows:
             options.compiler_exe = "cl.exe"
         else:
-            options.compiler_exe = "g++"
+            options.compiler_exe = "clang++"
  
     # checks the required compiler otherwise prints an error message
     PATH_dir = string.split(os.getenv("PATH"), os.pathsep) 

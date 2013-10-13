@@ -299,6 +299,22 @@ def perf(options1, args):
     if cpu_percent > 20:
         error("CPU Usage is very high.\nClose other applications.\n", 2)
 
+    # prepare build.log, perf_temp and perf.log files
+    global perf_log
+    if options.in_file:
+        perf_log = pwd + options.in_file
+        common.remove_if_exists(perf_log)
+    else:
+        perf_log = ""
+    global build_log
+    build_log = pwd + os.sep + "logs" + os.sep + "perf_build.log"
+    common.remove_if_exists(build_log)
+    if os.path.exists(pwd + os.sep + "logs") == False:
+        os.makedirs(pwd + os.sep + "logs")
+    global perf_temp
+    perf_temp = pwd + "perf_temp"
+
+
     global ispc_test
     global ispc_ref
     global ref_compiler
@@ -310,8 +326,8 @@ def perf(options1, args):
     ref_compiler_exists = False
     if is_windows == False:
         ispc_test = "ispc"
-        ref_compiler = "g++"
-        refc_compiler = "gcc"
+        ref_compiler = "clang++"
+        refc_compiler = "clang"
         if options.compiler != "":
             if options.compiler == "clang" or options.compiler == "clang++":
                 ref_compiler = "clang++"
@@ -319,21 +335,30 @@ def perf(options1, args):
             if options.compiler == "icc" or options.compiler == "icpc":
                 ref_compiler = "icpc"
                 refc_compiler = "icc"
+            if options.compiler == "gcc" or options.compiler == "g++":
+                ref_compiler = "g++"
+                refc_compiler = "gcc"
     else:
         ispc_test = "ispc.exe"
         ref_compiler = "cl.exe"
     ispc_ref = options.ref
     if options.ref != "":
         options.ref = True
-    for counter in PATH_dir:
-        if os.path.exists(counter + os.sep + ispc_test):
+    if os.environ.get("ISPC_HOME") != None:
+        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + ispc_test):
             ispc_test_exists = True
+            ispc_test = os.environ["ISPC_HOME"] + os.sep + ispc_test
+    for counter in PATH_dir:
+        if ispc_test_exists == False:
+            if os.path.exists(counter + os.sep + ispc_test):
+                ispc_test_exists = True
+                ispc_test = counter + os.sep + ispc_test
         if os.path.exists(counter + os.sep + ref_compiler):
             ref_compiler_exists = True
         if os.path.exists(counter + os.sep + ispc_ref):
             ispc_ref_exists = True
     if not ispc_test_exists:
-        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable.\n", 1)
+        error("ISPC compiler not found.\nAdded path to ispc compiler to your PATH variable or ISPC_HOME variable\n", 1)
     if not ref_compiler_exists:
         error("C/C++ compiler %s not found.\nAdded path to %s compiler to your PATH variable.\n" % (ref_compiler, ref_compiler), 1)
     if options.ref:
@@ -355,26 +380,11 @@ def perf(options1, args):
         if f_lines[i][0] != "%":
             lines.append(f_lines[i])
     length = len(lines)
-
-    # prepare build.log, perf_temp and perf.log files
-    global perf_log
-    if options.in_file:
-        perf_log = pwd + options.in_file
-        common.remove_if_exists(perf_log)
-    else:
-        perf_log = ""
-    global build_log
-    build_log = pwd + os.sep + "logs" + os.sep + "perf_build.log"
-    common.remove_if_exists(build_log)
-    if os.path.exists(pwd + os.sep + "logs") == False:
-        os.makedirs(pwd + os.sep + "logs")
-
-    global perf_temp
-    perf_temp = pwd + "perf_temp"
     # end of preparations
  
     print_debug("Okey go go go!\n\n", s, perf_log)
-    
+    print_debug("Testing ispc: " + ispc_test + "\n", s, perf_log)
+ 
     #print compilers versions   
     common.print_version(ispc_test, ispc_ref, ref_compiler, False, perf_log, is_windows) 
 
