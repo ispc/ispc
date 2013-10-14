@@ -374,7 +374,12 @@ def file_check(compfails, runfails):
             temp3 = re.search("[0-9]*\.[0-9]*", temp2.group())
         compiler_version = options.compiler_exe + temp3.group()
     else:
-        compiler_version = "cl" 
+        compiler_version = "cl"
+    possible_compilers = ["g++4.4", "g++4.7", "clang++3.3", "cl"]
+    if not compiler_version in possible_compilers:
+        error("\n**********\nWe don't have history of fails for compiler " +
+                compiler_version +
+                "\nAll fails will be new!!!\n**********", 2)
     new_line = " "+options.arch.rjust(6)+" "+options.target.rjust(14)+" "+OS.rjust(7)+" "+llvm_version+" "+compiler_version.rjust(10)+" "+opt+" *\n"
 
     new_compfails = compfails[:]
@@ -672,7 +677,11 @@ def run_tests(options1, args, print_version):
     if len(compile_error_files) == 0 and len(run_error_files) == 0:
         print_debug("No fails\n", s, run_tests_log)
 
-    R = file_check(compile_error_files, run_error_files)
+    if len(args) == 0:
+        R = file_check(compile_error_files, run_error_files)
+    else:
+        error("don't check new fails for incomplete suite of tests", 2)
+        R = 0
 
     if options.time:
         print_debug("Elapsed time: %d s\n" % elapsed_time, s, run_tests_log)
