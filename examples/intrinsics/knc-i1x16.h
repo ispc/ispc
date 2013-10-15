@@ -2009,43 +2009,37 @@ static FORCEINLINE void __masked_store_i16(void *p, __vec16_i16 val,
             ptr[i] = val[i];
 }
 
-static FORCEINLINE void __masked_store_i32(void *p, __vec16_i32 val, __vec16_i1 mask) 
+static FORCEINLINE void __masked_store_i32(void *p, const __vec16_i32 val, const __vec16_i1 mask) 
 {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_mask_store_epi32(p, mask, val.v);
 #else
-  __vec16_i32 tmp;
-  tmp.v = _mm512_extloadunpacklo_epi32(tmp.v, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_extloadunpackhi_epi32(tmp.v, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_mask_mov_epi32(tmp.v, mask, val.v);
-  _mm512_extpackstorelo_epi32(p, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_epi32((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
+  _mm512_mask_i32extscatter_epi32(p, mask, __ispc_stride1, val, _MM_DOWNCONV_EPI32_NONE, _MM_SCALE_4, _MM_HINT_NONE);
 #endif
 }
 
-static FORCEINLINE void __masked_store_float(void *p, __vec16_f val, __vec16_i1 mask) 
+static FORCEINLINE void __masked_store_float(void *p, const __vec16_f val, const __vec16_i1 mask) 
 {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   _mm512_mask_store_ps(p, mask, val.v);
 #else
-  __vec16_f tmp;
-  tmp.v = _mm512_extloadunpacklo_ps(tmp.v, p, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_extloadunpackhi_ps(tmp.v, (uint8_t*)p+64, _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
-  tmp.v = _mm512_mask_mov_ps(tmp.v, mask, val.v);
-  _mm512_extpackstorelo_ps(p, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_ps((uint8_t*)p+64, tmp.v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
+  _mm512_mask_i32extscatter_ps(p, mask, __ispc_stride1, val, _MM_DOWNCONV_PS_NONE, _MM_SCALE_4, _MM_HINT_NONE);
 #endif
 }
 
-static FORCEINLINE void __masked_store_i64(void *p, __vec16_i64 val,
-                                          __vec16_i1 mask) {
-    int64_t *ptr = (int64_t *)p;
-    for (int i = 0; i < 16; ++i)
-        if ((mask.v & (1 << i)) != 0)
-            ptr[i] = val[i];
+static FORCEINLINE void __masked_store_i64(void *p, const __vec16_i64 val, const __vec16_i1 mask) {
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  __vec16_i1 tmp_m = mask;
+  tmp_m = _mm512_kswapb(tmp_m, tmp_m);
+  _mm512_mask_store_epi64(p, mask, val.v1);
+  _mm512_mask_store_epi64((uint8_t*)p+64, tmp_m, val.v2);
+#else
+  _mm512_mask_i32loextscatter_epi64(          p,                      mask,  __ispc_stride1, val.v1, _MM_DOWNCONV_EPI64_NONE, _MM_SCALE_8, _MM_HINT_NONE);
+  _mm512_mask_i32loextscatter_epi64((int64_t*)p+8, _mm512_kswapb(mask,mask), __ispc_stride1, val.v2, _MM_DOWNCONV_EPI64_NONE, _MM_SCALE_8, _MM_HINT_NONE);
+#endif
 }
 
-static FORCEINLINE void __masked_store_double(void *p, __vec16_d val, __vec16_i1 mask) 
+static FORCEINLINE void __masked_store_double(void *p, const __vec16_d val, const __vec16_i1 mask) 
 {
 #ifdef ISPC_FORCE_ALIGNED_MEMORY
   __vec16_i1 tmp_m = mask;
@@ -2053,19 +2047,8 @@ static FORCEINLINE void __masked_store_double(void *p, __vec16_d val, __vec16_i1
   _mm512_mask_store_pd(p, mask, val.v1);
   _mm512_mask_store_pd((uint8_t*)p+64, tmp_m, val.v2);
 #else
-  __vec16_d tmp;
-  __vec16_i1 tmp_m = mask;
-  tmp_m = _mm512_kswapb(tmp_m, tmp_m);
-  tmp.v1 = _mm512_extloadunpacklo_pd(tmp.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v1 = _mm512_extloadunpackhi_pd(tmp.v1, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v2 = _mm512_extloadunpacklo_pd(tmp.v2, (uint8_t*)p+64, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v2 = _mm512_extloadunpackhi_pd(tmp.v2, (uint8_t*)p+128, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
-  tmp.v1 = _mm512_mask_mov_pd(tmp.v1, mask, val.v1);
-  tmp.v2 = _mm512_mask_mov_pd(tmp.v2, tmp_m, val.v2);
-  _mm512_extpackstorelo_pd(p, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+64, tmp.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorelo_pd((uint8_t*)p+64, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
-  _mm512_extpackstorehi_pd((uint8_t*)p+128, tmp.v2, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
+  _mm512_mask_i32loextscatter_pd(           p,                    mask,  __ispc_stride1, val.v1, _MM_DOWNCONV_PD_NONE, _MM_SCALE_8, _MM_HINT_NONE);
+  _mm512_mask_i32loextscatter_pd((double*)p+8, _mm512_kswapb(mask,mask), __ispc_stride1, val.v2, _MM_DOWNCONV_PD_NONE, _MM_SCALE_8, _MM_HINT_NONE);
 #endif
 }
 
