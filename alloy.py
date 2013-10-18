@@ -212,10 +212,10 @@ def check_targets():
                 answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
             if AVX11 == False and "rdrand" in f_lines[i]:
                 AVX11 = True;
-                answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
+                answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16", "avx1.1-i64x4"]
             if AVX2 == False and "avx2" in f_lines[i]:
                 AVX2 = True;
-                answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+                answer = answer + ["avx2-i32x8", "avx2-i32x16", "avx2-i64x4"]
     if current_OS == "MacOS":
         f_lines = take_lines("sysctl machdep.cpu.features", "first")
         if "SSE2" in f_lines:
@@ -229,10 +229,10 @@ def check_targets():
             answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
         if "RDRAND" in f_lines:
             AVX11 = True;
-            answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
+            answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16", "avx1.1-i64x4"]
         if "AVX2.0" in f_lines:
             AVX2 = True;
-            answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+            answer = answer + ["avx2-i32x8", "avx2-i32x16", "avx2-i64x4"]
 
     answer = answer + ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
@@ -257,9 +257,9 @@ def check_targets():
         if AVX == False and "snb" in f_lines[i]:
             answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
         if AVX11 == False and "ivb" in f_lines[i]:
-            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"]]
+            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if AVX2 == False and "hsw" in f_lines[i]:
-            answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"]]
+            answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
     return [answer, answer_sde]
 
 def build_ispc(version_LLVM, make):

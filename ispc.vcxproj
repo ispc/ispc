@@ -28,10 +28,14 @@
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-x2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx11-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-i64x4-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx11-i64x4-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-x2-32bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-avx2-x2-64bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-i64x4-32bit.cpp" />
+    <ClCompile Include="$(Configuration)\gen-bitcode-avx2-i64x4-64bit.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-32.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-c-64.cpp" />
     <ClCompile Include="$(Configuration)\gen-bitcode-dispatch.cpp" />
@@ -324,6 +328,24 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="builtins\target-avx11-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx11-i64x4.ll | python bitcode2cpp.py builtins\target-avx11-i64x4.ll 32bit &gt; $(Configuration)/gen-bitcode-avx11-i64x4-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx11-i64x4-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx11-i64x4-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx11-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx11-i64x4.ll | python bitcode2cpp.py builtins\target-avx11-i64x4.ll 64bit &gt; $(Configuration)/gen-bitcode-avx11-i64x4-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx11-i64x4-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx11-i64x4-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
     <CustomBuild Include="builtins\target-avx2.ll">
       <FileType>Document</FileType>
       <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx2.ll | python bitcode2cpp.py builtins\target-avx2.ll 32bit &gt; $(Configuration)/gen-bitcode-avx2-32bit.cpp</Command>
@@ -357,6 +379,24 @@
       <Outputs>$(Configuration)/gen-bitcode-avx2-x2-64bit.cpp</Outputs>
       <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx-x2.ll</AdditionalInputs>
       <Message>Building gen-bitcode-avx2-x2-64bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx2-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=32 builtins/target-avx2-i64x4.ll | python bitcode2cpp.py builtins\target-avx2-i64x4.ll 32bit &gt; $(Configuration)/gen-bitcode-avx2-i64x4-32bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx2-i64x4-32bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx2-i64x4-32bit.cpp</Message>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="builtins\target-avx2-i64x4.ll">
+      <FileType>Document</FileType>
+      <Command>m4 -Ibuiltins/ -DLLVM_VERSION=%LLVM_VERSION% -DBUILD_OS=WINDOWS -DRUNTIME=64 builtins/target-avx2-i64x4.ll | python bitcode2cpp.py builtins\target-avx2-i64x4.ll 64bit &gt; $(Configuration)/gen-bitcode-avx2-i64x4-64bit.cpp</Command>
+      <Outputs>$(Configuration)/gen-bitcode-avx2-i64x4-64bit.cpp</Outputs>
+      <AdditionalInputs>builtins\util.m4;builtins\svml.m4;builtins\target-avx-common.ll;builtins\target-avx.ll;builtins\target-avx1-i64x4base.ll</AdditionalInputs>
+      <Message>Building gen-bitcode-avx2-i64x4-64bit.cpp</Message>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
