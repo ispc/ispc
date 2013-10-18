@@ -1,4 +1,4 @@
-;;  Copyright (c) 2012, Intel Corporation
+;;  Copyright (c) 2013, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,7 @@
 
 include(`target-avx1-i64x4base.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
-       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
+ifelse(LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
        `rdrand_definition()')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,10 +72,6 @@ gen_gather(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float/half conversions
-
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-;; nothing to define...
-', `
 
 define(`expand_4to8', `
   %$3 = shufflevector <4 x $1> %$2, <4 x $1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -123,4 +118,3 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %r = extractelement <8 x i16> %rv, i32 0
   ret i16 %r
 }
-')

@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2012, Intel Corporation
+;;  Copyright (c) 2013, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -29,14 +29,12 @@
 ;;   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 ;;   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `',
-       LLVM_VERSION, `LLVM_3_1', `',
+ifelse(LLVM_VERSION, `LLVM_3_1', `',
        `define(`HAVE_GATHER', `1')')
 
 include(`target-avx1-i64x4base.ll')
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
-       LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
+ifelse(LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
        `rdrand_definition()')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -76,10 +74,6 @@ define <4 x i32> @__max_varying_uint32(<4 x i32>, <4 x i32>) nounwind readonly a
 ;; float/half conversions
 
 
-
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-;; nothing to define...
-', `
 
 define(`expand_4to8', `
   %$3 = shufflevector <4 x $1> %$2, <4 x $1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -126,7 +120,6 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
   %r = extractelement <8 x i16> %rv, i32 0
   ret i16 %r
 }
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; gather
@@ -134,14 +127,7 @@ define i16 @__float_to_half_uniform(float %v) nounwind readnone {
 declare void @llvm.trap() noreturn nounwind
 
 
-ifelse(LLVM_VERSION, `LLVM_3_0', `
-gen_gather_factored(i8)
-gen_gather_factored(i16)
-gen_gather_factored(i32)
-gen_gather_factored(float)
-gen_gather_factored(i64)
-gen_gather_factored(double)',
-LLVM_VERSION, `LLVM_3_1', `
+ifelse(LLVM_VERSION, `LLVM_3_1', `
 gen_gather_factored(i8)
 gen_gather_factored(i16)
 gen_gather_factored(i32)
