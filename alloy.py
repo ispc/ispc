@@ -274,27 +274,38 @@ def build_ispc(version_LLVM, make):
 
 def execute_stability(stability, R, print_version):
     stability1 = copy.deepcopy(stability)
-    temp = run_tests.run_tests(stability1, [], print_version)
+    b_temp = run_tests.run_tests(stability1, [], print_version)
+    temp = b_temp[0]
+    time = b_temp[1]
     for j in range(0,4):
         R[j][0] = R[j][0] + temp[j]
         for i in range(0,len(temp[j])):
             R[j][1].append(temp[4])
     number_of_fails = temp[5]
     number_of_new_fails = len(temp[0]) + len(temp[1])
+    number_of_passes = len(temp[2]) + len(temp[3])
     if number_of_fails == 0:
         str_fails = ". No fails"
     else:
         str_fails = ". Fails: " + str(number_of_fails)
     if number_of_new_fails == 0:
-        str_new_fails = ", No new fails.\n"
+        str_new_fails = ", No new fails"
     else:
-        str_new_fails = ", New fails: " + str(number_of_new_fails) + ".\n"
-    print_debug(temp[4][1:-3] + str_fails + str_new_fails, False, stability_log)
+        str_new_fails = ", New fails: " + str(number_of_new_fails)
+    if number_of_passes == 0:
+        str_new_passes = "."
+    else:
+        str_new_passes = ", " + str(number_of_passes) + " new passes."
+    if stability.time:
+        str_time = " " + time + "\n"
+    else:
+        str_time = "\n"
+    print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
 def run_special_tests():
    i = 5 
 
-def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm):
+def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
     os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
@@ -322,7 +333,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.compiler_exe = None
         stability.num_jobs = speed_number
         stability.verbose = False
-        stability.time = False
+        stability.time = time
         stability.non_interactive = True
         stability.update = update
         stability.include_file = None
@@ -572,13 +583,17 @@ def Main():
         if options.branch == "master":
             options.branch = "trunk"
     try:
+        start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
                     options.debug, options.selfbuild, options.extra, False, options.force, make)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
                     options.number_for_performance, options.notify, options.update, int(options.speed),
-                    make, options.perf_llvm)
+                    make, options.perf_llvm, options.time)
+        elapsed_time = time.time() - start_time
+        if options.time:
+            print_debug("Elapsed time: " + time.strftime('%Hh%Mm%Ssec.', time.gmtime(elapsed_time)) + "\n", False, "")
     finally:
         os.chdir(current_path)
         date_name = "alloy_results_" + datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
@@ -668,6 +683,8 @@ run_group.add_option('--update-errors', dest='update',
 run_group.add_option('--only-targets', dest='only_targets',
     help='set list of targets to test. Possible values - all subnames of targets.',
     default="")
+run_group.add_option('--time', dest='time',
+    help='display time of testing', default=False, action='store_true')
 run_group.add_option('--only', dest='only',
     help='set types of tests. Possible values:\n' + 
         '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +

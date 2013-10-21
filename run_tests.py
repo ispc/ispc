@@ -653,7 +653,8 @@ def run_tests(options1, args, print_version):
     if options.non_interactive == False:
         print_debug("\n", s, run_tests_log)
 
-    elapsed_time = time.time() - start_time
+    temp_time = (time.time() - start_time)
+    elapsed_time = time.strftime('%Hh%Mm%Ssec.', time.gmtime(temp_time))
 
     while not qret.empty():
         (c, r, skip) = qret.get()
@@ -688,9 +689,9 @@ def run_tests(options1, args, print_version):
         R = 0
 
     if options.time:
-        print_debug("Elapsed time: %d s\n" % elapsed_time, s, run_tests_log)
+        print_debug("Elapsed time: " + elapsed_time + "\n", s, run_tests_log)
 
-    return R
+    return [R, elapsed_time]
 
 
 from optparse import OptionParser
