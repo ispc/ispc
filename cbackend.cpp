@@ -558,8 +558,15 @@ char CWriter::ID = 0;
 static std::string CBEMangle(const std::string &S) {
   std::string Result;
 
-  for (unsigned i = 0, e = S.size(); i != e; ++i)
-    if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
+  for (unsigned i = 0, e = S.size(); i != e; ++i) {
+    if (i+1 != e && ((S[i] == '>' && S[i+1] == '>') ||
+                     (S[i] == '<' && S[i+1] == '<'))) {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+      i++;
+    } else if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
       Result += S[i];
     } else {
       Result += '_';
@@ -567,6 +574,7 @@ static std::string CBEMangle(const std::string &S) {
       Result += 'A'+((S[i]>>4)&15);
       Result += '_';
     }
+  }
   return Result;
 }
 
