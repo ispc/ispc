@@ -80,6 +80,13 @@ declare <WIDTH x i32> @__rotate_i32(<WIDTH x i32>, i32) nounwind readnone
 declare <WIDTH x double> @__rotate_double(<WIDTH x double>, i32) nounwind readnone
 declare <WIDTH x i64> @__rotate_i64(<WIDTH x i64>, i32) nounwind readnone
 
+declare <WIDTH x i8> @__shift_i8(<WIDTH x i8>, i32) nounwind readnone
+declare <WIDTH x i16> @__shift_i16(<WIDTH x i16>, i32) nounwind readnone
+declare <WIDTH x float> @__shift_float(<WIDTH x float>, i32) nounwind readnone
+declare <WIDTH x i32> @__shift_i32(<WIDTH x i32>, i32) nounwind readnone
+declare <WIDTH x double> @__shift_double(<WIDTH x double>, i32) nounwind readnone
+declare <WIDTH x i64> @__shift_i64(<WIDTH x i64>, i32) nounwind readnone
+
 declare <WIDTH x i8> @__shuffle_i8(<WIDTH x i8>, <WIDTH x i32>) nounwind readnone
 declare <WIDTH x i8> @__shuffle2_i8(<WIDTH x i8>, <WIDTH x i8>,
                                     <WIDTH x i32>) nounwind readnone

@@ -171,6 +171,36 @@ static inline int64 rotate(int64 v, uniform int i) {
 }
 
 __declspec(safe) 
+static inline float shift(float v, uniform int i) {
+    return __shift_float(v, i);
+}
+
+__declspec(safe) 
+static inline int8 shift(int8 v, uniform int i) {
+    return __shift_i8(v, i);
+}
+
+__declspec(safe) 
+static inline int16 shift(int16 v, uniform int i) {
+    return __shift_i16(v, i);
+}
+
+__declspec(safe) 
+static inline int32 shift(int32 v, uniform int i) {
+    return __shift_i32(v, i);
+}
+
+__declspec(safe) 
+static inline double shift(double v, uniform int i) {
+    return __shift_double(v, i);
+}
+
+__declspec(safe) 
+static inline int64 shift(int64 v, uniform int i) {
+    return __shift_i64(v, i);
+}
+
+__declspec(safe) 
 static inline float shuffle(float v, int i) {
     return __shuffle_float(v, i);
 }

@@ -72,6 +72,7 @@
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/ADT/Triple.h>
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
@@ -123,6 +124,8 @@ static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 static llvm::Pass *CreateDebugPass(char * output);
+
+static llvm::Pass *CreateReplaceExtractInsertChainsPass();
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -635,6 +638,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(CreateIsCompileTimeConstantPass(true));
         optPM.add(CreateIntrinsicsOptPass());
         optPM.add(CreateInstructionSimplifyPass());
+        optPM.add(CreateReplaceExtractInsertChainsPass());
 
         optPM.add(llvm::createMemCpyOptPass());
         optPM.add(llvm::createSCCPPass());
@@ -4922,4 +4926,137 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 static llvm::Pass *
 CreatePeepholePass() {
   return new PeepholePass;
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ReplaceExtractInsertChainsPass
+
+/** 
+    We occassionally get chains of ExtractElementInsts followed by 
+    InsertElementInsts.  Unfortunately, all of these can't be replaced by 
+    ShuffleVectorInsts as we don't know that things are constant at the time.
+
+    This Pass will detect such chains, and replace them with ShuffleVectorInsts
+    if all the appropriate values are constant.
+ */
+
+class ReplaceExtractInsertChainsPass : public llvm::BasicBlockPass {
+public:
+    static char ID;
+    ReplaceExtractInsertChainsPass() : BasicBlockPass(ID) {
+    }
+
+    const char *getPassName() const { return "Resolve \"replace extract insert chains\""; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+};
+
+char ReplaceExtractInsertChainsPass::ID = 0;
+
+#include <iostream>
+
+/** Given an llvm::Value known to be an integer, return its value as
+    an int64_t.
+*/
+static int64_t
+lGetIntValue(llvm::Value *offset) {
+  llvm::ConstantInt *intOffset = llvm::dyn_cast<llvm::ConstantInt>(offset);
+  Assert(intOffset && (intOffset->getBitWidth() == 32 ||
+                       intOffset->getBitWidth() == 64));
+  return intOffset->getSExtValue();
+}
+
+bool
+ReplaceExtractInsertChainsPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("ReplaceExtractInsertChainsPass");
+    bool modifiedAny = false;
+
+    // Initialize our mapping to the first spot in the zero vector
+    int vectorWidth = g->target->getVectorWidth();
+    int shuffleMap[vectorWidth];
+    for (int i = 0; i < vectorWidth; i++) {
+      shuffleMap[i] = vectorWidth;
+    }
+
+    // Hack-y.  16 is likely the upper limit for now.
+    llvm::SmallSet<llvm::Value *, 16> inserts;
+
+    // save the last Insert in the chain
+    llvm::Value * lastInsert = NULL;
+
+    for (llvm::BasicBlock::iterator i = bb.begin(), e = bb.end(); i != e; ++i) {
+      // Iterate through the instructions looking for InsertElementInsts
+      llvm::InsertElementInst *ieInst = llvm::dyn_cast<llvm::InsertElementInst>(&*i);
+      if (ieInst == NULL) {
+        // These aren't the instructions you're looking for.
+        continue;
+      }
+      
+      llvm::Value * base = ieInst->getOperand(0);
+      if ( (llvm::isa<llvm::UndefValue>(base))
+           || (llvm::isa<llvm::ConstantAggregateZero>(base))
+           || (base == lastInsert)) {
+        // if source for insert scalar is 0 or an EEInst, add insert
+        llvm::Value *scalar = ieInst->getOperand(1);
+        if (llvm::ExtractElementInst *eeInst = llvm::dyn_cast<llvm::ExtractElementInst>(scalar)) {
+          // We're only going to deal with Inserts into a Constant vector lane
+          if (llvm::isa<llvm::Constant>(eeInst->getOperand(1))) {
+            inserts.insert(ieInst);
+            lastInsert = ieInst;
+          }
+        }
+        else if (llvm::ConstantInt *ci = llvm::dyn_cast<llvm::ConstantInt>(scalar)) {
+          if (ci->isZero()) {
+            inserts.insert(ieInst);
+            lastInsert = ieInst;
+          }
+        }
+        else {
+          lastInsert = NULL;
+        }
+      }
+    }
+    
+    // Look for chains, not insert/shuffle sequences
+    if (inserts.size() > 1) {
+      // The vector from which we're extracting elements
+      llvm::Value * baseVec = NULL;
+      llvm::Value *ee = llvm::cast<llvm::InsertElementInst>((*inserts.begin()))->getOperand(1);
+      if (llvm::ExtractElementInst *eeInst = llvm::dyn_cast<llvm::ExtractElementInst>(ee)) {
+        baseVec = eeInst->getOperand(0);
+      }
+
+      bool sameBase = true;
+      for (llvm::SmallSet<llvm::Value *,16>::iterator i = inserts.begin(); i != inserts.end(); i++) {
+        llvm::InsertElementInst *ie = llvm::cast<llvm::InsertElementInst>(*i);
+        if (llvm::ExtractElementInst *ee = llvm::dyn_cast<llvm::ExtractElementInst>(ie->getOperand(1))) {
+          if (ee->getOperand(0) != baseVec) {
+            sameBase = false;
+            break;
+          }
+          int64_t from = lGetIntValue(ee->getIndexOperand());
+          int64_t to = lGetIntValue(ie->getOperand(2)); 
+          shuffleMap[to] = from;
+        }
+      }
+      if (sameBase) {
+        llvm::Value *shuffleIdxs = LLVMInt32Vector(shuffleMap);
+        llvm::Value *zeroVec = llvm::ConstantAggregateZero::get(shuffleIdxs->getType());
+        llvm::Value *shuffle = new llvm::ShuffleVectorInst(baseVec, zeroVec, shuffleIdxs, "shiftInZero", llvm::cast<llvm::Instruction>(lastInsert));
+        // For now, be lazy and let DCE clean up the Extracts/Inserts.
+        lastInsert->replaceAllUsesWith(shuffle);
+
+        modifiedAny = true;
+      }
+    }    
+    
+    DEBUG_END_PASS("ReplaceExtractInsertChainsPass");
+
+    return modifiedAny;
+}
+
+
+static llvm::Pass *
+CreateReplaceExtractInsertChainsPass() {
+    return new ReplaceExtractInsertChainsPass();
 }
