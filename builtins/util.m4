@@ -815,7 +815,6 @@ forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eva
   ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
 
 not_const:
-  ; store two instances of the vector into memory
   %ptr = alloca <WIDTH x $1>, i32 3
   %ptr0 = getelementptr <WIDTH x $1> * %ptr, i32 0
   store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr0
@@ -824,8 +823,7 @@ not_const:
   %ptr2 = getelementptr <WIDTH x $1> * %ptr, i32 2
   store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr2
 
-  ; compute offset in [0,vectorwidth-1], then index into the doubled-up vector
-  %offset = add i32 %1, 16
+  %offset = add i32 %1, WIDTH
   %ptr_as_elt_array = bitcast <WIDTH x $1> * %ptr to [eval(3*WIDTH) x $1] *
   %load_ptr = getelementptr [eval(3*WIDTH) x $1] * %ptr_as_elt_array, i32 0, i32 %offset
   %load_ptr_vec = bitcast $1 * %load_ptr to <WIDTH x $1> *
