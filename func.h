@@ -60,7 +60,10 @@ private:
     Stmt *code;
     Symbol *maskSymbol;
     Symbol *threadIndexSym, *threadCountSym;
-    Symbol *taskIndexSym, *taskCountSym;
+    Symbol *taskIndexSym,   *taskCountSym;
+    Symbol *taskIndexSym_x, *taskCountSym_x;
+    Symbol *taskIndexSym_y, *taskCountSym_y;
+    Symbol *taskIndexSym_z, *taskCountSym_z;
 };
 
 #endif // ISPC_FUNC_H

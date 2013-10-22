@@ -2961,6 +2961,12 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         callTypes.push_back(LLVMTypes::Int32Type); // threadCount
         callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
         callTypes.push_back(LLVMTypes::Int32Type); // taskCount
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex_x
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex_y
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex_z
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount_x
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount_y
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount_z
     }
     else
         // Otherwise we already have the types of the arguments

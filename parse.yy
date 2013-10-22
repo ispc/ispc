@@ -2214,9 +2214,24 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
 
     Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
     m->symbolTable->AddVariable(taskIndexSym);
-
+    
     Symbol *taskCountSym = new Symbol("taskCount", pos, type);
     m->symbolTable->AddVariable(taskCountSym);
+    
+    Symbol *taskIndexSym_x = new Symbol("taskIndex_x", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym_x);
+    Symbol *taskIndexSym_y = new Symbol("taskIndex_y", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym_y);
+    Symbol *taskIndexSym_z = new Symbol("taskIndex_z", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym_z);
+
+    
+    Symbol *taskCountSym_x = new Symbol("taskCount_x", pos, type);
+    m->symbolTable->AddVariable(taskCountSym_x);
+    Symbol *taskCountSym_y = new Symbol("taskCount_y", pos, type);
+    m->symbolTable->AddVariable(taskCountSym_y);
+    Symbol *taskCountSym_z = new Symbol("taskCount_z", pos, type);
+    m->symbolTable->AddVariable(taskCountSym_z);
 }
 
 
