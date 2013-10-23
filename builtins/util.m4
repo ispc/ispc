@@ -798,23 +798,6 @@ not_const:
 }
 
 define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
-  %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
-  %zeropaddedvec = shufflevector <WIDTH x $1> %0, <WIDTH x $1> zeroinitializer,
-                     <eval(2*WIDTH) x i32> < forloop(i, 0, eval(2*WIDTH-2), `i32 i, ')i32 eval(2*WIDTH-1) >
-  br i1 %isc, label %is_const, label %not_const
-
-is_const:
-  ; though verbose, this turms into tight code if %1 is a constant
-forloop(i, 0, eval(WIDTH-1), `  
-  %delta_`'i = add i32 %1, i
-  %delta_clamped_`'i = and i32 %delta_`'i, eval(2*WIDTH-1)
-  %v_`'i = extractelement <eval(2*WIDTH) x $1> %zeropaddedvec, i32 %delta_clamped_`'i')
-  %ret_0 = insertelement <WIDTH x $1> zeroinitializer, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-
-not_const:
   %ptr = alloca <WIDTH x $1>, i32 3
   %ptr0 = getelementptr <WIDTH x $1> * %ptr, i32 0
   store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr0
