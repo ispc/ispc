@@ -542,7 +542,7 @@ public:
         he given argument values. */
     llvm::Value *LaunchInst(llvm::Value *callee,
                             std::vector<llvm::Value *> &argVals,
-                            llvm::Value *launchCount);
+                            llvm::Value *launchCount[3]);
 
     void SyncInst();
 

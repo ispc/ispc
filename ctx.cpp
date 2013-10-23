@@ -3502,7 +3502,7 @@ FunctionEmitContext::ReturnInst() {
 llvm::Value *
 FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
-                                llvm::Value *launchCount) {
+                                llvm::Value *launchCount[3]){
     if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3563,7 +3563,9 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     args.push_back(launchGroupHandlePtr);
     args.push_back(fptr);
     args.push_back(voidmem);
-    args.push_back(launchCount);
+    args.push_back(launchCount[0]);
+    args.push_back(launchCount[1]);
+    args.push_back(launchCount[2]);
     return CallInst(flaunch, NULL, args, "");
 }
 

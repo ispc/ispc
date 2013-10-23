@@ -204,6 +204,7 @@ struct ForeachDimension {
 %token TOKEN_CASE TOKEN_DEFAULT TOKEN_IF TOKEN_ELSE TOKEN_SWITCH
 %token TOKEN_WHILE TOKEN_DO TOKEN_LAUNCH TOKEN_FOREACH TOKEN_FOREACH_TILED
 %token TOKEN_FOREACH_UNIQUE TOKEN_FOREACH_ACTIVE TOKEN_DOTDOTDOT
+%token TOKEN_TRIPLECHEVRON_OPEN TOKEN_TRIPLECHEVRON_CLOSE
 %token TOKEN_FOR TOKEN_GOTO TOKEN_CONTINUE TOKEN_BREAK TOKEN_RETURN
 %token TOKEN_CIF TOKEN_CDO TOKEN_CFOR TOKEN_CWHILE
 %token TOKEN_SYNC TOKEN_PRINT TOKEN_ASSERT
@@ -353,17 +354,64 @@ launch_expression
     : TOKEN_LAUNCH postfix_expression '(' argument_expression_list ')'
       {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
-          $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, oneExpr);
+          Expr *launchCount[3] = {oneExpr, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, launchCount);
       }
     | TOKEN_LAUNCH postfix_expression '(' ')'
       {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
-          $$ = new FunctionCallExpr($2, new ExprList(Union(@3,@4)), Union(@2, @4), true, oneExpr);
+          Expr *launchCount[3] = {oneExpr, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($2, new ExprList(Union(@3,@4)), Union(@2, @4), true, launchCount);
        }
     | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' argument_expression_list ')'
-      { $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, $3); }
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, launchCount);
+      }
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' argument_expression_list ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, launchCount);
+      }
     | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' ')'
-      { $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, $3); }
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, launchCount);
+      }
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, launchCount);
+      }
+
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression ',' assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' argument_expression_list ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
+          Expr *launchCount[3] = {$3, $5, oneExpr};
+          $$ = new FunctionCallExpr($7, $9, Union(@7,@10), true, launchCount);
+      }
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression ',' assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
+          Expr *launchCount[3] = {$3, $5, oneExpr};
+          $$ = new FunctionCallExpr($7, new ExprList(Union(@7,@8)), Union(@7,@9), true, launchCount);
+      }
+
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression ',' assignment_expression ',' assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' argument_expression_list ')'
+      { 
+          Expr *launchCount[3] = {$3, $5, $7};
+          $$ = new FunctionCallExpr($9, $11, Union(@9,@12), true, launchCount);
+      }
+    | TOKEN_LAUNCH TOKEN_TRIPLECHEVRON_OPEN assignment_expression ',' assignment_expression ',' assignment_expression TOKEN_TRIPLECHEVRON_CLOSE postfix_expression '(' ')'
+      { 
+          Expr *launchCount[3] = {$3, $5, $7};
+          $$ = new FunctionCallExpr($9, new ExprList(Union(@9,@10)), Union(@9,@11), true, launchCount);
+      }
+
 
     | TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
        {

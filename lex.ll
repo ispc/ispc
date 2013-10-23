@@ -76,6 +76,7 @@ static int allTokens[] = {
   TOKEN_TASK, TOKEN_TRUE, TOKEN_TYPEDEF, TOKEN_UNIFORM, TOKEN_UNMASKED,
   TOKEN_UNSIGNED, TOKEN_VARYING, TOKEN_VOID, TOKEN_WHILE,
   TOKEN_STRING_C_LITERAL, TOKEN_DOTDOTDOT,
+  TOKEN_TRIPLECHEVRON_OPEN, TOKEN_TRIPLECHEVRON_CLOSE,
   TOKEN_FLOAT_CONSTANT, TOKEN_DOUBLE_CONSTANT,
   TOKEN_INT8_CONSTANT, TOKEN_UINT8_CONSTANT,
   TOKEN_INT16_CONSTANT, TOKEN_UINT16_CONSTANT,
@@ -151,6 +152,8 @@ void ParserInit() {
     tokenToName[TOKEN_WHILE] = "while";
     tokenToName[TOKEN_STRING_C_LITERAL] = "\"C\"";
     tokenToName[TOKEN_DOTDOTDOT] = "...";
+    tokenToName[TOKEN_TRIPLECHEVRON_OPEN] = "<<<";
+    tokenToName[TOKEN_TRIPLECHEVRON_CLOSE] = ">>>";
     tokenToName[TOKEN_FLOAT_CONSTANT] = "TOKEN_FLOAT_CONSTANT";
     tokenToName[TOKEN_DOUBLE_CONSTANT] = "TOKEN_DOUBLE_CONSTANT";
     tokenToName[TOKEN_INT8_CONSTANT] = "TOKEN_INT8_CONSTANT";
@@ -266,6 +269,8 @@ void ParserInit() {
     tokenNameRemap["TOKEN_WHILE"] = "\'while\'";
     tokenNameRemap["TOKEN_STRING_C_LITERAL"] = "\"C\"";
     tokenNameRemap["TOKEN_DOTDOTDOT"] = "\'...\'";
+    tokenNameRemap["TOKEN_TRIPLECHEVRON_OPEN"] = "\'<<<\'";
+    tokenNameRemap["TOKEN_TRIPLECHEVRON_CLOSE"] = "\'>>>\'";
     tokenNameRemap["TOKEN_FLOAT_CONSTANT"] = "float constant";
     tokenNameRemap["TOKEN_DOUBLE_CONSTANT"] = "double constant";
     tokenNameRemap["TOKEN_INT8_CONSTANT"] = "int8 constant";
@@ -418,6 +423,8 @@ void { RT; return TOKEN_VOID; }
 while { RT; return TOKEN_WHILE; }
 \"C\" { RT; return TOKEN_STRING_C_LITERAL; }
 \.\.\. { RT; return TOKEN_DOTDOTDOT; }
+\<\<\< { RT; return TOKEN_TRIPLECHEVRON_OPEN; }
+\>\>\> { RT; return TOKEN_TRIPLECHEVRON_CLOSE; }
 
 "operator*"  { return TOKEN_IDENTIFIER; }
 "operator+"  { return TOKEN_IDENTIFIER; }

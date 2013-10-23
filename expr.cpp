@@ -3540,11 +3540,13 @@ SelectExpr::Print() const {
 // FunctionCallExpr
 
 FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p,
-                                   bool il, Expr *lce)
+                                   bool il, Expr *lce[3])
     : Expr(p), isLaunch(il) {
     func = f;
     args = a;
-    launchCountExpr = lce;
+    launchCountExpr[0] = lce[0];
+    launchCountExpr[1] = lce[1];
+    launchCountExpr[2] = lce[2];
 }
 
 
@@ -3662,9 +3664,13 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
     if (ft->isTask) {
-        AssertPos(pos, launchCountExpr != NULL);
-        llvm::Value *launchCount = launchCountExpr->GetValue(ctx);
-        if (launchCount != NULL)
+        AssertPos(pos, launchCountExpr[0] != NULL);
+        llvm::Value *launchCount[3] = 
+        { launchCountExpr[0]->GetValue(ctx),
+          launchCountExpr[1]->GetValue(ctx),
+          launchCountExpr[2]->GetValue(ctx) };
+
+        if (launchCount[0] != NULL)
             ctx->LaunchInst(callee, argVals, launchCount);
     }
     else
@@ -3787,14 +3793,17 @@ FunctionCallExpr::TypeCheck() {
             if (!isLaunch)
                 Error(pos, "\"launch\" expression needed to call function "
                       "with \"task\" qualifier.");
-            if (!launchCountExpr)
+            for (int k = 0; k < 3; k++)
+            {
+              if (!launchCountExpr[k])
                 return NULL;
 
-            launchCountExpr =
-                TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
-                                "task launch count");
-            if (launchCountExpr == NULL)
+              launchCountExpr[k] =
+                TypeConvertExpr(launchCountExpr[k], AtomicType::UniformInt32,
+                    "task launch count");
+              if (launchCountExpr[k] == NULL)
                 return NULL;
+            }
         }
         else {
             if (isLaunch) {
@@ -3802,7 +3811,7 @@ FunctionCallExpr::TypeCheck() {
                       "qualified function.");
                 return NULL;
             }
-            AssertPos(pos, launchCountExpr == NULL);
+            AssertPos(pos, launchCountExpr[0] == NULL);
         }
     }
     else {
