@@ -108,21 +108,20 @@ struct __vec4_i64 {
 };
 
 struct __vec4_i32 {
-    __vec4_i32() { }
+    FORCEINLINE __vec4_i32() : v(_mm_setzero_si128()) { }
     FORCEINLINE __vec4_i32(__m128i vv) : v(vv) {  }
-    FORCEINLINE __vec4_i32(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    FORCEINLINE __vec4_i32(int32_t a, int32_t b, int32_t c, int32_t d) {
         v = _mm_set_epi32(d, c, b, a);
     }
-    FORCEINLINE __vec4_i32(uint32_t *p) {
+    FORCEINLINE __vec4_i32(int32_t *p) {
         v = _mm_loadu_si128((__m128i *)p);
     }
-
+    FORCEINLINE __vec4_i32(const __vec4_i32 &other) : v(other.v) {}
+    FORCEINLINE __vec4_i32& operator =(const __vec4_i32 &o) { v=o.v; return *this; }
     FORCEINLINE operator __m128() const { return _mm_castsi128_ps(v); }
-
+    
     __m128i v;
 };
-
-static inline int32_t __extract_element(__vec4_i32 v, int index);
 
 struct __vec4_i16 {
     __vec4_i16() { }
@@ -214,6 +213,64 @@ INSERT_EXTRACT(__vec1_i32, int32_t)
 INSERT_EXTRACT(__vec1_i64, int64_t)
 INSERT_EXTRACT(__vec1_f, float)
 INSERT_EXTRACT(__vec1_d, double)
+
+static FORCEINLINE bool __extract_element(const __vec4_i1 &v, int index) {
+    return ((int32_t *)&v)[index] ? true : false;
+}
+
+static FORCEINLINE void __insert_element(__vec4_i1 *v, int index, bool val) {
+    ((int32_t *)v)[index] = val ? -1 : 0;
+}
+
+static FORCEINLINE int8_t __extract_element(const __vec4_i8 &v, int index) {
+    return ((int8_t *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_i8 *v, int index, int8_t val) {
+    ((int8_t *)v)[index] = val;
+}
+
+static FORCEINLINE int16_t __extract_element(const __vec4_i16 &v, int index) {
+    return ((int16_t *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_i16 *v, int index, int16_t val) {
+    ((int16_t *)v)[index] = val;
+}
+
+static FORCEINLINE int32_t __extract_element(const __vec4_i32 &v, int index) {
+    return ((int32_t *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_i32 *v, int index, int32_t val) {
+    ((int32_t *)v)[index] = val;
+}
+
+static FORCEINLINE int64_t __extract_element(const __vec4_i64 &v, int index) {
+    return ((int64_t *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_i64 *v, int index, int64_t val) {
+    ((int64_t *)v)[index] = val;
+}
+
+static FORCEINLINE float __extract_element(const __vec4_f &v, int index) {
+    return ((float *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_f *v, int index, float val) {
+    ((float *)v)[index] = val;
+}
+
+static FORCEINLINE double __extract_element(const __vec4_d &v, int index) {
+    return ((double *)&v)[index];
+}
+
+static FORCEINLINE void __insert_element(__vec4_d *v, int index, double val) {
+    ((double *)v)[index] = val;
+}
+
+
 
 #define CAST_BITS_SCALAR(TO, FROM)                  \
 static FORCEINLINE TO __cast_bits(TO, FROM v) {     \
@@ -313,13 +370,6 @@ static FORCEINLINE __vec4_i1 __select(__vec4_i1 mask, __vec4_i1 a, __vec4_i1 b) 
     return _mm_blendv_ps(b.v, a.v, mask.v);
 }
 
-static FORCEINLINE bool __extract_element(__vec4_i1 v, int index) {
-    return ((int32_t *)&v)[index] ? true : false;
-}
-
-static FORCEINLINE void __insert_element(__vec4_i1 *v, int index, bool val) {
-    ((int32_t *)v)[index] = val ? -1 : 0;
-}
 
 template <int ALIGN> static FORCEINLINE __vec4_i1 __load(const __vec4_i1 *v) {
     // FIXME: handle align of 16...
@@ -564,13 +614,6 @@ static FORCEINLINE __vec4_i8 __select(__vec4_i1 mask, __vec4_i8 a, __vec4_i8 b) 
                                                         _mm_extract_epi8(b.v, 3));
 }
 
-static FORCEINLINE int8_t __extract_element(__vec4_i8 v, int index) {
-    return ((int8_t *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_i8 *v, int index, int8_t val) {
-    ((int8_t *)v)[index] = val;
-}
 
 template <class RetVecType> __vec4_i8 __smear_i8(int8_t v);
 template <> FORCEINLINE __vec4_i8 __smear_i8<__vec4_i8>(int8_t v) {
@@ -850,13 +893,6 @@ static FORCEINLINE __vec4_i16 __select(__vec4_i1 mask, __vec4_i16 a, __vec4_i16 
                                                          _mm_extract_epi16(b.v, 3));
 }
 
-static FORCEINLINE int16_t __extract_element(__vec4_i16 v, int index) {
-    return ((int16_t *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_i16 *v, int index, int16_t val) {
-    ((int16_t *)v)[index] = val;
-}
 
 template <class RetVecType> __vec4_i16 __smear_i16(int16_t v);
 template <> FORCEINLINE __vec4_i16 __smear_i16<__vec4_i16>(int16_t v) {
@@ -1137,13 +1173,6 @@ template <> FORCEINLINE __vec4_i32 __undef_i32<__vec4_i32>() {
     return __vec4_i32();
 }
 
-static FORCEINLINE int32_t __extract_element(__vec4_i32 v, int index) {
-    return ((int32_t *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_i32 *v, int index, int32_t val) {
-    ((int32_t *)v)[index] = val;
-}
 
 static FORCEINLINE __vec4_i32 __broadcast_i32(__vec4_i32 v, int index) {
     return _mm_set1_epi32(__extract_element(v, index));
@@ -1156,9 +1185,10 @@ static FORCEINLINE __vec4_i32 __rotate_i32(__vec4_i32 v, int delta) {
                       __extract_element(v, (delta+3) & 0x3));
 }
 
-static FORCEINLINE __vec4_i32 __shift_i32(__vec4_i32 v, int delta) {
+#include <iostream>
+static FORCEINLINE __vec4_i32 __shift_i32(const __vec4_i32 &v, int delta) {
   int32_t v1, v2, v3, v4;
-  int d1, d2, d3, d4;
+  int32_t d1, d2, d3, d4;
   d1 = delta+0;
   d2 = delta+1;
   d3 = delta+2;
@@ -1425,13 +1455,6 @@ template <> FORCEINLINE __vec4_i64 __undef_i64<__vec4_i64>() {
     return __vec4_i64();
 }
 
-static FORCEINLINE int64_t __extract_element(__vec4_i64 v, int index) {
-    return ((int64_t *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_i64 *v, int index, int64_t val) {
-    ((int64_t *)v)[index] = val;
-}
 
 static FORCEINLINE __vec4_i64 __broadcast_i64(__vec4_i64 v, int index) {
     uint64_t val = __extract_element(v, index);
@@ -1560,13 +1583,6 @@ template <> FORCEINLINE __vec4_f __undef_float<__vec4_f>() {
     return __vec4_f();
 }
 
-static FORCEINLINE float __extract_element(__vec4_f v, int index) {
-    return ((float *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_f *v, int index, float val) {
-    ((float *)v)[index] = val;
-}
 
 static FORCEINLINE __vec4_f __broadcast_float(__vec4_f v, int index) {
     return _mm_set1_ps(__extract_element(v, index));
@@ -1726,13 +1742,6 @@ template <> FORCEINLINE __vec4_d __undef_double<__vec4_d>() {
     return __vec4_d();
 }
 
-static FORCEINLINE double __extract_element(__vec4_d v, int index) {
-    return ((double *)&v)[index];
-}
-
-static FORCEINLINE void __insert_element(__vec4_d *v, int index, double val) {
-    ((double *)v)[index] = val;
-}
 
 static FORCEINLINE __vec4_d __broadcast_double(__vec4_d v, int index) {
     return __vec4_d(_mm_set1_pd(__extract_element(v, index)),
@@ -1973,7 +1982,7 @@ static FORCEINLINE __vec4_f __cast_sitofp(__vec4_f, __vec4_i16 val) {
                     (float)((int16_t)_mm_extract_epi16(val.v, 3)));
 }
 
-static FORCEINLINE __vec4_f __cast_sitofp(__vec4_f, __vec4_i32 val) {
+static FORCEINLINE __vec4_f __cast_sitofp(__vec4_f, const __vec4_i32 &val) {
     return _mm_cvtepi32_ps(val.v);
 }
 

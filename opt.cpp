@@ -536,8 +536,11 @@ Optimize(llvm::Module *module, int optLevel) {
         }
         optPM.add(llvm::createDeadInstEliminationPass(), 220);
 
-        optPM.add(llvm::createIPConstantPropagationPass());
-        optPM.add(CreateReplaceStdlibShiftPass());
+        if (g->target->getISA() != Target::GENERIC) {
+          // Just use the builtins for generic targets.
+          optPM.add(llvm::createIPConstantPropagationPass());
+          optPM.add(CreateReplaceStdlibShiftPass());
+        }
 
         // Max struct size threshold for scalar replacement is
         //    1) 4 fields (r,g,b,w)
