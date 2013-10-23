@@ -598,6 +598,20 @@ static FORCEINLINE __vec4_i8 __rotate_i8(__vec4_i8 v, int delta) {
                      __extract_element(v, (delta+3) & 0x3));
 }
 
+static FORCEINLINE __vec4_i8 __shift_i8(__vec4_i8 v, int delta) {
+  int8_t v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0;
+  return __vec4_i8(v1, v2, v3, v4);
+}
+
 static FORCEINLINE __vec4_i8 __shuffle_i8(__vec4_i8 v, __vec4_i32 index) {
     return __vec4_i8(__extract_element(v, __extract_element(index, 0) & 0x3),
                      __extract_element(v, __extract_element(index, 1) & 0x3),
@@ -870,6 +884,20 @@ static FORCEINLINE __vec4_i16 __rotate_i16(__vec4_i16 v, int delta) {
                       __extract_element(v, (delta+3) & 0x3));
 }
 
+static FORCEINLINE __vec4_i16 __shift_i16(__vec4_i16 v, int delta) {
+  int16_t v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0;
+  return __vec4_i16(v1, v2, v3, v4);
+}
+
 static FORCEINLINE __vec4_i16 __shuffle_i16(__vec4_i16 v, __vec4_i32 index) {
     return __vec4_i16(__extract_element(v, __extract_element(index, 0) & 0x3),
                       __extract_element(v, __extract_element(index, 1) & 0x3),
@@ -1126,6 +1154,20 @@ static FORCEINLINE __vec4_i32 __rotate_i32(__vec4_i32 v, int delta) {
                       __extract_element(v, (delta+1) & 0x3),
                       __extract_element(v, (delta+2) & 0x3),
                       __extract_element(v, (delta+3) & 0x3));
+}
+
+static FORCEINLINE __vec4_i32 __shift_i32(__vec4_i32 v, int delta) {
+  int32_t v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0;
+  return __vec4_i32(v1, v2, v3, v4);
 }
 
 static FORCEINLINE __vec4_i32 __shuffle_i32(__vec4_i32 v, __vec4_i32 index) {
@@ -1403,6 +1445,20 @@ static FORCEINLINE __vec4_i64 __rotate_i64(__vec4_i64 v, int delta) {
                       __extract_element(v, (delta+3) & 0x3));
 }
 
+static FORCEINLINE __vec4_i64 __shift_i64(__vec4_i64 v, int delta) {
+  int64_t v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0;
+  return __vec4_i64(v1, v2, v3, v4);
+}
+
 static FORCEINLINE __vec4_i64 __shuffle_i64(__vec4_i64 v, __vec4_i32 index) {
     return __vec4_i64(__extract_element(v, __extract_element(index, 0) & 0x3),
                       __extract_element(v, __extract_element(index, 1) & 0x3),
@@ -1521,6 +1577,20 @@ static FORCEINLINE __vec4_f __rotate_float(__vec4_f v, int delta) {
                     __extract_element(v, (delta+1) & 0x3),
                     __extract_element(v, (delta+2) & 0x3),
                     __extract_element(v, (delta+3) & 0x3));
+}
+
+static FORCEINLINE __vec4_f __shift_float(__vec4_f v, int delta) {
+  float v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0.f;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0.f;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0.f;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0.f;
+  return __vec4_f(v1, v2, v3, v4);
 }
 
 static FORCEINLINE __vec4_f __shuffle_float(__vec4_f v, __vec4_i32 index) {
@@ -1674,6 +1744,20 @@ static FORCEINLINE __vec4_d __rotate_double(__vec4_d v, int delta) {
                     __extract_element(v, (delta+1) & 0x3),
                     __extract_element(v, (delta+2) & 0x3),
                     __extract_element(v, (delta+3) & 0x3));
+}
+
+static FORCEINLINE __vec4_d __shift_double(__vec4_d v, int delta) {
+  double v1, v2, v3, v4;
+  int d1, d2, d3, d4;
+  d1 = delta+0;
+  d2 = delta+1;
+  d3 = delta+2;
+  d4 = delta+3;
+  v1 = ((d1 >= 0) && (d1 < 4)) ? __extract_element(v, d1) : 0;
+  v2 = ((d2 >= 0) && (d2 < 4)) ? __extract_element(v, d2) : 0;
+  v3 = ((d3 >= 0) && (d3 < 4)) ? __extract_element(v, d3) : 0;
+  v4 = ((d4 >= 0) && (d4 < 4)) ? __extract_element(v, d4) : 0;
+  return __vec4_d(v1, v2, v3, v4);
 }
 
 static FORCEINLINE __vec4_d __shuffle_double(__vec4_d v, __vec4_i32 index) {
