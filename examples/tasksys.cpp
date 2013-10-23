@@ -59,9 +59,7 @@
 #define ISPC_USE_PTHREADS
 #define ISPC_USE_PTHREADS_FULLY_SUBSCRIBED
 #define ISPC_USE_CILK
-*/
 #define ISPC_USE_OMP
-/*
 #define ISPC_USE_TBB_TASK_GROUP
 #define ISPC_USE_TBB_PARALLEL_FOR
 
@@ -172,21 +170,39 @@
 
 // Signature of ispc-generated 'task' functions
 typedef void (*TaskFuncType)(void *data, int threadIndex, int threadCount,
-                             int taskIndex, int taskCount);
+                             int taskIndex, int taskCount,
+                             int taskIndex_x, int taskIndex_y, int taskIndex_z,
+                             int taskCount_x, int taskCount_y, int taskCount_z);
 
 // Small structure used to hold the data for each task
 struct TaskInfo {
     TaskFuncType func;
     void *data;
     int taskIndex, taskCount;
+    int taskCount3d[3];
 #if defined(ISPC_IS_WINDOWS)
     event taskEvent;
 #endif
+    int taskIndex_x() const 
+    {
+      return taskIndex % taskCount3d[0];
+    }
+    int taskIndex_y() const 
+    {
+      return ( taskIndex / taskCount3d[0] ) % taskCount3d[1];
+    }
+    int taskIndex_z() const 
+    {
+      return taskIndex / ( taskCount3d[0]*taskCount3d[1] );
+    }
+    int taskCount_x() const { return taskCount3d[0]; }
+    int taskCount_y() const { return taskCount3d[1]; }
+    int taskCount_z() const { return taskCount3d[2]; }
 };
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" { 
-    void ISPCLaunch(void **handlePtr, void *f, void *data, int count);
+    void ISPCLaunch(void **handlePtr, void *f, void *data, int countx,int county, int countz);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
     void ISPCSync(void *handle);
 }
@@ -520,7 +536,9 @@ lRunTask(void *ti) {
 
     // Actually run the task
     taskInfo->func(taskInfo->data, threadIndex, threadCount, 
-                   taskInfo->taskIndex, taskInfo->taskCount);
+                   taskInfo->taskIndex, taskInfo->taskCount,
+            taskInfo->taskIndex_x(), taskInfo->taskIndex_y(), taskInfo->taskIndex_z(),
+            taskInfo->taskCount_x(), taskInfo->taskCount_y(), taskInfo->taskCount_z());
 }
 
 
@@ -561,7 +579,9 @@ lRunTask(LPVOID param) {
     // will cause bugs in code that uses those.
     int threadIndex = 0;
     int threadCount = 1;
-    ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount);
+    ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount,
+            ti->taskIndex_x(), ti->taskIndex_y(), ti->taskIndex_z(),
+            ti->taskCount_x(), ti->taskCount_y(), ti->taskCount_z());
 
     // Signal the event that this task is done
     ti->taskEvent.set();
@@ -662,7 +682,9 @@ lTaskEntry(void *arg) {
         DBG(fprintf(stderr, "running task %d from group %p\n", taskNumber, tg));
         TaskInfo *myTask = tg->GetTaskInfo(taskNumber);
         myTask->func(myTask->data, threadIndex, threadCount, myTask->taskIndex,
-                     myTask->taskCount);
+                     myTask->taskCount,
+            myTask->taskIndex_x(), myTask->taskIndex_y(), myTask->taskIndex_z(),
+            myTask->taskCount_x(), myTask->taskCount_y(), myTask->taskCount_z());
 
         //
         // Decrement the "number of unfinished tasks" counter in the task
@@ -863,7 +885,9 @@ TaskGroup::Sync() {
         // Do work for _myTask_
         //
         // FIXME: bogus values for thread index/thread count here as well..
-        myTask->func(myTask->data, 0, 1, myTask->taskIndex, myTask->taskCount);
+        myTask->func(myTask->data, 0, 1, myTask->taskIndex, myTask->taskCount,
+            myTask->taskIndex_x(), myTask->taskIndex_y(), myTask->taskIndex_z(),
+            myTask->taskCount_x(), myTask->taskCount_y(), myTask->taskCount_z());
 
         //
         // Decrement the number of unfinished tasks counter
@@ -893,7 +917,9 @@ TaskGroup::Launch(int baseIndex, int count) {
 
         // Actually run the task. 
         // Cilk does not expose the task -> thread mapping so we pretend it's 1:1
-        ti->func(ti->data, ti->taskIndex, ti->taskCount, ti->taskIndex, ti->taskCount);
+        ti->func(ti->data, ti->taskIndex, ti->taskCount, ti->taskIndex, ti->taskCount,
+            ti->taskIndex_x(), ti->taskIndex_y(), ti->taskIndex_z(),
+            ti->taskCount_x(), ti->taskCount_y(), ti->taskCount_z());
     }
 }
 
@@ -922,7 +948,9 @@ TaskGroup::Launch(int baseIndex, int count) {
         // Actually run the task. 
         int threadIndex = omp_get_thread_num();
         int threadCount = omp_get_num_threads();
-        ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount);
+        ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount,
+            ti->taskIndex_x(), ti->taskIndex_y(), ti->taskIndex_z(),
+            ti->taskCount_x(), ti->taskCount_y(), ti->taskCount_z());
     }
 }
 
@@ -953,7 +981,9 @@ TaskGroup::Launch(int baseIndex, int count) {
         int threadIndex = ti->taskIndex;
         int threadCount = ti->taskCount;
 
-        ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount);
+        ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount,
+            ti->taskIndex_x(), ti->taskIndex_y(), ti->taskIndex_z(),
+            ti->taskCount_x(), ti->taskCount_y(), ti->taskCount_z());
     });
 }
 
@@ -980,7 +1010,9 @@ TaskGroup::Launch(int baseIndex, int count) {
             // TBB does not expose the task -> thread mapping so we pretend it's 1:1
             int threadIndex = ti->taskIndex;
             int threadCount = ti->taskCount;
-            ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount);
+            ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount,
+            ti->taskIndex_x(), ti->taskIndex_y(), ti->taskIndex_z(),
+            ti->taskCount_x(), ti->taskCount_y(), ti->taskCount_z());
         });
     }
 }
@@ -1033,7 +1065,8 @@ FreeTaskGroup(TaskGroup *tg) {
 ///////////////////////////////////////////////////////////////////////////
 
 void
-ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count) {
+ISPCLaunch(void **taskGroupPtr, void *func, void *data, int countx, int county, int countz) {
+    const int count = countx*county*countz;
     TaskGroup *taskGroup;
     if (*taskGroupPtr == NULL) {
         InitTaskSystem();
@@ -1050,6 +1083,9 @@ ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count) {
         ti->data = data;
         ti->taskIndex = i;
         ti->taskCount = count;
+        ti->taskCount3d[0] = countx;
+        ti->taskCount3d[1] = county;
+        ti->taskCount3d[2] = countz;
     }
     taskGroup->Launch(baseIndex, count);
 }

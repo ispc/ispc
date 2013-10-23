@@ -1,11 +1,11 @@
 
-TASK_CXX=../tasksys3d.cpp
+TASK_CXX=../tasksys.cpp
 TASK_LIB=-lpthread
-TASK_OBJ=objs/tasksys3d.o
+TASK_OBJ=objs/tasksys.o
 
-CXX=g++ -fopenmp
+CXX=clang++
 CXXFLAGS+=-Iobjs/ -O2
-CC=gcc -fopenmp
+CC=clang
 CCFLAGS+=-Iobjs/ -O2
 
 LIBS=-lm $(TASK_LIB) -lstdc++
