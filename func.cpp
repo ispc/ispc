@@ -133,26 +133,26 @@ Function::Function(Symbol *s, Stmt *c) {
         taskCountSym = m->symbolTable->LookupVariable("taskCount");
         Assert(taskCountSym);
 
+        taskIndexSym0 = m->symbolTable->LookupVariable("taskIndex0");
+        Assert(taskIndexSym0);
         taskIndexSym1 = m->symbolTable->LookupVariable("taskIndex1");
         Assert(taskIndexSym1);
         taskIndexSym2 = m->symbolTable->LookupVariable("taskIndex2");
         Assert(taskIndexSym2);
-        taskIndexSym3 = m->symbolTable->LookupVariable("taskIndex3");
-        Assert(taskIndexSym3);
 
 
+        taskCountSym0 = m->symbolTable->LookupVariable("taskCount0");
+        Assert(taskCountSym0);
         taskCountSym1 = m->symbolTable->LookupVariable("taskCount1");
         Assert(taskCountSym1);
         taskCountSym2 = m->symbolTable->LookupVariable("taskCount2");
         Assert(taskCountSym2);
-        taskCountSym3 = m->symbolTable->LookupVariable("taskCount3");
-        Assert(taskCountSym3);
     }
     else
     {
         threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
-        taskIndexSym1 = taskIndexSym2 = taskIndexSym3 = NULL;
-        taskCountSym1 = taskCountSym2 = taskCountSym3 = NULL;
+        taskIndexSym0 = taskIndexSym1 = taskIndexSym2 = NULL;
+        taskCountSym0 = taskCountSym1 = taskCountSym2 = NULL;
     }
 }
 
@@ -244,12 +244,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Value *threadCount = argIter++;
         llvm::Value *taskIndex = argIter++;
         llvm::Value *taskCount = argIter++;
+        llvm::Value *taskIndex0 = argIter++;
         llvm::Value *taskIndex1 = argIter++;
         llvm::Value *taskIndex2 = argIter++;
-        llvm::Value *taskIndex3 = argIter++;
+        llvm::Value *taskCount0 = argIter++;
         llvm::Value *taskCount1 = argIter++;
         llvm::Value *taskCount2 = argIter++;
-        llvm::Value *taskCount3 = argIter++;
 
         // Copy the function parameter values from the structure into local
         // storage
@@ -282,19 +282,19 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         taskCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
         ctx->StoreInst(taskCount, taskCountSym->storagePtr);
         
+        taskIndexSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
+        ctx->StoreInst(taskIndex0, taskIndexSym0->storagePtr);
         taskIndexSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
         ctx->StoreInst(taskIndex1, taskIndexSym1->storagePtr);
         taskIndexSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
         ctx->StoreInst(taskIndex2, taskIndexSym2->storagePtr);
-        taskIndexSym3->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex3");
-        ctx->StoreInst(taskIndex3, taskIndexSym3->storagePtr);
         
+        taskCountSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
+        ctx->StoreInst(taskCount0, taskCountSym0->storagePtr);
         taskCountSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
         ctx->StoreInst(taskCount1, taskCountSym1->storagePtr);
         taskCountSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
         ctx->StoreInst(taskCount2, taskCountSym2->storagePtr);
-        taskCountSym3->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount3");
-        ctx->StoreInst(taskCount3, taskCountSym3->storagePtr);
     }
     else {
         // Regular, non-task function

@@ -59,10 +59,10 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
                     uniform int width, uniform int height, 
                     uniform int xspan, uniform int yspan,
                     uniform int maxIterations, uniform int output[]) {
-    const uniform int xstart = taskIndex1 * xspan;
+    const uniform int xstart = taskIndex0 * xspan;
     const uniform int xend   = min(xstart  + xspan, width);
 
-    const uniform int ystart = taskIndex2 * yspan;
+    const uniform int ystart = taskIndex1 * yspan;
     const uniform int yend   = min(ystart  + yspan, height);
     
 

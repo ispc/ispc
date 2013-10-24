@@ -171,8 +171,8 @@
 // Signature of ispc-generated 'task' functions
 typedef void (*TaskFuncType)(void *data, int threadIndex, int threadCount,
                              int taskIndex, int taskCount,
-                             int taskIndex1, int taskIndex2, int taskIndex3,
-                             int taskCount1, int taskCount2, int taskCount3);
+                             int taskIndex0, int taskIndex1, int taskIndex2,
+                             int taskCount0, int taskCount1, int taskCount2);
 
 // Small structure used to hold the data for each task
 struct TaskInfo {
@@ -184,21 +184,21 @@ struct TaskInfo {
     event taskEvent;
 #endif
     int taskCount() const { return taskCount3d[0]*taskCount3d[1]*taskCount3d[2]; }
-    int taskIndex1() const 
+    int taskIndex0() const 
     {
       return taskIndex % taskCount3d[0];
     }
-    int taskIndex2() const 
+    int taskIndex1() const 
     {
       return ( taskIndex / taskCount3d[0] ) % taskCount3d[1];
     }
-    int taskIndex3() const 
+    int taskIndex2() const 
     {
       return taskIndex / ( taskCount3d[0]*taskCount3d[1] );
     }
-    int taskCount1() const { return taskCount3d[0]; }
-    int taskCount2() const { return taskCount3d[1]; }
-    int taskCount3() const { return taskCount3d[2]; }
+    int taskCount0() const { return taskCount3d[0]; }
+    int taskCount1() const { return taskCount3d[1]; }
+    int taskCount2() const { return taskCount3d[2]; }
     TaskInfo() { assert(sizeof(TaskInfo) % 32 == 0); }
 } __attribute__((aligned(32)));
 
@@ -539,8 +539,8 @@ lRunTask(void *ti) {
     // Actually run the task
     taskInfo->func(taskInfo->data, threadIndex, threadCount, 
                    taskInfo->taskIndex, taskInfo->taskCount(),
-            taskInfo->taskIndex1(), taskInfo->taskIndex2(), taskInfo->taskIndex3(),
-            taskInfo->taskCount1(), taskInfo->taskCount2(), taskInfo->taskCount3());
+            taskInfo->taskIndex0(), taskInfo->taskIndex1(), taskInfo->taskIndex2(),
+            taskInfo->taskCount0(), taskInfo->taskCount1(), taskInfo->taskCount2());
 }
 
 
@@ -582,8 +582,8 @@ lRunTask(LPVOID param) {
     int threadIndex = 0;
     int threadCount = 1;
     ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
-            ti->taskIndex1(), ti->taskIndex2(), ti->taskIndex3(),
-            ti->taskCount1(), ti->taskCount2(), ti->taskCount3());
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
 
     // Signal the event that this task is done
     ti->taskEvent.set();
@@ -685,8 +685,8 @@ lTaskEntry(void *arg) {
         TaskInfo *myTask = tg->GetTaskInfo(taskNumber);
         myTask->func(myTask->data, threadIndex, threadCount, myTask->taskIndex,
                      myTask->taskCount(),
-            myTask->taskIndex1(), myTask->taskIndex2(), myTask->taskIndex3(),
-            myTask->taskCount1(), myTask->taskCount2(), myTask->taskCount3());
+            myTask->taskIndex0(), myTask->taskIndex1(), myTask->taskIndex2(),
+            myTask->taskCount0(), myTask->taskCount1(), myTask->taskCount2());
 
         //
         // Decrement the "number of unfinished tasks" counter in the task
@@ -888,8 +888,8 @@ TaskGroup::Sync() {
         //
         // FIXME: bogus values for thread index/thread count here as well..
         myTask->func(myTask->data, 0, 1, myTask->taskIndex, myTask->taskCount(),
-            myTask->taskIndex1(), myTask->taskIndex2(), myTask->taskIndex3(),
-            myTask->taskCount1(), myTask->taskCount2(), myTask->taskCount3());
+            myTask->taskIndex0(), myTask->taskIndex1(), myTask->taskIndex2(),
+            myTask->taskCount0(), myTask->taskCount1(), myTask->taskCount2());
 
         //
         // Decrement the number of unfinished tasks counter
@@ -920,8 +920,8 @@ TaskGroup::Launch(int baseIndex, int count) {
         // Actually run the task. 
         // Cilk does not expose the task -> thread mapping so we pretend it's 1:1
         ti->func(ti->data, ti->taskIndex, ti->taskCount(),
-            ti->taskIndex1(), ti->taskIndex2(), ti->taskIndex3(),
-            ti->taskCount1(), ti->taskCount2(), ti->taskCount3());
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
     }
 }
 
@@ -951,8 +951,8 @@ TaskGroup::Launch(int baseIndex, int count) {
         int threadIndex = omp_get_thread_num();
         int threadCount = omp_get_num_threads();
         ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
-            ti->taskIndex1(), ti->taskIndex2(), ti->taskIndex3(),
-            ti->taskCount1(), ti->taskCount2(), ti->taskCount3());
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
     }
 }
 
@@ -984,8 +984,8 @@ TaskGroup::Launch(int baseIndex, int count) {
         int threadCount = ti->taskCount;
 
         ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
-            ti->taskIndex1(), ti->taskIndex2(), ti->taskIndex3(),
-            ti->taskCount1(), ti->taskCount2(), ti->taskCount3());
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
     });
 }
 
@@ -1013,8 +1013,8 @@ TaskGroup::Launch(int baseIndex, int count) {
             int threadIndex = ti->taskIndex;
             int threadCount = ti->taskCount;
             ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
-            ti->taskIndex1(), ti->taskIndex2(), ti->taskIndex3(),
-            ti->taskCount1(), ti->taskCount2(), ti->taskCount3());
+            ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
+            ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
         });
     }
 }
@@ -1067,8 +1067,8 @@ FreeTaskGroup(TaskGroup *tg) {
 ///////////////////////////////////////////////////////////////////////////
 
 void
-ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count1, int count2, int count3) {
-    const int count = count1*count2*count3;
+ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count0, int count1, int count2) {
+    const int count = count0*count1*count2;
     TaskGroup *taskGroup;
     if (*taskGroupPtr == NULL) {
         InitTaskSystem();
@@ -1084,9 +1084,9 @@ ISPCLaunch(void **taskGroupPtr, void *func, void *data, int count1, int count2, 
         ti->func = (TaskFuncType)func;
         ti->data = data;
         ti->taskIndex = i;
-        ti->taskCount3d[0] = count1;
-        ti->taskCount3d[1] = count2;
-        ti->taskCount3d[2] = count3;
+        ti->taskCount3d[0] = count0;
+        ti->taskCount3d[1] = count1;
+        ti->taskCount3d[2] = count2;
     }
     taskGroup->Launch(baseIndex, count);
 }

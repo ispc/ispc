@@ -61,9 +61,9 @@ private:
     Symbol *maskSymbol;
     Symbol *threadIndexSym, *threadCountSym;
     Symbol *taskIndexSym,   *taskCountSym;
+    Symbol *taskIndexSym0, *taskCountSym0;
     Symbol *taskIndexSym1, *taskCountSym1;
     Symbol *taskIndexSym2, *taskCountSym2;
-    Symbol *taskIndexSym3, *taskCountSym3;
 };
 
 #endif // ISPC_FUNC_H
