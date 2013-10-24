@@ -59,16 +59,10 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
                     uniform int width, uniform int height, 
                     uniform int xspan, uniform int yspan,
                     uniform int maxIterations, uniform int output[]) {
-#if 0
-    print("taskIndex  = %  : % \n", taskIndex);
-    print("taskIndex_x= %  : % \n", taskIndex_x);
-    print("taskIndex_y= %  : % \n", taskIndex_y);
-    print(" --- \n");
-#endif
-    const uniform int xstart = taskIndex_x * xspan;
+    const uniform int xstart = taskIndex1 * xspan;
     const uniform int xend   = min(xstart  + xspan, width);
 
-    const uniform int ystart = taskIndex_y * yspan;
+    const uniform int ystart = taskIndex2 * yspan;
     const uniform int yend   = min(ystart  + yspan, height);
     
 
@@ -90,10 +84,15 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
                 uniform int maxIterations, uniform int output[]) {
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
-    const uniform int xspan = 16;
+    const uniform int xspan = 16;  /* make sure it is big enough to avoid false-sharing */
     const uniform int yspan = 16; 
 
-    launch <<<width/xspan, height/yspan>>>
+
+#if 1
+    launch [width/xspan, height/yspan]
+#else
+    launch [height/yspan][width/xspan]
+#endif
       mandelbrot_scanline(x0, dx, y0, dy, width, height, xspan, yspan,
                           maxIterations, output);
 }

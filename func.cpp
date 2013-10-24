@@ -133,26 +133,26 @@ Function::Function(Symbol *s, Stmt *c) {
         taskCountSym = m->symbolTable->LookupVariable("taskCount");
         Assert(taskCountSym);
 
-        taskIndexSym_x = m->symbolTable->LookupVariable("taskIndex_x");
-        Assert(taskIndexSym_x);
-        taskIndexSym_y = m->symbolTable->LookupVariable("taskIndex_y");
-        Assert(taskIndexSym_y);
-        taskIndexSym_z = m->symbolTable->LookupVariable("taskIndex_z");
-        Assert(taskIndexSym_z);
+        taskIndexSym1 = m->symbolTable->LookupVariable("taskIndex1");
+        Assert(taskIndexSym1);
+        taskIndexSym2 = m->symbolTable->LookupVariable("taskIndex2");
+        Assert(taskIndexSym2);
+        taskIndexSym3 = m->symbolTable->LookupVariable("taskIndex3");
+        Assert(taskIndexSym3);
 
 
-        taskCountSym_x = m->symbolTable->LookupVariable("taskCount_x");
-        Assert(taskCountSym_x);
-        taskCountSym_y = m->symbolTable->LookupVariable("taskCount_y");
-        Assert(taskCountSym_y);
-        taskCountSym_z = m->symbolTable->LookupVariable("taskCount_z");
-        Assert(taskCountSym_z);
+        taskCountSym1 = m->symbolTable->LookupVariable("taskCount1");
+        Assert(taskCountSym1);
+        taskCountSym2 = m->symbolTable->LookupVariable("taskCount2");
+        Assert(taskCountSym2);
+        taskCountSym3 = m->symbolTable->LookupVariable("taskCount3");
+        Assert(taskCountSym3);
     }
     else
     {
         threadIndexSym = threadCountSym = taskIndexSym = taskCountSym = NULL;
-        taskIndexSym_x = taskIndexSym_y = taskIndexSym_z = NULL;
-        taskCountSym_x = taskCountSym_y = taskCountSym_z = NULL;
+        taskIndexSym1 = taskIndexSym2 = taskIndexSym3 = NULL;
+        taskCountSym1 = taskCountSym2 = taskCountSym3 = NULL;
     }
 }
 
@@ -244,12 +244,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         llvm::Value *threadCount = argIter++;
         llvm::Value *taskIndex = argIter++;
         llvm::Value *taskCount = argIter++;
-        llvm::Value *taskIndex_x = argIter++;
-        llvm::Value *taskIndex_y = argIter++;
-        llvm::Value *taskIndex_z = argIter++;
-        llvm::Value *taskCount_x = argIter++;
-        llvm::Value *taskCount_y = argIter++;
-        llvm::Value *taskCount_z = argIter++;
+        llvm::Value *taskIndex1 = argIter++;
+        llvm::Value *taskIndex2 = argIter++;
+        llvm::Value *taskIndex3 = argIter++;
+        llvm::Value *taskCount1 = argIter++;
+        llvm::Value *taskCount2 = argIter++;
+        llvm::Value *taskCount3 = argIter++;
 
         // Copy the function parameter values from the structure into local
         // storage
@@ -282,19 +282,19 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         taskCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
         ctx->StoreInst(taskCount, taskCountSym->storagePtr);
         
-        taskIndexSym_x->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex_x");
-        ctx->StoreInst(taskIndex_x, taskIndexSym_x->storagePtr);
-        taskIndexSym_y->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex_y");
-        ctx->StoreInst(taskIndex_y, taskIndexSym_y->storagePtr);
-        taskIndexSym_z->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex_z");
-        ctx->StoreInst(taskIndex_z, taskIndexSym_z->storagePtr);
+        taskIndexSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
+        ctx->StoreInst(taskIndex1, taskIndexSym1->storagePtr);
+        taskIndexSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
+        ctx->StoreInst(taskIndex2, taskIndexSym2->storagePtr);
+        taskIndexSym3->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex3");
+        ctx->StoreInst(taskIndex3, taskIndexSym3->storagePtr);
         
-        taskCountSym_x->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount_x");
-        ctx->StoreInst(taskCount_x, taskCountSym_x->storagePtr);
-        taskCountSym_y->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount_y");
-        ctx->StoreInst(taskCount_y, taskCountSym_y->storagePtr);
-        taskCountSym_z->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount_z");
-        ctx->StoreInst(taskCount_z, taskCountSym_z->storagePtr);
+        taskCountSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
+        ctx->StoreInst(taskCount1, taskCountSym1->storagePtr);
+        taskCountSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
+        ctx->StoreInst(taskCount2, taskCountSym2->storagePtr);
+        taskCountSym3->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount3");
+        ctx->StoreInst(taskCount3, taskCountSym3->storagePtr);
     }
     else {
         // Regular, non-task function
