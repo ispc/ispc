@@ -1660,6 +1660,64 @@ BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p)
     arg1 = b;
 }
 
+Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop,
+                                Expr *a0, Expr *a1,
+                                const SourcePos &sp)
+{
+    if ((a0 == NULL) || (a1 == NULL)) {
+        return NULL;
+    }
+    Expr *arg0 = a0->TypeCheck();
+    Expr *arg1 = a1->TypeCheck();
+    if ((arg0 == NULL) || (arg1 == NULL)) {
+        return NULL;
+    }
+    const Type *type0 = arg0->GetType();
+    const Type *type1 = arg1->GetType();
+
+    // If either operand is a reference, dereference it before we move
+    // forward
+    if (CastType<ReferenceType>(type0) != NULL) {
+        arg0 = new RefDerefExpr(arg0, arg0->pos);
+        type0 = arg0->GetType();
+    }
+    if (CastType<ReferenceType>(type1) != NULL) {
+        arg1 = new RefDerefExpr(arg1, arg1->pos);
+        type1 = arg1->GetType();
+    }
+    if ((type0 == NULL) || (type1 == NULL)) {
+        return NULL;
+    }
+    if (CastType<StructType>(type0) != NULL ||
+        CastType<StructType>(type1) != NULL) {
+        std::string opName = std::string("operator") + lOpString(bop);
+        std::vector<Symbol *> funs;
+        m->symbolTable->LookupFunction(opName.c_str(), &funs);
+        if (funs.size() == 0) {
+            Error(sp, "operator %s(%s, %s) is not defined.",
+            opName.c_str(), (type0->GetString()).c_str(), (type1->GetString()).c_str());
+            return NULL;
+        }
+        Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
+        ExprList *args = new ExprList(sp);
+        args->exprs.push_back(arg0);
+        args->exprs.push_back(arg1);
+        Expr *opCallExpr = new FunctionCallExpr(func, args, sp);
+        return opCallExpr;
+    }
+    return NULL;
+}
+
+
+Expr * MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
+    Expr * op = lCreateBinaryOperatorCall(o, a, b, p);
+    if (op != NULL) {
+        return op;
+    }
+    op = new BinaryExpr(o, a, b, p);
+    return op;
+}
+
 
 /** Emit code for a && or || logical operator.  In particular, the code
     here handles "short-circuit" evaluation, where the second expression
@@ -2985,29 +3043,10 @@ AssignExpr::TypeCheck() {
     if (lvalueIsReference)
         lvalue = new RefDerefExpr(lvalue, lvalue->pos);
 
-    FunctionSymbolExpr *fse;
-    if ((fse = dynamic_cast<FunctionSymbolExpr *>(rvalue)) != NULL) {
-        // Special case to use the type of the LHS to resolve function
-        // overloads when we're assigning a function pointer where the
-        // function is overloaded.
-        const Type *lvalueType = lvalue->GetType();
-        const FunctionType *ftype;
-        if (CastType<PointerType>(lvalueType) == NULL ||
-            (ftype = CastType<FunctionType>(lvalueType->GetBaseType())) == NULL) {
-            Error(lvalue->pos, "Can't assign function pointer to type \"%s\".",
-                  lvalueType ? lvalueType->GetString().c_str() : "<unknown>");
-            return NULL;
-        }
-
-        std::vector<const Type *> paramTypes;
-        for (int i = 0; i < ftype->GetNumParameters(); ++i)
-            paramTypes.push_back(ftype->GetParameterType(i));
-
-        if (!fse->ResolveOverloads(rvalue->pos, paramTypes)) {
-            Error(pos, "Unable to find overloaded function for function "
-                  "pointer assignment.");
-            return NULL;
-        }
+    if (PossiblyResolveFunctionOverloads(rvalue, lvalue->GetType()) == false) {
+        Error(pos, "Unable to find overloaded function for function "
+                "pointer assignment.");
+        return NULL;
     }
 
     const Type *lhsType = lvalue->GetType();
@@ -3501,11 +3540,13 @@ SelectExpr::Print() const {
 // FunctionCallExpr
 
 FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p,
-                                   bool il, Expr *lce)
+                                   bool il, Expr *lce[3])
     : Expr(p), isLaunch(il) {
     func = f;
     args = a;
-    launchCountExpr = lce;
+    launchCountExpr[0] = lce[0];
+    launchCountExpr[1] = lce[1];
+    launchCountExpr[2] = lce[2];
 }
 
 
@@ -3623,9 +3664,13 @@ FunctionCallExpr::GetValue(FunctionEmitContext *ctx) const {
     llvm::Value *retVal = NULL;
     ctx->SetDebugPos(pos);
     if (ft->isTask) {
-        AssertPos(pos, launchCountExpr != NULL);
-        llvm::Value *launchCount = launchCountExpr->GetValue(ctx);
-        if (launchCount != NULL)
+        AssertPos(pos, launchCountExpr[0] != NULL);
+        llvm::Value *launchCount[3] = 
+        { launchCountExpr[0]->GetValue(ctx),
+          launchCountExpr[1]->GetValue(ctx),
+          launchCountExpr[2]->GetValue(ctx) };
+
+        if (launchCount[0] != NULL)
             ctx->LaunchInst(callee, argVals, launchCount);
     }
     else
@@ -3650,10 +3695,37 @@ FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 }
- 
+
+
+bool FullResolveOverloads(Expr * func, ExprList * args,
+                        std::vector<const Type *> *argTypes,
+                        std::vector<bool> *argCouldBeNULL,
+                        std::vector<bool> *argIsConstant) {
+    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+        Expr *expr = args->exprs[i];
+        if (expr == NULL)
+            return false;
+        const Type *t = expr->GetType();
+        if (t == NULL)
+            return false;
+        argTypes->push_back(t);
+        argCouldBeNULL->push_back(lIsAllIntZeros(expr) || dynamic_cast<NullPointerExpr *>(expr));
+        argIsConstant->push_back(dynamic_cast<ConstExpr *>(expr) || dynamic_cast<NullPointerExpr *>(expr));
+    }
+    return true;
+}
+
 
 const Type *
 FunctionCallExpr::GetType() const {
+    std::vector<const Type *> argTypes;
+    std::vector<bool> argCouldBeNULL, argIsConstant;
+    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
+        FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+        if (fse != NULL) {
+            fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
+        }
+    }
     const FunctionType *ftype = lGetFunctionType(func);
     return ftype ? ftype->GetReturnType() : NULL;
 }
@@ -3689,20 +3761,9 @@ FunctionCallExpr::TypeCheck() {
 
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
-    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-        Expr *expr = args->exprs[i];
 
-        if (expr == NULL)
-            return NULL;
-        const Type *t = expr->GetType();
-        if (t == NULL)
-            return NULL;
-
-        argTypes.push_back(t);
-        argCouldBeNULL.push_back(lIsAllIntZeros(expr) ||
-                                 dynamic_cast<NullPointerExpr *>(expr));
-        argIsConstant.push_back(dynamic_cast<ConstExpr *>(expr) ||
-                                dynamic_cast<NullPointerExpr *>(expr));
+    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
+        return NULL;
     }
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
@@ -3732,14 +3793,17 @@ FunctionCallExpr::TypeCheck() {
             if (!isLaunch)
                 Error(pos, "\"launch\" expression needed to call function "
                       "with \"task\" qualifier.");
-            if (!launchCountExpr)
+            for (int k = 0; k < 3; k++)
+            {
+              if (!launchCountExpr[k])
                 return NULL;
 
-            launchCountExpr =
-                TypeConvertExpr(launchCountExpr, AtomicType::UniformInt32,
-                                "task launch count");
-            if (launchCountExpr == NULL)
+              launchCountExpr[k] =
+                TypeConvertExpr(launchCountExpr[k], AtomicType::UniformInt32,
+                    "task launch count");
+              if (launchCountExpr[k] == NULL)
                 return NULL;
+            }
         }
         else {
             if (isLaunch) {
@@ -3747,7 +3811,7 @@ FunctionCallExpr::TypeCheck() {
                       "qualified function.");
                 return NULL;
             }
-            AssertPos(pos, launchCountExpr == NULL);
+            AssertPos(pos, launchCountExpr[0] == NULL);
         }
     }
     else {
@@ -7010,7 +7074,8 @@ TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const {
-    AssertPos(pos, type->HasUnboundVariability() == false);
+    // We have to switch off this assert after supporting of operators.
+    //AssertPos(pos, type->HasUnboundVariability() == false);
     return type;
 }
 
@@ -8190,6 +8255,9 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
                                      const std::vector<bool> *argCouldBeNULL,
                                      const std::vector<bool> *argIsConstant) {
     const char *funName = candidateFunctions.front()->name.c_str();
+    if (triedToResolve == true) {
+        return true;
+    }
 
     triedToResolve = true;
 

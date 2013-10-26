@@ -212,10 +212,10 @@ def check_targets():
                 answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
             if AVX11 == False and "rdrand" in f_lines[i]:
                 AVX11 = True;
-                answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
+                answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16", "avx1.1-i64x4"]
             if AVX2 == False and "avx2" in f_lines[i]:
                 AVX2 = True;
-                answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+                answer = answer + ["avx2-i32x8", "avx2-i32x16", "avx2-i64x4"]
     if current_OS == "MacOS":
         f_lines = take_lines("sysctl machdep.cpu.features", "first")
         if "SSE2" in f_lines:
@@ -229,10 +229,10 @@ def check_targets():
             answer = answer + ["avx1-i32x8", "avx1-i32x16", "avx1-i64x4"]
         if "RDRAND" in f_lines:
             AVX11 = True;
-            answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16"]
+            answer = answer + ["avx1.1-i32x8", "avx1.1-i32x16", "avx1.1-i64x4"]
         if "AVX2.0" in f_lines:
             AVX2 = True;
-            answer = answer + ["avx2-i32x8", "avx2-i32x16"]
+            answer = answer + ["avx2-i32x8", "avx2-i32x16", "avx2-i64x4"]
 
     answer = answer + ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
@@ -257,9 +257,9 @@ def check_targets():
         if AVX == False and "snb" in f_lines[i]:
             answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
         if AVX11 == False and "ivb" in f_lines[i]:
-            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"]]
+            answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if AVX2 == False and "hsw" in f_lines[i]:
-            answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"]]
+            answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
     return [answer, answer_sde]
 
 def build_ispc(version_LLVM, make):
@@ -274,29 +274,38 @@ def build_ispc(version_LLVM, make):
 
 def execute_stability(stability, R, print_version):
     stability1 = copy.deepcopy(stability)
-    temp = run_tests.run_tests(stability1, [], print_version)
+    b_temp = run_tests.run_tests(stability1, [], print_version)
+    temp = b_temp[0]
+    time = b_temp[1]
     for j in range(0,4):
         R[j][0] = R[j][0] + temp[j]
         for i in range(0,len(temp[j])):
             R[j][1].append(temp[4])
     number_of_fails = temp[5]
     number_of_new_fails = len(temp[0]) + len(temp[1])
+    number_of_passes = len(temp[2]) + len(temp[3])
     if number_of_fails == 0:
         str_fails = ". No fails"
     else:
         str_fails = ". Fails: " + str(number_of_fails)
     if number_of_new_fails == 0:
-        str_new_fails = ", No new fails.\n"
+        str_new_fails = ", No new fails"
     else:
-        str_new_fails = ", New fails: " + str(number_of_new_fails) + ".\n"
-    print_debug(temp[4][1:-3] + str_fails + str_new_fails, False, stability_log)
+        str_new_fails = ", New fails: " + str(number_of_new_fails)
+    if number_of_passes == 0:
+        str_new_passes = "."
+    else:
+        str_new_passes = ", " + str(number_of_passes) + " new passes."
+    if stability.time:
+        str_time = " " + time + "\n"
+    else:
+        str_time = "\n"
+    print_debug(temp[4][1:-3] + str_fails + str_new_fails + str_new_passes + str_time, False, stability_log)
 
 def run_special_tests():
    i = 5 
 
-def validation_run(only, only_targets, reference_branch, number, notify, update, make):
-    if os.environ["ISPC_HOME"] != os.getcwd():
-        error("you ISPC_HOME and your current pass are different!\n", 2)
+def validation_run(only, only_targets, reference_branch, number, notify, update, speed_number, make, perf_llvm, time):
     os.chdir(os.environ["ISPC_HOME"])
     os.environ["PATH"] = os.environ["ISPC_HOME"] + ":" + os.environ["PATH"]
     if options.notify != "":
@@ -322,9 +331,9 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.random = False
         stability.ispc_flags = ""
         stability.compiler_exe = None
-        stability.num_jobs = 1024
+        stability.num_jobs = speed_number
         stability.verbose = False
-        stability.time = False
+        stability.time = time
         stability.non_interactive = True
         stability.update = update
         stability.include_file = None
@@ -476,28 +485,36 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 # prepare LLVM 3.3 as newest LLVM
         need_LLVM = check_LLVM(["3.3"])
         if len(need_LLVM) != 0:
-            build_LLVM(need_LLVM[i], "", "", "", False, False, False, True, False, make)
-# prepare reference point. build both test and reference compilers
-        try_do_LLVM("apply git", "git branch", True)
-        temp4 = take_lines("git branch", "all")
-        for line in temp4:
-            if "*" in line:
-                current_branch = line[2:-1]
-        stashing = True
-        sys.stdout.write("Please, don't interrupt script here! You can have not sync git status after interruption!\n")
-        if "No local changes" in take_lines("git stash", "first"):
-            stashing = False
-        #try_do_LLVM("stash current branch ", "git stash", True)
-        try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
-        sys.stdout.write(".\n")
-        build_ispc("3.3", make)
-        sys.stdout.write(".\n")
-        os.rename("ispc", "ispc_ref")
-        try_do_LLVM("checkout test branch " + current_branch + " ", "git checkout " + current_branch, True)
-        if stashing:
-            try_do_LLVM("return current branch ", "git stash pop", True)
-        sys.stdout.write("You can interrupt script now.\n")
-        build_ispc("3.3", make)
+            build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make)
+        if perf_llvm == False:
+            # prepare reference point. build both test and reference compilers
+            try_do_LLVM("apply git", "git branch", True)
+            temp4 = take_lines("git branch", "all")
+            for line in temp4:
+                if "*" in line:
+                    current_branch = line[2:-1]
+            stashing = True
+            sys.stdout.write("Please, don't interrupt script here! You can have not sync git status after interruption!\n")
+            if "No local changes" in take_lines("git stash", "first"):
+                stashing = False
+            #try_do_LLVM("stash current branch ", "git stash", True)
+            try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
+            sys.stdout.write(".\n")
+            build_ispc("3.3", make)
+            sys.stdout.write(".\n")
+            os.rename("ispc", "ispc_ref")
+            try_do_LLVM("checkout test branch " + current_branch + " ", "git checkout " + current_branch, True)
+            if stashing:
+                try_do_LLVM("return current branch ", "git stash pop", True)
+            sys.stdout.write("You can interrupt script now.\n")
+            build_ispc("3.3", make)
+        else:
+            # build compiler with two different LLVM versions
+            if len(check_LLVM([reference_branch])) != 0:
+                error("you haven't got llvm called " + reference_branch, 1)
+            build_ispc("3.3", make)
+            os.rename("ispc", "ispc_ref")
+            build_ispc(reference_branch, make)
 # begin validation run for performance. output is inserted into perf()
         perf.perf(performance, [])
         if options.notify != "":
@@ -560,16 +577,26 @@ def Main():
     stability_log = os.getcwd() + os.sep + f_date + os.sep + "stability.log"
     current_path = os.getcwd()
     make = "make -j" + options.speed
+    if os.environ["ISPC_HOME"] != os.getcwd():
+        error("you ISPC_HOME and your current path are different!\n", 2)
+    if options.perf_llvm == True:
+        if options.branch == "master":
+            options.branch = "trunk"
     try:
+        start_time = time.time()
         if options.build_llvm:
             build_LLVM(options.version, options.revision, options.folder, options.tarball,
                     options.debug, options.selfbuild, options.extra, False, options.force, make)
         if options.validation_run:
             validation_run(options.only, options.only_targets, options.branch,
-                    options.number_for_performance, options.notify, options.update, make)
+                    options.number_for_performance, options.notify, options.update, int(options.speed),
+                    make, options.perf_llvm, options.time)
+        elapsed_time = time.time() - start_time
+        if options.time:
+            print_debug("Elapsed time: " + time.strftime('%Hh%Mm%Ssec.', time.gmtime(elapsed_time)) + "\n", False, "")
     finally:
         os.chdir(current_path)
-        date_name = "alloy_results_" + datetime.datetime.now().strftime('%d_%m_%Y_%H_%M_%S')
+        date_name = "alloy_results_" + datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         if os.path.exists(date_name):
             error("It's forbidden to run alloy two times in a second, logs are in ./logs", 1)
         os.rename(f_date, date_name)
@@ -656,11 +683,15 @@ run_group.add_option('--update-errors', dest='update',
 run_group.add_option('--only-targets', dest='only_targets',
     help='set list of targets to test. Possible values - all subnames of targets.',
     default="")
+run_group.add_option('--time', dest='time',
+    help='display time of testing', default=False, action='store_true')
 run_group.add_option('--only', dest='only',
     help='set types of tests. Possible values:\n' + 
         '-O0, -O2, x86, x86-64, stability (test only stability), performance (test only performance)\n' +
         'build (only build with different LLVM), 3.1, 3.2, 3.3, trunk, native (do not use SDE), current (do not rebuild ISPC).',
         default="")
+run_group.add_option('--perf_LLVM', dest='perf_llvm',
+    help='compare LLVM 3.3 with "--compare-with", default trunk', default=False, action='store_true')
 parser.add_option_group(run_group)
 # options for activity "setup PATHS"
 setup_group = OptionGroup(parser, "Options for setup",

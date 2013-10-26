@@ -353,17 +353,75 @@ launch_expression
     : TOKEN_LAUNCH postfix_expression '(' argument_expression_list ')'
       {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
-          $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, oneExpr);
+          Expr *launchCount[3] = {oneExpr, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($2, $4, Union(@2, @5), true, launchCount);
       }
     | TOKEN_LAUNCH postfix_expression '(' ')'
       {
           ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @2);
-          $$ = new FunctionCallExpr($2, new ExprList(Union(@3,@4)), Union(@2, @4), true, oneExpr);
+          Expr *launchCount[3] = {oneExpr, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($2, new ExprList(Union(@3,@4)), Union(@2, @4), true, launchCount);
        }
-    | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' argument_expression_list ')'
-      { $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, $3); }
-    | TOKEN_LAUNCH '[' expression ']' postfix_expression '(' ')'
-      { $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, $3); }
+
+    | TOKEN_LAUNCH '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, $7, Union(@5,@8), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ']' postfix_expression '(' ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @5);
+          Expr *launchCount[3] = {$3, oneExpr, oneExpr};
+          $$ = new FunctionCallExpr($5, new ExprList(Union(@5,@6)), Union(@5,@7), true, launchCount);
+      }
+
+    | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
+          Expr *launchCount[3] = {$3, $5, oneExpr};
+          $$ = new FunctionCallExpr($7, $9, Union(@7,@10), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ']' postfix_expression '(' ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @7);
+          Expr *launchCount[3] = {$3, $5, oneExpr};
+          $$ = new FunctionCallExpr($7, new ExprList(Union(@7,@8)), Union(@7,@9), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @8);
+          Expr *launchCount[3] = {$6, $3, oneExpr};
+          $$ = new FunctionCallExpr($8, $10, Union(@8,@11), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' ')'
+      { 
+          ConstExpr *oneExpr = new ConstExpr(AtomicType::UniformInt32, (int32_t)1, @8);
+          Expr *launchCount[3] = {$6, $3, oneExpr};
+          $$ = new FunctionCallExpr($8, new ExprList(Union(@8,@9)), Union(@8,@10), true, launchCount);
+      }
+
+    | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ',' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
+      { 
+          Expr *launchCount[3] = {$3, $5, $7};
+          $$ = new FunctionCallExpr($9, $11, Union(@9,@12), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ',' assignment_expression ',' assignment_expression ']' postfix_expression '(' ')'
+      { 
+          Expr *launchCount[3] = {$3, $5, $7};
+          $$ = new FunctionCallExpr($9, new ExprList(Union(@9,@10)), Union(@9,@11), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' argument_expression_list ')'
+      { 
+          Expr *launchCount[3] = {$9, $6, $3};
+          $$ = new FunctionCallExpr($11, $13, Union(@11,@14), true, launchCount);
+      }
+    | TOKEN_LAUNCH '[' assignment_expression ']' '[' assignment_expression ']' '[' assignment_expression ']' postfix_expression '(' ')'
+      { 
+          Expr *launchCount[3] = {$9, $6, $3};
+          $$ = new FunctionCallExpr($11, new ExprList(Union(@11,@12)), Union(@11,@13), true, launchCount);
+      }
+
 
     | TOKEN_LAUNCH '<' postfix_expression '(' argument_expression_list ')' '>'
        {
@@ -377,13 +435,13 @@ launch_expression
                 "around function call expression.");
           $$ = NULL;
        }
-    | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' argument_expression_list ')' '>'
+    | TOKEN_LAUNCH '[' assignment_expression ']' '<' postfix_expression '(' argument_expression_list ')' '>'
        {
           Error(Union(@5, @10), "\"launch\" expressions no longer take '<' '>' "
                 "around function call expression.");
           $$ = NULL;
        }
-    | TOKEN_LAUNCH '[' expression ']' '<' postfix_expression '(' ')' '>'
+    | TOKEN_LAUNCH '[' assignment_expression ']' '<' postfix_expression '(' ')' '>'
        {
           Error(Union(@5, @9), "\"launch\" expressions no longer take '<' '>' "
                 "around function call expression.");
@@ -468,27 +526,27 @@ cast_expression
 multiplicative_expression
     : cast_expression
     | multiplicative_expression '*' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '/' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '%' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
     ;
 
 additive_expression
     : multiplicative_expression
     | additive_expression '+' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
     | additive_expression '-' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
     ;
 
 shift_expression
     : additive_expression
     | shift_expression TOKEN_LEFT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1, @3)); }
     | shift_expression TOKEN_RIGHT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1, @3)); }
     ;
 
 relational_expression
@@ -2214,9 +2272,24 @@ static void lAddThreadIndexCountToSymbolTable(SourcePos pos) {
 
     Symbol *taskIndexSym = new Symbol("taskIndex", pos, type);
     m->symbolTable->AddVariable(taskIndexSym);
-
+    
     Symbol *taskCountSym = new Symbol("taskCount", pos, type);
     m->symbolTable->AddVariable(taskCountSym);
+    
+    Symbol *taskIndexSym0 = new Symbol("taskIndex0", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym0);
+    Symbol *taskIndexSym1 = new Symbol("taskIndex1", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym1);
+    Symbol *taskIndexSym2 = new Symbol("taskIndex2", pos, type);
+    m->symbolTable->AddVariable(taskIndexSym2);
+
+    
+    Symbol *taskCountSym0 = new Symbol("taskCount0", pos, type);
+    m->symbolTable->AddVariable(taskCountSym0);
+    Symbol *taskCountSym1 = new Symbol("taskCount1", pos, type);
+    m->symbolTable->AddVariable(taskCountSym1);
+    Symbol *taskCountSym2 = new Symbol("taskCount2", pos, type);
+    m->symbolTable->AddVariable(taskCountSym2);
 }
 
 

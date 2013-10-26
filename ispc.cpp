@@ -517,6 +517,25 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasRand = true;
 #endif
     }
+    else if (!strcasecmp(isa, "avx1.1-i64x4")) {
+        this->m_isa = Target::AVX11;
+        this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
+        ;           
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 64;
+        this->m_hasHalf = true;
+#if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
+        this->m_hasRand = true;
+#endif
+    }
     else if (!strcasecmp(isa, "avx2") ||
              !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
@@ -558,6 +577,29 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
+        this->m_hasHalf = true;
+#if !defined(LLVM_3_1)
+        // LLVM 3.2+ only
+        this->m_hasRand = true;
+        this->m_hasGather = true;
+#endif
+    }
+    else if (!strcasecmp(isa, "avx2-i64x4")) {
+        this->m_isa = Target::AVX2;
+        this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
+#if defined(LLVM_3_4)
+        ",+rdrnd"
+#else
+        ",+rdrand"
+#endif
+#ifndef LLVM_3_1
+            ",+fma"
+#endif // !LLVM_3_1
+            ;
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 64;
         this->m_hasHalf = true;
 #if !defined(LLVM_3_1)
         // LLVM 3.2+ only
@@ -740,8 +782,8 @@ Target::SupportedTargets() {
         "sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
         "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
-        "avx1.1-i32x8, avx1.1-i32x16, "
-        "avx2-i32x8, avx2-i32x16, "
+        "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
+        "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
         "generic-x32, generic-x64";
 }

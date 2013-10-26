@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2011-2012, Intel Corporation
+  Copyright (c) 2010-2011, Intel Corporation
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,42 +28,41 @@
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-/** @file func.h
-    @brief Representation of a function in a source file.
-*/
 
-#ifndef ISPC_FUNC_H
-#define ISPC_FUNC_H 1
+static int mandel(float c_re, float c_im, int count) {
+    float z_re = c_re, z_im = c_im;
+    int i;
+    for (i = 0; i < count; ++i) {
+        if (z_re * z_re + z_im * z_im > 4.f)
+            break;
 
-#include "ispc.h"
-#include <vector>
+        float new_re = z_re*z_re - z_im*z_im;
+        float new_im = 2.f * z_re * z_im;
+        z_re = c_re + new_re;
+        z_im = c_im + new_im;
+    }
 
-class Function {
-public:
-    Function(Symbol *sym, Stmt *code);
+    return i;
+}
 
-    const Type *GetReturnType() const;
-    const FunctionType *GetType() const;
+void mandelbrot_serial(float x0, float y0, float x1, float y1,
+                       int width, int height, int maxIterations,
+                       int output[])
+{
+    float dx = (x1 - x0) / width;
+    float dy = (y1 - y0) / height;
 
-    /** Generate LLVM IR for the function into the current module. */
-    void GenerateIR();
+    for (int j = 0; j < height; j++) {
+        for (int i = 0; i < width; ++i) {
+            float x = x0 + i * dx;
+            float y = y0 + j * dy;
 
-private:
-    void emitCode(FunctionEmitContext *ctx, llvm::Function *function,
-                  SourcePos firstStmtPos);
+            int index = (j * width + i);
+            output[index] = mandel(x, y, maxIterations);
+        }
+    }
+}
 
-    Symbol *sym;
-    std::vector<Symbol *> args;
-    Stmt *code;
-    Symbol *maskSymbol;
-    Symbol *threadIndexSym, *threadCountSym;
-    Symbol *taskIndexSym,   *taskCountSym;
-    Symbol *taskIndexSym0, *taskCountSym0;
-    Symbol *taskIndexSym1, *taskCountSym1;
-    Symbol *taskIndexSym2, *taskCountSym2;
-};
-
-#endif // ISPC_FUNC_H
