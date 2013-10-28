@@ -4998,6 +4998,8 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                                    shuffleIdxs, "vecShift", ci);
                 ci->replaceAllUsesWith(shuffle);
                 modifiedAny = true;
+              } else {
+                PerformanceWarning(SourcePos(), "Stdlib shift() called without constant shift amount."); 
               }
             }
           }
