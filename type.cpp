@@ -2924,8 +2924,11 @@ FunctionType::GetReturnTypeString() const {
 
 llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
+
+#if 0 /* NVPTX64::task_and_externC */
     if (isTask == true)
         Assert(removeMask == false);
+#endif
 
     // Get the LLVM Type *s for the function arguments
     std::vector<llvm::Type *> llvmArgTypes;
@@ -2955,10 +2958,10 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         // threads the tasks system has running.  (Task arguments are
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
-        llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
-        callTypes.push_back(llvm::PointerType::getUnqual(st));
         if (g->target->getISA() != Target::NVPTX64)
         {
+          llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
+          callTypes.push_back(llvm::PointerType::getUnqual(st));
           callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
           callTypes.push_back(LLVMTypes::Int32Type); // threadCount
           callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
@@ -2970,6 +2973,11 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
           callTypes.push_back(LLVMTypes::Int32Type); // taskCount1
           callTypes.push_back(LLVMTypes::Int32Type); // taskCount2
         }
+        else
+        {
+          callTypes = llvmArgTypes;
+        }
+
     }
     else
         // Otherwise we already have the types of the arguments

@@ -186,6 +186,7 @@ lCopyInTaskParameter(int i, llvm::Value *structArgPtr, const
                      FunctionEmitContext *ctx) {
     // We expect the argument structure to come in as a poitner to a
     // structure.  Confirm and figure out its type here.
+    
     const llvm::Type *structArgType = structArgPtr->getType();
     Assert(llvm::isa<llvm::PointerType>(structArgType));
     const llvm::PointerType *pt = llvm::dyn_cast<const llvm::PointerType>(structArgType);
@@ -240,26 +241,26 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // For tasks, we there should always be three parmeters: the
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
-        llvm::Function::arg_iterator argIter = function->arg_begin();
-        llvm::Value *structParamPtr = argIter++;
-
-        // Copy the function parameter values from the structure into local
-        // storage
-        for (unsigned int i = 0; i < args.size(); ++i)
-          lCopyInTaskParameter(i, structParamPtr, args, ctx);
-
-        if (type->isUnmasked == false) {
-          // Copy in the mask as well.
-          int nArgs = (int)args.size();
-          // The mask is the last parameter in the argument structure
-          llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL,
-              "task_struct_mask");
-          llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
-          ctx->SetFunctionMask(ptrval);
-        }
 
         if (g->target->getISA() != Target::NVPTX64)
         {
+          llvm::Function::arg_iterator argIter = function->arg_begin();
+          llvm::Value *structParamPtr = argIter++;
+          // Copy the function parameter values from the structure into local
+          // storage
+          for (unsigned int i = 0; i < args.size(); ++i)
+            lCopyInTaskParameter(i, structParamPtr, args, ctx);
+
+          if (type->isUnmasked == false) {
+            // Copy in the mask as well.
+            int nArgs = (int)args.size();
+            // The mask is the last parameter in the argument structure
+            llvm::Value *ptr = ctx->AddElementOffset(structParamPtr, nArgs, NULL,
+                "task_struct_mask");
+            llvm::Value *ptrval = ctx->LoadInst(ptr, "mask");
+            ctx->SetFunctionMask(ptrval);
+          }
+
           llvm::Value *threadIndex = argIter++;
           llvm::Value *threadCount = argIter++;
           llvm::Value *taskIndex = argIter++;
@@ -320,6 +321,28 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         }
         else
         {
+          llvm::Function::arg_iterator argIter = function->arg_begin();
+          for (unsigned int i = 0; i < args.size(); ++i, ++argIter) {
+            Symbol *sym = args[i];
+            if (sym == NULL)
+              // anonymous function parameter
+              continue;
+
+            argIter->setName(sym->name.c_str());
+
+            // Allocate stack storage for the parameter and emit code
+            // to store the its value there.
+            sym->storagePtr = ctx->AllocaInst(argIter->getType(), sym->name.c_str());
+            ctx->StoreInst(argIter, sym->storagePtr);
+            ctx->EmitFunctionParameterDebugInfo(sym, i);
+          }
+          if (argIter == function->arg_end()) {
+            Assert(type->isUnmasked || type->isExported);
+            ctx->SetFunctionMask(LLVMMaskAllOn);
+          }
+          else
+            assert(0);
+
           llvm::NamedMDNode* annotations =
             m->module->getOrInsertNamedMetadata("nvvm.annotations");
           llvm::SmallVector<llvm::Value*, 3> av;

@@ -539,12 +539,14 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
                   "qualifiers");
             return;
-        }
+        }j
+#if 0 /* NVPTX64::task_and_externC */
         if (isExternC && isTask) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
                   "qualifiers");
             return;
         }
+#endif
         if (isExternC && isExported) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "
                   "qualifiers");
