@@ -69,7 +69,7 @@ static bool __os_has_avx_support() {
     // Check if the OS will save the YMM registers
     unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
     return (xcrFeatureMask & 6) == 6;
-#else // defined(ISPC_IS_WINDOWS)
+#else // !defined(ISPC_IS_WINDOWS)
     // Check xgetbv; this uses a .byte sequence instead of the instruction
     // directly because older assemblers do not include support for xgetbv and
     // there is no easy way to conditionally compile based on the assembler used.
