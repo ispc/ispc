@@ -442,7 +442,7 @@ define  i64 @__reduce_max_uint64(<1 x i64>) nounwind readnone {
 }
 
 define  i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue,
-                                      <1 x i32> %mask) nounwind alwaysinline {
+                                      <1 x i1> %mask) nounwind alwaysinline {
   %v=extractelement <1 x i32> %vv, i32 0
   store i32 %v, i32 * %samevalue
   ret i1 true
@@ -450,7 +450,7 @@ define  i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue,
 }
 
 define  i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue,
-                                      <1 x i32> %mask) nounwind alwaysinline {
+                                      <1 x i1> %mask) nounwind alwaysinline {
   %v=extractelement <1 x float> %vv, i32 0
   store float %v, float * %samevalue
   ret i1 true
@@ -458,7 +458,7 @@ define  i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue,
 }
 
 define  i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue,
-                                      <1 x i32> %mask) nounwind alwaysinline {
+                                      <1 x i1> %mask) nounwind alwaysinline {
   %v=extractelement <1 x i64> %vv, i32 0
   store i64 %v, i64 * %samevalue
   ret i1 true
@@ -466,7 +466,7 @@ define  i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue,
 }
 
 define  i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue,
-                                      <1 x i32> %mask) nounwind alwaysinline {
+                                      <1 x i1> %mask) nounwind alwaysinline {
   %v=extractelement <1 x double> %vv, i32 0
   store double %v, double * %samevalue
   ret i1 true
