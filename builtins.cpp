@@ -611,6 +611,14 @@ lSetInternalFunctions(llvm::Module *module) {
         "__vec4_add_int32",
         "__vselect_float",
         "__vselect_i32",
+        "__tid_x",
+        "__ctaid_x",
+        "__ctaid_y",
+        "__ctaid_z",
+        "__nctaid_x",
+        "__nctaid_y",
+        "__nctaid_z",
+        "__warpsize"
     };
 
     int count = sizeof(names) / sizeof(names[0]);

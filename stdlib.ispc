@@ -57,6 +57,54 @@
   #error Unknown value of ISPC_MASK_BITS
 #endif
 
+
+
+///////////////////////////////////////////////////////////////////////////
+// CUDA Specific primitives
+//
+#define CUDABLOCKSIZE 128
+__declspec(safe,cost0)
+  static inline uniform int blockIndex0()
+{
+  return __ctaid_x();
+}
+__declspec(safe,cost0)
+  static inline uniform int blockIndex1()
+{
+  return __ctaid_y();
+}
+__declspec(safe,cost0)
+  static inline uniform int blockIndex2()
+{
+  return __ctaid_y();
+}
+
+__declspec(safe,cost0)
+  static inline uniform int blockCount0()
+{
+  return __nctaid_x();
+}
+__declspec(safe,cost0)
+  static inline uniform int blockCount1()
+{
+  return __nctaid_y();
+}
+__declspec(safe,cost0)
+  static inline uniform int blockCount2()
+{
+  return __nctaid_z();
+}
+__declspec(safe,cost0)
+  static inline uniform int warpSize()
+{
+  return __warpsize();
+}
+__declspec(safe,cost0)
+  static inline uniform int laneIndex()
+{
+  return __tid_x() & (warpSize()-1);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 

@@ -281,18 +281,35 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 
         taskCountSym->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount");
         ctx->StoreInst(taskCount, taskCountSym->storagePtr);
+
+        /* nvptx map:
+         * programCount : llvm.nvvm.read.ptx.sreg.warpsize
+         * programIndex : llvm.ptx.read.laneid _or_ ed.ptx.sreg.tid.llvm.nvvm.read.ptx.sreg.tid.x & programCount
+         * taskIndex0   : llvm.nvvm.read.ptx.sreg.ctaid.x
+         * taskIndex1   : llvm.nvvm.read.ptx.sreg.ctaid.y
+         * taskIndex3   : llvm.nvvm.read.ptx.sreg.ctaid.z
+         * taskCount0   : llvm.nvvm.read.ptx.sreg.nctaid.x
+         * taskCount1   : llvm.nvvm.read.ptx.sreg.nctaid.y
+         * taskCount3   : llvm.nvvm.read.ptx.sreg.nctaid.z
+         */
         
+        // llvm.nvvm.read.ptx.sreg.ctaid.x
         taskIndexSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex0");
         ctx->StoreInst(taskIndex0, taskIndexSym0->storagePtr);
+        // llvm.nvvm.read.ptx.sreg.ctaid.y
         taskIndexSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex1");
         ctx->StoreInst(taskIndex1, taskIndexSym1->storagePtr);
+        // llvm.nvvm.read.ptx.sreg.ctaid.z
         taskIndexSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskIndex2");
         ctx->StoreInst(taskIndex2, taskIndexSym2->storagePtr);
         
+        // llvm.nvvm.read.ptx.sreg.nctaid.x
         taskCountSym0->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount0");
         ctx->StoreInst(taskCount0, taskCountSym0->storagePtr);
+        // llvm.nvvm.read.ptx.sreg.nctaid.y
         taskCountSym1->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount1");
         ctx->StoreInst(taskCount1, taskCountSym1->storagePtr);
+        // llvm.nvvm.read.ptx.sreg.nctaid.z
         taskCountSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
         ctx->StoreInst(taskCount2, taskCountSym2->storagePtr);
     }

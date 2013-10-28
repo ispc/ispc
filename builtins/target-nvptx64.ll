@@ -56,6 +56,66 @@ gen_scatter(i64)
 gen_scatter(double)
 
 
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+declare i32 @llvm.nvvm.read.ptx.sreg.tid.x() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.x() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.y() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.ctaid.z() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.nctaid.x() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.nctaid.y() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.nctaid.z() nounwind readnone
+declare i32 @llvm.nvvm.read.ptx.sreg.warpsize() nounwind readnone
+
+define i32 @__tid_x()  nounwind readnone alwaysinline
+{
+ %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+ ret i32 %tid
+}
+define i32 @__warpsize()  nounwind readnone alwaysinline
+{
+ %tid = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+ ret i32 %tid
+}
+
+
+define i32 @__ctaid_x()  nounwind readnone alwaysinline
+{
+ %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+ ret i32 %bid
+}
+define i32 @__ctaid_y()  nounwind readnone alwaysinline
+{
+ %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
+ ret i32 %bid
+}
+define i32 @__ctaid_z()  nounwind readnone alwaysinline
+{
+ %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
+ ret i32 %bid
+}
+
+define i32 @__nctaid_x()  nounwind readnone alwaysinline
+{
+ %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
+ ret i32 %nb
+}
+define i32 @__nctaid_y()  nounwind readnone alwaysinline
+{
+ %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
+ ret i32 %nb
+}
+define i32 @__nctaid_z()  nounwind readnone alwaysinline
+{
+ %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
+ ret i32 %nb
+}
+
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;
+
 define  <1 x i8> @__vselect_i8(<1 x i8>, <1 x i8> ,
                                <1 x i32> %mask) nounwind readnone alwaysinline {
 ;  %mv = trunc <1 x i32> %mask to <1 x i8>
