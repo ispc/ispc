@@ -336,11 +336,12 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             ctx->StoreInst(argIter, sym->storagePtr);
             ctx->EmitFunctionParameterDebugInfo(sym, i);
           }
-          if (argIter == function->arg_end()) {
+          if (argIter == function->arg_end()) 
+          {
             Assert(type->isUnmasked || type->isExported);
             ctx->SetFunctionMask(LLVMMaskAllOn);
           }
-          else
+          else  /* for NVPTX64 , function must be unmasked */
             assert(0);
 
           llvm::NamedMDNode* annotations =

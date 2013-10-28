@@ -734,7 +734,7 @@ Module::AddFunctionDeclaration(const std::string &name,
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
 #if 0 /* NVPTX64::task_and_externC */
-        if (functionType->isTask) {
+        if (functionType->isTask && g->target->getISA() != Target::NVPTX64) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;

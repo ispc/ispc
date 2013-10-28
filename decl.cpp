@@ -530,16 +530,22 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
+        bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
+        if (isTask && g->target->getISA() == Target::NVPTX64)
+        {
+          ds->storageClass = SC_EXTERN_C;
+          ds->typeQualifiers |= TYPEQUAL_UNMASKED;
+        }
+
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
-        bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
 
         if (isExported && isTask) {
             Error(pos, "Function can't have both \"task\" and \"export\" "
                   "qualifiers");
             return;
-        }j
+        }
 #if 0 /* NVPTX64::task_and_externC */
         if (isExternC && isTask) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
