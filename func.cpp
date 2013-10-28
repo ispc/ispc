@@ -47,6 +47,7 @@
 #include <stdio.h>
 
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
+  #include <llvm/IR/Metadata.h>
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -54,6 +55,7 @@
   #include <llvm/Intrinsics.h>
   #include <llvm/DerivedTypes.h>
 #else
+  #include <llvm/IR/Metadata.h>
   #include <llvm/IR/LLVMContext.h>
   #include <llvm/IR/Module.h>
   #include <llvm/IR/Type.h>
@@ -315,6 +317,16 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
           // llvm.nvvm.read.ptx.sreg.nctaid.z
           taskCountSym2->storagePtr = ctx->AllocaInst(LLVMTypes::Int32Type, "taskCount2");
           ctx->StoreInst(taskCount2, taskCountSym2->storagePtr);
+        }
+        else
+        {
+          llvm::NamedMDNode* annotations =
+            m->module->getOrInsertNamedMetadata("nvvm.annotations");
+          llvm::SmallVector<llvm::Value*, 3> av;
+          av.push_back(function);
+          av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+          av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
+          annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
         }
     }
     else {
