@@ -451,6 +451,17 @@ static FORCEINLINE VTYPE __rotate_##NAME(VTYPE v, int index) {   \
     return ret;                                       \
 }                                                     \
 
+#define SHIFT(VTYPE, NAME, STYPE)                    \
+static FORCEINLINE VTYPE __shift_##NAME(VTYPE v, int index) {   \
+    VTYPE ret;                                        \
+    for (int i = 0; i < 16; ++i) {                    \
+      int modIndex = i+index;                         \
+      STYPE val = ((modIndex >= 0) && (modIndex < 16)) ? v.v[modIndex] : 0; \
+      ret.v[i] = val;                                 \
+    }                                                 \
+    return ret;                                       \
+}                                                     \
+
 /* knc::macro::used */
 #define SHUFFLES(VTYPE, NAME, STYPE)                 \
 static FORCEINLINE VTYPE __shuffle_##NAME(VTYPE v, __vec16_i32 index) {   \
@@ -566,6 +577,7 @@ SETZERO(__vec16_i8, i8)
 UNDEF(__vec16_i8, i8)
 BROADCAST(__vec16_i8, i8, int8_t)
 ROTATE(__vec16_i8, i8, int8_t)
+SHIFT(__vec16_i8, i8, int8_t)
 SHUFFLES(__vec16_i8, i8, int8_t)
 LOAD_STORE(__vec16_i8, int8_t)
 
@@ -612,6 +624,7 @@ SETZERO(__vec16_i16, i16)
 UNDEF(__vec16_i16, i16)
 BROADCAST(__vec16_i16, i16, int16_t)
 ROTATE(__vec16_i16, i16, int16_t)
+SHIFT(__vec16_i16, i16, int16_t)
 SHUFFLES(__vec16_i16, i16, int16_t)
 LOAD_STORE(__vec16_i16, int16_t)
 
@@ -687,6 +700,8 @@ static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index)
   __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xF));
   return _mm512_mask_permutevar_epi32(v, 0xFFFF, shuffle, v);
 }
+
+SHIFT(__vec16_i32, i32, int32_t)
 
 static FORCEINLINE __vec16_i32 __shuffle_i32 (__vec16_i32 v, __vec16_i32 index) 
 { 
@@ -942,6 +957,8 @@ static FORCEINLINE __vec16_i64 __rotate_i64(const __vec16_i64 _v, const int inde
   const __vec16_i32 ret_lo = __rotate_i32(v_lo, index);
   return CASTI2L(ret_hi, ret_lo);
 }
+SHIFT(__vec16_i64, i64, int64_t)
+
 static FORCEINLINE __vec16_i64 __shuffle_double(__vec16_i64 _v, const __vec16_i32 index) 
 {
   CASTL2I(_v, v_hi, v_lo);
@@ -1063,6 +1080,7 @@ static FORCEINLINE __vec16_f __rotate_float(__vec16_f _v, int index)
   const __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xF));
   return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(v, 0xFFFF, shuffle, v));
 }
+SHIFT(__vec16_f, float, float)
 static FORCEINLINE __vec16_f __shuffle_float(__vec16_f v, __vec16_i32 index) 
 {
   return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(_mm512_castps_si512(v), 0xffff, index, _mm512_castps_si512(v)));
@@ -1333,6 +1351,7 @@ static FORCEINLINE __vec16_d __rotate_double(const __vec16_d _v, const int index
   const __vec16_f ret_lo = __rotate_float(v_lo, index);
   return CASTF2D(ret_hi, ret_lo);
 }
+SHIFT(__vec16_d, double, double)
 static FORCEINLINE __vec16_d __shuffle_double(__vec16_d _v, const __vec16_i32 index) 
 {
   CASTD2F(_v, v_hi, v_lo);
