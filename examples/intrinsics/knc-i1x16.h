@@ -456,8 +456,8 @@ static FORCEINLINE VTYPE __shift_##NAME(VTYPE v, int index) {   \
     VTYPE ret;                                        \
     for (int i = 0; i < 16; ++i) {                    \
       int modIndex = i+index;                         \
-      STYPE val = ((modIndex >= 0) && (modIndex < 16)) ? v.v[modIndex] : 0; \
-      ret.v[i] = val;                                 \
+      STYPE val = ((modIndex >= 0) && (modIndex < 16)) ? v[modIndex] : 0; \
+      ret[i] = val;                                 \
     }                                                 \
     return ret;                                       \
 }                                                     \
