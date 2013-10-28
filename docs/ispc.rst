@@ -2344,8 +2344,11 @@ based on C++'s ``new`` and ``delete`` operators:
 In the above code, each program instance allocates its own ``count`` sized
 array of ``uniform int`` values, uses that memory, and then deallocates
 that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
-serviced by corresponding calls the system C library's ``malloc()`` and
-``free()`` functions.
+implemented as calls to C library's aligned memory allocation routines,
+which are platform dependent (``posix_memalign()`` and ``free()`` on Linux
+and Mac and ``_aligned_malloc()`` and ``_aligned_free()`` on Windows). So it's
+advised to pair ISPC's ``new`` and ``delete`` with each other, but not with
+C/C++ memory management functions.
 
 Note that the rules for ``uniform`` and ``varying`` for ``new`` are
 analogous to the corresponding rules for pointers (as described in
