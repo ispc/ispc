@@ -108,7 +108,7 @@ struct __vec4_i64 {
 };
 
 struct __vec4_i32 {
-    FORCEINLINE __vec4_i32() : v(_mm_setzero_si128()) { }
+    FORCEINLINE __vec4_i32() { }
     FORCEINLINE __vec4_i32(__m128i vv) : v(vv) {  }
     FORCEINLINE __vec4_i32(int32_t a, int32_t b, int32_t c, int32_t d) {
         v = _mm_set_epi32(d, c, b, a);
