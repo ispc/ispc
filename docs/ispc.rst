@@ -3719,6 +3719,22 @@ the size of the gang (it is masked to ensure valid offsets).
     double rotate(double value, uniform int offset)
 
 
+The ``shift()`` function allows each program instance to find the value of
+the given value that their neighbor ``offset`` steps away has.  This is similar
+to ``rotate()`` with the exception that values are not circularly shifted.  
+Instead, zeroes are shifted in where appropriate.
+
+
+::
+
+    int8 shift(int8 value, uniform int offset)
+    int16 shift(int16 value, uniform int offset)
+    int32 shift(int32 value, uniform int offset)
+    int64 shift(int64 value, uniform int offset)
+    float shift(float value, uniform int offset)
+    double shift(double value, uniform int offset)
+
+
 Finally, the ``shuffle()`` functions allow two variants of fully general
 shuffling of values among the program instances.  For the first version,
 each program instance's value of permutation gives the program instance
@@ -3751,7 +3767,7 @@ the last element of ``value1``, etc.)
     double shuffle(double value0, double value1, int permutation)
 
 Finally, there are primitive operations that extract and set values in the
-SIMD lanes.  You can implement all of the broadcast, rotate, and shuffle
+SIMD lanes.  You can implement all of the broadcast, rotate, shift, and shuffle
 operations described above in this section from these routines, though in
 general, not as efficiently.  These routines are useful for implementing
 other reductions and cross-lane communication that isn't included in the
