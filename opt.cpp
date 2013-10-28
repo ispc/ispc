@@ -550,11 +550,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalOptimizerPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
-        //        if (g->target->getISA() != Target::GENERIC) {
-          // Just use the builtins for generic targets.
-
-          optPM.add(CreateReplaceStdlibShiftPass(),229);
-          //        }
+        optPM.add(CreateReplaceStdlibShiftPass(),229);
         optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
