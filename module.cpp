@@ -1914,6 +1914,8 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
     }
+    if (g->target->getISA() == Target::NVPTX64)
+      opts.addMacroDef("__NVPTX__");
 
 #if defined(LLVM_3_1)
     inst.getLangOpts().BCPLComment = 1;
