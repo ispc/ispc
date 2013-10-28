@@ -68,6 +68,7 @@ include(`util.m4')
 
 stdlib_core()
 packed_load_and_store()
+int64minmax()
 scans()
 rdrand_decls()
 
@@ -75,66 +76,81 @@ rdrand_decls()
 ;; broadcast/rotate/shuffle
 
 define_shuffles()
-ctlztz()
 
-declare <WIDTH x float> @__smear_float(float) nounwind readnone
-declare <WIDTH x double> @__smear_double(double) nounwind readnone
-declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
-declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
-declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
-declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
+;; declare <WIDTH x float> @__smear_float(float) nounwind readnone
+;; declare <WIDTH x double> @__smear_double(double) nounwind readnone
+;; declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
+;; declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
+;; declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
+;; declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
 
-declare <WIDTH x float> @__setzero_float() nounwind readnone
-declare <WIDTH x double> @__setzero_double() nounwind readnone
-declare <WIDTH x i8> @__setzero_i8() nounwind readnone
-declare <WIDTH x i16> @__setzero_i16() nounwind readnone
-declare <WIDTH x i32> @__setzero_i32() nounwind readnone
-declare <WIDTH x i64> @__setzero_i64() nounwind readnone
+;; declare <WIDTH x float> @__setzero_float() nounwind readnone
+;; declare <WIDTH x double> @__setzero_double() nounwind readnone
+;; declare <WIDTH x i8> @__setzero_i8() nounwind readnone
+;; declare <WIDTH x i16> @__setzero_i16() nounwind readnone
+;; declare <WIDTH x i32> @__setzero_i32() nounwind readnone
+;; declare <WIDTH x i64> @__setzero_i64() nounwind readnone
 
-declare <WIDTH x float> @__undef_float() nounwind readnone
-declare <WIDTH x double> @__undef_double() nounwind readnone
-declare <WIDTH x i8> @__undef_i8() nounwind readnone
-declare <WIDTH x i16> @__undef_i16() nounwind readnone
-declare <WIDTH x i32> @__undef_i32() nounwind readnone
-declare <WIDTH x i64> @__undef_i64() nounwind readnone
+;; declare <WIDTH x float> @__undef_float() nounwind readnone
+;; declare <WIDTH x double> @__undef_double() nounwind readnone
+;; declare <WIDTH x i8> @__undef_i8() nounwind readnone
+;; declare <WIDTH x i16> @__undef_i16() nounwind readnone
+;; declare <WIDTH x i32> @__undef_i32() nounwind readnone
+;; declare <WIDTH x i64> @__undef_i64() nounwind readnone
 
-declare <WIDTH x i8> @__shuffle_i8(<WIDTH x i8>, <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i8> @__shuffle2_i8(<WIDTH x i8>, <WIDTH x i8>,
-                                    <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i16> @__shuffle_i16(<WIDTH x i16>, <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i16> @__shuffle2_i16(<WIDTH x i16>, <WIDTH x i16>,
-                                      <WIDTH x i32>) nounwind readnone
-declare <WIDTH x float> @__shuffle_float(<WIDTH x float>,
-                                         <WIDTH x i32>) nounwind readnone
-declare <WIDTH x float> @__shuffle2_float(<WIDTH x float>, <WIDTH x float>,
-                                          <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i32> @__shuffle_i32(<WIDTH x i32>,
-                                     <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i32> @__shuffle2_i32(<WIDTH x i32>, <WIDTH x i32>,
-                                      <WIDTH x i32>) nounwind readnone
-declare <WIDTH x double> @__shuffle_double(<WIDTH x double>,
-                                           <WIDTH x i32>) nounwind readnone
-declare <WIDTH x double> @__shuffle2_double(<WIDTH x double>,
-                                            <WIDTH x double>, <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i64> @__shuffle_i64(<WIDTH x i64>,
-                                     <WIDTH x i32>) nounwind readnone
-declare <WIDTH x i64> @__shuffle2_i64(<WIDTH x i64>, <WIDTH x i64>,
-                                      <WIDTH x i32>) nounwind readnone
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; aos/soa
 
-declare void @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
-                                  <WIDTH x float> %v2, float * noalias %p) nounwind
-declare void @__aos_to_soa3_float(float * noalias %p, <WIDTH x float> * %out0,
-                                  <WIDTH x float> * %out1, <WIDTH x float> * %out2) nounwind
-declare void @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1,
-                                  <WIDTH x float> %v2, <WIDTH x float> %v3,
-                                  float * noalias %p) nounwind
-declare void @__aos_to_soa4_float(float * noalias %p, <WIDTH x float> * noalias %out0,
-                                  <WIDTH x float> * noalias %out1,
-                                  <WIDTH x float> * noalias %out2,
-                                  <WIDTH x float> * noalias %out3) nounwind
+aossoa()
+
+;; dummy 1 wide vector ops
+define  void
+@__aos_to_soa4_float1(<1 x float> %v0, <1 x float> %v1, <1 x float> %v2,
+        <1 x float> %v3, <1 x float> * noalias %out0, 
+        <1 x float> * noalias %out1, <1 x float> * noalias %out2, 
+        <1 x float> * noalias %out3) nounwind alwaysinline { 
+
+  store <1 x float> %v0, <1 x float > * %out0
+  store <1 x float> %v1, <1 x float > * %out1
+  store <1 x float> %v2, <1 x float > * %out2
+  store <1 x float> %v3, <1 x float > * %out3
+
+  ret void
+}
+
+define  void
+@__soa_to_aos4_float1(<1 x float> %v0, <1 x float> %v1, <1 x float> %v2,
+        <1 x float> %v3, <1 x float> * noalias %out0, 
+        <1 x float> * noalias %out1, <1 x float> * noalias %out2, 
+        <1 x float> * noalias %out3) nounwind alwaysinline { 
+  call void @__aos_to_soa4_float1(<1 x float> %v0, <1 x float> %v1, 
+    <1 x float> %v2, <1 x float> %v3, <1 x float> * %out0, 
+    <1 x float> * %out1, <1 x float> * %out2, <1 x float> * %out3)
+  ret void
+}
+
+define  void
+@__aos_to_soa3_float1(<1 x float> %v0, <1 x float> %v1,
+         <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
+         <1 x float> * %out2) {
+  store <1 x float> %v0, <1 x float > * %out0
+  store <1 x float> %v1, <1 x float > * %out1
+  store <1 x float> %v2, <1 x float > * %out2
+
+  ret void
+}
+
+define  void
+@__soa_to_aos3_float1(<1 x float> %v0, <1 x float> %v1,
+         <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
+         <1 x float> * %out2) {
+  call void @__aos_to_soa3_float1(<1 x float> %v0, <1 x float> %v1,
+         <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
+         <1 x float> * %out2)
+  ret void
+}
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
@@ -210,10 +226,10 @@ define  i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
   ret i32 %r
 }
 
-declare i64 @__min_uniform_int64(i64, i64) nounwind readnone 
-declare i64 @__max_uniform_int64(i64, i64) nounwind readnone 
-declare i64 @__min_uniform_uint64(i64, i64) nounwind readnone 
-declare i64 @__max_uniform_uint64(i64, i64) nounwind readnone 
+;; declare i64 @__min_uniform_int64(i64, i64) nounwind readnone 
+;; declare i64 @__max_uniform_int64(i64, i64) nounwind readnone 
+;; declare i64 @__min_uniform_uint64(i64, i64) nounwind readnone 
+;; declare i64 @__max_uniform_uint64(i64, i64) nounwind readnone 
 
 ;; declare double @__min_uniform_double(double, double) nounwind readnone 
 ;; declare double @__max_uniform_double(double, double) nounwind readnone 
@@ -236,10 +252,10 @@ declare <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwin
 declare <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
 declare <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
 declare <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
-declare <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-declare <WIDTH x i64> @__max_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-declare <WIDTH x i64> @__min_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-declare <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
+;; declare <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
+;; declare <WIDTH x i64> @__max_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
+;; declare <WIDTH x i64> @__min_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
+;; declare <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
 declare <WIDTH x double> @__min_varying_double(<WIDTH x double>,
                                                <WIDTH x double>) nounwind readnone
 declare <WIDTH x double> @__max_varying_double(<WIDTH x double>,
@@ -284,13 +300,19 @@ declare <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readn
 
 ;; bit ops
 
-declare i32 @__popcnt_int32(i32) nounwind readnone
-declare i64 @__popcnt_int64(i64) nounwind readnone 
+declare i32 @llvm.ctpop.i32(i32) nounwind readnone
+define  i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
+  %call = call i32 @llvm.ctpop.i32(i32 %0)
+  ret i32 %call
+}
 
-declare i32 @__count_trailing_zeros_i32(i32) nounwind readnone
-declare i64 @__count_trailing_zeros_i64(i64) nounwind readnone
-declare i32 @__count_leading_zeros_i32(i32) nounwind readnone
-declare i64 @__count_leading_zeros_i64(i64) nounwind readnone
+declare i64 @llvm.ctpop.i64(i64) nounwind readnone
+define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
+  %call = call i64 @llvm.ctpop.i64(i64 %0)
+  ret i64 %call
+}
+
+ctlztz()
 
 ; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
 ; or, use the macro to call the 4-wide ones twice with our 8-wide
@@ -303,12 +325,13 @@ svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; reductions
+; population count;
 
-;; declare i64 @__movmsk(<WIDTH x i1>) nounwind readnone 
-;; declare i1 @__any(<WIDTH x i1>) nounwind readnone 
-;; declare i1 @__all(<WIDTH x i1>) nounwind readnone 
-;; declare i1 @__none(<WIDTH x i1>) nounwind readnone 
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reductions
 
 define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
@@ -337,25 +360,118 @@ define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
 declare i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone
 declare i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone
 
-declare float @__reduce_add_float(<WIDTH x float>) nounwind readnone
-declare float @__reduce_min_float(<WIDTH x float>) nounwind readnone 
-declare float @__reduce_max_float(<WIDTH x float>) nounwind readnone 
+define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline {
+  %r = extractelement <1 x float> %v, i32 0
+  ret float %r
+}
 
-declare i64 @__reduce_add_int32(<WIDTH x i32>) nounwind readnone
-declare i32 @__reduce_min_int32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_max_int32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_min_uint32(<WIDTH x i32>) nounwind readnone 
-declare i32 @__reduce_max_uint32(<WIDTH x i32>) nounwind readnone 
+define  float @__reduce_min_float(<1 x float>) nounwind readnone {
+  %r = extractelement <1 x float> %0, i32 0
+  ret float %r
+}
 
-declare double @__reduce_add_double(<WIDTH x double>) nounwind readnone 
-declare double @__reduce_min_double(<WIDTH x double>) nounwind readnone 
-declare double @__reduce_max_double(<WIDTH x double>) nounwind readnone 
+define  float @__reduce_max_float(<1 x float>) nounwind readnone {
+  %r = extractelement <1 x float> %0, i32 0
+  ret float %r
+}
 
-declare i64 @__reduce_add_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_min_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_max_int64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_min_uint64(<WIDTH x i64>) nounwind readnone 
-declare i64 @__reduce_max_uint64(<WIDTH x i64>) nounwind readnone 
+define  i32 @__reduce_add_int32(<1 x i32> %v) nounwind readnone {
+  %r = extractelement <1 x i32> %v, i32 0
+  ret i32 %r
+}
+
+define  i32 @__reduce_min_int32(<1 x i32>) nounwind readnone {
+  %r = extractelement <1 x i32> %0, i32 0
+  ret i32 %r
+}
+
+define  i32 @__reduce_max_int32(<1 x i32>) nounwind readnone {
+  %r = extractelement <1 x i32> %0, i32 0
+  ret i32 %r
+}
+
+define  i32 @__reduce_min_uint32(<1 x i32>) nounwind readnone {
+  %r = extractelement <1 x i32> %0, i32 0
+  ret i32 %r
+}
+
+define  i32 @__reduce_max_uint32(<1 x i32>) nounwind readnone {
+  %r = extractelement <1 x i32> %0, i32 0
+  ret i32 %r
+ }
+
+
+define  double @__reduce_add_double(<1 x double>) nounwind readnone {
+  %m = extractelement <1 x double> %0, i32 0
+  ret double %m
+}
+
+define  double @__reduce_min_double(<1 x double>) nounwind readnone {
+  %m = extractelement <1 x double> %0, i32 0
+  ret double %m
+}
+
+define  double @__reduce_max_double(<1 x double>) nounwind readnone {
+  %m = extractelement <1 x double> %0, i32 0
+  ret double %m
+}
+
+define  i64 @__reduce_add_int64(<1 x i64>) nounwind readnone {
+  %m = extractelement <1 x i64> %0, i32 0
+  ret i64 %m
+}
+
+define  i64 @__reduce_min_int64(<1 x i64>) nounwind readnone {
+  %m = extractelement <1 x i64> %0, i32 0
+  ret i64 %m
+}
+
+define  i64 @__reduce_max_int64(<1 x i64>) nounwind readnone {
+  %m = extractelement <1 x i64> %0, i32 0
+  ret i64 %m
+}
+
+define  i64 @__reduce_min_uint64(<1 x i64>) nounwind readnone {
+  %m = extractelement <1 x i64> %0, i32 0
+  ret i64 %m
+}
+
+define  i64 @__reduce_max_uint64(<1 x i64>) nounwind readnone {
+  %m = extractelement <1 x i64> %0, i32 0
+  ret i64 %m
+}
+
+define  i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue,
+                                      <1 x i32> %mask) nounwind alwaysinline {
+  %v=extractelement <1 x i32> %vv, i32 0
+  store i32 %v, i32 * %samevalue
+  ret i1 true
+
+}
+
+define  i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue,
+                                      <1 x i32> %mask) nounwind alwaysinline {
+  %v=extractelement <1 x float> %vv, i32 0
+  store float %v, float * %samevalue
+  ret i1 true
+
+}
+
+define  i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue,
+                                      <1 x i32> %mask) nounwind alwaysinline {
+  %v=extractelement <1 x i64> %vv, i32 0
+  store i64 %v, i64 * %samevalue
+  ret i1 true
+
+}
+
+define  i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue,
+                                      <1 x i32> %mask) nounwind alwaysinline {
+  %v=extractelement <1 x double> %vv, i32 0
+  store double %v, double * %samevalue
+  ret i1 true
+
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
@@ -449,7 +565,7 @@ gen_scatter(double)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetch
 
-define void @__prefetch_read_uniform_1(i8 * nocapture) nounwind alwaysinline { }
+;; define void @__prefetch_read_uniform_1(i8 * nocapture) nounwind alwaysinline { }
 ;; define void @__prefetch_read_uniform_2(i8 * nocapture) nounwind alwaysinline { }
 ;; define void @__prefetch_read_uniform_3(i8 * nocapture) nounwind alwaysinline { }
 ;; define void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind alwaysinline { }
@@ -460,29 +576,3 @@ define_prefetches()
 
 define_avgs()
 
-define  i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x i32> %vv, i32 0
-  store i32 %v, i32 * %samevalue
-  ret i1 true
-}
-define  i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x float> %vv, i32 0
-  store float %v, float * %samevalue
-  ret i1 true
-}
-define  i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x i64> %vv, i32 0
-  store i64 %v, i64 * %samevalue
-  ret i1 true
-
-}
-define  i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x double> %vv, i32 0
-  store double %v, double * %samevalue
-  ret i1 true
-
-}
