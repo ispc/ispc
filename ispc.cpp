@@ -167,6 +167,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     m_valid(false),
     m_isa(SSE2),
+    m_isPTX(false),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),
@@ -639,6 +640,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     else if (!strcasecmp(isa, "nvptx64")) {
         this->m_isa = Target::NVPTX64;
+        this->m_isPTX = true;
         this->m_nativeVectorWidth = 1;
         this->m_vectorWidth = 1;
         this->m_attributes = "+sm_35";

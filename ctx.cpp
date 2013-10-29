@@ -1404,15 +1404,33 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
+  if (1) //g->target->getISA() != Target::NVPTX64)
+  {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
-        llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
-        array.push_back(C);
+      llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
+      array.push_back(C);
     }
 
     llvm::Constant* index = llvm::ConstantVector::get(array);
 
     return index;
+  }
+  else
+  {
+    std::vector<Symbol *> mm;
+    m->symbolTable->LookupFunction("__tid_x", &mm);
+    if (g->target->getMaskBitCount() == 1)
+      AssertPos(currentPos, mm.size() == 1);
+    else
+      // There should be one with signed int signature, one unsigned int.
+      AssertPos(currentPos, mm.size() == 2);
+    // We can actually call either one, since both are i32s as far as
+    // LLVM's type system is concerned...
+    llvm::Function *fmm = mm[0]->function;
+    std::vector<llvm::Value*> args;
+    return CallInst(fmm, NULL, args, "__tid_x");
+  }
 }
 
 
