@@ -47,7 +47,7 @@
 #include <stdio.h>
 
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
-  #include <llvm/IR/Metadata.h>
+  #include <llvm/Metadata.h>
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
