@@ -311,6 +311,17 @@ static FORCEINLINE VTYPE __rotate_##NAME(VTYPE v, int index) {   \
     return ret;                                       \
 }                                                     \
 
+#define SHIFT(VTYPE, NAME, STYPE)                    \
+static FORCEINLINE VTYPE __shift_##NAME(VTYPE v, int index) {   \
+    VTYPE ret;                                        \
+    for (int i = 0; i < 16; ++i) {                    \
+      int modIndex = i+index;                         \
+      STYPE val = ((modIndex >= 0) && (modIndex < 16)) ? v.v[modIndex] : 0; \
+      ret.v[i] = val;                                 \
+    }                                                 \
+    return ret;                                       \
+}                                                     \
+
 #define SHUFFLES(VTYPE, NAME, STYPE)                 \
 static FORCEINLINE VTYPE __shuffle_##NAME(VTYPE v, __vec16_i32 index) {   \
     VTYPE ret;                                        \
@@ -492,6 +503,7 @@ SETZERO(__vec16_i8, i8)
 UNDEF(__vec16_i8, i8)
 BROADCAST(__vec16_i8, i8, int8_t)
 ROTATE(__vec16_i8, i8, int8_t)
+SHIFT(__vec16_i8, i8, int8_t)
 SHUFFLES(__vec16_i8, i8, int8_t)
 LOAD_STORE(__vec16_i8, int8_t)
 
@@ -537,6 +549,7 @@ SETZERO(__vec16_i16, i16)
 UNDEF(__vec16_i16, i16)
 BROADCAST(__vec16_i16, i16, int16_t)
 ROTATE(__vec16_i16, i16, int16_t)
+SHIFT(__vec16_i16, i16, int16_t)
 SHUFFLES(__vec16_i16, i16, int16_t)
 LOAD_STORE(__vec16_i16, int16_t)
 
@@ -582,6 +595,7 @@ SETZERO(__vec16_i32, i32)
 UNDEF(__vec16_i32, i32)
 BROADCAST(__vec16_i32, i32, int32_t)
 ROTATE(__vec16_i32, i32, int32_t)
+SHIFT(__vec16_i32, i32, int32_t)
 SHUFFLES(__vec16_i32, i32, int32_t)
 LOAD_STORE(__vec16_i32, int32_t)
 
@@ -627,6 +641,7 @@ SETZERO(__vec16_i64, i64)
 UNDEF(__vec16_i64, i64)
 BROADCAST(__vec16_i64, i64, int64_t)
 ROTATE(__vec16_i64, i64, int64_t)
+SHIFT(__vec16_i64, i64, int64_t)
 SHUFFLES(__vec16_i64, i64, int64_t)
 LOAD_STORE(__vec16_i64, int64_t)
 
@@ -672,6 +687,7 @@ SETZERO(__vec16_f, float)
 UNDEF(__vec16_f, float)
 BROADCAST(__vec16_f, float, float)
 ROTATE(__vec16_f, float, float)
+SHIFT(__vec16_f, float, float)
 SHUFFLES(__vec16_f, float, float)
 LOAD_STORE(__vec16_f, float)
 
@@ -832,6 +848,7 @@ SETZERO(__vec16_d, double)
 UNDEF(__vec16_d, double)
 BROADCAST(__vec16_d, double, double)
 ROTATE(__vec16_d, double, double)
+SHIFT(__vec16_d, double, double)
 SHUFFLES(__vec16_d, double, double)
 LOAD_STORE(__vec16_d, double)
 

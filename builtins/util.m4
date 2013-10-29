@@ -797,6 +797,24 @@ not_const:
   ret <WIDTH x $1> %result
 }
 
+define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
+  %ptr = alloca <WIDTH x $1>, i32 3
+  %ptr0 = getelementptr <WIDTH x $1> * %ptr, i32 0
+  store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr0
+  %ptr1 = getelementptr <WIDTH x $1> * %ptr, i32 1
+  store <WIDTH x $1> %0, <WIDTH x $1> * %ptr1
+  %ptr2 = getelementptr <WIDTH x $1> * %ptr, i32 2
+  store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr2
+
+  %offset = add i32 %1, WIDTH
+  %ptr_as_elt_array = bitcast <WIDTH x $1> * %ptr to [eval(3*WIDTH) x $1] *
+  %load_ptr = getelementptr [eval(3*WIDTH) x $1] * %ptr_as_elt_array, i32 0, i32 %offset
+  %load_ptr_vec = bitcast $1 * %load_ptr to <WIDTH x $1> *
+  %result = load <WIDTH x $1> * %load_ptr_vec, align $2
+  ret <WIDTH x $1> %result
+}
+
+
 define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
 forloop(i, 0, eval(WIDTH-1), `  
   %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
