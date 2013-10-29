@@ -733,13 +733,11 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-#if 0 /* NVPTX64::task_and_externC */
-        if (functionType->isTask && g->target->getISA() != Target::NVPTX64) {
+        if (functionType->isTask && !g->target->isPTX()) { //tISA() != Target::NVPTX64) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;
         }
-#endif
 
         std::vector<Symbol *> funcs;
         symbolTable->LookupFunction(name.c_str(), &funcs);
@@ -953,7 +951,13 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
-            if (strcasecmp(suffix, "s"))
+            if (g->target->getISA() != Target::NVPTX64)
+            {
+              if (strcasecmp(suffix, "s"))
+                fileType = "assembly";
+            }
+            else
+              if (strcasecmp(suffix, "ptx"))
                 fileType = "assembly";
             break;
         case Bitcode:
@@ -1047,6 +1051,11 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+    if (g->target->getISA() == Target::NVPTX64)
+    {
+      const std::string dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+      module->setDataLayout(dl_string);
+    }
     llvm::WriteBitcodeToFile(module, fos);
     return true;
 }
@@ -2305,7 +2314,88 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-    if (target == NULL || strchr(target, ',') == NULL) {
+  if (target != NULL && !strcmp(target,"nvptx64"))  // NVPTX64
+  {
+    // We're only compiling to a single target
+    const char * target_list[] = {"nvptx64", "avx"};
+    int errorCount = 0;
+
+    const char *suffix_orig = strrchr(outFileName, '.');
+    ++suffix_orig;
+    assert(suffix_orig!=NULL);
+
+    for (int itarget = 0; itarget < 2; itarget++)
+    {
+      fprintf(stderr,  "compiling nvptx64 : target= %s\n",target_list[itarget]);
+      g->target = new Target(arch, cpu, target_list[itarget], generatePIC, /* isPTX= */ true);
+      if (!g->target->isValid())
+        return 1;
+
+      m = new Module(srcFile);
+      if (m->CompileFile() == 0) {
+        if (outputType == CXX) {
+          if (target == NULL || strncmp(target, "generic-", 8) != 0) {
+            Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
+                "targets must be used.");
+            return 1;
+          }
+        }
+        else if (outputType == Asm || outputType == Object) {
+          if (target != NULL && strncmp(target, "generic-", 8) == 0) {
+            Error(SourcePos(), "When using a \"generic-*\" compilation target, "
+                "%s output can not be used.",
+                (outputType == Asm) ? "assembly" : "object file");
+            return 1;
+          }
+        }
+
+        assert(outFileName != NULL);
+
+        std::string targetOutFileName = 
+          lGetTargetFileName(outFileName, target_list[itarget]);
+        if (outputType == Asm)
+        {
+          const char * targetOutFileName_c = targetOutFileName.c_str();
+          const int suffix = strrchr(targetOutFileName_c, '.') - targetOutFileName_c + 1;
+          if (itarget == 1 && !strcasecmp(suffix_orig, "ptx"))
+          {
+            targetOutFileName[suffix  ] = 's';
+            targetOutFileName[suffix+1] =  0;
+          }
+        }
+        if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
+            return 1;
+
+        if (itarget > 0)
+        {
+          if (headerFileName != NULL)
+            if (!m->writeOutput(Module::Header, headerFileName))
+              return 1;
+          if (depsFileName != NULL)
+            if (!m->writeOutput(Module::Deps,depsFileName))
+              return 1;
+          if (hostStubFileName != NULL)
+            if (!m->writeOutput(Module::HostStub,hostStubFileName))
+              return 1;
+          if (devStubFileName != NULL)
+            if (!m->writeOutput(Module::DevStub,devStubFileName))
+              return 1;
+        }
+      }
+      else
+        ++m->errorCount;
+
+      errorCount += m->errorCount;
+      delete m;
+      m = NULL;
+
+      delete g->target;
+      g->target = NULL;
+
+    }
+    return errorCount > 0;
+  }
+  else if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         g->target = new Target(arch, cpu, target, generatePIC);
         if (!g->target->isValid())
@@ -2476,4 +2566,5 @@ Module::CompileAndOutput(const char *srcFile,
 
         return errorCount > 0;
     }
+    return true;
 }

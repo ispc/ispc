@@ -189,7 +189,7 @@ public:
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(const char *arch, const char *cpu, const char *isa, bool pic);
+    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool isPTX = false);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
@@ -244,6 +244,7 @@ public:
     bool isValid() const {return m_valid;}
 
     ISA getISA() const {return m_isa;}
+    bool isPTX() const {return m_isPTX;}
 
     std::string getArch() const {return m_arch;}
 
@@ -298,6 +299,7 @@ private:
 
     /** Instruction set being compiled to. */
     ISA m_isa;
+    bool m_isPTX;
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
     std::string m_arch;

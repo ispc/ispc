@@ -174,7 +174,7 @@ static const char *supportedCPUs[] = {
 #endif // LLVM 3.4+
 };
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool isPTX) :
     m_target(NULL),
     m_targetMachine(NULL),
 #if defined(LLVM_3_1)
@@ -184,6 +184,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     m_valid(false),
     m_isa(SSE2),
+    m_isPTX(isPTX),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),
@@ -656,15 +657,16 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     else if (!strcasecmp(isa, "nvptx64")) {
         this->m_isa = Target::NVPTX64;
+        this->m_isPTX = true;
         this->m_nativeVectorWidth = 1;
         this->m_vectorWidth = 1;
         this->m_attributes = "+sm_35";
-#if 0
+#if 1
         this->m_hasHalf = false;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasTranscendentals = true;
-        this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasGather = this->m_hasScatter = false;
 #else
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
@@ -727,6 +729,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
                 "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
                 "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32-v4:128:128";
+        } else if (m_isa == Target::NVPTX64)
+        {
+          dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
         }
 
         // 3. Finally set member data

@@ -47,7 +47,7 @@
 #include <stdio.h>
 
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
-  #include <llvm/IR/Metadata.h>
+  #include <llvm/Metadata.h>
   #include <llvm/LLVMContext.h>
   #include <llvm/Module.h>
   #include <llvm/Type.h>
@@ -523,6 +523,13 @@ Function::GenerateIR() {
     }
 
     // And we can now go ahead and emit the code
+    { /* export function with NVPTX64 target should be emitted host architecture */
+      const FunctionType *type= CastType<FunctionType>(sym->type);
+      if (g->target->getISA() == Target::NVPTX64 && type->isExported)
+        return;
+      if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && !type->isExported)
+        return;
+    }
     {
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
@@ -540,7 +547,7 @@ Function::GenerateIR() {
         // the application can call it
         const FunctionType *type = CastType<FunctionType>(sym->type);
         Assert(type != NULL);
-        if (type->isExported) {
+        if (type->isExported && g->target->getISA() != Target::NVPTX64) {
             if (!type->isTask) {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
