@@ -157,7 +157,7 @@ static const char *supportedCPUs[] = {
 #endif // LLVM 3.4+
 };
 
-Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
+Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, bool isPTX) :
     m_target(NULL),
     m_targetMachine(NULL),
 #if defined(LLVM_3_1)
@@ -167,7 +167,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #endif
     m_valid(false),
     m_isa(SSE2),
-    m_isPTX(false),
+    m_isPTX(isPTX),
     m_arch(""),
     m_is32Bit(true),
     m_cpu(""),

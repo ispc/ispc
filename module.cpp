@@ -733,13 +733,11 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-#if 0 /* NVPTX64::task_and_externC */
         if (functionType->isTask && g->target->getISA() != Target::NVPTX64) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;
         }
-#endif
 
         std::vector<Symbol *> funcs;
         symbolTable->LookupFunction(name.c_str(), &funcs);
@@ -2316,62 +2314,72 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-  if (target != NULL && !strcmp(target,"nvptx64"))
+  if (target != NULL && !strcmp(target,"nvptx64"))  // NVPTX64
   {
-    fprintf(stderr,  "compiling nvptx64 \n");
     // We're only compiling to a single target
-    g->target = new Target(arch, cpu, target, generatePIC);
-    if (!g->target->isValid())
-      return 1;
+    const char * target_list[] = {"nvptx64", "avx"};
+    int errorCount = 0;
+    for (int itarget = 0; itarget < 2; itarget++)
+    {
+      fprintf(stderr,  "compiling nvptx64 : target= %s\n",target_list[itarget]);
+      g->target = new Target(arch, cpu, target_list[itarget], generatePIC, /* isPTX= */ true);
+      if (!g->target->isValid())
+        return 1;
 
-    m = new Module(srcFile);
-    if (m->CompileFile() == 0) {
-      if (outputType == CXX) {
-        if (target == NULL || strncmp(target, "generic-", 8) != 0) {
-          Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
-              "targets must be used.");
-          return 1;
+      m = new Module(srcFile);
+      if (m->CompileFile() == 0) {
+        if (outputType == CXX) {
+          if (target == NULL || strncmp(target, "generic-", 8) != 0) {
+            Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
+                "targets must be used.");
+            return 1;
+          }
+        }
+        else if (outputType == Asm || outputType == Object) {
+          if (target != NULL && strncmp(target, "generic-", 8) == 0) {
+            Error(SourcePos(), "When using a \"generic-*\" compilation target, "
+                "%s output can not be used.",
+                (outputType == Asm) ? "assembly" : "object file");
+            return 1;
+          }
+        }
+
+        assert(outFileName != NULL);
+        std::string targetOutFileName =
+          lGetTargetFileName(outFileName, target_list[itarget]);
+        if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
+            return 1;
+
+        if (itarget > 0)
+        {
+          if (headerFileName != NULL)
+            if (!m->writeOutput(Module::Header, headerFileName))
+              return 1;
+          if (depsFileName != NULL)
+            if (!m->writeOutput(Module::Deps,depsFileName))
+              return 1;
+          if (hostStubFileName != NULL)
+            if (!m->writeOutput(Module::HostStub,hostStubFileName))
+              return 1;
+          if (devStubFileName != NULL)
+            if (!m->writeOutput(Module::DevStub,devStubFileName))
+              return 1;
         }
       }
-      else if (outputType == Asm || outputType == Object) {
-        if (target != NULL && strncmp(target, "generic-", 8) == 0) {
-          Error(SourcePos(), "When using a \"generic-*\" compilation target, "
-              "%s output can not be used.",
-              (outputType == Asm) ? "assembly" : "object file");
-          return 1;
-        }
-      }
+      else
+        ++m->errorCount;
 
-      if (outFileName != NULL)
-        if (!m->writeOutput(outputType, outFileName, includeFileName))
-          return 1;
-      if (headerFileName != NULL)
-        if (!m->writeOutput(Module::Header, headerFileName))
-          return 1;
-      if (depsFileName != NULL)
-        if (!m->writeOutput(Module::Deps,depsFileName))
-          return 1;
-      if (hostStubFileName != NULL)
-        if (!m->writeOutput(Module::HostStub,hostStubFileName))
-          return 1;
-      if (devStubFileName != NULL)
-        if (!m->writeOutput(Module::DevStub,devStubFileName))
-          return 1;
+      errorCount += m->errorCount;
+      delete m;
+      m = NULL;
+
+      delete g->target;
+      g->target = NULL;
+
     }
-    else
-      ++m->errorCount;
-
-    int errorCount = m->errorCount;
-    delete m;
-    m = NULL;
-
-    delete g->target;
-    g->target = NULL;
-
     return errorCount > 0;
   }
-  else
-    if (target == NULL || strchr(target, ',') == NULL) {
+  else if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         g->target = new Target(arch, cpu, target, generatePIC);
         if (!g->target->isValid())
@@ -2542,4 +2550,5 @@ Module::CompileAndOutput(const char *srcFile,
 
         return errorCount > 0;
     }
+    return true;
 }
