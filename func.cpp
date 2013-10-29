@@ -527,6 +527,8 @@ Function::GenerateIR() {
       const FunctionType *type= CastType<FunctionType>(sym->type);
       if (g->target->getISA() == Target::NVPTX64 && type->isExported)
         return;
+      if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && !type->isExported)
+        return;
     }
     {
         FunctionEmitContext ec(this, sym, function, firstStmtPos);

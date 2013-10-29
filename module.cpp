@@ -733,7 +733,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-        if (functionType->isTask && g->target->getISA() != Target::NVPTX64) {
+        if (functionType->isTask && !g->target->isPTX()) { //tISA() != Target::NVPTX64) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;
@@ -2319,6 +2319,11 @@ Module::CompileAndOutput(const char *srcFile,
     // We're only compiling to a single target
     const char * target_list[] = {"nvptx64", "avx"};
     int errorCount = 0;
+
+    const char *suffix_orig = strrchr(outFileName, '.');
+    ++suffix_orig;
+    assert(suffix_orig!=NULL);
+
     for (int itarget = 0; itarget < 2; itarget++)
     {
       fprintf(stderr,  "compiling nvptx64 : target= %s\n",target_list[itarget]);
@@ -2345,8 +2350,19 @@ Module::CompileAndOutput(const char *srcFile,
         }
 
         assert(outFileName != NULL);
-        std::string targetOutFileName =
+
+        std::string targetOutFileName = 
           lGetTargetFileName(outFileName, target_list[itarget]);
+        if (outputType == Asm)
+        {
+          const char * targetOutFileName_c = targetOutFileName.c_str();
+          const int suffix = strrchr(targetOutFileName_c, '.') - targetOutFileName_c + 1;
+          if (itarget == 1 && !strcasecmp(suffix_orig, "ptx"))
+          {
+            targetOutFileName[suffix  ] = 's';
+            targetOutFileName[suffix+1] =  0;
+          }
+        }
         if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
             return 1;
 
