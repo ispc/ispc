@@ -4930,8 +4930,6 @@ CreatePeepholePass() {
   return new PeepholePass;
 }
 
-#include <iostream>
-
 /** Given an llvm::Value known to be an integer, return its value as
     an int64_t.
 */
@@ -4978,7 +4976,7 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
           llvm::Function *func = ci->getCalledFunction();
           for (int i = 0; i < 6; i++) {
-            if (shifts[i] == func) {
+            if (shifts[i] && (shifts[i] == func)) {
               // we matched a call
               llvm::Value *shiftedVec = ci->getArgOperand(0);
               llvm::Value *shiftAmt = ci->getArgOperand(1);
