@@ -655,22 +655,18 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_maskBitCount = 32;
     }
 #endif
-    else if (!strcasecmp(isa, "nvptx64")) {
+    else if (!strcasecmp(isa, "nvptx64")) 
+    {
         this->m_isa = Target::NVPTX64;
         this->m_isPTX = true;
-        this->m_nativeVectorWidth = 1;
+        this->m_nativeVectorWidth = 32;
         this->m_vectorWidth = 1;
         this->m_attributes = "+sm_35";
-#if 1
         this->m_hasHalf = false;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = false;
-#else
-        this->m_maskingIsFree = false;
-        this->m_maskBitCount = 32;
-#endif
     }
     else {
         Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.",
