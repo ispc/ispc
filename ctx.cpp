@@ -1417,9 +1417,9 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     return index;
   }
   else
-  {
+  { /* this idea is to call __tid_x() builtin, but it doesn't work */
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__tid_x", &mm);
+    m->symbolTable->LookupFunction("laneIndex", &mm);
     if (g->target->getMaskBitCount() == 1)
       AssertPos(currentPos, mm.size() == 1);
     else
@@ -1429,7 +1429,7 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     // LLVM's type system is concerned...
     llvm::Function *fmm = mm[0]->function;
     std::vector<llvm::Value*> args;
-    return CallInst(fmm, NULL, args, "__tid_x");
+    return CallInst(fmm, NULL, args, "laneIndex");
   }
 }
 
