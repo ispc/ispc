@@ -953,7 +953,13 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
-            if (strcasecmp(suffix, "s"))
+            if (g->target->getISA() != Target::NVPTX64)
+            {
+              if (strcasecmp(suffix, "s"))
+                fileType = "assembly";
+            }
+            else
+              if (strcasecmp(suffix, "ptx"))
                 fileType = "assembly";
             break;
         case Bitcode:
