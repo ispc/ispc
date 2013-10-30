@@ -3592,6 +3592,8 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     }
     else /* isPTX ==  true */
     {
+      assert(g->target->getISA() != Target::NVPTX64);
+
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3647,22 +3649,67 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       // And emit the call to the user-supplied task launch function, passing
       // a pointer to the task function being called and a pointer to the
       // argument block we just filled in
+  
+
+
+
  //     llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
       llvm::Function *flaunch = m->module->getFunction("CUDALaunch");
       AssertPos(currentPos, flaunch != NULL);
       std::vector<llvm::Value *> args;
       args.push_back(launchGroupHandlePtr);  /* void **handler */
-      args.push_back(voidmem);               /* const char * module_name */
+      {
+        const std::string moduleNameStr("module_xyz");
+        llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
+
+        llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
+            /*Module=*/ *m->module,
+            /*Type=*/ ArrayTyModuleName,
+            /*isConstant=*/ true,
+            /*Linkage=*/ llvm::GlobalValue::PrivateLinkage,
+            /*Initializer=*/ 0, // has initializer, specified below
+            /*Name=*/ ".str");
+        gvarModuleNameStr->setAlignment(1);
+
+        llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
+        gvarModuleNameStr->setInitializer(constModuleName);
+
+        std::vector<llvm::Constant*> const_ptr_12_indices;
+        const_ptr_12_indices.push_back(llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+        const_ptr_12_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*g->ctx),0));
+        llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
+        args.push_back(const_ptr_12);               /* const char * module_name */
+      }
+
       args.push_back(voidmem);               /* const char * module */
-#if 0
-      llvm::Value *fname = llvm::MDString::get(*g->ctx, 
-          callee->getName().str().c_str());
-      llvm::Value *fnameptr = BitCastInst(fname, LLVMTypes::VoidPointerType);
-      args.push_back(fnameptr);               /* const char * func_name */
-#else
-      args.push_back(voidmem);               /* const char * func_name */
-#endif
+
+      {
+        const std::string funcNameStr = callee->getName().str();
+        llvm::ArrayType* ArrayTyFuncName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), funcNameStr.size()+1);
+
+        llvm::GlobalVariable* gvarFuncNameStr = new llvm::GlobalVariable(
+            /*Module=*/ *m->module,
+            /*Type=*/ ArrayTyFuncName,
+            /*isConstant=*/ true,
+            /*Linkage=*/ llvm::GlobalValue::PrivateLinkage,
+            /*Initializer=*/ 0, // has initializer, specified below
+            /*Name=*/ ".str");
+        gvarFuncNameStr->setAlignment(1);
+
+        llvm::Constant *constFuncName= llvm::ConstantDataArray::getString(*g->ctx, funcNameStr.c_str(), true); 
+        gvarFuncNameStr->setInitializer(constFuncName);
+
+        std::vector<llvm::Constant*> const_ptr_12_indices;
+        const_ptr_12_indices.push_back(llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+        const_ptr_12_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*g->ctx),0));
+        llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarFuncNameStr, const_ptr_12_indices);
+        args.push_back(const_ptr_12);               /* const char * func_name */
+      }
+
       args.push_back(launchGroupHandlePtr);               /* const void ** args */
+      //args.push_back( (llvm::dyn_cast<llvm::Function>(callee))->arg_begin() );
+      //llvm::PointerType *pt =
+       // llvm::dyn_cast<llvm::PointerType>(argType);
       args.push_back(launchCount[0]);
       args.push_back(launchCount[1]);
       args.push_back(launchCount[2]);
