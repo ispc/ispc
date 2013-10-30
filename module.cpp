@@ -2325,7 +2325,7 @@ Module::CompileAndOutput(const char *srcFile,
     ++suffix_orig;
     assert(suffix_orig!=NULL);
 
-    std::string PtxString;
+    g->PtxString = std::string();
 
     for (int itarget = 0; itarget < 2; itarget++)
     {
@@ -2378,7 +2378,7 @@ Module::CompileAndOutput(const char *srcFile,
           pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #endif
 
-          llvm::raw_string_ostream rso(PtxString);
+          llvm::raw_string_ostream rso(g->PtxString);
           llvm::formatted_raw_ostream fos(rso);
 
           llvm::TargetMachine::CodeGenFileType fileType = llvm::TargetMachine::CGFT_AssemblyFile;
@@ -2391,9 +2391,9 @@ Module::CompileAndOutput(const char *srcFile,
           llvm::Module *module = m->module;
           pm.run(*module);
           fos.flush();
-          assert(!PtxString.empty());
+          assert(!g->PtxString.empty());
 #if 0
-          std::cout << PtxString << std::endl;
+          std::cout << g->PtxString << std::endl;
 #endif
         }
 

@@ -576,6 +576,7 @@ struct Globals {
     /** Indicates that alignment in memory allocation routines should be
         forced to have given value. -1 value means natural alignment for the platforms. */
     int forceAlignment;
+    std::string PtxString;
 };
 
 enum {
