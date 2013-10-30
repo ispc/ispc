@@ -2314,20 +2314,23 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-  if (target != NULL && !strcmp(target,"nvptx64"))  // NVPTX64
+  if (target != NULL && strcmp(target,"nvptx64") >= 0)  // NVPTX64
   {
+    std::vector<std::string> targets = lExtractTargets(target);
+    Assert(targets.size() > 1);
     // We're only compiling to a single target
-    const char * target_list[] = {"nvptx64", "avx"};
     int errorCount = 0;
 
     const char *suffix_orig = strrchr(outFileName, '.');
     ++suffix_orig;
     assert(suffix_orig!=NULL);
 
+    std::string PtxString;
+
     for (int itarget = 0; itarget < 2; itarget++)
     {
-      fprintf(stderr,  "compiling nvptx64 : target= %s\n",target_list[itarget]);
-      g->target = new Target(arch, cpu, target_list[itarget], generatePIC, /* isPTX= */ true);
+      fprintf(stderr,  "compiling nvptx64 : target= %s\n",targets[itarget].c_str());
+      g->target = new Target(arch, cpu, targets[itarget].c_str(), generatePIC, /* isPTX= */ true);
       if (!g->target->isValid())
         return 1;
 
@@ -2352,7 +2355,7 @@ Module::CompileAndOutput(const char *srcFile,
         assert(outFileName != NULL);
 
         std::string targetOutFileName = 
-          lGetTargetFileName(outFileName, target_list[itarget]);
+          lGetTargetFileName(outFileName, targets[itarget].c_str());
         if (outputType == Asm)
         {
           const char * targetOutFileName_c = targetOutFileName.c_str();
@@ -2365,6 +2368,35 @@ Module::CompileAndOutput(const char *srcFile,
         }
         if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
             return 1;
+
+        if (itarget == 0)
+        {  /* store ptx into memory */
+          llvm::PassManager pm;
+#if defined(LLVM_3_1)
+          pm.add(new llvm::TargetData(*g->target->getDataLayout()));
+#else
+          pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#endif
+
+          llvm::raw_string_ostream rso(PtxString);
+          llvm::formatted_raw_ostream fos(rso);
+
+          llvm::TargetMachine::CodeGenFileType fileType = llvm::TargetMachine::CGFT_AssemblyFile;
+          llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
+          if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
+            fprintf(stderr, "Fatal error adding passes to emit object file!");
+            exit(1);
+          }
+
+          llvm::Module *module = m->module;
+          pm.run(*module);
+          fos.flush();
+          assert(!PtxString.empty());
+#if 0
+          std::cout << PtxString << std::endl;
+#endif
+        }
+
 
         if (itarget > 0)
         {
@@ -2463,6 +2495,8 @@ Module::CompileAndOutput(const char *srcFile,
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
         Assert(targets.size() > 1);
+        for (unsigned int i = 0; i < targets.size(); ++i) 
+          assert(strcmp(targets[i].c_str(), "nvptx64") < 0);
 
         if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
             Error(SourcePos(), "Multi-target compilation can't generate output "

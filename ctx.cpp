@@ -3521,70 +3521,153 @@ llvm::Value *
 FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
                                 llvm::Value *launchCount[3]){
-    if (callee == NULL) {
+
+    if (!g->target->isPTX())
+    {
+      if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
-    }
+      }
 
-    launchedTasks = true;
+      launchedTasks = true;
 
-    AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-    llvm::Type *argType =
+      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+      llvm::Type *argType =
         (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
-    AssertPos(currentPos, llvm::PointerType::classof(argType));
-    llvm::PointerType *pt =
+      AssertPos(currentPos, llvm::PointerType::classof(argType));
+      llvm::PointerType *pt =
         llvm::dyn_cast<llvm::PointerType>(argType);
-    AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
-    llvm::StructType *argStructType =
+      AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
+      llvm::StructType *argStructType =
         static_cast<llvm::StructType *>(pt->getElementType());
 
-    llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
-    AssertPos(currentPos, falloc != NULL);
-    llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
-    if (structSize->getType() != LLVMTypes::Int64Type)
+
+      llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+      AssertPos(currentPos, falloc != NULL);
+      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+      if (structSize->getType() != LLVMTypes::Int64Type)
         // ISPCAlloc expects the size as an uint64_t, but on 32-bit
         // targets, SizeOf returns a 32-bit value
         structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
-                              "struct_size_to_64");
-    int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
+            "struct_size_to_64");
+      int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
 
-    std::vector<llvm::Value *> allocArgs;
-    allocArgs.push_back(launchGroupHandlePtr);
-    allocArgs.push_back(structSize);
-    allocArgs.push_back(LLVMInt32(align));
-    llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
-    llvm::Value *argmem = BitCastInst(voidmem, pt);
+      std::vector<llvm::Value *> allocArgs;
+      allocArgs.push_back(launchGroupHandlePtr);
+      allocArgs.push_back(structSize);
+      allocArgs.push_back(LLVMInt32(align));
+      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+      llvm::Value *argmem = BitCastInst(voidmem, pt);
 
-    // Copy the values of the parameters into the appropriate place in
-    // the argument block
-    for (unsigned int i = 0; i < argVals.size(); ++i) {
+      // Copy the values of the parameters into the appropriate place in
+      // the argument block
+      for (unsigned int i = 0; i < argVals.size(); ++i) {
         llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
         // don't need to do masked store here, I think
         StoreInst(argVals[i], ptr);
-    }
+      }
 
-    if (argStructType->getNumElements() == argVals.size() + 1) {
+      if (argStructType->getNumElements() == argVals.size() + 1) {
         // copy in the mask
         llvm::Value *mask = GetFullMask();
         llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-                                            "funarg_mask");
+            "funarg_mask");
         StoreInst(mask, ptr);
-    }
+      }
 
-    // And emit the call to the user-supplied task launch function, passing
-    // a pointer to the task function being called and a pointer to the
-    // argument block we just filled in
-    llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
-    llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
-    AssertPos(currentPos, flaunch != NULL);
-    std::vector<llvm::Value *> args;
-    args.push_back(launchGroupHandlePtr);
-    args.push_back(fptr);
-    args.push_back(voidmem);
-    args.push_back(launchCount[0]);
-    args.push_back(launchCount[1]);
-    args.push_back(launchCount[2]);
-    return CallInst(flaunch, NULL, args, "");
+      // And emit the call to the user-supplied task launch function, passing
+      // a pointer to the task function being called and a pointer to the
+      // argument block we just filled in
+      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+      AssertPos(currentPos, flaunch != NULL);
+      std::vector<llvm::Value *> args;
+      args.push_back(launchGroupHandlePtr);
+      args.push_back(fptr);
+      args.push_back(voidmem);
+      args.push_back(launchCount[0]);
+      args.push_back(launchCount[1]);
+      args.push_back(launchCount[2]);
+      return CallInst(flaunch, NULL, args, "");
+    }
+    else /* isPTX ==  true */
+    {
+      if (callee == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+      }
+
+      launchedTasks = true;
+
+      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+      llvm::Type *argType =
+        (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
+      AssertPos(currentPos, llvm::PointerType::classof(argType));
+      llvm::PointerType *pt =
+        llvm::dyn_cast<llvm::PointerType>(argType);
+      AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
+      llvm::StructType *argStructType =
+        static_cast<llvm::StructType *>(pt->getElementType());
+
+
+      llvm::Function *falloc = m->module->getFunction("CUDAAlloc");
+      AssertPos(currentPos, falloc != NULL);
+      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+      if (structSize->getType() != LLVMTypes::Int64Type)
+        // ISPCAlloc expects the size as an uint64_t, but on 32-bit
+        // targets, SizeOf returns a 32-bit value
+        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
+            "struct_size_to_64");
+      int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
+
+      std::vector<llvm::Value *> allocArgs;
+      allocArgs.push_back(launchGroupHandlePtr);
+      allocArgs.push_back(structSize);
+      allocArgs.push_back(LLVMInt32(align));
+      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+#if 0
+      llvm::Value *argmem = BitCastInst(voidmem, pt);
+
+      // Copy the values of the parameters into the appropriate place in
+      // the argument block
+      for (unsigned int i = 0; i < argVals.size(); ++i) {
+        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+        // don't need to do masked store here, I think
+        StoreInst(argVals[i], ptr);
+      }
+
+      if (argStructType->getNumElements() == argVals.size() + 1) {
+        // copy in the mask
+        llvm::Value *mask = GetFullMask();
+        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
+            "funarg_mask");
+        StoreInst(mask, ptr);
+      }
+#endif
+      // And emit the call to the user-supplied task launch function, passing
+      // a pointer to the task function being called and a pointer to the
+      // argument block we just filled in
+ //     llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+      llvm::Function *flaunch = m->module->getFunction("CUDALaunch");
+      AssertPos(currentPos, flaunch != NULL);
+      std::vector<llvm::Value *> args;
+      args.push_back(launchGroupHandlePtr);  /* void **handler */
+      args.push_back(voidmem);               /* const char * module_name */
+      args.push_back(voidmem);               /* const char * module */
+#if 0
+      llvm::Value *fname = llvm::MDString::get(*g->ctx, 
+          callee->getName().str().c_str());
+      llvm::Value *fnameptr = BitCastInst(fname, LLVMTypes::VoidPointerType);
+      args.push_back(fnameptr);               /* const char * func_name */
+#else
+      args.push_back(voidmem);               /* const char * func_name */
+#endif
+      args.push_back(launchGroupHandlePtr);               /* const void ** args */
+      args.push_back(launchCount[0]);
+      args.push_back(launchCount[1]);
+      args.push_back(launchCount[2]);
+      return CallInst(flaunch, NULL, args, "");
+    }
 }
 
 

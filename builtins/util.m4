@@ -1835,6 +1835,10 @@ declare void @ISPCLaunch(i8**, i8*, i8*, i32,i32,i32) nounwind
 declare void @ISPCSync(i8*) nounwind
 declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
+declare i8* @CUDAAlloc(i8**, i64, i32) nounwind
+declare void @CUDALaunch(i8**, i8*,i8*,i8*, i8**, i32, i32, i32) nounwind
+declare void @CUDASync(i8*) nounwind
+
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
 declare i1 @__is_compile_time_constant_uniform_int32(i32)
 declare i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32>)

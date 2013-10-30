@@ -2942,7 +2942,18 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
             Assert(m->errorCount > 0);
             return NULL;
         }
-        llvmArgTypes.push_back(t);
+        if (g->target->isPTX() && g->target->getISA() != Target::NVPTX64 && isTask)
+        {
+#if 0
+          llvmArgTypes.push_back(
+              llvm::BitCastInst(llvm::PointerType::getUnqual(t), LLVMTypes::VoidPointerType)
+              );
+#endif
+          llvmArgTypes.push_back(llvm::PointerType::getUnqual(t));
+          //llvmArgTypes.push_back(t);
+        }
+        else
+          llvmArgTypes.push_back(t);
     }
 
     // And add the function mask, if asked for
@@ -2956,7 +2967,8 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         // threads the tasks system has running.  (Task arguments are
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
-        if (g->target->getISA() != Target::NVPTX64)
+//        if (g->target->getISA() != Target::NVPTX64)
+        if (!g->target->isPTX()) 
         {
           llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
           callTypes.push_back(llvm::PointerType::getUnqual(st));
@@ -2973,9 +2985,14 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         }
         else
         {
-          callTypes = llvmArgTypes;
+          if (g->target->getISA() == Target::NVPTX64)
+            callTypes = llvmArgTypes;
+          else
+          {
+            llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
+            callTypes.push_back(llvm::PointerType::getUnqual(st));
+          }
         }
-
     }
     else
         // Otherwise we already have the types of the arguments
