@@ -3682,12 +3682,12 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 
       args.push_back(launchGroupHandlePtr);  /* void **handler */
 
-      /* module name string  to distinguish between different modules  */
+      /* module name string  to distinguish between different modules  , generated ones */
       {
         const std::string moduleNameStr = m->module->getModuleIdentifier();
-        llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
+        static llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
 
-        llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
+        static llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
             /*Module=*/ *m->module,
             /*Type=*/ ArrayTyModuleName,
             /*isConstant=*/ true,
@@ -3696,23 +3696,22 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
             /*Name=*/ ".module_str");
         //gvarModuleNameStr->setAlignment(1);
 
-        llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
+        static llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
         gvarModuleNameStr->setInitializer(constModuleName);
 
         std::vector<llvm::Constant*> const_ptr_12_indices;
         const_ptr_12_indices.push_back(llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
         const_ptr_12_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*g->ctx),0));
-        llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
+        static llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
         args.push_back(const_ptr_12);               /* const char * module_name */
       }
 
-      /* ptx string, must be created ones */
+      /* ptx string, quick hack with "static" to create only single string.. the must be a better way */
       {
         const std::string moduleNameStr = g->PtxString;
-        g->PtxString.clear();
-        llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
+        static llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
 
-        llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
+        static llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
             /*Module=*/ *m->module,
             /*Type=*/ ArrayTyModuleName,
             /*isConstant=*/ true,
@@ -3720,13 +3719,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
             /*Initializer=*/ 0, // has initializer, specified below
             /*Name=*/ ".ptx_str");
 
-        llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
+        static llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
         gvarModuleNameStr->setInitializer(constModuleName);
 
         std::vector<llvm::Constant*> const_ptr_12_indices;
         const_ptr_12_indices.push_back(llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
         const_ptr_12_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*g->ctx),0));
-        llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
+        static llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
         args.push_back(const_ptr_12);               /* const char * module_name */
       }
 
