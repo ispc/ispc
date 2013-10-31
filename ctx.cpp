@@ -3641,7 +3641,10 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       llvm::ArrayType* ArrayTy_6 = llvm::ArrayType::get(LLVMTypes::VoidPointerType, argVals.size());
       llvm::Value* ptrParam = AllocaInst(ArrayTy_6, "arrayStructPtr");
 
-      /* construct array of pointers to arguments */
+      /* constructed array of pointers to arguments 
+       * this, and other parts are reverse enginered via
+       * cpp(clang++ -S -emit-llvm)->IR and then IR(llc -march=cpp)->cpp 
+       */
       for (unsigned int i = 0; i < argVals.size(); ++i) 
       {
         llvm::Type*           type = argStructType->getElementType(i);
