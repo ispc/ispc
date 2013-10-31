@@ -3633,6 +3633,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       allocArgs.push_back(launchGroupHandlePtr);
       allocArgs.push_back(structSize);
       allocArgs.push_back(LLVMInt32(align));
+      CallInst(falloc, NULL, allocArgs, "args_ptr");
 
       // Copy the values of the parameters into the appropriate place in
       // the argument block
@@ -3651,9 +3652,10 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         llvm::Value* ptr_arg1_addr = AllocaInst(type, "argptr");
         StoreInst(argVals[i], ptr_arg1_addr);
 
+        llvm::ConstantInt* const_int64_10 = llvm::ConstantInt::get(*g->ctx, llvm::APInt(64, 0));
         llvm::ConstantInt* const_int64_11 = llvm::ConstantInt::get(*g->ctx, llvm::APInt(64, i));
         std::vector<llvm::Value*> ptr_arrayinit_begin_indices;
-        ptr_arrayinit_begin_indices.push_back(const_int64_11);
+        ptr_arrayinit_begin_indices.push_back(const_int64_10);
         ptr_arrayinit_begin_indices.push_back(const_int64_11);
         llvm::GetElementPtrInst* ptr_arrayinit_element = 
           llvm::GetElementPtrInst::Create(ptrParam, ptr_arrayinit_begin_indices, "el", bblock);

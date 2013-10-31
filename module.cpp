@@ -2366,8 +2366,17 @@ Module::CompileAndOutput(const char *srcFile,
             targetOutFileName[suffix+1] =  0;
           }
         }
-        if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
+
+        if (outputType != Object)
+        {
+          if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
             return 1;
+        }
+        else if (itarget > 0)
+        {
+          if (!m->writeOutput(outputType, outFileName, includeFileName))
+            return 1;
+        }
 
         if (itarget == 0)
         {  /* store ptx into memory */
