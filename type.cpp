@@ -2942,15 +2942,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
             Assert(m->errorCount > 0);
             return NULL;
         }
-#if 0
-        if (g->target->isPTX() && g->target->getISA() != Target::NVPTX64 && isTask)
-        {
-          /* we pass struct of pointers to CUDALaunch */
-          llvmArgTypes.push_back(llvm::PointerType::getUnqual(t));
-        }
-        else
-#endif
-          llvmArgTypes.push_back(t);
+        llvmArgTypes.push_back(t);
     }
 
     // And add the function mask, if asked for
