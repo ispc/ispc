@@ -57,6 +57,8 @@
   #include <llvm/IR/Instructions.h>
   #include <llvm/IR/DerivedTypes.h>
 #endif
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/FormattedStream.h>
 
 /** This is a small utility structure that records information related to one
     level of nested control flow.  It's mostly used in correctly restoring
@@ -3611,55 +3613,78 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       llvm::StructType *argStructType =
         static_cast<llvm::StructType *>(pt->getElementType());
 
-
       llvm::Function *falloc = m->module->getFunction("CUDAAlloc");
       AssertPos(currentPos, falloc != NULL);
+#if 0
       llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
       if (structSize->getType() != LLVMTypes::Int64Type)
         // ISPCAlloc expects the size as an uint64_t, but on 32-bit
         // targets, SizeOf returns a 32-bit value
         structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
             "struct_size_to_64");
+#else
+      /* CUDALaunch takes array of argVals.size() of pointer to parameters */
+      /* code assumes sizeof(void*) pointer size */
+      llvm::Value *structSize = llvm::ConstantInt::get(*g->ctx, llvm::APInt(64, sizeof(void*)*argVals.size()));
+#endif
       int align = 4 * RoundUpPow2(g->target->getNativeVectorWidth());
 
       std::vector<llvm::Value *> allocArgs;
       allocArgs.push_back(launchGroupHandlePtr);
       allocArgs.push_back(structSize);
       allocArgs.push_back(LLVMInt32(align));
-      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
-#if 0
-      llvm::Value *argmem = BitCastInst(voidmem, pt);
 
       // Copy the values of the parameters into the appropriate place in
       // the argument block
-      for (unsigned int i = 0; i < argVals.size(); ++i) {
-        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
-        // don't need to do masked store here, I think
-        StoreInst(argVals[i], ptr);
+
+      /* allocate structure of pointer */
+      llvm::ArrayType* ArrayTy_6 = llvm::ArrayType::get(LLVMTypes::VoidPointerType, argVals.size());
+      llvm::Value* ptrParam = AllocaInst(ArrayTy_6, "arrayStructPtr");
+
+      /* construct array of pointers to arguments */
+      for (unsigned int i = 0; i < argVals.size(); ++i) 
+      {
+        llvm::Type*           type = argStructType->getElementType(i);
+        llvm::Value* ptr_arg1_addr = AllocaInst(type, "argptr");
+        StoreInst(argVals[i], ptr_arg1_addr);
+
+        llvm::ConstantInt* const_int64_11 = llvm::ConstantInt::get(*g->ctx, llvm::APInt(64, i));
+        std::vector<llvm::Value*> ptr_arrayinit_begin_indices;
+        ptr_arrayinit_begin_indices.push_back(const_int64_11);
+        ptr_arrayinit_begin_indices.push_back(const_int64_11);
+        llvm::GetElementPtrInst* ptr_arrayinit_element = 
+          llvm::GetElementPtrInst::Create(ptrParam, ptr_arrayinit_begin_indices, "el", bblock);
+        llvm::Value* ptr_15 = BitCastInst(ptr_arg1_addr, LLVMTypes::VoidPointerType, "voidptr");
+#if 0
+        {
+          std::string str; llvm::raw_string_ostream rso(str); llvm::formatted_raw_ostream fos(rso);
+          ptr_arg1_addr->print(fos);
+          const_int64_11->print(fos);
+          ptr_arrayinit_element->print(fos);
+          ptr_15->print(fos);
+          fos.flush(); fprintf(stderr, ">>> %s\n", str.c_str());
+        }
+#endif
+        StoreInst(ptr_15, ptr_arrayinit_element);
       }
 
-      if (argStructType->getNumElements() == argVals.size() + 1) {
-        // copy in the mask
-        llvm::Value *mask = GetFullMask();
-        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
-            "funarg_mask");
-        StoreInst(mask, ptr);
-      }
-#endif
+      if (argStructType->getNumElements() == argVals.size() + 1) 
+        assert(0); /* must not happen as task function is unmasked for PTX target */
+
       // And emit the call to the user-supplied task launch function, passing
       // a pointer to the task function being called and a pointer to the
       // argument block we just filled in
   
 
-
-
- //     llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
       llvm::Function *flaunch = m->module->getFunction("CUDALaunch");
       AssertPos(currentPos, flaunch != NULL);
       std::vector<llvm::Value *> args;
+
       args.push_back(launchGroupHandlePtr);  /* void **handler */
+
+      /* module name string  to distinguish between different modules  */
       {
-        const std::string moduleNameStr("module_xyz");
+        const std::string moduleNameStr = m->module->getModuleIdentifier();
         llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
 
         llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
@@ -3668,8 +3693,8 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
             /*isConstant=*/ true,
             /*Linkage=*/ llvm::GlobalValue::PrivateLinkage,
             /*Initializer=*/ 0, // has initializer, specified below
-            /*Name=*/ ".str");
-        gvarModuleNameStr->setAlignment(1);
+            /*Name=*/ ".module_str");
+        //gvarModuleNameStr->setAlignment(1);
 
         llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
         gvarModuleNameStr->setInitializer(constModuleName);
@@ -3681,8 +3706,31 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         args.push_back(const_ptr_12);               /* const char * module_name */
       }
 
-      args.push_back(voidmem);               /* const char * module */
+      /* ptx string, must be created ones */
+      {
+        const std::string moduleNameStr = g->PtxString;
+        g->PtxString.clear();
+        llvm::ArrayType* ArrayTyModuleName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), moduleNameStr.size()+1);
 
+        llvm::GlobalVariable* gvarModuleNameStr = new llvm::GlobalVariable(
+            /*Module=*/ *m->module,
+            /*Type=*/ ArrayTyModuleName,
+            /*isConstant=*/ true,
+            /*Linkage=*/ llvm::GlobalValue::PrivateLinkage,
+            /*Initializer=*/ 0, // has initializer, specified below
+            /*Name=*/ ".ptx_str");
+
+        llvm::Constant *constModuleName= llvm::ConstantDataArray::getString(*g->ctx, moduleNameStr.c_str(), true); 
+        gvarModuleNameStr->setInitializer(constModuleName);
+
+        std::vector<llvm::Constant*> const_ptr_12_indices;
+        const_ptr_12_indices.push_back(llvm::Constant::getNullValue(llvm::Type::getInt32Ty(*g->ctx)));
+        const_ptr_12_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*g->ctx),0));
+        llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
+        args.push_back(const_ptr_12);               /* const char * module_name */
+      }
+
+      /* fucntion name string */
       {
         const std::string funcNameStr = callee->getName().str();
         llvm::ArrayType* ArrayTyFuncName = llvm::ArrayType::get(llvm::IntegerType::get(*g->ctx, 8), funcNameStr.size()+1);
@@ -3693,8 +3741,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
             /*isConstant=*/ true,
             /*Linkage=*/ llvm::GlobalValue::PrivateLinkage,
             /*Initializer=*/ 0, // has initializer, specified below
-            /*Name=*/ ".str");
-        gvarFuncNameStr->setAlignment(1);
+            /*Name=*/ ".func_str");
 
         llvm::Constant *constFuncName= llvm::ConstantDataArray::getString(*g->ctx, funcNameStr.c_str(), true); 
         gvarFuncNameStr->setInitializer(constFuncName);
@@ -3706,10 +3753,16 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         args.push_back(const_ptr_12);               /* const char * func_name */
       }
 
-      args.push_back(launchGroupHandlePtr);               /* const void ** args */
-      //args.push_back( (llvm::dyn_cast<llvm::Function>(callee))->arg_begin() );
-      //llvm::PointerType *pt =
-       // llvm::dyn_cast<llvm::PointerType>(argType);
+      /* pass array of pointers to function arguments, this is how cuLaunchKernel accepts arguments */
+      {
+        std::vector<llvm::Value*> ptr_arraydecay_indices;
+        llvm::ConstantInt* const_int32_14 = llvm::ConstantInt::get(*g->ctx, llvm::APInt(32, 0));
+        ptr_arraydecay_indices.push_back(const_int32_14);
+        ptr_arraydecay_indices.push_back(const_int32_14);
+        llvm::Instruction* ptr_arraydecay = llvm::GetElementPtrInst::Create(ptrParam, ptr_arraydecay_indices, "arraydecay", bblock);
+        args.push_back(ptr_arraydecay); /* const void ** params */
+      }
+
       args.push_back(launchCount[0]);
       args.push_back(launchCount[1]);
       args.push_back(launchCount[2]);
