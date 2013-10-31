@@ -4982,7 +4982,7 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
               llvm::Value *shiftAmt = ci->getArgOperand(1);
               if (llvm::isa<llvm::Constant>(shiftAmt)) {
                 int vectorWidth = g->target->getVectorWidth();
-                int shuffleVals[vectorWidth];
+                int * shuffleVals = new int[vectorWidth];
                 int shiftInt = lGetIntValue(shiftAmt);
                 for (int i = 0; i < vectorWidth; i++) {
                   int s = i + shiftInt;
@@ -4996,6 +4996,7 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                                    shuffleIdxs, "vecShift", ci);
                 ci->replaceAllUsesWith(shuffle);
                 modifiedAny = true;
+                delete [] shuffleVals;
               } else {
                 PerformanceWarning(SourcePos(), "Stdlib shift() called without constant shift amount."); 
               }
