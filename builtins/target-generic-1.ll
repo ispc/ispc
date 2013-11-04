@@ -9,6 +9,7 @@ packed_load_and_store()
 scans()
 int64minmax()
 aossoa()
+rdrand_decls()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store
@@ -652,121 +653,10 @@ define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alw
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; svml stuff
 
-declare  <1 x float> @__svml_sind(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_asind(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_cosd(<1 x float>) nounwind readnone alwaysinline 
-declare  void @__svml_sincosd(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_tand(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_atand(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_atan2d(<1 x float>, <1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_expd(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_logd(<1 x float>) nounwind readnone alwaysinline 
-declare  <1 x float> @__svml_powd(<1 x float>, <1 x float>) nounwind readnone alwaysinline 
+include(`svml.m4')
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
-define  <1 x float> @__svml_sinf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_sinf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  ;%r = extractelement <1 x float> %0, i32 0
-  ;%s = call float @llvm.sin.f32(float %r)
-  ;%rv = insertelement <1 x float> undef, float %r, i32 0
-  ;ret <1 x float> %rv
-  unary1to1(float,@llvm.sin.f32)
-   
-}
-
-define  <1 x float> @__svml_asinf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_asinf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  ;%r = extractelement <1 x float> %0, i32 0
-  ;%s = call float @llvm.asin.f32(float %r)
-  ;%rv = insertelement <1 x float> undef, float %r, i32 0
-  ;ret <1 x float> %rv
-  unary1to1(float,@llvm.asin.f32)
-   
-}
-
-define  <1 x float> @__svml_cosf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_cosf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  ;%r = extractelement <1 x float> %0, i32 0
-  ;%s = call float @llvm.cos.f32(float %r)
-  ;%rv = insertelement <1 x float> undef, float %r, i32 0
-  ;ret <1 x float> %rv
-  unary1to1(float, @llvm.cos.f32)
-
-}
-
-define  void @__svml_sincosf(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline {
-;  %s = call <1 x float> @__svml_sincosf4(<1 x float> * %2, <1 x float> %0)
-;  store <1 x float> %s, <1 x float> * %1
-;  ret void
-   %sin = call <1 x float> @__svml_sinf(<1 x float> %0)
-   %cos = call <1 x float> @__svml_cosf(<1 x float> %0)
-   store <1 x float> %sin, <1 x float> * %1
-   store <1 x float> %cos, <1 x float> * %2
-   ret void
-}
-
-define  <1 x float> @__svml_tanf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_tanf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  ;%r = extractelement <1 x float> %0, i32 0
-  ;%s = call float @llvm_tan_f32(float %r)
-  ;%rv = insertelement <1 x float> undef, float %r, i32 0
-  ;ret <1 x float> %rv
-  ;unasry1to1(float, @llvm.tan.f32)
-  ; UNSUPPORTED!
-  ret <1 x float > %0
-}
-
-define  <1 x float> @__svml_atanf(<1 x float>) nounwind readnone alwaysinline {
-;  %ret = call <1 x float> @__svml_atanf4(<1 x float> %0)
-;  ret <1 x float> %ret
-  ;%r = extractelement <1 x float> %0, i32 0
-  ;%s = call float @llvm_atan_f32(float %r)
-  ;%rv = insertelement <1 x float> undef, float %r, i32 0
-  ;ret <1 x float> %rv
-  ;unsary1to1(float,@llvm.atan.f32)
-  ;UNSUPPORTED!
-  ret <1 x float > %0
-
-}
-
-define  <1 x float> @__svml_atan2f(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_atan2f4(<1 x float> %0, <1 x float> %1)
-  ;ret <1 x float> %ret
-  ;%y = extractelement <1 x float> %0, i32 0
-  ;%x = extractelement <1 x float> %1, i32 0
-  ;%q = fdiv float %y, %x
-  ;%a = call float @llvm.atan.f32 (float %q)
-  ;%rv = insertelement <1 x float> undef, float %a, i32 0
-  ;ret <1 x float> %rv
-  ; UNSUPPORTED!
-  ret <1 x float > %0
-}
-
-define  <1 x float> @__svml_expf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_expf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  unary1to1(float, @llvm.exp.f32)
-}
-
-define  <1 x float> @__svml_logf(<1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_logf4(<1 x float> %0)
-  ;ret <1 x float> %ret
-  unary1to1(float, @llvm.log.f32)
-}
-
-define  <1 x float> @__svml_powf(<1 x float>, <1 x float>) nounwind readnone alwaysinline {
-  ;%ret = call <1 x float> @__svml_powf4(<1 x float> %0, <1 x float> %1)
-  ;ret <1 x float> %ret
-  %r = extractelement <1 x float> %0, i32 0
-  %e  = extractelement <1 x float> %1, i32 0
-  %s = call float @llvm.pow.f32(float %r,float %e)
-  %rv = insertelement <1 x float> undef, float %s, i32 0
-  ret <1 x float> %rv
-
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -990,4 +880,15 @@ declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind read
 ;; int8/int16 builtins
 
 define_avgs()
+
+;;;;;;; nvptx64
+
+declare i32 @__tid_x()  nounwind readnone alwaysinline
+declare i32 @__warpsize()  nounwind readnone alwaysinline
+declare i32 @__ctaid_x()  nounwind readnone alwaysinline
+declare i32 @__ctaid_y()  nounwind readnone alwaysinline
+declare i32 @__ctaid_z()  nounwind readnone alwaysinline
+declare i32 @__nctaid_x()  nounwind readnone alwaysinline
+declare i32 @__nctaid_y()  nounwind readnone alwaysinline
+declare i32 @__nctaid_z()  nounwind readnone alwaysinline
 
