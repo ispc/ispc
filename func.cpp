@@ -527,17 +527,17 @@ Function::GenerateIR() {
     const FunctionType *func_type= CastType<FunctionType>(sym->type);
     if (g->target->getISA() == Target::NVPTX64 && func_type->isExported)
       return;
-    if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && !func_type->isExported)
+    if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && func_type->isTask)
       return;
 
-    if (!(g->target->getISA() && func_type->isExported))
+//    if (!(g->target->getISA()==Target::NVPTX64 && func_type->isExported))
     {
         FunctionEmitContext ec(this, sym, function, firstStmtPos);
         emitCode(&ec, function, firstStmtPos);
     }
 
     if (m->errorCount == 0) {
-      if (!(g->target->getISA() && func_type->isExported))
+//      if (!(g->target->getISA() == Target::NVPTX64 && func_type->isExported))
         if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
             if (g->debugPrint)
                 function->dump();
