@@ -102,6 +102,22 @@ static void __cpuidex(int info[4], int level, int count) {
 }
 #endif // !ISPC_IS_WINDOWS && !__ARM__
 
+#if !defined(__arm__)
+static bool __os_has_avx_support() {
+#if defined(ISPC_IS_WINDOWS)
+    // Check if the OS will save the YMM registers
+    unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
+    return (xcrFeatureMask & 6) == 6;
+#else // !defined(ISPC_IS_WINDOWS)
+    // Check xgetbv; this uses a .byte sequence instead of the instruction
+    // directly because older assemblers do not include support for xgetbv and
+    // there is no easy way to conditionally compile based on the assembler used.
+    int rEAX, rEDX;
+    __asm__ __volatile__ (".byte 0x0f, 0x01, 0xd0" : "=a" (rEAX), "=d" (rEDX) : "c" (0));
+    return (rEAX & 6) == 6;
+#endif // !defined(ISPC_IS_WINDOWS)
+}
+#endif // !__arm__
 
 static const char *
 lGetSystemISA() {
@@ -111,7 +127,8 @@ lGetSystemISA() {
     int info[4];
     __cpuid(info, 1);
 
-    if ((info[2] & (1 << 28)) != 0) {  // AVX
+    if ((info[2] & (1 << 28)) != 0 &&
+         __os_has_avx_support()) {  // AVX
         // AVX1 for sure....
         // Ivy Bridge?
         if ((info[2] & (1 << 29)) != 0 &&  // F16C

@@ -72,6 +72,7 @@
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/ADT/Triple.h>
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
@@ -123,6 +124,8 @@ static llvm::Pass *CreateIsCompileTimeConstantPass(bool isLastTry);
 static llvm::Pass *CreateMakeInternalFuncsStaticPass();
 
 static llvm::Pass *CreateDebugPass(char * output);
+
+static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -521,6 +524,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createPromoteMemoryToRegisterPass());
         optPM.add(llvm::createAggressiveDCEPass());
 
+
         if (g->opt.disableGatherScatterOptimizations == false &&
             g->target->getVectorWidth() > 1) {
             optPM.add(llvm::createInstructionCombiningPass(), 210);
@@ -546,7 +550,8 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalOptimizerPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
-        optPM.add(llvm::createDeadArgEliminationPass());
+        optPM.add(CreateReplaceStdlibShiftPass(),229);
+        optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createPruneEHPass());
@@ -4879,6 +4884,7 @@ lMatchAvgDownInt16(llvm::Value *inst) {
 }
 #endif // !LLVM_3_1 && !LLVM_3_2
 
+
 bool
 PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("PeepholePass");
@@ -4922,4 +4928,90 @@ PeepholePass::runOnBasicBlock(llvm::BasicBlock &bb) {
 static llvm::Pass *
 CreatePeepholePass() {
   return new PeepholePass;
+}
+
+/** Given an llvm::Value known to be an integer, return its value as
+    an int64_t.
+*/
+static int64_t
+lGetIntValue(llvm::Value *offset) {
+  llvm::ConstantInt *intOffset = llvm::dyn_cast<llvm::ConstantInt>(offset);
+  Assert(intOffset && (intOffset->getBitWidth() == 32 ||
+                       intOffset->getBitWidth() == 64));
+  return intOffset->getSExtValue();
+}
+
+///////////////////////////////////////////////////////////////////////////
+// ReplaceStdlibShiftPass
+
+class ReplaceStdlibShiftPass : public llvm::BasicBlockPass {
+public:
+    static char ID;
+    ReplaceStdlibShiftPass() : BasicBlockPass(ID) {
+    }
+
+    const char *getPassName() const { return "Resolve \"replace extract insert chains\""; }
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+
+};
+
+char ReplaceStdlibShiftPass::ID = 0;
+
+bool
+ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
+    DEBUG_START_PASS("ReplaceStdlibShiftPass");
+    bool modifiedAny = false;
+    
+    llvm::Function *shifts[6];
+    shifts[0] = m->module->getFunction("__shift_i8");
+    shifts[1] = m->module->getFunction("__shift_i16");
+    shifts[2] = m->module->getFunction("__shift_i32");
+    shifts[3] = m->module->getFunction("__shift_i64");
+    shifts[4] = m->module->getFunction("__shift_float");
+    shifts[5] = m->module->getFunction("__shift_double");
+
+    for (llvm::BasicBlock::iterator iter = bb.begin(), e = bb.end(); iter != e; ++iter) {
+        llvm::Instruction *inst = &*iter;
+
+        if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
+          llvm::Function *func = ci->getCalledFunction();
+          for (int i = 0; i < 6; i++) {
+            if (shifts[i] && (shifts[i] == func)) {
+              // we matched a call
+              llvm::Value *shiftedVec = ci->getArgOperand(0);
+              llvm::Value *shiftAmt = ci->getArgOperand(1);
+              if (llvm::isa<llvm::Constant>(shiftAmt)) {
+                int vectorWidth = g->target->getVectorWidth();
+                int * shuffleVals = new int[vectorWidth];
+                int shiftInt = lGetIntValue(shiftAmt);
+                for (int i = 0; i < vectorWidth; i++) {
+                  int s = i + shiftInt;
+                  s = (s < 0) ? vectorWidth : s;
+                  s = (s >= vectorWidth) ? vectorWidth : s;
+                  shuffleVals[i] = s;
+                }
+                llvm::Value *shuffleIdxs = LLVMInt32Vector(shuffleVals);
+                llvm::Value *zeroVec = llvm::ConstantAggregateZero::get(shiftedVec->getType());
+                llvm::Value *shuffle = new llvm::ShuffleVectorInst(shiftedVec, zeroVec, 
+                                                                   shuffleIdxs, "vecShift", ci);
+                ci->replaceAllUsesWith(shuffle);
+                modifiedAny = true;
+                delete [] shuffleVals;
+              } else {
+                PerformanceWarning(SourcePos(), "Stdlib shift() called without constant shift amount."); 
+              }
+            }
+          }
+        }
+    }
+    
+    DEBUG_END_PASS("ReplaceStdlibShiftPass");
+
+    return modifiedAny;
+}
+
+
+static llvm::Pass *
+CreateReplaceStdlibShiftPass() {
+    return new ReplaceStdlibShiftPass();
 }

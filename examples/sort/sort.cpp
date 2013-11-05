@@ -78,7 +78,7 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 
@@ -96,7 +96,7 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 
@@ -114,7 +114,7 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 

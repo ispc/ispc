@@ -42,6 +42,9 @@ def print_file(line):
 def build_test(commands):
     os.system(commands[4])
     test = os.system(commands[1])
+    if is_windows:
+        common.remove_if_exists(".\\X64\\Release1")
+        os.rename(".\\X64\\Release", ".\\X64\\Release1")
     if options.ref:
         ref = os.system(commands[3])
     return (options.ref and ref) or test
@@ -156,16 +159,16 @@ def cpu_check():
             R = c_line.split(' ')
             cpu_percent = float(R[1]) * 3
     else:
-	os.system("wmic cpu get loadpercentage /value > cpu_temp")
-	c = open("cpu_temp", 'r')
+        os.system("wmic cpu get loadpercentage /value > cpu_temp")
+        c = open("cpu_temp", 'r')
         c_lines = c.readlines()
-	c.close()
-	os.remove("cpu_temp")
-	t = "0"
-	for i in c_lines[2]:
+        c.close()
+        os.remove("cpu_temp")
+        t = "0"
+        for i in c_lines[2]:
             if i.isdigit():
                 t = t + i
-	cpu_percent = int(t)
+        cpu_percent = int(t)
     return cpu_percent
 
 #returns geomean of list
@@ -345,9 +348,14 @@ def perf(options1, args):
     if options.ref != "":
         options.ref = True
     if os.environ.get("ISPC_HOME") != None:
-        if os.path.exists(os.environ["ISPC_HOME"] + os.sep + ispc_test):
-            ispc_test_exists = True
-            ispc_test = os.environ["ISPC_HOME"] + os.sep + ispc_test
+        if is_windows == False:
+            if os.path.exists(os.environ["ISPC_HOME"] + os.sep + ispc_test):
+                ispc_test_exists = True
+                ispc_test = os.environ["ISPC_HOME"] + os.sep + ispc_test
+        else:
+            if os.path.exists(os.environ["ISPC_HOME"] + "\\Release\\" + ispc_test):
+                ispc_test_exists = True
+                ispc_test = os.environ["ISPC_HOME"] + "\\Release\\" + ispc_test
     for counter in PATH_dir:
         if ispc_test_exists == False:
             if os.path.exists(counter + os.sep + ispc_test):
@@ -419,9 +427,9 @@ def perf(options1, args):
             re_command = "make clean >> "+build_log
         else:
             ex_command_ref = "x64\\Release\\ref.exe " + command + " >> " + perf_temp + "_ref"
-            ex_command = "x64\\Release\\test.exe " + command + " >> " + perf_temp + "_test"
-            bu_command_ref = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=ref /t:rebuild >> " + build_log
-            bu_command = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=test /t:rebuild >> " + build_log
+            ex_command = "x64\\Release1\\test.exe " + command + " >> " + perf_temp + "_test"
+            bu_command_ref = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=ref /p:ISPC_compiler=ispc_ref /t:rebuild >> " + build_log
+            bu_command = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=test /p:ISPC_compiler=ispc /t:rebuild >> " + build_log
             re_command = "msbuild /t:clean >> " + build_log
         commands = [ex_command, bu_command, ex_command_ref, bu_command_ref, re_command]
         # parsing config parameters

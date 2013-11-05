@@ -2798,6 +2798,17 @@ BinaryExpr::TypeCheck() {
     }
 }
 
+const Type *
+BinaryExpr::GetLValueType() const {
+  const Type *t = GetType();
+  if (CastType<PointerType>(t) != NULL) {
+    // Are we doing something like (basePtr + offset)[...] = ...
+    return t;
+  }
+  else {
+    return NULL;
+  }
+}
 
 int
 BinaryExpr::EstimateCost() const {
@@ -4266,8 +4277,9 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL) {
-            // Only check for non-function calls
+        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL && 
+            dynamic_cast<BinaryExpr *>(baseExpr) == NULL) {
+          // Don't check if we're doing a function call or pointer arith
             AssertPos(pos, baseSym != NULL);
         }
         mask = lMaskForSymbol(baseSym, ctx);
@@ -7065,9 +7077,22 @@ TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const {
-    // We have to switch off this assert after supporting of operators.
-    //AssertPos(pos, type->HasUnboundVariability() == false);
-    return type;
+    // Here we try to resolve situation where (base_type) can be treated as
+    // (uniform base_type) of (varying base_type). This is a part of function
+    // TypeCastExpr::TypeCheck. After implementation of operators we
+    // have to have this functionality here.
+    const Type *toType = type, *fromType = expr->GetType();
+    if (toType == NULL || fromType == NULL)
+        return NULL;
+    if (toType->HasUnboundVariability()) {
+        if (fromType->IsUniformType()) {
+            toType = type->ResolveUnboundVariability(Variability::Uniform);
+        } else {
+            toType = type->ResolveUnboundVariability(Variability::Varying);
+        }
+    }
+    AssertPos(pos, toType->HasUnboundVariability() == false);
+    return toType;
 }
 
 
