@@ -451,6 +451,17 @@ static FORCEINLINE VTYPE __rotate_##NAME(VTYPE v, int index) {   \
     return ret;                                       \
 }                                                     \
 
+#define SHIFT(VTYPE, NAME, STYPE)                    \
+static FORCEINLINE VTYPE __shift_##NAME(VTYPE v, int index) {   \
+    VTYPE ret;                                        \
+    for (int i = 0; i < 16; ++i) {                    \
+      int modIndex = i+index;                         \
+      STYPE val = ((modIndex >= 0) && (modIndex < 16)) ? v[modIndex] : 0; \
+      ret[i] = val;                                 \
+    }                                                 \
+    return ret;                                       \
+}                                                     \
+
 /* knc::macro::used */
 #define SHUFFLES(VTYPE, NAME, STYPE)                 \
 static FORCEINLINE VTYPE __shuffle_##NAME(VTYPE v, __vec16_i32 index) {   \
@@ -566,6 +577,7 @@ SETZERO(__vec16_i8, i8)
 UNDEF(__vec16_i8, i8)
 BROADCAST(__vec16_i8, i8, int8_t)
 ROTATE(__vec16_i8, i8, int8_t)
+SHIFT(__vec16_i8, i8, int8_t)
 SHUFFLES(__vec16_i8, i8, int8_t)
 LOAD_STORE(__vec16_i8, int8_t)
 
@@ -612,6 +624,7 @@ SETZERO(__vec16_i16, i16)
 UNDEF(__vec16_i16, i16)
 BROADCAST(__vec16_i16, i16, int16_t)
 ROTATE(__vec16_i16, i16, int16_t)
+SHIFT(__vec16_i16, i16, int16_t)
 SHUFFLES(__vec16_i16, i16, int16_t)
 LOAD_STORE(__vec16_i16, int16_t)
 
@@ -688,6 +701,8 @@ static FORCEINLINE __vec16_i32 __rotate_i32(__vec16_i32 v, int index)
   return _mm512_mask_permutevar_epi32(v, 0xFFFF, shuffle, v);
 }
 
+SHIFT(__vec16_i32, i32, int32_t)
+
 static FORCEINLINE __vec16_i32 __shuffle_i32 (__vec16_i32 v, __vec16_i32 index) 
 { 
   return _mm512_mask_permutevar_epi32(v, 0xFFFF, __and(index, __smear_i32<__vec16_i32>(0xF)), v); 
@@ -704,8 +719,9 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<64>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<64>(p);
+  return _mm512_load_epi32(p);
 #else
   __vec16_i32 v;
   v = _mm512_extloadunpacklo_epi32(v,           p,    _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
@@ -716,8 +732,9 @@ template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32 v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  __store<64>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<64>(p,v);
+  _mm512_store_epi32(p, v);
 #else
   _mm512_extpackstorelo_epi32(          p,    v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_epi32((uint8_t*)p+64, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
@@ -942,6 +959,8 @@ static FORCEINLINE __vec16_i64 __rotate_i64(const __vec16_i64 _v, const int inde
   const __vec16_i32 ret_lo = __rotate_i32(v_lo, index);
   return CASTI2L(ret_hi, ret_lo);
 }
+SHIFT(__vec16_i64, i64, int64_t)
+
 static FORCEINLINE __vec16_i64 __shuffle_double(__vec16_i64 _v, const __vec16_i32 index) 
 {
   CASTL2I(_v, v_hi, v_lo);
@@ -962,8 +981,11 @@ static FORCEINLINE __vec16_i64 __shuffle2_double(__vec16_i64 _v0, __vec16_i64 _v
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<128>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<128>(p);
+  __m512i v2 = _mm512_load_epi32(p);
+  __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
+  return __vec16_i64(v2,v1);
 #else
   __vec16_i32 v1;
   __vec16_i32 v2;
@@ -978,8 +1000,12 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __store<128>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<128>(p,v);
+  __m512i v1 = v.v2;
+  __m512i v2 = v.v1;
+  _mm512_store_epi64(p, v2);
+  _mm512_store_epi64(((uint8_t*)p)+64, v1);
 #else
   __m512i v1 = v.v2;
   __m512i v2 = v.v1;
@@ -1063,6 +1089,7 @@ static FORCEINLINE __vec16_f __rotate_float(__vec16_f _v, int index)
   const __vec16_i32 shuffle = _mm512_and_epi32(_mm512_add_epi32(__ispc_stride1, idx),  __smear_i32<__vec16_i32>(0xF));
   return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(v, 0xFFFF, shuffle, v));
 }
+SHIFT(__vec16_f, float, float)
 static FORCEINLINE __vec16_f __shuffle_float(__vec16_f v, __vec16_i32 index) 
 {
   return _mm512_castsi512_ps(_mm512_mask_permutevar_epi32(_mm512_castps_si512(v), 0xffff, index, _mm512_castps_si512(v)));
@@ -1081,8 +1108,9 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f _v0, __vec16_f _v1, __ve
 
 template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<64>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<64>(p);
+  return _mm512_load_ps(p);
 #else
   __vec16_f v;
   v = _mm512_extloadunpacklo_ps(v,           p,    _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
@@ -1093,8 +1121,9 @@ template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  __store<64>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<64>(p,v);
+  _mm512_store_ps(p, v);
 #else
   _mm512_extpackstorelo_ps(          p,    v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
@@ -1333,6 +1362,7 @@ static FORCEINLINE __vec16_d __rotate_double(const __vec16_d _v, const int index
   const __vec16_f ret_lo = __rotate_float(v_lo, index);
   return CASTF2D(ret_hi, ret_lo);
 }
+SHIFT(__vec16_d, double, double)
 static FORCEINLINE __vec16_d __shuffle_double(__vec16_d _v, const __vec16_i32 index) 
 {
   CASTD2F(_v, v_hi, v_lo);
@@ -1353,8 +1383,9 @@ static FORCEINLINE __vec16_d __shuffle2_double(__vec16_d _v0, __vec16_d _v1, con
 
 template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) \
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<128>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<128>(p);
+  return __vec16_d(_mm512_load_pd(p), _mm512_load_pd(((uint8_t*)p)+64));
 #else
   __vec16_d ret;
   ret.v1 = _mm512_extloadunpacklo_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
@@ -1367,8 +1398,10 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) \
  
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __store<128>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __store<128>(p,v);
+  _mm512_store_pd(p, v.v1);
+  _mm512_store_pd(((uint8_t*)p)+64, v.v2);
 #else
   _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
