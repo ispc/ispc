@@ -175,8 +175,28 @@ declare double @__round_uniform_double(double) nounwind readnone
 declare double @__floor_uniform_double(double) nounwind readnone 
 declare double @__ceil_uniform_double(double) nounwind readnone 
 
-declare <WIDTH x float> @__round_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__floor_varying_float(<WIDTH x float>) nounwind readnone 
+define  <1 x float> @__round_varying_float(<1 x float>) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast <1 x float> %0 to <1 x i32>
+  %bitop.i.i = and <1 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648>
+  %bitop.i = xor <1 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <1 x i32> %bitop.i to <1 x float>
+  %binop.i = fadd <1 x float> %int_to_float_bitcast.i.i40.i, <float 8.388608e+06>
+  %binop21.i = fadd <1 x float> %binop.i, <float -8.388608e+06>
+  %float_to_int_bitcast.i.i.i = bitcast <1 x float> %binop21.i to <1 x i32>
+  %bitop31.i = xor <1 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <1 x i32> %bitop31.i to <1 x float>
+  ret <1 x float> %int_to_float_bitcast.i.i.i
+}
+define  <1 x float> @__floor_varying_float(<1 x float>) nounwind readonly alwaysinline {
+  %calltmp.i = tail call <1 x float> @__round_varying_float(<1 x float> %0) nounwind
+  %bincmp.i = fcmp ogt <1 x float> %calltmp.i, %0
+  %val_to_boolvec32.i = sext <1 x i1> %bincmp.i to <1 x i32>
+  %bitop.i = and <1 x i32> %val_to_boolvec32.i, <i32 -1082130432>
+  %int_to_float_bitcast.i.i.i = bitcast <1 x i32> %bitop.i to <1 x float>
+  %binop.i = fadd <1 x float> %calltmp.i, %int_to_float_bitcast.i.i.i
+  ret <1 x float> %binop.i
+}
+
 declare <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readnone 
 
 declare <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readnone 
@@ -246,10 +266,40 @@ define  double @__min_uniform_double(double, double) nounwind readonly alwaysinl
 
 ;; min/max uniform
 
-declare <WIDTH x float> @__max_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__min_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone 
-declare <WIDTH x i32> @__min_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
-declare <WIDTH x i32> @__max_varying_int32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
+;; /* float */
+define  <1 x float> @__max_varying_float(<1 x float>, <1 x float>) nounwind readonly alwaysinline {
+  %a = extractelement <1 x float> %0, i32 0
+  %b = extractelement <1 x float> %1, i32 0
+  %r = call float @__max_uniform_float(float %a, float %b)
+  %rv = insertelement <1 x float> undef, float %r, i32 0
+  ret <1 x float> %rv    
+}
+define  <1 x float> @__min_varying_float(<1 x float>, <1 x float>) nounwind readonly alwaysinline {
+  %a = extractelement <1 x float> %0, i32 0
+  %b = extractelement <1 x float> %1, i32 0
+  %r = call float @__min_uniform_float(float %a, float %b)
+  %rv = insertelement <1 x float> undef, float %r, i32 0
+  ret <1 x float> %rv    
+
+}
+
+;; /* int32 */
+define  <1 x i32> @__max_varying_int32(<1 x i32>, <1 x i32>) nounwind readonly alwaysinline {
+  %a = extractelement <1 x i32> %0, i32 0
+  %b = extractelement <1 x i32> %1, i32 0
+  %r = call i32 @__max_uniform_int32(i32 %a, i32 %b)
+  %rv = insertelement <1 x i32> undef, i32 %r, i32 0
+  ret <1 x i32> %rv
+}
+define  <1 x i32> @__min_varying_int32(<1 x i32>, <1 x i32>) nounwind readonly alwaysinline {
+  %a = extractelement <1 x i32> %0, i32 0
+  %b = extractelement <1 x i32> %1, i32 0
+  %r = call i32 @__min_uniform_int32(i32 %a, i32 %b)
+  %rv = insertelement <1 x i32> undef, i32 %r, i32 0
+  ret <1 x i32> %rv
+}
+
+;; /* uint32 */
 declare <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
 declare <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
 ;; declare <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
@@ -289,7 +339,13 @@ define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline
 
 declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
 declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
+define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
+{
+  %v = extractelement <1 x float> %0, i32 0
+  %r = call float @__sqrt_uniform_float(float %v)
+  %rv = insertelement <1 x float> undef, float %r, i32 0 
+  ret <WIDTH x float> %rv
+}
 
 ;; declare double @__sqrt_uniform_double(double) nounwind readnone
 define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {

@@ -49,7 +49,7 @@ struct Ray {
 };
 
 
-static void
+static inline void
 generateRay(const uniform float raster2camera[4][4], 
             const uniform float camera2world[4][4],
             float x, float y, Ray &ray) {
@@ -80,7 +80,7 @@ Inside(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static bool
+static inline bool
 IntersectP(Ray ray, float3 pMin, float3 pMax, float &hit0, float &hit1) {
     float t0 = -1e30, t1 = 1e30;
 
@@ -140,7 +140,7 @@ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static float Density(float3 Pobj, float3 pMin, float3 pMax, 
+static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
                      uniform float density[], uniform int nVoxels[3]) {
     if (!Inside(Pobj, pMin, pMax)) 
         return 0;
@@ -171,7 +171,7 @@ static float Density(float3 Pobj, float3 pMin, float3 pMax,
    with extent (pMin,pMax) with transmittance coefficient sigma_t,
    defined by nVoxels[3] voxels in each dimension in the given density
    array. */
-static float
+static inline float
 transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
               uniform float3 pMax, uniform float sigma_t, 
               uniform float density[], uniform int nVoxels[3]) {
@@ -213,13 +213,13 @@ distanceSquared(float3 a, float3 b) {
 }
 
 
-static float 
+static inline float 
 raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float rayT0, rayT1;
     uniform float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
     uniform float3 lightPos = { -1, 4, 1.5 };
 
-    cif (!IntersectP(ray, pMin, pMax, rayT0, rayT1))
+    if (!IntersectP(ray, pMin, pMax, rayT0, rayT1))
         return 0.;
 
     rayT0 = max(rayT0, 0.f);
@@ -241,7 +241,8 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float t = rayT0;
     float3 pos = ray.origin + ray.dir * rayT0;
     float3 dirStep = ray.dir * stepT;
-    cwhile (t < rayT1) {
+    while (t < rayT1) 
+    {
         float d = Density(pos, pMin, pMax, density, nVoxels);
 
         // terminate once attenuation is high
@@ -271,7 +272,7 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
    Renders a tile of the image, covering [x0,x0) * [y0, y1), storing the
    result into the image[] array.
  */
-static void
+static inline void
 volume_tile(uniform int x0, uniform int y0, uniform int x1,
             uniform int y1, uniform float density[], uniform int nVoxels[3], 
             const uniform float raster2camera[4][4],
@@ -282,7 +283,13 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
     // by 4.
     for (uniform int y = y0; y < y1; y += 4) {
         for (uniform int x = x0; x < x1; x += 4) {
-            foreach (o = 0 ... 16) {
+//            foreach (o = 0 ... 16) {
+              for (int ob = 0; ob < 32; ob += programCount)            
+              {
+                const int o = ob + programIndex;
+                if (o >= 16) continue;
+
+          
                 // These two arrays encode the mapping from [0,15] to
                 // offsets within the 4x4 pixel block so that we render
                 // each pixel inside the block
@@ -310,22 +317,72 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
 
 
 task void
-volume_task(uniform float density[], uniform int nVoxels[3], 
-            const uniform float raster2camera[4][4],
-            const uniform float camera2world[4][4], 
-            uniform int width, uniform int height, uniform float image[]) {
-    uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
-    uniform int xbuckets = (width + (dx-1)) / dx;
-    uniform int ybuckets = (height + (dy-1)) / dy;
+volume_task(uniform float density[], uniform int _nVoxels[3], 
+            const uniform float _raster2camera[4][4],
+            const uniform float _camera2world[4][4], 
+            uniform int width, uniform int height, uniform float image[]) 
+{
+  if (taskIndex >= taskCount) return;
 
-    uniform int x0 = (taskIndex % xbuckets) * dx;
-    uniform int y0 = (taskIndex / xbuckets) * dy;
-    uniform int x1 = x0 + dx, y1 = y0 + dy;
-    x1 = min(x1, width);
-    y1 = min(y1, height);
+#if 1
+  uniform int nVoxels[3];
+  nVoxels[0] = _nVoxels[0];
+  nVoxels[1] = _nVoxels[1];
+  nVoxels[2] = _nVoxels[2];
 
-    volume_tile(x0, y0, x1, y1, density, nVoxels, raster2camera,
-                 camera2world, width, height, image);
+  uniform float raster2camera[4][4];
+  raster2camera[0][0] = _raster2camera[0][0];
+  raster2camera[0][1] = _raster2camera[0][1];
+  raster2camera[0][2] = _raster2camera[0][2];
+  raster2camera[0][3] = _raster2camera[0][3];
+  raster2camera[1][0] = _raster2camera[1][0];
+  raster2camera[1][1] = _raster2camera[1][1];
+  raster2camera[1][2] = _raster2camera[1][2];
+  raster2camera[1][3] = _raster2camera[1][3];
+  raster2camera[2][0] = _raster2camera[2][0];
+  raster2camera[2][1] = _raster2camera[2][1];
+  raster2camera[2][2] = _raster2camera[2][2];
+  raster2camera[2][3] = _raster2camera[2][3];
+  raster2camera[3][0] = _raster2camera[3][0];
+  raster2camera[3][1] = _raster2camera[3][1];
+  raster2camera[3][2] = _raster2camera[3][2];
+  raster2camera[3][3] = _raster2camera[3][3];
+  
+  uniform float camera2world[4][4];
+  camera2world[0][0] = _camera2world[0][0];
+  camera2world[0][1] = _camera2world[0][1];
+  camera2world[0][2] = _camera2world[0][2];
+  camera2world[0][3] = _camera2world[0][3];
+  camera2world[1][0] = _camera2world[1][0];
+  camera2world[1][1] = _camera2world[1][1];
+  camera2world[1][2] = _camera2world[1][2];
+  camera2world[1][3] = _camera2world[1][3];
+  camera2world[2][0] = _camera2world[2][0];
+  camera2world[2][1] = _camera2world[2][1];
+  camera2world[2][2] = _camera2world[2][2];
+  camera2world[2][3] = _camera2world[2][3];
+  camera2world[3][0] = _camera2world[3][0];
+  camera2world[3][1] = _camera2world[3][1];
+  camera2world[3][2] = _camera2world[3][2];
+  camera2world[3][3] = _camera2world[3][3];
+#else
+#define  nVoxels _nVoxels
+#define  raster2camera _raster2camera
+#define  camera2world _camera2world
+#endif
+
+  uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
+  uniform int xbuckets = (width + (dx-1)) / dx;
+  uniform int ybuckets = (height + (dy-1)) / dy;
+
+  uniform int x0 = (taskIndex % xbuckets) * dx;
+  uniform int y0 = (taskIndex / xbuckets) * dy;
+  uniform int x1 = x0 + dx, y1 = y0 + dy;
+  x1 = min(x1, width);
+  y1 = min(y1, height);
+
+  volume_tile(x0, y0, x1, y1, density, nVoxels, raster2camera,
+      camera2world, width, height, image);
 }
 
 
@@ -347,6 +404,7 @@ volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
     // Launch tasks to work on (dx,dy)-sized tiles of the image
     uniform int dx = 8, dy = 8;
     uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
+    print("nTasks= %\n", nTasks);
     launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
                                width, height, image);
 }

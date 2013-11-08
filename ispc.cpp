@@ -665,7 +665,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_hasHalf = false;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasTranscendentals = true;
+        this->m_hasTranscendentals = false; //true;
         this->m_hasGather = this->m_hasScatter = false;
     }
     else {
