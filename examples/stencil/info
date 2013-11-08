@@ -1,0 +1,5 @@
+I have been working with sort example, attempting to use ISPC_USE_OMP for tasking and adding example for sort_paralle.cpp which uses  __gnu_parallel::sort to compare apples with apples, but clang has no support for OpenMP.
+
+The reason to use ISPC_USE_OMP is to control thread-affinity on multi-socket systems. For bandwidth bound throughput, the tasking system based on pthread make it messy to control thread-affinity and w/o this for bandwidth bound work-loads performance may suffer..
+
+I used sort example to begin with

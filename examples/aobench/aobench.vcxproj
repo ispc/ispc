@@ -26,15 +26,15 @@
   <ItemGroup>
     <CustomBuild Include="ao.ispc">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4,avx
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4,avx
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4,avx
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4,avx
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4,avx
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
@@ -44,6 +44,7 @@
     <ProjectGuid>{F29204CA-19DF-4F3C-87D5-03F4EEDAAFEB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>aobench</RootNamespace>
+    <ISPC_compiler Condition=" '$(ISPC_compiler)' == '' ">ispc</ISPC_compiler>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

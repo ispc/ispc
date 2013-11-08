@@ -25,6 +25,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "deferred_shading", "deferre
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "perfbench", "perfbench\perfbench.vcxproj", "{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sort", "sort\sort.vcxproj", "{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -129,6 +131,14 @@ Global
 		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|Win32.Build.0 = Release|Win32
 		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|x64.ActiveCfg = Release|x64
 		{D923BB7E-A7C8-4850-8FCF-0EB9CE35B4E8}.Release|x64.Build.0 = Release|x64
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Debug|Win32.Build.0 = Debug|Win32
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Debug|x64.ActiveCfg = Debug|x64
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Debug|x64.Build.0 = Debug|x64
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|Win32.ActiveCfg = Release|Win32
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|Win32.Build.0 = Release|Win32
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|x64.ActiveCfg = Release|x64
+		{6D3EF8C5-AE26-407B-9ECE-C27CB988D9C2}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
