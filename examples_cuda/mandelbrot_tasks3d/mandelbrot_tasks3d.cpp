@@ -42,7 +42,7 @@
 #include <algorithm>
 #include <string.h>
 #include "../timing.h"
-#include "mandelbrot_tasks3d_ispc.h"
+#include "mandelbrot_ispc.h"
 using namespace ispc;
 
 extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
@@ -127,6 +127,7 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minSerial = 1e30;
+#if 0
     for (int i = 0; i < 3; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
@@ -139,6 +140,7 @@ int main(int argc, char *argv[]) {
 
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "mandelbrot-serial.ppm");
+#endif
 
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
 

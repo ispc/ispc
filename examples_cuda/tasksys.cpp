@@ -59,7 +59,9 @@
 #define ISPC_USE_PTHREADS
 #define ISPC_USE_PTHREADS_FULLY_SUBSCRIBED
 #define ISPC_USE_CILK
+*/
 #define ISPC_USE_OMP
+/*
 #define ISPC_USE_TBB_TASK_GROUP
 #define ISPC_USE_TBB_PARALLEL_FOR
 
@@ -943,7 +945,7 @@ InitTaskSystem() {
 
 inline void
 TaskGroup::Launch(int baseIndex, int count) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
     for(int i = 0; i < count; i++) {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 

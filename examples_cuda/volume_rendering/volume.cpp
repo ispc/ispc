@@ -179,10 +179,10 @@ int main(int argc, char *argv[]) {
     double dt = get_elapsed_mcycles();
     minISPC = std::min(minISPC, dt);
   }
-#endif
 
   printf("[volume ispc 1 core]:\t\t[%.3f] million cycles\n", minISPC);
   writePPM(image, width, height, "volume-ispc-1core.ppm");
+#endif
 
   // Clear out the buffer
   for (int i = 0; i < width * height; ++i)
@@ -214,6 +214,7 @@ int main(int argc, char *argv[]) {
   // minimum time.
   //
   double minSerial = 1e30;
+#if 0
   for (int i = 0; i < 3; ++i) {
     reset_and_start_timer();
     volume_serial(density, n, raster2camera, camera2world,
@@ -224,6 +225,7 @@ int main(int argc, char *argv[]) {
 
   printf("[volume serial]:\t\t[%.3f] million cycles\n", minSerial);
   writePPM(image, width, height, "volume-serial.ppm");
+#endif
 
   printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
       minSerial/minISPC, minSerial / minISPCtasks);

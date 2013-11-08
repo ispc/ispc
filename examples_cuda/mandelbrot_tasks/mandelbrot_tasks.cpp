@@ -42,105 +42,123 @@
 #include <algorithm>
 #include <string.h>
 #include "../timing.h"
-#include "mandelbrot_tasks_ispc.h"
+#include "mandelbrot_ispc.h"
 using namespace ispc;
 
+#include <sys/time.h>
+
+
+double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
-                              int width, int height, int maxIterations,
-                              int output[]);
+    int width, int height, int maxIterations,
+    int output[]);
 
 /* Write a PPM image file with the image of the Mandelbrot set */
 static void
 writePPM(int *buf, int width, int height, const char *fn) {
-    FILE *fp = fopen(fn, "wb");
-    fprintf(fp, "P6\n");
-    fprintf(fp, "%d %d\n", width, height);
-    fprintf(fp, "255\n");
-    for (int i = 0; i < width*height; ++i) {
-        // Map the iteration count to colors by just alternating between
-        // two greys.
-        char c = (buf[i] & 0x1) ? 240 : 20;
-        for (int j = 0; j < 3; ++j)
-            fputc(c, fp);
-    }
-    fclose(fp);
-    printf("Wrote image file %s\n", fn);
+  FILE *fp = fopen(fn, "wb");
+  fprintf(fp, "P6\n");
+  fprintf(fp, "%d %d\n", width, height);
+  fprintf(fp, "255\n");
+  for (int i = 0; i < width*height; ++i) {
+    // Map the iteration count to colors by just alternating between
+    // two greys.
+    char c = (buf[i] & 0x1) ? 240 : 20;
+    for (int j = 0; j < 3; ++j)
+      fputc(c, fp);
+  }
+  fclose(fp);
+  printf("Wrote image file %s\n", fn);
 }
 
 
 static void usage() {
-    fprintf(stderr, "usage: mandelbrot [--scale=<factor>]\n");
-    exit(1);
+  fprintf(stderr, "usage: mandelbrot [--scale=<factor>]\n");
+  exit(1);
 }
 
 int main(int argc, char *argv[]) {
-    unsigned int width = 1536;
-    unsigned int height = 1024;
-    float x0 = -2;
-    float x1 = 1;
-    float y0 = -1;
-    float y1 = 1;
+  unsigned int width = 1536;
+  unsigned int height = 1024;
+  float x0 = -2;
+  float x1 = 1;
+  float y0 = -1;
+  float y1 = 1;
 
-    if (argc == 1)
-        ;
-    else if (argc == 2) {
-        if (strncmp(argv[1], "--scale=", 8) == 0) {
-            float scale = atof(argv[1] + 8);
-            if (scale == 0.f)
-                usage();
-            width *= scale;
-            height *= scale;
-            // round up to multiples of 16
-            width = (width + 0xf) & ~0xf;
-            height = (height + 0xf) & ~0xf;
-        }
-        else 
-            usage();
-    }
-    else
+  if (argc == 1)
+    ;
+  else if (argc == 2) {
+    if (strncmp(argv[1], "--scale=", 8) == 0) {
+      float scale = atof(argv[1] + 8);
+      if (scale == 0.f)
         usage();
-
-    int maxIterations = 512;
-    int *buf = new int[width*height];
-
-    //
-    // Compute the image using the ispc implementation; report the minimum
-    // time of three runs.
-    //
-    double minISPC = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        // Clear out the buffer
-        for (unsigned int i = 0; i < width * height; ++i)
-            buf[i] = 0;
-        reset_and_start_timer();
-        mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
-        double dt = get_elapsed_mcycles();
-        minISPC = std::min(minISPC, dt);
+      width *= scale;
+      height *= scale;
+      // round up to multiples of 16
+      width = (width + 0xf) & ~0xf;
+      height = (height + 0xf) & ~0xf;
     }
+    else 
+      usage();
+  }
+  else
+    usage();
 
-    printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
-    writePPM(buf, width, height, "mandelbrot-ispc.ppm");
+  int maxIterations = 512;
+  int *buf = new int[width*height];
+
+  //
+  // Compute the image using the ispc implementation; report the minimum
+  // time of three runs.
+  //
+  double minISPC = 1e30;
+  for (int i = 0; i < 3; ++i) {
+    // Clear out the buffer
+    for (unsigned int i = 0; i < width * height; ++i)
+      buf[i] = 0;
+    reset_and_start_timer();
+    double t0 = rtc();
+    mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
+    double dt = rtc() - t0; //get_elapsed_mcycles();
+    minISPC = std::min(minISPC, dt);
+  }
+
+  printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
+  writePPM(buf, width, height, "mandelbrot-ispc.ppm");
 
 
-    // 
-    // And run the serial implementation 3 times, again reporting the
-    // minimum time.
-    //
-    double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        // Clear out the buffer
-        for (unsigned int i = 0; i < width * height; ++i)
-            buf[i] = 0;
-        reset_and_start_timer();
-        mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
-        double dt = get_elapsed_mcycles();
-        minSerial = std::min(minSerial, dt);
-    }
+  // 
+  // And run the serial implementation 3 times, again reporting the
+  // minimum time.
+  //
+  double minSerial = 1e30;
+#if 0
+  for (int i = 0; i < 3; ++i) {
+    // Clear out the buffer
+    for (unsigned int i = 0; i < width * height; ++i)
+      buf[i] = 0;
+    reset_and_start_timer();
+    mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
+    double dt = get_elapsed_mcycles();
+    minSerial = std::min(minSerial, dt);
+  }
 
-    printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
-    writePPM(buf, width, height, "mandelbrot-serial.ppm");
+  printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
+  writePPM(buf, width, height, "mandelbrot-serial.ppm");
+#endif
 
-    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
+  printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
 
-    return 0;
+  return 0;
 }
