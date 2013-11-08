@@ -34,13 +34,14 @@
 #ifdef __NVPTX__
 #warning "emitting DEVICE code"
 #define taskIndex blockIndex0()
+#define taskCount blockCount0()
 #define programIndex laneIndex()
 #define programCount warpSize()
 #else
 #warning "emitting HOST code"
 #endif
 
-static void
+static inline void
 stencil_step(uniform int x0, uniform int x1,
              uniform int y0, uniform int y1,
              uniform int z0, uniform int z1,
@@ -50,29 +51,62 @@ stencil_step(uniform int x0, uniform int x1,
     const uniform int Nxy = Nx * Ny;
 
 //    foreach (z = z0 ... z1, y = y0 ... y1, x = x0 ... x1) 
+#if 0
+#define VER1
+#endif
+
+#ifdef VER1
+    const uniform long x1o = 1;
+    const uniform long x2o = 2;
+    const uniform long x3o = 3;
+    const uniform long y1o = Nx;
+    const uniform long y2o = Nx*2;
+    const uniform long y3o = Nx*3;
+    const uniform long z1o = Nxy;
+    const uniform long z2o = Nxy*2;
+    const uniform long z3o = Nxy*3;
+#endif
     for (uniform int z = z0; z < z1; z++)
       for (uniform int y = y0; y < y1; y++)
-        for (uniform int xb = x0; xb < x1; xb += programCount)
       {
-        const int x = xb + programIndex;
-        int index = (z * Nxy) + (y * Nx) + x;
+        const int index_base = (z * Nxy) + (y * Nx);
+        for (uniform int xb = x0; xb < x1; xb += programCount)
+        {
+          const int x = xb + programIndex;
+          int index = index_base + x;
+#ifndef VER1
 #define A_cur(x, y, z) Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)]
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
-        double div = coef[0] * A_cur(0, 0, 0) +
+          double div = coef[0] * A_cur(0, 0, 0) +
             coef[1] * (A_cur(+1, 0, 0) + A_cur(-1, 0, 0) +
-                       A_cur(0, +1, 0) + A_cur(0, -1, 0) +
-                       A_cur(0, 0, +1) + A_cur(0, 0, -1)) +
+                A_cur(0, +1, 0) + A_cur(0, -1, 0) +
+                A_cur(0, 0, +1) + A_cur(0, 0, -1)) +
             coef[2] * (A_cur(+2, 0, 0) + A_cur(-2, 0, 0) +
-                       A_cur(0, +2, 0) + A_cur(0, -2, 0) +
-                       A_cur(0, 0, +2) + A_cur(0, 0, -2)) +
+                A_cur(0, +2, 0) + A_cur(0, -2, 0) +
+                A_cur(0, 0, +2) + A_cur(0, 0, -2)) +
             coef[3] * (A_cur(+3, 0, 0) + A_cur(-3, 0, 0) +
-                       A_cur(0, +3, 0) + A_cur(0, -3, 0) +
-                       A_cur(0, 0, +3) + A_cur(0, 0, -3));
+                A_cur(0, +3, 0) + A_cur(0, -3, 0) +
+                A_cur(0, 0, +3) + A_cur(0, 0, -3));
+#else
+#define A_cur(x, y, z)  Ain [index + (x) + (y) + (z)]
+#define A_next(x, y, z) Aout[index + (x) + (y) + (z)]
+          double div = coef[0] * A_cur(0, 0, 0) +
+            coef[1] * (A_cur(+x1o, 0, 0) + A_cur(-x1o, 0, 0) +
+                A_cur(0, +y1o, 0) + A_cur(0, -y1o, 0) +
+                A_cur(0, 0, +z1o) + A_cur(0, 0, -z1o)) +
+            coef[2] * (A_cur(+x2o, 0, 0) + A_cur(-x2o, 0, 0) +
+                A_cur(0, +y2o, 0) + A_cur(0, -y2o, 0) +
+                A_cur(0, 0, +z2o) + A_cur(0, 0, -z2o)) +
+            coef[3] * (A_cur(+x3o, 0, 0) + A_cur(-x3o, 0, 0) +
+                A_cur(0, +y3o, 0) + A_cur(0, -y3o, 0) +
+                A_cur(0, 0, +z3o) + A_cur(0, 0, -z3o));
+#endif
 
-        if (x < x1)
-          A_next(0, 0, 0) = 2.0d0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
-            vsq[index] * div;
-    }
+          if (x < x1)
+            A_next(0, 0, 0) = 2.0d0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
+              vsq[index] * div;
+        }
+      }
 }
 
 
@@ -83,6 +117,8 @@ stencil_step_task(uniform int x0, uniform int x1,
                   uniform int Nx, uniform int Ny, uniform int Nz,
                   uniform const double coef[4], uniform const double vsq[],
                   uniform const double Ain[], uniform double Aout[]) {
+  if(taskIndex >= taskCount) return;
+
     stencil_step(x0, x1, y0, y1, z0+taskIndex, z0+taskIndex+1,
                  Nx, Ny, Nz, coef, vsq, Ain, Aout);
 }

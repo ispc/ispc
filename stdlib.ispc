@@ -63,46 +63,55 @@
 // CUDA Specific primitives
 //
 #define CUDABLOCKSIZE 128
+#define WARPSIZE2     5
+#define WARPSIZE      (1<<WARPSIZE2)
+/***************/
+__declspec(safe,cost0)
+  static inline uniform int warpSize()
+{
+  return WARPSIZE; //__warpsize();
+}
+/***************/
+__declspec(safe,cost0)
+  static inline uniform int laneIndex()
+{
+  return __tid_x() & (WARPSIZE-1) ; //& (warpSize()-1);
+}
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockIndex0()
 {
-  return __ctaid_x();
+  return (__ctaid_x() * (CUDABLOCKSIZE >> WARPSIZE2)) + (__tid_x() >> WARPSIZE2);
 }
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockIndex1()
 {
   return __ctaid_y();
 }
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockIndex2()
 {
   return __ctaid_y();
 }
-
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockCount0()
 {
-  return __nctaid_x();
+  return __nctaid_x() * (CUDABLOCKSIZE >> WARPSIZE2);
 }
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockCount1()
 {
   return __nctaid_y();
 }
+/***************/
 __declspec(safe,cost0)
   static inline uniform int blockCount2()
 {
   return __nctaid_z();
-}
-__declspec(safe,cost0)
-  static inline uniform int warpSize()
-{
-  return __warpsize();
-}
-__declspec(safe,cost0)
-  static inline uniform int laneIndex()
-{
-  return __tid_x() & (warpSize()-1);
 }
 
 ///////////////////////////////////////////////////////////////////////////

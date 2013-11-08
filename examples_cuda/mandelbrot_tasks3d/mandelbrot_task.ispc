@@ -1,13 +1,10 @@
 #ifdef __NVPTX__  
-#define blockIndex0 blockIndex0()
-#define blockIndex1 blockIndex1()
-#define vectorWidth warpSize()
-#define vectorIndex laneIndex()
-#else
-#define blockIndex0 taskIndex0
-#define blockIndex1 taskIndex1
-#define vectorWidth programCount
-#define vectorIndex programIndex
+#define taskIndex0 blockIndex0()
+#define taskIndex1 blockIndex1()
+#define taskCount0 blockCount0()
+#define taskCount1 blockCount1()
+#define programCount warpSize()
+#define programIndex laneIndex()
 #endif
 
 #if 0
@@ -46,23 +43,25 @@ mandelbrot_scanline(
     uniform int xspan, uniform int yspan,
     uniform int maxIterations, uniform int output[]) 
 {
-  const uniform int xstart = blockIndex0 * xspan;
+  if (taskIndex0 >= taskCount0) return;
+  if (taskIndex1 >= taskCount1) return;
+
+  const uniform int xstart = taskIndex0 * xspan;
   const uniform int xend   = min(xstart  + xspan, width);
 
-  const uniform int ystart = blockIndex1 * yspan;
+  const uniform int ystart = taskIndex1 * yspan;
   const uniform int yend   = min(ystart  + yspan, height);
 
-//  assert(xspan >= vectorWidth);
 
   for (uniform int yi = ystart; yi < yend; yi++)
-    for (uniform int xi = xstart; xi < xend; xi += vectorWidth)
+    for (uniform int xi = xstart; xi < xend; xi += programCount)
     {
-      const float x = x0 + (xi + vectorIndex) * dx;
+      const float x = x0 + (xi + programIndex) * dx;
       const float y = y0 +  yi              * dy;
 
       const int res = mandel(x,y,maxIterations);
-      const int index = yi * width + (xi + vectorIndex);
-      if (xi + vectorIndex < xend)
+      const int index = yi * width + (xi + programIndex);
+      if (xi + programIndex < xend)
         output[index] = res;
     }
 }

@@ -1,8 +1,8 @@
 #include <stdio.h>
-#define blockIndex0 (blockIdx.x)
+#define blockIndex0 (blockIdx.x*4 + (threadIdx.x >> 5))
 #define blockIndex1 (blockIdx.y)
 #define vectorWidth (32)
-#define vectorIndex (threadIdx.x & (vectorWidth-1))
+#define vectorIndex (threadIdx.x & 31)
 
   int __device__ __forceinline__
 mandel(float c_re, float c_im, int count) 

@@ -40,14 +40,13 @@
 
 #include <stdio.h>
 #include <algorithm>
-#include <math.h>
+#include <string.h>
 #include "../timing.h"
-#include "stencil_ispc.h"
-using namespace ispc;
 
-#include <cassert>
 #include <iostream>
 #include <cuda.h>
+#include <vector>
+#include <cassert>
 #include "drvapi_error_string.h"
 
 #define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
@@ -60,6 +59,13 @@ void __checkCudaErrors(CUresult err, const char *file, const int line) {
     exit(-1);
   }
 }
+extern "C"
+void mandelbrot_ispc(
+     float x0,  float y0, 
+     float x1,  float y1,
+     int width,  int height, 
+     int maxIterations,  int output[]) ;
+
 
 /**********************/
 /* Basic CUDriver API */
@@ -132,7 +138,6 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
 #define deviceLaunch(func,nbx,nby,nbz,params) \
-  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
@@ -180,9 +185,49 @@ std::vector<char> readBinary(const char * filename)
 
 extern "C" 
 {
+#if 0
+  struct ModuleManager
+  {
+    private:
+      typedef std::pair<std::string, CUModule> ModulePair;
+      typedef std::map <std::string, CUModule> ModuleMap;
+      ModuleMap module_list;
+
+      ModuleMap::iterator findModule(const char * module_name)
+      {
+        return module_list.find(std::string(module_name));
+      }
+
+    public:
+
+      CUmodule loadModule(const char * module_name, const char * module_data)
+      {
+        const ModuleMap::iterator it = findModule(module_name)
+        if (it != ModuleMap::end)
+        {
+          CUmodule cudaModule = loadModule(module);
+          module_list.insert(std::make_pair(std::string(module_name), cudaModule));
+          return cudaModule
+        }
+        return it->second;
+      }
+      void unloadModule(const char * module_name)
+      {
+        ModuleMap::iterator it = findModule(module_name)
+        if (it != ModuleMap::end)
+          module_list.erase(it);
+      }
+  };
+#endif
 
   void *CUDAAlloc(void **handlePtr, int64_t size, int32_t alignment)
   {
+#if 0
+    fprintf(stderr, " ptr= %p\n", *handlePtr);
+    fprintf(stderr, " size= %d\n", (int)size);
+    fprintf(stderr, " alignment= %d\n", (int)alignment);
+    fprintf(stderr, " ------- \n\n");
+#endif
     return NULL;
   }
   void CUDALaunch(
@@ -203,10 +248,30 @@ extern "C"
     const std::vector<char> module_str = readBinary("kernel.cubin");
     const char *  module = &module_str[0];
 #endif
+#if 1
     CUmodule   cudaModule   = loadModule(module);
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
     deviceLaunch(cudaFunction, countx, county, countz, func_args);
     unloadModule(cudaModule);
+#else
+    fprintf(stderr, " handle= %p\n", *handlePtr);
+    fprintf(stderr, " count= %d %d %d\n", countx, county, countz);
+
+    fprintf(stderr, " module_name= %s \n", module_name);
+    fprintf(stderr, " func_name= %s \n", func_name);
+//    fprintf(stderr, " ptx= %s \n", module);
+    fprintf(stderr, " x0= %g  \n", *((float*)(func_args[0])));
+    fprintf(stderr, " dx= %g  \n", *((float*)(func_args[1])));
+    fprintf(stderr, " y0= %g  \n", *((float*)(func_args[2])));
+    fprintf(stderr, " dy= %g  \n", *((float*)(func_args[3])));
+    fprintf(stderr, " w= %d  \n", *((int*)(func_args[4])));
+    fprintf(stderr, " h= %d  \n", *((int*)(func_args[5])));
+    fprintf(stderr, " xs= %d  \n", *((int*)(func_args[6])));
+    fprintf(stderr, " ys= %d  \n", *((int*)(func_args[7])));
+    fprintf(stderr, " maxit= %d  \n", *((int*)(func_args[8])));
+    fprintf(stderr, " ptr= %p  \n", *((int**)(func_args[9])));
+    fprintf(stderr, " ------- \n\n");
+#endif
   }
   void CUDASync(void *handle)
   {
@@ -214,143 +279,124 @@ extern "C"
   }
   void ISPCSync(void *handle)
   {
-    checkCudaErrors(cuStreamSynchronize(0));
   }
   void CUDAFree(void *handle)
   {
   }
 }
 
-
-extern void loop_stencil_serial(int t0, int t1, int x0, int x1,
-    int y0, int y1, int z0, int z1,
-    int Nx, int Ny, int Nz,
-    const double coef[5], 
-    const double vsq[],
-    double Aeven[], double Aodd[]);
+/********************/
 
 
-void InitData(int Nx, int Ny, int Nz, double *A[2], double *vsq) {
-  int offset = 0;
-  for (int z = 0; z < Nz; ++z)
-    for (int y = 0; y < Ny; ++y)
-      for (int x = 0; x < Nx; ++x, ++offset) {
-        A[0][offset] = (x < Nx / 2) ? x / double(Nx) : y / double(Ny);
-        A[1][offset] = 0;
-        vsq[offset] = x*y*z / double(Nx * Ny * Nz);
-      }
+extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
+                              int width, int height, int maxIterations,
+                              int output[]);
+
+/* Write a PPM image file with the image of the Mandelbrot set */
+static void
+writePPM(int *buf, int width, int height, const char *fn) {
+    FILE *fp = fopen(fn, "wb");
+    fprintf(fp, "P6\n");
+    fprintf(fp, "%d %d\n", width, height);
+    fprintf(fp, "255\n");
+    for (int i = 0; i < width*height; ++i) {
+        // Map the iteration count to colors by just alternating between
+        // two greys.
+        char c = (buf[i] & 0x1) ? 240 : 20;
+        for (int j = 0; j < 3; ++j)
+            fputc(c, fp);
+    }
+    fclose(fp);
+    printf("Wrote image file %s\n", fn);
 }
 
 
-int main() {
-  int Nx = 256, Ny = 256, Nz = 256;
-  int width = 4;
-  double *Aserial[2], *Aispc[2];
-  Aserial[0] = new double [Nx * Ny * Nz];
-  Aserial[1] = new double [Nx * Ny * Nz];
-  Aispc[0] = new double [Nx * Ny * Nz];
-  Aispc[1] = new double [Nx * Ny * Nz];
-  double *vsq = new double [Nx * Ny * Nz];
+static void usage() {
+    fprintf(stderr, "usage: mandelbrot [--scale=<factor>]\n");
+    exit(1);
+}
 
-  double coeff[4] = { 0.5, -.25, .125, -.0625 }; 
+int main(int argc, char *argv[]) {
+    unsigned int width = 1536;
+    unsigned int height = 1024;
+    float x0 = -2;
+    float x1 = 1;
+    float y0 = -1;
+    float y1 = 1;
 
-  /*******************/
-  createContext();
-  /*******************/
-
-  const size_t bufsize = sizeof(double)*Nx*Ny*Nz;
-  devicePtr d_Aispc0   = deviceMalloc(bufsize);
-  devicePtr d_Aispc1   = deviceMalloc(bufsize);
-  devicePtr d_vsq      = deviceMalloc(bufsize);
-  devicePtr d_coeff    = deviceMalloc(4*sizeof(double));
-
-
-  InitData(Nx, Ny, Nz, Aispc, vsq);
-
-  //
-  // Compute the image using the ispc implementation on one core; report
-  // the minimum time of three runs.
-  //
-  double minTimeISPC = 1e30;
-  for (int i = 0; i < 3; ++i) {
-    reset_and_start_timer();
-    loop_stencil_ispc(0, 6, width, Nx - width, width, Ny - width,
-        width, Nz - width, Nx, Ny, Nz, coeff, vsq,
-        Aispc[0], Aispc[1]);
-    double dt = get_elapsed_mcycles();
-    minTimeISPC = std::min(minTimeISPC, dt);
-  }
-
-  printf("[stencil ispc 1 core]:\t\t[%.3f] million cycles\n", minTimeISPC);
-
-  InitData(Nx, Ny, Nz, Aispc, vsq);
-
-  memcpyH2D(d_Aispc0, Aispc[0], bufsize);
-  memcpyH2D(d_Aispc1, Aispc[1], bufsize);
-  memcpyH2D(d_vsq,    vsq,      bufsize);
-  memcpyH2D(d_coeff,  coeff,    4*sizeof(double));
-  //
-  // Compute the image using the ispc implementation with tasks; report
-  // the minimum time of three runs.
-  //
-  double minTimeISPCTasks = 1e30;
-  for (int i = 0; i < 3; ++i) {
-    reset_and_start_timer();
-    loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
-        width, Nz - width, Nx, Ny, Nz, (double*)d_coeff, (double*)d_vsq,
-        (double*)d_Aispc0, (double*)d_Aispc1);
-    double dt = get_elapsed_mcycles();
-    minTimeISPCTasks = std::min(minTimeISPCTasks, dt);
-  }
-  memcpyD2H(Aispc[1], d_Aispc1, bufsize);
-  //memcpyD2H(Aispc[1], d_vsq, bufsize);
-
-  printf("[stencil ispc + tasks]:\t\t[%.3f] million cycles\n", minTimeISPCTasks);
-
-  InitData(Nx, Ny, Nz, Aserial, vsq);
-
-  // 
-  // And run the serial implementation 3 times, again reporting the
-  // minimum time.
-  //
-  double minTimeSerial = 1e30;
-  for (int i = 0; i < 3; ++i) {
-    reset_and_start_timer();
-    loop_stencil_serial(0, 6, width, Nx-width, width, Ny - width,
-        width, Nz - width, Nx, Ny, Nz, coeff, vsq,
-        Aserial[0], Aserial[1]);
-    double dt = get_elapsed_mcycles();
-    minTimeSerial = std::min(minTimeSerial, dt);
-  }
-
-  printf("[stencil serial]:\t\t[%.3f] million cycles\n", minTimeSerial);
-
-  printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
-      minTimeSerial / minTimeISPC, minTimeSerial / minTimeISPCTasks);
-
-  // Check for agreement
-  int offset = 0;
-  int nerr = 0;
-  for (int z = 0; z < Nz; ++z)
-    for (int y = 0; y < Ny; ++y)
-      for (int x = 0; x < Nx; ++x, ++offset) {
-
-        double error = fabsf((Aserial[1][offset] - Aispc[1][offset]) /
-            Aserial[1][offset]);
-        if (error > 1e-3)
-        {
-          if (nerr < 100)
-            printf("Error @ (%d,%d,%d): ispc = %g, serial = %g error= %g\n",
-                x, y, z, Aispc[1][offset], Aserial[1][offset], error);
-          nerr++;
+    if (argc == 1)
+        ;
+    else if (argc == 2) {
+        if (strncmp(argv[1], "--scale=", 8) == 0) {
+            float scale = atof(argv[1] + 8);
+            if (scale == 0.f)
+                usage();
+            width *= scale;
+            height *= scale;
+            // round up to multiples of 16
+            width = (width + 0xf) & ~0xf;
+            height = (height + 0xf) & ~0xf;
         }
-      }
+        else 
+            usage();
+    }
+    else
+        usage();
 
-  fprintf(stderr, " nerr= %d  frac= %g \n", nerr, 1.0*nerr/(1.0*Nx*Ny*Nz));
+    /*******************/
+    createContext();
+    /*******************/
 
-  /*******************/
-  destroyContext();
-  /*******************/
+    int maxIterations = 512;
+    int *buf = new int[width*height];
 
-  return 0;
+    for (unsigned int i = 0; i < width*height; i++)
+      buf[i] = 0;
+    const size_t bufsize = sizeof(int)*width*height;
+    devicePtr d_buf = deviceMalloc(bufsize);
+    memcpyH2D(d_buf, buf, bufsize);
+
+    //
+    // Compute the image using the ispc implementation; report the minimum
+    // time of three runs.
+    //
+    double minISPC = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        // Clear out the buffer
+        for (unsigned int i = 0; i < width * height; ++i)
+            buf[i] = 0;
+        reset_and_start_timer();
+        mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, (int*)d_buf);
+        double dt = get_elapsed_mcycles();
+        minISPC = std::min(minISPC, dt);
+    }
+
+    memcpyD2H(buf, d_buf, bufsize);
+    deviceFree(d_buf);
+
+    printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
+    writePPM(buf, width, height, "mandelbrot-ispc.ppm");
+
+
+    // 
+    // And run the serial implementation 3 times, again reporting the
+    // minimum time.
+    //
+    double minSerial = 1e30;
+    for (int i = 0; i < 3; ++i) {
+        // Clear out the buffer
+        for (unsigned int i = 0; i < width * height; ++i)
+            buf[i] = 0;
+        reset_and_start_timer();
+        mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
+        double dt = get_elapsed_mcycles();
+        minSerial = std::min(minSerial, dt);
+    }
+
+    printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
+    writePPM(buf, width, height, "mandelbrot-serial.ppm");
+
+    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", minSerial/minISPC);
+
+    return 0;
 }

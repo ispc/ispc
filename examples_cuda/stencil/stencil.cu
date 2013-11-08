@@ -1,6 +1,6 @@
 #define programCount 32
-#define programIndex threadIdx.x
-#define taskIndex blockIdx.x
+#define programIndex (threadIdx.x & 31)
+#define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
 
 __device__ static void
 stencil_step( int x0,  int x1,
