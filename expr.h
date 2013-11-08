@@ -155,6 +155,7 @@ public:
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     void Print() const;
 
     Expr *Optimize();

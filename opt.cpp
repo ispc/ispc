@@ -4930,8 +4930,6 @@ CreatePeepholePass() {
   return new PeepholePass;
 }
 
-#include <iostream>
-
 /** Given an llvm::Value known to be an integer, return its value as
     an int64_t.
 */
@@ -4978,13 +4976,13 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
         if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst)) {
           llvm::Function *func = ci->getCalledFunction();
           for (int i = 0; i < 6; i++) {
-            if (shifts[i] == func) {
+            if (shifts[i] && (shifts[i] == func)) {
               // we matched a call
               llvm::Value *shiftedVec = ci->getArgOperand(0);
               llvm::Value *shiftAmt = ci->getArgOperand(1);
               if (llvm::isa<llvm::Constant>(shiftAmt)) {
                 int vectorWidth = g->target->getVectorWidth();
-                int shuffleVals[vectorWidth];
+                int * shuffleVals = new int[vectorWidth];
                 int shiftInt = lGetIntValue(shiftAmt);
                 for (int i = 0; i < vectorWidth; i++) {
                   int s = i + shiftInt;
@@ -4998,6 +4996,7 @@ ReplaceStdlibShiftPass::runOnBasicBlock(llvm::BasicBlock &bb) {
                                                                    shuffleIdxs, "vecShift", ci);
                 ci->replaceAllUsesWith(shuffle);
                 modifiedAny = true;
+                delete [] shuffleVals;
               } else {
                 PerformanceWarning(SourcePos(), "Stdlib shift() called without constant shift amount."); 
               }

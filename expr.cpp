@@ -2798,6 +2798,17 @@ BinaryExpr::TypeCheck() {
     }
 }
 
+const Type *
+BinaryExpr::GetLValueType() const {
+  const Type *t = GetType();
+  if (CastType<PointerType>(t) != NULL) {
+    // Are we doing something like (basePtr + offset)[...] = ...
+    return t;
+  }
+  else {
+    return NULL;
+  }
+}
 
 int
 BinaryExpr::EstimateCost() const {
@@ -4275,8 +4286,9 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL) {
-            // Only check for non-function calls
+        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL && 
+            dynamic_cast<BinaryExpr *>(baseExpr) == NULL) {
+          // Don't check if we're doing a function call or pointer arith
             AssertPos(pos, baseSym != NULL);
         }
         mask = lMaskForSymbol(baseSym, ctx);

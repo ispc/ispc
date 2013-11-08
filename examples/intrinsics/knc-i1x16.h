@@ -719,8 +719,9 @@ static FORCEINLINE __vec16_i32 __shuffle2_i32(__vec16_i32 v0, __vec16_i32 v1, __
 
 template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<64>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<64>(p);
+  return _mm512_load_epi32(p);
 #else
   __vec16_i32 v;
   v = _mm512_extloadunpacklo_epi32(v,           p,    _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
@@ -731,8 +732,9 @@ template <int ALIGN> static FORCEINLINE __vec16_i32 __load(const __vec16_i32 *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32 v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  __store<64>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<64>(p,v);
+  _mm512_store_epi32(p, v);
 #else
   _mm512_extpackstorelo_epi32(          p,    v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_epi32((uint8_t*)p+64, v, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
@@ -979,8 +981,11 @@ static FORCEINLINE __vec16_i64 __shuffle2_double(__vec16_i64 _v0, __vec16_i64 _v
 
 template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<128>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<128>(p);
+  __m512i v2 = _mm512_load_epi32(p);
+  __m512i v1 = _mm512_load_epi32(((uint8_t*)p)+64);
+  return __vec16_i64(v2,v1);
 #else
   __vec16_i32 v1;
   __vec16_i32 v2;
@@ -995,8 +1000,12 @@ template <int ALIGN> static FORCEINLINE __vec16_i64 __load(const __vec16_i64 *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64 v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __store<128>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<128>(p,v);
+  __m512i v1 = v.v2;
+  __m512i v2 = v.v1;
+  _mm512_store_epi64(p, v2);
+  _mm512_store_epi64(((uint8_t*)p)+64, v1);
 #else
   __m512i v1 = v.v2;
   __m512i v2 = v.v1;
@@ -1099,8 +1108,9 @@ static FORCEINLINE __vec16_f __shuffle2_float(__vec16_f _v0, __vec16_f _v1, __ve
 
 template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<64>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<64>(p);
+  return _mm512_load_ps(p);
 #else
   __vec16_f v;
   v = _mm512_extloadunpacklo_ps(v,           p,    _MM_UPCONV_PS_NONE, _MM_HINT_NONE);
@@ -1111,8 +1121,9 @@ template <int ALIGN> static FORCEINLINE __vec16_f __load(const __vec16_f *p)
 
 template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  __store<64>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // __store<64>(p,v);
+  _mm512_store_ps(p, v);
 #else
   _mm512_extpackstorelo_ps(          p,    v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_ps((uint8_t*)p+64, v, _MM_DOWNCONV_PS_NONE, _MM_HINT_NONE);
@@ -1372,8 +1383,9 @@ static FORCEINLINE __vec16_d __shuffle2_double(__vec16_d _v0, __vec16_d _v1, con
 
 template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) \
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __load<128>(p);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __load<128>(p);
+  return __vec16_d(_mm512_load_pd(p), _mm512_load_pd(((uint8_t*)p)+64));
 #else
   __vec16_d ret;
   ret.v1 = _mm512_extloadunpacklo_pd(ret.v1, p, _MM_UPCONV_PD_NONE, _MM_HINT_NONE);
@@ -1386,8 +1398,10 @@ template <int ALIGN> static FORCEINLINE __vec16_d __load(const __vec16_d *p) \
  
 template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v) 
 {
-#ifdef ISPC_FORCE_ALIGNED_MEMORY__REMOVETHIS_WHEN_FIXED
-  return __store<128>(p,v);
+#ifdef ISPC_FORCE_ALIGNED_MEMORY
+  // return __store<128>(p,v);
+  _mm512_store_pd(p, v.v1);
+  _mm512_store_pd(((uint8_t*)p)+64, v.v2);
 #else
   _mm512_extpackstorelo_pd(p, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
   _mm512_extpackstorehi_pd((uint8_t*)p+64, v.v1, _MM_DOWNCONV_PD_NONE, _MM_HINT_NONE);
