@@ -31,27 +31,70 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#ifdef __NVPTX__
-#warning "emitting DEVICE code"
-#define taskIndex blockIndex0()
-#define taskCount blockCount0()
-#define programIndex laneIndex()
-#define programCount warpSize()
-#else
-#warning "emitting HOST code"
-#endif
+#define programCount 32
+#define programIndex (threadIdx.x & 31)
+#define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
+#define taskCount (gridDim.x*4)
+__device__ static inline float clamp(float v, float low, float high) 
+{
+      return min(max(v, low), high);
+}
 
 
-typedef float<3> float3;
+#define float3 Float3
+struct Float3
+{
+  float x,y,z;
+  __device__ friend Float3 operator+(const Float3 a, const Float3 b)
+  {
+    Float3 c;
+    c.x = a.x+b.x;
+    c.y = a.y+b.y;
+    c.z = a.z+b.z;
+    return c;
+  }
+  __device__ friend Float3 operator-(const Float3 a, const Float3 b)
+  {
+    Float3 c;
+    c.x = a.x-b.x;
+    c.y = a.y-b.y;
+    c.z = a.z-b.z;
+    return c;
+  }
+  __device__ friend Float3 operator/(const Float3 a, const Float3 b)
+  {
+    Float3 c;
+    c.x = a.x/b.x;
+    c.y = a.y/b.y;
+    c.z = a.z/b.z;
+    return c;
+  }
+  __device__ friend Float3 operator*(const Float3 a, const Float3 b)
+  {
+    Float3 c;
+    c.x = a.x*b.x;
+    c.y = a.y*b.y;
+    c.z = a.z*b.z;
+    return c;
+  }
+  __device__ friend Float3 operator*(const Float3 a, const float b)
+  {
+    Float3 c;
+    c.x = a.x*b;
+    c.y = a.y*b;
+    c.z = a.z*b;
+    return c;
+  }
+};
 
 struct Ray {
     float3 origin, dir;
 };
 
 
-static inline void
-generateRay(const uniform float raster2camera[4][4], 
-            const uniform float camera2world[4][4],
+__device__ static void
+generateRay(const float raster2camera[4][4], 
+            const float camera2world[4][4],
             float x, float y, Ray &ray) {
     // transform raster coordinate (x, y, 0) to camera space
     float camx = raster2camera[0][0] * x + raster2camera[0][1] * y + raster2camera[0][3];
@@ -72,7 +115,7 @@ generateRay(const uniform float raster2camera[4][4],
 }
 
 
-static inline bool
+__device__ static inline bool
 Inside(float3 p, float3 pMin, float3 pMax) {
     return (p.x >= pMin.x && p.x <= pMax.x &&
             p.y >= pMin.y && p.y <= pMax.y &&
@@ -80,7 +123,7 @@ Inside(float3 p, float3 pMin, float3 pMax) {
 }
 
 
-static inline bool
+__device__ static bool
 IntersectP(Ray ray, float3 pMin, float3 pMax, float &hit0, float &hit1) {
     float t0 = -1e30, t1 = 1e30;
 
@@ -120,13 +163,13 @@ IntersectP(Ray ray, float3 pMin, float3 pMax, float &hit0, float &hit1) {
 }
 
 
-static inline float Lerp(float t, float a, float b) {
+__device__ static inline float Lerp(float t, float a, float b) {
     return (1.f - t) * a + t * b;
 }
 
 
-static inline float D(int x, int y, int z, uniform int nVoxels[3], 
-                      uniform float density[]) {
+__device__ static inline float D(int x, int y, int z, int nVoxels[3], 
+                      float density[]) {
     x = clamp(x, 0, nVoxels[0]-1);
     y = clamp(y, 0, nVoxels[1]-1);
     z = clamp(z, 0, nVoxels[2]-1);
@@ -135,13 +178,13 @@ static inline float D(int x, int y, int z, uniform int nVoxels[3],
 }
 
 
-static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
+__device__ static inline float3 Offset(float3 p, float3 pMin, float3 pMax) {
     return (p - pMin) / (pMax - pMin);
 }
 
 
-static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
-                     uniform float density[], uniform int nVoxels[3]) {
+__device__ static inline float Density(float3 Pobj, float3 pMin, float3 pMax, 
+                     float density[], int nVoxels[3]) {
     if (!Inside(Pobj, pMin, pMax)) 
         return 0;
     // Compute voxel coordinates and offsets for _Pobj_
@@ -171,10 +214,10 @@ static inline float Density(float3 Pobj, float3 pMin, float3 pMax,
    with extent (pMin,pMax) with transmittance coefficient sigma_t,
    defined by nVoxels[3] voxels in each dimension in the given density
    array. */
-static inline float
-transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
-              uniform float3 pMax, uniform float sigma_t, 
-              uniform float density[], uniform int nVoxels[3]) {
+__device__ static inline float
+transmittance(float3 p0, float3 p1, float3 pMin,
+              float3 pMax, float sigma_t, 
+              float density[], int nVoxels[3]) {
     float rayT0, rayT1;
     Ray ray;
     ray.origin = p1;
@@ -190,7 +233,7 @@ transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
     float tau = 0;
     float rayLength = sqrt(ray.dir.x * ray.dir.x + ray.dir.y * ray.dir.y +
                            ray.dir.z * ray.dir.z);
-    uniform float stepDist = 0.2;
+    float stepDist = 0.2;
     float stepT = stepDist / rayLength;
 
     float t = rayT0;
@@ -206,18 +249,18 @@ transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
 }
 
 
-static inline float
+__device__ static inline float
 distanceSquared(float3 a, float3 b) {
     float3 d = a-b;
     return d.x*d.x + d.y*d.y + d.z*d.z;
 }
 
 
-static inline float 
-raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
+__device__ static inline float 
+raymarch(float density[], int nVoxels[3], Ray ray) {
     float rayT0, rayT1;
-    uniform float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
-    uniform float3 lightPos = { -1, 4, 1.5 };
+    float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
+    float3 lightPos = { -1, 4, 1.5 };
 
     if (!IntersectP(ray, pMin, pMax, rayT0, rayT1))
         return 0.;
@@ -226,11 +269,11 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
 
     // Parameters that define the volume scattering characteristics and
     // sampling rate for raymarching
-    uniform float Le = .25;            // Emission coefficient
-    uniform float sigma_a = 10;        // Absorption coefficient
-    uniform float sigma_s = 10;        // Scattering coefficient
-    uniform float stepDist = 0.025;    // Ray step amount
-    uniform float lightIntensity = 40; // Light source intensity
+    float Le = .25;            // Emission coefficient
+    float sigma_a = 10;        // Absorption coefficient
+    float sigma_s = 10;        // Scattering coefficient
+    float stepDist = 0.025;    // Ray step amount
+    float lightIntensity = 40; // Light source intensity
 
     float tau = 0.f;  // accumulated beam transmittance
     float L = 0;      // radiance along the ray
@@ -272,32 +315,32 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
    Renders a tile of the image, covering [x0,x0) * [y0, y1), storing the
    result into the image[] array.
  */
-static inline void
-volume_tile(uniform int x0, uniform int y0, uniform int x1,
-            uniform int y1, uniform float density[], uniform int nVoxels[3], 
-            const uniform float raster2camera[4][4],
-            const uniform float camera2world[4][4], 
-            uniform int width, uniform int height, uniform float image[]) {
+__device__ static void
+volume_tile(int x0, int y0, int x1,
+            int y1, float density[], int nVoxels[3], 
+            const float raster2camera[4][4],
+            const float camera2world[4][4], 
+            int width, int height, float image[]) {
     // Work on 4x4=16 pixel big tiles of the image.  This function thus
     // implicitly assumes that both (x1-x0) and (y1-y0) are evenly divisble
     // by 4.
-    for (uniform int y = y0; y < y1; y += 8) {
-        for (uniform int x = x0; x < x1; x += 8) {
-//            foreach (o = 0 ... 16) {
-              for (uniform int ob = 0; ob < 64; ob += programCount)
+    for (int y = y0; y < y1; y += 8) {
+        for (int x = x0; x < x1; x += 8) {
+              for (int ob = 0; ob < 64; ob += programCount)            
               {
                 const int o = ob + programIndex;
+
           
                 // These two arrays encode the mapping from [0,15] to
                 // offsets within the 4x4 pixel block so that we render
                 // each pixel inside the block
-                const uniform int xoffsets[16] = { 0, 1, 0, 1, 2, 3, 2, 3,
-                                                   0, 1, 0, 1, 2, 3, 2, 3 };
-                const uniform int yoffsets[16] = { 0, 0, 1, 1, 0, 0, 1, 1,
-                                                   2, 2, 3, 3, 2, 2, 3, 3 };
+                const int xoffsets[16] = { 0, 1, 0, 1, 2, 3, 2, 3,
+                  0, 1, 0, 1, 2, 3, 2, 3 };
+                const int yoffsets[16] = { 0, 0, 1, 1, 0, 0, 1, 1,
+                  2, 2, 3, 3, 2, 2, 3, 3 };
 
-                const uniform int xblock[4] = {0, 4, 0, 4};
-                const uniform int yblock[4] = {0, 0, 4, 4};
+                const int xblock[4] = {0, 4, 0, 4};
+                const int yblock[4] = {0, 0, 4, 4};
 
                 // Figure out the pixel to render for this program instance
                 const int xo = x + xblock[o/16] + xoffsets[o&15];
@@ -319,21 +362,21 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
 }
 
 
-task void
-volume_task(uniform float density[], uniform int _nVoxels[3], 
-            const uniform float _raster2camera[4][4],
-            const uniform float _camera2world[4][4], 
-            uniform int width, uniform int height, uniform float image[]) 
-{
+extern "C"
+__global__ void
+volume_task(float density[], int _nVoxels[3], 
+            const float _raster2camera[4][4],
+            const float _camera2world[4][4], 
+            int width, int height, float image[]) {
   if (taskIndex >= taskCount) return;
 
 #if 1
-  uniform int nVoxels[3];
+  int nVoxels[3];
   nVoxels[0] = _nVoxels[0];
   nVoxels[1] = _nVoxels[1];
   nVoxels[2] = _nVoxels[2];
 
-  uniform float raster2camera[4][4];
+  float raster2camera[4][4];
   raster2camera[0][0] = _raster2camera[0][0];
   raster2camera[0][1] = _raster2camera[0][1];
   raster2camera[0][2] = _raster2camera[0][2];
@@ -351,7 +394,7 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
   raster2camera[3][2] = _raster2camera[3][2];
   raster2camera[3][3] = _raster2camera[3][3];
   
-  uniform float camera2world[4][4];
+  float camera2world[4][4];
   camera2world[0][0] = _camera2world[0][0];
   camera2world[0][1] = _camera2world[0][1];
   camera2world[0][2] = _camera2world[0][2];
@@ -374,13 +417,13 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
 #define  camera2world _camera2world
 #endif
 
-  uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
-  uniform int xbuckets = (width + (dx-1)) / dx;
-  uniform int ybuckets = (height + (dy-1)) / dy;
+  int dx = 8, dy = 8; // must match value in volume_ispc_tasks
+  int xbuckets = (width + (dx-1)) / dx;
+  int ybuckets = (height + (dy-1)) / dy;
 
-  uniform int x0 = (taskIndex % xbuckets) * dx;
-  uniform int y0 = (taskIndex / xbuckets) * dy;
-  uniform int x1 = x0 + dx, y1 = y0 + dy;
+  int x0 = (taskIndex % xbuckets) * dx;
+  int y0 = (taskIndex / xbuckets) * dy;
+  int x1 = x0 + dx, y1 = y0 + dy;
   x1 = min(x1, width);
   y1 = min(y1, height);
 
@@ -389,25 +432,3 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
 }
 
 
-export void
-volume_ispc(uniform float density[], uniform int nVoxels[3], 
-            const uniform float raster2camera[4][4],
-            const uniform float camera2world[4][4], 
-            uniform int width, uniform int height, uniform float image[]) {
-    volume_tile(0, 0, width, height, density, nVoxels, raster2camera, 
-                camera2world, width, height,  image);
-}
-
-
-export void
-volume_ispc_tasks(uniform float density[], uniform int nVoxels[3], 
-                  const uniform float raster2camera[4][4],
-                  const uniform float camera2world[4][4], 
-                  uniform int width, uniform int height, uniform float image[]) {
-    // Launch tasks to work on (dx,dy)-sized tiles of the image
-    uniform int dx = 8, dy = 8;
-    uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
-    print("nTasks= %\n", nTasks);
-    launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
-                               width, height, image);
-}
