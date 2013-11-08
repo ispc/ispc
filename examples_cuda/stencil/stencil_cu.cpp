@@ -49,14 +49,28 @@ using namespace ispc;
 #include <iostream>
 #include <cuda.h>
 #include "drvapi_error_string.h"
+#include <sys/time.h>
+
+
+double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
 
 #define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
 // These are the inline versions for all of the SDK helper functions
 void __checkCudaErrors(CUresult err, const char *file, const int line) {
   if(CUDA_SUCCESS != err) {
     std::cerr << "checkCudeErrors() Driver API error = " << err << "\""
-           << getCudaDrvErrorString(err) << "\" from file <" << file
-           << ", line " << line << "\n";
+      << getCudaDrvErrorString(err) << "\" from file <" << file
+      << ", line " << line << "\n";
     exit(-1);
   }
 }
@@ -112,7 +126,7 @@ CUfunction getFunction(CUmodule &cudaModule, const char * function)
   checkCudaErrors(cuModuleGetFunction(&cudaFunction, cudaModule, function));
   return cudaFunction;
 }
-  
+
 CUdeviceptr deviceMalloc(const size_t size)
 {
   CUdeviceptr d_buf;
@@ -133,13 +147,13 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
 }
 #define deviceLaunch(func,nbx,nby,nbz,params) \
   checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
-  checkCudaErrors( \
-      cuLaunchKernel( \
-        (func), \
-        ((nbx-1)/(128/32)+1), (nby), (nbz), \
-        128, 1, 1, \
-        0, NULL, (params), NULL \
-        ));
+checkCudaErrors( \
+    cuLaunchKernel( \
+      (func), \
+      ((nbx-1)/(128/32)+1), (nby), (nbz), \
+      128, 1, 1, \
+      0, NULL, (params), NULL \
+      ));
 
 typedef CUdeviceptr devicePtr;
 
@@ -272,6 +286,7 @@ int main() {
   // the minimum time of three runs.
   //
   double minTimeISPC = 1e30;
+#if 0
   for (int i = 0; i < 3; ++i) {
     reset_and_start_timer();
     loop_stencil_ispc(0, 6, width, Nx - width, width, Ny - width,
@@ -280,6 +295,7 @@ int main() {
     double dt = get_elapsed_mcycles();
     minTimeISPC = std::min(minTimeISPC, dt);
   }
+#endif
 
   printf("[stencil ispc 1 core]:\t\t[%.3f] million cycles\n", minTimeISPC);
 
@@ -296,10 +312,11 @@ int main() {
   double minTimeISPCTasks = 1e30;
   for (int i = 0; i < 3; ++i) {
     reset_and_start_timer();
+    const double t0 = rtc();
     loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
         width, Nz - width, Nx, Ny, Nz, (double*)d_coeff, (double*)d_vsq,
         (double*)d_Aispc0, (double*)d_Aispc1);
-    double dt = get_elapsed_mcycles();
+    double dt = rtc() - t0; //get_elapsed_mcycles();
     minTimeISPCTasks = std::min(minTimeISPCTasks, dt);
   }
   memcpyD2H(Aispc[1], d_Aispc1, bufsize);

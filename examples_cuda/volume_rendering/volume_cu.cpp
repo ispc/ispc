@@ -44,6 +44,19 @@
 #include "volume_ispc.h"
 using namespace ispc;
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 #include <cassert>
 #include <iostream>
 #include <cuda.h>
@@ -414,6 +427,7 @@ int main(int argc, char *argv[]) {
     double minISPCtasks = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         volume_ispc_tasks(
               (float*)d_density, 
               (int*)d_n, 
@@ -421,7 +435,7 @@ int main(int argc, char *argv[]) {
               (float(*)[4])d_camera2world,
               width, height, 
               (float*)d_image);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
         minISPCtasks = std::min(minISPCtasks, dt);
     }
 
