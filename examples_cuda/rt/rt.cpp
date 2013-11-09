@@ -133,10 +133,12 @@ int main(int argc, char *argv[]) {
   if (filename == NULL)
     usage();
 
+  fprintf(stderr, " --- 1 --- \n");
+
 #define READ(var, n)                                            \
   if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
     fprintf(stderr, "Unexpected EOF reading scene file\n"); \
-    return 1;                                               \
+    assert(0); \
   } else /* eat ; */                                                     
 
   //
@@ -149,6 +151,7 @@ int main(int argc, char *argv[]) {
     perror(fnbuf);
     return 1;
   }
+  fprintf(stderr, " --- 2 --- \n");
 
   //
   // Nothing fancy, and trouble if we run on a big-endian system, just
@@ -170,6 +173,7 @@ int main(int argc, char *argv[]) {
     perror(fnbuf);
     return 1;
   }
+  fprintf(stderr, " --- 3 --- \n");
 
   // The BVH file starts with an int that gives the total number of BVH
   // nodes
@@ -195,6 +199,8 @@ int main(int argc, char *argv[]) {
     READ(nodes[i].pad, 1);
   }
 
+  fprintf(stderr, " --- 4 --- \n");
+
   // And then read the triangles 
   uint nTris;
   READ(nTris, 1);
@@ -214,6 +220,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
+  fprintf(stderr, " --- 5 --- \n");
   int height = int(baseHeight * scale);
   int width = int(baseWidth * scale);
 
@@ -246,19 +253,26 @@ int main(int argc, char *argv[]) {
   //
   // Run 3 iterations with ispc + 1 core, record the minimum time
   //
+  fprintf(stderr, " --- 6 --- \n");
+  fflush(stderr);
   double minTimeISPCtasks = 1e30;
-  for (int i = 0; i < 3; ++i) {
-    reset_and_start_timer();
+  for (int i = 0; i < 3; ++i) 
+  {
+  //  reset_and_start_timer();
     const double t0 = rtc();
     raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
         camera2world, image, id, nodes, triangles);
     double dt = rtc() - t0; //get_elapsed_mcycles();
     minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
   }
-  printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
+  fprintf(stderr, "[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
       minTimeISPCtasks, width, height);
+  fflush(stderr);
 
+  fprintf(stderr, " --- 7 --- \n");
+  fflush(stderr);
   writeImage(id, image, width, height, "rt-ispc-tasks.ppm");
+  return 0;
 
   memset(id, 0, width*height*sizeof(int));
   memset(image, 0, width*height*sizeof(float));
