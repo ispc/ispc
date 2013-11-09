@@ -133,10 +133,12 @@ int main(int argc, char *argv[]) {
   if (filename == NULL)
     usage();
 
+  fprintf(stderr, " --- 1 --- \n");
+
 #define READ(var, n)                                            \
   if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
     fprintf(stderr, "Unexpected EOF reading scene file\n"); \
-    return 1;                                               \
+    assert(0); \
   } else /* eat ; */                                                     
 
   //
@@ -149,6 +151,7 @@ int main(int argc, char *argv[]) {
     perror(fnbuf);
     return 1;
   }
+  fprintf(stderr, " --- 2 --- \n");
 
   //
   // Nothing fancy, and trouble if we run on a big-endian system, just
@@ -170,6 +173,7 @@ int main(int argc, char *argv[]) {
     perror(fnbuf);
     return 1;
   }
+  fprintf(stderr, " --- 3 --- \n");
 
   // The BVH file starts with an int that gives the total number of BVH
   // nodes
@@ -177,6 +181,7 @@ int main(int argc, char *argv[]) {
   READ(nNodes, 1);
 
   LinearBVHNode *nodes = new LinearBVHNode[nNodes];
+#pragma omp parallel for
   for (unsigned int i = 0; i < nNodes; ++i) {
     // Each node is 6x floats for a boox, then an integer for an offset
     // to the second child node, then an integer that encodes the type
@@ -195,10 +200,13 @@ int main(int argc, char *argv[]) {
     READ(nodes[i].pad, 1);
   }
 
+  fprintf(stderr, " --- 4 --- \n");
+
   // And then read the triangles 
   uint nTris;
   READ(nTris, 1);
   Triangle *triangles = new Triangle[nTris];
+#pragma omp parallel for
   for (uint i = 0; i < nTris; ++i) {
     // 9x floats for the 3 vertices
     float v[9];
@@ -214,6 +222,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
+  fprintf(stderr, " --- 5 --- \n");
   int height = int(baseHeight * scale);
   int width = int(baseWidth * scale);
 
