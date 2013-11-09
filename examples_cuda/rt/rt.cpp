@@ -181,7 +181,6 @@ int main(int argc, char *argv[]) {
   READ(nNodes, 1);
 
   LinearBVHNode *nodes = new LinearBVHNode[nNodes];
-#pragma omp parallel for
   for (unsigned int i = 0; i < nNodes; ++i) {
     // Each node is 6x floats for a boox, then an integer for an offset
     // to the second child node, then an integer that encodes the type
@@ -206,7 +205,6 @@ int main(int argc, char *argv[]) {
   uint nTris;
   READ(nTris, 1);
   Triangle *triangles = new Triangle[nTris];
-#pragma omp parallel for
   for (uint i = 0; i < nTris; ++i) {
     // 9x floats for the 3 vertices
     float v[9];
@@ -255,19 +253,26 @@ int main(int argc, char *argv[]) {
   //
   // Run 3 iterations with ispc + 1 core, record the minimum time
   //
+  fprintf(stderr, " --- 6 --- \n");
+  fflush(stderr);
   double minTimeISPCtasks = 1e30;
-  for (int i = 0; i < 3; ++i) {
-    reset_and_start_timer();
+  for (int i = 0; i < 3; ++i) 
+  {
+  //  reset_and_start_timer();
     const double t0 = rtc();
     raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
         camera2world, image, id, nodes, triangles);
     double dt = rtc() - t0; //get_elapsed_mcycles();
     minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
   }
-  printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
+  fprintf(stderr, "[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
       minTimeISPCtasks, width, height);
+  fflush(stderr);
 
+  fprintf(stderr, " --- 7 --- \n");
+  fflush(stderr);
   writeImage(id, image, width, height, "rt-ispc-tasks.ppm");
+  return 0;
 
   memset(id, 0, width*height*sizeof(int));
   memset(image, 0, width*height*sizeof(float));
