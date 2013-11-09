@@ -249,8 +249,6 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
-                if (todoOffset == 0) 
-                    break;
                 nodeNum = todo[--todoOffset];
             }
             else {
@@ -275,10 +273,10 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
             }
         }
         else {
-            if (todoOffset == 0)
-                break;
             nodeNum = todo[--todoOffset];
         }
+            if (todoOffset == 0)
+                break;
     }
     r.maxt = ray.maxt;
     r.hitId = ray.hitId;

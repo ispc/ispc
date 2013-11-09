@@ -397,19 +397,19 @@ define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = icmp ne i1 %v, 0
-  ret i1 %cmp
+;   %cmp = icmp ne i1 %v, 0
+  ret i1 %v
 }
 
 define  i1 @__all(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = icmp eq i1 %v, 1
-  ret i1 %cmp
+;  %cmp = icmp eq i1 %v, 1
+  ret i1 %v
 }
 
 define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = icmp eq i1 %v, 0
+  %cmp = xor i1 %v,  1; ;icmp eq i1 %v, 0
   ret i1 %cmp
 }
 

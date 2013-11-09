@@ -219,6 +219,8 @@ inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[],
     uniform int todoOffset = 0, nodeNum = 0;
     uniform int todo[64];
 
+#define FAST
+
     while (true) {
         // Check ray against BVH node
         uniform LinearBVHNode node = nodes[nodeNum];
@@ -233,8 +235,10 @@ inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
+#ifndef FAST
                 if (todoOffset == 0) 
                     break;
+#endif
                 nodeNum = todo[--todoOffset];
             }
             else 
@@ -261,10 +265,16 @@ inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[],
             }
         }
         else {
+#ifndef FAST
             if (todoOffset == 0)
                 break;
+#endif
             nodeNum = todo[--todoOffset];
         }
+#ifdef FAST
+        if (todoOffset == 0)
+          break;
+#endif
     }
     r.maxt = ray.maxt;
     r.hitId = ray.hitId;
