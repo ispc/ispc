@@ -319,48 +319,12 @@ export void raytrace_ispc(uniform int width, uniform int height,
 
 task void raytrace_tile_task(uniform int width, uniform int height,
                              uniform int baseWidth, uniform int baseHeight,
-                             const uniform float _raster2camera[4][4], 
-                             const uniform float _camera2world[4][4],
+                             const uniform float raster2camera[4][4], 
+                             const uniform float camera2world[4][4],
                              uniform float image[], uniform int id[],
                              const uniform LinearBVHNode nodes[],
                              const uniform Triangle triangles[]) {
   if (taskIndex >= taskCount) return;
-
-  uniform float raster2camera[4][4];
-  raster2camera[0][0] = _raster2camera[0][0];
-  raster2camera[0][1] = _raster2camera[0][1];
-  raster2camera[0][2] = _raster2camera[0][2];
-  raster2camera[0][3] = _raster2camera[0][3];
-  raster2camera[1][0] = _raster2camera[1][0];
-  raster2camera[1][1] = _raster2camera[1][1];
-  raster2camera[1][2] = _raster2camera[1][2];
-  raster2camera[1][3] = _raster2camera[1][3];
-  raster2camera[2][0] = _raster2camera[2][0];
-  raster2camera[2][1] = _raster2camera[2][1];
-  raster2camera[2][2] = _raster2camera[2][2];
-  raster2camera[2][3] = _raster2camera[2][3];
-  raster2camera[3][0] = _raster2camera[3][0];
-  raster2camera[3][1] = _raster2camera[3][1];
-  raster2camera[3][2] = _raster2camera[3][2];
-  raster2camera[3][3] = _raster2camera[3][3];
-
-  uniform float camera2world[4][4];
-  camera2world[0][0] = _camera2world[0][0];
-  camera2world[0][1] = _camera2world[0][1];
-  camera2world[0][2] = _camera2world[0][2];
-  camera2world[0][3] = _camera2world[0][3];
-  camera2world[1][0] = _camera2world[1][0];
-  camera2world[1][1] = _camera2world[1][1];
-  camera2world[1][2] = _camera2world[1][2];
-  camera2world[1][3] = _camera2world[1][3];
-  camera2world[2][0] = _camera2world[2][0];
-  camera2world[2][1] = _camera2world[2][1];
-  camera2world[2][2] = _camera2world[2][2];
-  camera2world[2][3] = _camera2world[2][3];
-  camera2world[3][0] = _camera2world[3][0];
-  camera2world[3][1] = _camera2world[3][1];
-  camera2world[3][2] = _camera2world[3][2];
-  camera2world[3][3] = _camera2world[3][3];
 
   uniform int dx = 32, dy = 16; // must match dx, dy below
   uniform int xBuckets = (width + (dx-1)) / dx;
