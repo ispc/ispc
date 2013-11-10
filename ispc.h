@@ -253,6 +253,8 @@ public:
 
     int getNativeVectorWidth() const {return m_nativeVectorWidth;}
 
+    int getDataTypeWidth() const {return m_dataTypeWidth;}
+
     int getVectorWidth() const {return m_vectorWidth;}
 
     bool getGeneratePIC() const {return m_generatePIC;}
@@ -319,9 +321,13 @@ private:
 #endif
 
     /** Native vector width of the vector instruction set.  Note that this
-        value is directly derived from the ISA Being used (e.g. it's 4 for
+        value is directly derived from the ISA being used (e.g. it's 4 for
         SSE, 8 for AVX, etc.) */
     int m_nativeVectorWidth;
+
+    /** Data type with in bits. Typically it's 32, but could be 8, 16 or 64.
+        For generic it's -1, which means undefined. */
+    int m_dataTypeWidth;
 
     /** Actual vector width currently being compiled to.  This may be an
         integer multiple of the native vector width, for example if we're
