@@ -91,17 +91,17 @@ static inline void vnormalize(vec &v) {
 }
 
 
-static void
+static inline void
 ray_plane_intersect(Isect &isect, Ray &ray, uniform Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
-    cif (abs(v) < 1.0e-17) 
+    if (abs(v) < 1.0e-17) 
         return;
     else {
         float t = -(dot(ray.org, plane.n) + d) / v;
 
-        cif ((t > 0.0) && (t < isect.t)) {
+        if ((t > 0.0) && (t < isect.t)) {
             isect.t = t;
             isect.hit = 1;
             isect.p = ray.org + ray.dir * t;
@@ -119,10 +119,10 @@ ray_sphere_intersect(Isect &isect, Ray &ray, uniform Sphere &sphere) {
     float C = dot(rs, rs) - sphere.radius * sphere.radius;
     float D = B * B - C;
 
-    cif (D > 0.) {
+    if (D > 0.) {
         float t = -B - sqrt(D);
 
-        cif ((t > 0.0) && (t < isect.t)) {
+        if ((t > 0.0) && (t < isect.t)) {
             isect.t = t;
             isect.hit = 1;
             isect.p = ray.org + t * ray.dir;
@@ -133,7 +133,7 @@ ray_sphere_intersect(Isect &isect, Ray &ray, uniform Sphere &sphere) {
 }
 
 
-static void
+static inline void
 orthoBasis(vec basis[3], vec n) {
     basis[2] = n;
     basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
@@ -156,7 +156,7 @@ orthoBasis(vec basis[3], vec n) {
 }
 
 
-static float
+static inline float
 ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
                   RNGState &rngstate) {
     float eps = 0.0001f;
@@ -210,7 +210,7 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
  */
-static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
+static inline void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
                          uniform int h,  uniform int nsubsamples, 
                          uniform float image[]) {
     static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
@@ -224,7 +224,8 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
     float invSamples = 1.f / nsubsamples;
 
     foreach_tiled(y = y0 ... y1, x = 0 ... w, 
-                  u = 0 ... nsubsamples, v = 0 ... nsubsamples) {
+                  u = 0 ... nsubsamples, v = 0 ... nsubsamples) 
+    {
         float du = (float)u * invSamples, dv = (float)v * invSamples;
 
         // Figure out x,y pixel in NDC
@@ -251,7 +252,7 @@ static void ao_scanlines(uniform int y0, uniform int y1, uniform int w,
 
         // Note use of 'coherent' if statement; the set of rays we
         // trace will often all hit or all miss the scene
-        cif (isect.hit) {
+        if (isect.hit) {
             ret = ambient_occlusion(isect, plane, spheres, rngstate);
             ret *= invSamples * invSamples;
 
