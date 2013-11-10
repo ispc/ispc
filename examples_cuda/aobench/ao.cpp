@@ -56,6 +56,20 @@ using namespace ispc;
 
 #include "../timing.h"
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
+
 #define NSUBSAMPLES        2
 
 extern void ao_serial(int w, int h, int nsubsamples, float image[]);
@@ -127,6 +141,7 @@ int main(int argc, char **argv)
     // time for any of them.
     //
     double minTimeISPC = 1e30;
+#if 0
     for (unsigned int i = 0; i < test_iterations; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
@@ -141,6 +156,7 @@ int main(int argc, char **argv)
     printf("[aobench ispc]:\t\t\t[%.3f] million cycles (%d x %d image)\n", 
            minTimeISPC, width, height);
     savePPM("ao-ispc.ppm", width, height); 
+#endif
 
     //
     // Run the ispc + tasks path, test_iterations times, and report the
@@ -152,8 +168,9 @@ int main(int argc, char **argv)
         assert(NSUBSAMPLES == 2);
 
         reset_and_start_timer();
+        const double t0 = rtc();
         ao_ispc_tasks(width, height, NSUBSAMPLES, fimg);
-        double t = get_elapsed_mcycles();
+        double t = (rtc() - t0); //get_elapsed_mcycles();
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
 
@@ -161,6 +178,7 @@ int main(int argc, char **argv)
     printf("[aobench ispc + tasks]:\t\t[%.3f] million cycles (%d x %d image)\n", 
            minTimeISPCTasks, width, height);
     savePPM("ao-ispc-tasks.ppm", width, height); 
+    return 0;
 
     //
     // Run the serial path, again test_iteration times, and report the
