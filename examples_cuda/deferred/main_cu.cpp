@@ -71,7 +71,8 @@ static inline double rtc(void)
     1.e-6*((double) Tvalue.tv_usec);
   return etime;
 }
-/******************************/ #include <cassert>
+/******************************/ 
+#include <cassert>
 #include <iostream>
 #include <cuda.h>
 #include "drvapi_error_string.h"
