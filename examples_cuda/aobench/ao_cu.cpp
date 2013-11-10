@@ -232,7 +232,6 @@ std::vector<char> readBinary(const char * filename)
 
 extern "C" 
 {
-
   void *CUDAAlloc(void **handlePtr, int64_t size, int32_t alignment)
   {
     return NULL;
