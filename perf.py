@@ -391,6 +391,9 @@ def perf(options1, args):
     # end of preparations
  
     print_debug("Okey go go go!\n\n", s, perf_log)
+    # report command line
+    print_debug("Command line: %s\n" % " ".join(map(str, sys.argv)), s, perf_log)
+    # report used ispc
     print_debug("Testing ispc: " + ispc_test + "\n", s, perf_log)
  
     #print compilers versions   
@@ -419,11 +422,15 @@ def perf(options1, args):
         # read parameters of test
         command = lines[i+2]
         command = command[:-1]
+        # handle conditional target argument
+        target_str = ""
+        if options.target != "":
+            target_str = " ISPC_IA_TARGETS="+options.target 
         if is_windows == False:
             ex_command_ref = "./ref " + command + " >> " + perf_temp + "_ref"
             ex_command = "./test " + command + " >> " + perf_temp + "_test"
-            bu_command_ref = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=ref ISPC="+ispc_ref+" >> "+build_log+" 2>> "+build_log
-            bu_command = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=test ISPC="+ispc_test+" >> "+build_log+" 2>> "+build_log
+            bu_command_ref = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=ref ISPC="+ispc_ref+target_str+" >> "+build_log+" 2>> "+build_log
+            bu_command = "make CXX="+ref_compiler+" CC="+refc_compiler+ " EXAMPLE=test ISPC="+ispc_test+target_str+" >> "+build_log+" 2>> "+build_log
             re_command = "make clean >> "+build_log
         else:
             ex_command_ref = "x64\\Release\\ref.exe " + command + " >> " + perf_temp + "_ref"
@@ -503,5 +510,7 @@ if __name__ == "__main__":
         help='set reference compiler for compare', default="")
     parser.add_option('-f', '--file', dest='in_file',
         help='file to save perf output', default="")
+    parser.add_option('-t', '--target', dest='target',
+        help='set ispc target for building benchmarks (both test and ref)', default="")
     (options, args) = parser.parse_args()
     perf(options, args)
