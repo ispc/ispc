@@ -59,6 +59,19 @@
 #include "kernels_ispc.h"
 #include "../timing.h"
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
@@ -76,27 +89,36 @@ int main(int argc, char** argv) {
     Framebuffer framebuffer(input->header.framebufferWidth,
                             input->header.framebufferHeight);
 
+#if 0
     InitDynamicC(input);
 #ifdef __cilk
     InitDynamicCilk(input);
 #endif // __cilk
+#endif
+
+  const int buffsize = input->header.framebufferWidth*input->header.framebufferHeight;
+  for (int i = 0; i < buffsize; i++)
+    framebuffer.r[i] = framebuffer.g[i] = framebuffer.b[i] = 0;
 
     int nframes = 5;
     double ispcCycles = 1e30;
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
-        reset_and_start_timer();
+        const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
             ispc::RenderStatic(input->header, input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
-        double mcycles = get_elapsed_mcycles() / nframes;
+        double mcycles = (rtc() - t0) / nframes;
         ispcCycles = std::min(ispcCycles, mcycles);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
            "%d x %d image\n", ispcCycles,
            input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
+    return 0;
+
+#if 0
 
 #ifdef __cilk
     double dynamicCilkCycles = 1e30;
@@ -132,6 +154,7 @@ int main(int argc, char** argv) {
 #else
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles/ispcCycles);
 #endif // __cilk
+#endif
 
     DeleteInputData(input);
 

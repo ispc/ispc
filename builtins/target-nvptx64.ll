@@ -337,8 +337,20 @@ define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline
   ret float %ret
 }
 
-declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
-declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
+define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone  alwaysinline
+{
+  %v = extractelement <1 x float> %0, i32 0
+  %r = call float @__rcp_uniform_float(float %v)
+  %rv = insertelement <1 x float> undef, float %r, i32 0 
+  ret <WIDTH x float> %rv
+}
+define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
+{
+  %v = extractelement <1 x float> %0, i32 0
+  %r = call float @__rsqrt_uniform_float(float %v)
+  %rv = insertelement <1 x float> undef, float %r, i32 0 
+  ret <WIDTH x float> %rv
+}
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
 {
   %v = extractelement <1 x float> %0, i32 0
@@ -397,19 +409,19 @@ define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-;   %cmp = icmp ne i1 %v, 0
-  ret i1 %v
+   %cmp = icmp ne i1 %v, 0
+  ret i1 %cmp
 }
 
 define  i1 @__all(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-;  %cmp = icmp eq i1 %v, 1
-  ret i1 %v
+  %cmp = icmp eq i1 %v, 1
+  ret i1 %cmp
 }
 
 define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = xor i1 %v,  1; ;icmp eq i1 %v, 0
+  %cmp = icmp eq i1 %v, 0
   ret i1 %cmp
 }
 

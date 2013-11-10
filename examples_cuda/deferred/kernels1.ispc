@@ -31,6 +31,17 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#ifdef __NVPTX__
+#warning "emitting DEVICE code"
+#define programCount warpSize()
+#define programIndex laneIndex()
+#define taskIndex    blockIndex0()
+#define taskCount    blockCount0()
+#else
+#warning "emitting HOST code"
+#endif
+
+
 #include "deferred.h"
 
 struct InputDataArrays
@@ -97,7 +108,7 @@ Float32ToUnorm8(float f) {
 }
 
 
-static void
+static inline void
 ComputeZBounds(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
@@ -116,7 +127,11 @@ ComputeZBounds(
     float laneMinZ = cameraFar;
     float laneMaxZ = cameraNear;
     for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-        foreach (x = tileStartX ... tileEndX) {
+//        foreach (x = tileStartX ... tileEndX) {
+        for (uniform int xb = tileStartX; xb < tileEndX; xb += programCount)
+        {
+          const int x = xb + programIndex;
+          if (x >= tileEndX) continue;
             // Unproject depth buffer Z value into view space
             float z = zBuffer[y * gBufferWidth + x];
             float viewSpaceZ = cameraProj_43 / (z - cameraProj_33);
@@ -134,7 +149,7 @@ ComputeZBounds(
 }
 
 
-export uniform int32
+static inline uniform int32
 IntersectLightsWithTileMinMax(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
@@ -178,7 +193,12 @@ IntersectLightsWithTileMinMax(
 
     uniform int32 tileNumLights = 0;
 
-    foreach (lightIndex = 0 ... numLights) {
+//    foreach (lightIndex = 0 ... numLights) {
+    for (uniform int lightIndexB = 0; lightIndexB < numLights; lightIndexB += programCount)
+    {
+      const int lightIndex = lightIndexB + programIndex;
+      if (lightIndex >= numLights) continue;
+
         float light_positionView_z = light_positionView_z_array[lightIndex];
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
@@ -214,7 +234,7 @@ IntersectLightsWithTileMinMax(
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
         
             // Pack and store intersecting lights
-            cif (inFrustum) {
+            if (inFrustum) {
                 tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
                                                      lightIndex);
             }
@@ -225,7 +245,7 @@ IntersectLightsWithTileMinMax(
 }
 
 
-static uniform int32
+static inline  uniform int32
 IntersectLightsWithTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
@@ -262,12 +282,12 @@ IntersectLightsWithTile(
 }
 
 
-export void
+static inline void
 ShadeTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
     uniform int32 gBufferWidth, uniform int32 gBufferHeight,
-    uniform InputDataArrays &inputData,
+    const uniform InputDataArrays &inputData,
     // Camera data
     uniform float cameraProj_11, uniform float cameraProj_22,
     uniform float cameraProj_33, uniform float cameraProj_43,
@@ -285,7 +305,11 @@ ShadeTile(
     if (tileNumLights == 0 || visualizeLightCount) {
         uniform unsigned int8 c = (unsigned int8)(min(tileNumLights << 2, 255));
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-            foreach (x = tileStartX ... tileEndX) {
+//            foreach (x = tileStartX ... tileEndX) 
+            for (uniform int xb = tileStartX ; xb < tileEndX; xb += programCount)
+            { 
+              const int x = xb + programIndex;
+              if (x >= tileEndX) continue;
                 int32 framebufferIndex = (y * gBufferWidth + x);
                 framebuffer_r[framebufferIndex] = c;
                 framebuffer_g[framebufferIndex] = c;
@@ -299,7 +323,10 @@ ShadeTile(
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
             uniform float positionScreen_y = -(((0.5f + y) * twoOverGBufferHeight) - 1.f);
 
-            foreach (x = tileStartX ... tileEndX) {
+//            foreach (x = tileStartX ... tileEndX) {
+            for (uniform int xb = tileStartX ; xb < tileEndX; xb += programCount)
+            { 
+              const int x = xb + programIndex;
                 int32 gBufferOffset = y * gBufferWidth + x;
                 
                 // Reconstruct position and (negative) view vector from G-buffer
@@ -373,7 +400,7 @@ ShadeTile(
                     // Clip at end of attenuation
                     float light_attenutaionEnd2 = light_attenuationEnd * light_attenuationEnd;
 
-                    cif (distanceToLight2 < light_attenutaionEnd2) {                    
+                    if (distanceToLight2 < light_attenutaionEnd2) {                    
                         float distanceToLight = sqrt(distanceToLight2);
 
                         // HLSL "rcp" is allowed to be fairly inaccurate
@@ -387,7 +414,7 @@ ShadeTile(
                                            surface_normal_z, L_x, L_y, L_z);
                     
                         // Clip back facing
-                        cif (NdotL > 0.0f) {
+                        if (NdotL > 0.0f) {
                             uniform float light_attenuationBegin = 
                                 inputData.lightAttenuationBegin[lightIndex];
 
@@ -451,13 +478,18 @@ ShadeTile(
 
 task void
 RenderTile(uniform int num_groups_x, uniform int num_groups_y,
-           uniform InputHeader &inputHeader,
-           uniform InputDataArrays &inputData,
+           const uniform InputHeader inputHeaderPtr[],
+           const uniform InputDataArrays inputDataPtr[],
            uniform int visualizeLightCount,
            // Output
            uniform unsigned int8 framebuffer_r[],
            uniform unsigned int8 framebuffer_g[],
            uniform unsigned int8 framebuffer_b[]) {
+  if (taskIndex >= taskCount) return;
+
+  const uniform InputHeader inputHeader = *inputHeaderPtr;
+  const uniform InputDataArrays inputData = *inputDataPtr;
+
     uniform int32 group_y = taskIndex / num_groups_x;
     uniform int32 group_x = taskIndex % num_groups_x;
     uniform int32 tile_start_x = group_x * MIN_TILE_WIDTH;
@@ -471,7 +503,6 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_11 = inputHeader.cameraProj[1][1];
     uniform float cameraProj_22 = inputHeader.cameraProj[2][2];
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
-
 
     // Light intersection: figure out which lights illuminate this tile.
     uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
@@ -490,7 +521,6 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
                                 inputData.lightAttenuationEnd,
                                 tileLightIndices);
 
-
     // And now shade the tile, using the lights in tileLightIndices
     ShadeTile(tile_start_x, tile_end_x, tile_start_y, tile_end_y,
               framebufferWidth, framebufferHeight, inputData,
@@ -501,13 +531,15 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
 
 
 export void
-RenderStatic(uniform InputHeader &inputHeader,
-             uniform InputDataArrays &inputData,
+RenderStatic(uniform InputHeader inputHeaderPtr[],
+             uniform InputDataArrays inputDataPtr[],
+             uniform InputHeader &inputHeader,
              uniform int visualizeLightCount,
              // Output
              uniform unsigned int8 framebuffer_r[],
              uniform unsigned int8 framebuffer_g[],
              uniform unsigned int8 framebuffer_b[]) {
+
     uniform int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
     uniform int num_groups_y = (inputHeader.framebufferHeight + 
@@ -517,7 +549,9 @@ RenderStatic(uniform InputHeader &inputHeader,
     // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
     // by MIN_TILE_HEIGHT pixels.
     launch[num_groups] RenderTile(num_groups_x, num_groups_y,
-                                  inputHeader, inputData, visualizeLightCount,
+                                  inputHeaderPtr, inputDataPtr, visualizeLightCount,
                                   framebuffer_r, framebuffer_g, framebuffer_b);
 }
+
+
 
