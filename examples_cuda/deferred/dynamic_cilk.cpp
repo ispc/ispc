@@ -51,8 +51,8 @@
 #endif // ISPC_IS_LINUX
 
 // Currently tile widths must be a multiple of SIMD width (i.e. 8 for ispc sse4x2)!
-#define MIN_TILE_WIDTH 16
-#define MIN_TILE_HEIGHT 16
+//#define MIN_TILE_WIDTH 64
+//#define MIN_TILE_HEIGHT 16
 
 
 #define DYNAMIC_TREE_LEVELS 5
@@ -247,7 +247,7 @@ ShadeDynamicTileRecurse(InputData *input, int level, int tileX, int tileY,
             ispc::ShadeTile(
                 startX, endX, startY, endY,
                 input->header.framebufferWidth, input->header.framebufferHeight,
-                &input->arrays,
+                input->arrays,
                 input->header.cameraProj[0][0], input->header.cameraProj[1][1], 
                 input->header.cameraProj[2][2], input->header.cameraProj[3][2],
                 lightIndices, numLights, VISUALIZE_LIGHT_COUNT, 

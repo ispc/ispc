@@ -59,6 +59,19 @@
 #include "kernels_ispc.h"
 #include "../timing.h"
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 ///////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv) {
@@ -85,12 +98,12 @@ int main(int argc, char** argv) {
     double ispcCycles = 1e30;
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
-        reset_and_start_timer();
+        const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
             ispc::RenderStatic(input->header, input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
-        double mcycles = get_elapsed_mcycles() / nframes;
+        double mcycles = 1000*(rtc() - t0) / nframes;
         ispcCycles = std::min(ispcCycles, mcycles);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
@@ -102,10 +115,10 @@ int main(int argc, char** argv) {
     double dynamicCilkCycles = 1e30;
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
-        reset_and_start_timer();
+        const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicCilk(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
+        double mcycles = 1000*(rtc() - t0) / nframes;
         dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
     }
     printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", 
@@ -116,10 +129,10 @@ int main(int argc, char** argv) {
     double serialCycles = 1e30;
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
-        reset_and_start_timer();
+        const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicC(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
+        double mcycles = 1000*(rtc() - t0) / nframes;
         serialCycles = std::min(serialCycles, mcycles);
     }
     printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", 

@@ -472,7 +472,6 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_22 = inputHeader.cameraProj[2][2];
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
 
-
     // Light intersection: figure out which lights illuminate this tile.
     uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
     uniform int numTileLights = 
@@ -489,7 +488,6 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
                                 inputData.lightPositionView_z, 
                                 inputData.lightAttenuationEnd,
                                 tileLightIndices);
-
 
     // And now shade the tile, using the lights in tileLightIndices
     ShadeTile(tile_start_x, tile_end_x, tile_start_y, tile_end_y,
@@ -521,3 +519,154 @@ RenderStatic(uniform InputHeader &inputHeader,
                                   framebuffer_r, framebuffer_g, framebuffer_b);
 }
 
+
+///////////////////////////////////////////////////////////////////////////
+// Routines for dynamic decomposition path
+
+// This computes the z min/max range for a whole row worth of tiles.
+export void
+ComputeZBoundsRow(
+    uniform int32 tileY,
+    uniform int32 tileWidth, uniform int32 tileHeight,
+    uniform int32 numTilesX, uniform int32 numTilesY,
+    // G-buffer data
+    uniform float zBuffer[],
+    uniform int32 gBufferWidth,
+    // Camera data
+    uniform float cameraProj_33, uniform float cameraProj_43,
+    uniform float cameraNear, uniform float cameraFar,
+    // Output
+    uniform float minZArray[],
+    uniform float maxZArray[]
+    )
+{
+    for (uniform int32 tileX = 0; tileX < numTilesX; ++tileX) {
+        uniform float minZ, maxZ;
+        ComputeZBounds(
+            tileX * tileWidth, tileX * tileWidth + tileWidth,
+            tileY * tileHeight, tileY * tileHeight + tileHeight,
+            zBuffer, gBufferWidth,
+            cameraProj_33, cameraProj_43, cameraNear, cameraFar,
+            minZ, maxZ);
+        minZArray[tileX] = minZ;
+        maxZArray[tileX] = maxZ;
+    }
+}
+
+
+// Reclassifies the lights with respect to four sub-tiles when we refine a tile.
+// numLights need not be a multiple of programCount here, but the input and output arrays
+// should be able to handle programCount-sized load/stores.
+export void
+SplitTileMinMax(
+    uniform int32 tileMidX, uniform int32 tileMidY,
+    // Subtile data (00, 10, 01, 11)
+    uniform float subtileMinZ[],
+    uniform float subtileMaxZ[],
+    // G-buffer data
+    uniform int32 gBufferWidth, uniform int32 gBufferHeight,
+    // Camera data
+    uniform float cameraProj_11, uniform float cameraProj_22,
+    // Light Data
+    uniform int32 lightIndices[],
+    uniform int32 numLights,
+    uniform float light_positionView_x_array[],
+    uniform float light_positionView_y_array[],
+    uniform float light_positionView_z_array[],
+    uniform float light_attenuationEnd_array[],
+    // Outputs
+    uniform int32 subtileIndices[],
+    uniform int32 subtileIndicesPitch,
+    uniform int32 subtileNumLights[]
+    )
+{
+    uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
+    uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
+        
+    uniform float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
+                                           (cameraProj_22 * gBufferScale_y) };
+    uniform float frustumPlanes_z[2] = { tileMidX - gBufferScale_x,
+                                         tileMidY - gBufferScale_y };
+
+    // Normalize
+    uniform float norm[2] = { rsqrt(frustumPlanes_xy[0] * frustumPlanes_xy[0] + 
+                                    frustumPlanes_z[0] * frustumPlanes_z[0]),
+                              rsqrt(frustumPlanes_xy[1] * frustumPlanes_xy[1] + 
+                                    frustumPlanes_z[1] * frustumPlanes_z[1]) };
+    frustumPlanes_xy[0] *= norm[0];
+    frustumPlanes_xy[1] *= norm[1];
+    frustumPlanes_z[0] *= norm[0];
+    frustumPlanes_z[1] *= norm[1];
+
+    // Initialize
+    uniform int32 subtileLightOffset[4];
+    subtileLightOffset[0] = 0 * subtileIndicesPitch;
+    subtileLightOffset[1] = 1 * subtileIndicesPitch;
+    subtileLightOffset[2] = 2 * subtileIndicesPitch;
+    subtileLightOffset[3] = 3 * subtileIndicesPitch;
+
+    foreach (i = 0 ... numLights) {
+        int32 lightIndex = lightIndices[i];
+
+        float light_positionView_x = light_positionView_x_array[lightIndex];
+        float light_positionView_y = light_positionView_y_array[lightIndex];
+        float light_positionView_z = light_positionView_z_array[lightIndex];
+        float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
+        float light_attenuationEndNeg = -light_attenuationEnd;
+        
+        // Test lights again subtile z bounds
+        bool inFrustum[4];
+        inFrustum[0] = (light_positionView_z - subtileMinZ[0] >= light_attenuationEndNeg) &&
+            (subtileMaxZ[0] - light_positionView_z >= light_attenuationEndNeg);
+        inFrustum[1] = (light_positionView_z - subtileMinZ[1] >= light_attenuationEndNeg) && 
+            (subtileMaxZ[1] - light_positionView_z >= light_attenuationEndNeg);
+        inFrustum[2] = (light_positionView_z - subtileMinZ[2] >= light_attenuationEndNeg) && 
+            (subtileMaxZ[2] - light_positionView_z >= light_attenuationEndNeg);
+        inFrustum[3] = (light_positionView_z - subtileMinZ[3] >= light_attenuationEndNeg) && 
+            (subtileMaxZ[3] - light_positionView_z >= light_attenuationEndNeg);
+
+        float dx = light_positionView_z * frustumPlanes_z[0] + 
+            light_positionView_x * frustumPlanes_xy[0];
+        float dy = light_positionView_z * frustumPlanes_z[1] +
+            light_positionView_y * frustumPlanes_xy[1];
+        
+        cif (abs(dx) > light_attenuationEnd) {
+            bool positiveX = dx > 0.0f;
+            inFrustum[0] = inFrustum[0] &&  positiveX;    // 00 subtile
+            inFrustum[1] = inFrustum[1] && !positiveX;    // 10 subtile
+            inFrustum[2] = inFrustum[2] &&  positiveX;    // 01 subtile
+            inFrustum[3] = inFrustum[3] && !positiveX;    // 11 subtile
+        }
+        cif (abs(dy) > light_attenuationEnd) {
+            bool positiveY = dy > 0.0f;
+            inFrustum[0] = inFrustum[0] &&  positiveY;    // 00 subtile
+            inFrustum[1] = inFrustum[1] &&  positiveY;    // 10 subtile
+            inFrustum[2] = inFrustum[2] && !positiveY;    // 01 subtile
+            inFrustum[3] = inFrustum[3] && !positiveY;    // 11 subtile
+        }
+
+        // Pack and store intersecting lights
+        // TODO: Experiment with a loop here instead
+        cif (inFrustum[0])
+            subtileLightOffset[0] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[0]],
+                                lightIndex);
+        cif (inFrustum[1])
+            subtileLightOffset[1] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[1]],
+                                lightIndex);
+        cif (inFrustum[2])
+            subtileLightOffset[2] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[2]], 
+                                lightIndex);
+        cif (inFrustum[3])
+            subtileLightOffset[3] += 
+            packed_store_active(&subtileIndices[subtileLightOffset[3]], 
+                                lightIndex);
+    }
+
+    subtileNumLights[0] = subtileLightOffset[0] - 0 * subtileIndicesPitch;
+    subtileNumLights[1] = subtileLightOffset[1] - 1 * subtileIndicesPitch;
+    subtileNumLights[2] = subtileLightOffset[2] - 2 * subtileIndicesPitch;
+    subtileNumLights[3] = subtileLightOffset[3] - 3 * subtileIndicesPitch;
+}

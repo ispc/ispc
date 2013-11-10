@@ -51,8 +51,8 @@
 #endif // ISPC_IS_LINUX
 
 // Currently tile widths must be a multiple of SIMD width (i.e. 8 for ispc sse4x2)!
-#define MIN_TILE_WIDTH 16
-#define MIN_TILE_HEIGHT 16
+//#define MIN_TILE_WIDTH 16
+//#define MIN_TILE_HEIGHT 16
 
 
 #define DYNAMIC_TREE_LEVELS 5
