@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
             ispc::RenderStatic(input->header, input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
-        double mcycles = (rtc() - t0) / nframes;
+        double mcycles = 1000*(rtc() - t0) / nframes;
         ispcCycles = std::min(ispcCycles, mcycles);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
