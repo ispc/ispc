@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
                 (uint8_t*)d_r, 
                 (uint8_t*)d_g, 
                 (uint8_t*)d_b);
-        double mcycles = (rtc() - t0) / nframes;
+        double mcycles = 1000*(rtc() - t0) / nframes;
         ispcCycles = std::min(ispcCycles, mcycles);
     }
 

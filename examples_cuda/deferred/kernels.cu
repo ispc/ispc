@@ -96,18 +96,101 @@ dot3(float x, float y, float z, float a, float b, float c) {
 
 
 #if 0
+static __shared__ int shdata_full[128];
 template<typename T, int N>
 struct Uniform
 {
-  T data[(N-1)/programCount+1];
+  T data[(N+programCount-1)/programCount];
+  volatile T *shdata;
 
-  __device__ inline const T& operator[](const int i) const
+  __device__ inline Uniform()
   {
-    const int  laneIdx = i & (programCount-1);
-    const int chunkIdx = i >> 5;
-    return __shfl(data[chunkIdx], laneIdx);
+    shdata = ((T*)shdata_full) + warpIdx*32;
   }
-}
+
+  __device__ inline int2 get_chunk(const int i) const
+  {
+    const int elem  = i & (programCount - 1);
+    const int chunk = i >> 5;
+    shdata[programIndex] = chunk;
+    shdata[        elem] = chunk;
+    return make_int2(shdata[programIndex], elem);
+  }
+
+  __device__ inline const T get(const int i) const
+  {
+    const int2 idx = get_chunk(i);
+    return __shfl(data[idx.x], idx.y);
+  }
+  
+  __device__ inline void set(const bool active, const int i, T value) 
+  {
+    const int2 idx = get_chunk(i);
+    const int chunkIdx = idx.x;
+    const int elemIdx = idx.y;
+    shdata[programIndex] = data[chunkIdx];
+    if (active) shdata[elemIdx] = value;
+    data[chunkIdx] = shdata[programIndex];
+  }
+};
+#elif 1
+template<typename T, int N>
+struct Uniform
+{
+  union
+  {
+    T *data;
+    int32_t ptr[2];
+  };
+
+  __device__ inline Uniform()
+  {
+    if (programIndex == 0)
+      data = (T*)malloc(N*sizeof(T));
+    ptr[0] = __shfl(ptr[0], 0);
+    ptr[1] = __shfl(ptr[1], 0);
+  }
+  __device__ inline ~Uniform()
+  {
+    if (programIndex == 0)
+      free(data);
+  }
+
+  __device__ inline const T get(const int i) const
+  {
+    return data[i];
+  }
+  
+  __device__ inline void set(const bool active, const int i, T value) 
+  {
+    if (active)
+      data[i] = value;
+  }
+};
+
+#else
+__shared__ int shdata_full[4*MAX_LIGHTS];
+template<typename T, int N>
+struct Uniform
+{
+  volatile T *shdata;
+
+  __device__ Uniform()
+  {
+    shdata = (T*)&shdata_full[warpIdx*MAX_LIGHTS];
+  }
+
+  __device__ inline const T get(const int i) const
+  {
+    return shdata[i];
+  }
+  
+  __device__ inline void set(const bool active, const int i, T value) 
+  {
+    if (active)
+      shdata[i] = value;
+  }
+};
 #endif
 
 
@@ -256,7 +339,7 @@ IntersectLightsWithTileMinMax(
      float light_positionView_z_array[],
      float light_attenuationEnd_array[],
     // Output
-     volatile int32 tileLightIndices[]
+     Uniform<int,MAX_LIGHTS> &tileLightIndices
     )
 {
      float gBufferScale_x = 0.5f * (float)gBufferWidth;
@@ -346,8 +429,8 @@ IntersectLightsWithTileMinMax(
         const int idx = tileNumLights + res.x;
         const int nactive = res.y;
 #endif
-        if (active)
-          tileLightIndices[idx] = lightIndex;
+//        if (active)
+          tileLightIndices.set(active, idx,lightIndex);
         tileNumLights += nactive;
 #endif
     }
@@ -375,7 +458,7 @@ IntersectLightsWithTile(
      float light_positionView_z_array[],
      float light_attenuationEnd_array[],
     // Output
-     int32 tileLightIndices[]
+     Uniform<int,MAX_LIGHTS> &tileLightIndices
     )
 {
      float minZ, maxZ;
@@ -406,7 +489,7 @@ ShadeTile(
      float cameraProj_11,  float cameraProj_22,
      float cameraProj_33,  float cameraProj_43,
     // Light list
-     volatile int32 tileLightIndices[],
+     Uniform<int,MAX_LIGHTS> &tileLightIndices,
      int32 tileNumLights,
     // UI
      bool visualizeLightCount,
@@ -491,7 +574,7 @@ ShadeTile(
                 float lit_z = 0.0f;
                 for ( int32 tileLightIndex = 0; tileLightIndex < tileNumLights; 
                      ++tileLightIndex) {
-                     int32 lightIndex = tileLightIndices[tileLightIndex];
+                     int32 lightIndex = tileLightIndices.get(tileLightIndex);
                                         
                     // Gather light data relevant to initial culling
                      float light_positionView_x = 
@@ -618,8 +701,9 @@ RenderTile( int num_groups_x,  int num_groups_y,
      float cameraProj_32 = inputHeader.cameraProj[3][2];
 
     // Light intersection: figure out which lights illuminate this tile.
-#if 0
-     int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
+#if 1
+//     int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
+     Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
 #else
      __shared__ int tileLightIndicesFull[4*MAX_LIGHTS];  // Light list for the tile
      int *tileLightIndices = &tileLightIndicesFull[warpIdx*MAX_LIGHTS];

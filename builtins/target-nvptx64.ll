@@ -64,7 +64,8 @@ define i32 @__nctaid_z()  nounwind readnone alwaysinline
 ;;;;;;;;;;;;;;
 
 
-include(`util.m4')
+
+include(`util_ptx.m4')
 
 stdlib_core()
 packed_load_and_store()
