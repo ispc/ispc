@@ -116,7 +116,11 @@ ComputeZBounds(
     float laneMinZ = cameraFar;
     float laneMaxZ = cameraNear;
     for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-        foreach (x = tileStartX ... tileEndX) {
+//        foreach (x = tileStartX ... tileEndX) 
+        for (uniform int xb = tileStartX; xb < tileEndX; xb += programCount)
+        {
+          const int x = xb + programIndex;
+          if (x >= tileEndX) break;
             // Unproject depth buffer Z value into view space
             float z = zBuffer[y * gBufferWidth + x];
             float viewSpaceZ = cameraProj_43 / (z - cameraProj_33);
@@ -178,7 +182,10 @@ IntersectLightsWithTileMinMax(
 
     uniform int32 tileNumLights = 0;
 
-    foreach (lightIndex = 0 ... numLights) {
+//    foreach (lightIndex = 0 ... numLights) 
+    for (uniform int lightIndexB = 0; lightIndexB < numLights; lightIndexB += programCount)
+    {
+      const int lightIndex = lightIndexB + programIndex;
         float light_positionView_z = light_positionView_z_array[lightIndex];
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
         float light_attenuationEndNeg = -light_attenuationEnd;
@@ -193,6 +200,7 @@ IntersectLightsWithTileMinMax(
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
+      bool active = false;
         if (any(inFrustum)) {
             float light_positionView_x = light_positionView_x_array[lightIndex];
             float light_positionView_y = light_positionView_y_array[lightIndex];
@@ -214,12 +222,14 @@ IntersectLightsWithTileMinMax(
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
         
             // Pack and store intersecting lights
-            cif (inFrustum) {
-                tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
-                                                     lightIndex);
+            if (inFrustum)
+              active = true;
             }
+            if (lightIndex >= numLights) 
+              active = false;
+
+            tileNumLights += packed_store_active(active, &tileLightIndices[tileNumLights], lightIndex);
         }
-    }
 
     return tileNumLights;
 }
@@ -285,7 +295,11 @@ ShadeTile(
     if (tileNumLights == 0 || visualizeLightCount) {
         uniform unsigned int8 c = (unsigned int8)(min(tileNumLights << 2, 255));
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
-            foreach (x = tileStartX ... tileEndX) {
+//            foreach (x = tileStartX ... tileEndX) 
+            for (uniform int xb = tileStartX ; xb < tileEndX; xb += programCount)
+            { 
+              const int x = xb + programIndex;
+              if (x >= tileEndX) continue;
                 int32 framebufferIndex = (y * gBufferWidth + x);
                 framebuffer_r[framebufferIndex] = c;
                 framebuffer_g[framebufferIndex] = c;
@@ -299,7 +313,10 @@ ShadeTile(
         for (uniform int32 y = tileStartY; y < tileEndY; ++y) {
             uniform float positionScreen_y = -(((0.5f + y) * twoOverGBufferHeight) - 1.f);
 
-            foreach (x = tileStartX ... tileEndX) {
+//            foreach (x = tileStartX ... tileEndX) {
+            for (uniform int xb = tileStartX ; xb < tileEndX; xb += programCount)
+            { 
+              const int x = xb + programIndex;
                 int32 gBufferOffset = y * gBufferWidth + x;
                 
                 // Reconstruct position and (negative) view vector from G-buffer

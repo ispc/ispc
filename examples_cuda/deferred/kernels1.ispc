@@ -131,7 +131,7 @@ ComputeZBounds(
         for (uniform int xb = tileStartX; xb < tileEndX; xb += programCount)
         {
           const int x = xb + programIndex;
-          if (x >= tileEndX) continue;
+          if (x >= tileEndX) break;
             // Unproject depth buffer Z value into view space
             float z = zBuffer[y * gBufferWidth + x];
             float viewSpaceZ = cameraProj_43 / (z - cameraProj_33);
@@ -197,48 +197,50 @@ IntersectLightsWithTileMinMax(
     for (uniform int lightIndexB = 0; lightIndexB < numLights; lightIndexB += programCount)
     {
       const int lightIndex = lightIndexB + programIndex;
-      if (lightIndex >= numLights) continue;
 
-        float light_positionView_z = light_positionView_z_array[lightIndex];
-        float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
-        float light_attenuationEndNeg = -light_attenuationEnd;
+      float light_positionView_z = light_positionView_z_array[lightIndex];
+      float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
+      float light_attenuationEndNeg = -light_attenuationEnd;
 
-        float d = light_positionView_z - minZ;
-        bool inFrustum = (d >= light_attenuationEndNeg);
+      float d = light_positionView_z - minZ;
+      bool inFrustum = (d >= light_attenuationEndNeg);
 
-        d = maxZ - light_positionView_z;
+      d = maxZ - light_positionView_z;
+      inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+
+      // This seems better than cif(!inFrustum) ccontinue; here since we
+      // don't actually need to mask the rest of this function - this is
+      // just a greedy early-out.  Could also structure all of this as
+      // nested if() statements, but this a bit easier to read
+      bool active = false;
+      if (any(inFrustum)) {
+        float light_positionView_x = light_positionView_x_array[lightIndex];
+        float light_positionView_y = light_positionView_y_array[lightIndex];
+
+        d = light_positionView_z * frustumPlanes_z[0] + 
+          light_positionView_x * frustumPlanes_xy[0];
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
-        // This seems better than cif(!inFrustum) ccontinue; here since we
-        // don't actually need to mask the rest of this function - this is
-        // just a greedy early-out.  Could also structure all of this as
-        // nested if() statements, but this a bit easier to read
-        if (any(inFrustum)) {
-            float light_positionView_x = light_positionView_x_array[lightIndex];
-            float light_positionView_y = light_positionView_y_array[lightIndex];
 
-            d = light_positionView_z * frustumPlanes_z[0] + 
-                light_positionView_x * frustumPlanes_xy[0];
-            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+        d = light_positionView_z * frustumPlanes_z[1] + 
+          light_positionView_x * frustumPlanes_xy[1];
+        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[1] + 
-                light_positionView_x * frustumPlanes_xy[1];
-            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+        d = light_positionView_z * frustumPlanes_z[2] + 
+          light_positionView_y * frustumPlanes_xy[2];
+        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[2] + 
-                light_positionView_y * frustumPlanes_xy[2];
-            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
+        d = light_positionView_z * frustumPlanes_z[3] + 
+          light_positionView_y * frustumPlanes_xy[3];
+        inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
-            d = light_positionView_z * frustumPlanes_z[3] + 
-                light_positionView_y * frustumPlanes_xy[3];
-            inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
-            // Pack and store intersecting lights
-            if (inFrustum) {
-                tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
-                                                     lightIndex);
-            }
-        }
+        // Pack and store intersecting lights
+        if (inFrustum) 
+          active = true;
+      }
+      if (lightIndex >= numLights) 
+        active = false;
+
+      tileNumLights += packed_store_active(active, &tileLightIndices[tileNumLights], lightIndex);
     }
 
     return tileNumLights;

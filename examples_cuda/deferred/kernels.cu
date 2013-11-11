@@ -209,7 +209,7 @@ static float reduce_min(float value)
 {
 #pragma unroll
   for (int i = 4; i >=0; i--)
-    value = min(value, __shfl_xor(value, 1<<i, 32));
+    value = fminf(value, __shfl_xor(value, 1<<i, 32));
   return value;
 }
 __device__ inline
@@ -217,7 +217,7 @@ static float reduce_max(float value)
 {
 #pragma unroll
   for (int i = 4; i >=0; i--)
-    value = max(value, __shfl_xor(value, 1<<i, 32));
+    value = fmaxf(value, __shfl_xor(value, 1<<i, 32));
   return value;
 }
 
@@ -261,15 +261,15 @@ static __device__ __forceinline__ int lanemask_lt()
 }
 static __device__ __forceinline__ int2 warpBinExclusiveScan(const bool p)
 {
-  const unsigned int b = __ballot(p);
-  return make_int2(__popc(b & lanemask_lt()), __popc(b));
+  const int b = __ballot(p);
+  return make_int2(__popc(b), __popc(b & lanemask_lt()));
 }
   __device__ static inline 
 int packed_store_active(bool active, int* ptr, int value)
 {
   const int2 res = warpBinExclusiveScan(active);
-  const int idx = res.x;
-  const int nactive = res.y;
+  const int idx = res.y;
+  const int nactive = res.x;
   if (active)
     ptr[idx] = value;
   return nactive;
@@ -382,6 +382,7 @@ IntersectLightsWithTileMinMax(
     for ( int lightIndexB = 0; lightIndexB < numLights; lightIndexB += programCount)
     {
       const int lightIndex = lightIndexB + programIndex;
+      if (lightIndex >= numLights) break;
 
         float light_positionView_z = light_positionView_z_array[lightIndex];
         float light_attenuationEnd = light_attenuationEnd_array[lightIndex];
@@ -431,8 +432,6 @@ IntersectLightsWithTileMinMax(
             }
 #endif
         }
-        if (lightIndex >= numLights) 
-          active = 0;
 
 #if 0
         const int2 res = warpBinExclusiveScan(active);
@@ -561,8 +560,10 @@ ShadeTile(
 
                 // Reconstruct normal from G-buffer
                 float surface_normal_x, surface_normal_y, surface_normal_z;
+                asm("// half2float //");
                 float normal_x = __half2float(inputData.normalEncoded_x[gBufferOffset]);
                 float normal_y = __half2float(inputData.normalEncoded_y[gBufferOffset]);
+                asm("// half2float //");
                     
                 float f = (normal_x - normal_x * normal_x) + (normal_y - normal_y * normal_y);
                 float m = sqrt(4.0f * f - 1.0f);
