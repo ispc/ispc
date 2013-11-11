@@ -662,7 +662,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_nativeVectorWidth = 32;
         this->m_vectorWidth = 1;
         this->m_attributes = "+sm_35";
-        this->m_hasHalf = false;
+        this->m_hasHalf = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
         this->m_hasTranscendentals = false; //true;
