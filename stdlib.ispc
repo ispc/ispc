@@ -1276,6 +1276,11 @@ packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
+static inline uniform int 
+packed_store_active(bool active, uniform int a[], int vals) {
+    return __packed_store_active(a, vals, (IntMaskType)(-(int)active));
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // System information
 
