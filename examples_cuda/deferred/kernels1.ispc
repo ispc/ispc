@@ -37,6 +37,7 @@
 #define programIndex laneIndex()
 #define taskIndex    blockIndex0()
 #define taskCount    blockCount0()
+#define cif          if
 #else
 #warning "emitting HOST code"
 #endif
@@ -212,8 +213,8 @@ IntersectLightsWithTileMinMax(
       // don't actually need to mask the rest of this function - this is
       // just a greedy early-out.  Could also structure all of this as
       // nested if() statements, but this a bit easier to read
-      bool active = false;
-      if (any(inFrustum)) {
+      if (any(inFrustum)) 
+      {
         float light_positionView_x = light_positionView_x_array[lightIndex];
         float light_positionView_y = light_positionView_y_array[lightIndex];
 
@@ -234,13 +235,11 @@ IntersectLightsWithTileMinMax(
         inFrustum = inFrustum && (d >= light_attenuationEndNeg);
 
         // Pack and store intersecting lights
-        if (inFrustum) 
-          active = true;
-      }
-      if (lightIndex >= numLights) 
-        active = false;
+        const bool active = inFrustum && lightIndex < numLights;
 
-      tileNumLights += packed_store_active(active, &tileLightIndices[tileNumLights], lightIndex);
+        if(any(active))
+          tileNumLights += packed_store_active(active, &tileLightIndices[tileNumLights], lightIndex);
+      }
     }
 
     return tileNumLights;
@@ -402,7 +401,7 @@ ShadeTile(
                     // Clip at end of attenuation
                     float light_attenutaionEnd2 = light_attenuationEnd * light_attenuationEnd;
 
-                    if (distanceToLight2 < light_attenutaionEnd2) {                    
+                    cif (distanceToLight2 < light_attenutaionEnd2) {                    
                         float distanceToLight = sqrt(distanceToLight2);
 
                         // HLSL "rcp" is allowed to be fairly inaccurate
@@ -416,7 +415,7 @@ ShadeTile(
                                            surface_normal_z, L_x, L_y, L_z);
                     
                         // Clip back facing
-                        if (NdotL > 0.0f) {
+                        cif (NdotL > 0.0f) {
                             uniform float light_attenuationBegin = 
                                 inputData.lightAttenuationBegin[lightIndex];
 

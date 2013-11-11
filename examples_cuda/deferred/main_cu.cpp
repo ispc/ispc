@@ -186,7 +186,7 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
 #define deviceLaunch(func,nbx,nby,nbz,params) \
-  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_EQUAL)); \
+  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
@@ -251,7 +251,7 @@ extern "C"
     assert(module_1 != NULL);
     assert(func_name != NULL);
     assert(func_args != NULL);
-#if 1
+#if 0
     const char * module = module_1;
 #else
     const std::vector<char> module_str = readBinary("kernel.cubin");
@@ -388,7 +388,7 @@ int main(int argc, char** argv) {
     memcpyD2H(framebuffer.g, d_g, buffsize);
     memcpyD2H(framebuffer.b, d_b, buffsize);
 
-    printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
+    printf("[ispc cuda]:\t\t[%.3f] million cycles to render "
            "%d x %d image\n", ispcCycles,
            input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-cuda.ppm", input, framebuffer);

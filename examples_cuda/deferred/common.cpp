@@ -131,6 +131,7 @@ CreateInputDataFromFile(const char *path) {
         fprintf(stderr, "Preumature EOF reading file \"%s\"\n", path);
         return NULL;
     }
+    fprintf(stderr, " numLights= %d\n", input->header.numLights);
 
     // Load data chunk and update pointers
     input->chunk = (uint8_t *)lAlignedMalloc(input->header.inputDataChunkSize, 

@@ -484,25 +484,28 @@ svml_stubs(double,d,WIDTH)
 
 define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %v64 = zext i1 %v to i64
-  ret i64 %v64
+    %v64 = zext i1 %v to i64
+    ret i64 %v64
 }
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-   %cmp = icmp ne i1 %v, 0
+  %res = call i32 @__ballot(i1 %v)
+  %cmp = icmp ne i32 %res, 0
   ret i1 %cmp
 }
 
 define  i1 @__all(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = icmp eq i1 %v, 1
+  %res = call i32 @__ballot(i1 %v)
+  %cmp = icmp eq i32 %res, 31
   ret i1 %cmp
 }
 
 define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %cmp = icmp eq i1 %v, 0
+  %res = call i32 @__ballot(i1 %v)
+  %cmp = icmp eq i32 %res, 0
   ret i1 %cmp
 }
 
