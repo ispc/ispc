@@ -161,6 +161,7 @@ struct Uniform
     return data[i];
   }
   
+  __device__ inline T* get_ptr(const int i) {return &data[i]; }
   __device__ inline void set(const bool active, const int i, T value) 
   {
     if (active)
@@ -219,6 +220,8 @@ static float reduce_max(float value)
     value = max(value, __shfl_xor(value, 1<<i, 32));
   return value;
 }
+
+#if 0
 __device__ inline
 static int reduce_sum(int value)
 {
@@ -247,6 +250,7 @@ static __device__ __forceinline__ int inclusive_scan_warp(const int value)
     sum = shfl_scan_add_step(sum, 1 << i);
   return sum - value;
 }
+#endif
 
 
 static __device__ __forceinline__ int lanemask_lt()
@@ -259,6 +263,16 @@ static __device__ __forceinline__ int2 warpBinExclusiveScan(const bool p)
 {
   const unsigned int b = __ballot(p);
   return make_int2(__popc(b & lanemask_lt()), __popc(b));
+}
+  __device__ static inline 
+int packed_store_active(bool active, int* ptr, int value)
+{
+  const int2 res = warpBinExclusiveScan(active);
+  const int idx = res.x;
+  const int nactive = res.y;
+  if (active)
+    ptr[idx] = value;
+  return nactive;
 }
 
 
@@ -417,21 +431,18 @@ IntersectLightsWithTileMinMax(
             }
 #endif
         }
-#if 1
         if (lightIndex >= numLights) 
           active = 0;
 
 #if 0
-        const int idx = tileNumLights + inclusive_scan_warp(active);
-        const int nactive = reduce_sum(active);
-#else
         const int2 res = warpBinExclusiveScan(active);
         const int idx = tileNumLights + res.x;
         const int nactive = res.y;
-#endif
-//        if (active)
-          tileLightIndices.set(active, idx,lightIndex);
+        tileLightIndices.set(active, idx,lightIndex);
         tileNumLights += nactive;
+#else
+        tileNumLights += packed_store_active(active, tileLightIndices.get_ptr(tileNumLights), 
+            lightIndex);
 #endif
     }
 

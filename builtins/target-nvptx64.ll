@@ -60,6 +60,11 @@ define i32 @__nctaid_z()  nounwind readnone alwaysinline
  %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
  ret i32 %nb
 }
+define i32 @__shfl_i32(i32, i32) nounwind readnone alwaysinline
+{
+  %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
+  ret i32 %shfl
+}
 
 ;;;;;;;;;;;;;;
 
