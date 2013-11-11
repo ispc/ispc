@@ -511,6 +511,7 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
 #else
     uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
 #endif
+#if 1
     uniform int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
@@ -532,6 +533,7 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
+#endif
 #if 1
     delete tileLightIndices;
 #endif

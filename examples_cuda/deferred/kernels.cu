@@ -398,8 +398,8 @@ IntersectLightsWithTileMinMax(
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
-        int active = 0;
-        if ((inFrustum)) {
+        if (__ballot(inFrustum) > 0) 
+        {
             float light_positionView_x = light_positionView_x_array[lightIndex];
             float light_positionView_y = light_positionView_y_array[lightIndex];
 
@@ -420,29 +420,21 @@ IntersectLightsWithTileMinMax(
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
         
             // Pack and store intersecting lights
+            const bool active = inFrustum && lightIndex < numLights;
 #if 0
-            if (inFrustum) {
-                tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
-                                                     lightIndex);
-            }
+            if (__ballot(active) > 0)
+              tileNumLights += packed_store_active(active, tileLightIndices.get_ptr(tileNumLights), lightIndex);
 #else
-            if (inFrustum)
+            if (__ballot(active) > 0)
             {
-              active = 1;
+              const int2 res = warpBinExclusiveScan(active);
+              const int idx = tileNumLights + res.y;
+              const int nactive = res.x;
+              tileLightIndices.set(active, idx, lightIndex);
+              tileNumLights += nactive;
             }
 #endif
         }
-
-#if 0
-        const int2 res = warpBinExclusiveScan(active);
-        const int idx = tileNumLights + res.x;
-        const int nactive = res.y;
-        tileLightIndices.set(active, idx,lightIndex);
-        tileNumLights += nactive;
-#else
-        tileNumLights += packed_store_active(active, tileLightIndices.get_ptr(tileNumLights), 
-            lightIndex);
-#endif
     }
 
     return tileNumLights;
@@ -590,13 +582,13 @@ ShadeTile(
                                         
                     // Gather light data relevant to initial culling
                      float light_positionView_x = 
-                        inputData.lightPositionView_x[lightIndex];
+                        __ldg(&inputData.lightPositionView_x[lightIndex]);
                      float light_positionView_y = 
-                        inputData.lightPositionView_y[lightIndex];
+                        __ldg(&inputData.lightPositionView_y[lightIndex]);
                      float light_positionView_z = 
-                        inputData.lightPositionView_z[lightIndex];
+                        __ldg(&inputData.lightPositionView_z[lightIndex]);
                      float light_attenuationEnd = 
-                        inputData.lightAttenuationEnd[lightIndex];
+                        __ldg(&inputData.lightAttenuationEnd[lightIndex]);
                     
                     // Compute light vector
                     float L_x = light_positionView_x - surface_positionView_x;
@@ -713,13 +705,8 @@ RenderTile( int num_groups_x,  int num_groups_y,
      float cameraProj_32 = inputHeader.cameraProj[3][2];
 
     // Light intersection: figure out which lights illuminate this tile.
-#if 1
-//     int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
      Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
-#else
-     __shared__ int tileLightIndicesFull[4*MAX_LIGHTS];  // Light list for the tile
-     int *tileLightIndices = &tileLightIndicesFull[warpIdx*MAX_LIGHTS];
-#endif
+#if 1
      int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
@@ -741,6 +728,7 @@ RenderTile( int num_groups_x,  int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
+#endif
 }
 
 
