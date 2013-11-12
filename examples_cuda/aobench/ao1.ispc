@@ -286,7 +286,11 @@ static inline void ao_tile(
 #define TILEX 64
 #define TILEY 4
 
-/* task will generate " __global__ " only */
+/* unless task/export is specified all functions
+ * are generated as mangled "__device__" functions  
+ */
+
+/* task will generate mangled "__global__" function only */
 void task ao_task(uniform int width, uniform int height, 
     uniform int nsubsamples, uniform float image[]) 
 {
@@ -302,11 +306,12 @@ void task ao_task(uniform int width, uniform int height,
 }
 
 
-/* export will generate "extern "C" __global__"  an "__device__" */
+/* export will generate unmangled "extern "C" __global__"  and mangled "__device__" */
 export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
     uniform float image[]) 
 {
   const uniform int ntilex = (w+TILEX-1)/TILEX;
   const uniform int ntiley = (h+TILEY-1)/TILEY;
   launch[ntilex,ntiley] ao_task(w, h, nsubsamples, image);
+  sync;
 }

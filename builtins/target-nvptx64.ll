@@ -24,8 +24,9 @@ define i32 @__tid_x()  nounwind readnone alwaysinline
 }
 define i32 @__warpsize()  nounwind readnone alwaysinline
 {
- %tid = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
- ret i32 %tid
+;; %tid = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
+;; ret i32 %tid
+  ret i32 32
 }
 
 
@@ -116,14 +117,26 @@ define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
 }
 define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
 {
+entry:
   %func_i64 = ptrtoint i8*  %func_ptr  to i64
   %args_i64 = ptrtoint i8** %func_args to i64
 ;; nbx = (%ntx-1)/(blocksize/warpsize) + 1  for blocksize=128 & warpsize=32
-  %sub = add nsw i32 %ntx, -1
-  %div = sdiv i32 %sub, 4
-  %nbx = add nsw i32 %div, 1
+  %ntxm1   = add nsw i32 %ntx, -1
+  %ntxm1d4 = sdiv i32 %ntxm1, 4
+  %nbx     = add nsw i32 %ntxm1d4, 1
 
-  %res = call i32 asm sideeffect "{
+;;  only 1 lane must launch the kernel  !!!
+  %call = tail call i32 @__tid_x()
+  %call1 = tail call i32 @__warpsize()
+  %sub = add nsw i32 %call1, -1
+  %and = and i32 %sub, %call
+;; if (laneIdx == 0)
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+
+  %res_tmp = call i32 asm sideeffect "{
       .reg .s32 %r<8>;
       .reg .s64 %rd<3>;
      .param .b64 param0;
@@ -158,6 +171,11 @@ define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty
   }
   ", 
 "=r, l,l, r,r,r, r,r,r, r,l"(i64 %func_i64,i64 %args_i64, i32 %nbx,i32 %nty,i32 %ntz, i32 128,i32 1,i32 1, i32 0,i64 0);
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  %res = phi i32 [ %res_tmp, %if.then ], [ undef, %entry ]
+
   ret void
 }
 declare i32 @cudaDeviceSynchronize() nounwind
