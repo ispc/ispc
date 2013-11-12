@@ -268,13 +268,13 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
 {
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
-#define deviceLaunch(func,nbx,nby,nbz,params) \
+#define deviceLaunch(func,params) \
   checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_EQUAL)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
-        ((nbx-1)/(128/32)+1), (nby), (nbz), \
-        128, 1, 1, \
+        1,1,1, \
+        32, 1, 1, \
         0, NULL, (params), NULL \
         ));
 
@@ -323,27 +323,14 @@ extern "C"
   }
   void CUDALaunch(
       void **handlePtr, 
-      const char * module_name,
-      const char * module_1,
       const char * func_name,
-      void **func_args, 
-      int countx, int county, int countz)
+      void **func_args)
   {
-    assert(module_name != NULL);
-    assert(module_1 != NULL);
-    assert(func_name != NULL);
-    assert(func_args != NULL);
-#if 0
-    const char * module = module_1;
-#else
     const std::vector<char> module_str = readBinary("kernel.ptx");
     const char *  module = &module_str[0];
-#endif
     CUmodule   cudaModule   = loadModule(module);
-//    CUfunction cudaFunction = getFunction(cudaModule, func_name);
-//    deviceLaunch(cudaFunction, countx, county, countz, func_args);
-    CUfunction cudaFunction = getFunction(cudaModule, "ao_ispc_tasks");
-    deviceLaunch(cudaFunction, 1, 1, 1, func_args);
+    CUfunction cudaFunction = getFunction(cudaModule, func_name);
+    deviceLaunch(cudaFunction, func_args);
     unloadModule(cudaModule);
   }
   void CUDASync(void *handle)
@@ -466,11 +453,20 @@ int main(int argc, char **argv)
 
         reset_and_start_timer();
         const double t0 = rtc();
+#if 0
         ao_ispc_tasks(
             width, 
             height, 
             NSUBSAMPLES, 
             (float*)d_fimg);
+#else
+        const char * func_name = "ao_ispc_tasks";
+        int arg_1 = width;
+        int arg_2 = height;
+        int arg_3 = NSUBSAMPLES;
+        void *func_args[] = {&arg_1, &arg_2, &arg_3, (float*)&d_fimg};
+        CUDALaunch(NULL, func_name, func_args);
+#endif
         double t = (rtc() - t0); //get_elapsed_mcycles();
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
