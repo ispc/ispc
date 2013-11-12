@@ -186,7 +186,7 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
 #define deviceLaunch(func,nbx,nby,nbz,params) \
-  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
+  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_SHARED)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
@@ -381,6 +381,7 @@ int main(int argc, char** argv) {
                 (uint8_t*)d_g, 
                 (uint8_t*)d_b);
         double mcycles = 1000*(rtc() - t0) / nframes;
+        fprintf(stderr, "dt= %g\n", mcycles);
         ispcCycles = std::min(ispcCycles, mcycles);
     }
 

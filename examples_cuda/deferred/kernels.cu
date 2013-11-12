@@ -133,6 +133,44 @@ struct Uniform
     data[chunkIdx] = shdata[programIndex];
   }
 };
+#elif 0
+static __shared__ void* shptr_full[128];
+template<typename T, int N>
+struct Uniform
+{
+  T data[(N+programCount-1)/programCount];
+  T* *shptr;
+
+  __device__ inline Uniform()
+  {
+    shptr = (T**)shptr_full;
+    shptr[threadIdx.x] = data;
+    __syncthreads();
+  }
+
+  __device__ inline int2 get_chunk(const int i) const
+  {
+    const int elem  = i & (programCount - 1);
+    const int chunk = i >> 5;
+    return make_int2(chunk, elem);
+  }
+
+  __device__ inline const T get(const int i) const
+  {
+    const int2 idx = get_chunk(i);
+    const int chunk = idx.x;
+    const int elem  = idx.y;
+    return shptr[chunk][elem];
+  }
+  
+  __device__ inline void set(const bool active, const int i, T value) 
+  {
+    const int2 idx = get_chunk(i);
+    const int chunk = idx.x;
+    const int elem  = idx.y;
+    shptr[chunk][elem] = value;
+  }
+};
 #elif 1
 template<typename T, int N>
 struct Uniform
@@ -143,17 +181,32 @@ struct Uniform
     int32_t ptr[2];
   };
 
+
   __device__ inline Uniform()
   {
+#if 1
     if (programIndex == 0)
-      data = (T*)malloc(N*sizeof(T));
+      data = new T[N];
     ptr[0] = __shfl(ptr[0], 0);
     ptr[1] = __shfl(ptr[1], 0);
+#else
+    __shared__ T *ptr;
+    if (threadIdx.x == 0)
+      ptr = new T[4*N];
+    __syncthreads();
+    data = ptr;
+    data += warpIdx*N;
+#endif
   }
   __device__ inline ~Uniform()
   {
+#if 1
     if (programIndex == 0)
-      free(data);
+      delete data;
+#else
+    if (threadIdx.x == 0)
+      delete data;
+#endif
   }
 
   __device__ inline const T get(const int i) const
@@ -664,6 +717,7 @@ ShadeTile(
                 lit_y = pow(clamp(lit_y, 0.0f, 1.0f), gamma);
                 lit_z = pow(clamp(lit_z, 0.0f, 1.0f), gamma);
                 
+              if (x >= tileEndX) break;
                 framebuffer_r[gBufferOffset] = Float32ToUnorm8(lit_x);
                 framebuffer_g[gBufferOffset] = Float32ToUnorm8(lit_y);
                 framebuffer_b[gBufferOffset] = Float32ToUnorm8(lit_z);
@@ -687,6 +741,7 @@ RenderTile( int num_groups_x,  int num_groups_y,
             unsigned int8 framebuffer_b[]) {
   if (taskIndex >= taskCount) return;
 
+#if 1
   const  InputHeader inputHeader = *inputHeaderPtr;
   const  InputDataArrays inputData = *inputDataPtr;
      int32 group_y = taskIndex / num_groups_x;
@@ -703,9 +758,16 @@ RenderTile( int num_groups_x,  int num_groups_y,
      float cameraProj_11 = inputHeader.cameraProj[1][1];
      float cameraProj_22 = inputHeader.cameraProj[2][2];
      float cameraProj_32 = inputHeader.cameraProj[3][2];
+#endif
 
     // Light intersection: figure out which lights illuminate this tile.
      Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
+
+#if 0
+     tileLightIndices.set(threadIdx.x&1, threadIdx.x, framebuffer_g[blockIdx.x]);
+     framebuffer_r[threadIdx.x] = tileLightIndices.get(threadIdx.x);
+#endif
+
 #if 1
      int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
