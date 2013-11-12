@@ -115,7 +115,8 @@ define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
 {
   ret i8* null
 }
-define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
+declare i64 @cudaGetParameterBuffer(i64, i64) nounwind
+define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %nargs, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
 {
 entry:
   %func_i64 = ptrtoint i8*  %func_ptr  to i64
@@ -135,6 +136,10 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
+
+  %param = call i64 @cudaGetParameterBuffer(i64 8, i64 24);
+  %ptr   = inttoptr i64 %param to i8*;
+
 
   %res_tmp = call i32 asm sideeffect "{
       .reg .s32 %r<8>;

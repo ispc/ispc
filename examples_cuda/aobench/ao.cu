@@ -418,7 +418,7 @@ void ao_ispc_tasks(
   const int nbz = 1;
   const dim3 blocks (nbx, nby, nbz);
   if (threadIdx.x == 0)
-    ao_task<<<blocks, 128>>>(w,h,nsubsamples,image);
+    ao_task<<<blocks, 128>>>(w,w,nsubsamples,image);
   cudaDeviceSynchronize();
 }
 #endif
