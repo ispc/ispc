@@ -3524,7 +3524,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
                                 llvm::Value *launchCount[3]){
 
-    if (!g->target->isPTX())
+    if (1) // if (!g->target->isPTX())
     {
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);

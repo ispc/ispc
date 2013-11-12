@@ -533,8 +533,8 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         if (isTask && g->target->isPTX()) //getISA() == Target::NVPTX64)
         {
-          ds->storageClass = SC_EXTERN_C;
-          ds->typeQualifiers |= TYPEQUAL_UNMASKED;
+//          ds->storageClass = SC_EXTERN_C;
+//          ds->typeQualifiers |= TYPEQUAL_UNMASKED;
         }
 
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
@@ -546,7 +546,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
                   "qualifiers");
             return;
         }
-        if (!g->target->isPTX())
+//        if (!g->target->isPTX())
           if (isExternC && isTask) {
               Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
                     "qualifiers");

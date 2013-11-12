@@ -860,7 +860,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::NVPTX64: 
       {
         if (runtime32) {
-            fprintf(stderr, " please add 32-bit bulitins .. \n");
+            fprintf(stderr, "W're sorry, but only 64bit targets are supported at this moment .. \n");
             assert(0);
         }
         else {

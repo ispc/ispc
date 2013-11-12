@@ -242,7 +242,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
 
-        if (g->target->getISA() != Target::NVPTX64)
+        if (1) //if (g->target->getISA() != Target::NVPTX64)
         {
           llvm::Function::arg_iterator argIter = function->arg_begin();
           llvm::Value *structParamPtr = argIter++;
@@ -342,7 +342,16 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             ctx->SetFunctionMask(LLVMMaskAllOn);
           }
           else  /* for NVPTX64 , function must be unmasked */
-            assert(0);
+          {
+            //assert(0);
+            Assert(type->isUnmasked == false);
+
+            // Otherwise use the mask to set the entry mask value
+            argIter->setName("__mask");
+            Assert(argIter->getType() == LLVMTypes::MaskType);
+            ctx->SetFunctionMask(argIter);
+            Assert(++argIter == function->arg_end());
+          }
 
           llvm::NamedMDNode* annotations =
             m->module->getOrInsertNamedMetadata("nvvm.annotations");
@@ -524,11 +533,13 @@ Function::GenerateIR() {
 
     // And we can now go ahead and emit the code
      /* export function with NVPTX64 target should be emitted host architecture */
+#if 0
     const FunctionType *func_type= CastType<FunctionType>(sym->type);
     if (g->target->getISA() == Target::NVPTX64 && func_type->isExported)
       return;
     if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && func_type->isTask)
       return;
+#endif
 
 //    if (!(g->target->getISA()==Target::NVPTX64 && func_type->isExported))
     {
@@ -549,7 +560,7 @@ Function::GenerateIR() {
         // the application can call it
         const FunctionType *type = CastType<FunctionType>(sym->type);
         Assert(type != NULL);
-        if (type->isExported && g->target->getISA() != Target::NVPTX64) {
+        if (type->isExported) { // && g->target->getISA() != Target::NVPTX64) {
             if (!type->isTask) {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;

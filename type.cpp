@@ -2925,7 +2925,7 @@ FunctionType::GetReturnTypeString() const {
 llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
 
-    if (isTask == true && !g->target->isPTX()) //getISA() != Target::NVPTX64)
+    if (isTask == true) // && !g->target->isPTX()) //getISA() != Target::NVPTX64)
         Assert(removeMask == false);
 
     // Get the LLVM Type *s for the function arguments
@@ -2957,7 +2957,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
 //        if (g->target->getISA() != Target::NVPTX64)
-        if (!g->target->isPTX()) 
+        if (1) //if (!g->target->isPTX()) 
         {
           llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
           callTypes.push_back(llvm::PointerType::getUnqual(st));
