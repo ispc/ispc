@@ -286,6 +286,7 @@ static inline void ao_tile(
 #define TILEX 64
 #define TILEY 4
 
+/* task will generate " __global__ " only */
 void task ao_task(uniform int width, uniform int height, 
     uniform int nsubsamples, uniform float image[]) 
 {
@@ -301,6 +302,7 @@ void task ao_task(uniform int width, uniform int height,
 }
 
 
+/* export will generate "extern "C" __global__"  an "__device__" */
 export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
     uniform float image[]) 
 {
