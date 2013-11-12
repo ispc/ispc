@@ -31,6 +31,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; AVX target implementation.
+;;
+;; Please note that this file uses SSE intrinsics, but LLVM generates AVX
+;; instructions, so it doesn't makes sense to change this implemenation.
+
 
 ctlztz()
 define_prefetches()
