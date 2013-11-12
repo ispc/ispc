@@ -417,6 +417,11 @@ void ao_ispc_tasks(
   const int nby =  ntiley;
   const int nbz = 1;
   const dim3 blocks (nbx, nby, nbz);
-  ao_task<<<blocks, 128>>>(w,h,nsubsamples,image);
+  if (threadIdx.x == 0)
+  {
+    printf(" --- using CDP -- \n");
+    ao_task<<<blocks, 128>>>(w,h,nsubsamples,image);
+  }
+  cudaDeviceSynchronize();
 }
 #endif

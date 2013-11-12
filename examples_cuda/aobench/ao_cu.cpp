@@ -340,8 +340,10 @@ extern "C"
     const char *  module = &module_str[0];
 #endif
     CUmodule   cudaModule   = loadModule(module);
-    CUfunction cudaFunction = getFunction(cudaModule, func_name);
-    deviceLaunch(cudaFunction, countx, county, countz, func_args);
+//    CUfunction cudaFunction = getFunction(cudaModule, func_name);
+//    deviceLaunch(cudaFunction, countx, county, countz, func_args);
+    CUfunction cudaFunction = getFunction(cudaModule, "ao_ispc_tasks");
+    deviceLaunch(cudaFunction, 1, 1, 1, func_args);
     unloadModule(cudaModule);
   }
   void CUDASync(void *handle)
