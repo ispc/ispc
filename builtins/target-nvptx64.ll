@@ -96,6 +96,77 @@ define i32 @__lanemask_lt() nounwind readnone alwaysinline
   ret i32 %mask
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; tasking
+
+module asm "
+.extern .func  (.param .b32 func_retval0) cudaLaunchDevice
+(
+  .param .b64 cudaLaunchDevice_param_0,
+  .param .b64 cudaLaunchDevice_param_1,
+  .param .align 4 .b8 cudaLaunchDevice_param_2[12],
+  .param .align 4 .b8 cudaLaunchDevice_param_3[12],
+  .param .b32 cudaLaunchDevice_param_4,
+  .param .b64 cudaLaunchDevice_param_5
+);
+"
+define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline builtin
+{
+  ret i8* null
+}
+define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty, i32 %ntz)  builtin
+{
+  %func_i64 = ptrtoint i8*  %func_ptr  to i64
+  %args_i64 = ptrtoint i8** %func_args to i64
+;; nbx = (%ntx-1)/(blocksize/warpsize) + 1  for blocksize=128 & warpsize=32
+  %sub = add nsw i32 %ntx, -1
+  %div = sdiv i32 %sub, 4
+  %nbx = add nsw i32 %div, 1
+
+  %res = call i32 asm sideeffect "{
+      .reg .s32 %r<8>;
+      .reg .s64 %rd<3>;
+     .param .b64 param0;
+     st.param.b64	[param0+0], $1; //%rd0;
+     .param .b64 param1;
+     st.param.b64	[param1+0], $2; //%rd1;
+     .param .align 4 .b8 param2[12];
+     st.param.b32	[param2+0], $3; //%r0;
+     st.param.b32	[param2+4], $4; //%r1;
+     st.param.b32	[param2+8], $5; //%r2;
+     .param .align 4 .b8 param3[12];
+     st.param.b32	[param3+0], $6; //%r3;
+     st.param.b32	[param3+4], $7; //%r4;
+     st.param.b32	[param3+8], $8; //%r5;
+     .param .b32 param4;
+     st.param.b32	[param4+0], $9; //%r6;
+     .param .b64 param5;
+     st.param.b64	[param5+0], $10; //%rd2;
+
+     .param .b32 retval0;
+     call.uni (retval0), 
+       cudaLaunchDevice,
+       (
+        param0, 
+        param1, 
+        param2, 
+        param3, 
+        param4, 
+        param5
+       );
+     ld.param.b32	$0, [retval0+0];
+  ", 
+"=r, l,l, r,r,r, r,r,r, r,l"(i64 %func_i64,i64 %args_i64, i32 %nbx,i32 %nty,i32 %ntz, i32 128,i32 1,i32 1, i32 0,i64 0);
+  ret void
+}
+declare i32 @cudaDeviceSynchronize() nounwind
+define void @ISPCSync(i8*) nounwind alwaysinline
+{
+  call i32 @cudaDeviceSynchronize()
+  ret void;
+}
+
+
 ;;;;;;;;;;;;;;
 
 

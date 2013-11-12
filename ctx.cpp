@@ -3617,7 +3617,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         static_cast<llvm::StructType *>(pt->getElementType());
 #endif
 
-      llvm::Function *falloc = m->module->getFunction("CUDAAlloc");
+      llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
       AssertPos(currentPos, falloc != NULL);
 #if 0
       llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
@@ -3691,12 +3691,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       // argument block we just filled in
   
 
-      llvm::Function *flaunch = m->module->getFunction("CUDALaunch");
+      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
       AssertPos(currentPos, flaunch != NULL);
       std::vector<llvm::Value *> args;
 
       args.push_back(launchGroupHandlePtr);  /* void **handler */
 
+#if 0
       /* module name string  to distinguish between different modules  , generated ones */
       {
         const std::string moduleNameStr = m->module->getModuleIdentifier();
@@ -3743,7 +3744,9 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         static llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarModuleNameStr, const_ptr_12_indices);
         args.push_back(const_ptr_12);               /* const char * module_name */
       }
+#endif
 
+#if 0
       /* fucntion name string */
       {
         const std::string funcNameStr = callee->getName().str();
@@ -3766,6 +3769,12 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         llvm::Constant* const_ptr_12 = llvm::ConstantExpr::getGetElementPtr(gvarFuncNameStr, const_ptr_12_indices);
         args.push_back(const_ptr_12);               /* const char * func_name */
       }
+#else
+      {
+        llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+        args.push_back(fptr);
+      }
+#endif
 
       /* pass array of pointers to function arguments, this is how cuLaunchKernel accepts arguments */
       {
