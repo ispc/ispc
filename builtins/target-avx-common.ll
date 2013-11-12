@@ -1,4 +1,4 @@
-;;  Copyright (c) 2010-2011, Intel Corporation
+;;  Copyright (c) 2010-2013, Intel Corporation
 ;;  All rights reserved.
 ;;
 ;;  Redistribution and use in source and binary forms, with or without
@@ -37,24 +37,6 @@ define_prefetches()
 define_shuffles()
 aossoa()
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rcp
-
-declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
-
-define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-;    uniform float iv = extract(__rcp_u(v), 0);
-;    return iv * (2. - v * iv);
-  %vecval = insertelement <4 x float> undef, float %0, i32 0
-  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
-  %scall = extractelement <4 x float> %call, i32 0
-
-  ; do one N-R iteration
-  %v_iv = fmul float %0, %scall
-  %two_minus = fsub float 2., %v_iv  
-  %iv_mul = fmul float %scall, %two_minus
-  ret float %iv_mul
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats
@@ -77,7 +59,8 @@ define float @__round_uniform_float(float) nounwind readonly alwaysinline {
   ;  r3 = a3
   ;
   ;  It doesn't matter what we pass as a, since we only need the r0 value
-  ;  here.  So we pass the same register for both.
+  ;  here.  So we pass the same register for both.  Further, only the 0th
+  ;  element of the b parameter matters
   %xi = insertelement <4 x float> undef, float %0, i32 0
   %xr = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %xi, <4 x float> %xi, i32 8)
   %rs = extractelement <4 x float> %xr, i32 0
@@ -117,7 +100,7 @@ define double @__round_uniform_double(double) nounwind readonly alwaysinline {
 define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
+  ; roundsd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 9)
   %rs = extractelement <2 x double> %xr, i32 0
   ret double %rs
@@ -126,12 +109,31 @@ define double @__floor_uniform_double(double) nounwind readonly alwaysinline {
 define double @__ceil_uniform_double(double) nounwind readonly alwaysinline {
   ; see above for round_ss instrinsic discussion...
   %xi = insertelement <2 x double> undef, double %0, i32 0
-  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
+  ; roundsd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   %xr = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %xi, <2 x double> %xi, i32 10)
   %rs = extractelement <2 x double> %xr, i32 0
   ret double %rs
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rcp
+
+declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
+
+define float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
+  ; do the rcpss call
+  ;    uniform float iv = extract(__rcp_u(v), 0);
+  ;    return iv * (2. - v * iv);
+  %vecval = insertelement <4 x float> undef, float %0, i32 0
+  %call = call <4 x float> @llvm.x86.sse.rcp.ss(<4 x float> %vecval)
+  %scall = extractelement <4 x float> %call, i32 0
+
+  ; do one N-R iteration to improve precision, as above
+  %v_iv = fmul float %0, %scall
+  %two_minus = fsub float 2., %v_iv  
+  %iv_mul = fmul float %scall, %two_minus
+  ret float %iv_mul
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rsqrt
@@ -144,6 +146,7 @@ define float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline {
   %vis = call <4 x float> @llvm.x86.sse.rsqrt.ss(<4 x float> %v)
   %is = extractelement <4 x float> %vis, i32 0
 
+  ; Newton-Raphson iteration to improve precision
   ;  return 0.5 * is * (3. - (v * is) * is);
   %v_is = fmul float %0, %is
   %v_is_is = fmul float %v_is, %is
@@ -164,9 +167,18 @@ define float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
   ret float %ret
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision sqrt
+
+declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
+
+define double @__sqrt_uniform_double(double) nounwind alwaysinline {
+  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
+  ret double %ret
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; fastmath
+;; fast math mode
 
 declare void @llvm.x86.sse.stmxcsr(i8 *) nounwind
 declare void @llvm.x86.sse.ldmxcsr(i8 *) nounwind
@@ -198,6 +210,22 @@ define float @__max_uniform_float(float, float) nounwind readonly alwaysinline {
 define float @__min_uniform_float(float, float) nounwind readonly alwaysinline {
   sse_binary_scalar(ret, 4, float, @llvm.x86.sse.min.ss, %0, %1)
   ret float %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision min/max
+
+declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
+declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
+
+define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
+  ret double %ret
+}
+
+define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
+  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
+  ret double %ret
 }
 
 
@@ -235,7 +263,7 @@ define i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; horizontal ops
+;; horizontal ops / reductions
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 
@@ -251,32 +279,6 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %call
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision sqrt
-
-declare <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double>) nounwind readnone
-
-define double @__sqrt_uniform_double(double) nounwind alwaysinline {
-  sse_unary_scalar(ret, 2, double, @llvm.x86.sse2.sqrt.sd, %0)
-  ret double %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision min/max
-
-declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
-declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
-
-define double @__min_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.min.sd, %0, %1)
-  ret double %ret
-}
-
-define double @__max_uniform_double(double, double) nounwind readnone alwaysinline {
-  sse_binary_scalar(ret, 2, double, @llvm.x86.sse2.max.sd, %0, %1)
-  ret double %ret
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
