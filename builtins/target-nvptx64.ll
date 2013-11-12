@@ -110,11 +110,11 @@ module asm "
   .param .b64 cudaLaunchDevice_param_5
 );
 "
-define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline builtin
+define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
 {
   ret i8* null
 }
-define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty, i32 %ntz)  builtin
+define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
 {
   %func_i64 = ptrtoint i8*  %func_ptr  to i64
   %args_i64 = ptrtoint i8** %func_args to i64
@@ -155,6 +155,7 @@ define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %ntx, i32 %nty
         param5
        );
      ld.param.b32	$0, [retval0+0];
+  }
   ", 
 "=r, l,l, r,r,r, r,r,r, r,l"(i64 %func_i64,i64 %args_i64, i32 %nbx,i32 %nty,i32 %ntz, i32 128,i32 1,i32 1, i32 0,i64 0);
   ret void
