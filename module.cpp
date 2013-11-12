@@ -796,6 +796,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
+     /* evghenii: on PTX target this must not be used, cause crash, dunno why */
     if (functionType->isTask && g->target->getISA() != Target::NVPTX64)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)

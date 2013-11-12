@@ -354,15 +354,16 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             Assert(++argIter == function->arg_end());
           }
 
-#if 0
-          llvm::NamedMDNode* annotations =
-            m->module->getOrInsertNamedMetadata("nvvm.annotations");
-          llvm::SmallVector<llvm::Value*, 3> av;
-          av.push_back(function);
-          av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
-          av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
-          annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
-#endif
+          if (g->target->isPTX() && g->target->getISA() == Target::NVPTX64)
+          {
+            llvm::NamedMDNode* annotations =
+              m->module->getOrInsertNamedMetadata("nvvm.annotations");
+            llvm::SmallVector<llvm::Value*, 3> av;
+            av.push_back(function);
+            av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+            av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
+            annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
+          }
         }
     }
     else {
@@ -538,7 +539,6 @@ Function::GenerateIR() {
      /* export function with NVPTX64 target should be emitted host architecture */
 #if 0
     const FunctionType *func_type= CastType<FunctionType>(sym->type);
-    /* exported functions are not supported yet */
     if (g->target->getISA() == Target::NVPTX64 && func_type->isExported)
       return;
 #endif
@@ -567,7 +567,7 @@ Function::GenerateIR() {
         // the application can call it
         const FunctionType *type = CastType<FunctionType>(sym->type);
         Assert(type != NULL);
-        if (type->isExported) { // && g->target->getISA() != Target::NVPTX64) {
+        if (type->isExported) { // && g->target->getISA() != Target::VPTX64) {
             if (!type->isTask) {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
@@ -601,6 +601,16 @@ Function::GenerateIR() {
                                 appFunction->dump();
                             FATAL("Function verificication failed");
                         }
+                    }
+                    if (g->target->isPTX() && g->target->getISA() == Target::NVPTX64)
+                    {
+                      llvm::NamedMDNode* annotations =
+                        m->module->getOrInsertNamedMetadata("nvvm.annotations");
+                      llvm::SmallVector<llvm::Value*, 3> av;
+                      av.push_back(appFunction);
+                      av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+                      av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
+                      annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
                     }
                 }
             }

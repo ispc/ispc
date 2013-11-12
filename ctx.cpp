@@ -3595,7 +3595,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     }
     else /* isPTX ==  true */
     {
-      assert(0);  /* must only be called in export */
+      //assert(0);  /* must only be called in export */
     //  assert(g->target->getISA() != Target::NVPTX64);
 
       if (callee == NULL) {
@@ -3606,6 +3606,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       launchedTasks = true;
 
       AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+#if 0
       llvm::Type *argType =
         (llvm::dyn_cast<llvm::Function>(callee))->arg_begin()->getType();
       AssertPos(currentPos, llvm::PointerType::classof(argType));
@@ -3614,6 +3615,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       AssertPos(currentPos, llvm::StructType::classof(pt->getElementType()));
       llvm::StructType *argStructType =
         static_cast<llvm::StructType *>(pt->getElementType());
+#endif
 
       llvm::Function *falloc = m->module->getFunction("CUDAAlloc");
       AssertPos(currentPos, falloc != NULL);
@@ -3648,9 +3650,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
        * this, and other parts are reverse enginered via
        * cpp(clang++ -S -emit-llvm)->IR and then IR(llc -march=cpp)->cpp 
        */
-      for (unsigned int i = 0; i < argVals.size(); ++i) 
+      llvm::Function *func = llvm::dyn_cast<llvm::Function>(callee);
+      llvm::Function::arg_iterator argIter =func->arg_begin();
+      llvm::Function::arg_iterator argIterEnd =func->arg_end();
+      int i = 0;
+      for (; argIter != argIterEnd; argIter++, i++)
       {
-        llvm::Type*           type = argStructType->getElementType(i);
+        llvm::Type*           type = argIter->getType(); //argStructType->getElementType(i);
         llvm::Value* ptr_arg1_addr = AllocaInst(type, "argptr");
         StoreInst(argVals[i], ptr_arg1_addr);
 
