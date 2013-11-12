@@ -3524,8 +3524,9 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
                                 llvm::Value *launchCount[3]){
 
-    if (1) // if (!g->target->isPTX())
+    if (!g->target->isPTX())
     {
+      assert(0); /* evghenii: must be removed after testing is done */
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -3594,7 +3595,8 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
     }
     else /* isPTX ==  true */
     {
-      assert(g->target->getISA() != Target::NVPTX64);
+      assert(0);  /* must only be called in export */
+    //  assert(g->target->getISA() != Target::NVPTX64);
 
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -3673,8 +3675,10 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         StoreInst(ptr_15, ptr_arrayinit_element);
       }
 
+#if 0 /* evghenii:: must work uncommented */
       if (argStructType->getNumElements() == argVals.size() + 1) 
         assert(0); /* must not happen as task function is unmasked for PTX target */
+#endif
 
       // And emit the call to the user-supplied task launch function, passing
       // a pointer to the task function being called and a pointer to the

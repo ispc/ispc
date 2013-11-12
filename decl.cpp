@@ -534,7 +534,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         if (isTask && g->target->isPTX()) //getISA() == Target::NVPTX64)
         {
 //          ds->storageClass = SC_EXTERN_C;
-//          ds->typeQualifiers |= TYPEQUAL_UNMASKED;
+          ds->typeQualifiers |= TYPEQUAL_UNMASKED;
         }
 
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);

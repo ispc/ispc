@@ -2957,8 +2957,9 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
 //        if (g->target->getISA() != Target::NVPTX64)
-        if (1) //if (!g->target->isPTX()) 
+        if (!g->target->isPTX()) 
         {
+          assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
           llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
           callTypes.push_back(llvm::PointerType::getUnqual(st));
           callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
@@ -2978,6 +2979,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
             callTypes = llvmArgTypes;
           else
           {
+            assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
             llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
             callTypes.push_back(llvm::PointerType::getUnqual(st));
           }

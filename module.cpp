@@ -733,7 +733,8 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-        if (functionType->isTask) { // && !g->target->isPTX()) { //tISA() != Target::NVPTX64) {
+        if (functionType->isTask) //&& !g->target->isPTX())  //tISA() != Target::NVPTX64) 
+        {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;
@@ -795,7 +796,7 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
-    if (functionType->isTask) // && g->target->getISA() != Target::NVPTX64)
+    if (functionType->isTask && g->target->getISA() != Target::NVPTX64)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);

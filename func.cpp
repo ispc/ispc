@@ -242,8 +242,9 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
 
-        if (1) //if (g->target->getISA() != Target::NVPTX64)
+        if (!g->target->isPTX()) //if (g->target->getISA() != Target::NVPTX64)
         {
+          assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
           llvm::Function::arg_iterator argIter = function->arg_begin();
           llvm::Value *structParamPtr = argIter++;
           // Copy the function parameter values from the structure into local
@@ -343,7 +344,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
           }
           else  /* for NVPTX64 , function must be unmasked */
           {
-            //assert(0);
+             assert(0);
             Assert(type->isUnmasked == false);
 
             // Otherwise use the mask to set the entry mask value
@@ -353,6 +354,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
             Assert(++argIter == function->arg_end());
           }
 
+#if 0
           llvm::NamedMDNode* annotations =
             m->module->getOrInsertNamedMetadata("nvvm.annotations");
           llvm::SmallVector<llvm::Value*, 3> av;
@@ -360,6 +362,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
           av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
           av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
           annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
+#endif
         }
     }
     else {
@@ -535,8 +538,12 @@ Function::GenerateIR() {
      /* export function with NVPTX64 target should be emitted host architecture */
 #if 0
     const FunctionType *func_type= CastType<FunctionType>(sym->type);
+    /* exported functions are not supported yet */
     if (g->target->getISA() == Target::NVPTX64 && func_type->isExported)
       return;
+#endif
+
+#if 0
     if (g->target->getISA() != Target::NVPTX64 && g->target->isPTX() && func_type->isTask)
       return;
 #endif
