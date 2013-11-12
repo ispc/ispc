@@ -403,3 +403,20 @@ void ao_task( int width,  int height,
   const  int y1 = min(y0 + TILEY, height);
   ao_tile(x0,x1,y0,y1, width, height, nsubsamples, image);
 }
+
+#if 1
+extern "C"
+__global__
+void ao_ispc_tasks(
+    int w, int h, int nsubsamples, 
+    float image[]) 
+{
+  const int ntilex = (w+TILEX-1)/TILEX;
+  const int ntiley = (h+TILEY-1)/TILEY;
+  const int nbx = (ntilex-1)/4 + 1;
+  const int nby =  ntiley;
+  const int nbz = 1;
+  const dim3 blocks (nbx, nby, nbz);
+  ao_task<<<blocks, 128>>>(w,h,nsubsamples,image);
+}
+#endif
