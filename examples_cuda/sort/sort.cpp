@@ -41,6 +41,20 @@
 #include "../timing.h"
 #include "sort_ispc.h"
 
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
+
 using namespace ispc;
 
 extern void sort_serial (int n, unsigned int code[], int order[]);
@@ -71,26 +85,30 @@ int main (int argc, char *argv[])
 {
   int i, j, n = argc == 1 ? 1000000 : atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
+  printf("n= %d \n", n);
   unsigned int *code = new unsigned int [n];
   int *order = new int [n];
 
   srand (0);
 
+#if 0
   for (i = 0; i < m; i ++)
   {
     for (j = 0; j < n; j ++) code [j] = random() % l;
 
     reset_and_start_timer();
 
+    const double t0 = rtc();
     sort_ispc (n, code, order, 1);
 
-    tISPC1 += get_elapsed_mcycles();
+    tISPC1 += (rtc() - t0); //get_elapsed_mcycles();
 
     if (argc != 3)
         progressbar (i, m);
   }
 
   printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
+#endif
 
   srand (0);
 
@@ -100,9 +118,10 @@ int main (int argc, char *argv[])
 
     reset_and_start_timer();
 
+    const double t0 = rtc();
     sort_ispc (n, code, order, 0);
 
-    tISPC2 += get_elapsed_mcycles();
+    tISPC2 += (rtc() - t0); // get_elapsed_mcycles();
 
     if (argc != 3)
         progressbar (i, m);
@@ -118,9 +137,10 @@ int main (int argc, char *argv[])
 
     reset_and_start_timer();
 
+    const double t0 = rtc();
     sort_serial (n, code, order);
 
-    tSerial += get_elapsed_mcycles();
+    tSerial += (rtc() - t0);//get_elapsed_mcycles();
 
     if (argc != 3)
         progressbar (i, m);
