@@ -40,6 +40,7 @@
 #include <iomanip>
 #include "../timing.h"
 #include "sort_ispc.h"
+#include <cassert>
 
 #include <sys/time.h>
 static inline double rtc(void)
@@ -128,6 +129,12 @@ int main (int argc, char *argv[])
   }
 
   printf("[sort ispc + tasks]:\t[%.3f] million cycles\n", tISPC2);
+
+  for (int i = 0; i < n-1; i++)
+  {
+    assert(code[i+1] >=  code[i]);
+  }
+
 
   srand (0);
 

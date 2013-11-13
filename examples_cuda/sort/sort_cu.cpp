@@ -351,7 +351,7 @@ int main (int argc, char *argv[])
   createContext();
   /*******************/
 
-  int ntask = 13*4*8;
+  int ntask = 13*4;
   devicePtr d_code   = deviceMalloc(n*sizeof(int));
   devicePtr d_order  = deviceMalloc(n*sizeof(int));
   devicePtr d_pair   = deviceMalloc(n*2*sizeof(int));
@@ -386,7 +386,13 @@ int main (int argc, char *argv[])
         progressbar (i, m);
   }
 
-  printf("[sort ispc + tasks]:\t[%.3f] million cycles\n", tISPC2);
+  printf("[sort cuda]:\t[%.3f] million cycles\n", tISPC2);
+  memcpyD2H(code,  d_code,  n*sizeof(int));
+  memcpyD2H(order, d_order, n*sizeof(int));
+  for (int i = 0; i < n-1; i++)
+  {
+    assert(code[i+1] >=  code[i]);
+  }
 
   srand (0);
 
