@@ -320,11 +320,6 @@ std::vector<char> readBinary(const char * filename)
 
 extern "C" 
 {
-
-  void *CUDAAlloc(void **handlePtr, int64_t size, int32_t alignment)
-  {
-    return NULL;
-  }
   void CUDALaunch(
       void **handlePtr, 
       const char * func_name,
@@ -336,17 +331,6 @@ extern "C"
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
     deviceLaunch(cudaFunction, func_args);
     unloadModule(cudaModule);
-  }
-  void CUDASync(void *handle)
-  {
-    checkCudaErrors(cuStreamSynchronize(0));
-  }
-  void ISPCSync(void *handle)
-  {
-    checkCudaErrors(cuStreamSynchronize(0));
-  }
-  void CUDAFree(void *handle)
-  {
   }
 }
 /******************************/
@@ -448,16 +432,16 @@ int main(int argc, char** argv) {
         const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
         {
-        const char * func_name = "RenderStatic";
-        int light_count = VISUALIZE_LIGHT_COUNT;
-        void *func_args[] = {
-                &d_header, 
-                &d_arrays,
-                &light_count,
-                &d_r, 
-                &d_g, 
-                &d_b};
-        CUDALaunch(NULL, func_name, func_args);
+          const char * func_name = "RenderStatic";
+          int light_count = VISUALIZE_LIGHT_COUNT;
+          void *func_args[] = {
+            &d_header, 
+            &d_arrays,
+            &light_count,
+            &d_r, 
+            &d_g, 
+            &d_b};
+          CUDALaunch(NULL, func_name, func_args);
         }
         double mcycles = 1000*(rtc() - t0) / nframes;
         fprintf(stderr, "dt= %g\n", mcycles);
