@@ -214,8 +214,15 @@ public:
     /** Convert ISA enum to string */
     static const char *ISAToString(Target::ISA isa);
 
-    /** Returns a string like "avx" encoding the target. */
+    /** Returns a string like "avx" encoding the target. Good for mangling. */
     const char *GetISAString() const;
+
+    /** Convert ISA enum to string */
+    static const char *ISAToTargetString(Target::ISA isa);
+
+    /** Returns a string like "avx1.1-i32x8" encoding the target.
+        This may be used for Target initialization. */
+    const char *GetISATargetString() const;
 
     /** Returns the size of the given type */
     llvm::Value *SizeOf(llvm::Type *type,

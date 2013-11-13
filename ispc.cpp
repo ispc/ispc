@@ -838,6 +838,9 @@ Target::GetTripleString() const {
     return triple.str();
 }
 
+// This function returns string representation of ISA for the purpose of
+// mangling. And may return any unique string, preferably short, like
+// sse4, avx and etc.
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
@@ -869,6 +872,45 @@ Target::ISAToString(ISA isa) {
 
 const char *
 Target::GetISAString() const {
+    return ISAToString(m_isa);
+}
+
+
+// This function returns string representation of default target corresponding
+// to ISA. I.e. for SSE4 it's sse4-i32x4, for AVX11 it's avx1.1-i32x8. This
+// string may be used to initialize Target.
+const char *
+Target::ISAToTargetString(ISA isa) {
+    switch (isa) {
+#ifdef ISPC_ARM_ENABLED
+    case Target::NEON8:
+        return "neon-8";
+    case Target::NEON16:
+        return "neon-16";
+    case Target::NEON32:
+        return "neon-32";
+#endif
+    case Target::SSE2:
+        return "sse2-i32x4";
+    case Target::SSE4:
+        return "sse4-i32x4";
+    case Target::AVX:
+        return "avx1-i32x8";
+    case Target::AVX11:
+        return "avx1.1-i32x8";
+    case Target::AVX2:
+        return "avx2-i32x8";
+    case Target::GENERIC:
+        return "generic-4";
+    default:
+        FATAL("Unhandled target in ISAToTargetString()");
+    }
+    return "";
+}
+
+
+const char *
+Target::GetISATargetString() const {
     return ISAToString(m_isa);
 }
 
