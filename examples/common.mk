@@ -84,9 +84,9 @@ objs/%.o: %.c dirs $(ISPC_HEADER)
 objs/%.o: ../%.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h
+objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h dirs
 
-objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o: %.ispc
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o: %.ispc dirs
 	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)
