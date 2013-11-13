@@ -2959,7 +2959,6 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
 //        if (g->target->getISA() != Target::NVPTX64)
         if (!g->target->isPTX()) 
         {
-          assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
           llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
           callTypes.push_back(llvm::PointerType::getUnqual(st));
           callTypes.push_back(LLVMTypes::Int32Type); // threadIndex

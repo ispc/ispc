@@ -244,7 +244,6 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
 
         if (!g->target->isPTX()) //if (g->target->getISA() != Target::NVPTX64)
         {
-          assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
           llvm::Function::arg_iterator argIter = function->arg_begin();
           llvm::Value *structParamPtr = argIter++;
           // Copy the function parameter values from the structure into local
