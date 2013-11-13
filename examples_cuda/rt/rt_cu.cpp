@@ -153,7 +153,7 @@ CUmodule loadModule(const char * module)
   optionVals[5] = (void*) 1;
   // Max # of registers/pthread
   options[6] = CU_JIT_MAX_REGISTERS;
-  int jitRegCount = 48;
+  int jitRegCount = 32;
   optionVals[6] = (void *)(size_t)jitRegCount;
 
   // Create a pending linker invocation
