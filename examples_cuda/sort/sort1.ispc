@@ -139,17 +139,15 @@ task void copy (uniform int span, uniform int n, uniform int64 from[], uniform i
 
 task void pack (uniform int span, uniform int n, uniform unsigned int code[], uniform int64 pair[])
 {
-#if 0
   if (taskIndex >= taskCount) return;
   uniform int start = taskIndex*span;
   uniform int end = taskIndex == taskCount-1 ? n : start+span;
 
   for (int i = programIndex + start; i < end; i += programCount)
     if (i < end)
-  {
-    pair[i] = ((int64)i<<32)+code[i];
-  }
-#endif
+    {
+      pair[i] = ((int64)i<<32)+code[i];
+    }
 }
 
 task void unpack (uniform int span, uniform int n, uniform int64 pair[], uniform int unsigned code[], uniform int order[])
