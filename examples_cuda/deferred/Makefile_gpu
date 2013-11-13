@@ -1,0 +1,52 @@
+PROG=main_cu
+ISPC_SRC=kernels1.ispc
+CXX_SRC=main_cu.cpp common.cpp
+
+CXX=g++
+CXXFLAGS=-O3 -I$(CUDATK)/include
+LD=g++
+LDFLAGS=-lcuda
+
+ISPC=ispc
+ISPCFLAGS=-O3 --math-lib=default --target=nvptx64,avx
+
+LLVM32 = $(HOME)/usr/local/llvm/bin-3.2
+LLVM   = $(HOME)/usr/local/llvm/bin-3.3
+PTXGEN = $(HOME)/ptxgen
+
+LLVM32DIS=$(LLVM32)/bin/llvm-dis
+
+.SUFFIXES: .bc .o .ptx .cu _ispc_nvptx64.bc
+
+
+ISPC_OBJ=$(ISPC_SRC:%.ispc=%_ispc.o)
+ISPC_BC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.bc)
+PTXSRC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.ptx)
+CXX_OBJ=$(CXX_SRC:%.cpp=%.o)
+
+all: $(PROG)
+
+
+$(PROG): $(CXX_OBJ) kernel.ptx
+	/bin/cp kernel.ptx __kernels.ptx
+	$(LD) -o $@ $(CXX_OBJ) $(LDFLAGS)
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS)  -o $@ -c $<
+
+
+%_ispc_nvptx64.bc: %.ispc
+	$(ISPC) $(ISPCFLAGS) --emit-llvm -o `basename $< .ispc`_ispc.bc -h `basename $< .ispc`_ispc.h $< --emit-llvm
+
+%.ptx: %.bc
+	$(LLVM32DIS) $<
+	$(PTXGEN)  `basename $< .bc`.ll > $@
+
+kernel.ptx: $(PTXSRC)
+	cat $^ > kernel.ptx
+
+clean: 
+	/bin/rm -rf *.ptx *.bc *.ll $(PROG)
+
+	 
+

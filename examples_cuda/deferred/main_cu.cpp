@@ -327,7 +327,7 @@ extern "C"
       const char * func_name,
       void **func_args)
   {
-    const std::vector<char> module_str = readBinary("kernel.ptx");
+    const std::vector<char> module_str = readBinary("__kernels.ptx");
     const char *  module = &module_str[0];
     CUmodule   cudaModule   = loadModule(module);
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
