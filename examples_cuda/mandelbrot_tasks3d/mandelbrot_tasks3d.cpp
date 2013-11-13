@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
         minISPC = std::min(minISPC, dt);
     }
 
-    printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
+    fprintf(stderr,"[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
     writePPM(buf, width, height, "mandelbrot-ispc.ppm");
 
 
