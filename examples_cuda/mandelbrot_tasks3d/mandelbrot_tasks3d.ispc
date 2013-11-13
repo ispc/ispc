@@ -31,12 +31,21 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#ifdef __NVPTX__  
+#define taskIndex0 blockIndex0()
+#define taskIndex1 blockIndex1()
+#define taskCount0 blockCount0()
+#define taskCount1 blockCount1()
+#define programCount warpSize()
+#define programIndex laneIndex()
+#endif
+
 static inline int
 mandel(float c_re, float c_im, int count) {
     float z_re = c_re, z_im = c_im;
     int i;
     for (i = 0; i < count; ++i) {
-        if (z_re * z_re + z_im * z_im > 4.)
+        if (z_re * z_re + z_im * z_im > 4.0f)
             break;
 
         float new_re = z_re*z_re - z_im*z_im;
@@ -65,13 +74,16 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
     const uniform int ystart = taskIndex1 * yspan;
     const uniform int yend   = min(ystart  + yspan, height);
     
+  for (uniform int yi = ystart; yi < yend; yi++)
+    for (uniform int xi = xstart; xi < xend; xi += programCount)
+    {
+      const float x = x0 + (xi + programIndex) * dx;
+      const float y = y0 +  yi              * dy;
 
-    foreach (yi = ystart ... yend, xi = xstart ... xend) {
-        float x = x0 + xi * dx;
-        float y = y0 + yi * dy;
-
-        int index = yi * width + xi;
-        output[index] = mandel(x, y, maxIterations);
+      const int res = mandel(x,y,maxIterations);
+      const int index = yi * width + (xi + programIndex);
+      if (xi + programIndex < xend)
+        output[index] = res;
     }
     
 }
@@ -84,8 +96,8 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
                 uniform int maxIterations, uniform int output[]) {
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
-    const uniform int xspan = 16;  /* make sure it is big enough to avoid false-sharing */
-    const uniform int yspan = 16; 
+    const uniform int xspan = 32;  /* make sure it is big enough to avoid false-sharing */
+    const uniform int yspan = 4; 
 
 
 #if 1

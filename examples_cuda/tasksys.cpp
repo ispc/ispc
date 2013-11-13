@@ -214,7 +214,7 @@ extern "C" {
 ///////////////////////////////////////////////////////////////////////////
 // TaskGroupBase
 
-#define LOG_TASK_QUEUE_CHUNK_SIZE 14
+#define LOG_TASK_QUEUE_CHUNK_SIZE 16
 #define MAX_TASK_QUEUE_CHUNKS 8
 #define TASK_QUEUE_CHUNK_SIZE (1<<LOG_TASK_QUEUE_CHUNK_SIZE)
 

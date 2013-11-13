@@ -1,6 +1,6 @@
-PROG=ao_cu
-ISPC_SRC=ao1.ispc
-CXX_SRC=ao_cu.cpp 
+PROG=mandel_cu
+ISPC_SRC=mandelbrot_tasks3d.ispc
+CXX_SRC=mandel_cu.cpp  mandelbrot_tasks_serial.cpp
 
 CXX=g++
 CXXFLAGS=-O3 -I$(CUDATK)/include

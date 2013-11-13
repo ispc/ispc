@@ -42,8 +42,20 @@
 #include <algorithm>
 #include <string.h>
 #include "../timing.h"
-#include "mandelbrot_ispc.h"
+#include "mandelbrot_tasks3d_ispc.h"
 using namespace ispc;
+#include <sys/time.h>
+double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
 
 extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
                               int width, int height, int maxIterations,
@@ -113,8 +125,9 @@ int main(int argc, char *argv[]) {
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
         reset_and_start_timer();
+        const double t0 = rtc();
         mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
         minISPC = std::min(minISPC, dt);
     }
 
