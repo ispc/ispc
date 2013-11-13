@@ -102,7 +102,8 @@ define i32 @__lanemask_lt() nounwind readnone alwaysinline
 
 define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
 {
-  ret i8* null
+  %ptr = inttoptr i64 1 to i8*
+  ret i8* %ptr
 }
 
 ;; this call allocate parameter buffer for kernel launch
