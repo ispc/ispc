@@ -99,6 +99,7 @@ void createContext(const int deviceId = 0)
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
+  checkCudaErrors(cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE,1024*1024*1024));
 }
 void destroyContext()
 {
@@ -370,6 +371,7 @@ int main (int argc, char *argv[])
     int ntask = 0;
     void *func_args[] = {&n, &d_code, &d_order, &ntask};
     const double dt = CUDALaunch(NULL, func_name, func_args);
+    tISPC2 += dt;
 #endif
 
     if (argc != 3)

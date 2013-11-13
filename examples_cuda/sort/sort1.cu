@@ -46,6 +46,28 @@
 
 __device__ inline int nbx(const int n) { return (n - 1) / 4 + 1; }
 
+template<typename T>
+__device__ inline T* __new(const int n)
+{
+  union
+  {
+    T* ptr;
+    int v[2];
+  }  val;
+  if (programIndex == 0)
+    val.ptr = new T[n];
+  val.v[0] = __shfl(val.v[0],0);
+  val.v[1] = __shfl(val.v[1],0);
+  return val.ptr;
+};
+
+template<typename T>
+__device__ inline void __delete(T* ptr)
+{
+  if (programIndex == 0)
+    delete ptr;
+};
+
 __global__ void histogram ( int span,  int n,  int64 code[],  int pass,  int hist[])
 {
   if (taskIndex >= taskCount) return;
@@ -194,9 +216,9 @@ __global__ void bumpup ( int h[],  int g[])
 }
 
 __device__
-static void prefix_sum ( int num,  int h[])
+static void prefix_sum ( int num,  int h[], int * g)
 {
-   int *  g =  new  int [num+1];
+//   int *  g =  new  int [num+1];
    int i;
 
 //  launch[num] addup (h, g+1);
@@ -204,25 +226,34 @@ static void prefix_sum ( int num,  int h[])
      addup<<<nbx(num),128>>>(h,g+1);
    sync;
 
-  for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
+   if (programIndex == 0)
+     for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
 
 //  launch[num] bumpup (h, g);
   if(programIndex == 0)
     bumpup<<<nbx(num),128>>>(h,g);
   sync;
 
-  delete g;
+
+//  delete g;
 }
 
 extern "C" __global__
 void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks)
 {
-   int num = ntasks < 1 ? 13*4*8 : ntasks;
+   int num = ntasks < 1 ? 13*4 : ntasks;
    int span = n / num;
    int hsize = 256*programCount*num;
+#if 0
    int *  hist =  new  int [hsize];
    int64 *  pair =  new  int64 [n];
    int64 *  temp =  new  int64 [n];
+#else
+   int *  hist =  __new< int>(hsize);
+   int64 *  pair =  __new< int64>(n);
+   int64 *  temp =  __new< int64>(n);
+   int *  g =  __new<int>(num+1);
+#endif
    int pass, i;
 
 
@@ -231,35 +262,42 @@ void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks)
      pack<<<nbx(num),128>>>(span, n, code, pair);
   sync;
 
-#if 0
+#if 1
   for (pass = 0; pass < 4; pass ++)
   {
-//    launch[num] histogram (span, n, pair, pass, hist);
-   if(programIndex == 0)
-    histogram<<<nbx(num),128>>>(span, n, pair, pass, hist);
+    //    launch[num] histogram (span, n, pair, pass, hist);
+    if(programIndex == 0)
+      histogram<<<nbx(num),128>>>(span, n, pair, pass, hist);
     sync;
 
-    prefix_sum (num, hist);
+    prefix_sum (num, hist,g);
 
-//    launch[num] permutation (span, n, pair, pass, hist, temp);
-   if(programIndex == 0)
-    permutation<<<nbx(num),128>>> (span, n, pair, pass, hist, temp);
+    //    launch[num] permutation (span, n, pair, pass, hist, temp);
+    if(programIndex == 0)
+      permutation<<<nbx(num),128>>> (span, n, pair, pass, hist, temp);
     sync;
 
-///    launch[num] copy (span, n, temp, pair);
-   if(programIndex == 0)
-    copy<<<nbx(num),128>>> (span, n, temp, pair);
+    ///    launch[num] copy (span, n, temp, pair);
+    if(programIndex == 0)
+      copy<<<nbx(num),128>>> (span, n, temp, pair);
     sync;
   }
 
-///  launch[num] unpack (span, n, pair, code, order);
-   if(programIndex == 0)
-  unpack<<<nbx(num),128>>> (span, n, pair, code, order);
+  ///  launch[num] unpack (span, n, pair, code, order);
+  if(programIndex == 0)
+    unpack<<<nbx(num),128>>> (span, n, pair, code, order);
   sync;
 #endif
 
 
+#if 0
   delete hist;
   delete pair;
   delete temp;
+#else
+    __delete(g);
+  __delete(hist);
+  __delete(pair);
+  __delete(temp);
+#endif
 }
