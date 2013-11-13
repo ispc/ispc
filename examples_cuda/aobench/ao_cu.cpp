@@ -51,8 +51,8 @@
 #include <algorithm>
 #include <sys/types.h>
 
-#include "ao_ispc.h"
-using namespace ispc;
+//#include "ao1_ispc.h"
+//using namespace ispc;
 
 #include "../timing.h"
 
@@ -191,7 +191,7 @@ CUmodule loadModule(const char * module)
     optionVals[5] = (void*) 1;
     // Max # of registers/pthread
     options[6] = CU_JIT_MAX_REGISTERS;
-    int jitRegCount = 64;
+    int jitRegCount = 48;
     optionVals[6] = (void *)(size_t)jitRegCount;
 
     // Create a pending linker invocation
@@ -321,7 +321,7 @@ extern "C"
   {
     return NULL;
   }
-  void CUDALaunch(
+  double CUDALaunch(
       void **handlePtr, 
       const char * func_name,
       void **func_args)
@@ -330,8 +330,12 @@ extern "C"
     const char *  module = &module_str[0];
     CUmodule   cudaModule   = loadModule(module);
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
+    const double t0 = rtc();
     deviceLaunch(cudaFunction, func_args);
+    checkCudaErrors(cuStreamSynchronize(0));
+    const double dt = rtc() - t0;
     unloadModule(cudaModule);
+    return dt;
   }
   void CUDASync(void *handle)
   {
@@ -452,22 +456,22 @@ int main(int argc, char **argv)
         memcpyH2D(d_fimg, fimg, width*height*3*sizeof(float));
 
         reset_and_start_timer();
-        const double t0 = rtc();
 #if 0
+        const double t0 = rtc();
         ao_ispc_tasks(
             width, 
             height, 
             NSUBSAMPLES, 
             (float*)d_fimg);
+//        double t = (rtc() - t0); //get_elapsed_mcycles();
 #else
         const char * func_name = "ao_ispc_tasks";
         int arg_1 = width;
         int arg_2 = height;
         int arg_3 = NSUBSAMPLES;
         void *func_args[] = {&arg_1, &arg_2, &arg_3, (float*)&d_fimg};
-        CUDALaunch(NULL, func_name, func_args);
+        const double t = CUDALaunch(NULL, func_name, func_args);
 #endif
-        double t = (rtc() - t0); //get_elapsed_mcycles();
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
 
