@@ -92,7 +92,7 @@ int main (int argc, char *argv[])
 
   srand (0);
 
-#if 0
+#if 1
   for (i = 0; i < m; i ++)
   {
     for (j = 0; j < n; j ++) code [j] = random() % l;
@@ -100,15 +100,20 @@ int main (int argc, char *argv[])
     reset_and_start_timer();
 
     const double t0 = rtc();
-    sort_ispc (n, code, order, 1);
+    sort_ispc (n, code, order, 13*4*2+1);
 
-    tISPC1 += (rtc() - t0); //get_elapsed_mcycles();
+    tISPC2 += (rtc() - t0); //get_elapsed_mcycles();
 
     if (argc != 3)
         progressbar (i, m);
   }
 
-  printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
+  printf("[sort ispc + task]:\t[%.3f] million cycles\n", tISPC2);
+
+  for (int i = 0; i < n-1; i++)
+  {
+    assert(code[i+1] >=  code[i]);
+  }
 #endif
 
   srand (0);
@@ -120,20 +125,15 @@ int main (int argc, char *argv[])
     reset_and_start_timer();
 
     const double t0 = rtc();
-    sort_ispc (n, code, order, 0);
+    sort_ispc (n, code, order, 1);
 
-    tISPC2 += (rtc() - t0); // get_elapsed_mcycles();
+    tISPC1 += (rtc() - t0); // get_elapsed_mcycles();
 
     if (argc != 3)
         progressbar (i, m);
   }
 
-  printf("[sort ispc + tasks]:\t[%.3f] million cycles\n", tISPC2);
-
-  for (int i = 0; i < n-1; i++)
-  {
-    assert(code[i+1] >=  code[i]);
-  }
+  printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
 
 
   srand (0);

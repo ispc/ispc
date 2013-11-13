@@ -351,7 +351,7 @@ int main (int argc, char *argv[])
   createContext();
   /*******************/
 
-  int ntask = 13*4*2;
+  int ntask = 13*4;
   devicePtr d_code   = deviceMalloc(n*sizeof(int));
   devicePtr d_order  = deviceMalloc(n*sizeof(int));
   devicePtr d_pair   = deviceMalloc(n*2*sizeof(int));
