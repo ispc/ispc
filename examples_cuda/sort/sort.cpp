@@ -108,7 +108,7 @@ int main (int argc, char *argv[])
         progressbar (i, m);
   }
 
-  printf("[sort ispc + task]:\t[%.3f] million cycles\n", tISPC2);
+  printf("[sort ispc + task]:\t[%.3f] million cycles :: rate= %g Mel/sec\n", tISPC2, 1.0e-6*n*m/tISPC2);
 
   for (int i = 0; i < n-1; i++)
   {
@@ -133,7 +133,7 @@ int main (int argc, char *argv[])
         progressbar (i, m);
   }
 
-  printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
+  printf("[sort ispc]:\t[%.3f] million cycles :: rate= %g Mel/sec\n", tISPC1, 1.0e-6*n*m/tISPC1);
 
 
   srand (0);
@@ -153,7 +153,7 @@ int main (int argc, char *argv[])
         progressbar (i, m);
   }
 
-  printf("[sort serial]:\t\t[%.3f] million cycles\n", tSerial);
+  printf("[sort serial]:\t[%.3f] million cycles :: rate= %g Mel/sec\n", tSerial, 1.0e-6*n*m/tSerial);
 
   printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", tSerial/tISPC1, tSerial/tISPC2);
 

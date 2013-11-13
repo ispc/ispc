@@ -219,12 +219,16 @@ export void sort_ispc (uniform int n,
 {
   uniform int num = ntasks;
   uniform int span = n / num;
-#if 0
+#if 1 
+  /* if fails, change to 0. some issues with stack size/heap inside CUDA context
+   * grep for CuCtxSetLimit in  sort_cu.cpp 
+   */ 
   uniform int hsize = 256*programCount*num;
   uniform int * uniform hist = uniform new uniform int [hsize];
   uniform int64 * uniform pair = uniform new uniform int64 [n];
   uniform int64 * uniform temp = uniform new uniform int64 [n];
   uniform int * uniform g = uniform new uniform int [num+1];
+#define ALLOCATED
 #else
    uniform int * uniform hist = _hist;
    uniform int64 * uniform pair = _pair;
@@ -253,7 +257,7 @@ export void sort_ispc (uniform int n,
   launch[num] unpack (span, n, pair, code, order);
   sync;
 
-#if ALLOCATED
+#ifdef ALLOCATED
   delete g;
   delete hist;
   delete pair;

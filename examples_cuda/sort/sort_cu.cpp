@@ -99,7 +99,13 @@ void createContext(const int deviceId = 0)
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
+  size_t limit;
+  checkCudaErrors(cuCtxGetLimit(&limit, CU_LIMIT_STACK_SIZE));
+  fprintf(stderr, " stack_limit= %llu KB\n", limit/1024);
+  checkCudaErrors(cuCtxGetLimit(&limit, CU_LIMIT_MALLOC_HEAP_SIZE));
+  fprintf(stderr, " heap= %llu KB\n", limit/1024);
   checkCudaErrors(cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE,1024*1024*1024));
+  checkCudaErrors(cuCtxSetLimit(CU_LIMIT_STACK_SIZE,1024*4));
 }
 void destroyContext()
 {
@@ -386,7 +392,7 @@ int main (int argc, char *argv[])
         progressbar (i, m);
   }
 
-  printf("[sort cuda]:\t[%.3f] million cycles\n", tISPC2);
+  printf("[sort cuda]:\t[%.3f] million cycles :: rate= %g Mel/sec\n", tISPC2, 1.0e-6*n*m/tISPC2);
   memcpyD2H(code,  d_code,  n*sizeof(int));
   memcpyD2H(order, d_order, n*sizeof(int));
   for (int i = 0; i < n-1; i++)
