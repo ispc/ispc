@@ -161,7 +161,7 @@ CUmodule loadModule(const char * module)
 #else
   CUlinkState  CUState;
   CUlinkState *lState = &CUState;
-  const int nOptions = 7;
+  const int nOptions = 8;
     CUjit_option options[nOptions];
     void* optionVals[nOptions];
     float walltime;
@@ -195,7 +195,9 @@ CUmodule loadModule(const char * module)
     options[6] = CU_JIT_MAX_REGISTERS;
     int jitRegCount = 48;
     optionVals[6] = (void *)(size_t)jitRegCount;
-
+    // Caching
+    options[7] = CU_JIT_CACHE_MODE;
+    optionVals[7] = (void *)CU_JIT_CACHE_OPTION_CA;
     // Create a pending linker invocation
     checkCudaErrors(cuLinkCreate(nOptions,options, optionVals, lState));
 
@@ -271,7 +273,7 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
 #define deviceLaunch(func,params) \
-  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_SHARED)); \
+  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
@@ -320,7 +322,7 @@ std::vector<char> readBinary(const char * filename)
 
 extern "C" 
 {
-  void CUDALaunch(
+  double CUDALaunch(
       void **handlePtr, 
       const char * func_name,
       void **func_args)
@@ -329,8 +331,12 @@ extern "C"
     const char *  module = &module_str[0];
     CUmodule   cudaModule   = loadModule(module);
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
+    const double t0 = rtc();
     deviceLaunch(cudaFunction, func_args);
+    checkCudaErrors(cuStreamSynchronize(0));
+    const double dt = rtc() - t0;
     unloadModule(cudaModule);
+    return dt;
   }
 }
 /******************************/
@@ -430,6 +436,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 5; ++i) {
         framebuffer.clear();
         const double t0 = rtc();
+        double dt = 0.0;
         for (int j = 0; j < nframes; ++j)
         {
           const char * func_name = "RenderStatic";
@@ -441,9 +448,10 @@ int main(int argc, char** argv) {
             &d_r, 
             &d_g, 
             &d_b};
-          CUDALaunch(NULL, func_name, func_args);
+          dt += CUDALaunch(NULL, func_name, func_args);
         }
-        double mcycles = 1000*(rtc() - t0) / nframes;
+        //double mcycles = 1000*(rtc() - t0) / nframes;
+        double mcycles = 1000*dt / nframes;
         fprintf(stderr, "dt= %g\n", mcycles);
         ispcCycles = std::min(ispcCycles, mcycles);
     }

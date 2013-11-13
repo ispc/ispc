@@ -805,8 +805,8 @@ RenderStatic(InputHeader inputHeaderPtr[],
              unsigned int8 framebuffer_g[],
              unsigned int8 framebuffer_b[]) {
 
-  const InputHeader &inputHeader = *inputHeaderPtr;
-  const InputDataArrays &inputData = *inputDataPtr;
+  const InputHeader inputHeader = *inputHeaderPtr;
+  const InputDataArrays inputData = *inputDataPtr;
 
     int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
@@ -816,7 +816,9 @@ RenderStatic(InputHeader inputHeaderPtr[],
 
     // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
     // by MIN_TILE_HEIGHT pixels.
-    RenderTile<<<dim3(num_groups_x,num_groups_y), 128>>>(num_groups_x, num_groups_y,
-                                  inputHeaderPtr, inputDataPtr, visualizeLightCount,
-                                  framebuffer_r, framebuffer_g, framebuffer_b);
+    if (programIndex == 0)
+      RenderTile<<<num_groups, 128>>>(num_groups_x, num_groups_y,
+          inputHeaderPtr, inputDataPtr, visualizeLightCount,
+          framebuffer_r, framebuffer_g, framebuffer_b);
+    cudaDeviceSynchronize();
 }
