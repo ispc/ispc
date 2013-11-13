@@ -184,7 +184,7 @@ struct Uniform
 
   __device__ inline Uniform()
   {
-#if 1
+#if 0
     if (programIndex == 0)
       data = new T[N];
     ptr[0] = __shfl(ptr[0], 0);
@@ -200,7 +200,7 @@ struct Uniform
   }
   __device__ inline ~Uniform()
   {
-#if 1
+#if 0
     if (programIndex == 0)
       delete data;
 #else
@@ -730,20 +730,21 @@ ShadeTile(
 ///////////////////////////////////////////////////////////////////////////
 // Static decomposition
 
-extern "C" __global__ void
+
+__global__ void
 RenderTile( int num_groups_x,  int num_groups_y,
-           const  InputHeader *inputHeaderPtr,
-           const  InputDataArrays *inputDataPtr,
+           const  InputHeader inputHeaderPtr[],
+           const  InputDataArrays inputDataPtr[],
             int visualizeLightCount,
            // Output
             unsigned int8 framebuffer_r[],
             unsigned int8 framebuffer_g[],
             unsigned int8 framebuffer_b[]) {
   if (taskIndex >= taskCount) return;
+  const InputHeader &inputHeader = *inputHeaderPtr;
+  const InputDataArrays &inputData = *inputDataPtr;
 
 #if 1
-  const  InputHeader inputHeader = *inputHeaderPtr;
-  const  InputDataArrays inputData = *inputDataPtr;
      int32 group_y = taskIndex / num_groups_x;
      int32 group_x = taskIndex % num_groups_x;
 
@@ -794,3 +795,28 @@ RenderTile( int num_groups_x,  int num_groups_y,
 }
 
 
+  extern "C"
+__global__ void
+RenderStatic(InputHeader inputHeaderPtr[],
+             InputDataArrays inputDataPtr[],
+             int visualizeLightCount,
+             // Output
+             unsigned int8 framebuffer_r[],
+             unsigned int8 framebuffer_g[],
+             unsigned int8 framebuffer_b[]) {
+
+  const InputHeader &inputHeader = *inputHeaderPtr;
+  const InputDataArrays &inputData = *inputDataPtr;
+
+    int num_groups_x = (inputHeader.framebufferWidth + 
+                                MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
+    int num_groups_y = (inputHeader.framebufferHeight + 
+                                MIN_TILE_HEIGHT - 1) / MIN_TILE_HEIGHT;
+    int num_groups = num_groups_x * num_groups_y;
+
+    // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
+    // by MIN_TILE_HEIGHT pixels.
+    RenderTile<<<dim3(num_groups_x,num_groups_y), 128>>>(num_groups_x, num_groups_y,
+                                  inputHeaderPtr, inputDataPtr, visualizeLightCount,
+                                  framebuffer_r, framebuffer_g, framebuffer_b);
+}

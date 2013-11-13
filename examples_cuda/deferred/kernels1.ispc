@@ -477,19 +477,18 @@ ShadeTile(
 ///////////////////////////////////////////////////////////////////////////
 // Static decomposition
 
-task void
+void task
 RenderTile(uniform int num_groups_x, uniform int num_groups_y,
-           const uniform InputHeader inputHeaderPtr[],
-           const uniform InputDataArrays inputDataPtr[],
+           const  uniform InputHeader inputHeaderPtr[],
+           const  uniform InputDataArrays inputDataPtr[],
            uniform int visualizeLightCount,
            // Output
            uniform unsigned int8 framebuffer_r[],
            uniform unsigned int8 framebuffer_g[],
            uniform unsigned int8 framebuffer_b[]) {
   if (taskIndex >= taskCount) return;
-
-  const uniform InputHeader inputHeader = *inputHeaderPtr;
-  const uniform InputDataArrays inputData = *inputDataPtr;
+  const  uniform InputHeader inputHeader = *inputHeaderPtr;
+  const  uniform InputDataArrays inputData = *inputDataPtr;
 
     uniform int32 group_y = taskIndex / num_groups_x;
     uniform int32 group_x = taskIndex % num_groups_x;
@@ -543,12 +542,15 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
 export void
 RenderStatic(uniform InputHeader inputHeaderPtr[],
              uniform InputDataArrays inputDataPtr[],
-             uniform InputHeader &inputHeader,
              uniform int visualizeLightCount,
              // Output
              uniform unsigned int8 framebuffer_r[],
              uniform unsigned int8 framebuffer_g[],
              uniform unsigned int8 framebuffer_b[]) {
+
+  const uniform InputHeader inputHeader = *inputHeaderPtr;
+  const uniform InputDataArrays inputData = *inputDataPtr;
+
 
     uniform int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;

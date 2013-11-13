@@ -124,10 +124,12 @@ void destroyContext()
 
 CUmodule loadModule(const char * module)
 {
+  const double t0 = rtc();
   CUmodule cudaModule;
   // in this branch we use compilation with parameters
 
-  const unsigned int jitNumOptions = 1;
+#if 0
+  unsigned int jitNumOptions = 1;
   CUjit_option *jitOptions = new CUjit_option[jitNumOptions];
   void **jitOptVals = new void*[jitNumOptions];
   // set up pointer to set the Maximum # of registers for a particular kernel
@@ -136,23 +138,106 @@ CUmodule loadModule(const char * module)
   jitOptVals[0] = (void *)(size_t)jitRegCount;
 #if 0
 
-        // set up size of compilation log buffer
-        jitOptions[0] = CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES;
-        int jitLogBufferSize = 1024;
-        jitOptVals[0] = (void *)(size_t)jitLogBufferSize;
+  {
+    jitNumOptions = 3;
+    // set up size of compilation log buffer
+    jitOptions[0] = CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES;
+    int jitLogBufferSize = 1024;
+    jitOptVals[0] = (void *)(size_t)jitLogBufferSize;
 
-        // set up pointer to the compilation log buffer
-        jitOptions[1] = CU_JIT_INFO_LOG_BUFFER;
-        char *jitLogBuffer = new char[jitLogBufferSize];
-        jitOptVals[1] = jitLogBuffer;
+    // set up pointer to the compilation log buffer
+    jitOptions[1] = CU_JIT_INFO_LOG_BUFFER;
+    char *jitLogBuffer = new char[jitLogBufferSize];
+    jitOptVals[1] = jitLogBuffer;
 
-        // set up pointer to set the Maximum # of registers for a particular kernel
-        jitOptions[2] = CU_JIT_MAX_REGISTERS;
-        int jitRegCount = 32;
-        jitOptVals[2] = (void *)(size_t)jitRegCount;
+    // set up pointer to set the Maximum # of registers for a particular kernel
+    jitOptions[2] = CU_JIT_MAX_REGISTERS;
+    int jitRegCount = 32;
+    jitOptVals[2] = (void *)(size_t)jitRegCount;
+  }
 #endif
 
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, module,jitNumOptions, jitOptions, (void **)jitOptVals));
+#else
+  CUlinkState  CUState;
+  CUlinkState *lState = &CUState;
+  const int nOptions = 7;
+    CUjit_option options[nOptions];
+    void* optionVals[nOptions];
+    float walltime;
+    const unsigned int logSize = 32768;
+    char error_log[logSize],
+         info_log[logSize];
+    void *cuOut;
+    size_t outSize;
+    int myErr = 0;
+
+    // Setup linker options
+    // Return walltime from JIT compilation
+    options[0] = CU_JIT_WALL_TIME;
+    optionVals[0] = (void*) &walltime;
+    // Pass a buffer for info messages
+    options[1] = CU_JIT_INFO_LOG_BUFFER;
+    optionVals[1] = (void*) info_log;
+    // Pass the size of the info buffer
+    options[2] = CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES;
+    optionVals[2] = (void*) logSize;
+    // Pass a buffer for error message
+    options[3] = CU_JIT_ERROR_LOG_BUFFER;
+    optionVals[3] = (void*) error_log;
+    // Pass the size of the error buffer
+    options[4] = CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES;
+    optionVals[4] = (void*) logSize;
+    // Make the linker verbose
+    options[5] = CU_JIT_LOG_VERBOSE;
+    optionVals[5] = (void*) 1;
+    // Max # of registers/pthread
+    options[6] = CU_JIT_MAX_REGISTERS;
+    int jitRegCount = 48;
+    optionVals[6] = (void *)(size_t)jitRegCount;
+
+    // Create a pending linker invocation
+    checkCudaErrors(cuLinkCreate(nOptions,options, optionVals, lState));
+
+#if 0
+    if (sizeof(void *)==4)
+    {
+        // Load the PTX from the string myPtx32
+        printf("Loading myPtx32[] program\n");
+        // PTX May also be loaded from file, as per below.
+        myErr = cuLinkAddData(*lState, CU_JIT_INPUT_PTX, (void*)myPtx32, strlen(myPtx32)+1, 0, 0, 0, 0);
+    }
+    else
+#endif
+    {
+        // Load the PTX from the string myPtx (64-bit)
+        fprintf(stderr, "Loading ptx..\n");
+        myErr = cuLinkAddData(*lState, CU_JIT_INPUT_PTX, (void*)module, strlen(module)+1, 0, 0, 0, 0);
+        myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_LIBRARY, "libcudadevrt.a", 0,0,0); 
+        // PTX May also be loaded from file, as per below.
+        // myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_PTX, "myPtx64.ptx",0,0,0);
+    }
+
+    // Complete the linker step
+    myErr = cuLinkComplete(*lState, &cuOut, &outSize);
+
+    if ( myErr != CUDA_SUCCESS )
+    {
+      // Errors will be put in error_log, per CU_JIT_ERROR_LOG_BUFFER option above. 
+      fprintf(stderr,"PTX Linker Error:\n%s\n",error_log);
+      assert(0);
+    }    
+
+    // Linker walltime and info_log were requested in options above.
+    fprintf(stderr, "CUDA Link Completed in %fms [ %g ms]. Linker Output:\n%s\n",walltime,info_log,1e3*(rtc() - t0));
+
+    // Load resulting cuBin into module
+    checkCudaErrors(cuModuleLoadData(&cudaModule, cuOut));
+
+    // Destroy the linker invocation
+    checkCudaErrors(cuLinkDestroy(*lState));
+#endif
+  fprintf(stderr, " loadModule took %g ms \n", 1e3*(rtc() - t0));
   return cudaModule;
 }
 void unloadModule(CUmodule &cudaModule)
@@ -185,15 +270,16 @@ void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
 {
   checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
 }
-#define deviceLaunch(func,nbx,nby,nbz,params) \
+#define deviceLaunch(func,params) \
   checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_SHARED)); \
   checkCudaErrors( \
       cuLaunchKernel( \
         (func), \
-        ((nbx-1)/(128/32)+1), (nby), (nbz), \
-        128, 1, 1, \
+        1,1,1, \
+        32, 1, 1, \
         0, NULL, (params), NULL \
         ));
+
 
 typedef CUdeviceptr devicePtr;
 
@@ -241,25 +327,14 @@ extern "C"
   }
   void CUDALaunch(
       void **handlePtr, 
-      const char * module_name,
-      const char * module_1,
       const char * func_name,
-      void **func_args, 
-      int countx, int county, int countz)
+      void **func_args)
   {
-    assert(module_name != NULL);
-    assert(module_1 != NULL);
-    assert(func_name != NULL);
-    assert(func_args != NULL);
-#if 0
-    const char * module = module_1;
-#else
-    const std::vector<char> module_str = readBinary("kernel.cubin");
+    const std::vector<char> module_str = readBinary("kernel.ptx");
     const char *  module = &module_str[0];
-#endif
     CUmodule   cudaModule   = loadModule(module);
     CUfunction cudaFunction = getFunction(cudaModule, func_name);
-    deviceLaunch(cudaFunction, countx, county, countz, func_args);
+    deviceLaunch(cudaFunction, func_args);
     unloadModule(cudaModule);
   }
   void CUDASync(void *handle)
@@ -372,14 +447,18 @@ int main(int argc, char** argv) {
         framebuffer.clear();
         const double t0 = rtc();
         for (int j = 0; j < nframes; ++j)
-            ispc::RenderStatic(
-                (ispc::InputHeader*)d_header, 
-                (ispc::InputDataArrays*)d_arrays,
-                input->header,
-                VISUALIZE_LIGHT_COUNT,
-                (uint8_t*)d_r, 
-                (uint8_t*)d_g, 
-                (uint8_t*)d_b);
+        {
+        const char * func_name = "RenderStatic";
+        int light_count = VISUALIZE_LIGHT_COUNT;
+        void *func_args[] = {
+                &d_header, 
+                &d_arrays,
+                &light_count,
+                &d_r, 
+                &d_g, 
+                &d_b};
+        CUDALaunch(NULL, func_name, func_args);
+        }
         double mcycles = 1000*(rtc() - t0) / nframes;
         fprintf(stderr, "dt= %g\n", mcycles);
         ispcCycles = std::min(ispcCycles, mcycles);
