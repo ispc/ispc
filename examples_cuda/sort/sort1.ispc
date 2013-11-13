@@ -194,51 +194,56 @@ task void bumpup (uniform int h[], uniform int g[])
   }
 }
 
-static void prefix_sum (uniform int num, uniform int h[])
+static void prefix_sum (uniform int num, uniform int h[], uniform int g[])
 {
-  uniform int * uniform g = uniform new uniform int [num+1];
   uniform int i;
 
   launch[num] addup (h, g+1);
   sync;
 
-  for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
+  g[0] = 0;
+  for (i = 1; i < num; i ++) 
+      g[i] += g[i-1];
 
   launch[num] bumpup (h, g);
   sync;
 
-  delete g;
 }
 
-export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
+export void sort_ispc (uniform int n, 
+    uniform unsigned int code[], 
+    uniform int order[], 
+    uniform int ntasks,
+    uniform int _hist[],
+    uniform int64 _pair[],
+    uniform int64 _temp[],
+    uniform int _g[])
 {
-  uniform int num = ntasks < 1 ? 13*4*8 : ntasks;
+  uniform int num = ntasks;
   uniform int span = n / num;
+#if 0
   uniform int hsize = 256*programCount*num;
   uniform int * uniform hist = uniform new uniform int [hsize];
   uniform int64 * uniform pair = uniform new uniform int64 [n];
   uniform int64 * uniform temp = uniform new uniform int64 [n];
-  uniform int pass, i;
-
-#if DEBUG
-  if (n < 100)
-  {
-    print ("input: ");
-    for (i = 0; i < n; i ++) print ("%, ", code[i]);
-    print ("\n");
-  }
+  uniform int * uniform g = uniform new uniform int [num+1];
+#else
+   uniform int * uniform hist = _hist;
+   uniform int64 * uniform pair = _pair;
+   uniform int64 * uniform temp = _temp;
+   uniform int * uniform g = _g;
 #endif
+  uniform int pass, i;
 
   launch[num] pack (span, n, code, pair);
   sync;
-#if 0
 
   for (pass = 0; pass < 4; pass ++)
   {
     launch[num] histogram (span, n, pair, pass, hist);
     sync;
 
-    prefix_sum (num, hist);
+    prefix_sum (num, hist, g);
 
     launch[num] permutation (span, n, pair, pass, hist, temp);
     sync;
@@ -250,26 +255,11 @@ export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int o
   launch[num] unpack (span, n, pair, code, order);
   sync;
 
-#if DEBUG
-  for (i = 0; i < n; i ++)
-  {
-    if (i > 0 && code[i-1] > code[i])
-      print ("ERR at % => % > %; ", i, code[i-1], code[i]);
-  }
-
-  if (n < 100)
-  {
-    print ("output: ");
-    for (i = 0; i < n; i ++) print ("%, ", code[i]);
-    print ("\n");
-    print ("order: ");
-    for (i = 0; i < n; i ++) print ("%, ", order[i]);
-    print ("\n");
-  }
-#endif
-#endif
-
+#if ALLOCATED
+  delete g;
   delete hist;
   delete pair;
   delete temp;
+#endif
 }
+

@@ -239,20 +239,26 @@ static void prefix_sum ( int num,  int h[], int * g)
 }
 
 extern "C" __global__
-void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks)
+void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks,
+    int _hist[],
+    int64 _pair[],
+    int64 _temp[],
+    int _g[])
 {
-   int num = ntasks < 1 ? 13*4 : ntasks;
+   int num = ntasks;
    int span = n / num;
-   int hsize = 256*programCount*num;
 #if 0
-   int *  hist =  new  int [hsize];
-   int64 *  pair =  new  int64 [n];
-   int64 *  temp =  new  int64 [n];
-#else
+   int hsize = 256*programCount*num;
    int *  hist =  __new< int>(hsize);
    int64 *  pair =  __new< int64>(n);
    int64 *  temp =  __new< int64>(n);
    int *  g =  __new<int>(num+1);
+#define ALLOCATED
+#else
+   int * hist = _hist;
+   int64 * pair = _pair;
+   int64 * temp = _temp;
+   int * g = _g;
 #endif
    int pass, i;
 
@@ -262,7 +268,6 @@ void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks)
      pack<<<nbx(num),128>>>(span, n, code, pair);
   sync;
 
-#if 1
   for (pass = 0; pass < 4; pass ++)
   {
     //    launch[num] histogram (span, n, pair, pass, hist);
@@ -287,15 +292,9 @@ void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks)
   if(programIndex == 0)
     unpack<<<nbx(num),128>>> (span, n, pair, code, order);
   sync;
-#endif
 
-
-#if 0
-  delete hist;
-  delete pair;
-  delete temp;
-#else
-    __delete(g);
+#if ALLOCATED
+  __delete(g);
   __delete(hist);
   __delete(pair);
   __delete(temp);

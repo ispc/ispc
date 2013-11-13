@@ -351,8 +351,13 @@ int main (int argc, char *argv[])
   createContext();
   /*******************/
 
+  int ntask = 13*4*8;
   devicePtr d_code   = deviceMalloc(n*sizeof(int));
   devicePtr d_order  = deviceMalloc(n*sizeof(int));
+  devicePtr d_pair   = deviceMalloc(n*2*sizeof(int));
+  devicePtr d_temp   = deviceMalloc(n*2*sizeof(int));
+  devicePtr d_hist   = deviceMalloc(256*32 * ntask * sizeof(int));
+  devicePtr d_g      = deviceMalloc((ntask + 1) * sizeof(int));
 
   for (i = 0; i < m; i ++)
   {
@@ -368,8 +373,11 @@ int main (int argc, char *argv[])
     tISPC2 += (rtc() - t0); // get_elapsed_mcycles();
 #else
     const char * func_name = "sort_ispc";
-    int ntask = 0;
+#if 0
     void *func_args[] = {&n, &d_code, &d_order, &ntask};
+#else
+    void *func_args[] = {&n, &d_code, &d_order, &ntask, &d_hist, &d_pair, &d_temp, &d_g};
+#endif
     const double dt = CUDALaunch(NULL, func_name, func_args);
     tISPC2 += dt;
 #endif
