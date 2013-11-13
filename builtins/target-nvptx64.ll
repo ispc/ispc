@@ -100,6 +100,34 @@ define i32 @__lanemask_lt() nounwind readnone alwaysinline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tasking
 
+define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
+{
+  ret i8* null
+}
+
+;; this call allocate parameter buffer for kernel launch
+declare i64 @cudaGetParameterBuffer(i64, i64) nounwind
+define i8* @ISPCGetParamBuffer(i8**, i64 %align, i64 %size) nounwind alwaysinline
+{
+entry:
+  %call = tail call i32 @__tid_x()
+  %call1 = tail call i32 @__warpsize()
+  %sub = add nsw i32 %call1, -1
+  %and = and i32 %sub, %call
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %ptri64tmp = call i64 @cudaGetParameterBuffer(i64 %align, i64 %size);
+  br label %if.end
+
+if.end:
+  %ptri64 = phi i64 [ %ptri64tmp, %if.then ], [ 0, %entry ]
+  %ptr = inttoptr i64 %ptri64 to i8*
+  ret i8* %ptr
+}
+
+;; this actually launches kernel a kernel
 module asm "
 .extern .func  (.param .b32 func_retval0) cudaLaunchDevice
 (
@@ -111,22 +139,17 @@ module asm "
   .param .b64 cudaLaunchDevice_param_5
 );
 "
-define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
-{
-  ret i8* null
-}
-declare i64 @cudaGetParameterBuffer(i64, i64) nounwind
-define void @ISPCLaunch(i8**, i8* %func_ptr, i8** %func_args, i32 %nargs, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
+define void @ISPCLaunch(i8**, i8* %func_ptr, i8* %func_args, i32 %ntx, i32 %nty, i32 %ntz) nounwind alwaysinline
 {
 entry:
-  %func_i64 = ptrtoint i8*  %func_ptr  to i64
-  %args_i64 = ptrtoint i8** %func_args to i64
+;;  only 1 lane must launch the kernel  !!!
+ %func_i64 = ptrtoint i8*  %func_ptr  to i64
+ %args_i64 = ptrtoint i8*  %func_args to i64
+
 ;; nbx = (%ntx-1)/(blocksize/warpsize) + 1  for blocksize=128 & warpsize=32
   %ntxm1   = add nsw i32 %ntx, -1
   %ntxm1d4 = sdiv i32 %ntxm1, 4
   %nbx     = add nsw i32 %ntxm1d4, 1
-
-;;  only 1 lane must launch the kernel  !!!
   %call = tail call i32 @__tid_x()
   %call1 = tail call i32 @__warpsize()
   %sub = add nsw i32 %call1, -1
@@ -135,31 +158,25 @@ entry:
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %if.then, label %if.end
 
-if.then:                                          ; preds = %entry
+if.then:
 
-  %param = call i64 @cudaGetParameterBuffer(i64 8, i64 24);
-  %ptr   = inttoptr i64 %param to i8*;
-
-
-  %res_tmp = call i32 asm sideeffect "{
-      .reg .s32 %r<8>;
-      .reg .s64 %rd<3>;
+ %res_tmp = call i32 asm sideeffect "{
      .param .b64 param0;
-     st.param.b64	[param0+0], $1; //%rd0;
+     st.param.b64	[param0+0], $1;
      .param .b64 param1;
-     st.param.b64	[param1+0], $2; //%rd1;
+     st.param.b64	[param1+0], $2;
      .param .align 4 .b8 param2[12];
-     st.param.b32	[param2+0], $3; //%r0;
-     st.param.b32	[param2+4], $4; //%r1;
-     st.param.b32	[param2+8], $5; //%r2;
+     st.param.b32	[param2+0], $3; 
+     st.param.b32	[param2+4], $4; 
+     st.param.b32	[param2+8], $5; 
      .param .align 4 .b8 param3[12];
-     st.param.b32	[param3+0], $6; //%r3;
-     st.param.b32	[param3+4], $7; //%r4;
-     st.param.b32	[param3+8], $8; //%r5;
+     st.param.b32	[param3+0], $6; 
+     st.param.b32	[param3+4], $7; 
+     st.param.b32	[param3+8], $8; 
      .param .b32 param4;
-     st.param.b32	[param4+0], $9; //%r6;
+     st.param.b32	[param4+0], $9; 
      .param .b64 param5;
-     st.param.b64	[param5+0], $10; //%rd2;
+     st.param.b64	[param5+0], $10; 
 
      .param .b32 retval0;
      call.uni (retval0), 
@@ -175,14 +192,19 @@ if.then:                                          ; preds = %entry
      ld.param.b32	$0, [retval0+0];
   }
   ", 
-"=r, l,l, r,r,r, r,r,r, r,l"(i64 %func_i64,i64 %args_i64, i32 %nbx,i32 %nty,i32 %ntz, i32 128,i32 1,i32 1, i32 0,i64 0);
+"=r, l,l, r,r,r, r,r,r, r,l"(
+          i64 %func_i64,i64 %args_i64, 
+          i32 %nbx,i32 %nty,i32 %ntz, 
+          i32 128,i32 1,i32 1, i32 0,i64 0);
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  %res = phi i32 [ %res_tmp, %if.then ], [ undef, %entry ]
+;;  %res = phi i32 [ %res_tmp, %if.then ], [ undef, %entry ]
 
   ret void
 }
+
+;; this synchronizes kernel
 declare i32 @cudaDeviceSynchronize() nounwind
 define void @ISPCSync(i8*) nounwind alwaysinline
 {

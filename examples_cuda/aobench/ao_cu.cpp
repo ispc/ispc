@@ -163,7 +163,7 @@ CUmodule loadModule(const char * module)
     CUjit_option options[nOptions];
     void* optionVals[nOptions];
     float walltime;
-    const unsigned int logSize = 8192;
+    const unsigned int logSize = 32768;
     char error_log[logSize],
          info_log[logSize];
     void *cuOut;

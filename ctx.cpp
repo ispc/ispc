@@ -3593,9 +3593,87 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       args.push_back(launchCount[2]);
       return CallInst(flaunch, NULL, args, "");
     }
-    else /* isPTX ==  true */
+    else if(1) /* isPTX ==  true */
     {
-      //assert(0);  /* must only be called in export */
+      if (callee == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+      }
+      launchedTasks = true;
+      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+
+      std::vector<llvm::Type*> argTypes;
+      for (unsigned int i = 0; i < argVals.size(); i++)
+        argTypes.push_back(argVals[i]->getType());
+      llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
+      llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
+      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+      if (structSize->getType() != LLVMTypes::Int64Type)
+        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
+            "struct_size_to_64");
+#if 0
+      {
+        std::string str; llvm::raw_string_ostream rso(str); llvm::formatted_raw_ostream fos(rso);
+        structSize->print(fos);
+        fos.flush(); fprintf(stderr, ">>> %s\n", str.c_str());
+      }
+#endif
+      int align = 8;
+      llvm::Function *falloc = m->module->getFunction("ISPCGetParamBuffer");
+      AssertPos(currentPos, falloc != NULL);
+      std::vector<llvm::Value *> allocArgs;
+      allocArgs.push_back(launchGroupHandlePtr);
+      allocArgs.push_back(LLVMInt64(align));
+      allocArgs.push_back(structSize);
+      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+      llvm::Value *voidi64 = PtrToIntInst(voidmem, "args_i64");
+      llvm::BasicBlock* if_true  = CreateBasicBlock("if_true");
+      llvm::BasicBlock* if_false = CreateBasicBlock("if_false");
+//      llvm::BasicBlock* bblock_bak = bblock;
+
+      /* check if the pointer returned by ISPCGetParamBuffer is not NULL 
+       * --------------
+       * this is a workaround for not checking which laneIdx we are in,
+       * because ISPCGetParamBuffer will return NULL pointer for all laneIdx, except when laneIdx = 0 
+       * of course, if ISPCGetParamBuffer fails to get parameter buffer, the pointer for laneIdx = 0
+       * will also be zero. 
+       * This check must be added, and also rewrite the code to make it less opaque 
+       */
+      llvm::Value* cmp1 = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, voidi64, LLVMInt64(0), "cmp1");
+      BranchInst(if_true, if_false, cmp1);
+
+      bblock = if_true;
+
+      // label_if_then block:
+      llvm::Type *pt = llvm::PointerType::getUnqual(st);
+      llvm::Value *argmem = BitCastInst(voidmem, pt);
+      for (unsigned int i = 0; i < argVals.size(); ++i) 
+      {
+        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+        // don't need to do masked store here, I think
+        StoreInst(argVals[i], ptr);
+      }
+      BranchInst(if_false);
+
+      bblock = if_false;
+
+      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+      AssertPos(currentPos, flaunch != NULL);
+      std::vector<llvm::Value *> args;
+      args.push_back(launchGroupHandlePtr);
+      args.push_back(fptr);
+      args.push_back(voidmem);
+      args.push_back(launchCount[0]);
+      args.push_back(launchCount[1]);
+      args.push_back(launchCount[2]);
+      return CallInst(flaunch, NULL, args, "");
+
+
+    }
+    else
+    {
+      assert(0);  /* must only be called in export */
     //  assert(g->target->getISA() != Target::NVPTX64);
 
       if (callee == NULL) {
@@ -3643,7 +3721,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       // the argument block
 
       /* allocate structure of pointer */
-      llvm::ArrayType* ArrayTy_6 = llvm::ArrayType::get(LLVMTypes::VoidPointerType, argVals.size());
+      llvm::ArrayType* ArrayTy_6 = llvm::ArrayType::get(LLVMTypes::VoidPointerType, argVals.size()*2);
       llvm::Value* ptrParam = AllocaInst(ArrayTy_6, "arrayStructPtr");
 
       /* constructed array of pointers to arguments 
@@ -3786,6 +3864,8 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         args.push_back(ptr_arraydecay); /* const void ** params */
       }
 
+      llvm::ConstantInt* const_int64_10 = llvm::ConstantInt::get(*g->ctx, llvm::APInt(32, argVals.size()*2));
+      args.push_back(const_int64_10);
       args.push_back(launchCount[0]);
       args.push_back(launchCount[1]);
       args.push_back(launchCount[2]);
