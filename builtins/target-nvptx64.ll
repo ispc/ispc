@@ -149,7 +149,8 @@ entry:
 
 ;; nbx = (%ntx-1)/(blocksize/warpsize) + 1  for blocksize=128 & warpsize=32
   %ntxm1   = add nsw i32 %ntx, -1
-  %ntxm1d4 = sdiv i32 %ntxm1, 4
+;;  %ntxm1d4 = sdiv i32 %ntxm1, 4
+  %ntxm1d4 = ashr i32 %ntxm1, 2
   %nbx     = add nsw i32 %ntxm1d4, 1
   %call = tail call i32 @__tid_x()
   %call1 = tail call i32 @__warpsize()
