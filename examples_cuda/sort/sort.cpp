@@ -86,7 +86,7 @@ int main (int argc, char *argv[])
 {
   int i, j, n = argc == 1 ? 1000000 : atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
-  printf("n= %d \n", n);
+  printf("n= %d  m= %d\n", n, m);
   unsigned int *code = new unsigned int [n];
   int *order = new int [n];
 
