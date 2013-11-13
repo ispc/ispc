@@ -20,19 +20,19 @@ ifeq ($(ARCH),x86)
   COMMA=,
   ifneq (,$(findstring $(COMMA),$(ISPC_IA_TARGETS)))
     #$(info multi-target detected: $(ISPC_IA_TARGETS))
-    ifneq (,$(findstring sse2-,$(ISPC_IA_TARGETS)))
+    ifneq (,$(findstring sse2,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse2.o)
     endif
-    ifneq (,$(findstring sse4-,$(ISPC_IA_TARGETS)))
+    ifneq (,$(findstring sse4,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse4.o)
     endif
     ifneq (,$(findstring avx1-,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx.o)
     endif
-    ifneq (,$(findstring avx1.1-,$(ISPC_IA_TARGETS)))
+    ifneq (,$(findstring avx1.1,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx11.o)
     endif
-    ifneq (,$(findstring avx2-,$(ISPC_IA_TARGETS)))
+    ifneq (,$(findstring avx2,$(ISPC_IA_TARGETS)))
       ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx2.o)
     endif
   endif
