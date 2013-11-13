@@ -495,6 +495,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         performance.ref = "ispc_ref"
         if current_OS == "Windows":
             performance.ref = "ispc_ref.exe"
+        performance.perf_target = ""
         performance.in_file = "." + os.sep + f_date + os.sep + "performance.log"
 # prepare LLVM 3.3 as newest LLVM
         need_LLVM = check_LLVM(["3.3"])
