@@ -257,10 +257,10 @@ extern "C"
     assert(module_1 != NULL);
     assert(func_name != NULL);
     assert(func_args != NULL);
-#if 1
+#if 0
     const char * module = module_1;
 #else
-    const std::vector<char> module_str = readBinary("kernel.cubin");
+    const std::vector<char> module_str = readBinary("__kernels.cubin");
     const char *  module = &module_str[0];
 #endif
 #if 1
