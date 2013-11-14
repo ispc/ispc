@@ -1926,7 +1926,10 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
         }
     }
     if (g->target->getISA() == Target::NVPTX64)
+    {
       opts.addMacroDef("__NVPTX__");
+      opts.addMacroDef("programIndex=laneIndex()");
+    }
 
 #if defined(LLVM_3_1)
     inst.getLangOpts().BCPLComment = 1;
