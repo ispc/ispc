@@ -362,7 +362,6 @@ volume_tile(int x0, int y0, int x1,
 }
 
 
-extern "C"
 __global__ void
 volume_task(float density[], int _nVoxels[3], 
             const float _raster2camera[4][4],
@@ -432,3 +431,16 @@ volume_task(float density[], int _nVoxels[3],
 }
 
 
+extern "C"
+__global__ void
+volume_ispc_tasks( float density[],  int nVoxels[3], 
+    const  float raster2camera[4][4],
+    const  float camera2world[4][4], 
+    int width,  int height,  float image[]) {
+  // Launch tasks to work on (dx,dy)-sized tiles of the image
+  int dx = 8, dy = 8;
+  int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
+  if (programIndex == 0)
+    volume_task<<<(nTasks-1)/4+1, 128>>>(density, nVoxels, raster2camera, camera2world, 
+        width, height, image);
+}
