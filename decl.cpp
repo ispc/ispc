@@ -535,6 +535,7 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         {
 //          ds->storageClass = SC_EXTERN_C;
           ds->typeQualifiers |= TYPEQUAL_UNMASKED;
+//          ds->typeQualifiers |= TYPEQUAL_INLINE;
         }
 
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);

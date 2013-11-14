@@ -40,18 +40,6 @@ met:
 
 typedef float<3> vec;
 
-#ifdef __NVPTX__
-#warning "emitting DEVICE code"
-#define programCount warpSize()
-#define programIndex laneIndex()
-#define taskIndex0    blockIndex0()
-#define taskCount0    blockCount0()
-#define taskIndex1    blockIndex1()
-#define taskCount1    blockCount1()
-#else
-#warning "emitting HOST code"
-#endif
-
 struct Isect {
   float      t;
   vec        p;
