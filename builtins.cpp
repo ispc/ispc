@@ -1117,7 +1117,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     }
 
     // define the 'programCount' builtin variable
-    lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable);
+    if (!g->target->isPTX())
+    {
+      lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable);
+    }
+    else
+    {
+      lDefineConstantInt("programCount", 32, module, symbolTable);
+    }
 
     // define the 'programIndex' builtin
     lDefineProgramIndex(module, symbolTable);

@@ -1406,7 +1406,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-  if (1) //g->target->getISA() != Target::NVPTX64)
+  if (g->target->getISA() != Target::NVPTX64)
   {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
@@ -1419,19 +1419,15 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     return index;
   }
   else
-  { /* this idea is to call __tid_x() builtin, but it doesn't work */
-    std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("laneIndex", &mm);
-    if (g->target->getMaskBitCount() == 1)
-      AssertPos(currentPos, mm.size() == 1);
-    else
-      // There should be one with signed int signature, one unsigned int.
-      AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
-    llvm::Function *fmm = mm[0]->function;
-    std::vector<llvm::Value*> args;
-    return CallInst(fmm, NULL, args, "laneIndex");
+  { /* this calls __tid_x() & __warpsize */
+    llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
+    llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
+    llvm::Value *__tid_x    = CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(), "laneIdxForEach");
+    llvm::Value *__warpsz   = CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(), "warpSZForEach");
+    llvm::Value *__warpszm1 = BinaryOperator(llvm::Instruction::And, __warpsz, LLVMInt32(-1), "__warpszm1");
+    llvm::Value *laneIdx = BinaryOperator(llvm::Instruction::And, __tid_x, __warpszm1, "__laneidx");
+    llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), laneIdx, 0, "__laneIdxV");
+    return index;
   }
 }
 
