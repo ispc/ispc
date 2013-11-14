@@ -73,7 +73,8 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
 
     const uniform int ystart = taskIndex1 * yspan;
     const uniform int yend   = min(ystart  + yspan, height);
-    
+   
+#if 0 
   for (uniform int yi = ystart; yi < yend; yi++)
     for (uniform int xi = xstart; xi < xend; xi += programCount)
     {
@@ -85,6 +86,17 @@ mandelbrot_scanline(uniform float x0, uniform float dx,
       if (xi + programIndex < xend)
         output[index] = res;
     }
+#else
+    foreach (yi = ystart ... yend, xi = xstart ... xend)
+    {
+      const float x = x0 + xi * dx;
+      const float y = y0 + yi * dy;
+
+      const int res = mandel(x,y,maxIterations);
+      const int index = yi * width + xi;
+      output[index] = res;
+    }
+#endif
     
 }
 

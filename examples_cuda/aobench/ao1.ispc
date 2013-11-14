@@ -228,57 +228,54 @@ static inline void ao_tile(
 
   seed_rng(&rngstate, programIndex + (y0 << (programIndex & 31)));
   float invSamples = 1.f / nsubsamples;
-  for (uniform int y = y0; y < y1; y++)
-    for (uniform int xb = x0; xb < x1; xb += programCount)
-    {
-      const int x = xb + programIndex;
-      const int offset = 3 * (y * w + x);
-      float res = 0.0f;
+  foreach_tiled (y = y0 ... y1, x = x0 ... x1)
+  {
+    const int offset = 3 * (y * w + x);
+    float res = 0.0f;
 
-      for (uniform int u = 0; u < nsubsamples; u++)
-        for (uniform int v = 0; v < nsubsamples; v++)
-        {
-          float du = (float)u * invSamples, dv = (float)v * invSamples;
-
-          // Figure out x,y pixel in NDC
-          float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
-          float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
-          float ret = 0.f;
-          Ray ray;
-          Isect isect;
-
-          ray.org = 0.f;
-
-          // Poor man's perspective projection
-          ray.dir.x = px;
-          ray.dir.y = py;
-          ray.dir.z = -1.0;
-          vnormalize(ray.dir);
-
-          isect.t   = 1.0e+17;
-          isect.hit = 0;
-
-          for (uniform int snum = 0; snum < 3; ++snum)
-            ray_sphere_intersect(isect, ray, spheres[snum]);
-          ray_plane_intersect(isect, ray, plane);
-
-          // Note use of 'coherent' if statement; the set of rays we
-          // trace will often all hit or all miss the scene
-          if (isect.hit) {
-            ret = ambient_occlusion(isect, plane, spheres, rngstate);
-            ret *= invSamples * invSamples;
-            res += ret;
-          }
-        }
-
-      if (xb < x1)
+    for (uniform int u = 0; u < nsubsamples; u++)
+      for (uniform int v = 0; v < nsubsamples; v++)
       {
-        image[offset  ] = res;
-        image[offset+1] = res;
-        image[offset+2] = res;
+        float du = (float)u * invSamples, dv = (float)v * invSamples;
+
+        // Figure out x,y pixel in NDC
+        float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
+        float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
+        float ret = 0.f;
+        Ray ray;
+        Isect isect;
+
+        ray.org = 0.f;
+
+        // Poor man's perspective projection
+        ray.dir.x = px;
+        ray.dir.y = py;
+        ray.dir.z = -1.0;
+        vnormalize(ray.dir);
+
+        isect.t   = 1.0e+17;
+        isect.hit = 0;
+
+        for (uniform int snum = 0; snum < 3; ++snum)
+          ray_sphere_intersect(isect, ray, spheres[snum]);
+        ray_plane_intersect(isect, ray, plane);
+
+        // Note use of 'coherent' if statement; the set of rays we
+        // trace will often all hit or all miss the scene
+        if (isect.hit) {
+          ret = ambient_occlusion(isect, plane, spheres, rngstate);
+          ret *= invSamples * invSamples;
+          res += ret;
+        }
       }
 
+    //if (x < x1)
+    {
+      image[offset  ] = res;
+      image[offset+1] = res;
+      image[offset+2] = res;
     }
+  }
 }
 
 

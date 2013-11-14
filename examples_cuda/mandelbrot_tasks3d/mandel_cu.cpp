@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
   deviceFree(d_buf);
 
   printf("[mandelbrot ispc+tasks]:\t[%.3f] million cycles\n", minISPC);
-  writePPM(buf, width, height, "mandelbrot-ispc.ppm");
+  writePPM(buf, width, height, "mandelbrot-cuda.ppm");
 
 
   // 

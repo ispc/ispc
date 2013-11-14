@@ -278,44 +278,54 @@ volume_tile(uniform int x0, uniform int y0, uniform int x1,
             const uniform float raster2camera[4][4],
             const uniform float camera2world[4][4], 
             uniform int width, uniform int height, uniform float image[]) {
-    // Work on 4x4=16 pixel big tiles of the image.  This function thus
-    // implicitly assumes that both (x1-x0) and (y1-y0) are evenly divisble
-    // by 4.
-    for (uniform int y = y0; y < y1; y += 8) {
-        for (uniform int x = x0; x < x1; x += 8) {
-//            foreach (o = 0 ... 16) {
-              for (uniform int ob = 0; ob < 64; ob += programCount)
-              {
-                const int o = ob + programIndex;
-          
-                // These two arrays encode the mapping from [0,15] to
-                // offsets within the 4x4 pixel block so that we render
-                // each pixel inside the block
-                const uniform int xoffsets[16] = { 0, 1, 0, 1, 2, 3, 2, 3,
-                                                   0, 1, 0, 1, 2, 3, 2, 3 };
-                const uniform int yoffsets[16] = { 0, 0, 1, 1, 0, 0, 1, 1,
-                                                   2, 2, 3, 3, 2, 2, 3, 3 };
+  // Work on 4x4=16 pixel big tiles of the image.  This function thus
+  // implicitly assumes that both (x1-x0) and (y1-y0) are evenly divisble
+  // by 4.
+#if 0
+  for (uniform int y = y0; y < y1; y += 8) 
+    for (uniform int x = x0; x < x1; x += 8) 
+      foreach (o = 0 ... 64)
+      {
+        // These two arrays encode the mapping from [0,15] to
+        // offsets within the 4x4 pixel block so that we render
+        // each pixel inside the block
+        const uniform int xoffsets[16] = { 0, 1, 0, 1, 2, 3, 2, 3,
+          0, 1, 0, 1, 2, 3, 2, 3 };
+        const uniform int yoffsets[16] = { 0, 0, 1, 1, 0, 0, 1, 1,
+          2, 2, 3, 3, 2, 2, 3, 3 };
 
-                const uniform int xblock[4] = {0, 4, 0, 4};
-                const uniform int yblock[4] = {0, 0, 4, 4};
+        const uniform int xblock[4] = {0, 4, 0, 4};
+        const uniform int yblock[4] = {0, 0, 4, 4};
 
-                // Figure out the pixel to render for this program instance
-                const int xo = x + xblock[o/16] + xoffsets[o&15];
-                const int yo = y + yblock[o/16] + yoffsets[o&15];
+        // Figure out the pixel to render for this program instance
+        const int xo = x + xblock[o/16] + xoffsets[o&15];
+        const int yo = y + yblock[o/16] + yoffsets[o&15];
 
-                // Use viewing parameters to compute the corresponding ray
-                // for the pixel
-                Ray ray;
-                generateRay(raster2camera, camera2world, xo, yo, ray);
+        // Use viewing parameters to compute the corresponding ray
+        // for the pixel
+        Ray ray;
+        generateRay(raster2camera, camera2world, xo, yo, ray);
 
-                // And raymarch through the volume to compute the pixel's
-                // value
-                int offset = yo * width + xo;
-                if (xo < x1 && yo < y1)
-                  image[offset] = raymarch(density, nVoxels, ray);
-            }
-        }
-    }
+        // And raymarch through the volume to compute the pixel's
+        // value
+        int offset = yo * width + xo;
+        if (xo < x1 && yo < y1)
+          image[offset] = raymarch(density, nVoxels, ray);
+      }
+#else
+  foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
+  {
+    // Use viewing parameters to compute the corresponding ray
+    // for the pixel
+    Ray ray;
+    generateRay(raster2camera, camera2world, x, y, ray);
+
+    // And raymarch through the volume to compute the pixel's
+    // value
+    int offset = y * width + x;
+    image[offset] = raymarch(density, nVoxels, ray);
+  }
+#endif
 }
 
 

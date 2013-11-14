@@ -1325,28 +1325,76 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
     // (0,0,0,0,1,1,1,1).
     int32_t delta[ISPC_MAX_NVEC];
     const int vecWidth = 32; 
-    for (int i = 0; i < vecWidth; ++i) {
-        int d = i;
-        // First, account for the effect of any dimensions at deeper
-        // nesting levels than the current one.
-        int prevDimSpanCount = 1;
-        for (int j = dim; j < nDims-1; ++j)
-            prevDimSpanCount *= spans[j+1];
-        d /= prevDimSpanCount;
+    std::vector<llvm::Constant*> constDeltaList;
+    for (int i = 0; i < vecWidth; ++i) 
+    {
+      int d = i;
+      // First, account for the effect of any dimensions at deeper
+      // nesting levels than the current one.
+      int prevDimSpanCount = 1;
+      for (int j = dim; j < nDims-1; ++j)
+        prevDimSpanCount *= spans[j+1];
+      d /= prevDimSpanCount;
 
-        // And now with what's left, figure out our own offset
-        delta[i] = d % spans[dim];
+      // And now with what's left, figure out our own offset
+      delta[i] = d % spans[dim];
+      constDeltaList.push_back(LLVMInt8(delta[i]));
     }
 
-    llvm::VectorType *LLVMTypes::Int32VectorSIMT = llvm::VectorType::get(LLVMTypes::Int32Type, 32);
-    llvm::ArrayType* ArrayDelta = llvm::ArrayType::get(LLVMTypes::Int32Type, 32);
+    llvm::ArrayType* ArrayDelta = llvm::ArrayType::get(LLVMTypes::Int8Type, 32);
+//    llvm::PointerType::get(ArrayDelta, 4); /* constant memory */
 
-   
+
+    llvm::GlobalVariable* globalDelta = new llvm::GlobalVariable(
+        /*Module=*/*m->module,
+        /*Type=*/ArrayDelta,
+        /*isConstant=*/true,
+        /*Linkage=*/llvm::GlobalValue::PrivateLinkage,
+        /*Initializer=*/0, // has initializer, specified below
+        /*Name=*/"constDeltaForeach");
+#if 0
+        /*ThreadLocalMode=*/llvm::GlobalVariable::NotThreadLocal,
+        /*unsigned AddressSpace=*/4 /*constant*/);
+#endif
+
+
+    llvm::Constant* constDelta = llvm::ConstantArray::get(ArrayDelta, constDeltaList);
+
+    globalDelta->setInitializer(constDelta);
+    llvm::Function *func_tid_x = m->module->getFunction("__tid_x");
+    std::vector<llvm::Value *> allocArgs;
+    llvm::Value *__tid_x = ctx->CallInst(func_tid_x, NULL, allocArgs, "laneIdxForEach");
+    llvm::Value *laneIdx = ctx->BinaryOperator(llvm::Instruction::And, __tid_x, LLVMInt32(31), "__laneidx");
+
+    std::vector<llvm::Value*> ptr_arrayidx_indices;
+    ptr_arrayidx_indices.push_back(LLVMInt32(0));
+    ptr_arrayidx_indices.push_back(laneIdx);
+#if 1
+    llvm::Instruction* ptr_arrayidx = llvm::GetElementPtrInst::Create(globalDelta, ptr_arrayidx_indices, "arrayidx", ctx->GetCurrentBasicBlock());
+    llvm::LoadInst* int8_39 = new llvm::LoadInst(ptr_arrayidx, "", false, ctx->GetCurrentBasicBlock());
+    llvm::Value * int32_39 = ctx->ZExtInst(int8_39, LLVMTypes::Int32Type);
+
+    llvm::VectorType* VectorTy_2 = llvm::VectorType::get(llvm::IntegerType::get(*g->ctx, 32), 1);
+    llvm::UndefValue* const_packed_41 = llvm::UndefValue::get(VectorTy_2);
+
+    llvm::InsertElementInst* packed_43 = llvm::InsertElementInst::Create(
+//        llvm::UndefValue(LLVMInt32Vector),
+        const_packed_41,
+        int32_39, LLVMInt32(0), "", ctx->GetCurrentBasicBlock());
+#endif
+
+
     // Add the deltas to compute the varying counter values; store the
     // result to memory and then return it directly as well.
+#if 0
     llvm::Value *varyingCounter =
         ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
                             LLVMInt32Vector(delta), "iter_val");
+#else
+    llvm::Value *varyingCounter =
+        ctx->BinaryOperator(llvm::Instruction::Add, smearCounter,
+                            packed_43, "iter_val");
+#endif
     ctx->StoreInst(varyingCounter, varyingCounterPtr);
     return varyingCounter;
   }
@@ -1895,12 +1943,14 @@ ForeachStmt::EmitCode(FunctionEmitContext *ctx) const {
       std::vector<int> span(nDims, 0);
       const int vectorWidth = 32;
       lGetSpans(nDims-1, nDims, vectorWidth, isTiled, &span[0]);
+#if 0
       for (int i = 0; i < nDims; i++)
       {
         fprintf(stderr, " i= %d [ %d ] : %d \n",
             i, nDims, span[i]);
       }
       fprintf(stderr, " --- \n");
+#endif
 
       for (int i = 0; i < nDims; ++i) {
         // Basic blocks that we'll fill in later with the looping logic for
