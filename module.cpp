@@ -2331,7 +2331,10 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-  if (target != NULL && strcmp(target,"nvptx64") >= 0)  // NVPTX64
+  char ptxname[] = "nvptx64";
+  for (int k = 0; k < 7; k++)
+    ptxname[k] = target[k];
+  if (target != NULL && strcmp(ptxname,"nvptx64") == 0)  // NVPTX64
   {
     std::vector<std::string> targets = lExtractTargets(target);
     Assert(targets.size() > 1);

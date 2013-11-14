@@ -275,3 +275,5 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   %call = call i64 @llvm.ctpop.i64(i64 %0)
   ret i64 %call
 }
+
+declare_nvptx64()

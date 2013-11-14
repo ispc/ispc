@@ -282,15 +282,5 @@ define double @__max_uniform_double(double, double) nounwind readnone alwaysinli
 ;; int8/int16 builtins
 
 define_avgs()
-
-;;;;;;; nvptx64
-
-declare i32 @__tid_x()  nounwind readnone alwaysinline
-declare i32 @__warpsize()  nounwind readnone alwaysinline
-declare i32 @__ctaid_x()  nounwind readnone alwaysinline
-declare i32 @__ctaid_y()  nounwind readnone alwaysinline
-declare i32 @__ctaid_z()  nounwind readnone alwaysinline
-declare i32 @__nctaid_x()  nounwind readnone alwaysinline
-declare i32 @__nctaid_y()  nounwind readnone alwaysinline
-declare i32 @__nctaid_z()  nounwind readnone alwaysinline
+declare_nvptx64()
 
