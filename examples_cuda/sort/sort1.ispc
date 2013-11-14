@@ -130,8 +130,7 @@ task void copy (uniform int span, uniform int n, uniform int64 from[], uniform i
   uniform int start = taskIndex*span;
   uniform int end = taskIndex == taskCount-1 ? n : start+span;
 
-  for (int i = programIndex + start; i < end; i += programCount)
-    if (i < end)
+  foreach (i = start ... end)
   {
     to[i] = from[i];
   }
@@ -143,11 +142,10 @@ task void pack (uniform int span, uniform int n, uniform unsigned int code[], un
   uniform int start = taskIndex*span;
   uniform int end = taskIndex == taskCount-1 ? n : start+span;
 
-  for (int i = programIndex + start; i < end; i += programCount)
-    if (i < end)
-    {
-      pair[i] = ((int64)i<<32)+code[i];
-    }
+  foreach (i = start ... end)
+  {
+    pair[i] = ((int64)i<<32)+code[i];
+  }
 }
 
 task void unpack (uniform int span, uniform int n, uniform int64 pair[], uniform int unsigned code[], uniform int order[])
@@ -156,8 +154,7 @@ task void unpack (uniform int span, uniform int n, uniform int64 pair[], uniform
   uniform int start = taskIndex*span;
   uniform int end = taskIndex == taskCount-1 ? n : start+span;
 
-  for (int i = programIndex + start; i < end; i += programCount)
-    if (i < end)
+  foreach (i = start ... end)
   {
     code[i] = pair[i];
     order[i] = pair[i]>>32;
@@ -186,7 +183,7 @@ task void bumpup (uniform int h[], uniform int g[])
   uniform int * uniform u = &h[256*programCount*taskIndex];
   uniform int z = g[taskIndex];
 
-  for (int i = programIndex; i < 256*programCount; i += programCount)
+  foreach (i = 0 ... 256*programCount)
   {
     u[i] += z;
   }
