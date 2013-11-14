@@ -116,6 +116,10 @@ void createContext(const int deviceId = 0)
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
+    const size_t stackLimit = 4*1024;
+ //   const size_t heapLimit = 1024*1024*1024;
+  checkCudaErrors(cuCtxSetLimit(CU_LIMIT_STACK_SIZE,stackLimit));
+//  checkCudaErrors(cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE,heapLimit));
 }
 void destroyContext()
 {
