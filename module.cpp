@@ -1929,6 +1929,18 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     {
       opts.addMacroDef("__NVPTX__");
       opts.addMacroDef("programIndex=laneIndex()");
+      opts.addMacroDef("cif=if");
+      opts.addMacroDef("cfor=for");
+      opts.addMacroDef("cwhile=while");
+      opts.addMacroDef("cdo=do");
+      opts.addMacroDef("taskIndex=blockIndex0()");
+      opts.addMacroDef("taskCount=blockCount0()");
+      opts.addMacroDef("taskIndex0=blockIndex0()");
+      opts.addMacroDef("taskCount0=blockCount0()");
+      opts.addMacroDef("taskIndex1=blockIndex1()");
+      opts.addMacroDef("taskCount1=blockCount1()");
+      opts.addMacroDef("taskIndex2=blockIndex2()");
+      opts.addMacroDef("taskCount2=blockCount2()");
     }
 
 #if defined(LLVM_3_1)

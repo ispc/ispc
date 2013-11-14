@@ -45,6 +45,7 @@
 #warning "emitting HOST code"
 #endif
 
+
 task void histogram (uniform int span, uniform int n, uniform int64 code[], uniform int pass, uniform int hist[])
 {
   if (taskIndex >= taskCount) return;

@@ -1,5 +1,5 @@
 PROG=sort_cu
-ISPC_SRC=sort1.ispc
+ISPC_SRC=sort.ispc
 CXX_SRC=sort_cu.cpp sort_serial.cpp
 
 CXX=g++
