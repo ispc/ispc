@@ -76,7 +76,7 @@ void __checkCudaErrors(CUresult err, const char *file, const int line) {
 
 CUcontext context;
 
-static void createContext(const int deviceId = 0)
+static void createContext(const int deviceId = 0, const bool verbose = true)
 {
   CUdevice device;
   int devCount;
@@ -87,14 +87,17 @@ static void createContext(const int deviceId = 0)
 
   char name[128];
   checkCudaErrors(cuDeviceGetName(name, 128, device));
-  std::cout << "Using CUDA Device [0]: " << name << "\n";
+  if (verbose)
+    std::cout << "Using CUDA Device [0]: " << name << "\n";
 
   int devMajor, devMinor;
   checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
-  std::cout << "Device Compute Capability: " 
-    << devMajor << "." << devMinor << "\n";
+  if (verbose)
+    std::cout << "Device Compute Capability: " 
+      << devMajor << "." << devMinor << "\n";
   if (devMajor < 2) {
-    std::cerr << "ERROR: Device 0 is not SM 2.0 or greater\n";
+    if (verbose)
+      std::cerr << "ERROR: Device 0 is not SM 2.0 or greater\n";
     exit(1); 
   }
 
@@ -173,7 +176,8 @@ static CUmodule loadModule(
 #endif
   {
     // Load the PTX from the string myPtx (64-bit)
-    fprintf(stderr, "Loading ptx..\n");
+    if (print_log)
+      fprintf(stderr, "Loading ptx..\n");
     myErr = cuLinkAddData(*lState, CU_JIT_INPUT_PTX, (void*)module, strlen(module)+1, 0, 0, 0, 0);
     myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_LIBRARY, cudadevrt_lib, 0,0,0); 
     // PTX May also be loaded from file, as per below.
@@ -283,6 +287,7 @@ static double CUDALaunch(
     const char cudadevrt_lib[] = "libcudadevrt.a",
     const int log_size = 32768)
 {
+  fprintf(stderr, " launching kernel: %s \n", func_name);
   const std::vector<char> module_str = readBinary(kernel_file, print_log);
   const char *  module = &module_str[0];
   CUmodule   cudaModule   = loadModule(module, maxrregcount, cudadevrt_lib, log_size, print_log);
@@ -325,8 +330,15 @@ int main(int argc, char *argv[]) {
     int vint[64] ALIGN;
     int vint2[64] ALIGN;
 
+    const int device = 0;
+#if 0
+    const bool verbose = true;
+#else
+    const bool verbose = false;
+#endif
+
     /*******************/
-    createContext();
+    createContext(device, verbose);
     /*******************/
 
     devicePtr d_returned_result = deviceMalloc(64*sizeof(float));
@@ -353,7 +365,7 @@ int main(int argc, char *argv[]) {
 
     float b = 5.;
 
-    const bool print_log = true;
+    const bool print_log = false;
     const int  nreg = 64;
 #if (TEST_SIG == 0)
     void *args[] = {&d_returned_result};
