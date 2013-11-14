@@ -1406,7 +1406,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-  if (g->target->getISA() != Target::NVPTX64)
+  if (!g->target->isPTX()) //g->target->getISA() != Target::NVPTX64)
   {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
@@ -1424,7 +1424,7 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
     llvm::Value *__tid_x    = CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(), "laneIdxForEach");
     llvm::Value *__warpsz   = CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(), "warpSZForEach");
-    llvm::Value *__warpszm1 = BinaryOperator(llvm::Instruction::And, __warpsz, LLVMInt32(-1), "__warpszm1");
+    llvm::Value *__warpszm1 = BinaryOperator(llvm::Instruction::Add, __warpsz, LLVMInt32(-1), "__warpszm1");
     llvm::Value *laneIdx = BinaryOperator(llvm::Instruction::And, __tid_x, __warpszm1, "__laneidx");
     llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), laneIdx, 0, "__laneIdxV");
     return index;
