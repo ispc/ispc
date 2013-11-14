@@ -295,21 +295,15 @@ static inline void raytrace_tile(uniform int x0, uniform int x1,
     uniform float widthScale = (float)(baseWidth) / (float)(width);
     uniform float heightScale = (float)(baseHeight) / (float)(height);
 
-//    foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
-    for (uniform int y = y0; y < y1; y++)
-      for (uniform int xb = x0; xb < x1; xb += programCount)
+    foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
     {
-      const int x = xb + programIndex;
-        Ray ray;
-        generateRay(raster2camera, camera2world, x*widthScale, y*heightScale, ray);
-        BVHIntersect(nodes, triangles, ray);
+      Ray ray;
+      generateRay(raster2camera, camera2world, x*widthScale, y*heightScale, ray);
+      BVHIntersect(nodes, triangles, ray);
 
-        int offset = y * width + x;
-        if (x < x1)
-        {
-          image[offset] = ray.maxt;
-          id[offset] = ray.hitId;
-        }
+      int offset = y * width + x;
+      image[offset] = ray.maxt;
+      id[offset] = ray.hitId;
     }
 }
 

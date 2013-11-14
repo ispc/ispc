@@ -1,6 +1,6 @@
 PROG=rt_cu
 ISPC_SRC=rt1.ispc
-CXX_SRC=rt_cu.cpp
+CXX_SRC=rt_cu.cpp 
 
 CXX=g++
 CXXFLAGS=-O3 -I$(CUDATK)/include
@@ -8,7 +8,7 @@ LD=g++
 LDFLAGS=-lcuda
 
 ISPC=ispc
-ISPCFLAGS=-O3 --math-lib=default --target=nvptx64,avx
+ISPCFLAGS=-O3 --math-lib=default --target=nvptx64 --opt=fast-math
 
 LLVM32 = $(HOME)/usr/local/llvm/bin-3.2
 LLVM   = $(HOME)/usr/local/llvm/bin-3.3
@@ -27,6 +27,7 @@ CXX_OBJ=$(CXX_SRC:%.cpp=%.o)
 all: $(PROG)
 
 
+$(CXX_OBJ) : kernel.ptx
 $(PROG): $(CXX_OBJ) kernel.ptx
 	/bin/cp kernel.ptx __kernels.ptx
 	$(LD) -o $@ $(CXX_OBJ) $(LDFLAGS)
@@ -36,7 +37,7 @@ $(PROG): $(CXX_OBJ) kernel.ptx
 
 
 %_ispc_nvptx64.bc: %.ispc
-	$(ISPC) $(ISPCFLAGS) --emit-llvm -o `basename $< .ispc`_ispc.bc -h `basename $< .ispc`_ispc.h $< --emit-llvm
+	$(ISPC) $(ISPCFLAGS) --emit-llvm -o `basename $< .ispc`_ispc_nvptx64.bc -h `basename $< .ispc`_ispc.h $< --emit-llvm
 
 %.ptx: %.bc
 	$(LLVM32DIS) $<
