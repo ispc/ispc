@@ -33,30 +33,11 @@
 
 #define bool int
 
-#ifdef __NVPTX__
-#warning "emitting DEVICE code"
-#define programCount warpSize()
-#define programIndex laneIndex()
-#define taskIndex    blockIndex0()
-#define taskCount    blockCount0()
-#else
-#warning "emitting HOST code"
-#endif
-
 typedef float<3> float3;
-
-#if 0
-#define DIRISNEG
-#endif
 
 struct Ray {
     float3 origin, dir, invDir;
-#ifdef DIRISNEG /* this fails to compile with nvvm */
     uniform unsigned int dirIsNeg[3];
-#else
-    unsigned int dirIsNeg0, dirIsNeg1, dirIsNeg2;
-#endif
-
     float mint, maxt;
     int hitId;
 };
@@ -90,7 +71,7 @@ static inline float Dot(const float3 a, const float3 b) {
 }
 
 
-static inline void generateRay(uniform const float raster2camera[4][4], 
+static void generateRay(uniform const float raster2camera[4][4], 
                         uniform const float camera2world[4][4],
                         float x, float y, Ray &ray) {
     ray.mint = 0.f;
@@ -120,19 +101,13 @@ static inline void generateRay(uniform const float raster2camera[4][4],
 
     ray.invDir = 1.f / ray.dir;
 
-#ifdef DIRISNEG
     ray.dirIsNeg[0] = any(ray.invDir.x < 0) ? 1 : 0;
     ray.dirIsNeg[1] = any(ray.invDir.y < 0) ? 1 : 0;
     ray.dirIsNeg[2] = any(ray.invDir.z < 0) ? 1 : 0;
-#else
-    ray.dirIsNeg0 = any(ray.invDir.x < 0) ? 1 : 0;
-    ray.dirIsNeg1 = any(ray.invDir.y < 0) ? 1 : 0;
-    ray.dirIsNeg2 = any(ray.invDir.z < 0) ? 1 : 0;
-#endif
 }
 
 
-static inline bool BBoxIntersect(const uniform float bounds[2][3], 
+static bool BBoxIntersect(const uniform float bounds[2][3], 
                           const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
     uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
@@ -171,7 +146,7 @@ static inline bool BBoxIntersect(const uniform float bounds[2][3],
 
 
 
-static inline bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
+static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
     uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
@@ -211,7 +186,7 @@ static inline bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
 }
 
 
-inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[], 
+bool BVHIntersect(const uniform LinearBVHNode nodes[], 
                   const uniform Triangle tris[], Ray &r) {
     Ray ray = r;
     bool hit = false;
@@ -219,62 +194,39 @@ inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[],
     uniform int todoOffset = 0, nodeNum = 0;
     uniform int todo[64];
 
-#define FAST
-
     while (true) {
         // Check ray against BVH node
         uniform LinearBVHNode node = nodes[nodeNum];
-        if (any(BBoxIntersect(node.bounds, ray))) 
-        {
+        if (any(BBoxIntersect(node.bounds, ray))) {
             uniform unsigned int nPrimitives = node.nPrimitives;
-            if (nPrimitives > 0) 
-            {
+            if (nPrimitives > 0) {
                 // Intersect ray with primitives in leaf BVH node
                 uniform unsigned int primitivesOffset = node.offset;
                 for (uniform unsigned int i = 0; i < nPrimitives; ++i) {
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
-#ifndef FAST
                 if (todoOffset == 0) 
                     break;
-#endif
                 nodeNum = todo[--todoOffset];
             }
-            else 
-            {
+            else {
                 // Put far BVH node on _todo_ stack, advance to near node
-#ifdef DIRISNEG
-                const int dirIsNeg = r.dirIsNeg[node.splitAxis];
-#else
-                int dirIsNeg;
-                if (node.splitAxis == 0) dirIsNeg = r.dirIsNeg0;
-                if (node.splitAxis == 1) dirIsNeg = r.dirIsNeg1;
-                if (node.splitAxis == 2) dirIsNeg = r.dirIsNeg2;
-#endif
-                if (dirIsNeg) 
-                {
+                if (r.dirIsNeg[node.splitAxis]) {
                    todo[todoOffset++] = nodeNum + 1;
                    nodeNum = node.offset;
                 }
-                else 
-                {
+                else {
                    todo[todoOffset++] = node.offset;
                    nodeNum = nodeNum + 1;
                 }
             }
         }
         else {
-#ifndef FAST
             if (todoOffset == 0)
                 break;
-#endif
             nodeNum = todo[--todoOffset];
         }
-#ifdef FAST
-        if (todoOffset == 0)
-          break;
-#endif
     }
     r.maxt = ray.maxt;
     r.hitId = ray.hitId;
@@ -283,7 +235,7 @@ inline inline bool BVHIntersect(const uniform LinearBVHNode nodes[],
 }
 
 
-static inline void raytrace_tile(uniform int x0, uniform int x1,
+static void raytrace_tile(uniform int x0, uniform int x1,
                           uniform int y0, uniform int y1, 
                           uniform int width, uniform int height,
                           uniform int baseWidth, uniform int baseHeight,
@@ -295,15 +247,15 @@ static inline void raytrace_tile(uniform int x0, uniform int x1,
     uniform float widthScale = (float)(baseWidth) / (float)(width);
     uniform float heightScale = (float)(baseHeight) / (float)(height);
 
-    foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
-    {
-      Ray ray;
-      generateRay(raster2camera, camera2world, x*widthScale, y*heightScale, ray);
-      BVHIntersect(nodes, triangles, ray);
+    foreach_tiled (y = y0 ... y1, x = x0 ... x1) {
+        Ray ray;
+        generateRay(raster2camera, camera2world, x*widthScale,
+                    y*heightScale, ray);
+        BVHIntersect(nodes, triangles, ray);
 
-      int offset = y * width + x;
-      image[offset] = ray.maxt;
-      id[offset] = ray.hitId;
+        int offset = y * width + x;
+        image[offset] = ray.maxt;
+        id[offset] = ray.hitId;
     }
 }
 
@@ -328,34 +280,32 @@ task void raytrace_tile_task(uniform int width, uniform int height,
                              uniform float image[], uniform int id[],
                              const uniform LinearBVHNode nodes[],
                              const uniform Triangle triangles[]) {
-  if (taskIndex >= taskCount) return;
-
-  uniform int dx = 32, dy = 16; // must match dx, dy below
-  uniform int xBuckets = (width + (dx-1)) / dx;
-  uniform int x0 = (taskIndex % xBuckets) * dx;
-  uniform int x1 = min(x0 + dx, width);
-  uniform int y0 = (taskIndex / xBuckets) * dy;
-  uniform int y1 = min(y0 + dy, height);
-
-  raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
-      raster2camera, camera2world, image,
-      id, nodes, triangles);
+    uniform int dx = 16, dy = 16; // must match dx, dy below
+    uniform int xBuckets = (width + (dx-1)) / dx;
+    uniform int x0 = (taskIndex % xBuckets) * dx;
+    uniform int x1 = min(x0 + dx, width);
+    uniform int y0 = (taskIndex / xBuckets) * dy;
+    uniform int y1 = min(y0 + dy, height);
+                             
+    raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
+                  raster2camera, camera2world, image,
+                  id, nodes, triangles);
 }
 
 
 export void raytrace_ispc_tasks(uniform int width, uniform int height,
-    uniform int baseWidth, uniform int baseHeight,
-    const uniform float raster2camera[4][4], 
-    const uniform float camera2world[4][4],
-    uniform float image[], uniform int id[],
-    const uniform LinearBVHNode nodes[],
-    const uniform Triangle triangles[]) {
-  uniform int dx = 32, dy = 16;
-  uniform int xBuckets = (width + (dx-1)) / dx;
-  uniform int yBuckets = (height + (dy-1)) / dy;
-  uniform int nTasks = xBuckets * yBuckets;
-  launch[nTasks] raytrace_tile_task(width, height, baseWidth, baseHeight, 
-      raster2camera, camera2world, 
-      image, id, nodes, triangles);
+                                uniform int baseWidth, uniform int baseHeight,
+                                const uniform float raster2camera[4][4], 
+                                const uniform float camera2world[4][4],
+                                uniform float image[], uniform int id[],
+                                const uniform LinearBVHNode nodes[],
+                                const uniform Triangle triangles[]) {
+    uniform int dx = 16, dy = 16;
+    uniform int xBuckets = (width + (dx-1)) / dx;
+    uniform int yBuckets = (height + (dy-1)) / dy;
+    uniform int nTasks = xBuckets * yBuckets;
+    launch[nTasks] raytrace_tile_task(width, height, baseWidth, baseHeight, 
+                                      raster2camera, camera2world, 
+                                      image, id, nodes, triangles);
 }
 
