@@ -95,7 +95,7 @@ static CUmodule loadModule(
 
   CUlinkState  CUState;
   CUlinkState *lState = &CUState;
-  const int nOptions = 7;
+  const int nOptions = 8;
   CUjit_option options[nOptions];
   void* optionVals[nOptions];
   float walltime;
@@ -129,6 +129,10 @@ static CUmodule loadModule(
   options[6] = CU_JIT_MAX_REGISTERS;
   int jitRegCount = maxrregcount;
   optionVals[6] = (void *)(size_t)jitRegCount;
+  // Caching
+  options[7] = CU_JIT_CACHE_MODE;
+  optionVals[7] = (void *)CU_JIT_CACHE_OPTION_CA;
+  // Create a pending linker invocation
 
   // Create a pending linker invocation
   checkCudaErrors(cuLinkCreate(nOptions,options, optionVals, lState));
