@@ -2334,7 +2334,7 @@ Module::CompileAndOutput(const char *srcFile,
   char ptxname[] = "nvptx64";
   for (int k = 0; k < 7; k++)
     ptxname[k] = target[k];
-  if (target != NULL && strcmp(ptxname,"nvptx64") == 0)  // NVPTX64
+  if (0) //target != NULL && strcmp(ptxname,"nvptx64") == 0)  // NVPTX64
   {
     std::vector<std::string> targets = lExtractTargets(target);
     Assert(targets.size() > 1);
@@ -2458,7 +2458,8 @@ Module::CompileAndOutput(const char *srcFile,
   }
   else if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
-        g->target = new Target(arch, cpu, target, generatePIC);
+        const bool isPTX = strcmp(target, "nvptx64") == 0;
+        g->target = new Target(arch, cpu, target, generatePIC, isPTX);
         if (!g->target->isValid())
             return 1;
 
