@@ -68,6 +68,7 @@ static void createContext(
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
+#if 0
   size_t limit;
   checkCudaErrors(cuCtxGetLimit(&limit, CU_LIMIT_STACK_SIZE));
   fprintf(stderr, " stack_limit= %llu KB\n", limit/1024);
@@ -75,6 +76,7 @@ static void createContext(
   fprintf(stderr, " heap_limit= %llu KB\n", limit/1024);
   checkCudaErrors(cuCtxSetLimit(CU_LIMIT_STACK_SIZE,stackLimit));
   checkCudaErrors(cuCtxSetLimit(CU_LIMIT_MALLOC_HEAP_SIZE,heapLimit));
+#endif
 }
 static void destroyContext()
 {

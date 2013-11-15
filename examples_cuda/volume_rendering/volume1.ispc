@@ -419,4 +419,5 @@ volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
     uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
     launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
                                width, height, image);
+    sync;
 }

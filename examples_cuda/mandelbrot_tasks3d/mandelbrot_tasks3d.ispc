@@ -119,5 +119,6 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
 #endif
       mandelbrot_scanline(x0, dx, y0, dy, width, height, xspan, yspan,
                           maxIterations, output);
+    sync;
 }
 #endif

@@ -171,7 +171,7 @@ struct Uniform
     shptr[chunk][elem] = value;
   }
 };
-#elif 1
+#elif 0
 template<typename T, int N>
 struct Uniform
 {
@@ -184,7 +184,7 @@ struct Uniform
 
   __device__ inline Uniform()
   {
-#if 0
+#if 1
     if (programIndex == 0)
       data = new T[N];
     ptr[0] = __shfl(ptr[0], 0);
@@ -200,7 +200,7 @@ struct Uniform
   }
   __device__ inline ~Uniform()
   {
-#if 0
+#if 1
     if (programIndex == 0)
       delete data;
 #else
@@ -820,5 +820,6 @@ RenderStatic(InputHeader inputHeaderPtr[],
       RenderTile<<<num_groups, 128>>>(num_groups_x, num_groups_y,
           inputHeaderPtr, inputDataPtr, visualizeLightCount,
           framebuffer_r, framebuffer_g, framebuffer_b);
+    cudaDeviceSynchronize();
     cudaDeviceSynchronize();
 }

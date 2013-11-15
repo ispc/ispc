@@ -549,6 +549,7 @@ RenderStatic(uniform InputHeader inputHeaderPtr[],
     launch[num_groups] RenderTile(num_groups_x, num_groups_y,
                                   inputHeaderPtr, inputDataPtr, visualizeLightCount,
                                   framebuffer_r, framebuffer_g, framebuffer_b);
+    sync;
 }
 
 
