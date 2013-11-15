@@ -114,6 +114,7 @@ int main(int argc, char *argv[]) {
         void *func_args[] = {&d_S, &d_X, &d_T, &d_r, &d_v, &d_result, &nOptions};
         double dt = CUDALaunch(NULL, func_name, func_args, print_log, nreg);
         dt *= 1e3;
+        memcpyD2H(result, d_result, nOptions*sizeof(float));
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -133,6 +134,7 @@ int main(int argc, char *argv[]) {
         void *func_args[] = {&d_S, &d_X, &d_T, &d_r, &d_v, &d_result, &nOptions};
         double dt = CUDALaunch(NULL, func_name, func_args, print_log, nreg);
         dt *= 1e3;
+        memcpyD2H(result, d_result, nOptions*sizeof(float));
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -152,6 +154,7 @@ int main(int argc, char *argv[]) {
         void *func_args[] = {&d_S, &d_X, &d_T, &d_r, &d_v, &d_result, &nOptions};
         double dt = CUDALaunch(NULL, func_name, func_args, print_log, nreg);
         dt *= 1e3;
+        memcpyD2H(result, d_result, nOptions*sizeof(float));
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -171,6 +174,7 @@ int main(int argc, char *argv[]) {
         void *func_args[] = {&d_S, &d_X, &d_T, &d_r, &d_v, &d_result, &nOptions};
         double dt = CUDALaunch(NULL, func_name, func_args, print_log, nreg);
         dt *= 1e3;
+        memcpyD2H(result, d_result, nOptions*sizeof(float));
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];

@@ -45,9 +45,9 @@
 __device__
 static inline float
 CND(float X) {
-    float L = abs(X);
+    float L = fabsf(X);
 
-    float k = 1.0 / (1.0 + 0.2316419 * L);
+    float k = 1.0f / (1.0f + 0.2316419f * L);
     float k2 = k*k;
     float k3 = k2*k;
     float k4 = k2*k2;
@@ -56,10 +56,10 @@ CND(float X) {
     const float invSqrt2Pi = 0.39894228040f;
     float w = (0.31938153f * k - 0.356563782f * k2 + 1.781477937f * k3 +
                -1.821255978f * k4 + 1.330274429f * k5);
-    w *= invSqrt2Pi * exp(-L * L * .5f);
+    w *= invSqrt2Pi * expf(-L * L * .5f);
 
     if (X > 0.f)
-        w = 1.0 - w;
+        w = 1.0f - w;
     return w;
 }
 
@@ -75,10 +75,10 @@ void bs_task( float Sa[],  float Xa[],  float Ta[],
     {
         float S = Sa[i], X = Xa[i], T = Ta[i], r = ra[i], v = va[i];
 
-        float d1 = (log(S/X) + (r + v * v * .5f) * T) / (v * sqrt(T));
-        float d2 = d1 - v * sqrt(T);
+        float d1 = (logf(S/X) + (r + v * v * .5f) * T) / (v * sqrtf(T));
+        float d2 = d1 - v * sqrtf(T);
 
-        result[i] = S * CND(d1) - X * exp(-r * T) * CND(d2);
+        result[i] = S * CND(d1) - X * expf(-r * T) * CND(d2);
     }
 }
 
@@ -101,7 +101,7 @@ binomial_put(float S, float X, float T, float r, float v) {
 
     float dt = T / BINOMIAL_NUM;
     float u = exp(v * sqrt(dt));
-    float d = 1. / u;
+    float d = 1.f / u;
     float disc = exp(r * dt);
     float Pu = (disc - d) / (u - d);
 
