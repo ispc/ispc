@@ -510,21 +510,21 @@ declare double    @llvm.nvvm.sqrt.d(double %f) nounwind readonly alwaysinline
 define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 ;    uniform float iv = extract(__rcp_u(v), 0);
 ;    return iv * (2. - v * iv);
-;  %ret = fdiv float 1.,%0
-  %ret = tail call float asm sideeffect "rcp.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
+  %ret = fdiv float 1.,%0
+;  %ret = tail call float asm sideeffect "rcp.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
 ;; declare float @__sqrt_uniform_float(float) nounwind readnone 
 define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  ;;%ret = call float @llvm.nvvm.sqrt.f(float %0)
-  %ret = tail call float asm sideeffect "sqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
+  %ret = call float @llvm.nvvm.sqrt.f(float %0)
+;  %ret = tail call float asm sideeffect "sqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
 ;; declare float @__rsqrt_uniform_float(float) nounwind readnone 
 define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline 
 {
-;;  %ret = call float @llvm.nvvm.rsqrt.approx.f(float %0)
-  %ret = tail call float asm sideeffect "rsqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
+  %ret = call float @llvm.nvvm.rsqrt.approx.f(float %0)
+;  %ret = tail call float asm sideeffect "rsqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
 
