@@ -253,7 +253,7 @@ CUfunction getFunction(CUmodule &cudaModule, const char * function)
 CUdeviceptr deviceMalloc(const size_t size)
 {
   CUdeviceptr d_buf;
-  checkCudaErrors(cuMemAlloc(&d_buf, size));
+  checkCudaErrors(cuMemAllocManaged(&d_buf, size, CU_MEM_ATTACH_GLOBAL));
   return d_buf;
 }
 void deviceFree(CUdeviceptr d_buf)
