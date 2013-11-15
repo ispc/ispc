@@ -97,7 +97,12 @@ black_scholes_ispc_tasks( float Sa[],  float Xa[],  float Ta[],
 __device__
 static inline float
 binomial_put(float S, float X, float T, float r, float v) {
+#if 0
     float V[BINOMIAL_NUM];
+#else
+    __shared__ float VSH[BINOMIAL_NUM*4];
+    float *V = VSH + warpIdx*BINOMIAL_NUM;
+#endif
 
     float dt = T / BINOMIAL_NUM;
     float u = exp(v * sqrt(dt));
