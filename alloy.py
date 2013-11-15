@@ -214,7 +214,7 @@ def check_targets():
         try_do_LLVM("build check_ISA", "cl check_isa.cpp", True)
     SSE2  = ["sse2-i32x4",  "sse2-i32x8"]
     SSE4  = ["sse4-i32x4",  "sse4-i32x8",   "sse4-i16x8", "sse4-i8x16"]
-    AVX   = ["avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"]
+    AVX   = ["avx1-i32x4",  "avx1-i32x8",  "avx1-i32x16",  "avx1-i64x4"]
     AVX11 = ["avx1.1-i32x8","avx1.1-i32x16","avx1.1-i64x4"]
     AVX2  = ["avx2-i32x8",  "avx2-i32x16",  "avx2-i64x4"]
     targets = [["AVX2", AVX2, False], ["AVX1.1", AVX11, False], ["AVX", AVX, False], ["SSE4", SSE4, False], ["SSE2", SSE2, False]]
@@ -251,7 +251,7 @@ def check_targets():
         if targets[3][2] == False and "wsm" in f_lines[i]:
             answer_sde = answer_sde + [["-wsm", "sse4-i32x4"], ["-wsm", "sse4-i32x8"], ["-wsm", "sse4-i16x8"], ["-wsm", "sse4-i8x16"]]
         if targets[2][2] == False and "snb" in f_lines[i]:
-            answer_sde = answer_sde + [["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
+            answer_sde = answer_sde + [["-snb", "avx1-i32x4"], ["-snb", "avx1-i32x8"], ["-snb", "avx1-i32x16"], ["-snb", "avx1-i64x4"]]
         if targets[1][2] == False and "ivb" in f_lines[i]:
             answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if targets[0][2] == False and "hsw" in f_lines[i]:
