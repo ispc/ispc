@@ -46,6 +46,19 @@ using std::max;
 
 #include "options_ispc.h"
 using namespace ispc;
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 
 extern void black_scholes_serial(float Sa[], float Xa[], float Ta[], 
                                  float ra[], float va[], 
@@ -96,8 +109,10 @@ int main(int argc, char *argv[]) {
     double binomial_ispc = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         binomial_put_ispc(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = (rtc() - t0); //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -112,8 +127,10 @@ int main(int argc, char *argv[]) {
     double binomial_tasks = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         binomial_put_ispc_tasks(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -128,8 +145,10 @@ int main(int argc, char *argv[]) {
     double binomial_serial = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         binomial_put_serial(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -147,8 +166,10 @@ int main(int argc, char *argv[]) {
     double bs_ispc = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         black_scholes_ispc(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -163,8 +184,10 @@ int main(int argc, char *argv[]) {
     double bs_ispc_tasks = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         black_scholes_ispc_tasks(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
@@ -179,8 +202,10 @@ int main(int argc, char *argv[]) {
     double bs_serial = 1e30;
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
+        const double t0 = rtc();
         black_scholes_serial(S, X, T, r, v, result, nOptions);
-        double dt = get_elapsed_mcycles();
+        double dt = rtc() - t0; //get_elapsed_mcycles();
+        dt *= 1e3;
         sum = 0.;
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
