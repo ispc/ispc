@@ -151,7 +151,8 @@ static CUmodule loadModule(
 #endif
   {
     // Load the PTX from the string myPtx (64-bit)
-    fprintf(stderr, "Loading ptx..\n");
+    if (print_log)
+      fprintf(stderr, "Loading ptx..\n");
     myErr = cuLinkAddData(*lState, CU_JIT_INPUT_PTX, (void*)module, strlen(module)+1, 0, 0, 0, 0);
     myErr = cuLinkAddFile(*lState, CU_JIT_INPUT_LIBRARY, cudadevrt_lib, 0,0,0); 
     // PTX May also be loaded from file, as per below.
@@ -177,7 +178,8 @@ static CUmodule loadModule(
 
  // Destroy the linker invocation
  checkCudaErrors(cuLinkDestroy(*lState));
- fprintf(stderr, " loadModule took %g ms \n", 1e3*(rtc() - t0));
+ if (print_log)
+   fprintf(stderr, " loadModule took %g ms \n", 1e3*(rtc() - t0));
  return cudaModule;
 }
 static void unloadModule(CUmodule &cudaModule)

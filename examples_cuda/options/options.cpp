@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
     // Binomial options, serial implementation
     //
     double binomial_serial = 1e30;
+#if 0
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         const double t0 = rtc();
@@ -159,6 +160,7 @@ int main(int argc, char *argv[]) {
 
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n",
            binomial_serial / binomial_ispc, binomial_serial / binomial_tasks);
+#endif
 
     //
     // Black-Scholes options pricing model, ispc implementation, 1 thread
@@ -200,6 +202,7 @@ int main(int argc, char *argv[]) {
     // Black-Scholes options pricing model, serial implementation
     //
     double bs_serial = 1e30;
+#if 0
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         const double t0 = rtc();
@@ -216,6 +219,7 @@ int main(int argc, char *argv[]) {
 
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
            bs_serial / bs_ispc, bs_serial / bs_ispc_tasks);
+#endif
 
     return 0;
 }
