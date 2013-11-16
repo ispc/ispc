@@ -169,7 +169,7 @@ static const char *supportedCPUs[] = {
     , "core-avx-i", "core-avx2"
 #endif // LLVM 3.2+
 #if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3)
-    , "slm" 
+    , "slm"
 #endif // LLVM 3.4+
 };
 
@@ -191,6 +191,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_tf_attributes(NULL),
 #endif
     m_nativeVectorWidth(-1),
+    m_dataTypeWidth(-1),
     m_vectorWidth(-1),
     m_generatePIC(pic),
     m_maskingIsFree(false),
@@ -308,6 +309,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         !strcasecmp(isa, "sse2-i32x4")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
 #if defined(LLVM_3_4)
@@ -323,6 +325,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse2-i32x8")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
 #if defined(LLVM_3_4)
@@ -338,11 +341,12 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse4-i32x4")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         // TODO: why not sse42 and popcnt?
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        ",+sse4.1,-sse4.2"        
+        ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
 #endif
@@ -355,10 +359,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse4-i32x8")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        ",+sse4.1,-sse4.2"        
+        ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
 #endif
@@ -369,10 +374,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "sse4-i8x16")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
+        this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        ",+sse4.1,-sse4.2"        
+        ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
 #endif
@@ -383,10 +389,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "sse4-i16x8")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
 #if defined(LLVM_3_4)
-        ",+sse4.1,-sse4.2"        
+        ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
 #endif
@@ -457,11 +464,21 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
     }
+    else if (!strcasecmp(isa, "avx1-i32x4")) {
+        this->m_isa = Target::AVX;
+        this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
+        this->m_vectorWidth = 4;
+        this->m_attributes = "+avx,+popcnt,+cmov";
+        this->m_maskingIsFree = false;
+        this->m_maskBitCount = 32;
+    }
     else if (!strcasecmp(isa, "avx") ||
              !strcasecmp(isa, "avx1") ||
              !strcasecmp(isa, "avx1-i32x8")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx,+popcnt,+cmov";
         this->m_maskingIsFree = false;
@@ -471,6 +488,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1-i64x4")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov";
         this->m_maskingIsFree = false;
@@ -481,6 +499,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1-i32x16")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx,+popcnt,+cmov";
         this->m_maskingIsFree = false;
@@ -490,6 +509,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1.1-i32x8")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -510,6 +530,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1.1-i32x16")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -517,7 +538,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #else
         ",+rdrand"
 #endif
-        ;           
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
         this->m_hasHalf = true;
@@ -529,6 +550,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "avx1.1-i64x4")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -536,7 +558,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
 #else
         ",+rdrand"
 #endif
-        ;           
+        ;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 64;
         this->m_hasHalf = true;
@@ -549,6 +571,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -573,6 +596,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx2-i32x16")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -596,6 +620,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "avx2-i64x4")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
 #if defined(LLVM_3_4)
@@ -620,6 +645,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "neon-i8x16")) {
         this->m_isa = Target::NEON8;
         this->m_nativeVectorWidth = 16;
+        this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
@@ -629,6 +655,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "neon-i16x8")) {
         this->m_isa = Target::NEON16;
         this->m_nativeVectorWidth = 8;
+        this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
@@ -639,6 +666,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "neon-i32x4")) {
         this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
+        this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+neon,+fp16";
         this->m_hasHalf = true; // ??
@@ -773,6 +801,7 @@ Target::SupportedTargets() {
 #endif
         "sse2-i32x4, sse2-i32x8, "
         "sse4-i32x4, sse4-i32x8, sse4-i16x8, sse4-i8x16, "
+        "avx1-i32x4, "
         "avx1-i32x8, avx1-i32x16, avx1-i64x4, "
         "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
@@ -810,6 +839,9 @@ Target::GetTripleString() const {
     return triple.str();
 }
 
+// This function returns string representation of ISA for the purpose of
+// mangling. And may return any unique string, preferably short, like
+// sse4, avx and etc.
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
@@ -841,6 +873,45 @@ Target::ISAToString(ISA isa) {
 
 const char *
 Target::GetISAString() const {
+    return ISAToString(m_isa);
+}
+
+
+// This function returns string representation of default target corresponding
+// to ISA. I.e. for SSE4 it's sse4-i32x4, for AVX11 it's avx1.1-i32x8. This
+// string may be used to initialize Target.
+const char *
+Target::ISAToTargetString(ISA isa) {
+    switch (isa) {
+#ifdef ISPC_ARM_ENABLED
+    case Target::NEON8:
+        return "neon-8";
+    case Target::NEON16:
+        return "neon-16";
+    case Target::NEON32:
+        return "neon-32";
+#endif
+    case Target::SSE2:
+        return "sse2-i32x4";
+    case Target::SSE4:
+        return "sse4-i32x4";
+    case Target::AVX:
+        return "avx1-i32x8";
+    case Target::AVX11:
+        return "avx1.1-i32x8";
+    case Target::AVX2:
+        return "avx2-i32x8";
+    case Target::GENERIC:
+        return "generic-4";
+    default:
+        FATAL("Unhandled target in ISAToTargetString()");
+    }
+    return "";
+}
+
+
+const char *
+Target::GetISATargetString() const {
     return ISAToString(m_isa);
 }
 

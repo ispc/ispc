@@ -16,8 +16,26 @@ ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
 ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
 
 ifeq ($(ARCH),x86)
-  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
-	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
+  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o)
+  COMMA=,
+  ifneq (,$(findstring $(COMMA),$(ISPC_IA_TARGETS)))
+    #$(info multi-target detected: $(ISPC_IA_TARGETS))
+    ifneq (,$(findstring sse2,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse2.o)
+    endif
+    ifneq (,$(findstring sse4,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse4.o)
+    endif
+    ifneq (,$(findstring avx1-,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx.o)
+    endif
+    ifneq (,$(findstring avx1.1,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx11.o)
+    endif
+    ifneq (,$(findstring avx2,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx2.o)
+    endif
+  endif
   ISPC_TARGETS=$(ISPC_IA_TARGETS)
   ARCH_BIT:=$(shell getconf LONG_BIT)
   ifeq ($(ARCH_BIT),32)
@@ -66,9 +84,9 @@ objs/%.o: %.c dirs $(ISPC_HEADER)
 objs/%.o: ../%.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h
+objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h dirs
 
-objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o: %.ispc
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o: %.ispc dirs
 	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)

@@ -942,11 +942,31 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     case Target::AVX: {
         switch (g->target->getVectorWidth()) {
         case 4:
-            if (runtime32) {
-                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
-            }
-            else {
-                EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
+            if (g->target->getDataTypeWidth() == 32) {
+                // Note here that for avx1-i32x4 we are using bitcode file for
+                // sse4-i32x4. This is intentional and good enough.
+                // AVX target implies appropriate target-feature attrbute,
+                // which forces LLVM to generate AVX code, even for SSE4
+                // intrinsics. Except that the only "missing" feature in sse4
+                // target is implemenation of __masked_[store|load]_[i32|i64]
+                // using maskmov instruction. But it's not very popular
+                // intrinsics, so we assume the implementation to be good
+                // enough at the moment.
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_sse4_32bit);
+                }
+                else {
+                    EXPORT_MODULE(builtins_bitcode_sse4_64bit);
+                }
+            } else if (g->target->getDataTypeWidth() == 64) {
+                if (runtime32) {
+                    EXPORT_MODULE(builtins_bitcode_avx1_i64x4_32bit);
+                }
+                else {
+                    EXPORT_MODULE(builtins_bitcode_avx1_i64x4_64bit);
+                }
+            } else {
+                FATAL("logic error in DefineStdlib");
             }
             break;
         case 8:
