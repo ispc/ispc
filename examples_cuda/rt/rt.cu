@@ -345,6 +345,7 @@ void raytrace_tile_task( int width,  int height,
     raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
+    cudaDeviceSynchronize();
 }
 
 
