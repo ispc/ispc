@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
     // Binomial options pricing model, ispc implementation
     //
     const bool print_log = false;
-    const int nreg = 32;
+    const int nreg = 64;
     double binomial_ispc = 1e30;
 #if 0
     for (int i = 0; i < 3; ++i) {
@@ -122,6 +122,9 @@ int main(int argc, char *argv[]) {
     }
     printf("[binomial ispc, 1 thread]:\t[%.3f] million cycles (avg %f)\n", 
            binomial_ispc, sum / nOptions);
+    for (int i = 0; i < nOptions; ++i)
+      result[i] = 0.0;
+    memcpyH2D(d_result, result, nOptions*sizeof(float));
 #endif
 
     //
@@ -142,6 +145,10 @@ int main(int argc, char *argv[]) {
     }
     printf("[binomial ispc, tasks]:\t\t[%.3f] million cycles (avg %f)\n", 
            binomial_tasks, sum / nOptions);
+    for (int i = 0; i < nOptions; ++i)
+      result[i] = 0.0;
+    memcpyH2D(d_result, result, nOptions*sizeof(float));
+
 
     //
     // Black-Scholes options pricing model, ispc implementation, 1 thread
@@ -162,6 +169,9 @@ int main(int argc, char *argv[]) {
     }
     printf("[black-scholes ispc, 1 thread]:\t[%.3f] million cycles (avg %f)\n", 
            bs_ispc, sum / nOptions);
+    for (int i = 0; i < nOptions; ++i)
+      result[i] = 0.0;
+    memcpyH2D(d_result, result, nOptions*sizeof(float));
 #endif
 
     //
@@ -179,6 +189,9 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < nOptions; ++i)
             sum += result[i];
         bs_ispc_tasks = std::min(bs_ispc_tasks, dt);
+    for (int i = 0; i < nOptions; ++i)
+      result[i] = 0.0;
+    memcpyH2D(d_result, result, nOptions*sizeof(float));
     }
     printf("[black-scholes ispc, tasks]:\t[%.3f] million cycles (avg %f)\n", 
            bs_ispc_tasks, sum / nOptions);

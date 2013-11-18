@@ -268,6 +268,7 @@ static double CUDALaunch(
   const char *  module = &module_str[0];
   CUmodule   cudaModule   = loadModule(module, maxrregcount, cudadevrt_lib, log_size, print_log);
   CUfunction cudaFunction = getFunction(cudaModule, func_name);
+  checkCudaErrors(cuStreamSynchronize(0));
   const double t0 = rtc();
   deviceLaunch(cudaFunction, func_args);
   checkCudaErrors(cuStreamSynchronize(0));
