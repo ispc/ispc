@@ -108,14 +108,68 @@ binomial_put(float S, float X, float T, float r, float v) {
     float disc = exp(r * dt);
     float Pu = (disc - d) / (u - d);
 
+#if 0
+
     for (uniform int j = 0; j < BINOMIAL_NUM; ++j) {
         float upow = pow(u, (float)(2*j-BINOMIAL_NUM));
         V[j] = max(0., X - S * upow);
     }
-
     for (uniform int j = BINOMIAL_NUM-1; j >= 0; --j)
         for (uniform int k = 0; k < j; ++k)
             V[k] = ((1 - Pu) * V[k] + Pu * V[k + 1]) / disc;
+
+#else
+
+    /* loop unrolling helps NVVM to place V -> registers therefore boosting performance */
+    /* takes looong time to compile... */
+#if BINOMIAL_NUM != 64
+#error "Cannot unroll. Please use generic version above"
+#endif
+
+
+    /* first loop */
+
+#define OP(j) { \
+        float upow = pow(u, (float)(2*(j)-BINOMIAL_NUM)); \
+        V[j] = max(0., X - S * upow); }
+#define OP10(k) \
+    OP(k+0); OP(k+1); OP(k+2); OP(k+3); OP(k+4) \
+    OP(k+5); OP(k+6); OP(k+7); OP(k+8); OP(k+9); 
+    OP10(0)
+    OP10(10)
+    OP10(20)
+    OP10(30)
+    OP10(40)
+    OP10(50)
+    OP(60)
+    OP(61)
+    OP(62)
+    OP(63)
+#undef OP10
+#undef OP
+
+    /* second loop */
+
+#define OP(j) {\
+  for (uniform int k = 0; k < (j); ++k) \
+      V[k] = ((1 - Pu) * V[k] + Pu * V[k + 1]) / disc; }
+#define OP10(k) \
+  OP(k+9); OP(k+8); OP(k+7); OP(k+6); OP(k+5); \
+  OP(k+4); OP(k+3); OP(k+2); OP(k+1); OP(k+0);
+  OP(63)
+  OP(62)
+  OP(61)
+  OP(60)
+  OP10(50)
+  OP10(40)
+  OP10(30)
+  OP10(20)
+  OP10(10)
+  OP10(0)
+#undef OP10
+#undef OP
+
+#endif
     return V[0];
 }
 
