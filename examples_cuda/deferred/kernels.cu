@@ -95,7 +95,7 @@ dot3(float x, float y, float z, float a, float b, float c) {
 }
 
 
-#if 0
+#if 1
 static __shared__ int shdata_full[128];
 template<typename T, int N>
 struct Uniform
@@ -171,7 +171,7 @@ struct Uniform
     shptr[chunk][elem] = value;
   }
 };
-#elif 0
+#elif 1
 template<typename T, int N>
 struct Uniform
 {
@@ -274,36 +274,6 @@ static float reduce_max(float value)
   return value;
 }
 
-#if 0
-__device__ inline
-static int reduce_sum(int value)
-{
-#pragma unroll
-  for (int i = 4; i >=0; i--)
-    value +=  __shfl_xor(value, 1<<i, 32);
-  return value;
-}
-static __device__ __forceinline__ uint shfl_scan_add_step(uint partial, uint up_offset)
-{
-  uint result;
-  asm(
-      "{.reg .u32 r0;"
-      ".reg .pred p;"
-      "shfl.up.b32 r0|p, %1, %2, 0;"
-      "@p add.u32 r0, r0, %3;"
-      "mov.u32 %0, r0;}"
-      : "=r"(result) : "r"(partial), "r"(up_offset), "r"(partial));
-  return result;
-}
-static __device__ __forceinline__ int inclusive_scan_warp(const int value)
-{
-  uint sum = value;
-#pragma unroll
-  for(int i = 0; i < 5; ++i)
-    sum = shfl_scan_add_step(sum, 1 << i);
-  return sum - value;
-}
-#endif
 
 
 static __device__ __forceinline__ int lanemask_lt()
@@ -451,7 +421,7 @@ IntersectLightsWithTileMinMax(
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
-        if (__ballot(inFrustum) > 0) 
+        if (any(inFrustum))
         {
             float light_positionView_x = light_positionView_x_array[lightIndex];
             float light_positionView_y = light_positionView_y_array[lightIndex];
@@ -474,11 +444,7 @@ IntersectLightsWithTileMinMax(
         
             // Pack and store intersecting lights
             const bool active = inFrustum && lightIndex < numLights;
-#if 0
-            if (__ballot(active) > 0)
-              tileNumLights += packed_store_active(active, tileLightIndices.get_ptr(tileNumLights), lightIndex);
-#else
-            if (__ballot(active) > 0)
+            if (any(active))
             {
               const int2 res = warpBinExclusiveScan(active);
               const int idx = tileNumLights + res.y;
@@ -486,7 +452,6 @@ IntersectLightsWithTileMinMax(
               tileLightIndices.set(active, idx, lightIndex);
               tileNumLights += nactive;
             }
-#endif
         }
     }
 
@@ -717,7 +682,7 @@ ShadeTile(
                 lit_y = pow(clamp(lit_y, 0.0f, 1.0f), gamma);
                 lit_z = pow(clamp(lit_z, 0.0f, 1.0f), gamma);
                 
-              if (x >= tileEndX) break;
+        //      if (x >= tileEndX) break;
                 framebuffer_r[gBufferOffset] = Float32ToUnorm8(lit_x);
                 framebuffer_g[gBufferOffset] = Float32ToUnorm8(lit_y);
                 framebuffer_b[gBufferOffset] = Float32ToUnorm8(lit_z);
@@ -744,7 +709,6 @@ RenderTile( int num_groups_x,  int num_groups_y,
   const InputHeader &inputHeader = *inputHeaderPtr;
   const InputDataArrays &inputData = *inputDataPtr;
 
-#if 1
      int32 group_y = taskIndex / num_groups_x;
      int32 group_x = taskIndex % num_groups_x;
 
@@ -759,17 +723,11 @@ RenderTile( int num_groups_x,  int num_groups_y,
      float cameraProj_11 = inputHeader.cameraProj[1][1];
      float cameraProj_22 = inputHeader.cameraProj[2][2];
      float cameraProj_32 = inputHeader.cameraProj[3][2];
-#endif
 
     // Light intersection: figure out which lights illuminate this tile.
      Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
 
-#if 0
-     tileLightIndices.set(threadIdx.x&1, threadIdx.x, framebuffer_g[blockIdx.x]);
-     framebuffer_r[threadIdx.x] = tileLightIndices.get(threadIdx.x);
-#endif
 
-#if 1
      int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
@@ -791,7 +749,6 @@ RenderTile( int num_groups_x,  int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
-#endif
 }
 
 
@@ -806,7 +763,6 @@ RenderStatic(InputHeader inputHeaderPtr[],
              unsigned int8 framebuffer_b[]) {
 
   const InputHeader inputHeader = *inputHeaderPtr;
-  const InputDataArrays inputData = *inputDataPtr;
 
     int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
