@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         reset_and_start_timer();
         const double t0 = rtc();
         ao_ispc_tasks(width, height, NSUBSAMPLES, fimg);
-        double t = (rtc() - t0); //get_elapsed_mcycles();
+        double t = 1e3*(rtc() - t0); //get_elapsed_mcycles();
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
 

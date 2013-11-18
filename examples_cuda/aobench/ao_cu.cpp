@@ -470,7 +470,7 @@ int main(int argc, char **argv)
         int arg_2 = height;
         int arg_3 = NSUBSAMPLES;
         void *func_args[] = {&arg_1, &arg_2, &arg_3, (float*)&d_fimg};
-        const double t = CUDALaunch(NULL, func_name, func_args);
+        const double t = 1e3*CUDALaunch(NULL, func_name, func_args);
 #endif
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
