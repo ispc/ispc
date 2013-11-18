@@ -1,0 +1,40 @@
+PROG=options_mic
+ISPC_SRC=options.ispc
+CXX_SRC=options.cpp  ../tasksys.cpp
+
+CXX=icc
+CXXFLAGS=-O3 -I$(CUDATK)/include -mmic -openmp
+LD=icc
+LDFLAGS=-mmic -openmp
+
+ISPC=ispc
+ISPCFLAGS=-O3 --math-lib=default --target=generic-16 --c++-include-file=../intrinsics/knc-i1x16.h --opt=fast-math
+
+.SUFFIXES: .o .cpp
+
+
+ISPC_OBJ=$(ISPC_SRC:%.ispc=%_ispc.o)
+ISPC_ZMM=$(ISPC_SRC:%.ispc=%_ispc_zmm.cpp)
+CXX_OBJ=$(ISPC_ZMM:%_zmm.cpp=%.o)
+CXX_OBJ+=$(CXX_SRC:%.cpp=%.o)
+
+all: $(PROG)
+
+
+$(CXX_OBJ) : $(ISPC_ZMM)
+
+$(PROG): $(CXX_OBJ) 
+	$(LD) -o $@ $(CXX_OBJ) $(LDFLAGS)
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS)  -o $@ -c $<
+
+
+%_ispc_zmm.cpp: %.ispc
+	$(ISPC) $(ISPCFLAGS) --emit-c++ -o `basename $< .ispc`_zmm.cpp -h `basename $< .ispc`_ispc.h $< 
+
+clean: 
+	/bin/rm -rf *_ispc_zmm.cpp *.o  $(PROG)
+
+	 
+

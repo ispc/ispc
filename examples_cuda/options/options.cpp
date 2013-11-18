@@ -60,6 +60,10 @@ static inline double rtc(void)
 }
 
 
+#if 0
+#define SINGLE_TASK
+#endif
+
 extern void black_scholes_serial(float Sa[], float Xa[], float Ta[], 
                                  float ra[], float va[], 
                                  float result[], int count);
@@ -107,6 +111,7 @@ int main(int argc, char *argv[]) {
     // Binomial options pricing model, ispc implementation
     //
     double binomial_ispc = 1e30;
+#ifdef SINGLE_TASK
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         const double t0 = rtc();
@@ -120,6 +125,7 @@ int main(int argc, char *argv[]) {
     }
     printf("[binomial ispc, 1 thread]:\t[%.3f] million cycles (avg %f)\n", 
            binomial_ispc, sum / nOptions);
+#endif
 
     //
     // Binomial options pricing model, ispc implementation, tasks
@@ -166,6 +172,7 @@ int main(int argc, char *argv[]) {
     // Black-Scholes options pricing model, ispc implementation, 1 thread
     //
     double bs_ispc = 1e30;
+#ifdef SINGLE_TASK
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         const double t0 = rtc();
@@ -179,6 +186,7 @@ int main(int argc, char *argv[]) {
     }
     printf("[black-scholes ispc, 1 thread]:\t[%.3f] million cycles (avg %f)\n", 
            bs_ispc, sum / nOptions);
+#endif
 
     //
     // Black-Scholes options pricing model, ispc implementation, tasks
