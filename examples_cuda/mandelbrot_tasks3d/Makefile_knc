@@ -1,6 +1,6 @@
-PROG=options_mic
-ISPC_SRC=options.ispc
-CXX_SRC=options.cpp  ../tasksys.cpp
+PROG=mandelbrot_mic
+ISPC_SRC=mandelbrot_tasks3d.ispc
+CXX_SRC=mandelbrot_tasks3d.cpp  ../tasksys.cpp
 
 CXX=icc
 CXXFLAGS=-O3 -I$(CUDATK)/include -mmic -openmp
