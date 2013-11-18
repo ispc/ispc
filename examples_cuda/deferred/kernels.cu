@@ -95,7 +95,7 @@ dot3(float x, float y, float z, float a, float b, float c) {
 }
 
 
-#if 1
+#if 0
 static __shared__ int shdata_full[128];
 template<typename T, int N>
 struct Uniform
@@ -133,44 +133,6 @@ struct Uniform
     data[chunkIdx] = shdata[programIndex];
   }
 };
-#elif 0
-static __shared__ void* shptr_full[128];
-template<typename T, int N>
-struct Uniform
-{
-  T data[(N+programCount-1)/programCount];
-  T* *shptr;
-
-  __device__ inline Uniform()
-  {
-    shptr = (T**)shptr_full;
-    shptr[threadIdx.x] = data;
-    __syncthreads();
-  }
-
-  __device__ inline int2 get_chunk(const int i) const
-  {
-    const int elem  = i & (programCount - 1);
-    const int chunk = i >> 5;
-    return make_int2(chunk, elem);
-  }
-
-  __device__ inline const T get(const int i) const
-  {
-    const int2 idx = get_chunk(i);
-    const int chunk = idx.x;
-    const int elem  = idx.y;
-    return shptr[chunk][elem];
-  }
-  
-  __device__ inline void set(const bool active, const int i, T value) 
-  {
-    const int2 idx = get_chunk(i);
-    const int chunk = idx.x;
-    const int elem  = idx.y;
-    shptr[chunk][elem] = value;
-  }
-};
 #elif 1
 template<typename T, int N>
 struct Uniform
@@ -181,32 +143,17 @@ struct Uniform
     int32_t ptr[2];
   };
 
-
   __device__ inline Uniform()
   {
-#if 1
     if (programIndex == 0)
-      data = new T[N];
+      data = (T*)malloc(N*sizeof(T));
     ptr[0] = __shfl(ptr[0], 0);
     ptr[1] = __shfl(ptr[1], 0);
-#else
-    __shared__ T *ptr;
-    if (threadIdx.x == 0)
-      ptr = new T[4*N];
-    __syncthreads();
-    data = ptr;
-    data += warpIdx*N;
-#endif
   }
   __device__ inline ~Uniform()
   {
-#if 1
     if (programIndex == 0)
-      delete data;
-#else
-    if (threadIdx.x == 0)
-      delete data;
-#endif
+      free(data);
   }
 
   __device__ inline const T get(const int i) const
@@ -274,6 +221,36 @@ static float reduce_max(float value)
   return value;
 }
 
+#if 0
+__device__ inline
+static int reduce_sum(int value)
+{
+#pragma unroll
+  for (int i = 4; i >=0; i--)
+    value +=  __shfl_xor(value, 1<<i, 32);
+  return value;
+}
+static __device__ __forceinline__ uint shfl_scan_add_step(uint partial, uint up_offset)
+{
+  uint result;
+  asm(
+      "{.reg .u32 r0;"
+      ".reg .pred p;"
+      "shfl.up.b32 r0|p, %1, %2, 0;"
+      "@p add.u32 r0, r0, %3;"
+      "mov.u32 %0, r0;}"
+      : "=r"(result) : "r"(partial), "r"(up_offset), "r"(partial));
+  return result;
+}
+static __device__ __forceinline__ int inclusive_scan_warp(const int value)
+{
+  uint sum = value;
+#pragma unroll
+  for(int i = 0; i < 5; ++i)
+    sum = shfl_scan_add_step(sum, 1 << i);
+  return sum - value;
+}
+#endif
 
 
 static __device__ __forceinline__ int lanemask_lt()
@@ -421,7 +398,7 @@ IntersectLightsWithTileMinMax(
         // don't actually need to mask the rest of this function - this is
         // just a greedy early-out.  Could also structure all of this as
         // nested if() statements, but this a bit easier to read
-        if (any(inFrustum))
+        if (__ballot(inFrustum) > 0) 
         {
             float light_positionView_x = light_positionView_x_array[lightIndex];
             float light_positionView_y = light_positionView_y_array[lightIndex];
@@ -444,7 +421,11 @@ IntersectLightsWithTileMinMax(
         
             // Pack and store intersecting lights
             const bool active = inFrustum && lightIndex < numLights;
-            if (any(active))
+#if 0
+            if (__ballot(active) > 0)
+              tileNumLights += packed_store_active(active, tileLightIndices.get_ptr(tileNumLights), lightIndex);
+#else
+            if (__ballot(active) > 0)
             {
               const int2 res = warpBinExclusiveScan(active);
               const int idx = tileNumLights + res.y;
@@ -452,6 +433,7 @@ IntersectLightsWithTileMinMax(
               tileLightIndices.set(active, idx, lightIndex);
               tileNumLights += nactive;
             }
+#endif
         }
     }
 
@@ -682,7 +664,6 @@ ShadeTile(
                 lit_y = pow(clamp(lit_y, 0.0f, 1.0f), gamma);
                 lit_z = pow(clamp(lit_z, 0.0f, 1.0f), gamma);
                 
-        //      if (x >= tileEndX) break;
                 framebuffer_r[gBufferOffset] = Float32ToUnorm8(lit_x);
                 framebuffer_g[gBufferOffset] = Float32ToUnorm8(lit_y);
                 framebuffer_b[gBufferOffset] = Float32ToUnorm8(lit_z);
@@ -695,20 +676,19 @@ ShadeTile(
 ///////////////////////////////////////////////////////////////////////////
 // Static decomposition
 
-
 __global__ void
 RenderTile( int num_groups_x,  int num_groups_y,
-           const  InputHeader inputHeaderPtr[],
-           const  InputDataArrays inputDataPtr[],
+           const  InputHeader *inputHeaderPtr,
+           const  InputDataArrays *inputDataPtr,
             int visualizeLightCount,
            // Output
             unsigned int8 framebuffer_r[],
             unsigned int8 framebuffer_g[],
             unsigned int8 framebuffer_b[]) {
   if (taskIndex >= taskCount) return;
-  const InputHeader &inputHeader = *inputHeaderPtr;
-  const InputDataArrays &inputData = *inputDataPtr;
 
+  const  InputHeader inputHeader = *inputHeaderPtr;
+  const  InputDataArrays inputData = *inputDataPtr;
      int32 group_y = taskIndex / num_groups_x;
      int32 group_x = taskIndex % num_groups_x;
 
@@ -726,8 +706,7 @@ RenderTile( int num_groups_x,  int num_groups_y,
 
     // Light intersection: figure out which lights illuminate this tile.
      Uniform<int,MAX_LIGHTS> tileLightIndices;  // Light list for the tile
-
-
+#if 1
      int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
@@ -749,33 +728,34 @@ RenderTile( int num_groups_x,  int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
+#endif
 }
 
 
-  extern "C"
-__global__ void
-RenderStatic(InputHeader inputHeaderPtr[],
-             InputDataArrays inputDataPtr[],
-             int visualizeLightCount,
+extern "C" __global__ void
+RenderStatic( InputHeader inputHeaderPtr[],
+              InputDataArrays inputDataPtr[],
+              int visualizeLightCount,
              // Output
-             unsigned int8 framebuffer_r[],
-             unsigned int8 framebuffer_g[],
-             unsigned int8 framebuffer_b[]) {
+              unsigned int8 framebuffer_r[],
+              unsigned int8 framebuffer_g[],
+              unsigned int8 framebuffer_b[]) {
 
-  const InputHeader inputHeader = *inputHeaderPtr;
+  const  InputHeader inputHeader = *inputHeaderPtr;
+  const  InputDataArrays inputData = *inputDataPtr;
 
-    int num_groups_x = (inputHeader.framebufferWidth + 
+
+     int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
-    int num_groups_y = (inputHeader.framebufferHeight + 
+     int num_groups_y = (inputHeader.framebufferHeight + 
                                 MIN_TILE_HEIGHT - 1) / MIN_TILE_HEIGHT;
-    int num_groups = num_groups_x * num_groups_y;
+     int num_groups = num_groups_x * num_groups_y;
 
     // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
     // by MIN_TILE_HEIGHT pixels.
-    if (programIndex == 0)
-      RenderTile<<<num_groups, 128>>>(num_groups_x, num_groups_y,
-          inputHeaderPtr, inputDataPtr, visualizeLightCount,
-          framebuffer_r, framebuffer_g, framebuffer_b);
-    cudaDeviceSynchronize();
-    cudaDeviceSynchronize();
+     if (programIndex == 0)
+       RenderTile<<<(num_groups+4-1)/4,128>>>(num_groups_x, num_groups_y,
+           inputHeaderPtr, inputDataPtr, visualizeLightCount,
+           framebuffer_r, framebuffer_g, framebuffer_b);
+     cudaDeviceSynchronize();
 }
