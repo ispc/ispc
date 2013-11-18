@@ -319,7 +319,6 @@ static inline void raytrace_tile( int x0,  int x1,
 
 
 
-extern "C"
 __global__
 void raytrace_tile_task( int width,  int height,
                               int baseWidth,  int baseHeight,
@@ -330,7 +329,7 @@ void raytrace_tile_task( int width,  int height,
                              const  Triangle triangles[]) {
 
   if (taskIndex >= taskCount) return;
-     int dx = 32, dy = 16; // must match dx, dy below
+     int dx = 64, dy = 8; // must match dx, dy below
      int xBuckets = (width + (dx-1)) / dx;
      int x0 = (taskIndex % xBuckets) * dx;
      int x1 = min(x0 + dx, width);
@@ -343,3 +342,20 @@ void raytrace_tile_task( int width,  int height,
 }
 
 
+extern "C" __global__ void raytrace_ispc_tasks( int width,  int height,
+                                 int baseWidth,  int baseHeight,
+                                const  float raster2camera[4][4], 
+                                const  float camera2world[4][4],
+                                 float image[],  int id[],
+                                const  LinearBVHNode nodes[],
+                                const  Triangle triangles[]) {
+     int dx = 64, dy = 8;
+     int xBuckets = (width + (dx-1)) / dx;
+     int yBuckets = (height + (dy-1)) / dy;
+     int nTasks = xBuckets * yBuckets;
+     if (programIndex == 0)
+       raytrace_tile_task<<<(nTasks-1+4)/4,128>>>(width, height, baseWidth, baseHeight, 
+           raster2camera, camera2world, 
+           image, id, nodes, triangles);
+     cudaDeviceSynchronize();
+}
