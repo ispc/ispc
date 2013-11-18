@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
     // Binomial options pricing model, ispc implementation
     //
     const bool print_log = false;
-    const int nreg = 64;
+    const int nreg = 128;
     double binomial_ispc = 1e30;
 #if 0
     for (int i = 0; i < 3; ++i) {
