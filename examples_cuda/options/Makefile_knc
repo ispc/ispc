@@ -1,6 +1,6 @@
 PROG=options_mic
 ISPC_SRC=options.ispc
-CXX_SRC=options.cpp  ../tasksys.cpp
+CXX_SRC=options.cpp  ../tasksys.cpp 
 
 CXX=icc
 CXXFLAGS=-O3 -I$(CUDATK)/include -mmic -openmp
@@ -23,7 +23,7 @@ all: $(PROG)
 $(PROG): $(ISPC_OBJ) $(CXX_OBJ) 
 	$(LD) -o $@ $^ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp 
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
 %_ispc.o: %.ispc
