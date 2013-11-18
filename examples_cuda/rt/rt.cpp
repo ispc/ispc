@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
     raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
         camera2world, image, id, nodes, triangles);
     double dt = rtc() - t0; //get_elapsed_mcycles();
-    minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
+    minTimeISPCtasks = std::min(1e3*dt, minTimeISPCtasks);
   }
   fprintf(stderr, "[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
       minTimeISPCtasks, width, height);

@@ -518,7 +518,7 @@ int main(int argc, char *argv[]) {
       &d_raster2camera, &d_camera2world,
       &d_image, &d_id,
       &d_nodes, &d_triangles};
-    const double dt = CUDALaunch(NULL, func_name, func_args);
+    const double dt = 1e3*CUDALaunch(NULL, func_name, func_args);
 #endif
     minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
   }
