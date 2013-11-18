@@ -21,7 +21,6 @@ namespace ispc { /* namespace */
 #if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)
 extern "C" {
 #endif // __cplusplus
-    extern void loop_stencil_ispc(int32_t t0, int32_t t1, int32_t x0, int32_t x1, int32_t y0, int32_t y1, int32_t z0, int32_t z1, int32_t Nx, int32_t Ny, int32_t Nz, const double * coef, const double * vsq, double * Aeven, double * Aodd);
     extern void loop_stencil_ispc_tasks(int32_t t0, int32_t t1, int32_t x0, int32_t x1, int32_t y0, int32_t y1, int32_t z0, int32_t z1, int32_t Nx, int32_t Ny, int32_t Nz, const double * coef, const double * vsq, double * Aeven, double * Aodd);
 #if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)
 } /* end extern C */

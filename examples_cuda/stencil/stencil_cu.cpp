@@ -51,189 +51,8 @@ using namespace ispc;
 #include "drvapi_error_string.h"
 #include <sys/time.h>
 
+#include "../cuda_ispc.h"
 
-double rtc(void)
-{
-  struct timeval Tvalue;
-  double etime;
-  struct timezone dummy;
-
-  gettimeofday(&Tvalue,&dummy);
-  etime =  (double) Tvalue.tv_sec +
-    1.e-6*((double) Tvalue.tv_usec);
-  return etime;
-}
-
-#define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
-// These are the inline versions for all of the SDK helper functions
-void __checkCudaErrors(CUresult err, const char *file, const int line) {
-  if(CUDA_SUCCESS != err) {
-    std::cerr << "checkCudeErrors() Driver API error = " << err << "\""
-      << getCudaDrvErrorString(err) << "\" from file <" << file
-      << ", line " << line << "\n";
-    exit(-1);
-  }
-}
-
-/**********************/
-/* Basic CUDriver API */
-CUcontext context;
-
-void createContext(const int deviceId = 0)
-{
-  CUdevice device;
-  int devCount;
-  checkCudaErrors(cuInit(0));
-  checkCudaErrors(cuDeviceGetCount(&devCount));
-  assert(devCount > 0);
-  checkCudaErrors(cuDeviceGet(&device, deviceId < devCount ? deviceId : 0));
-
-  char name[128];
-  checkCudaErrors(cuDeviceGetName(name, 128, device));
-  std::cout << "Using CUDA Device [0]: " << name << "\n";
-
-  int devMajor, devMinor;
-  checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
-  std::cout << "Device Compute Capability: " 
-    << devMajor << "." << devMinor << "\n";
-  if (devMajor < 2) {
-    std::cerr << "ERROR: Device 0 is not SM 2.0 or greater\n";
-    exit(1); 
-  }
-
-  // Create driver context
-  checkCudaErrors(cuCtxCreate(&context, 0, device));
-}
-void destroyContext()
-{
-  checkCudaErrors(cuCtxDestroy(context));
-}
-
-CUmodule loadModule(const char * module)
-{
-  CUmodule cudaModule;
-  checkCudaErrors(cuModuleLoadData(&cudaModule, module));
-  return cudaModule;
-}
-void unloadModule(CUmodule &cudaModule)
-{
-  checkCudaErrors(cuModuleUnload(cudaModule));
-}
-
-CUfunction getFunction(CUmodule &cudaModule, const char * function)
-{
-  CUfunction cudaFunction;
-  checkCudaErrors(cuModuleGetFunction(&cudaFunction, cudaModule, function));
-  return cudaFunction;
-}
-
-CUdeviceptr deviceMalloc(const size_t size)
-{
-  CUdeviceptr d_buf;
-  checkCudaErrors(cuMemAlloc(&d_buf, size));
-  return d_buf;
-}
-void deviceFree(CUdeviceptr d_buf)
-{
-  checkCudaErrors(cuMemFree(d_buf));
-}
-void memcpyD2H(void * h_buf, CUdeviceptr d_buf, const size_t size)
-{
-  checkCudaErrors(cuMemcpyDtoH(h_buf, d_buf, size));
-}
-void memcpyH2D(CUdeviceptr d_buf, void * h_buf, const size_t size)
-{
-  checkCudaErrors(cuMemcpyHtoD(d_buf, h_buf, size));
-}
-#define deviceLaunch(func,nbx,nby,nbz,params) \
-  checkCudaErrors(cuFuncSetCacheConfig((func), CU_FUNC_CACHE_PREFER_L1)); \
-checkCudaErrors( \
-    cuLaunchKernel( \
-      (func), \
-      ((nbx-1)/(128/32)+1), (nby), (nbz), \
-      128, 1, 1, \
-      0, NULL, (params), NULL \
-      ));
-
-typedef CUdeviceptr devicePtr;
-
-
-/**************/
-#include <vector>
-std::vector<char> readBinary(const char * filename)
-{
-  std::vector<char> buffer;
-  FILE *fp = fopen(filename, "rb");
-  if (!fp )
-  {
-    fprintf(stderr, "file %s not found\n", filename);
-    assert(0);
-  }
-#if 0
-  char c;
-  while ((c = fgetc(fp)) != EOF)
-    buffer.push_back(c);
-#else
-  fseek(fp, 0, SEEK_END); 
-  const unsigned long long size = ftell(fp);         /*calc the size needed*/
-  fseek(fp, 0, SEEK_SET); 
-  buffer.resize(size);
-
-  if (fp == NULL){ /*ERROR detection if file == empty*/
-    fprintf(stderr, "Error: There was an Error reading the file %s \n",filename);           
-    exit(1);
-  }
-  else if (fread(&buffer[0], sizeof(char), size, fp) != size){ /* if count of read bytes != calculated size of .bin file -> ERROR*/
-    fprintf(stderr, "Error: There was an Error reading the file %s \n", filename);
-    exit(1);
-  }
-#endif
-  fprintf(stderr, " read buffer of size= %d bytes \n", (int)buffer.size());
-  return buffer;
-}
-
-extern "C" 
-{
-
-  void *CUDAAlloc(void **handlePtr, int64_t size, int32_t alignment)
-  {
-    return NULL;
-  }
-  void CUDALaunch(
-      void **handlePtr, 
-      const char * module_name,
-      const char * module_1,
-      const char * func_name,
-      void **func_args, 
-      int countx, int county, int countz)
-  {
-    assert(module_name != NULL);
-    assert(module_1 != NULL);
-    assert(func_name != NULL);
-    assert(func_args != NULL);
-#if 1
-    const char * module = module_1;
-#else
-    const std::vector<char> module_str = readBinary("kernel.cubin");
-    const char *  module = &module_str[0];
-#endif
-    CUmodule   cudaModule   = loadModule(module);
-    CUfunction cudaFunction = getFunction(cudaModule, func_name);
-    deviceLaunch(cudaFunction, countx, county, countz, func_args);
-    unloadModule(cudaModule);
-  }
-  void CUDASync(void *handle)
-  {
-    checkCudaErrors(cuStreamSynchronize(0));
-  }
-  void ISPCSync(void *handle)
-  {
-    checkCudaErrors(cuStreamSynchronize(0));
-  }
-  void CUDAFree(void *handle)
-  {
-  }
-}
 
 
 extern void loop_stencil_serial(int t0, int t1, int x0, int x1,
@@ -295,9 +114,9 @@ int main() {
     double dt = get_elapsed_mcycles();
     minTimeISPC = std::min(minTimeISPC, dt);
   }
-#endif
 
   printf("[stencil ispc 1 core]:\t\t[%.3f] million cycles\n", minTimeISPC);
+#endif
 
   InitData(Nx, Ny, Nz, Aispc, vsq);
 
@@ -310,19 +129,35 @@ int main() {
   // the minimum time of three runs.
   //
   double minTimeISPCTasks = 1e30;
+  const bool print_log = false;
+  const int nreg = 128;
   for (int i = 0; i < 3; ++i) {
     reset_and_start_timer();
-    const double t0 = rtc();
-    loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
-        width, Nz - width, Nx, Ny, Nz, (double*)d_coeff, (double*)d_vsq,
-        (double*)d_Aispc0, (double*)d_Aispc1);
-    double dt = rtc() - t0; //get_elapsed_mcycles();
+    const char * func_name = "loop_stencil_ispc_tasks";
+
+    int t0 = 0;
+    int t1 = 6;
+
+    int x0 =      width;
+    int x1 = Nx - width;
+
+    int y0 =      width;
+    int y1 = Ny - width;
+
+    int z0 =      width;
+    int z1 = Nz - width;
+
+    void *func_args[] = {
+      &t0, &t1,
+      &x0, &x1, &y0, &y1, &z0, &z1, &Nx, &Ny, &Nz,
+      &d_coeff, &d_vsq, &d_Aispc0, &d_Aispc1};
+    double dt = 1e3*CUDALaunch(NULL, func_name, func_args, print_log, nreg);
     minTimeISPCTasks = std::min(minTimeISPCTasks, dt);
   }
   memcpyD2H(Aispc[1], d_Aispc1, bufsize);
   //memcpyD2H(Aispc[1], d_vsq, bufsize);
 
-  printf("[stencil ispc + tasks]:\t\t[%.3f] million cycles\n", minTimeISPCTasks);
+  fprintf(stderr, "[stencil ispc + tasks]:\t\t[%.3f] million cycles\n", minTimeISPCTasks);
 
   InitData(Nx, Ny, Nz, Aserial, vsq);
 

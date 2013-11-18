@@ -37,8 +37,8 @@ stencil_step(int x0, int x1,
              int y0, int y1,
              int z0, int z1,
              int Nx, int Ny, int Nz,
-             const float coef[4], const float vsq[],
-             const float Ain[], float Aout[]) {
+             const double coef[4], const double vsq[],
+             const double Ain[], double Aout[]) {
     int Nxy = Nx * Ny;
 
 #pragma omp parallel for
@@ -48,7 +48,7 @@ stencil_step(int x0, int x1,
                 int index = (z * Nxy) + (y * Nx) + x;
 #define A_cur(x, y, z) Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)]
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
-                float div = coef[0] * A_cur(0, 0, 0) +
+                double div = coef[0] * A_cur(0, 0, 0) +
                             coef[1] * (A_cur(+1, 0, 0) + A_cur(-1, 0, 0) +
                                        A_cur(0, +1, 0) + A_cur(0, -1, 0) +
                                        A_cur(0, 0, +1) + A_cur(0, 0, -1)) +
@@ -72,9 +72,9 @@ void loop_stencil_parallel(int t0, int t1,
                          int y0, int y1,
                          int z0, int z1,
                          int Nx, int Ny, int Nz,
-                         const float coef[4], 
-                         const float vsq[],
-                         float Aeven[], float Aodd[])
+                         const double coef[4], 
+                         const double vsq[],
+                         double Aeven[], double Aodd[])
 {
     for (int t = t0; t < t1; ++t) {
         if ((t & 1) == 0)
