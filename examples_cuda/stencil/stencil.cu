@@ -1,6 +1,11 @@
 #define programCount 32
 #define programIndex (threadIdx.x & 31)
-#define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
+#define taskIndex0 (blockIdx.x*4 + (threadIdx.x >> 5))
+#define taskIndex1 (blockIdx.y)
+#define taskIndex2 (blockIdx.z)
+#define taskCount0  (gridDim.x*4)
+#define taskCount1  (gridDim.y)
+#define taskCount2  (gridDim.z)
 
 __device__ static void
 stencil_step( int x0,  int x1,
@@ -48,15 +53,71 @@ stencil_step( int x0,  int x1,
 }
 
 
-extern "C"
+#define SPANX 32
+#define SPANY 8
+#define SPANZ 8
+
 __global__  void
 stencil_step_task( int x0,  int x1,
                    int y0,  int y1,
-                   int z0,
+                   int z0,  int z1,
                    int Nx,  int Ny,  int Nz,
                    const double coef[4],  const double vsq[],
                    const double Ain[],  double Aout[]) {
-    stencil_step(x0, x1, y0, y1, z0+taskIndex, z0+taskIndex+1,
-                 Nx, Ny, Nz, coef, vsq, Ain, Aout);
+  if (taskIndex0 >= taskCount0 || 
+      taskIndex1 >= taskCount1 || 
+      taskIndex2 >= taskCount2)
+    return;
+
+  const  int xfirst = x0 + taskIndex0 * SPANX;
+  const  int xlast  = min(x1, xfirst + SPANX);
+
+  const  int yfirst = y0 + taskIndex1 * SPANY;
+  const  int ylast  = min(y1, yfirst + SPANY);
+
+  const  int zfirst = z0 + taskIndex2 * SPANZ;
+  const  int zlast  = min(z1, zfirst + SPANZ);
+
+  stencil_step(xfirst,xlast, yfirst,ylast, zfirst,zlast,
+      Nx, Ny, Nz, coef, vsq, Ain, Aout);
 }
 
+
+
+extern "C"
+__global__ void
+loop_stencil_ispc_tasks( int t0,  int t1, 
+                         int x0,  int x1,
+                         int y0,  int y1,
+                         int z0,  int z1,
+                         int Nx,  int Ny,  int Nz,
+                         const double coef[4], 
+                         const double vsq[],
+                         double Aeven[],  double Aodd[])
+{
+#define NB(x,n) (((x)+(n)-1)/(n))
+
+  dim3 grid((NB(x1-x0,SPANX)-1)/4+1, NB(y1-y0,SPANY), NB(z1-z0,SPANZ));
+
+    for ( int t = t0; t < t1; ++t) 
+    {
+      // Parallelize across cores as well: each task will work on a slice
+      // of 1 in the z extent of the volume.
+      if ((t & 1) == 0)
+      {
+        if (programIndex == 0)
+          stencil_step_task<<<grid,128>>>(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, 
+              coef, vsq, Aeven, Aodd);
+      }
+      else
+      {
+        if (programIndex == 0)
+          stencil_step_task<<<grid,128>>>(x0, x1, y0, y1, z0, z1, Nx, Ny, Nz, 
+              coef, vsq, Aodd, Aeven);
+      }
+
+      // We need to wait for all of the launched tasks to finish before
+      // starting the next iteration
+      cudaDeviceSynchronize();
+    }
+}

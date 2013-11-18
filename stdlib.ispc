@@ -93,7 +93,7 @@ __declspec(safe,cost0)
 __declspec(safe,cost0)
   static inline uniform int blockIndex2()
 {
-  return __ctaid_y();
+  return __ctaid_z();
 }
 /***************/
 __declspec(safe,cost0)

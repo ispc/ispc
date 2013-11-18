@@ -85,6 +85,7 @@ int main() {
     // the minimum time of three runs.
     //
     double minTimeISPC = 1e30;
+#if 0
     for (int i = 0; i < 3; ++i) {
         reset_and_start_timer();
         loop_stencil_ispc(0, 6, width, Nx - width, width, Ny - width,
@@ -95,6 +96,7 @@ int main() {
     }
 
     printf("[stencil ispc 1 core]:\t\t[%.3f] million cycles\n", minTimeISPC);
+#endif
 
     InitData(Nx, Ny, Nz, Aispc, vsq);
 
