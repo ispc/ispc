@@ -127,7 +127,7 @@ int main(int argc, char *argv[]) {
         reset_and_start_timer();
         const double t0 = rtc();
         mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
-        double dt = rtc() - t0; //get_elapsed_mcycles();
+        double dt = 1e3*(rtc() - t0); //get_elapsed_mcycles();
         minISPC = std::min(minISPC, dt);
     }
 

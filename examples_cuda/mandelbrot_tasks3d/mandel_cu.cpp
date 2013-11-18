@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 #else
     const char * func_name = "mandelbrot_ispc";
     void *func_args[] = {&x0, &y0, &x1, &y1, &width, &height, &maxIterations, &d_buf};
-    const double dt = CUDALaunch(NULL, func_name, func_args);
+    const double dt = 1e3*CUDALaunch(NULL, func_name, func_args);
 #endif
     minISPC = std::min(minISPC, dt);
   }
