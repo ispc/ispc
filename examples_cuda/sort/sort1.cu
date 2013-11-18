@@ -247,7 +247,7 @@ void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks,
 {
    int num = ntasks;
    int span = n / num;
-#if 0
+#if 1
    int hsize = 256*programCount*num;
    int *  hist =  __new< int>(hsize);
    int64 *  pair =  __new< int64>(n);
@@ -293,7 +293,7 @@ void sort_ispc ( int n,  unsigned int code[],  int order[],  int ntasks,
     unpack<<<nbx(num),128>>> (span, n, pair, code, order);
   sync;
 
-#if ALLOCATED
+#ifdef ALLOCATED
   __delete(g);
   __delete(hist);
   __delete(pair);

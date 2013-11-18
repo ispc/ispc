@@ -2,6 +2,7 @@
 #define programIndex (threadIdx.x & 31)
 #define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
 #define taskCount (gridDim.x*4)
+#define warpIdx (threadIdx.x >> 5)
 
 #define float3 Float3
 struct Float3
@@ -57,17 +58,12 @@ struct Float3
   }
 };
 
-#if 0
-#define DIRISNEG
-#endif
+#define int8 char
+#define int16 short
 
 struct Ray {
     float3 origin, dir, invDir;
-#ifdef DIRISNEG /* this fails to compile with nvvm */
-    unsigned int dirIsNeg[3];
-#else
     unsigned int dirIsNeg0, dirIsNeg1, dirIsNeg2;
-#endif
     float mint, maxt;
     int hitId;
 };
@@ -78,8 +74,6 @@ struct Triangle {
     int pad[3];
 };
 
-#define int8 char
-#define int16 short
 struct LinearBVHNode {
     float bounds[2][3];
     unsigned int offset;     // num primitives for leaf, second child for interior
@@ -105,7 +99,8 @@ static inline float Dot(const float3 a, const float3 b) {
 }
 
 __device__
-static inline void generateRay( const float raster2camera[4][4], 
+inline
+static void generateRay( const float raster2camera[4][4], 
                          const float camera2world[4][4],
                         float x, float y, Ray &ray) {
     ray.mint = 0.f;
@@ -135,7 +130,7 @@ static inline void generateRay( const float raster2camera[4][4],
 
     ray.invDir = 1.f / ray.dir;
 
-#ifdef DIRISNEG
+#if 0
     ray.dirIsNeg[0] = any(ray.invDir.x < 0) ? 1 : 0;
     ray.dirIsNeg[1] = any(ray.invDir.y < 0) ? 1 : 0;
     ray.dirIsNeg[2] = any(ray.invDir.z < 0) ? 1 : 0;
@@ -146,9 +141,9 @@ static inline void generateRay( const float raster2camera[4][4],
 #endif
 }
 
-
 __device__
-static inline bool BBoxIntersect(const  float bounds[2][3], 
+inline
+static bool BBoxIntersect(const  float bounds[2][3], 
                           const Ray &ray) {
      float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
      float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
@@ -186,9 +181,9 @@ static inline bool BBoxIntersect(const  float bounds[2][3],
 }
 
 
-
 __device__
-static inline bool TriIntersect(const  Triangle &tri, Ray &ray) {
+inline
+static bool TriIntersect(const  Triangle &tri, Ray &ray) {
      float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
      float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
      float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
@@ -227,15 +222,15 @@ static inline bool TriIntersect(const  Triangle &tri, Ray &ray) {
     return hit;
 }
 
-
 __device__
-static inline bool BVHIntersect(const  LinearBVHNode nodes[], 
-                  const  Triangle tris[], Ray &r) {
+inline
+bool BVHIntersect(const  LinearBVHNode nodes[], 
+                  const  Triangle tris[], Ray &r,
+                   int todo[]) {
     Ray ray = r;
     bool hit = false;
     // Follow ray through BVH nodes to find primitive intersections
      int todoOffset = 0, nodeNum = 0;
-     int todo[64];
 
     while (true) {
         // Check ray against BVH node
@@ -249,20 +244,17 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
                     if (TriIntersect(tris[primitivesOffset+i], ray))
                         hit = true;
                 }
+                if (todoOffset == 0) 
+                    break;
                 nodeNum = todo[--todoOffset];
             }
             else {
                 // Put far BVH node on _todo_ stack, advance to near node
-#ifdef DIRISNEG
-                const int dirIsNeg = r.dirIsNeg[node.splitAxis];
-#else
                 int dirIsNeg;
                 if (node.splitAxis == 0) dirIsNeg = r.dirIsNeg0;
                 if (node.splitAxis == 1) dirIsNeg = r.dirIsNeg1;
                 if (node.splitAxis == 2) dirIsNeg = r.dirIsNeg2;
-#endif
-                if (dirIsNeg) 
-                {
+                if (dirIsNeg) {
                    todo[todoOffset++] = nodeNum + 1;
                    nodeNum = node.offset;
                 }
@@ -273,10 +265,10 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
             }
         }
         else {
-            nodeNum = todo[--todoOffset];
-        }
             if (todoOffset == 0)
                 break;
+            nodeNum = todo[--todoOffset];
+        }
     }
     r.maxt = ray.maxt;
     r.hitId = ray.hitId;
@@ -284,9 +276,9 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
     return hit;
 }
 
-
 __device__
-static inline void raytrace_tile( int x0,  int x1,
+inline
+static void raytrace_tile( int x0,  int x1,
                            int y0,  int y1, 
                            int width,  int height,
                            int baseWidth,  int baseHeight,
@@ -298,28 +290,34 @@ static inline void raytrace_tile( int x0,  int x1,
      float widthScale = (float)(baseWidth) / (float)(width);
      float heightScale = (float)(baseHeight) / (float)(height);
 
-//    foreach_tiled (y = y0 ... y1, x = x0 ... x1) 
-    for ( int y = y0; y < y1; y++)
-      for ( int xb = x0; xb < x1; xb += programCount)
-    {
-      const int x = xb + programIndex;
-        Ray ray;
-        generateRay(raster2camera, camera2world, x*widthScale,
-                    y*heightScale, ray);
-        BVHIntersect(nodes, triangles, ray);
+#if 0
+   int *  todo =  new  int[64];
+#define ALLOC
+#else
+   int todo[64];
+#endif
 
-        int offset = y * width + x;
+    for (int y = y0 ;y < y1; y++)
+      for (int x = x0 + programIndex; x < x1; x += programCount)
         if (x < x1)
         {
+          Ray ray;
+          generateRay(raster2camera, camera2world, x*widthScale,
+              y*heightScale, ray);
+          BVHIntersect(nodes, triangles, ray, todo);
+
+          int offset = y * width + x;
           image[offset] = ray.maxt;
           id[offset] = ray.hitId;
         }
-    }
+
+#ifdef ALLOC
+  delete todo;
+#endif
 }
 
 
 
-extern "C"
 __global__
 void raytrace_tile_task( int width,  int height,
                               int baseWidth,  int baseHeight,
@@ -328,18 +326,34 @@ void raytrace_tile_task( int width,  int height,
                               float image[],  int id[],
                              const  LinearBVHNode nodes[],
                              const  Triangle triangles[]) {
-
-  if (taskIndex >= taskCount) return;
-     int dx = 32, dy = 16; // must match dx, dy below
+     int dx = 64, dy = 8; // must match dx, dy below
      int xBuckets = (width + (dx-1)) / dx;
      int x0 = (taskIndex % xBuckets) * dx;
      int x1 = min(x0 + dx, width);
      int y0 = (taskIndex / xBuckets) * dy;
      int y1 = min(y0 + dy, height);
-          
+                             
     raytrace_tile(x0, x1, y0, y1, width, height, baseWidth, baseHeight, 
                   raster2camera, camera2world, image,
                   id, nodes, triangles);
 }
 
+
+extern "C" __global__ void raytrace_ispc_tasks( int width,  int height,
+                                 int baseWidth,  int baseHeight,
+                                const  float raster2camera[4][4], 
+                                const  float camera2world[4][4],
+                                 float image[],  int id[],
+                                const  LinearBVHNode nodes[],
+                                const  Triangle triangles[]) {
+     int dx = 64, dy = 8;
+     int xBuckets = (width + (dx-1)) / dx;
+     int yBuckets = (height + (dy-1)) / dy;
+     int nTasks = xBuckets * yBuckets;
+     if (programIndex == 0)
+       raytrace_tile_task<<<(nTasks+4-1)/4,128>>>(width, height, baseWidth, baseHeight, 
+           raster2camera, camera2world, 
+           image, id, nodes, triangles);
+     cudaDeviceSynchronize();
+}
 
