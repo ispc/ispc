@@ -55,7 +55,7 @@ static void usage() {
 
 
 int main(int argc, char *argv[]) {
-    int nOptions = 128*1024;
+    int nOptions = 1024*1024;
 
     for (int i = 1; i < argc; ++i) {
         if (strncmp(argv[i], "--count=", 8) == 0) {
