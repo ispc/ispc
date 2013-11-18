@@ -2,6 +2,7 @@
 #define programIndex (threadIdx.x & 31)
 #define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
 #define taskCount (gridDim.x*4)
+#define warpIdx (threadIdx.x >> 5)
 
 #define float3 Float3
 struct Float3
@@ -235,7 +236,12 @@ static inline bool BVHIntersect(const  LinearBVHNode nodes[],
     bool hit = false;
     // Follow ray through BVH nodes to find primitive intersections
      int todoOffset = 0, nodeNum = 0;
+#if 0
+     __shared__ int todoX[64*4];
+     volatile int * todo = &todoX[warpIdx * 64];
+#else
      int todo[64];
+#endif
 
     while (true) {
         // Check ray against BVH node
