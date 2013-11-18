@@ -62,9 +62,9 @@ stencil_step(uniform int x0, uniform int x1,
     }
 }
 
-#define SPANX 64
+#define SPANX 32
 #define SPANY 8
-#define SPANZ 4
+#define SPANZ 8
 
 static task void
 stencil_step_task(uniform int x0, uniform int x1,
