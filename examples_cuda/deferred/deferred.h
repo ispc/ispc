@@ -63,7 +63,7 @@ enum InputDataArraysEnum {
 #ifndef ISPC
 
 #include <stdint.h>
-#include "kernels_ispc.h"
+#include "kernels1_ispc.h"
 
 #define ALIGNMENT_BYTES 64
 

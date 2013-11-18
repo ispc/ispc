@@ -55,8 +55,8 @@
   #define WIN32_LEAN_AND_MEAN
   #include <windows.h>
 #endif
+#include "kernels1_ispc.h"
 #include "deferred.h"
-#include "kernels_ispc.h"
 #include "../timing.h"
 
 #include <sys/time.h>
