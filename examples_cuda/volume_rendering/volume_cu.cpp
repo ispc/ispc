@@ -478,7 +478,7 @@ int main(int argc, char *argv[]) {
       &d_raster2camera, &d_camera2world,
       &width, &height,
       &d_image};
-      const double dt = CUDALaunch(NULL, func_name, func_args);
+      const double dt = 1e3*CUDALaunch(NULL, func_name, func_args);
 #endif
         minISPCtasks = std::min(minISPCtasks, dt);
     }
@@ -499,6 +499,7 @@ int main(int argc, char *argv[]) {
 
     printf("[volume ispc + tasks]:\t\t[%.3f] million cycles\n", minISPCtasks);
     writePPM(image, width, height, "volume-cuda.ppm");
+    return 0;
 
 #if 0
     // Clear out the buffer

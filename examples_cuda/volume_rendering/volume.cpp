@@ -199,11 +199,12 @@ int main(int argc, char *argv[]) {
     volume_ispc_tasks(density, n, raster2camera, camera2world,
         width, height, image);
     double dt = rtc() - t0; //get_elapsed_mcycles();
-    minISPCtasks = std::min(minISPCtasks, dt);
+    minISPCtasks = std::min(minISPCtasks, dt*1e3);
   }
 
   printf("[volume ispc + tasks]:\t\t[%.3f] million cycles\n", minISPCtasks);
   writePPM(image, width, height, "volume-ispc-tasks.ppm");
+  return 0;
 
   // Clear out the buffer
   for (int i = 0; i < width * height; ++i)
