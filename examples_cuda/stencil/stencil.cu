@@ -31,31 +31,31 @@ stencil_step( int x0,  int x1,
             const int x = xb + programIndex;
 
 #endif
-        int index = (z * Nxy) + (y * Nx) + x;
-#define A_cur(x, y, z) Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)]
+            int index = (z * Nxy) + (y * Nx) + x;
+#define A_cur(x, y, z) __ldg(&Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)])
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
-        double div = 
-            coef0 *  A_cur(0, 0, 0) +
-            coef1 * (A_cur(+1, 0, 0) + A_cur(-1, 0, 0) +
-                      A_cur(0, +1, 0) + A_cur(0, -1, 0) +
-                       A_cur(0, 0, +1) + A_cur(0, 0, -1)) +
-            coef2 * (A_cur(+2, 0, 0) + A_cur(-2, 0, 0) +
-                       A_cur(0, +2, 0) + A_cur(0, -2, 0) +
-                       A_cur(0, 0, +2) + A_cur(0, 0, -2)) +
-            coef3 * (A_cur(+3, 0, 0) + A_cur(-3, 0, 0) +
-                       A_cur(0, +3, 0) + A_cur(0, -3, 0) +
-                       A_cur(0, 0, +3) + A_cur(0, 0, -3));
+            double div = 
+              coef0 *  A_cur(0, 0, 0) +
+              coef1 * (A_cur(+1, 0, 0) + A_cur(-1, 0, 0) +
+                  A_cur(0, +1, 0) + A_cur(0, -1, 0) +
+                  A_cur(0, 0, +1) + A_cur(0, 0, -1)) +
+              coef2 * (A_cur(+2, 0, 0) + A_cur(-2, 0, 0) +
+                  A_cur(0, +2, 0) + A_cur(0, -2, 0) +
+                  A_cur(0, 0, +2) + A_cur(0, 0, -2)) +
+              coef3 * (A_cur(+3, 0, 0) + A_cur(-3, 0, 0) +
+                  A_cur(0, +3, 0) + A_cur(0, -3, 0) +
+                  A_cur(0, 0, +3) + A_cur(0, 0, -3));
 
-        if (x < x1)
-          A_next(0, 0, 0) = 2.0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
-            vsq[index] * div;
-    }
+            if (x < x1)
+              A_next(0, 0, 0) = 2.0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
+                __ldg(&vsq[index]) * div;
+          }
 }
 
 
 #define SPANX 32
-#define SPANY 8
-#define SPANZ 8
+#define SPANY 2
+#define SPANZ 4
 
 __global__  void
 stencil_step_task( int x0,  int x1,

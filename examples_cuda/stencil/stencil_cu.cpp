@@ -129,7 +129,7 @@ int main() {
   // the minimum time of three runs.
   //
   double minTimeISPCTasks = 1e30;
-  const bool print_log = false;
+  bool print_log = true;
   const int nreg = 128;
   for (int i = 0; i < 3; ++i) {
     reset_and_start_timer();
@@ -152,6 +152,7 @@ int main() {
       &x0, &x1, &y0, &y1, &z0, &z1, &Nx, &Ny, &Nz,
       &d_coeff, &d_vsq, &d_Aispc0, &d_Aispc1};
     double dt = 1e3*CUDALaunch(NULL, func_name, func_args, print_log, nreg);
+    print_log = false;
     minTimeISPCTasks = std::min(minTimeISPCTasks, dt);
   }
   memcpyD2H(Aispc[1], d_Aispc1, bufsize);

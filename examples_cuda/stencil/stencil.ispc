@@ -40,8 +40,44 @@ stencil_step(uniform int x0, uniform int x1,
              uniform const double Ain[], uniform double Aout[]) {
     const uniform int Nxy = Nx * Ny;
 
+#if 0
+#define VER1
+#endif
+
+#ifdef VER1
+    const uniform int x1o = 1;
+    const uniform int x2o = 2;
+    const uniform int x3o = 3;
+    const uniform int y1o = Nx;
+    const uniform int y2o = Nx*2;
+    const uniform int y3o = Nx*3;
+    const uniform int z1o = Nxy;
+    const uniform int z2o = Nxy*2;
+    const uniform int z3o = Nxy*3;
+#endif
+
     foreach (z = z0 ... z1, y = y0 ... y1, x = x0 ... x1) 
     {
+#ifdef VER1
+
+      int index = (z * Nxy) + (y * Nx) + x;
+#define A_cur(x, y, z)  Ain [index + (x) + (y) + (z)]
+#define A_next(x, y, z) Aout[index + (x) + (y) + (z)]
+          double div = coef[0] * A_cur(0, 0, 0) +
+            coef[1] * (A_cur(+x1o, 0, 0) + A_cur(-x1o, 0, 0) +
+                A_cur(0, +y1o, 0) + A_cur(0, -y1o, 0) +
+                A_cur(0, 0, +z1o) + A_cur(0, 0, -z1o)) +
+            coef[2] * (A_cur(+x2o, 0, 0) + A_cur(-x2o, 0, 0) +
+                A_cur(0, +y2o, 0) + A_cur(0, -y2o, 0) +
+                A_cur(0, 0, +z2o) + A_cur(0, 0, -z2o)) +
+            coef[3] * (A_cur(+x3o, 0, 0) + A_cur(-x3o, 0, 0) + 
+                A_cur(0, +y3o, 0) + A_cur(0, -y3o, 0) +
+                A_cur(0, 0, +z3o) + A_cur(0, 0, -z3o));
+            A_next(0, 0, 0) = 2.0d0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
+              vsq[index] * div;
+
+#else
+
       int index = (z * Nxy) + (y * Nx) + x;
 #define A_cur(x, y, z) Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)]
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
@@ -59,12 +95,14 @@ stencil_step(uniform int x0, uniform int x1,
       A_next(0, 0, 0) = 2.0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
         vsq[index] * div;
 
+#endif
+
     }
 }
 
 #define SPANX 32
-#define SPANY 8
-#define SPANZ 8
+#define SPANY 2
+#define SPANZ 4
 
 static task void
 stencil_step_task(uniform int x0, uniform int x1,
