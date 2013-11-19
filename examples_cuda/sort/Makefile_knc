@@ -1,0 +1,37 @@
+PROG=sort_mic
+ISPC_SRC=sort.ispc
+CXX_SRC=sort.cpp  ../tasksys.cpp sort_serial.cpp
+
+CXX=icc
+CXXFLAGS=-O3 -I$(CUDATK)/include -mmic -openmp
+LD=icc
+LDFLAGS=-mmic -openmp
+
+ISPC=ispc
+ISPCFLAGS=-O3 --math-lib=default --target=generic-16 --c++-include-file=../intrinsics/knc-i1x16.h --opt=fast-math
+
+.SUFFIXES: .o .cpp
+
+
+ISPC_OBJ=$(ISPC_SRC:%.ispc=%_ispc.o)
+CXX_OBJ=$(CXX_SRC:%.cpp=%.o)
+
+all: $(PROG)
+
+
+
+$(PROG): $(ISPC_OBJ) $(CXX_OBJ) 
+	$(LD) -o $@ $^ $(LDFLAGS)
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS)  -o $@ -c $<
+
+%_ispc.o: %.ispc
+	$(ISPC) $(ISPCFLAGS) --emit-c++ -o `basename $< .ispc`_ispc_zmm.cpp -h `basename $< .ispc`_ispc.h $< 
+	$(CXX) $(CXXFLAGS) -o $@ `basename $< .ispc`_ispc_zmm.cpp  -c
+
+clean: 
+	/bin/rm -rf *_ispc_zmm.cpp *.o  $(PROG)
+
+	 
+
