@@ -693,9 +693,19 @@ InitTaskSystem() {
                     }
 
                     char name[32];
-                    sprintf(name, "ispc_task.%d", (int)getpid());
-                    workerSemaphore = sem_open(name, O_CREAT, S_IRUSR|S_IWUSR, 0);
-                    if (!workerSemaphore) {
+                    bool success = false;
+                    srand(time(NULL));
+                    for (int i = 0; i < 10; i++) {
+                        sprintf(name, "ispc_task.%d.%d", (int)getpid(), (int)rand());
+                        workerSemaphore = sem_open(name, O_CREAT, S_IRUSR|S_IWUSR, 0);
+                        if (workerSemaphore != SEM_FAILED) {
+                            success = true;
+                            break;
+                        }
+                        fprintf(stderr, "Failed to create %s\n", name);
+                    }
+
+                    if (!success) {
                         fprintf(stderr, "Error creating semaphore (%s): %s\n", name, strerror(errno));
                         exit(1);
                     }
