@@ -298,4 +298,5 @@ export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
   const uniform int ntilex = (w+TILEX-1)/TILEX;
   const uniform int ntiley = (h+TILEY-1)/TILEY;
   launch[ntilex,ntiley] ao_task(w, h, nsubsamples, image);
+  sync;
 }

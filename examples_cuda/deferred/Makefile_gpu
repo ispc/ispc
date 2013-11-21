@@ -41,8 +41,9 @@ $(PROG): $(CXX_OBJ) kernel.ptx
 	$(ISPC) $(ISPCFLAGS) --emit-llvm -o `basename $< .ispc`_ispc_nvptx64.bc -h `basename $< .ispc`_ispc.h $< --emit-llvm
 
 %.ptx: %.bc
-	$(LLVM32DIS) $<
-	$(PTXGEN)  `basename $< .bc`.ll > $@
+	$(PTXGEN)  $< > $@
+# $(LLVM32DIS) $<
+# $(PTXGEN)  `basename $< .bc`.ll > $@
 
 kernel.ptx: $(PTXSRC)
 	cat $^ > kernel.ptx

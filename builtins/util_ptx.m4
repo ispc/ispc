@@ -2917,7 +2917,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call2 = tail call noalias i8* @malloc(i64 %size) #3
+  %call2 = tail call noalias i8* @malloc(i64 %size) 
   %phitmp = ptrtoint i8* %call2 to i64
   br label %if.end
 
@@ -2946,7 +2946,7 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  tail call void @free(i8* %ptr) #3
+  tail call void @free(i8* %ptr) 
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

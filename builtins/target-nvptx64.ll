@@ -647,15 +647,15 @@ define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline
 define  float @__reduce_min_float(<1 x float>) nounwind readnone {
   %value = extractelement <1 x float> %0, i32 0
   %call = tail call float @__shfl_xor_float(float %value, i32 16)
-  %call1 = tail call float @__fminf(float %value, float %call) #4
+  %call1 = tail call float @__fminf(float %value, float %call) 
   %call.1 = tail call float @__shfl_xor_float(float %call1, i32 8)
-  %call1.1 = tail call float @__fminf(float %call1, float %call.1) #4
+  %call1.1 = tail call float @__fminf(float %call1, float %call.1) 
   %call.2 = tail call float @__shfl_xor_float(float %call1.1, i32 4)
-  %call1.2 = tail call float @__fminf(float %call1.1, float %call.2) #4
+  %call1.2 = tail call float @__fminf(float %call1.1, float %call.2) 
   %call.3 = tail call float @__shfl_xor_float(float %call1.2, i32 2)
-  %call1.3 = tail call float @__fminf(float %call1.2, float %call.3) #4
+  %call1.3 = tail call float @__fminf(float %call1.2, float %call.3) 
   %call.4 = tail call float @__shfl_xor_float(float %call1.3, i32 1)
-  %call1.4 = tail call float @__fminf(float %call1.3, float %call.4) #4
+  %call1.4 = tail call float @__fminf(float %call1.3, float %call.4) 
   ret float %call1.4
 }
 
