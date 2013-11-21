@@ -312,7 +312,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",-sse4.1,-sse4.2"
 #else
         ",-sse41,-sse42"
@@ -328,7 +328,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",-sse4.1,-sse4.2"
 #else
         ",-sse41,-sse42"
@@ -345,7 +345,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_vectorWidth = 4;
         // TODO: why not sse42 and popcnt?
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
@@ -362,7 +362,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
@@ -377,7 +377,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
@@ -392,7 +392,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+sse4.1,-sse4.2"
 #else
         ",+sse41,-sse42"
@@ -512,7 +512,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
@@ -533,7 +533,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
@@ -553,7 +553,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
@@ -574,7 +574,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
@@ -599,7 +599,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
@@ -623,7 +623,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         ",+rdrnd"
 #else
         ",+rdrand"
