@@ -18,7 +18,7 @@ PTXGEN += -ftz=1 -prec-div=0 -prec-sqrt=0 -fma=1
 
 LLVM32DIS=$(LLVM32)/bin/llvm-dis
 
-.SUFFIXES: .bc .o .ptx .cu _ispc_nvptx64.bc
+##.SUFFIXES: .bc .o .ptx .cu
 
 
 ISPC_OBJ=$(ISPC_SRC:%.ispc=%_ispc.o)
@@ -26,7 +26,7 @@ ISPC_BC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.bc)
 PTXSRC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.ptx)
 CXX_OBJ=$(CXX_SRC:%.cpp=%.o)
 
-all: $(PROG)
+all: $(ISPC_BC) $(PROG)
 
 
 $(CXX_OBJ) : kernel.ptx
@@ -42,8 +42,9 @@ $(PROG): $(CXX_OBJ) kernel.ptx
 	$(ISPC) $(ISPCFLAGS) --emit-llvm -o `basename $< .ispc`_ispc_nvptx64.bc -h `basename $< .ispc`_ispc.h $< --emit-llvm
 
 %.ptx: %.bc
-	$(LLVM32DIS) $<
-	$(PTXGEN)  `basename $< .bc`.ll > $@
+	$(PTXGEN)  $< > $@
+#	$(LLVM32DIS) $<
+#	$(PTXGEN)  `basename $< .bc`.ll > $@
 
 kernel.ptx: $(PTXSRC)
 	cat $^ > kernel.ptx
