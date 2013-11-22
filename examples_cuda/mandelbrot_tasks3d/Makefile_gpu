@@ -26,7 +26,11 @@ ISPC_BC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.bc)
 PTXSRC=$(ISPC_SRC:%.ispc=%_ispc_nvptx64.ptx)
 CXX_OBJ=$(CXX_SRC:%.cpp=%.o)
 
-all: $(PROG)
+all: $(ISPC_BC) $(PROG)
+
+CUDART:
+	cd _cuobj && make
+	g++ -o  mandel_cu_nvcc mandel_cu.cpp  -I$(CUDATK)/include  -lcuda mandelbrot_tasks_serial.cpp -L./_cuobj -lmandel_cudart -lcudart -L$(CUDATK)/lib64  -D_CUDART_ -lcudadevrt
 
 
 $(CXX_OBJ) : kernel.ptx

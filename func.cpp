@@ -568,6 +568,16 @@ Function::GenerateIR() {
         Assert(type != NULL);
         if (type->isExported) { // && g->target->getISA() != Target::VPTX64) {
             if (!type->isTask) {
+              if (g->target->isPTX() && g->target->getISA() == Target::NVPTX64)
+              {
+                llvm::NamedMDNode* annotations =
+                  m->module->getOrInsertNamedMetadata("nvvm.annotations");
+                llvm::SmallVector<llvm::Value*, 3> av;
+                av.push_back(function);
+                av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
+                av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
+                annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
+              }
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;

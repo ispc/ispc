@@ -44,6 +44,13 @@
 #include "../timing.h"
 
 #include "../cuda_ispc.h"
+#ifdef _CUDART_
+extern "C"
+void mandelbrot_ispc(float x0, float y0, 
+    float x1, float y1,
+    int width, int height, 
+    int maxIterations, int output[]);
+#endif
 
 
 extern void mandelbrot_serial(float x0, float y0, float x1, float y1,
@@ -125,10 +132,10 @@ int main(int argc, char *argv[]) {
     for (unsigned int i = 0; i < width * height; ++i)
       buf[i] = 0;
     reset_and_start_timer();
-#if 0
+#ifdef _CUDART_
     const double t0 = rtc();
     mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, (int*)d_buf);
-    double dt = rtc() - t0; //get_elapsed_mcycles();
+    double dt = 1e3*(rtc() - t0); //get_elapsed_mcycles();
 #else
     const char * func_name = "mandelbrot_ispc";
     void *func_args[] = {&x0, &y0, &x1, &y1, &width, &height, &maxIterations, &d_buf};
