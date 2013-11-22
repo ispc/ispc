@@ -239,9 +239,9 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                 new llvm::GlobalVariable(*m->module, llvmType,
                                          sym->type->IsConstType(),
                                          llvm::GlobalValue::InternalLinkage, cinit,
-                                         llvm::Twine("static.") +
+                                         llvm::Twine("static_") +
                                          llvm::Twine(sym->pos.first_line) +
-                                         llvm::Twine(".") + sym->name.c_str());
+                                         llvm::Twine("_") + sym->name.c_str());
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }

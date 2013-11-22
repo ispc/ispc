@@ -101,7 +101,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, uniform Plane &plane) {
 }
 
 
-static inline void
+void
 ray_sphere_intersect(Isect &isect, Ray &ray, uniform Sphere &sphere) {
   vec rs = ray.org - sphere.center;
 
@@ -158,8 +158,8 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
 
   orthoBasis(basis, isect.n);
 
-  const uniform int ntheta = NAO_SAMPLES;
-  const uniform int nphi   = NAO_SAMPLES;
+  static const uniform int ntheta = NAO_SAMPLES;
+  static const uniform int nphi   = NAO_SAMPLES;
   for (uniform int j = 0; j < ntheta; j++) {
     for (uniform int i = 0; i < nphi; i++) {
       Ray ray;
@@ -200,15 +200,15 @@ ambient_occlusion(Isect &isect, uniform Plane &plane, uniform Sphere spheres[3],
 /* Compute the image for the scanlines from [y0,y1), for an overall image
    of width w and height h.
    */
-static inline void ao_tile(
+static  inline void ao_tile(
     uniform int x0, uniform int x1,
     uniform int y0, uniform int y1, 
     uniform int w, uniform int h,
     uniform int nsubsamples, 
     uniform float image[]) 
 {
-  uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-  uniform Sphere spheres[3] = {
+  static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+  static uniform Sphere spheres[3] = {
     { { -2.0f, 0.0f, -3.5f }, 0.5f },
     { { -0.5f, 0.0f, -3.0f }, 0.5f },
     { { 1.0f, 0.0f, -2.2f }, 0.5f } };
