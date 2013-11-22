@@ -2580,7 +2580,7 @@ Module::CompileAndOutput(const char *srcFile,
         int i = 0;
         const char *firstISA;
         while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
-            firstISA = Target::ISAToString((Target::ISA) i);
+            firstISA = Target::ISAToTargetString((Target::ISA) i);
             firstTargetMachine = targetMachines[i++];
         }
         Assert(firstTargetMachine != NULL);

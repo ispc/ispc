@@ -83,6 +83,10 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
     ISPC_LIBS += -lcurses
 endif
 
+ifeq ($(LLVM_VERSION),LLVM_3_5)
+    ISPC_LIBS += -lcurses
+endif
+
 ifeq ($(ARCH_OS),Linux)
 	ISPC_LIBS += -ldl
 endif

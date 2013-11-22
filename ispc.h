@@ -40,8 +40,8 @@
 
 #define ISPC_VERSION "1.5.1dev"
 
-#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4)
-#error "Only LLVM 3.1, 3.2, 3.3 and the 3.4 development branch are supported"
+#if !defined(LLVM_3_1) && !defined(LLVM_3_2) && !defined(LLVM_3_3) && !defined(LLVM_3_4) && !defined(LLVM_3_5)
+#error "Only LLVM 3.1, 3.2, 3.3, 3.4 and the 3.5 development branch are supported"
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -214,8 +214,15 @@ public:
     /** Convert ISA enum to string */
     static const char *ISAToString(Target::ISA isa);
 
-    /** Returns a string like "avx" encoding the target. */
+    /** Returns a string like "avx" encoding the target. Good for mangling. */
     const char *GetISAString() const;
+
+    /** Convert ISA enum to string */
+    static const char *ISAToTargetString(Target::ISA isa);
+
+    /** Returns a string like "avx1.1-i32x8" encoding the target.
+        This may be used for Target initialization. */
+    const char *GetISATargetString() const;
 
     /** Returns the size of the given type */
     llvm::Value *SizeOf(llvm::Type *type,
@@ -253,6 +260,8 @@ public:
     std::string getCPU() const {return m_cpu;}
 
     int getNativeVectorWidth() const {return m_nativeVectorWidth;}
+
+    int getDataTypeWidth() const {return m_dataTypeWidth;}
 
     int getVectorWidth() const {return m_vectorWidth;}
 
@@ -321,9 +330,13 @@ private:
 #endif
 
     /** Native vector width of the vector instruction set.  Note that this
-        value is directly derived from the ISA Being used (e.g. it's 4 for
+        value is directly derived from the ISA being used (e.g. it's 4 for
         SSE, 8 for AVX, etc.) */
     int m_nativeVectorWidth;
+
+    /** Data type with in bits. Typically it's 32, but could be 8, 16 or 64.
+        For generic it's -1, which means undefined. */
+    int m_dataTypeWidth;
 
     /** Actual vector width currently being compiled to.  This may be an
         integer multiple of the native vector width, for example if we're

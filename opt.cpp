@@ -63,7 +63,7 @@
   #include <llvm/IR/BasicBlock.h>
   #include <llvm/IR/Constants.h>
 #endif
-#if defined (LLVM_3_4)
+#if defined (LLVM_3_4) || defined(LLVM_3_5)
   #include <llvm/Transforms/Instrumentation.h>
 #endif
 #include <llvm/PassManager.h>
@@ -441,7 +441,7 @@ DebugPassManager::add(llvm::Pass * P, int stage = -1) {
                 number, P->getPassName());
             PM.add(CreateDebugPass(buf));
         }
-#ifdef LLVM_3_4
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         if (g->debugIR == number) {
             // adding generating of LLVM IR debug after optimization
             char buf[100];

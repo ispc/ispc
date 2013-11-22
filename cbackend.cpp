@@ -2196,7 +2196,7 @@ bool CWriter::doInitialization(llvm::Module &M) {
 #endif
   TAsm = new CBEMCAsmInfo();
   MRI  = new llvm::MCRegisterInfo();
-#if defined(LLVM_3_4)
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
   TCtx = new llvm::MCContext(TAsm, MRI, NULL);
 #else
   TCtx = new llvm::MCContext(*TAsm, *MRI, NULL);
