@@ -1,25 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\common.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E787BC3F-2D2E-425E-A64D-4721E2FF3DC9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>rt</RootNamespace>
-    <ISPC_compiler Condition=" '$(ISPC_compiler)' == '' ">ispc</ISPC_compiler>
+    <ISPC_file>rt</ISPC_file>
+    <default_targets>sse2,sse4-x2,avx1-i32x8</default_targets>
   </PropertyGroup>
-  <ItemGroup>
-    <CustomBuild Include="rt.ispc">
-      <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4-x2,avx</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4-x2,avx</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=sse2,sse4-x2,avx</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=sse2,sse4-x2,avx</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(TargetDir)%(Filename).obj;$(TargetDir)%(Filename)_sse2.obj;$(TargetDir)%(Filename)_sse4.obj;$(TargetDir)%(Filename)_avx.obj;$(TargetDir)%(Filename)_ispc.h</Outputs>
-    </CustomBuild>
-  </ItemGroup>
+  <Import Project="..\common.props" />
   <ItemGroup>
     <ClCompile Include="rt.cpp" />
     <ClCompile Include="rt_serial.cpp" />
