@@ -4258,6 +4258,41 @@ static inline void fastmath() {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+// saturation arithmetic
+
+static inline uniform int8 padds(uniform int8 a, uniform int8 b) {
+    return __padds_i8(a, b);
+}
+
+static inline uniform int16 padds(uniform int16 a, uniform int16 b) {
+    return __padds_i16(a, b);
+}
+
+static inline uniform unsigned int8 paddus(uniform unsigned int8 a, uniform unsigned int8 b) {
+    return __paddus_i8(a, b);
+}
+
+static inline uniform unsigned int16 paddus(uniform unsigned int16 a, unsigned uniform int16 b) {
+    return __paddus_i16(a, b);
+}
+
+static inline uniform int8 psubs(uniform int8 a, uniform int8 b) {
+    return __psubs_i8(a, b);
+}
+
+static inline uniform int16 psubs(uniform int16 a, uniform int16 b) {
+    return __psubs_i16(a, b);
+}
+
+static inline uniform unsigned int8 psubus(uniform unsigned int8 a, uniform unsigned int8 b) {
+    return __psubus_i8(a, b);
+}
+
+static inline uniform unsigned int16 psubus(uniform unsigned int16 a, unsigned uniform int16 b) {
+    return __psubus_i16(a, b);
+}
+
+///////////////////////////////////////////////////////////////////////////
 // rdrand
 
 static inline uniform bool rdrand(float * uniform ptr) {

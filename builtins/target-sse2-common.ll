@@ -36,6 +36,64 @@ aossoa()
 rdrand_decls()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; saturation arithmetic
+declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <16 x i8> @__vpadds_i8(<16 x i8> %a0, <16 x i8> %a1) {
+  ; CHECK: vpaddsb
+  %res = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+
+
+;;declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__padds_i8(i8 %a0, i8 %a1) {
+  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.padds.b, %a0, %a1)
+  ret i8 %ret
+}
+
+declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__padds_i16(i16 %a0, i16 %a1) {
+  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.padds.w, %a0, %a1)
+  ret i16 %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__paddus_i8(i8 %a0, i8 %a1) {
+  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.paddus.b, %a0, %a1)
+  ret i8 %ret
+}
+
+declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__paddus_i16(i16 %a0, i16 %a1) {
+  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)
+  ret i16 %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__psubs_i8(i8 %a0, i8 %a1) {
+  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.psubs.b, %a0, %a1)
+  ret i8 %ret
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__psubs_i16(i16 %a0, i16 %a1) {
+  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.psubs.w, %a0, %a1)
+  ret i16 %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__psubus_i8(i8 %a0, i8 %a1) {
+  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.psubus.b, %a0, %a1)
+  ret i8 %ret
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__psubus_i16(i16 %a0, i16 %a1) {
+  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)
+  ret i16 %ret
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp
 
 declare <4 x float> @llvm.x86.sse.rcp.ss(<4 x float>) nounwind readnone
