@@ -45,18 +45,12 @@ include(`target-avx-common.ll')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;vector saturation arithmetic
+
 define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
-  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
-  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
-    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  convert16to8(i8, %r16, %r)
   ret <WIDTH x i8> %r
 }
 
@@ -66,17 +60,10 @@ define <WIDTH x i16> @__padds_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
 }
 
 define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
-  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
-  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
-    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  convert16to8(i8, %r16, %r)
   ret <WIDTH x i8> %r
 }
 
@@ -86,17 +73,10 @@ define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
 }
 
 define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
-  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
-  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
-    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  convert16to8(i8, %r16, %r)
   ret <WIDTH x i8> %r
 }
 
@@ -106,17 +86,10 @@ define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
 }
 
 define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  %v0 = shufflevector <8 x i8> %0, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
-  %v1 = shufflevector <8 x i8> %1, <8 x i8> undef,
-    <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
-                i32 undef, i32 undef, i32 undef, i32 undef,
-                i32 undef, i32 undef, i32 undef, i32 undef>
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
-  %r = shufflevector <16 x i8> %r16, <16 x i8> undef,
-    <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  convert16to8(i8, %r16, %r)
   ret <WIDTH x i8> %r    
 }
 

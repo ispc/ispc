@@ -49,6 +49,58 @@ define(`MASK_HIGH_BIT_ON',
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; vector convertation utilities
+;; convert 4-wide vector into 8-wide vector
+;;
+;; $1: vector element type
+;; $2: 4-wide vector
+;; $3: 8-wide vector
+
+define(`convert4to8', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <8 x i32> <i32 0, i32 1, i32 2, i32 3, 
+             i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert4to16', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <16 x i32> <i32 0, i32 1, i32 2, i32 3, 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert8to16', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+;; convert 4-wide vector into 8-wide vector
+;;
+;; $1: vector element type
+;; $2: 8-wide vector
+;; $3: 4-wide vector
+
+define(`convert8to4', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+
+define(`convert16to4', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+define(`convert16to8', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; vector deconstruction utilities
 ;; split 8-wide vector into 2 4-wide vectors
 ;;
