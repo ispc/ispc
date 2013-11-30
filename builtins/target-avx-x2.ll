@@ -40,51 +40,9 @@ stdlib_core()
 packed_load_and_store()
 scans()
 int64minmax()
+saturation_arithmetic_vec16()
 
 include(`target-avx-common.ll')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;vector saturation arithmetic
-
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.padds.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
-}
-
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.padds.w, %a0, %a1)
-  ret <WIDTH x i16> %ret
-}
-
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.paddus.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
-}
-
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)  
-  ret <WIDTH x i16> %ret
-}
-
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.psubs.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
-}
-
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.psubs.w, %a0, %a1)
-  ret <WIDTH x i16> %ret
-}
-
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.psubus.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
-}
-
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  binary8to16(ret, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)  
-  ret <WIDTH x i16> %ret
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

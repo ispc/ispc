@@ -41,75 +41,9 @@ stdlib_core()
 packed_load_and_store()
 scans()
 int64minmax()
+saturation_arithmetic_vec4()
 
 include(`target-sse2-common.ll')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;vector saturation arithmetic
-
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert4to16(i8, %0, %v0)
-  convert4to16(i8, %1, %v1)    
-  %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert4to8(i16, %0, %v0)
-  convert4to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert4to16(i8, %0, %v0)
-  convert4to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert4to8(i16, %0, %v0)
-  convert4to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to4(i16, %r16, %r)  
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert4to16(i8, %0, %v0)
-  convert4to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert4to8(i16, %0, %v0)
-  convert4to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert4to16(i8, %0, %v0)
-  convert4to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert4to8(i16, %0, %v0)
-  convert4to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
