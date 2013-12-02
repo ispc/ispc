@@ -241,7 +241,11 @@ namespace {
   class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
     CBEMCAsmInfo() {
+#if defined(LLVM_3_5)
+      GlobalPrefix = '\0';
+#else
       GlobalPrefix = "";
+#endif
       PrivateGlobalPrefix = "";
     }
   };
