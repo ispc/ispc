@@ -635,6 +635,7 @@ import platform
 import smtplib
 import datetime
 import copy
+import multiprocessing
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEBase import MIMEBase
 from email.mime.text import MIMEText
@@ -663,13 +664,14 @@ if __name__ == '__main__':
     "Try to build compiler with all LLVM\n\talloy.py -r --only=build\n" +
     "Performance validation run with 10 runs of each test and comparing to branch 'old'\n\talloy.py -r --only=performance --compare-with=old --number=10\n" +
     "Validation run. Update fail_db.txt with new fails, send results to my@my.com\n\talloy.py -r --update-errors=F --notify='my@my.com'\n")
+    num_threads="%s" % multiprocessing.cpu_count()
     parser = MyParser(usage="Usage: alloy.py -r/-b [options]", epilog=examples)
     parser.add_option('-b', '--build-llvm', dest='build_llvm',
         help='ask to build LLVM', default=False, action="store_true")
     parser.add_option('-r', '--run', dest='validation_run',
         help='ask for validation run', default=False, action="store_true")
     parser.add_option('-j', dest='speed',
-        help='set -j for make', default="8")
+        help='set -j for make', default=num_threads)
     # options for activity "build LLVM"
     llvm_group = OptionGroup(parser, "Options for building LLVM",
                     "These options must be used with -b option.")
