@@ -66,8 +66,8 @@ writePPM(float *buf, int width, int height, const char *fn) {
 
 
 int main() {
-    unsigned int width = 768;
-    unsigned int height = 768;
+    unsigned int width = 768 * 4;
+    unsigned int height = 768 * 4;
     float x0 = -10;
     float x1 = 10;
     float y0 = -10;
@@ -98,13 +98,9 @@ int main() {
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
-    double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        reset_and_start_timer();
-        noise_serial(x0, y0, x1, y1, width, height, buf);
-        double dt = get_elapsed_mcycles();
-        minSerial = std::min(minSerial, dt);
-    }
+    reset_and_start_timer();
+    noise_serial(x0, y0, x1, y1, width, height, buf);
+    double minSerial = get_elapsed_mcycles();
 
     printf("[noise serial]:\t\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "noise-serial.ppm");

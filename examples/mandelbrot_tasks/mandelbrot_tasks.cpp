@@ -74,8 +74,8 @@ static void usage() {
 }
 
 int main(int argc, char *argv[]) {
-    unsigned int width = 1536;
-    unsigned int height = 1024;
+    unsigned int width = 1536 * 8;
+    unsigned int height = 1024 * 8;
     float x0 = -2;
     float x1 = 1;
     float y0 = -1;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     // time of three runs.
     //
     double minISPC = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 7; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
@@ -126,16 +126,12 @@ int main(int argc, char *argv[]) {
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
-    double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        // Clear out the buffer
-        for (unsigned int i = 0; i < width * height; ++i)
-            buf[i] = 0;
-        reset_and_start_timer();
-        mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
-        double dt = get_elapsed_mcycles();
-        minSerial = std::min(minSerial, dt);
-    }
+    // Clear out the buffer
+    for (unsigned int i = 0; i < width * height; ++i)
+        buf[i] = 0;
+    reset_and_start_timer();
+    mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
+    double minSerial = get_elapsed_mcycles();
 
     printf("[mandelbrot serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(buf, width, height, "mandelbrot-serial.ppm");

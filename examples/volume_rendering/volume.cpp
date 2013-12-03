@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
     // tasks; report the minimum time of three runs.
     //
     double minISPCtasks = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 7; ++i) {
         reset_and_start_timer();
         volume_ispc_tasks(density, n, raster2camera, camera2world,
                           width, height, image);
@@ -195,14 +195,10 @@ int main(int argc, char *argv[]) {
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
-    double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        reset_and_start_timer();
-        volume_serial(density, n, raster2camera, camera2world,
-                      width, height, image);
-        double dt = get_elapsed_mcycles();
-        minSerial = std::min(minSerial, dt);
-    }
+    reset_and_start_timer();
+    volume_serial(density, n, raster2camera, camera2world,
+                    width, height, image);
+    double minSerial = get_elapsed_mcycles();
 
     printf("[volume serial]:\t\t[%.3f] million cycles\n", minSerial);
     writePPM(image, width, height, "volume-serial.ppm");

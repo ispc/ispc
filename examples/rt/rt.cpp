@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //
     double minTimeISPCtasks = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 7; ++i) {
         reset_and_start_timer();
         raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
                             camera2world, image, id, nodes, triangles);
@@ -249,14 +249,10 @@ int main(int argc, char *argv[]) {
     // And 3 iterations with the serial implementation, reporting the
     // minimum time.
     //
-    double minTimeSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        reset_and_start_timer();
-        raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
-                        camera2world, image, id, nodes, triangles);
-        double dt = get_elapsed_mcycles();
-        minTimeSerial = std::min(dt, minTimeSerial);
-    }
+    reset_and_start_timer();
+    raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
+                    camera2world, image, id, nodes, triangles);
+    double minTimeSerial = get_elapsed_mcycles();
     printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n", 
            minTimeSerial, width, height);
     printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", 
