@@ -40,7 +40,6 @@ stdlib_core()
 packed_load_and_store()
 scans()
 int64minmax()
-saturation_arithmetic_vec8()
 
 include(`target-avx-common.ll')
 

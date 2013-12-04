@@ -50,11 +50,27 @@ define(`MASK_HIGH_BIT_ON',
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; vector convertation utilities
-;; convert 4-wide vector into 8-wide vector
+;; convert 1-wide vector into 8-wide vector
 ;;
 ;; $1: vector element type
-;; $2: 4-wide vector
+;; $2: 1-wide vector
 ;; $3: 8-wide vector
+
+
+define(`convert1to8', `
+  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
+  <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+             i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+
+define(`convert1to16', `
+  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
+  <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
 
 define(`convert4to8', `
   $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
@@ -117,7 +133,19 @@ define(`convert16to32', `
 ;;
 ;; $1: vector element type
 ;; $2: 8-wide vector
-;; $3: 4-wide vector
+;; $3: 1-wide vector
+
+
+define(`convert8to1', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+    <1 x i32> <i32 0>
+')
+
+
+define(`convert16to1', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+    <1 x i32> <i32 0>
+')
 
 define(`convert8to4', `
   $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
@@ -201,6 +229,74 @@ declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnon
 define i16 @__psubus_i16(i16 %a0, i16 %a1) {
   sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)
   ret i16 %ret
+}
+')
+
+;;no vector saturation arithmetic
+
+define(`saturation_arithmetic_novec', `
+define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  convert1to16(i8, %0, %v0)
+  convert1to16(i8, %1, %v1)    
+  %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to1(i8, %r16, %r)
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__padds_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  convert1to8(i16, %0, %v0)
+  convert1to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to1(i16, %r16, %r)
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  convert1to16(i8, %0, %v0)
+  convert1to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to1(i8, %r16, %r)
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  convert1to8(i16, %0, %v0)
+  convert1to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to1(i16, %r16, %r)  
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  convert1to16(i8, %0, %v0)
+  convert1to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to1(i8, %r16, %r)
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  convert1to8(i16, %0, %v0)
+  convert1to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to1(i16, %r16, %r)
+  ret <WIDTH x i16> %r
+}
+
+define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  convert1to16(i8, %0, %v0)
+  convert1to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to1(i8, %r16, %r)
+  ret <WIDTH x i8> %r
+}
+
+define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  convert1to8(i16, %0, %v0)
+  convert1to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to1(i16, %r16, %r)
+  ret <WIDTH x i16> %r
 }
 ')
 

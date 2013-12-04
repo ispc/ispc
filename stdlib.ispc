@@ -4287,12 +4287,12 @@ static inline varying unsigned int8 paddus(varying unsigned int8 a,
 }
 
 static inline uniform unsigned int16 paddus(uniform unsigned int16 a, 
-                                            unsigned uniform int16 b) {
+                                            uniform unsigned int16 b) {
     return __paddus_i16(a, b);
 }
 
 static inline varying unsigned int16 paddus(varying unsigned int16 a, 
-                                            unsigned varying int16 b) {
+                                            varying unsigned int16 b) {
     return __paddus_vi16(a, b);
 }
 
@@ -4323,12 +4323,12 @@ static inline varying unsigned int8 psubus(varying unsigned int8 a,
 }
 
 static inline uniform unsigned int16 psubus(uniform unsigned int16 a, 
-                                            unsigned uniform int16 b) {
+                                            uniform unsigned int16 b) {
     return __psubus_i16(a, b);
 }
 
 static inline varying unsigned int16 psubus(varying unsigned int16 a, 
-                                            unsigned varying int16 b) {
+                                            varying unsigned int16 b) {
     return __psubus_vi16(a, b);
 }
 ///////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,11 @@
+
+export uniform int width() { return programCount; }
+
+export void f_f(uniform float RET[], uniform float aFOO[]) {
+    uniform int8 a = 0, b = 255; // min and max unsigned int8
+    RET[programIndex] = psubus(a, b);
+}
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = 0;
+}

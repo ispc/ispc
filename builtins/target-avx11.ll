@@ -34,6 +34,7 @@ include(`target-avx.ll')
 ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
        LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
        `rdrand_definition()')
+saturation_arithmetic_vec8()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
