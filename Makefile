@@ -83,6 +83,10 @@ ifeq ($(LLVM_VERSION),LLVM_3_4)
     ISPC_LIBS += -lcurses
 endif
 
+ifeq ($(LLVM_VERSION),LLVM_3_5)
+    ISPC_LIBS += -lcurses
+endif
+
 ifeq ($(ARCH_OS),Linux)
 	ISPC_LIBS += -ldl
 endif
@@ -109,14 +113,13 @@ else
     BUILD_VERSION:=$(GIT_REVISION)
 endif
 
-CXX=g++
-CPP=cpp
+CXX=clang++
 OPT=-O2
 CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
 	-Wall \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
-	-Wno-sign-compare
+	-Wno-sign-compare -Wno-unused-function
 ifneq ($(LLVM_VERSION),LLVM_3_1)
 	CXXFLAGS+=-Werror
 endif
@@ -141,7 +144,7 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
+TARGETS=avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
 	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
 ifneq ($(ARM_ENABLED), 0)
@@ -160,7 +163,7 @@ BISON_SRC=parse.yy
 FLEX_SRC=lex.ll
 
 OBJS=$(addprefix objs/, $(CXX_SRC:.cpp=.o) $(BUILTINS_OBJS) \
-       stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o \
+       stdlib_mask1_ispc.o stdlib_mask8_ispc.o stdlib_mask16_ispc.o stdlib_mask32_ispc.o stdlib_mask64_ispc.o \
 	$(BISON_SRC:.yy=.o) $(FLEX_SRC:.ll=.o))
 
 default: ispc
@@ -202,8 +205,13 @@ ispc: print_llvm_src dirs $(OBJS)
 	@$(CXX) $(OPT) $(LDFLAGS) -o $@ $(OBJS) $(ISPC_LIBS)
 
 # Use clang as a default compiler, instead of gcc
+# This is default now.
 clang: ispc
 clang: CXX=clang++
+
+# Use gcc as a default compiler, instead of gcc
+gcc: ispc
+gcc: CXX=clang++
 
 # Build ispc with address sanitizer instrumentation using clang compiler
 # Note that this is not portable build
@@ -246,15 +254,15 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	@$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
-objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
 
-objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
 	@m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
 
@@ -268,20 +276,25 @@ objs/builtins-c-64.cpp: builtins/builtins.c
 
 objs/stdlib_mask1_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for mask1
-	@$(CLANG) -E -x c -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=1 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
 		python stdlib2cpp.py mask1 > $@
 
 objs/stdlib_mask8_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for mask8
-	@$(CLANG) -E -x c -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=8 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
 		python stdlib2cpp.py mask8 > $@
 
 objs/stdlib_mask16_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for mask16
-	@$(CLANG) -E -x c -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=16 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
 		python stdlib2cpp.py mask16 > $@
 
 objs/stdlib_mask32_ispc.cpp: stdlib.ispc
 	@echo Creating C++ source from $< for mask32
-	@$(CLANG) -E -x c -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.1415926536 $< -o - | \
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=32 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
 		python stdlib2cpp.py mask32 > $@
+
+objs/stdlib_mask64_ispc.cpp: stdlib.ispc
+	@echo Creating C++ source from $< for mask64
+	@$(CLANG) -E -x c -DISPC_MASK_BITS=64 -DISPC=1 -DPI=3.14159265358979 $< -o - | \
+		python stdlib2cpp.py mask64 > $@

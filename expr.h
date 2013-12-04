@@ -155,6 +155,7 @@ public:
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     const Type *GetType() const;
+    const Type *GetLValueType() const;
     void Print() const;
 
     Expr *Optimize();
@@ -729,6 +730,8 @@ bool CanConvertTypes(const Type *fromType, const Type *toType,
     parameter").
  */
 Expr *TypeConvertExpr(Expr *expr, const Type *toType, const char *errorMsgBase);
+
+Expr * MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p);
 
 /** Utility routine that emits code to initialize a symbol given an
     initializer expression.

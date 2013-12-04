@@ -270,6 +270,14 @@ new reserved words: ``unmasked``, ``foreach_unique``, ``foreach_active``,
 and ``in``.  Any program that happens to have a variable or function with
 one of these names must be modified to rename that symbol.
 
+Updating ISPC Programs For Changes In ISPC 1.5.0
+------------------------------------------------
+
+This release adds support for double precision floating point constants.
+Double precision floating point constants are floating point number with
+``d`` suffix and optional exponent part. Here are some examples: 3.14d,
+31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
+treated as single precision constant.
 
 Getting Started with ISPC
 =========================
@@ -1349,7 +1357,8 @@ but are likely to be supported in future releases:
 * Bitfield members of ``struct`` types
 * Variable numbers of arguments to functions
 * Literal floating-point constants (even without a ``f`` suffix) are
-  currently treated as being ``float`` type, not ``double``
+  currently treated as being ``float`` type, not ``double``. To have a double
+  precision floating point constant use ``d`` suffix.
 * The ``volatile`` qualifier
 * The ``register`` storage class for variables.  (Will be ignored).
 
@@ -2335,8 +2344,11 @@ based on C++'s ``new`` and ``delete`` operators:
 In the above code, each program instance allocates its own ``count`` sized
 array of ``uniform int`` values, uses that memory, and then deallocates
 that memory.  Uses of ``new`` and ``delete`` in ``ispc`` programs are
-serviced by corresponding calls the system C library's ``malloc()`` and
-``free()`` functions.
+implemented as calls to C library's aligned memory allocation routines,
+which are platform dependent (``posix_memalign()`` and ``free()`` on Linux
+and Mac and ``_aligned_malloc()`` and ``_aligned_free()`` on Windows). So it's
+advised to pair ISPC's ``new`` and ``delete`` with each other, but not with
+C/C++ memory management functions.
 
 Note that the rules for ``uniform`` and ``varying`` for ``new`` are
 analogous to the corresponding rules for pointers (as described in
@@ -3710,6 +3722,22 @@ the size of the gang (it is masked to ensure valid offsets).
     double rotate(double value, uniform int offset)
 
 
+The ``shift()`` function allows each program instance to find the value of
+the given value that their neighbor ``offset`` steps away has.  This is similar
+to ``rotate()`` with the exception that values are not circularly shifted.  
+Instead, zeroes are shifted in where appropriate.
+
+
+::
+
+    int8 shift(int8 value, uniform int offset)
+    int16 shift(int16 value, uniform int offset)
+    int32 shift(int32 value, uniform int offset)
+    int64 shift(int64 value, uniform int offset)
+    float shift(float value, uniform int offset)
+    double shift(double value, uniform int offset)
+
+
 Finally, the ``shuffle()`` functions allow two variants of fully general
 shuffling of values among the program instances.  For the first version,
 each program instance's value of permutation gives the program instance
@@ -3742,7 +3770,7 @@ the last element of ``value1``, etc.)
     double shuffle(double value0, double value1, int permutation)
 
 Finally, there are primitive operations that extract and set values in the
-SIMD lanes.  You can implement all of the broadcast, rotate, and shuffle
+SIMD lanes.  You can implement all of the broadcast, rotate, shift, and shuffle
 operations described above in this section from these routines, though in
 general, not as efficiently.  These routines are useful for implementing
 other reductions and cross-lane communication that isn't included in the

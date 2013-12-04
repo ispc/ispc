@@ -928,7 +928,7 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
                     const char *includeFileName) {
-    if (diBuilder != NULL && outputType != Header) {
+    if (diBuilder != NULL && (outputType != Header && outputType != Deps)) {
         diBuilder->finalize();
 
         lStripUnusedDebugInfo(module);
@@ -2096,7 +2096,7 @@ lAddExtractedGlobals(llvm::Module *module,
                 // example, this happens with varying globals if we compile
                 // to different vector widths.
                 if (gv2->getType() != gv->getType())
-                    Error(rgi.pos, "Mismatch in size/layout of global "
+                    Warning(rgi.pos, "Mismatch in size/layout of global "
                           "variable \"%s\" with different targets. "
                           "Globals must not include \"varying\" types or arrays "
                           "with size based on programCount when compiling to "
@@ -2446,7 +2446,7 @@ Module::CompileAndOutput(const char *srcFile,
         int i = 0;
         const char *firstISA;
         while (i < Target::NUM_ISAS && firstTargetMachine == NULL) {
-            firstISA = Target::ISAToString((Target::ISA) i);
+            firstISA = Target::ISAToTargetString((Target::ISA) i);
             firstTargetMachine = targetMachines[i++];
         }
         Assert(firstTargetMachine != NULL);

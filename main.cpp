@@ -70,6 +70,8 @@ lPrintVersion() {
            "3.3"
 #elif defined(LLVM_3_4)
            "3.4"
+#elif defined(LLVM_3_5)
+           "3.5"
 #else
 #error "Unhandled LLVM version"
 #endif
@@ -164,7 +166,7 @@ devUsage(int ret) {
     printf("        disable-uniform-memory-optimizations\tDisable uniform-based coherent memory access\n");
     printf("    [--yydebug]\t\t\t\tPrint debugging information during parsing\n");
     printf("    [--debug-phase=<value>]\t\tSet optimization phases to dump. --debug-phase=first,210:220,300,305,310:last\n");
-#ifdef LLVM_3_4
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
     printf("    [--debug-ir=<value>]\t\tSet optimization phase to generate debugIR after it\n");
 #endif
     printf("    [--off-phase=<value>]\t\tSwitch off optimization phases. --off-phase=first,210:220,300,305,310:last\n");
@@ -547,7 +549,7 @@ int main(int Argc, char *Argv[]) {
                             "away or introduce the new ones.\n");
             g->debug_stages = ParsingPhases(argv[i] + strlen("--debug-phase="));
         }
-#ifdef LLVM_3_4
+#if defined(LLVM_3_4) || defined(LLVM_3_5)
         else if (strncmp(argv[i], "--debug-ir=", 11) == 0) {
             g->debugIR = ParsingPhaseName(argv[i] + strlen("--debug-ir="));
         }

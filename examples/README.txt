@@ -146,6 +146,11 @@ This is a simple "hello world" type program that shows a ~10 line
 application program calling out to a ~5 line ispc program to do a simple
 computation.
 
+Sort
+====
+This is a bucket sort of 32 bit unsigned integers.
+By default 1000000 random elements get sorted.
+Call ./sort N in order to sort N elements instead.
 
 Volume
 ======

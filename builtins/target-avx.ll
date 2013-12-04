@@ -49,16 +49,55 @@ include(`target-avx-common.ll')
 declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>) nounwind readnone
 
 define <8 x float> @__rcp_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  ; do one N-R iteration to improve precision
   ;  float iv = __rcp_v(v);
   ;  return iv * (2. - v * iv);
-
   %call = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %0)
-  ; do one N-R iteration
   %v_iv = fmul <8 x float> %0, %call
   %two_minus = fsub <8 x float> <float 2., float 2., float 2., float 2.,
                                  float 2., float 2., float 2., float 2.>, %v_iv  
   %iv_mul = fmul <8 x float> %call, %two_minus
   ret <8 x float> %iv_mul
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; rsqrt
+
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
+
+define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
+  ;  float is = __rsqrt_v(v);
+  %is = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v)
+  ; Newton-Raphson iteration to improve precision
+  ;  return 0.5 * is * (3. - (v * is) * is);
+  %v_is = fmul <8 x float> %v, %is
+  %v_is_is = fmul <8 x float> %v_is, %is
+  %three_sub = fsub <8 x float> <float 3., float 3., float 3., float 3.,
+                                 float 3., float 3., float 3., float 3.>, %v_is_is
+  %is_mul = fmul <8 x float> %is, %three_sub
+  %half_scale = fmul <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
+                                  float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
+  ret <8 x float> %half_scale
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; sqrt
+
+declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
+
+define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysinline {
+  %call = call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %0)
+  ret <8 x float> %call
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; double precision sqrt
+
+declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
+
+define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
+  unary4to8(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
+  ret <8 x double> %ret
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -94,62 +133,14 @@ define <8 x double> @__round_varying_double(<8 x double>) nounwind readonly alwa
 }
 
 define <8 x double> @__floor_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1000 = 9
+  ; roundpd, round down 0b01 | don't signal precision exceptions 0b1001 = 9
   round4to8double(%0, 9)
 }
 
-
 define <8 x double> @__ceil_varying_double(<8 x double>) nounwind readonly alwaysinline {
-  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1000 = 10
+  ; roundpd, round up 0b10 | don't signal precision exceptions 0b1010 = 10
   round4to8double(%0, 10)
 }
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; rsqrt
-
-declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>) nounwind readnone
-
-define <8 x float> @__rsqrt_varying_float(<8 x float> %v) nounwind readonly alwaysinline {
-  ;  float is = __rsqrt_v(v);
-  %is = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %v)
-  ;  return 0.5 * is * (3. - (v * is) * is);
-  %v_is = fmul <8 x float> %v, %is
-  %v_is_is = fmul <8 x float> %v_is, %is
-  %three_sub = fsub <8 x float> <float 3., float 3., float 3., float 3.,
-                                 float 3., float 3., float 3., float 3.>, %v_is_is
-  %is_mul = fmul <8 x float> %is, %three_sub
-  %half_scale = fmul <8 x float> <float 0.5, float 0.5, float 0.5, float 0.5,
-                                  float 0.5, float 0.5, float 0.5, float 0.5>, %is_mul
-  ret <8 x float> %half_scale
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; sqrt
-
-declare <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float>) nounwind readnone
-
-define <8 x float> @__sqrt_varying_float(<8 x float>) nounwind readonly alwaysinline {
-  %call = call <8 x float> @llvm.x86.avx.sqrt.ps.256(<8 x float> %0)
-  ret <8 x float> %call
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; svml
-
-; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
-; or, use the macro to call the 4-wide ones twice with our 8-wide
-; vectors...
-
-declare <8 x float> @__svml_sin(<8 x float>)
-declare <8 x float> @__svml_cos(<8 x float>)
-declare void @__svml_sincos(<8 x float>, <8 x float> *, <8 x float> *)
-declare <8 x float> @__svml_tan(<8 x float>)
-declare <8 x float> @__svml_atan(<8 x float>)
-declare <8 x float> @__svml_atan2(<8 x float>, <8 x float>)
-declare <8 x float> @__svml_exp(<8 x float>)
-declare <8 x float> @__svml_log(<8 x float>)
-declare <8 x float> @__svml_pow(<8 x float>, <8 x float>)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; float min/max
@@ -171,7 +162,37 @@ define <8 x float> @__min_varying_float(<8 x float>,
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; horizontal ops
+;; double precision min/max
+
+declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
+declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
+
+define <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
+  binary4to8(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
+  ret <8 x double> %ret
+}
+
+define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
+  binary4to8(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
+  ret <8 x double> %ret
+}
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; svml
+
+include(`svml.m4')
+;; single precision
+svml_declare(float,f8,8)
+svml_define(float,f8,8,f)
+
+;; double precision
+svml_declare(double,4,4)
+svml_define_x(double,4,4,d,8)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; mask handling
 
 declare i32 @llvm.x86.avx.movmsk.ps.256(<8 x float>) nounwind readnone
 
@@ -204,6 +225,9 @@ define i1 @__none(<8 x i32>) nounwind readnone alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal ops / reductions
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal float ops
 
 declare <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float>, <8 x float>) nounwind readnone
@@ -221,12 +245,36 @@ define float @__reduce_min_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8(float, @__min_varying_float, @__min_uniform_float)
 }
 
-
 define float @__reduce_max_float(<8 x float>) nounwind readnone alwaysinline {
   reduce8(float, @__max_varying_float, @__max_uniform_float)
 }
 
-reduce_equal(8)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; horizontal double ops
+
+declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
+
+define double @__reduce_add_double(<8 x double>) nounwind readonly alwaysinline {
+  %v0 = shufflevector <8 x double> %0, <8 x double> undef,
+                      <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v1 = shufflevector <8 x double> %0, <8 x double> undef,
+                      <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %v0, <4 x double> %v1)
+  %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
+  %final0 = extractelement <4 x double> %sum1, i32 0
+  %final1 = extractelement <4 x double> %sum1, i32 2
+  %sum = fadd double %final0, %final1
+
+  ret double %sum
+}
+
+define double @__reduce_min_double(<8 x double>) nounwind readnone alwaysinline {
+  reduce8(double, @__min_varying_double, @__min_uniform_double)
+}
+
+define double @__reduce_max_double(<8 x double>) nounwind readnone alwaysinline {
+  reduce8(double, @__max_varying_double, @__max_uniform_double)
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int8 ops
@@ -267,6 +315,7 @@ define i16 @__reduce_add_int16(<8 x i16>) nounwind readnone alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int32 ops
 
+;; helper functions
 define <8 x i32> @__add_varying_int32(<8 x i32>,
                                       <8 x i32>) nounwind readnone alwaysinline {
   %s = add <8 x i32> %0, %1
@@ -278,15 +327,14 @@ define i32 @__add_uniform_int32(i32, i32) nounwind readnone alwaysinline {
   ret i32 %s
 }
 
+;; reduction functions
 define i32 @__reduce_add_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__add_varying_int32, @__add_uniform_int32)
 }
 
-
 define i32 @__reduce_min_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__min_varying_int32, @__min_uniform_int32)
 }
-
 
 define i32 @__reduce_max_int32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_int32, @__max_uniform_int32)
@@ -300,38 +348,11 @@ define i32 @__reduce_max_uint32(<8 x i32>) nounwind readnone alwaysinline {
   reduce8(i32, @__max_varying_uint32, @__max_uniform_uint32)
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; horizontal double ops
-
-declare <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double>, <4 x double>) nounwind readnone
-
-define double @__reduce_add_double(<8 x double>) nounwind readonly alwaysinline {
-  %v0 = shufflevector <8 x double> %0, <8 x double> undef,
-                      <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1 = shufflevector <8 x double> %0, <8 x double> undef,
-                      <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %sum0 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %v0, <4 x double> %v1)
-  %sum1 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %sum0, <4 x double> %sum0)
-  %final0 = extractelement <4 x double> %sum1, i32 0
-  %final1 = extractelement <4 x double> %sum1, i32 2
-  %sum = fadd double %final0, %final1
-
-  ret double %sum
-}
-
-define double @__reduce_min_double(<8 x double>) nounwind readnone alwaysinline {
-  reduce8(double, @__min_varying_double, @__min_uniform_double)
-}
-
-
-define double @__reduce_max_double(<8 x double>) nounwind readnone alwaysinline {
-  reduce8(double, @__max_varying_double, @__max_uniform_double)
-}
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; horizontal int64 ops
 
+;; helper functions
 define <8 x i64> @__add_varying_int64(<8 x i64>,
                                       <8 x i64>) nounwind readnone alwaysinline {
   %s = add <8 x i64> %0, %1
@@ -343,6 +364,7 @@ define i64 @__add_uniform_int64(i64, i64) nounwind readnone alwaysinline {
   ret i64 %s
 }
 
+;; reduction functions
 define i64 @__reduce_add_int64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__add_varying_int64, @__add_uniform_int64)
 }
@@ -367,6 +389,7 @@ define i64 @__reduce_max_uint64(<8 x i64>) nounwind readnone alwaysinline {
   reduce8(i64, @__max_varying_uint64, @__max_uniform_uint64)
 }
 
+reduce_equal(8)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
@@ -451,6 +474,10 @@ define void @__masked_store_i64(<8 x i64>* nocapture, <8 x i64>,
   ret void
 }
 
+masked_store_float_double()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; masked store blend
 
 masked_store_blend_8_16_by_8()
 
@@ -522,8 +549,6 @@ define void @__masked_store_blend_i64(<8 x i64>* nocapture %ptr, <8 x i64> %new,
   ret void
 }
 
-masked_store_float_double()
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scatter
 
@@ -533,31 +558,4 @@ gen_scatter(i32)
 gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision sqrt
-
-declare <4 x double> @llvm.x86.avx.sqrt.pd.256(<4 x double>) nounwind readnone
-
-define <8 x double> @__sqrt_varying_double(<8 x double>) nounwind alwaysinline {
-  unary4to8(ret, double, @llvm.x86.avx.sqrt.pd.256, %0)
-  ret <8 x double> %ret
-}
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; double precision min/max
-
-declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
-declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
-
-define <8 x double> @__min_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  binary4to8(ret, double, @llvm.x86.avx.min.pd.256, %0, %1)
-  ret <8 x double> %ret
-}
-
-define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind readnone alwaysinline {
-  binary4to8(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
-  ret <8 x double> %ret
-}
 

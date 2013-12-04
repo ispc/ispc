@@ -1660,6 +1660,64 @@ BinaryExpr::BinaryExpr(Op o, Expr *a, Expr *b, SourcePos p)
     arg1 = b;
 }
 
+Expr *lCreateBinaryOperatorCall(const BinaryExpr::Op bop,
+                                Expr *a0, Expr *a1,
+                                const SourcePos &sp)
+{
+    if ((a0 == NULL) || (a1 == NULL)) {
+        return NULL;
+    }
+    Expr *arg0 = a0->TypeCheck();
+    Expr *arg1 = a1->TypeCheck();
+    if ((arg0 == NULL) || (arg1 == NULL)) {
+        return NULL;
+    }
+    const Type *type0 = arg0->GetType();
+    const Type *type1 = arg1->GetType();
+
+    // If either operand is a reference, dereference it before we move
+    // forward
+    if (CastType<ReferenceType>(type0) != NULL) {
+        arg0 = new RefDerefExpr(arg0, arg0->pos);
+        type0 = arg0->GetType();
+    }
+    if (CastType<ReferenceType>(type1) != NULL) {
+        arg1 = new RefDerefExpr(arg1, arg1->pos);
+        type1 = arg1->GetType();
+    }
+    if ((type0 == NULL) || (type1 == NULL)) {
+        return NULL;
+    }
+    if (CastType<StructType>(type0) != NULL ||
+        CastType<StructType>(type1) != NULL) {
+        std::string opName = std::string("operator") + lOpString(bop);
+        std::vector<Symbol *> funs;
+        m->symbolTable->LookupFunction(opName.c_str(), &funs);
+        if (funs.size() == 0) {
+            Error(sp, "operator %s(%s, %s) is not defined.",
+            opName.c_str(), (type0->GetString()).c_str(), (type1->GetString()).c_str());
+            return NULL;
+        }
+        Expr *func = new FunctionSymbolExpr(opName.c_str(), funs, sp);
+        ExprList *args = new ExprList(sp);
+        args->exprs.push_back(arg0);
+        args->exprs.push_back(arg1);
+        Expr *opCallExpr = new FunctionCallExpr(func, args, sp);
+        return opCallExpr;
+    }
+    return NULL;
+}
+
+
+Expr * MakeBinaryExpr(BinaryExpr::Op o, Expr *a, Expr *b, SourcePos p) {
+    Expr * op = lCreateBinaryOperatorCall(o, a, b, p);
+    if (op != NULL) {
+        return op;
+    }
+    op = new BinaryExpr(o, a, b, p);
+    return op;
+}
+
 
 /** Emit code for a && or || logical operator.  In particular, the code
     here handles "short-circuit" evaluation, where the second expression
@@ -2740,6 +2798,17 @@ BinaryExpr::TypeCheck() {
     }
 }
 
+const Type *
+BinaryExpr::GetLValueType() const {
+  const Type *t = GetType();
+  if (CastType<PointerType>(t) != NULL) {
+    // Are we doing something like (basePtr + offset)[...] = ...
+    return t;
+  }
+  else {
+    return NULL;
+  }
+}
 
 int
 BinaryExpr::EstimateCost() const {
@@ -2985,29 +3054,10 @@ AssignExpr::TypeCheck() {
     if (lvalueIsReference)
         lvalue = new RefDerefExpr(lvalue, lvalue->pos);
 
-    FunctionSymbolExpr *fse;
-    if ((fse = dynamic_cast<FunctionSymbolExpr *>(rvalue)) != NULL) {
-        // Special case to use the type of the LHS to resolve function
-        // overloads when we're assigning a function pointer where the
-        // function is overloaded.
-        const Type *lvalueType = lvalue->GetType();
-        const FunctionType *ftype;
-        if (CastType<PointerType>(lvalueType) == NULL ||
-            (ftype = CastType<FunctionType>(lvalueType->GetBaseType())) == NULL) {
-            Error(lvalue->pos, "Can't assign function pointer to type \"%s\".",
-                  lvalueType ? lvalueType->GetString().c_str() : "<unknown>");
-            return NULL;
-        }
-
-        std::vector<const Type *> paramTypes;
-        for (int i = 0; i < ftype->GetNumParameters(); ++i)
-            paramTypes.push_back(ftype->GetParameterType(i));
-
-        if (!fse->ResolveOverloads(rvalue->pos, paramTypes)) {
-            Error(pos, "Unable to find overloaded function for function "
-                  "pointer assignment.");
-            return NULL;
-        }
+    if (PossiblyResolveFunctionOverloads(rvalue, lvalue->GetType()) == false) {
+        Error(pos, "Unable to find overloaded function for function "
+                "pointer assignment.");
+        return NULL;
     }
 
     const Type *lhsType = lvalue->GetType();
@@ -3650,10 +3700,37 @@ FunctionCallExpr::GetLValue(FunctionEmitContext *ctx) const {
         return NULL;
     }
 }
- 
+
+
+bool FullResolveOverloads(Expr * func, ExprList * args,
+                        std::vector<const Type *> *argTypes,
+                        std::vector<bool> *argCouldBeNULL,
+                        std::vector<bool> *argIsConstant) {
+    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
+        Expr *expr = args->exprs[i];
+        if (expr == NULL)
+            return false;
+        const Type *t = expr->GetType();
+        if (t == NULL)
+            return false;
+        argTypes->push_back(t);
+        argCouldBeNULL->push_back(lIsAllIntZeros(expr) || dynamic_cast<NullPointerExpr *>(expr));
+        argIsConstant->push_back(dynamic_cast<ConstExpr *>(expr) || dynamic_cast<NullPointerExpr *>(expr));
+    }
+    return true;
+}
+
 
 const Type *
 FunctionCallExpr::GetType() const {
+    std::vector<const Type *> argTypes;
+    std::vector<bool> argCouldBeNULL, argIsConstant;
+    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == true) {
+        FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
+        if (fse != NULL) {
+            fse->ResolveOverloads(args->pos, argTypes, &argCouldBeNULL, &argIsConstant);
+        }
+    }
     const FunctionType *ftype = lGetFunctionType(func);
     return ftype ? ftype->GetReturnType() : NULL;
 }
@@ -3689,20 +3766,9 @@ FunctionCallExpr::TypeCheck() {
 
     std::vector<const Type *> argTypes;
     std::vector<bool> argCouldBeNULL, argIsConstant;
-    for (unsigned int i = 0; i < args->exprs.size(); ++i) {
-        Expr *expr = args->exprs[i];
 
-        if (expr == NULL)
-            return NULL;
-        const Type *t = expr->GetType();
-        if (t == NULL)
-            return NULL;
-
-        argTypes.push_back(t);
-        argCouldBeNULL.push_back(lIsAllIntZeros(expr) ||
-                                 dynamic_cast<NullPointerExpr *>(expr));
-        argIsConstant.push_back(dynamic_cast<ConstExpr *>(expr) ||
-                                dynamic_cast<NullPointerExpr *>(expr));
+    if (FullResolveOverloads(func, args, &argTypes, &argCouldBeNULL, &argIsConstant) == false) {
+        return NULL;
     }
 
     FunctionSymbolExpr *fse = dynamic_cast<FunctionSymbolExpr *>(func);
@@ -4211,8 +4277,9 @@ IndexExpr::GetValue(FunctionEmitContext *ctx) const {
     }
     else {
         Symbol *baseSym = GetBaseSymbol();
-        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL) {
-            // Only check for non-function calls
+        if (dynamic_cast<FunctionCallExpr *>(baseExpr) == NULL && 
+            dynamic_cast<BinaryExpr *>(baseExpr) == NULL) {
+          // Don't check if we're doing a function call or pointer arith
             AssertPos(pos, baseSym != NULL);
         }
         mask = lMaskForSymbol(baseSym, ctx);
@@ -7010,8 +7077,22 @@ TypeCastExpr::GetLValue(FunctionEmitContext *ctx) const {
 
 const Type *
 TypeCastExpr::GetType() const {
-    AssertPos(pos, type->HasUnboundVariability() == false);
-    return type;
+    // Here we try to resolve situation where (base_type) can be treated as
+    // (uniform base_type) of (varying base_type). This is a part of function
+    // TypeCastExpr::TypeCheck. After implementation of operators we
+    // have to have this functionality here.
+    const Type *toType = type, *fromType = expr->GetType();
+    if (toType == NULL || fromType == NULL)
+        return NULL;
+    if (toType->HasUnboundVariability()) {
+        if (fromType->IsUniformType()) {
+            toType = type->ResolveUnboundVariability(Variability::Uniform);
+        } else {
+            toType = type->ResolveUnboundVariability(Variability::Varying);
+        }
+    }
+    AssertPos(pos, toType->HasUnboundVariability() == false);
+    return toType;
 }
 
 
@@ -8190,6 +8271,9 @@ FunctionSymbolExpr::ResolveOverloads(SourcePos argPos,
                                      const std::vector<bool> *argCouldBeNULL,
                                      const std::vector<bool> *argIsConstant) {
     const char *funName = candidateFunctions.front()->name.c_str();
+    if (triedToResolve == true) {
+        return true;
+    }
 
     triedToResolve = true;
 

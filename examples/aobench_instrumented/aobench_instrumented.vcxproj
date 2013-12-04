@@ -26,15 +26,15 @@
   <ItemGroup>
     <CustomBuild Include="ao.ispc">
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --arch=x86 --instrument --target=sse2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --arch=x86 --instrument --target=sse2
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --instrument --target=sse2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --instrument --target=sse2
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(TargetDir)%(Filename)_instrumented.obj;$(TargetDir)%(Filename)_instrumented_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(TargetDir)%(Filename)_instrumented.obj;$(TargetDir)%(Filename)_instrumented_ispc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --arch=x86 --instrument --target=sse2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --arch=x86 --instrument --target=sse2
 </Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">ispc -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --instrument --target=sse2
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename)_instrumented.obj -h $(TargetDir)%(Filename)_instrumented_ispc.h --instrument --target=sse2
 </Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(TargetDir)%(Filename)_instrumented.obj;$(TargetDir)%(Filename)_instrumented_ispc.h</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(TargetDir)%(Filename)_instrumented.obj;$(TargetDir)%(Filename)_instrumented_ispc.h</Outputs>
@@ -44,6 +44,7 @@
     <ProjectGuid>{B3B4AE3D-6D5A-4CF9-AF5B-43CF2131B958}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>aobench_instrumented</RootNamespace>
+    <ISPC_compiler Condition=" '$(ISPC_compiler)' == '' ">ispc</ISPC_compiler>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

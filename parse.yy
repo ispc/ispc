@@ -149,7 +149,8 @@ struct ForeachDimension {
 
 %union {
     uint64_t intVal;
-    float floatVal;
+    float  floatVal;
+    double doubleVal;
     std::string *stringVal;
     const char *constCharPtr;
 
@@ -185,7 +186,7 @@ struct ForeachDimension {
 %token TOKEN_INT64_CONSTANT TOKEN_UINT64_CONSTANT
 %token TOKEN_INT32DOTDOTDOT_CONSTANT TOKEN_UINT32DOTDOTDOT_CONSTANT
 %token TOKEN_INT64DOTDOTDOT_CONSTANT TOKEN_UINT64DOTDOTDOT_CONSTANT
-%token TOKEN_FLOAT_CONSTANT TOKEN_STRING_C_LITERAL
+%token TOKEN_FLOAT_CONSTANT TOKEN_DOUBLE_CONSTANT TOKEN_STRING_C_LITERAL
 %token TOKEN_IDENTIFIER TOKEN_STRING_LITERAL TOKEN_TYPE_NAME TOKEN_NULL
 %token TOKEN_PTR_OP TOKEN_INC_OP TOKEN_DEC_OP TOKEN_LEFT_OP TOKEN_RIGHT_OP
 %token TOKEN_LE_OP TOKEN_GE_OP TOKEN_EQ_OP TOKEN_NE_OP
@@ -327,7 +328,11 @@ primary_expression
     }
     | TOKEN_FLOAT_CONSTANT {
         $$ = new ConstExpr(AtomicType::UniformFloat->GetAsConstType(),
-                           (float)yylval.floatVal, @1);
+                           yylval.floatVal, @1);
+    }
+    | TOKEN_DOUBLE_CONSTANT {
+        $$ = new ConstExpr(AtomicType::UniformDouble->GetAsConstType(),
+                           yylval.doubleVal, @1);
     }
     | TOKEN_TRUE {
         $$ = new ConstExpr(AtomicType::UniformBool->GetAsConstType(), true, @1);
@@ -463,27 +468,27 @@ cast_expression
 multiplicative_expression
     : cast_expression
     | multiplicative_expression '*' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mul, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '/' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Div, $1, $3, Union(@1, @3)); }
     | multiplicative_expression '%' cast_expression
-      { $$ = new BinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Mod, $1, $3, Union(@1, @3)); }
     ;
 
 additive_expression
     : multiplicative_expression
     | additive_expression '+' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Add, $1, $3, Union(@1, @3)); }
     | additive_expression '-' multiplicative_expression
-      { $$ = new BinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Sub, $1, $3, Union(@1, @3)); }
     ;
 
 shift_expression
     : additive_expression
     | shift_expression TOKEN_LEFT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shl, $1, $3, Union(@1, @3)); }
     | shift_expression TOKEN_RIGHT_OP additive_expression
-      { $$ = new BinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1,@3)); }
+      { $$ = MakeBinaryExpr(BinaryExpr::Shr, $1, $3, Union(@1, @3)); }
     ;
 
 relational_expression
@@ -2182,6 +2187,9 @@ static void lAddMaskToSymbolTable(SourcePos pos) {
         break;
     case 32:
         t = AtomicType::VaryingUInt32;
+        break;
+    case 64:
+        t = AtomicType::VaryingUInt64;
         break;
     default:
         FATAL("Unhandled mask bitsize in lAddMaskToSymbolTable");

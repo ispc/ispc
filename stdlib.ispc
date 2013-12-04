@@ -50,6 +50,9 @@
 #elif (ISPC_MASK_BITS == 32)
   #define IntMaskType int32
   #define UIntMaskType unsigned int32
+#elif (ISPC_MASK_BITS == 64)
+  #define IntMaskType int64
+  #define UIntMaskType unsigned int64
 #else
   #error Unknown value of ISPC_MASK_BITS
 #endif
@@ -165,6 +168,60 @@ static inline double rotate(double v, uniform int i) {
 __declspec(safe) 
 static inline int64 rotate(int64 v, uniform int i) {
     return __rotate_i64(v, i);
+}
+
+__declspec(safe) 
+static inline float shift(float v, uniform int i) {
+  varying float result;
+  unmasked {
+    result = __shift_float(v, i);
+  }
+  return result;
+}
+
+__declspec(safe) 
+static inline int8 shift(int8 v, uniform int i) {
+  varying int8 result;
+  unmasked {
+    result = __shift_i8(v, i);
+  }
+  return result;
+}
+
+__declspec(safe) 
+static inline int16 shift(int16 v, uniform int i) {
+  varying int16 result;
+  unmasked {
+    result = __shift_i16(v, i);
+  }
+  return result;
+}
+
+__declspec(safe) 
+static inline int32 shift(int32 v, uniform int i) {
+  varying int32 result;
+  unmasked {
+    result = __shift_i32(v, i);
+  }
+  return result;
+}
+
+__declspec(safe) 
+static inline double shift(double v, uniform int i) {
+  varying double result;
+  unmasked {
+    result = __shift_double(v, i);
+  }
+  return result;
+}
+
+__declspec(safe) 
+static inline int64 shift(int64 v, uniform int i) {
+  varying int64 result;
+  unmasked {
+    result = __shift_i64(v, i);
+  }
+  return result;
 }
 
 __declspec(safe) 
@@ -1556,6 +1613,18 @@ static inline uniform float clamp(uniform float v, uniform float low, uniform fl
     return min(max(v, low), high);
 }
 
+// double
+
+__declspec(safe,cost2)
+static inline double clamp(double v, double low, double high) {
+    return min(max(v, low), high);
+}
+
+__declspec(safe,cost2)
+static inline uniform double clamp(uniform double v, uniform double low, uniform double high) {
+    return min(max(v, low), high);
+}
+
 // int8
 
 __declspec(safe,cost2)
@@ -2180,7 +2249,7 @@ static inline uniform float frexp(uniform float x, uniform int * uniform pw2) {
 __declspec(safe)
 static inline float sin(float x_full) {
     if (__math_lib == __math_lib_svml) {
-        return __svml_sin(x_full);
+        return __svml_sinf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2313,8 +2382,10 @@ static inline float asin(float x) {
     bool isnan = (x > 1);
 
     float v;
-    if (__math_lib == __math_lib_svml ||
-        __math_lib == __math_lib_system) {
+    if (__math_lib == __math_lib_svml) {
+        return __svml_asinf(x);
+    } 
+    else if (__math_lib == __math_lib_system) {
         float ret;
         foreach_active (i) {
             uniform float r = __stdlib_asinf(extract(x, i));
@@ -2417,7 +2488,7 @@ static inline uniform float asin(uniform float x) {
 __declspec(safe)
 static inline float cos(float x_full) {
     if (__math_lib == __math_lib_svml) {
-        return __svml_cos(x_full);
+        return __svml_cosf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2545,10 +2616,20 @@ static inline float acos(float v) {
     return 1.57079637050628662109375 - asin(v);
 }
 
+__declspec(safe)
+static inline double acos(const double v) {
+    return 1.57079637050628662109375d0 - asin(v);
+}
+
 
 __declspec(safe)
 static inline uniform float acos(uniform float v) {
     return 1.57079637050628662109375 - asin(v);
+}
+
+__declspec(safe)
+static inline uniform double acos(const uniform double v) {
+    return 1.57079637050628662109375d0 - asin(v);
 }
 
 
@@ -2556,7 +2637,7 @@ __declspec(safe)
 static inline void sincos(float x_full, varying float * uniform sin_result, 
                           varying float * uniform cos_result) {
     if (__math_lib == __math_lib_svml) {
-        __svml_sincos(x_full, sin_result, cos_result);
+        __svml_sincosf(x_full, sin_result, cos_result);
     }
     else if (__math_lib == __math_lib_system) {
         foreach_active (i) {
@@ -2688,7 +2769,7 @@ static inline void sincos(uniform float x_full, uniform float * uniform sin_resu
 __declspec(safe)
 static inline float tan(float x_full) {
     if (__math_lib == __math_lib_svml) {
-        return __svml_tan(x_full);
+        return __svml_tanf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2839,7 +2920,7 @@ static inline uniform float tan(uniform float x_full) {
 __declspec(safe)
 static inline float atan(float x_full) {
     if (__math_lib == __math_lib_svml) {
-        return __svml_atan(x_full);
+        return __svml_atanf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2934,7 +3015,7 @@ static inline uniform float atan(uniform float x_full) {
 __declspec(safe)
 static inline float atan2(float y, float x) {
     if (__math_lib == __math_lib_svml) {
-        return __svml_atan2(y, x);
+        return __svml_atan2f(y, x);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -2997,7 +3078,7 @@ static inline float exp(float x_full) {
         return __exp_varying_float(x_full);
     }
     else if (__math_lib == __math_lib_svml) {
-        return __svml_exp(x_full);
+        return __svml_expf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3204,7 +3285,7 @@ static inline float log(float x_full) {
         return __log_varying_float(x_full);
     }
     else if (__math_lib == __math_lib_svml) {
-        return __svml_log(x_full);
+        return __svml_logf(x_full);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3379,7 +3460,7 @@ static inline float pow(float a, float b) {
         return __pow_varying_float(a, b);
     }
     else if (__math_lib == __math_lib_svml) {
-        return __svml_pow(a, b);
+        return __svml_powf(a, b);
     }
     else if (__math_lib == __math_lib_system) {
         float ret;
@@ -3469,7 +3550,11 @@ static inline uniform double frexp(uniform double x, uniform int * uniform pw2) 
 
 __declspec(safe)
 static inline double sin(double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+      return __svml_sind(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return sin((float)x);
     else {
         double ret;
@@ -3490,8 +3575,30 @@ static inline uniform double sin(uniform double x) {
 }
 
 __declspec(safe)
-static inline double cos(double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+static inline double asin(const double x) {
+    if (__math_lib == __math_lib_svml) 
+    {
+      return __svml_asind(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
+        return asin((float)x);
+    else {
+        double ret;
+        foreach_active (i) {
+            uniform double r = __stdlib_asin(extract(x, i));
+            ret = insert(ret, i, r);
+        }
+        return ret;
+    }
+}
+
+__declspec(safe)
+static inline double cos(const double x) {
+    if (__math_lib == __math_lib_svml) 
+    {
+      return __svml_cosd(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return cos((float)x);
     else {
         double ret;
@@ -3514,7 +3621,11 @@ static inline uniform double cos(uniform double x) {
 __declspec(safe)
 static inline void sincos(double x, varying double * uniform sin_result,
                           varying double * uniform cos_result) {
-    if (__math_lib == __math_lib_ispc_fast) {
+    if (__math_lib == __math_lib_svml) 
+    {
+      __svml_sincosd(x, sin_result, cos_result);
+    }
+    else if (__math_lib == __math_lib_ispc_fast) {
         float sr, cr;
         sincos((float)x, &sr, &cr);
         *sin_result = sr;
@@ -3545,7 +3656,11 @@ static inline void sincos(uniform double x, uniform double * uniform sin_result,
 
 __declspec(safe)
 static inline double tan(double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+      return __svml_tand(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return tan((float)x);
     else {
         double ret;
@@ -3589,7 +3704,11 @@ static inline uniform double atan(uniform double x) {
 
 __declspec(safe)
 static inline double atan2(double y, double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+      return __svml_atan2d(y,x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return atan2((float)y, (float)x);
     else {
         double ret;
@@ -3611,7 +3730,11 @@ static inline uniform double atan2(uniform double y, uniform double x) {
 
 __declspec(safe)
 static inline double exp(double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+        return __svml_expd(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return exp((float)x);
     else {
         double ret;
@@ -3633,7 +3756,11 @@ static inline uniform double exp(uniform double x) {
 
 __declspec(safe)
 static inline double log(double x) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+        return __svml_logd(x);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return log((float)x);
     else {
         double ret;
@@ -3655,7 +3782,11 @@ static inline uniform double log(uniform double x) {
 
 __declspec(safe)
 static inline double pow(double a, double b) {
-    if (__math_lib == __math_lib_ispc_fast)
+    if (__math_lib == __math_lib_svml) 
+    {
+        return __svml_powd(a,b);
+    }
+    else if (__math_lib == __math_lib_ispc_fast)
         return pow((float)a, (float)b);
     else {
         double ret;

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2013, Intel Corporation
+  Copyright (c) 2013, Durham University
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -13,7 +13,7 @@
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
 
-    * Neither the name of Intel Corporation nor the names of its
+    * Neither the name of Durham University nor the names of its
       contributors may be used to endorse or promote products derived from
       this software without specific prior written permission.
 
@@ -78,7 +78,7 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 
@@ -86,7 +86,8 @@ int main (int argc, char *argv[])
 
     tISPC1 += get_elapsed_mcycles();
 
-    progressbar (i, m);
+    if (argc != 3)
+        progressbar (i, m);
   }
 
   printf("[sort ispc]:\t[%.3f] million cycles\n", tISPC1);
@@ -95,7 +96,7 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 
@@ -103,16 +104,17 @@ int main (int argc, char *argv[])
 
     tISPC2 += get_elapsed_mcycles();
 
-    progressbar (i, m);
+    if (argc != 3)
+        progressbar (i, m);
   }
-              
-  printf("[sort ispc+tasks]:\t[%.3f] million cycles\n", tISPC2);
+
+  printf("[sort ispc + tasks]:\t[%.3f] million cycles\n", tISPC2);
 
   srand (0);
 
   for (i = 0; i < m; i ++)
   {
-    for (j = 0; j < n; j ++) code [j] = random() % l;
+    for (j = 0; j < n; j ++) code [j] = rand() % l;
 
     reset_and_start_timer();
 
@@ -120,13 +122,13 @@ int main (int argc, char *argv[])
 
     tSerial += get_elapsed_mcycles();
 
-    progressbar (i, m);
+    if (argc != 3)
+        progressbar (i, m);
   }
 
   printf("[sort serial]:\t\t[%.3f] million cycles\n", tSerial);
 
-  printf("\t\t\t\t(%.2fx speedup from ISPC serial)\n", tSerial/tISPC1);
-  printf("\t\t\t\t(%.2fx speedup from ISPC with tasks)\n", tSerial/tISPC2);
+  printf("\t\t\t\t(%.2fx speedup from ISPC, %.2fx speedup from ISPC + tasks)\n", tSerial/tISPC1, tSerial/tISPC2);
 
   delete code;
   delete order;

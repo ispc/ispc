@@ -80,6 +80,13 @@ declare <WIDTH x i32> @__rotate_i32(<WIDTH x i32>, i32) nounwind readnone
 declare <WIDTH x double> @__rotate_double(<WIDTH x double>, i32) nounwind readnone
 declare <WIDTH x i64> @__rotate_i64(<WIDTH x i64>, i32) nounwind readnone
 
+declare <WIDTH x i8> @__shift_i8(<WIDTH x i8>, i32) nounwind readnone
+declare <WIDTH x i16> @__shift_i16(<WIDTH x i16>, i32) nounwind readnone
+declare <WIDTH x float> @__shift_float(<WIDTH x float>, i32) nounwind readnone
+declare <WIDTH x i32> @__shift_i32(<WIDTH x i32>, i32) nounwind readnone
+declare <WIDTH x double> @__shift_double(<WIDTH x double>, i32) nounwind readnone
+declare <WIDTH x i64> @__shift_i64(<WIDTH x i64>, i32) nounwind readnone
+
 declare <WIDTH x i8> @__shuffle_i8(<WIDTH x i8>, <WIDTH x i32>) nounwind readnone
 declare <WIDTH x i8> @__shuffle2_i8(<WIDTH x i8>, <WIDTH x i8>,
                                     <WIDTH x i32>) nounwind readnone
@@ -202,21 +209,15 @@ declare i64 @__count_trailing_zeros_i64(i64) nounwind readnone
 declare i32 @__count_leading_zeros_i32(i32) nounwind readnone
 declare i64 @__count_leading_zeros_i64(i64) nounwind readnone
 
-;; svml
-
 ; FIXME: need either to wire these up to the 8-wide SVML entrypoints,
 ; or, use the macro to call the 4-wide ones twice with our 8-wide
 ; vectors...
 
-declare <WIDTH x float> @__svml_sin(<WIDTH x float>)
-declare <WIDTH x float> @__svml_cos(<WIDTH x float>)
-declare void @__svml_sincos(<WIDTH x float>, <WIDTH x float> *, <WIDTH x float> *)
-declare <WIDTH x float> @__svml_tan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan(<WIDTH x float>)
-declare <WIDTH x float> @__svml_atan2(<WIDTH x float>, <WIDTH x float>)
-declare <WIDTH x float> @__svml_exp(<WIDTH x float>)
-declare <WIDTH x float> @__svml_log(<WIDTH x float>)
-declare <WIDTH x float> @__svml_pow(<WIDTH x float>, <WIDTH x float>)
+;; svml
+
+include(`svml.m4')
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reductions

@@ -209,16 +209,9 @@ define <8 x double> @__max_varying_double(<8 x double>, <8 x double>) nounwind r
 ;; svml
 
 ; FIXME
-
-declare <8 x float> @__svml_sin(<8 x float>)
-declare <8 x float> @__svml_cos(<8 x float>)
-declare void @__svml_sincos(<8 x float>, <8 x float> *, <8 x float> *)
-declare <8 x float> @__svml_tan(<8 x float>)
-declare <8 x float> @__svml_atan(<8 x float>)
-declare <8 x float> @__svml_atan2(<8 x float>, <8 x float>)
-declare <8 x float> @__svml_exp(<8 x float>)
-declare <8 x float> @__svml_log(<8 x float>)
-declare <8 x float> @__svml_pow(<8 x float>, <8 x float>)
+include(`svml.m4')
+svml_stubs(float,f,WIDTH)
+svml_stubs(double,d,WIDTH)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; horizontal ops / reductions

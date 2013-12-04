@@ -3,24 +3,50 @@ TASK_CXX=../tasksys.cpp
 TASK_LIB=-lpthread
 TASK_OBJ=objs/tasksys.o
 
-CXX=g++
-CXXFLAGS=-Iobjs/ -O2
-CC=gcc
-CCFLAGS=-Iobjs/ -O2
+CXX=clang++
+CXXFLAGS+=-Iobjs/ -O2
+CC=clang
+CCFLAGS+=-Iobjs/ -O2
 
 LIBS=-lm $(TASK_LIB) -lstdc++
-ISPC=ispc -O2 $(ISPC_FLAGS)
+ISPC=ispc
+ISPC_FLAGS+=-O2
 ISPC_HEADER=objs/$(ISPC_SRC:.ispc=_ispc.h)
 
-ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
+ARCH:=$(shell uname -m | sed -e s/x86_64/x86/ -e s/i686/x86/ -e s/arm.*/arm/ -e s/sa110/arm/)
 
 ifeq ($(ARCH),x86)
-  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o $(ISPC_SRC:.ispc=)_ispc_sse2.o \
-	$(ISPC_SRC:.ispc=)_ispc_sse4.o $(ISPC_SRC:.ispc=)_ispc_avx.o)
+  ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc.o)
+  COMMA=,
+  ifneq (,$(findstring $(COMMA),$(ISPC_IA_TARGETS)))
+    #$(info multi-target detected: $(ISPC_IA_TARGETS))
+    ifneq (,$(findstring sse2,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse2.o)
+    endif
+    ifneq (,$(findstring sse4,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_sse4.o)
+    endif
+    ifneq (,$(findstring avx1-,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx.o)
+    endif
+    ifneq (,$(findstring avx1.1,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx11.o)
+    endif
+    ifneq (,$(findstring avx2,$(ISPC_IA_TARGETS)))
+      ISPC_OBJS+=$(addprefix objs/, $(ISPC_SRC:.ispc=)_ispc_avx2.o)
+    endif
+  endif
   ISPC_TARGETS=$(ISPC_IA_TARGETS)
-  ISPC_FLAGS += --arch=x86-64
-  CXXFLAGS += -m64
-  CCFLAGS += -m64
+  ARCH_BIT:=$(shell getconf LONG_BIT)
+  ifeq ($(ARCH_BIT),32)
+    ISPC_FLAGS += --arch=x86
+    CXXFLAGS += -m32
+    CCFLAGS += -m32
+  else
+    ISPC_FLAGS += --arch=x86-64
+    CXXFLAGS += -m64
+    CCFLAGS += -m64
+  endif
 else ifeq ($(ARCH),arm)
   ISPC_OBJS=$(addprefix objs/, $(ISPC_SRC:.ispc=_ispc.o))
   ISPC_TARGETS=$(ISPC_ARM_TARGETS)
@@ -44,7 +70,7 @@ dirs:
 objs/%.cpp objs/%.o objs/%.h: dirs
 
 clean:
-	/bin/rm -rf objs *~ $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16
+	/bin/rm -rf objs *~ $(EXAMPLE) $(EXAMPLE)-sse4 $(EXAMPLE)-generic16 ref test
 
 $(EXAMPLE): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
@@ -58,13 +84,13 @@ objs/%.o: %.c dirs $(ISPC_HEADER)
 objs/%.o: ../%.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 
-objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h
+objs/$(EXAMPLE).o: objs/$(EXAMPLE)_ispc.h dirs
 
-objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o: %.ispc
-	$(ISPC) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
+objs/%_ispc.h objs/%_ispc.o objs/%_ispc_sse2.o objs/%_ispc_sse4.o objs/%_ispc_avx.o objs/%_ispc_avx11.o objs/%_ispc_avx2.o: %.ispc dirs
+	$(ISPC) $(ISPC_FLAGS) --target=$(ISPC_TARGETS) $< -o objs/$*_ispc.o -h objs/$*_ispc.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.cpp: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-4 --emit-c++ --c++-include-file=sse4.h
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-4 --emit-c++ --c++-include-file=sse4.h
 
 objs/$(ISPC_SRC:.ispc=)_sse4.o: objs/$(ISPC_SRC:.ispc=)_sse4.cpp
 	$(CXX) -I../intrinsics -msse4.2 $< $(CXXFLAGS) -c -o $@
@@ -73,7 +99,7 @@ $(EXAMPLE)-sse4: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_sse4.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 objs/$(ISPC_SRC:.ispc=)_generic16.cpp: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-16 --emit-c++ --c++-include-file=generic-16.h
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-16 --emit-c++ --c++-include-file=generic-16.h
 
 objs/$(ISPC_SRC:.ispc=)_generic16.o: objs/$(ISPC_SRC:.ispc=)_generic16.cpp
 	$(CXX) -I../intrinsics $< $(CXXFLAGS) -c -o $@
@@ -82,7 +108,7 @@ $(EXAMPLE)-generic16: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_generic16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 objs/$(ISPC_SRC:.ispc=)_scalar.o: $(ISPC_SRC)
-	$(ISPC) $< -o $@ --target=generic-1
+	$(ISPC) $(ISPC_FLAGS) $< -o $@ --target=generic-1
 
 $(EXAMPLE)-scalar: $(CPP_OBJS) objs/$(ISPC_SRC:.ispc=)_scalar.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
