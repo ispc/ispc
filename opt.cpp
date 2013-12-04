@@ -904,7 +904,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     lCopyMetadata(castPtr, callInst);
                     int align;
                     if (g->opt.forceAlignedMemory)
-                        align = 0;
+                        align = g->target->getNativeVectorAlignment();
                     else
                         align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                     name = LLVMGetName(callInst->getArgOperand(0), "_load");
@@ -946,7 +946,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                         new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
                     int align;
                     if (g->opt.forceAlignedMemory)
-                        align = 0;
+                        align = g->target->getNativeVectorAlignment();
                     else
                         align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
                     storeInst->setAlignment(align);
@@ -2758,7 +2758,8 @@ lImproveMaskedStore(llvm::CallInst *callInst) {
         lCopyMetadata(lvalue, callInst);
         llvm::Instruction *store =
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
-                                g->opt.forceAlignedMemory ? 0 : info->align);
+                                g->opt.forceAlignedMemory ?
+                                    g->target->getNativeVectorAlignment() : info->align);
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
         return true;
@@ -2821,7 +2822,8 @@ lImproveMaskedLoad(llvm::CallInst *callInst,
                                     callInst);
         llvm::Instruction *load =
             new llvm::LoadInst(ptr, callInst->getName(), false /* not volatile */,
-                               g->opt.forceAlignedMemory ? 0 : info->align,
+                               g->opt.forceAlignedMemory ?
+                                   g->target->getNativeVectorAlignment() : info->align,
                                (llvm::Instruction *)NULL);
         lCopyMetadata(load, callInst);
         llvm::ReplaceInstWithInst(callInst, load);
@@ -3226,6 +3228,9 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 4: {
             // 4-wide vector load
+            if (g->opt.forceAlignedMemory) {
+                align = g->target->getNativeVectorAlignment();
+            }
             llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,
@@ -3234,6 +3239,9 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 8: {
             // 8-wide vector load
+            if (g->opt.forceAlignedMemory) {
+                align = g->target->getNativeVectorAlignment();
+            }
             llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 8);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,

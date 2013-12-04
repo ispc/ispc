@@ -191,6 +191,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_tf_attributes(NULL),
 #endif
     m_nativeVectorWidth(-1),
+    m_nativeVectorAlignment(-1),
     m_dataTypeWidth(-1),
     m_vectorWidth(-1),
     m_generatePIC(pic),
@@ -309,6 +310,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         !strcasecmp(isa, "sse2-i32x4")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
@@ -325,6 +327,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse2-i32x8")) {
         this->m_isa = Target::SSE2;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,-sse3,-sse4a,-ssse3,-popcnt"
@@ -341,6 +344,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse4-i32x4")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         // TODO: why not sse42 and popcnt?
@@ -359,6 +363,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "sse4-i32x8")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
@@ -374,6 +379,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "sse4-i8x16")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
@@ -389,6 +395,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "sse4-i16x8")) {
         this->m_isa = Target::SSE4;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_attributes = "+sse,+sse2,+sse3,-sse4a,+ssse3,-popcnt,+cmov"
@@ -405,6 +412,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x4")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_vectorWidth = 4;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
@@ -416,6 +424,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x8")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_vectorWidth = 8;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
@@ -427,6 +436,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x16")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 16;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
@@ -438,6 +448,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x32")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 32;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
@@ -449,6 +460,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x64")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 64;
+        this->m_nativeVectorAlignment = 64;
         this->m_vectorWidth = 64;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
@@ -460,6 +472,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "generic-x1")) {
         this->m_isa = Target::GENERIC;
         this->m_nativeVectorWidth = 1;
+        this->m_nativeVectorAlignment = 16;
         this->m_vectorWidth = 1;
         this->m_maskingIsFree = false;
         this->m_maskBitCount = 32;
@@ -467,6 +480,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "avx1-i32x4")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov";
@@ -478,6 +492,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1-i32x8")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx,+popcnt,+cmov";
@@ -488,6 +503,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1-i64x4")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov";
@@ -499,6 +515,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1-i32x16")) {
         this->m_isa = Target::AVX;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx,+popcnt,+cmov";
@@ -509,6 +526,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1.1-i32x8")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
@@ -530,6 +548,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx1.1-i32x16")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
@@ -550,6 +569,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "avx1.1-i64x4")) {
         this->m_isa = Target::AVX11;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx,+popcnt,+cmov,+f16c"
@@ -571,6 +591,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx2-i32x8")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 8;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
@@ -596,6 +617,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "avx2-i32x16")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 16;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
@@ -620,6 +642,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "avx2-i64x4")) {
         this->m_isa = Target::AVX2;
         this->m_nativeVectorWidth = 8;  /* native vector width in terms of floats */
+        this->m_nativeVectorAlignment = 32;
         this->m_dataTypeWidth = 64;
         this->m_vectorWidth = 4;
         this->m_attributes = "+avx2,+popcnt,+cmov,+f16c"
@@ -645,6 +668,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "neon-i8x16")) {
         this->m_isa = Target::NEON8;
         this->m_nativeVectorWidth = 16;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 8;
         this->m_vectorWidth = 16;
         this->m_attributes = "+neon,+fp16";
@@ -655,6 +679,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "neon-i16x8")) {
         this->m_isa = Target::NEON16;
         this->m_nativeVectorWidth = 8;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 16;
         this->m_vectorWidth = 8;
         this->m_attributes = "+neon,+fp16";
@@ -666,6 +691,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
              !strcasecmp(isa, "neon-i32x4")) {
         this->m_isa = Target::NEON32;
         this->m_nativeVectorWidth = 4;
+        this->m_nativeVectorAlignment = 16;
         this->m_dataTypeWidth = 32;
         this->m_vectorWidth = 4;
         this->m_attributes = "+neon,+fp16";

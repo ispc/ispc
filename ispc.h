@@ -260,6 +260,8 @@ public:
 
     int getNativeVectorWidth() const {return m_nativeVectorWidth;}
 
+    int getNativeVectorAlignment() const {return m_nativeVectorAlignment;}
+
     int getDataTypeWidth() const {return m_dataTypeWidth;}
 
     int getVectorWidth() const {return m_vectorWidth;}
@@ -331,6 +333,13 @@ private:
         value is directly derived from the ISA being used (e.g. it's 4 for
         SSE, 8 for AVX, etc.) */
     int m_nativeVectorWidth;
+
+    /** Native vector alignment in bytes. Theoretically this may be derived
+        from the vector size, but it's better to manage directly the alignement.
+        It allows easier experimenting and better fine tuning for particular
+        platform. This information is primatily used when
+        --opt=force-aligned-memory is used. */
+    int m_nativeVectorAlignment;
 
     /** Data type with in bits. Typically it's 32, but could be 8, 16 or 64.
         For generic it's -1, which means undefined. */
