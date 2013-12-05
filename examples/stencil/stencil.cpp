@@ -67,7 +67,7 @@ void InitData(int Nx, int Ny, int Nz, float *A[2], float *vsq) {
 
 
 int main() {
-    int Nx = 256, Ny = 256, Nz = 256;
+    int Nx = 256 * 2, Ny = 256 * 2, Nz = 256 * 2;
     int width = 4;
     float *Aserial[2], *Aispc[2];
     Aserial[0] = new float [Nx * Ny * Nz];
@@ -103,7 +103,10 @@ int main() {
     // the minimum time of three runs.
     //
     double minTimeISPCTasks = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 7; ++i) {
+        if (i == 6) {
+            InitData(Nx, Ny, Nz, Aispc, vsq);
+        }
         reset_and_start_timer();
         loop_stencil_ispc_tasks(0, 6, width, Nx - width, width, Ny - width,
                                 width, Nz - width, Nx, Ny, Nz, coeff, vsq,
@@ -120,15 +123,11 @@ int main() {
     // And run the serial implementation 3 times, again reporting the
     // minimum time.
     //
-    double minTimeSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
-        reset_and_start_timer();
-        loop_stencil_serial(0, 6, width, Nx-width, width, Ny - width,
-                            width, Nz - width, Nx, Ny, Nz, coeff, vsq,
-                            Aserial[0], Aserial[1]);
-        double dt = get_elapsed_mcycles();
-        minTimeSerial = std::min(minTimeSerial, dt);
-    }
+    reset_and_start_timer();
+    loop_stencil_serial(0, 6, width, Nx-width, width, Ny - width,
+                        width, Nz - width, Nx, Ny, Nz, coeff, vsq,
+                        Aserial[0], Aserial[1]);
+    double minTimeSerial = get_elapsed_mcycles();
 
     printf("[stencil serial]:\t\t[%.3f] million cycles\n", minTimeSerial);
 
