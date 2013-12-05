@@ -459,7 +459,7 @@ AtomicType::GetCDeclaration(const std::string &name) const {
     if (variability == Variability::Varying ||
         variability == Variability::SOA) {
         char buf[32];
-		// get program count
+        // get program count
         // g->mangleFunctionsNamesWithTarget - hack check for void *
         int vWidth = (variability == Variability::Varying) ? 
                         g->target->getVectorWidth() :

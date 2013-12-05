@@ -599,6 +599,11 @@ lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
 
     const PointerType *pt = CastType<PointerType>(t);
     if (pt != NULL) {
+      // Only allow exported uniform pointers
+      // Uniform pointers to varying data, however, are ok.
+      if (pt->IsVaryingType()) 
+        return false;
+      else
         return lRecursiveCheckValidParamType(pt->GetBaseType(), true);
     }
 
@@ -615,6 +620,9 @@ static void
 lCheckExportedParameterTypes(const Type *type, const std::string &name,
                              SourcePos pos) {
     if (lRecursiveCheckValidParamType(type, false) == false) {
+        if (CastType<PointerType>(type))
+            Error(pos, "Varying pointer type parameter \"%s\" is illegal "
+                  "in an exported function.", name.c_str());
         if (CastType<StructType>(type->GetBaseType()))
             Error(pos, "Struct parameter \"%s\" with vector typed "
                   "member(s) is illegal in an exported function.", name.c_str());
@@ -622,7 +630,7 @@ lCheckExportedParameterTypes(const Type *type, const std::string &name,
             Error(pos, "Vector-typed parameter \"%s\" is illegal in an exported "
                   "function.", name.c_str());
         else
-            Error(pos, "\"%s\" is illegal in an exported function.",
+            Error(pos, "Varying parameter \"%s\" is illegal in an exported function.",
                   name.c_str());
     }
 }
@@ -823,8 +831,8 @@ Module::AddFunctionDeclaration(const std::string &name,
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
 		if (functionType->isExported) {
-            lCheckExportedParameterTypes(argType, argName, argPos);
-        }
+      lCheckExportedParameterTypes(argType, argName, argPos);
+    }
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
@@ -1784,6 +1792,60 @@ Module::writeHeader(const char *fn) {
 }
 
 
+bool
+Module::writeDispatchHeaderSection(FILE *f, unsigned int *flags) {
+  unsigned int AlreadyDone4 = (*flags) & 4;
+  unsigned int AlreadyDone8 = (*flags) & 8;
+  unsigned int AlreadyDone16 = (*flags) & 16;
+  
+  // Get Target ProgramCount
+  // If not already done
+  // { 
+  //   ... 
+  //   (*flags) = (*flags) | target program count
+  // }
+  // else return
+
+  fprintf(f, "\n#ifdef __cplusplus\nnamespace ispc { /* namespace */\n#endif // __cplusplus\n");
+
+  // Get all of the struct, vector, and enumerant types used as function
+  // parameters.  These vectors may have repeats.
+  std::vector<const StructType *> exportedStructTypes;
+  std::vector<const EnumType *> exportedEnumTypes;
+  std::vector<const VectorType *> exportedVectorTypes;
+  lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
+                         &exportedEnumTypes, &exportedVectorTypes);
+  lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
+                         &exportedEnumTypes, &exportedVectorTypes);
+  
+  // Go through the explicitly exported types
+  for (int i = 0; i < (int)exportedTypes.size(); ++i) {
+    if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
+      exportedStructTypes.push_back(st->GetAsUniformType());
+    else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
+      exportedEnumTypes.push_back(et->GetAsUniformType());
+    else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
+      exportedVectorTypes.push_back(vt->GetAsUniformType());
+    else
+      FATAL("Unexpected type in export list");
+  }
+  
+  // And print them
+  lEmitVectorTypedefs(exportedVectorTypes, f);
+  lEmitEnumDecls(exportedEnumTypes, f);
+  lEmitStructDecls(exportedStructTypes, f);
+  
+    // end namespace
+    fprintf(f, "\n");
+    fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
+
+    // end guard
+    fprintf(f, "\n#endif // %s\n", guard.c_str());
+
+    return true;
+}
+
+
 void
 Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
 {
@@ -1980,13 +2042,16 @@ lSymbolIsExported(const Symbol *s) {
 // llvm::Function that were compiled for different compilation target ISAs.
 struct FunctionTargetVariants {
     FunctionTargetVariants() {
-        for (int i = 0; i < Target::NUM_ISAS; ++i)
+      for (int i = 0; i < Target::NUM_ISAS; ++i) {
             func[i] = NULL;
+            FTs[i] = NULL;
+      }
     }
     // The func array is indexed with the Target::ISA enumerant.  Some
     // values may be NULL, indicating that the original function wasn't
     // compiled to the corresponding target ISA.
     llvm::Function *func[Target::NUM_ISAS];
+    const FunctionType *FTs[Target::NUM_ISAS];
 };
 
 
@@ -2001,6 +2066,7 @@ lGetExportedFunctions(SymbolTable *symbolTable,
     for (unsigned int i = 0; i < syms.size(); ++i) {
         FunctionTargetVariants &ftv = functions[syms[i]->name];
         ftv.func[g->target->getISA()] = syms[i]->exportedFunction;
+        ftv.FTs[g->target->getISA()] = CastType<FunctionType>(syms[i]->type);
     }
 }
 
@@ -2107,6 +2173,53 @@ lAddExtractedGlobals(llvm::Module *module,
     }
 }
 
+static llvm::FunctionType *
+lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
+  llvm::Type *ptrToInt8Ty = llvm::Type::getInt8PtrTy(*g->ctx);
+  llvm::FunctionType *resultFuncTy = NULL;
+
+  for (int i = 0; i < Target::NUM_ISAS; ++i) {
+    if (funcs.func[i] == NULL)  {
+      continue;
+    }
+    else {
+      bool foundVarying = false;
+      const FunctionType *ft = funcs.FTs[i];
+      resultFuncTy = funcs.func[i]->getFunctionType();
+
+      int numArgs = ft->GetNumParameters();
+      llvm::SmallVector<llvm::Type *, 8> ftype;
+      for (int j = 0; j < numArgs; ++j) {
+        ftype.push_back(resultFuncTy->getParamType(j));
+      }
+
+      for (int j = 0; j < numArgs; ++j) {
+        const Type *arg = ft->GetParameterType(j);
+
+        if (arg->IsPointerType()) {
+          const Type *baseType = CastType<PointerType>(arg)->GetBaseType();
+          // For each varying type pointed to, swap the LLVM pointer type
+          // with i8 * (as close as we can get to void *)
+          if (baseType->IsVaryingType()) {
+            ftype[j] = ptrToInt8Ty;
+            foundVarying = true;
+          }
+        }
+      }
+      if (foundVarying) {
+        resultFuncTy = llvm::FunctionType::get(resultFuncTy->getReturnType(), ftype, false);
+      }
+    }
+  }
+  
+  // We should've found at least one variant here
+  // or else something fishy is going on.
+  Assert(resultFuncTy);
+  
+  return resultFuncTy;
+}
+
+#include <iostream>
 
 /** Create the dispatch function for an exported ispc function.
     This function checks to see which vector ISAs the system the
@@ -2134,11 +2247,12 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
     // we'll start by generating an 'extern' declaration of each one that
     // we have in the current module so that we can then call out to that.
     llvm::Function *targetFuncs[Target::NUM_ISAS];
-    llvm::FunctionType *ftype = NULL;
+    llvm::FunctionType *ftypes[Target::NUM_ISAS];
 
     for (int i = 0; i < Target::NUM_ISAS; ++i) {
         if (funcs.func[i] == NULL) {
             targetFuncs[i] = NULL;
+            ftypes[i] = NULL;
             continue;
         }
 
@@ -2149,14 +2263,23 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         // because we only allow uniform stuff to pass through the
         // export'ed function layer, they should all have the same memory
         // layout, so this is benign..
-        if (ftype == NULL)
-            ftype = funcs.func[i]->getFunctionType();
+        // JCB nomosoa - not anymore...
+        // add a helper to see if this type has any varying thingies? 
+        // might be hard to detect....
+        // If so, return a new type with the pointers to those replaced
+        // by i8 *'s.
+        //        if (ftype == NULL)
+        ftypes[i] = funcs.func[i]->getFunctionType();
 
         targetFuncs[i] =
-            llvm::Function::Create(ftype, llvm::GlobalValue::ExternalLinkage,
+            llvm::Function::Create(ftypes[i], llvm::GlobalValue::ExternalLinkage,
                                    funcs.func[i]->getName(), module);
     }
 
+    // New helper function checks to see if we need to rewrite the
+    // type for the dispatch function in case of pointers to varyings
+    llvm::FunctionType *ftype = lGetVaryingDispatchType(funcs);
+    
     bool voidReturn = ftype->getReturnType()->isVoidTy();
 
     // Now we can emit the definition of the dispatch function..
@@ -2201,8 +2324,21 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         // the target-specific function.
         std::vector<llvm::Value *> args;
         llvm::Function::arg_iterator argIter = dispatchFunc->arg_begin();
-        for (; argIter != dispatchFunc->arg_end(); ++argIter)
+        llvm::Function::arg_iterator targsIter = targetFuncs[i]->arg_begin();
+        for (; argIter != dispatchFunc->arg_end(); ++argIter, ++targsIter) {
+          // Check to see if we rewrote any types in the dispatch function.
+          // If so, create bitcasts for the appropriate pointer types.
+          if (argIter->getType() == targsIter->getType()) {
             args.push_back(argIter);
+          }
+          else {
+            llvm::CastInst *argCast = 
+              llvm::CastInst::CreatePointerCast(argIter, targsIter->getType(),
+                                                "dpatch_arg_bitcast", callBBlock);
+            args.push_back(argCast);
+          }
+
+        }
         if (voidReturn) {
             llvm::CallInst::Create(targetFuncs[i], args, "", callBBlock);
             llvm::ReturnInst::Create(*g->ctx, callBBlock);
@@ -2238,7 +2374,6 @@ lCreateDispatchFunction(llvm::Module *module, llvm::Function *setISAFunc,
         llvm::ReturnInst::Create(*g->ctx, undefRet, bblock);
     }
 }
-
 
 // Given a map that holds the mapping from each of the 'export'ed functions
 // in the ispc program to the target-specific variants of the function,

@@ -181,6 +181,8 @@ private:
                                           llvm::Module *module, OutputType outputType,
                                           const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName);
+    static bool writeDispatchHeader(const char *dispatchHeaderFileName);
+    bool writeDispatchHeaderSection(FILE *file, unsigned int *flags);
 
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
 };
