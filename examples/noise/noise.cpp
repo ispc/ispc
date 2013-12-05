@@ -66,8 +66,8 @@ writePPM(float *buf, int width, int height, const char *fn) {
 
 
 int main() {
-    unsigned int width = 768;
-    unsigned int height = 768;
+    unsigned int width = 768 * 4;
+    unsigned int height = 768 * 4;
     float x0 = -10;
     float x1 = 10;
     float y0 = -10;
