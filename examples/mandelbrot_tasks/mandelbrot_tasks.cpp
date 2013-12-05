@@ -74,8 +74,8 @@ static void usage() {
 }
 
 int main(int argc, char *argv[]) {
-    unsigned int width = 1536;
-    unsigned int height = 1024;
+    unsigned int width = 1536 * 8;
+    unsigned int height = 1024 * 8;
     float x0 = -2;
     float x1 = 1;
     float y0 = -1;
