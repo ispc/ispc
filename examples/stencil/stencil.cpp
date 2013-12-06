@@ -67,7 +67,7 @@ void InitData(int Nx, int Ny, int Nz, float *A[2], float *vsq) {
 
 
 int main() {
-    int Nx = 256, Ny = 256, Nz = 256;
+    int Nx = 256 * 2, Ny = 256 * 2, Nz = 256 * 2;
     int width = 4;
     float *Aserial[2], *Aispc[2];
     Aserial[0] = new float [Nx * Ny * Nz];
