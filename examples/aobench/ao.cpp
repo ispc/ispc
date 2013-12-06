@@ -60,7 +60,7 @@ using namespace ispc;
 
 extern void ao_serial(int w, int h, int nsubsamples, float image[]);
 
-static unsigned int test_iterations;
+static unsigned int test_iterations[] = {3, 7, 1};
 static unsigned int width, height;
 static unsigned char *img;
 static float *fimg;
@@ -106,16 +106,20 @@ savePPM(const char *fname, int w, int h)
 
 int main(int argc, char **argv)
 {
-    if (argc != 4) {
+    if (argc < 3) {
         printf ("%s\n", argv[0]);
-        printf ("Usage: ao [num test iterations] [width] [height]\n");
+        printf ("Usage: ao [width] [height] [ispc iterations] [tasks iterations] [serial iterations]\n");
         getchar();
         exit(-1);
     }
     else {
-        test_iterations = atoi(argv[1]);
-        width = atoi (argv[2]);
-        height = atoi (argv[3]);
+        if (argc == 6) {
+            for (int i = 0; i < 3; i++) {
+                test_iterations[i] = atoi(argv[3 + i]);
+            }
+        }
+        width = atoi (argv[1]);
+        height = atoi (argv[2]);
     }
 
     // Allocate space for output images
@@ -127,13 +131,14 @@ int main(int argc, char **argv)
     // time for any of them.
     //
     double minTimeISPC = 1e30;
-    for (unsigned int i = 0; i < test_iterations; i++) {
+    for (unsigned int i = 0; i < test_iterations[0]; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
 
         reset_and_start_timer();
         ao_ispc(width, height, NSUBSAMPLES, fimg);
         double t = get_elapsed_mcycles();
+        printf("@time of ISPC run:\t\t\t[%.3f] million cycles\n", t);
         minTimeISPC = std::min(minTimeISPC, t);
     }
 
@@ -147,13 +152,14 @@ int main(int argc, char **argv)
     // minimum time for any of them.
     //
     double minTimeISPCTasks = 1e30;
-    for (unsigned int i = 0; i < test_iterations; i++) {
+    for (unsigned int i = 0; i < test_iterations[1]; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
 
         reset_and_start_timer();
         ao_ispc_tasks(width, height, NSUBSAMPLES, fimg);
         double t = get_elapsed_mcycles();
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", t);
         minTimeISPCTasks = std::min(minTimeISPCTasks, t);
     }
 
@@ -167,11 +173,12 @@ int main(int argc, char **argv)
     // minimum time.
     //
     double minTimeSerial = 1e30;
-    for (unsigned int i = 0; i < test_iterations; i++) {
+    for (unsigned int i = 0; i < test_iterations[2]; i++) {
         memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         reset_and_start_timer();
         ao_serial(width, height, NSUBSAMPLES, fimg);
         double t = get_elapsed_mcycles();
+        printf("@time of serial run:\t\t\t\t[%.3f] million cycles\n", t);
         minTimeSerial = std::min(minTimeSerial, t);
     }
 
