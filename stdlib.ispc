@@ -4260,75 +4260,75 @@ static inline void fastmath() {
 ///////////////////////////////////////////////////////////////////////////
 // saturation arithmetic
 
-static inline uniform int8 padds(uniform int8 a, uniform int8 b) {
+static inline uniform int8 saturating_add(uniform int8 a, uniform int8 b) {
     return __padds_i8(a, b);
 }
 
-static inline varying int8 padds(varying int8 a, varying int8 b) {
+static inline varying int8 saturating_add(varying int8 a, varying int8 b) {
     return __padds_vi8(a, b);
 }
 
-static inline uniform int16 padds(uniform int16 a, uniform int16 b) {
+static inline uniform int16 saturating_add(uniform int16 a, uniform int16 b) {
     return __padds_i16(a, b);
 }
 
-static inline varying int16 padds(varying int16 a, varying int16 b) {
+static inline varying int16 saturating_add(varying int16 a, varying int16 b) {
     return __padds_vi16(a, b);
 }
 
-static inline uniform unsigned int8 paddus(uniform unsigned int8 a, 
-                                           uniform unsigned int8 b) {
+static inline uniform unsigned int8 saturating_add(uniform unsigned int8 a, 
+                                                   uniform unsigned int8 b) {
     return __paddus_i8(a, b);
 }
 
-static inline varying unsigned int8 paddus(varying unsigned int8 a, 
-                                           varying unsigned int8 b) {
+static inline varying unsigned int8 saturating_add(varying unsigned int8 a, 
+                                                   varying unsigned int8 b) {
     return __paddus_vi8(a, b);
 }
 
-static inline uniform unsigned int16 paddus(uniform unsigned int16 a, 
-                                            uniform unsigned int16 b) {
+static inline uniform unsigned int16 saturating_add(uniform unsigned int16 a, 
+                                                    uniform unsigned int16 b) {
     return __paddus_i16(a, b);
 }
 
-static inline varying unsigned int16 paddus(varying unsigned int16 a, 
-                                            varying unsigned int16 b) {
+static inline varying unsigned int16 saturating_add(varying unsigned int16 a, 
+                                                    varying unsigned int16 b) {
     return __paddus_vi16(a, b);
 }
 
-static inline uniform int8 psubs(uniform int8 a, uniform int8 b) {
+static inline uniform int8 saturating_sub(uniform int8 a, uniform int8 b) {
     return __psubs_i8(a, b);
 }
 
-static inline varying int8 psubs(varying int8 a, varying int8 b) {
+static inline varying int8 saturating_sub(varying int8 a, varying int8 b) {
     return __psubs_vi8(a, b);
 }
 
-static inline uniform int16 psubs(uniform int16 a, uniform int16 b) {
+static inline uniform int16 saturating_sub(uniform int16 a, uniform int16 b) {
     return __psubs_i16(a, b);
 }
 
-static inline varying int16 psubs(varying int16 a, varying int16 b) {
+static inline varying int16 saturating_sub(varying int16 a, varying int16 b) {
     return __psubs_vi16(a, b);
 }
 
-static inline uniform unsigned int8 psubus(uniform unsigned int8 a, 
-                                           uniform unsigned int8 b) {
+static inline uniform unsigned int8 saturating_sub(uniform unsigned int8 a, 
+                                                   uniform unsigned int8 b) {
     return __psubus_i8(a, b);
 }
 
-static inline varying unsigned int8 psubus(varying unsigned int8 a, 
-                                           varying unsigned int8 b) {
+static inline varying unsigned int8 saturating_sub(varying unsigned int8 a, 
+                                                   varying unsigned int8 b) {
     return __psubus_vi8(a, b);
 }
 
-static inline uniform unsigned int16 psubus(uniform unsigned int16 a, 
-                                            uniform unsigned int16 b) {
+static inline uniform unsigned int16 saturating_sub(uniform unsigned int16 a, 
+                                                    uniform unsigned int16 b) {
     return __psubus_i16(a, b);
 }
 
-static inline varying unsigned int16 psubus(varying unsigned int16 a, 
-                                            varying unsigned int16 b) {
+static inline varying unsigned int16 saturating_sub(varying unsigned int16 a, 
+                                                    varying unsigned int16 b) {
     return __psubus_vi16(a, b);
 }
 ///////////////////////////////////////////////////////////////////////////

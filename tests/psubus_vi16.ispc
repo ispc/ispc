@@ -2,8 +2,8 @@
 export uniform int width() { return programCount; }
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
-    varying int16 a = 0, b = 32767; // min and max unsigned int16
-    RET[programIndex] = psubus(a, b);
+    varying unsigned int16 a = 0, b = 32767; // min and max unsigned int16
+    RET[programIndex] = saturating_sub(a, b);
 }
 
 export void result(uniform float RET[]) {
