@@ -3815,6 +3815,51 @@ loopend:
 done:
   ret i32 %nextoffset
 }
+
+define MASK @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+entry:
+  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
+  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
+  br i1 %mask_known, label %known_mask, label %unknown_mask
+
+known_mask:
+  %allon = icmp eq i64 %mask, ALL_ON_MASK
+  br i1 %allon, label %all_on, label %unknown_mask
+ 
+all_on:
+  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
+  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
+  ret MASK WIDTH
+ 
+unknown_mask:
+  br label %loop
+ 
+loop:
+  %offset = phi MASK [ 0, %unknown_mask ], [ %ch_offset, %loop ]
+  %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
+  %storeval = extractelement <WIDTH x i32> %vals, i32 %i
+
+;; Offset has value in range from 0 to WIDTH-1. So it does not matter if we
+;; zero or sign extending it, while zero extend is free. Also do nothing for
+;; i64 MASK, as we need i64 value.
+ifelse(MASK, `i64',
+` %storeptr = getelementptr i32 *%startptr, MASK %offset',
+` %offset1 = zext MASK %offset to i64
+  %storeptr = getelementptr i32 *%startptr, i64 %offset1')
+  store i32 %storeval, i32 *%storeptr
+
+  %mull_mask = extractelement <WIDTH x MASK> %full_mask, i32 %i
+  %ch_offset = sub MASK %offset, %mull_mask
+ 
+  ; are we done yet?
+  %ch_i = add i32 %i, 1
+  %test = icmp ne i32 %ch_i, WIDTH
+  br i1 %test, label %loop, label %done
+ 
+done:
+  ret MASK %ch_offset
+}
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
