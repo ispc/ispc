@@ -99,16 +99,19 @@ def analyse_test(c1, c2, test, b_serial, perf_temp_n):
             j+=1
         if "million cycles" in line:
             if j == c1:
-                line = line.replace("]","[")
-                line = line.split("[")
-                number = float(line[3])
-                if "tasks" in line[1]:
-                    absolute_tasks.append(number)
+                if line[0] == '@':
+                    print_debug(line, True, perf_log)
                 else:
-                    if "ispc" in line[1]:
-                        absolute_ispc.append(number)
-                if "serial" in line[1]:
-                    serial.append(number)
+                    line = line.replace("]","[")
+                    line = line.split("[")
+                    number = float(line[3])
+                    if "tasks" in line[1]:
+                        absolute_tasks.append(number)
+                    else:
+                        if "ispc" in line[1]:
+                            absolute_ispc.append(number)
+                    if "serial" in line[1]:
+                        serial.append(number)
 
     if len(ispc) != 0:
         if len(tasks) != 0:

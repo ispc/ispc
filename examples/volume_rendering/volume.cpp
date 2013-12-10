@@ -135,9 +135,15 @@ loadVolume(const char *fn, int n[3]) {
 
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: volume <camera.dat> <volume_density.vol>\n");
+    static unsigned int test_iterations[] = {3, 7, 1};
+    if (argc < 3) {
+        fprintf(stderr, "usage: volume <camera.dat> <volume_density.vol> [ispc iterations] [tasks iterations] [serial iterations]\n");
         return 1;
+    }
+    if (argc == 6) {
+        for (int i = 0; i < 3; i++) {
+            test_iterations[i] = atoi(argv[3 + i]);
+        }
     }
 
     //
@@ -156,11 +162,12 @@ int main(int argc, char *argv[]) {
     // time of three runs.
     //
     double minISPC = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
         volume_ispc(density, n, raster2camera, camera2world,
                     width, height, image);
         double dt = get_elapsed_mcycles();
+        printf("@time of ISPC run:\t\t\t[%.3f] million cycles\n", dt);
         minISPC = std::min(minISPC, dt);
     }
 
@@ -176,11 +183,12 @@ int main(int argc, char *argv[]) {
     // tasks; report the minimum time of three runs.
     //
     double minISPCtasks = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
         volume_ispc_tasks(density, n, raster2camera, camera2world,
                           width, height, image);
         double dt = get_elapsed_mcycles();
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", dt);
         minISPCtasks = std::min(minISPCtasks, dt);
     }
 
@@ -196,11 +204,12 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
         volume_serial(density, n, raster2camera, camera2world,
                       width, height, image);
         double dt = get_elapsed_mcycles();
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minSerial = std::min(minSerial, dt);
     }
 
