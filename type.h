@@ -872,6 +872,7 @@ public:
     std::string GetString() const;
     std::string Mangle() const;
     std::string GetCDeclaration(const std::string &fname) const;
+    std::string GetCDeclarationForDispatch(const std::string &fname) const;
 
     llvm::Type *LLVMType(llvm::LLVMContext *ctx) const;
     llvm::DIType GetDIType(llvm::DIDescriptor scope) const;

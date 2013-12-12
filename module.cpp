@@ -935,7 +935,7 @@ Module::AddExportedTypes(const std::vector<std::pair<const Type *,
 
 bool
 Module::writeOutput(OutputType outputType, const char *outFileName,
-                    const char *includeFileName) {
+                    const char *includeFileName, DispatchHeaderInfo *DHI) {
     if (diBuilder != NULL && (outputType != Header && outputType != Deps)) {
         diBuilder->finalize();
 
@@ -996,8 +996,12 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
                     "has suffix \"%s\"?", fileType, outFileName, suffix);
     }
 
-    if (outputType == Header)
-      return writeHeader(outFileName);
+    if (outputType == Header) {
+      if (DHI)
+        return writeDispatchHeader(DHI);
+      else
+        return writeHeader(outFileName);
+    }
     else if (outputType == Deps)
       return writeDeps(outFileName);
     else if (outputType == HostStub)
@@ -1121,6 +1125,19 @@ lGetElementStructType(const Type *t) {
     return NULL;
 }
 
+static bool
+lContainsPtrToVarying(const StructType *st) {
+  int numElts = st->GetElementCount();
+
+  for (int j = 0; j < numElts; ++j) {
+    const Type *t = st->GetElementType(j);
+
+    if (t->IsVaryingType()) return true;
+  }
+
+  return false;
+}
+
 
 /** Emits a declaration for the given struct to the given file.  This
     function first makes sure that declarations for any structs that are
@@ -1128,7 +1145,14 @@ lGetElementStructType(const Type *t) {
  */
 static void
 lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedStructs,
-                FILE *file) {
+                FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
+
+    // if we're emitting this for a generic dispatch header file and it's 
+    // struct that only contains uniforms, don't bother if we're emitting uniforms
+    if (printGenericHeader && !emitUnifs && !lContainsPtrToVarying(st)) {
+      return;
+    }
+
     // Has this struct type already been declared?  (This happens if it's a
     // member of another struct for which we emitted a declaration
     // previously.)
@@ -1141,19 +1165,33 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
         const StructType *elementStructType =
             lGetElementStructType(st->GetElementType(i));
         if (elementStructType != NULL)
-            lEmitStructDecl(elementStructType, emittedStructs, file);
+          lEmitStructDecl(elementStructType, emittedStructs, file, printGenericHeader, emitUnifs);
     }
 
     // And now it's safe to declare this one
     emittedStructs->push_back(st);
 
-    fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
-    fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
+    
+    if (printGenericHeader && lContainsPtrToVarying(st)) {
+      fprintf(file, "#ifndef __ISPC_STRUCT_%s%d__\n",
+              st->GetStructName().c_str(), 
+              g->target->getVectorWidth());
+      fprintf(file, "#define __ISPC_STRUCT_%s%d__\n",
+              st->GetStructName().c_str(),
+              g->target->getVectorWidth());
+    }
+    else {
+      fprintf(file, "#ifndef __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
+      fprintf(file, "#define __ISPC_STRUCT_%s__\n",st->GetStructName().c_str());
+    }
     fprintf(file, "struct %s", st->GetStructName().c_str());
     if (st->GetSOAWidth() > 0)
         // This has to match the naming scheme in
         // StructType::GetCDeclaration().
         fprintf(file, "_SOA%d", st->GetSOAWidth());
+    if (printGenericHeader && lContainsPtrToVarying(st)) {
+      fprintf(file, "%d", g->target->getVectorWidth());
+    }
     fprintf(file, " {\n");
 
     for (int i = 0; i < st->GetElementCount(); ++i) {
@@ -1170,10 +1208,10 @@ lEmitStructDecl(const StructType *st, std::vector<const StructType *> *emittedSt
     header file, emit their declarations.
  */
 static void
-lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file) {
+lEmitStructDecls(std::vector<const StructType *> &structTypes, FILE *file, bool printGenericHeader=false, bool emitUnifs=true) {
     std::vector<const StructType *> emittedStructs;
     for (unsigned int i = 0; i < structTypes.size(); ++i)
-        lEmitStructDecl(structTypes[i], &emittedStructs, file);
+      lEmitStructDecl(structTypes[i], &emittedStructs, file, printGenericHeader, emitUnifs);
 }
 
 
@@ -1338,14 +1376,20 @@ lGetExportedParamTypes(const std::vector<Symbol *> &funcs,
 
 static void
 lPrintFunctionDeclarations(FILE *file, const std::vector<Symbol *> &funcs,
-                           bool useExternC=1) {
+                           bool useExternC=1, bool rewriteForDispatch=false) {
   if (useExternC)
     fprintf(file, "#if defined(__cplusplus) && !defined(__ISPC_NO_EXTERN_C)\nextern \"C\" {\n#endif // __cplusplus\n");
     // fprintf(file, "#ifdef __cplusplus\nextern \"C\" {\n#endif // __cplusplus\n");
   for (unsigned int i = 0; i < funcs.size(); ++i) {
     const FunctionType *ftype = CastType<FunctionType>(funcs[i]->type);
     Assert(ftype);
-    std::string decl = ftype->GetCDeclaration(funcs[i]->name);
+    std::string decl;
+    if (rewriteForDispatch) {
+      decl = ftype->GetCDeclarationForDispatch(funcs[i]->name);
+    }
+    else {
+      decl = ftype->GetCDeclaration(funcs[i]->name);
+    }
     fprintf(file, "    extern %s;\n", decl.c_str());
   }
   if (useExternC)
@@ -1791,60 +1835,137 @@ Module::writeHeader(const char *fn) {
     return true;
 }
 
+struct DispatchHeaderInfo {
+  bool EmitUnifs;
+  bool EmitFuncs;
+  bool EmitFrontMatter;
+  bool EmitBackMatter;
+  bool Emit4;
+  bool Emit8;
+  bool Emit16;
+  FILE *file;
+  const char *fn;
+};
 
 bool
-Module::writeDispatchHeaderSection(FILE *f, unsigned int *flags) {
-  unsigned int AlreadyDone4 = (*flags) & 4;
-  unsigned int AlreadyDone8 = (*flags) & 8;
-  unsigned int AlreadyDone16 = (*flags) & 16;
+Module::writeDispatchHeader(DispatchHeaderInfo *DHI) {
+  FILE *f = DHI->file;
   
-  // Get Target ProgramCount
-  // If not already done
-  // { 
-  //   ... 
-  //   (*flags) = (*flags) | target program count
-  // }
-  // else return
-
-  fprintf(f, "\n#ifdef __cplusplus\nnamespace ispc { /* namespace */\n#endif // __cplusplus\n");
-
-  // Get all of the struct, vector, and enumerant types used as function
-  // parameters.  These vectors may have repeats.
-  std::vector<const StructType *> exportedStructTypes;
-  std::vector<const EnumType *> exportedEnumTypes;
-  std::vector<const VectorType *> exportedVectorTypes;
-  lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
-                         &exportedEnumTypes, &exportedVectorTypes);
-  lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
-                         &exportedEnumTypes, &exportedVectorTypes);
-  
-  // Go through the explicitly exported types
-  for (int i = 0; i < (int)exportedTypes.size(); ++i) {
-    if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
-      exportedStructTypes.push_back(st->GetAsUniformType());
-    else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
-      exportedEnumTypes.push_back(et->GetAsUniformType());
-    else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
-      exportedVectorTypes.push_back(vt->GetAsUniformType());
-    else
-      FATAL("Unexpected type in export list");
+  if (DHI->EmitFrontMatter) {
+    fprintf(f, "//\n// %s\n// (Header automatically generated by the ispc compiler.)\n", DHI->fn);
+    fprintf(f, "// DO NOT EDIT THIS FILE.\n//\n\n");
   }
-  
-  // And print them
-  lEmitVectorTypedefs(exportedVectorTypes, f);
-  lEmitEnumDecls(exportedEnumTypes, f);
-  lEmitStructDecls(exportedStructTypes, f);
-  
-    // end namespace
-    fprintf(f, "\n");
-    fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
+    // Create a nice guard string from the filename, turning any
+    // non-number/letter characters into underbars
+    std::string guard = "ISPC_";
+    const char *p = DHI->fn;
+    while (*p) {
+        if (isdigit(*p))
+            guard += *p;
+        else if (isalpha(*p))
+            guard += toupper(*p);
+        else
+            guard += "_";
+        ++p;
+    }
+    if (DHI->EmitFrontMatter) {
+      fprintf(f, "#ifndef %s\n#define %s\n\n", guard.c_str(), guard.c_str());
 
-    // end guard
-    fprintf(f, "\n#endif // %s\n", guard.c_str());
+      fprintf(f, "#include <stdint.h>\n\n");
 
+
+      if (g->emitInstrumentation) {
+        fprintf(f, "#define ISPC_INSTRUMENTATION 1\n");
+        fprintf(f, "extern \"C\" {\n");
+        fprintf(f, "  void ISPCInstrument(const char *fn, const char *note, int line, uint64_t mask);\n");
+        fprintf(f, "}\n");
+      }
+
+      // end namespace
+      fprintf(f, "\n");
+      fprintf(f, "\n#ifdef __cplusplus\nnamespace ispc { /* namespace */\n#endif // __cplusplus\n\n");
+      DHI->EmitFrontMatter = false;
+    }
+
+
+    // Collect single linear arrays of the exported and extern "C"
+    // functions
+    std::vector<Symbol *> exportedFuncs, externCFuncs;
+    m->symbolTable->GetMatchingFunctions(lIsExported, &exportedFuncs);
+    m->symbolTable->GetMatchingFunctions(lIsExternC, &externCFuncs);
+     
+    int programCount = g->target->getVectorWidth();
+    
+    if ((DHI->Emit4 && (programCount == 4)) || 
+        (DHI->Emit8 && (programCount == 8)) ||
+        (DHI->Emit16 && (programCount == 16))) {
+        // Get all of the struct, vector, and enumerant types used as function
+        // parameters.  These vectors may have repeats.
+        std::vector<const StructType *> exportedStructTypes;
+        std::vector<const EnumType *> exportedEnumTypes;
+        std::vector<const VectorType *> exportedVectorTypes;
+        lGetExportedParamTypes(exportedFuncs, &exportedStructTypes,
+                               &exportedEnumTypes, &exportedVectorTypes);
+        lGetExportedParamTypes(externCFuncs, &exportedStructTypes,
+                               &exportedEnumTypes, &exportedVectorTypes);
+        
+        // Go through the explicitly exported types
+        for (int i = 0; i < (int)exportedTypes.size(); ++i) {
+          if (const StructType *st = CastType<StructType>(exportedTypes[i].first))
+            exportedStructTypes.push_back(st->GetAsUniformType());
+          else if (const EnumType *et = CastType<EnumType>(exportedTypes[i].first))
+            exportedEnumTypes.push_back(et->GetAsUniformType());
+          else if (const VectorType *vt = CastType<VectorType>(exportedTypes[i].first))
+            exportedVectorTypes.push_back(vt->GetAsUniformType());
+          else
+            FATAL("Unexpected type in export list");
+        }
+
+        
+        // And print them
+        if (DHI->EmitUnifs) {
+          lEmitVectorTypedefs(exportedVectorTypes, f);
+          lEmitEnumDecls(exportedEnumTypes, f);
+        }
+        lEmitStructDecls(exportedStructTypes, f, true, DHI->EmitUnifs);
+        
+        // Update flags
+        DHI->EmitUnifs = false;
+        if (programCount == 4) {
+          DHI->Emit4 = false;
+        } 
+        else if (programCount == 8) {
+          DHI->Emit8 = false;
+        }
+        else if (programCount == 16) {
+          DHI->Emit16 = false;
+        }
+    }
+    if (DHI->EmitFuncs) {
+      // emit function declarations for exported stuff...
+      if (exportedFuncs.size() > 0) {
+        fprintf(f, "\n");
+        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
+        fprintf(f, "// Functions exported from ispc code\n");
+        fprintf(f, "///////////////////////////////////////////////////////////////////////////\n");
+        lPrintFunctionDeclarations(f, exportedFuncs, 1, true);
+        fprintf(f, "\n");
+      }
+      DHI->EmitFuncs = false;
+    }
+
+    if (DHI->EmitBackMatter) {
+      // end namespace
+      fprintf(f, "\n");
+      fprintf(f, "\n#ifdef __cplusplus\n} /* namespace */\n#endif // __cplusplus\n");
+      
+      // end guard
+      fprintf(f, "\n#endif // %s\n", guard.c_str());
+      DHI->EmitBackMatter = false;
+    }
+    
     return true;
 }
-
 
 void
 Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
@@ -2514,6 +2635,28 @@ Module::CompileAndOutput(const char *srcFile,
         std::map<std::string, FunctionTargetVariants> exportedFunctions;
         std::vector<RewriteGlobalInfo> globals[Target::NUM_ISAS];
         int errorCount = 0;
+        
+        // Handle creating a "generic" header file for multiple targets
+        // that use exported varyings
+        DispatchHeaderInfo DHI;
+        if ((targets.size() > 1) && (headerFileName != NULL)) {
+          DHI.file  = fopen(headerFileName, "w");
+          if (!DHI.file) {
+            perror("fopen");
+            return false;
+          }
+          DHI.fn = headerFileName;
+          DHI.EmitUnifs = true;
+          DHI.EmitFuncs = true;
+          DHI.EmitFrontMatter = true;
+          DHI.Emit4 = true;
+          DHI.Emit8 = true;
+          DHI.Emit16 = true;
+          // This is toggled later.
+          DHI.EmitBackMatter = false;
+        }
+
+
         for (unsigned int i = 0; i < targets.size(); ++i) {
             g->target = new Target(arch, cpu, targets[i].c_str(), generatePIC);
             if (!g->target->isValid())
@@ -2551,18 +2694,24 @@ Module::CompileAndOutput(const char *srcFile,
             // Only write the generate header file, if desired, the first
             // time through the loop here.
             if (headerFileName != NULL) {
-                const char *isaName = g->target->GetISAString();
-                std::string targetHeaderFileName = 
-                    lGetTargetFileName(headerFileName, isaName);
-                if (i == 0) {
-                    // write out a header w/o target name for the first target only
-                    if (!m->writeOutput(Module::Header, headerFileName)) {
-                        return 1;
-                    }
-                }
-                if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str())) {
-                    return 1;
-                }
+              if (i == targets.size()-1) {
+                // only print backmatter on the last target.
+                DHI.EmitBackMatter = true;
+              }
+              
+              const char *isaName = g->target->GetISAString();
+              std::string targetHeaderFileName = 
+                lGetTargetFileName(headerFileName, isaName);
+              // write out a header w/o target name for the first target only
+              if (!m->writeOutput(Module::Header, headerFileName, "", &DHI)) {
+                return 1;
+              }
+              if (!m->writeOutput(Module::Header, targetHeaderFileName.c_str())) {
+                return 1;
+              }
+              if (i == targets.size()-1) {
+                fclose(DHI.file);
+              }
             }
 
             delete g->target;

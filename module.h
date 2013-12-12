@@ -50,6 +50,8 @@ namespace llvm
     class raw_string_ostream;
 }
 
+struct DispatchHeaderInfo;
+
 class Module {
 public:
     /** The name of the source file being compiled should be passed as the
@@ -171,8 +173,10 @@ private:
         filename may be NULL, indicating that output should go to standard
         output. */
     bool writeOutput(OutputType ot, const char *filename,
-                     const char *includeFileName = NULL);
+                     const char *includeFileName = NULL,
+                     DispatchHeaderInfo *DHI = 0);
     bool writeHeader(const char *filename);
+    bool writeDispatchHeader(DispatchHeaderInfo *DHI);
     bool writeDeps(const char *filename);
     bool writeDevStub(const char *filename);
     bool writeHostStub(const char *filename);
@@ -181,8 +185,6 @@ private:
                                           llvm::Module *module, OutputType outputType,
                                           const char *outFileName);
     static bool writeBitcode(llvm::Module *module, const char *outFileName);
-    static bool writeDispatchHeader(const char *dispatchHeaderFileName);
-    bool writeDispatchHeaderSection(FILE *file, unsigned int *flags);
 
     void execPreprocessor(const char *infilename, llvm::raw_string_ostream* ostream) const;
 };

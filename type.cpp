@@ -2869,13 +2869,55 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
             CastType<ArrayType>(pt->GetBaseType()) != NULL) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
-
+        
         if (paramNames[i] != "")
-            ret += type->GetCDeclaration(paramNames[i]);
+          ret += type->GetCDeclaration(paramNames[i]);
         else
-            ret += type->GetString();
+          ret += type->GetString();
         if (i != paramTypes.size() - 1)
-            ret += ", ";
+          ret += ", ";
+    }
+    ret += ")";
+    return ret;
+}
+
+
+std::string
+FunctionType::GetCDeclarationForDispatch(const std::string &fname) const {
+    std::string ret;
+    ret += returnType->GetCDeclaration("");
+    ret += " ";
+    ret += fname;
+    ret += "(";
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        const Type *type = paramTypes[i];
+
+        // Convert pointers to arrays to unsized arrays, which are more clear
+        // to print out for multidimensional arrays (i.e. "float foo[][4] "
+        // versus "float (foo *)[4]").
+        const PointerType *pt = CastType<PointerType>(type);
+        if (pt != NULL &&
+            CastType<ArrayType>(pt->GetBaseType()) != NULL) {
+            type = new ArrayType(pt->GetBaseType(), 0);
+        }
+        
+        // Change pointers to varying thingies to void *
+        if (pt != NULL && pt->GetBaseType()->IsVaryingType()) {
+          PointerType *t = PointerType::Void;
+          
+          if (paramNames[i] != "")
+            ret += t->GetCDeclaration(paramNames[i]);
+          else
+            ret += t->GetString();
+        }
+        else {
+          if (paramNames[i] != "")
+            ret += type->GetCDeclaration(paramNames[i]);
+          else
+            ret += type->GetString();
+        }
+        if (i != paramTypes.size() - 1)
+          ret += ", ";
     }
     ret += ")";
     return ret;
