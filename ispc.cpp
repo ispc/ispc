@@ -944,7 +944,8 @@ Target::GetISATargetString() const {
 
 static bool
 lGenericTypeLayoutIndeterminate(llvm::Type *type) {
-    if (type->isPrimitiveType() || type->isIntegerTy())
+    if (type->isFloatingPointTy() || type->isX86_MMXTy() || type->isVoidTy() ||
+        type->isIntegerTy() || type->isLabelTy() || type->isMetadataTy())
         return false;
 
     if (type == LLVMTypes::BoolVectorType ||
