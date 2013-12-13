@@ -714,6 +714,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic, boo
         this->m_isa = Target::NVPTX64;
         this->m_isPTX = true;
         this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 32;
         this->m_vectorWidth = 1;
         this->m_attributes = "+sm_35";
         this->m_hasHalf = true;
