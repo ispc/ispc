@@ -241,7 +241,11 @@ namespace {
   class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
     CBEMCAsmInfo() {
+#if defined(LLVM_3_5)
+      GlobalPrefix = '\0';
+#else
       GlobalPrefix = "";
+#endif
       PrivateGlobalPrefix = "";
     }
   };
@@ -656,7 +660,7 @@ void CWriter::printStructReturnPointerFunctionType(llvm::raw_ostream &Out,
 llvm::raw_ostream &
 CWriter::printSimpleType(llvm::raw_ostream &Out, llvm::Type *Ty, bool isSigned,
                          const std::string &NameSoFar) {
-  assert((Ty->isPrimitiveType() || Ty->isIntegerTy() || Ty->isVectorTy()) &&
+  assert((Ty->isFloatingPointTy() || Ty->isX86_MMXTy() || Ty->isIntegerTy() || Ty->isVectorTy() || Ty->isVoidTy()) &&
          "Invalid type for printSimpleType");
   switch (Ty->getTypeID()) {
   case llvm::Type::VoidTyID:   return Out << "void " << NameSoFar;
@@ -752,7 +756,7 @@ llvm::raw_ostream &CWriter::printType(llvm::raw_ostream &Out, llvm::Type *Ty,
 #endif
                                       ) {
 
-  if (Ty->isPrimitiveType() || Ty->isIntegerTy() || Ty->isVectorTy()) {
+  if (Ty->isFloatingPointTy() || Ty->isX86_MMXTy() || Ty->isIntegerTy() || Ty->isVectorTy() || Ty->isVoidTy()) {
     printSimpleType(Out, Ty, isSigned, NameSoFar);
     return Out;
   }
@@ -2733,7 +2737,7 @@ void CWriter::printModuleTypes() {
 void CWriter::printContainedStructs(llvm::Type *Ty,
                                     llvm::SmallPtrSet<llvm::Type *, 16> &Printed) {
   // Don't walk through pointers.
-  if (Ty->isPointerTy() || Ty->isPrimitiveType() || Ty->isIntegerTy())
+  if (!(Ty->isStructTy() || Ty->isArrayTy()))
     return;
 
   // Print all contained types first.

@@ -44,7 +44,8 @@ def build_test(commands):
     test = os.system(commands[1])
     if is_windows:
         common.remove_if_exists(".\\X64\\Release1")
-        os.rename(".\\X64\\Release", ".\\X64\\Release1")
+        if (test == 0):
+            os.rename(".\\X64\\Release", ".\\X64\\Release1")
     if options.ref:
         ref = os.system(commands[3])
     return (options.ref and ref) or test
@@ -98,16 +99,19 @@ def analyse_test(c1, c2, test, b_serial, perf_temp_n):
             j+=1
         if "million cycles" in line:
             if j == c1:
-                line = line.replace("]","[")
-                line = line.split("[")
-                number = float(line[3])
-                if "tasks" in line[1]:
-                    absolute_tasks.append(number)
+                if line[0] == '@':
+                    print_debug(line, True, perf_log)
                 else:
-                    if "ispc" in line[1]:
-                        absolute_ispc.append(number)
-                if "serial" in line[1]:
-                    serial.append(number)
+                    line = line.replace("]","[")
+                    line = line.split("[")
+                    number = float(line[3])
+                    if "tasks" in line[1]:
+                        absolute_tasks.append(number)
+                    else:
+                        if "ispc" in line[1]:
+                            absolute_ispc.append(number)
+                    if "serial" in line[1]:
+                        serial.append(number)
 
     if len(ispc) != 0:
         if len(tasks) != 0:
@@ -334,9 +338,9 @@ def perf(options1, args):
 
     if options.perf_target != "":
         test_only_r = " sse2-i32x4 sse2-i32x8 sse4-i32x4 sse4-i32x8 sse4-i16x8 \
-                        sse4-i8x16 avx1-i32x8 avx1-i32x16 avx1-i64x4 avx1.1-i32x8 \
+                        sse4-i8x16 avx1-i32x4 avx1-i32x8 avx1-i32x16 avx1-i64x4 avx1.1-i32x8 \
                         avx1.1-i32x16 avx1.1-i64x4 avx2-i32x8 avx2-i32x16 avx2-i64x4 "
-        test_only = options.perf_target.split(" ")
+        test_only = options.perf_target.split(",")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
                 error("unknow option for target: " + iterator, 1)
@@ -467,17 +471,20 @@ def perf(options1, args):
         command = command[:-1]
         # handle conditional target argument
         target_str_temp = ""
+	target_out_temp = ""
         perf_targets = [""]
         target_number = 1
         if options.perf_target != "":
             perf_targets = options.perf_target.split(',')
             target_str_temp = " ISPC_IA_TARGETS="
+	    target_out_temp = " /p:Target_str="
             target_number = len(perf_targets)
         temp = 0
         for target_i in range(target_number):
             test = [lines[i][:-1],[],[],[],[],[]]
             test_ref = [lines[i][:-1],[],[],[],[],[]]
-            target_str = target_str_temp + perf_targets[target_i] 
+            target_str = target_str_temp + perf_targets[target_i]
+	    Target_out = target_out_temp + perf_targets[target_i]
             if is_windows == False:
                 ex_command_ref = "./ref " + command + " >> " + perf_temp + "_ref"
                 ex_command = "./test " + command + " >> " + perf_temp + "_test"
@@ -487,8 +494,8 @@ def perf(options1, args):
             else:
                 ex_command_ref = "x64\\Release\\ref.exe " + command + " >> " + perf_temp + "_ref"
                 ex_command = "x64\\Release1\\test.exe " + command + " >> " + perf_temp + "_test"
-                bu_command_ref = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=ref /p:ISPC_compiler=ispc_ref /t:rebuild >> " + build_log
-                bu_command = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=test /p:ISPC_compiler=ispc /t:rebuild >> " + build_log
+		bu_command_ref = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=ref /p:ISPC_compiler=ispc_ref " + Target_out + " /t:rebuild >> " + build_log
+                bu_command = "msbuild /V:m /p:Platform=x64 /p:Configuration=Release /p:TargetDir=.\ /p:TargetName=test /p:ISPC_compiler=ispc " + Target_out + " /t:rebuild >> " + build_log
                 re_command = "msbuild /t:clean >> " + build_log
             commands = [ex_command, bu_command, ex_command_ref, bu_command_ref, re_command]
             # parsing config parameters

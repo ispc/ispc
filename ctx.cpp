@@ -318,7 +318,11 @@ FunctionEmitContext::FunctionEmitContext(Function *func, Symbol *funSym,
             llvm::BasicBlock *offBB =
                    llvm::BasicBlock::Create(*g->ctx, "entry",
                                             (llvm::Function *)offFunc, 0);
-            new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
+            llvm::StoreInst *inst =
+                new llvm::StoreInst(LLVMMaskAllOff, globalAllOnMaskPtr, offBB);
+            if (g->opt.forceAlignedMemory) {
+                inst->setAlignment(g->target->getNativeVectorAlignment());
+            }
             llvm::ReturnInst::Create(*g->ctx, offBB);
         }
 
@@ -2453,7 +2457,13 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
 
-    llvm::Instruction *inst = new llvm::LoadInst(ptr, name, bblock);
+    llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
+
+    if (g->opt.forceAlignedMemory &&
+        llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+        inst->setAlignment(g->target->getNativeVectorAlignment());
+    }
+
     AddDebugPos(inst);
     return inst;
 }
@@ -2735,7 +2745,7 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         inst = new llvm::AllocaInst(llvmType, name ? name : "", bblock);
 
     // If no alignment was specified but we have an array of a uniform
-    // type, then align it to 4 * the native vector width; it's not
+    // type, then align it to the native vector alignment; it's not
     // unlikely that this array will be loaded into varying variables with
     // what will be aligned accesses if the uniform -> varying load is done
     // in regular chunks.
@@ -2743,7 +2753,7 @@ FunctionEmitContext::AllocaInst(llvm::Type *llvmType,
         llvm::dyn_cast<llvm::ArrayType>(llvmType);
     if (align == 0 && arrayType != NULL &&
         !llvm::isa<llvm::VectorType>(arrayType->getElementType()))
-        align = 4 * g->target->getNativeVectorWidth();
+        align = g->target->getNativeVectorAlignment();
 
     if (align != 0)
         inst->setAlignment(align);
@@ -3002,7 +3012,17 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
         return;
     }
 
-    llvm::Instruction *inst = new llvm::StoreInst(value, ptr, bblock);
+    llvm::PointerType *pt =
+        llvm::dyn_cast<llvm::PointerType>(ptr->getType());
+    AssertPos(currentPos, pt != NULL);
+
+    llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
+
+    if (g->opt.forceAlignedMemory &&
+        llvm::dyn_cast<llvm::VectorType>(pt->getElementType())) {
+        inst->setAlignment(g->target->getNativeVectorAlignment());
+    }
+
     AddDebugPos(inst);
 }
 

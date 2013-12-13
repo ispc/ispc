@@ -69,11 +69,12 @@ writePPM(int *buf, int width, int height, const char *fn) {
 
 
 static void usage() {
-    fprintf(stderr, "usage: mandelbrot [--scale=<factor>]\n");
+    fprintf(stderr, "usage: mandelbrot [--scale=<factor>] [tasks iterations] [serial iterations]\n");
     exit(1);
 }
 
 int main(int argc, char *argv[]) {
+    static unsigned int test_iterations[] = {7, 1};
     unsigned int width = 1536;
     unsigned int height = 1024;
     float x0 = -2;
@@ -81,9 +82,7 @@ int main(int argc, char *argv[]) {
     float y0 = -1;
     float y1 = 1;
 
-    if (argc == 1)
-        ;
-    else if (argc == 2) {
+    if (argc > 1) {
         if (strncmp(argv[1], "--scale=", 8) == 0) {
             float scale = atof(argv[1] + 8);
             if (scale == 0.f)
@@ -94,11 +93,13 @@ int main(int argc, char *argv[]) {
             width = (width + 0xf) & ~0xf;
             height = (height + 0xf) & ~0xf;
         }
-        else 
-            usage();
     }
-    else
-        usage();
+    if ((argc == 3) || (argc == 4)) {
+        for (int i = 0; i < 2; i++) {
+            test_iterations[i] = atoi(argv[argc - 2 + i]);
+        }
+    }
+
 
     int maxIterations = 512;
     int *buf = new int[width*height];
@@ -108,13 +109,14 @@ int main(int argc, char *argv[]) {
     // time of three runs.
     //
     double minISPC = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[0]; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
         reset_and_start_timer();
         mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", dt);
         minISPC = std::min(minISPC, dt);
     }
 
@@ -127,13 +129,14 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[1]; ++i) {
         // Clear out the buffer
         for (unsigned int i = 0; i < width * height; ++i)
             buf[i] = 0;
         reset_and_start_timer();
         mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
         double dt = get_elapsed_mcycles();
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minSerial = std::min(minSerial, dt);
     }
 

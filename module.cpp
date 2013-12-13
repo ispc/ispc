@@ -2134,7 +2134,7 @@ lAddExtractedGlobals(llvm::Module *module,
                 // example, this happens with varying globals if we compile
                 // to different vector widths.
                 if (gv2->getType() != gv->getType())
-                    Error(rgi.pos, "Mismatch in size/layout of global "
+                    Warning(rgi.pos, "Mismatch in size/layout of global "
                           "variable \"%s\" with different targets. "
                           "Globals must not include \"varying\" types or arrays "
                           "with size based on programCount when compiling to "
