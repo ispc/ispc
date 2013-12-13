@@ -38,7 +38,8 @@
 #pragma warning (disable: 4305)
 #endif
 
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
 #include <algorithm>
 #include <string.h>
 #include "../timing.h"

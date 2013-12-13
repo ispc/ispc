@@ -3012,8 +3012,7 @@ Intel® Cilk(tm), Intel® Thread Building Blocks or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
 from ``ispc`` code.  The approach is similar to Intel® Cilk's task launch
-feature.  (See the ``examples/mandelbrot_tasks`` and
-``examples/mandelbrot_tasks3d`` examples to see it used in a small example.)
+feature.  (Check the ``examples/mandelbrot_tasks`` example to see how it is used.)
 
 Any function that is launched as a task must be declared with the
 ``task`` qualifier:
