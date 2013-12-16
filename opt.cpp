@@ -1479,6 +1479,33 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                                                  insertBefore);
             return;
         }
+        else if (bop->getOpcode() == llvm::Instruction::Shl) {
+            lExtractConstantOffset(op0, &c0, &v0, insertBefore);
+            lExtractConstantOffset(op1, &c1, &v1, insertBefore);
+
+            // Given the product of constant and variable terms, we have:
+            // (c0 + v0) * (2^(c1 + v1))  = c0 * 2^c1 * 2^v1 + v0 * 2^c1 * 2^v1
+            // We can optimize only if v1 == NULL.
+            if ((v1 != NULL) || (c0 == NULL) || (c1 == NULL)) {
+                *constOffset = NULL;
+                *variableOffset = vec;
+            }
+            else if (v0 == NULL) {
+                *constOffset = vec;
+                *variableOffset = NULL;
+            }
+            else {
+                *constOffset =
+                    llvm::BinaryOperator::Create(llvm::Instruction::Shl, c0, c1,
+                                                 LLVMGetName("shl", c0, c1),
+                                                 insertBefore);
+                *variableOffset =
+                    llvm::BinaryOperator::Create(llvm::Instruction::Shl, v0, c1,
+                                                 LLVMGetName("shl", v0, c1),
+                                                 insertBefore);
+            }
+            return;
+        }
         else if (bop->getOpcode() == llvm::Instruction::Mul) {
             lExtractConstantOffset(op0, &c0, &v0, insertBefore);
             lExtractConstantOffset(op1, &c1, &v1, insertBefore);
