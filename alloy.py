@@ -584,7 +584,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.1 3.2 3.3 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only_r = " 3.1 3.2 3.3 3.4 trunk current build stability performance x86 x86-64 -O0 -O2 native "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):
