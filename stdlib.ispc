@@ -1209,6 +1209,13 @@ packed_store_active(uniform unsigned int a[],
     return __packed_store_active(a, vals, (UIntMaskType)__mask);
 }
 
+static inline uniform int
+packed_store_active2(uniform unsigned int a[],
+                    unsigned int vals) {
+    return __packed_store_active2(a, vals, (UIntMaskType)__mask);
+}
+
+
 static inline uniform int 
 packed_load_active(uniform int a[], varying int * uniform vals) {
     return __packed_load_active(a, vals, (IntMaskType)__mask);
@@ -1218,6 +1225,12 @@ static inline uniform int
 packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
+
+static inline uniform int
+packed_store_active2(uniform int a[], int vals) {
+    return __packed_store_active2(a, vals, (IntMaskType)__mask);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////
 // System information
