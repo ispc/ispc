@@ -62,17 +62,20 @@ extern "C" {
     extern void f_di(float *result, double *a, int *b);
     extern void result(float *val);
 
-    void ISPCLaunch(void **handlePtr, void *f, void *d, int);
+    void ISPCLaunch(void **handlePtr, void *f, void *d, int,int,int);
     void ISPCSync(void *handle);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
 }
-
-void ISPCLaunch(void **handle, void *f, void *d, int count) {
+ 
+void ISPCLaunch(void **handle, void *f, void *d, int count0, int count1, int count2) {
     *handle = (void *)0xdeadbeef;
-    typedef void (*TaskFuncType)(void *, int, int, int, int);
+    typedef void (*TaskFuncType)(void *, int, int, int, int, int, int, int, int, int, int);
     TaskFuncType func = (TaskFuncType)f;
-    for (int i = 0; i < count; ++i)
-        func(d, 0, 1, i, count);
+    int count = count0*count1*count2, idx = 0;
+    for (int k = 0; k < count2; ++k)
+      for (int j = 0; j < count1; ++j)
+        for (int i = 0; i < count0; ++i)
+        func(d, 0, 1, idx++, count, i,j,k,count0,count1,count2);
 }
 
 void ISPCSync(void *) {

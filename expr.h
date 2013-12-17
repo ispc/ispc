@@ -247,7 +247,8 @@ public:
 class FunctionCallExpr : public Expr {
 public:
     FunctionCallExpr(Expr *func, ExprList *args, SourcePos p,
-                     bool isLaunch = false, Expr *launchCountExpr = NULL);
+                     bool isLaunch = false, 
+                     Expr *launchCountExpr[3] = NULL);
 
     llvm::Value *GetValue(FunctionEmitContext *ctx) const;
     llvm::Value *GetLValue(FunctionEmitContext *ctx) const;
@@ -262,7 +263,7 @@ public:
     Expr *func;
     ExprList *args;
     bool isLaunch;
-    Expr *launchCountExpr;
+    Expr *launchCountExpr[3];
 };
 
 
