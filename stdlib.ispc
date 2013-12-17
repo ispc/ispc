@@ -5158,3 +5158,12 @@ __declspec(safe)
 static unmasked inline int16 avg_down(int16 a, int16 b) {
     return __avg_down_int16(a, b);
 }
+
+
+// Added so programmers can query programCount
+// at runtime from C/C++.
+// This is useful for using varying 
+// structures with exported functions
+export uniform int32 get_programCount() {
+  return programCount;
+}

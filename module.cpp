@@ -607,7 +607,10 @@ lRecursiveCheckValidParamType(const Type *t, bool vectorOk) {
         return lRecursiveCheckValidParamType(pt->GetBaseType(), true);
     }
 
-    return true;
+    if (t->IsVaryingType() && !vectorOk)
+      return false;
+    else 
+      return true;
 }
 
 
@@ -830,9 +833,9 @@ Module::AddFunctionDeclaration(const std::string &name,
         // If the function is exported, make sure that the parameter
         // doesn't have any funky stuff going on in it.
         // JCB nomosoa - Varying is now a-ok.
-		if (functionType->isExported) {
-      lCheckExportedParameterTypes(argType, argName, argPos);
-    }
+        if (functionType->isExported) {
+          lCheckExportedParameterTypes(argType, argName, argPos);
+        }
 
         // ISPC assumes that no pointers alias.  (It should be possible to
         // specify when this is not the case, but this should be the
@@ -2339,8 +2342,6 @@ lGetVaryingDispatchType(FunctionTargetVariants &funcs) {
   
   return resultFuncTy;
 }
-
-#include <iostream>
 
 /** Create the dispatch function for an exported ispc function.
     This function checks to see which vector ISAs the system the
