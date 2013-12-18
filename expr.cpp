@@ -3555,9 +3555,14 @@ FunctionCallExpr::FunctionCallExpr(Expr *f, ExprList *a, SourcePos p,
     : Expr(p), isLaunch(il) {
     func = f;
     args = a;
-    launchCountExpr[0] = lce[0];
-    launchCountExpr[1] = lce[1];
-    launchCountExpr[2] = lce[2];
+    if (lce != NULL)
+    {
+      launchCountExpr[0] = lce[0];
+      launchCountExpr[1] = lce[1];
+      launchCountExpr[2] = lce[2];
+    }
+    else
+      launchCountExpr[0] = launchCountExpr[1] = launchCountExpr[2] = NULL;
 }
 
 

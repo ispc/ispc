@@ -10,14 +10,14 @@ static uniform float array[N2][N1][N0];
 task void x(const float f) {
     uniform int j;
 
-    assert(taskCount  == N0*N1*N2);
-    assert(taskCount0 == N0);
-    assert(taskCount1 == N1);
-    assert(taskCount2 == N2);
-    assert(taskIndex  == taskIndex0 + N0*(taskIndex1 + N1*taskIndex2));
-    assert(taskIndex0 < N0);
-    assert(taskIndex1 < N1);
-    assert(taskIndex2 < N2);
+    assert(taskCount  == (int32)N0*N1*N2);
+    assert(taskCount0 == (int32)N0);
+    assert(taskCount1 == (int32)N1);
+    assert(taskCount2 == (int32)N2);
+    assert(taskIndex  == (int32)taskIndex0 + (int32)N0*(taskIndex1 +(int32) N1*taskIndex2));
+    assert(taskIndex0 < (int32)N0);
+    assert(taskIndex1 < (int32)N1);
+    assert(taskIndex2 < (int32)N2);
 
     const uniform int i0 = taskIndex0;
     const uniform int i1 = taskIndex1;

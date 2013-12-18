@@ -184,7 +184,7 @@ struct TaskInfo {
 
 // ispc expects these functions to have C linkage / not be mangled
 extern "C" { 
-    void ISPCLaunch(void **handlePtr, void *f, void *data, int count);
+    void ISPCLaunch(void **handlePtr, void *f, void *data, int countx, int county, int countz);
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
     void ISPCSync(void *handle);
 }
