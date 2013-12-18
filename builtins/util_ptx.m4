@@ -3781,6 +3781,9 @@ if.end:                                           ; preds = %if.then, %entry
 }
 ')
 
+declare i32 @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
+                                   <WIDTH x i1> %full_mask) nounwind alwaysinline ;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
 
