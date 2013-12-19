@@ -49,7 +49,7 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.3`_
   + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
-  + `Updating ISPC Programs For Changes In ISPC 1.5.1`_
+  + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
 
 * `Getting Started with ISPC`_
 
@@ -284,7 +284,7 @@ Double precision floating point constants are floating point number with
 31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
 treated as single precision constant.
 
-Updating ISPC Programs For Changes In ISPC 1.5.1
+Updating ISPC Programs For Changes In ISPC 1.6.0
 ------------------------------------------------
 
 This release adds support for `Operators Overloading`_, so a word ``operator``
@@ -1339,6 +1339,7 @@ in C:
 * Function overloading by parameter type
 * Hexadecimal floating-point constants
 * Dynamic memory allocation with ``new`` and ``delete``.
+* Limited support for overloaded operators (`Operators Overloading`_).
 
 ``ispc`` also adds a number of new features that aren't in C89, C99, or
 C++:
@@ -4096,7 +4097,7 @@ There are also ``packed_store_active2()`` functions with exactly the same
 signatures and the same semantic except that they may write one extra
 element to the output array (but still returning the same value as
 ``packed_store_active()``). These functions suggest different branch free 
-implementation on most of supported targets, which usuarly (but not always)
+implementation on most of supported targets, which usually (but not always)
 performs better than ``packed_store_active()``. It's advised to test function
 performance on user's scenarios on particular target hardware before using it.
 
