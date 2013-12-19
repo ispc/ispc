@@ -48,6 +48,8 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.3`_
+  + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.5.1`_
 
 * `Getting Started with ISPC`_
 
@@ -97,6 +99,9 @@ Contents:
     * `Short Vector Types`_
     * `Array Types`_
     * `Struct Types`_
+
+      + `Operators Overloading`_
+
     * `Structure of Array Types`_
 
   + `Declarations and Initializers`_
@@ -278,6 +283,15 @@ Double precision floating point constants are floating point number with
 ``d`` suffix and optional exponent part. Here are some examples: 3.14d,
 31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
 treated as single precision constant.
+
+Updating ISPC Programs For Changes In ISPC 1.5.1
+------------------------------------------------
+
+This release adds support for `Operators Overloading`_, so a word ``operator``
+becomes a keyword and it potentially creates a conflict with existing user 
+function. Also a new library function packed_store_active2() was introduced,
+which also may create a conflict with existing user functions.
+
 
 Getting Started with ISPC
 =========================
@@ -2122,7 +2136,35 @@ above code, the value of ``f[index]`` needs to be able to store a different
 value of ``Foo::a`` for each program instance.  However, a ``varying Foo``
 still has only a single ``a`` member, since ``a`` was declared with
 ``uniform`` variability in the declaration of ``Foo``.  Therefore, the
-indexing operation in the last line results in an error.  
+indexing operation in the last line results in an error.
+
+
+Operators Overloading
+---------------------
+
+ISPC has limited support for overloaded operators for ``struct`` types. Only
+binary operators are supported currently, namely they are: ``*, /, %, +, -, >>
+and <<``. Operators overloading support is similar to the one in C++ language.
+To overload an operator for ``struct S``, you need to declare and implement a
+function using keyword ``operator``, which accepts two parameters of type
+``struct S`` or ``struct S&`` and returns either of these types. For example:
+
+::
+
+    struct S { float re, im;};
+    struct S operator*(struct S a, struct S b) {
+        struct S result;
+        result.re = a.re * b.re - a.im * b.im;
+        result.im = a.re * b.im + a.im * b.re;
+        return result;
+    }
+
+    void foo(struct S a, struct S b) {
+        struct S mul = a*b;
+        print("a.re:   %\na.im:   %\n", a.re, a.im);
+        print("b.re:   %\nb.im:   %\n", b.re, b.im);
+        print("mul.re: %\nmul.im: %\n", mul.re, mul.im);
+    }
 
 
 Structure of Array Types
@@ -4049,6 +4091,14 @@ They return the total number of values stored.
     uniform int packed_store_active(uniform unsigned int * uniform base,
                                     unsigned int val)
 
+
+There are also ``packed_store_active2()`` functions with exactly the same
+signatures and the same semantic except that they may write one extra
+element to the output array (but still returning the same value as
+``packed_store_active()``). These functions suggest different branch free 
+implementation on most of supported targets, which usuarly (but not always)
+performs better than ``packed_store_active()``. It's advised to test function
+performance on user's scenarios on particular target hardware before using it.
 
 As an example of how these functions can be used, the following code shows
 the use of ``packed_store_active()``.
