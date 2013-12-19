@@ -2451,20 +2451,24 @@ static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val, _
   return _mm_countbits_32(uint32_t(mask));
 }
 
+static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, __vec16_i1 mask) 
+{
+  return __packed_store_active(p, val, mask);
+}
+
 static FORCEINLINE int32_t __packed_load_active(int32_t *p, __vec16_i32 *val, __vec16_i1 mask)
 {
-  __vec16_i32 v = __load<64>(val);
-  v = _mm512_mask_extloadunpacklo_epi32(v, mask, p, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  v = _mm512_mask_extloadunpackhi_epi32(v, mask, (uint8_t*)p+64, _MM_UPCONV_EPI32_NONE, _MM_HINT_NONE);
-  __store<64>(val, v);
-  return _mm_countbits_32(uint32_t(mask));
+  return __packed_load_active((uint32_t *)p, val, mask);
 }
 
 static FORCEINLINE int32_t __packed_store_active(int32_t *p, __vec16_i32 val, __vec16_i1 mask) 
 {
-  _mm512_mask_extpackstorelo_epi32(p, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  _mm512_mask_extpackstorehi_epi32((uint8_t*)p+64, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
-  return _mm_countbits_32(uint32_t(mask));
+  return __packed_store_active((uint32_t *)p, val, mask);
+}
+
+static FORCEINLINE int32_t __packed_store_active2(int32_t *p, __vec16_i32 val, __vec16_i1 mask) 
+{
+  return __packed_store_active(p, val, mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////

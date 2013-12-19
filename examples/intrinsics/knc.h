@@ -1878,6 +1878,11 @@ static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val,
     return _mm_countbits_32(uint32_t(mask));
 }
 
+static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, __vec16_i1 mask)
+{
+  return __packed_store_active(p, val, mask);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // prefetch
 ///////////////////////////////////////////////////////////////////////////
