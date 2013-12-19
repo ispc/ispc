@@ -3,6 +3,7 @@
 define(`MASK',`i32')
 define(`WIDTH',`1')
 include(`util.m4')
+rdrand_decls()
 ; Define some basics for a 1-wide target
 stdlib_core()
 packed_load_and_store()
@@ -655,7 +656,7 @@ define  <1 x float> @__rsqrt_varying_float(<1 x float> %v) nounwind readonly alw
 declare  <1 x float> @__svml_sind(<1 x float>) nounwind readnone alwaysinline 
 declare  <1 x float> @__svml_asind(<1 x float>) nounwind readnone alwaysinline 
 declare  <1 x float> @__svml_cosd(<1 x float>) nounwind readnone alwaysinline 
-declare  void @__svml_sincosd(<1 x float>, <1 x float> *, <1 x float> *) nounwind readnone alwaysinline 
+declare  void @__svml_sincosd(<1 x float>, <1 x double> *, <1 x double> *) nounwind readnone alwaysinline
 declare  <1 x float> @__svml_tand(<1 x float>) nounwind readnone alwaysinline 
 declare  <1 x float> @__svml_atand(<1 x float>) nounwind readnone alwaysinline 
 declare  <1 x float> @__svml_atan2d(<1 x float>, <1 x float>) nounwind readnone alwaysinline 

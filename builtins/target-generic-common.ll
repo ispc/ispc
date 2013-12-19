@@ -371,6 +371,8 @@ declare i32 @__packed_load_active(i32 * nocapture, <WIDTH x i32> * nocapture,
                                   <WIDTH x i1>) nounwind
 declare i32 @__packed_store_active(i32 * nocapture, <WIDTH x i32> %vals,
                                    <WIDTH x i1>) nounwind
+declare i32 @__packed_store_active2(i32 * nocapture, <WIDTH x i32> %vals,
+                                   <WIDTH x i1>) nounwind
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
