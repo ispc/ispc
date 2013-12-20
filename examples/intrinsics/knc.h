@@ -1260,6 +1260,13 @@ static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i3
     return __vec16_i64(val.v, _mm512_setzero_epi32());
 }
 
+static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
+{
+  __vec16_i32 ret = _mm512_setzero_epi32();
+  __vec16_i32 one = _mm512_set1_epi32(-1);
+  return _mm512_mask_mov_epi32(ret, val, one);
+}
+
 static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1 &val)
 {
     __vec16_i32 ret = _mm512_setzero_epi32();
