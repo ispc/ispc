@@ -40,7 +40,7 @@ ctlztz()
 define_prefetches()
 define_shuffles()
 aossoa()
-saturation_arithmetic_scalar()
+saturation_arithmetic_uniform()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rounding floats

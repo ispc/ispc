@@ -1,11 +1,11 @@
 
 export uniform int width() { return programCount; }
 
-export void f_f(uniform float RET[], uniform float aFOO[]) {
-    uniform int8 a = -128, b = 127; // min and max signed int8
+export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+    uniform int8 a = -128; // min signed int8
     RET[programIndex] = saturating_sub(a, b);
 }
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = -128;
+    RET[programIndex] = (uniform int8) -128;
 }

@@ -32,7 +32,7 @@
 include(`target-avx.ll')
 
 rdrand_decls()
-saturation_arithmetic_vec8()
+saturation_arithmetic()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max

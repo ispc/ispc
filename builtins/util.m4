@@ -179,10 +179,17 @@ define(`convert32to16', `
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;saturation arithmetic 
-;;scalar saturation arithmetic
+;;saturation arithmetic
+ 
+define(`saturation_arithmetic',
+`ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()', 
+        WIDTH,  `8', `saturation_arithmetic_vec8()',
+        WIDTH, `16', `saturation_arithmetic_vec16()',
+                     `saturation_arithmetic_uniform()')')
 
-define(`saturation_arithmetic_scalar', `
+;;uniform saturation arithmetic
+
+define(`saturation_arithmetic_uniform', `
 declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
 define i8 @__padds_i8(i8 %a0, i8 %a1) {
   sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.padds.b, %a0, %a1)
@@ -303,168 +310,168 @@ define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
 ;;4-wide vector saturation arithmetic
 
 define(`saturation_arithmetic_vec4', `
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <4 x i8> @__padds_vi8(<4 x i8>, <4 x i8>) {
   convert4to16(i8, %0, %v0)
   convert4to16(i8, %1, %v1)    
   %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <4 x i8> %r
 }
 
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+define <4 x i16> @__padds_vi16(<4 x i16>, <4 x i16>) {
   convert4to8(i16, %0, %v0)
   convert4to8(i16, %1, %v1)
   %r16 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %v0, <8 x i16> %v1)
   convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
+  ret <4 x i16> %r
 }
 
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <4 x i8> @__paddus_vi8(<4 x i8>, <4 x i8>) {
   convert4to16(i8, %0, %v0)
   convert4to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <4 x i8> %r
 }
 
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+define <4 x i16> @__paddus_vi16(<4 x i16>, <4 x i16>) {
   convert4to8(i16, %0, %v0)
   convert4to8(i16, %1, %v1)
   %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
   convert8to4(i16, %r16, %r)  
-  ret <WIDTH x i16> %r
+  ret <4 x i16> %r
 }
 
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <4 x i8> @__psubs_vi8(<4 x i8>, <4 x i8>) {
   convert4to16(i8, %0, %v0)
   convert4to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <4 x i8> %r
 }
 
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+define <4 x i16> @__psubs_vi16(<4 x i16>, <4 x i16>) {
   convert4to8(i16, %0, %v0)
   convert4to8(i16, %1, %v1)
   %r16 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %v0, <8 x i16> %v1)
   convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
+  ret <4 x i16> %r
 }
 
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <4 x i8> @__psubus_vi8(<4 x i8>, <4 x i8>) {
   convert4to16(i8, %0, %v0)
   convert4to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to4(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <4 x i8> %r
 }
 
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+define <4 x i16> @__psubus_vi16(<4 x i16>, <4 x i16>) {
   convert4to8(i16, %0, %v0)
   convert4to8(i16, %1, %v1)
   %r16 = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %v0, <8 x i16> %v1)
   convert8to4(i16, %r16, %r)
-  ret <WIDTH x i16> %r
+  ret <4 x i16> %r
 }
 ')
 
 ;;8-wide vector saturation arithmetic
 
 define(`saturation_arithmetic_vec8', `
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <8 x i8> @__padds_vi8(<8 x i8>, <8 x i8>) {
   convert8to16(i8, %0, %v0)
   convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to8(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <8 x i8> %r
 }
 
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  %res = call <WIDTH x i16> @llvm.x86.sse2.padds.w(<WIDTH x i16> %a0, <WIDTH x i16> %a1)
-  ret <WIDTH x i16> %res
+define <8 x i16> @__padds_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
 }
 
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <8 x i8> @__paddus_vi8(<8 x i8>, <8 x i8>) {
   convert8to16(i8, %0, %v0)
   convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to8(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <8 x i8> %r
 }
 
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  %res = call <WIDTH x i16> @llvm.x86.sse2.paddus.w(<WIDTH x i16> %a0, <WIDTH x i16> %a1)
-  ret <WIDTH x i16> %res
+define <8 x i16> @__paddus_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
 }
 
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <8 x i8> @__psubs_vi8(<8 x i8>, <8 x i8>) {
   convert8to16(i8, %0, %v0)
   convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to8(i8, %r16, %r)
-  ret <WIDTH x i8> %r
+  ret <8 x i8> %r
 }
 
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  %res = call <WIDTH x i16> @llvm.x86.sse2.psubs.w(<WIDTH x i16> %a0, <WIDTH x i16> %a1)
-  ret <WIDTH x i16> %res
+define <8 x i16> @__psubs_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
 }
 
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+define <8 x i8> @__psubus_vi8(<8 x i8>, <8 x i8>) {
   convert8to16(i8, %0, %v0)
   convert8to16(i8, %1, %v1)
   %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
   convert16to8(i8, %r16, %r)
-  ret <WIDTH x i8> %r    
+  ret <8 x i8> %r    
 }
 
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
-  %res = call <WIDTH x i16> @llvm.x86.sse2.psubus.w(<WIDTH x i16> %a0, <WIDTH x i16> %a1)
-  ret <WIDTH x i16> %res
+define <8 x i16> @__psubus_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
 }
 ')
 
 ;;16-wide vector saturation arithmetic
 
 define(`saturation_arithmetic_vec16', `
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.padds.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
+define <16 x i8> @__padds_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
 }
 
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
+define <16 x i16> @__padds_vi16(<16 x i16> %a0, <16 x i16> %a1) {
   binary8to16(ret, i16, @llvm.x86.sse2.padds.w, %a0, %a1)
-  ret <WIDTH x i16> %ret
+  ret <16 x i16> %ret
 }
 
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.paddus.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
+define <16 x i8> @__paddus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
 }
 
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
+define <16 x i16> @__paddus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
   binary8to16(ret, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)  
-  ret <WIDTH x i16> %ret
+  ret <16 x i16> %ret
 }
 
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.psubs.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
+define <16 x i8> @__psubs_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
 }
 
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
+define <16 x i16> @__psubs_vi16(<16 x i16> %a0, <16 x i16> %a1) {
   binary8to16(ret, i16, @llvm.x86.sse2.psubs.w, %a0, %a1)
-  ret <WIDTH x i16> %ret
+  ret <16 x i16> %ret
 }
 
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8> %a0, <WIDTH x i8> %a1) {
-  %res = call <WIDTH x i8> @llvm.x86.sse2.psubus.b(<WIDTH x i8> %a0, <WIDTH x i8> %a1) ; <<16 x i8>> [#uses=1]
-  ret <WIDTH x i8> %res
+define <16 x i8> @__psubus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
 }
 
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16> %a0, <WIDTH x i16> %a1) {
+define <16 x i16> @__psubus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
   binary8to16(ret, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)  
-  ret <WIDTH x i16> %ret
+  ret <16 x i16> %ret
 }
 ')
 

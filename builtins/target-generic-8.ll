@@ -31,4 +31,4 @@
 
 define(`WIDTH',`8')
 include(`target-generic-common.ll')
-saturation_arithmetic_vec8()
+saturation_arithmetic()
