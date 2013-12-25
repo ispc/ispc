@@ -1260,6 +1260,13 @@ static FORCEINLINE __vec16_i64 __cast_zext(const __vec16_i64 &, const __vec16_i3
     return __vec16_i64(val.v, _mm512_setzero_epi32());
 }
 
+static FORCEINLINE __vec16_i32 __cast_sext(const __vec16_i32 &, const __vec16_i1 &val)
+{
+  __vec16_i32 ret = _mm512_setzero_epi32();
+  __vec16_i32 one = _mm512_set1_epi32(-1);
+  return _mm512_mask_mov_epi32(ret, val, one);
+}
+
 static FORCEINLINE __vec16_i32 __cast_zext(const __vec16_i32 &, const __vec16_i1 &val)
 {
     __vec16_i32 ret = _mm512_setzero_epi32();
@@ -1876,6 +1883,11 @@ static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec16_i32 val,
     _mm512_mask_extpackstorelo_epi32(p, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     _mm512_mask_extpackstorehi_epi32((uint8_t*)p+64, mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     return _mm_countbits_32(uint32_t(mask));
+}
+
+static FORCEINLINE int32_t __packed_store_active2(uint32_t *p, __vec16_i32 val, __vec16_i1 mask)
+{
+  return __packed_store_active(p, val, mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////

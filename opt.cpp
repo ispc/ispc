@@ -5153,6 +5153,11 @@ FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
     // LLVM 3.3 only
 #if defined(LLVM_3_3)
 
+    // Don't optimize generic targets.
+    if (g->target->getISA() == Target::GENERIC) {
+        return false;
+    }
+
     for (llvm::Function::iterator I = F.begin(), E = F.end();
          I != E; ++I) {
         llvm::BasicBlock* bb = &*I;
