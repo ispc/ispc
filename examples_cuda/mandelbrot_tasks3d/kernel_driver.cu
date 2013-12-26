@@ -1,3 +1,5 @@
+typedef unsigned int uint32_t;
+typedef unsigned long long uint64_t;
 
 extern "C" __device__ void PTXmandelbrot_scanline___UM_unfunfunfunfuniuniuniuniuniun_3C_uni_3E_(
     float,float,float,float,uint32_t,uint32_t,uint32_t,uint32_t,uint32_t,uint64_t);
