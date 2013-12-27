@@ -514,6 +514,8 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
+        optPM.add(llvm::createGlobalDCEPass(), 185);
+
         // Setup to use LLVM default AliasAnalysis
         // Ideally, we want call:
         //    llvm::PassManagerBuilder pm_Builder;
@@ -525,12 +527,18 @@ Optimize(llvm::Module *module, int optLevel) {
         // An alternative is to call populateFunctionPassManager()
         optPM.add(llvm::createTypeBasedAliasAnalysisPass(), 190);
         optPM.add(llvm::createBasicAliasAnalysisPass());
-
-        optPM.add(llvm::createGlobalDCEPass(), 200);
+        optPM.add(llvm::createCFGSimplificationPass());
+        // Here clang has an experimental pass SROAPass instead of
+        // ScalarReplAggregatesPass. We should add it in the future.
+        optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createEarlyCSEPass());
+        optPM.add(llvm::createLowerExpectIntrinsicPass());
+        optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+        optPM.add(llvm::createBasicAliasAnalysisPass());
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
-        optPM.add(llvm::createReassociatePass());
+        optPM.add(llvm::createReassociatePass(), 200);
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
