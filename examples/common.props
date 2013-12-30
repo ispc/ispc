@@ -146,24 +146,24 @@
   <PropertyGroup Label="User">
     <ISPC_compiler Condition=" '$(ISPC_compiler)' == '' ">ispc</ISPC_compiler>
     <Target_str Condition=" '$(Target_str)' == '' ">$(default_targets)</Target_str>
-    <Target_out>$(TargetDir)$(ISPC_file).obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse2')))">$(Target_out);$(TargetDir)$(ISPC_file)_sse2.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse4')))">$(Target_out);$(TargetDir)$(ISPC_file)_sse4.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1-')))">$(Target_out);$(TargetDir)$(ISPC_file)_avx.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1.1')))">$(Target_out);$(TargetDir)$(ISPC_file)_avx11.obj</Target_out>
-    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx2')))">$(Target_out);$(TargetDir)$(ISPC_file)_avx2.obj</Target_out>
+    <Target_out>$(ISPC_file).obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse2')))">$(Target_out);$(ISPC_file)_sse2.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('sse4')))">$(Target_out);$(ISPC_file)_sse4.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1-')))">$(Target_out);$(ISPC_file)_avx.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx1.1')))">$(Target_out);$(ISPC_file)_avx11.obj</Target_out>
+    <Target_out Condition="($(Target_str.Contains(',')) And $(Target_str.Contains('avx2')))">$(Target_out);$(ISPC_file)_avx2.obj</Target_out>
   </PropertyGroup>
   <ItemGroup>
     <CustomBuild Include='$(ISPC_file).ispc'>
       <FileType>Document</FileType>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=$(Target_str)</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Target_out);$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Target_out);$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o $(TargetDir)%(Filename).obj -h $(TargetDir)%(Filename)_ispc.h --target=$(Target_str)</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Target_out);$(TargetDir)%(Filename)_ispc.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Target_out);$(TargetDir)%(Filename)_ispc.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(Target_out)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Target_out)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --arch=x86 --target=$(Target_str)</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ISPC_compiler) -O2 %(Filename).ispc -o %(Filename).obj -h %(Filename)_ispc.h --target=$(Target_str)</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(Target_out)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Target_out)</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

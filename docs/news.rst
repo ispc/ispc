@@ -2,6 +2,16 @@
 ispc News
 =========
 
+ispc 1.6.0 is Released
+----------------------
+
+A major update of ``ispc`` has been released. The main focus is on improved 
+performance and stability. Several new targets were added. There are also 
+a number of language and library extensions. Released binaries are based on
+patched LLVM 3.3 on Linux and MacOS and LLVM 3.4rc3 on Windows. Please refer
+to Release Notes for complete set of changes.
+
+
 ispc 1.5.0 is Released
 ----------------------
 

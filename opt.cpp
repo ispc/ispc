@@ -514,11 +514,31 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
-        optPM.add(llvm::createGlobalDCEPass(), 200);
+        optPM.add(llvm::createGlobalDCEPass(), 185);
+
+        // Setup to use LLVM default AliasAnalysis
+        // Ideally, we want call:
+        //    llvm::PassManagerBuilder pm_Builder;
+        //    pm_Builder.OptLevel = optLevel;
+        //    pm_Builder.addInitialAliasAnalysisPasses(optPM);
+        // but the addInitialAliasAnalysisPasses() is a private function
+        // so we explicitly enable them here.
+        // Need to keep sync with future LLVM change
+        // An alternative is to call populateFunctionPassManager()
+        optPM.add(llvm::createTypeBasedAliasAnalysisPass(), 190);
+        optPM.add(llvm::createBasicAliasAnalysisPass());
+        optPM.add(llvm::createCFGSimplificationPass());
+        // Here clang has an experimental pass SROAPass instead of
+        // ScalarReplAggregatesPass. We should add it in the future.
+        optPM.add(llvm::createScalarReplAggregatesPass());
+        optPM.add(llvm::createEarlyCSEPass());
+        optPM.add(llvm::createLowerExpectIntrinsicPass());
+        optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+        optPM.add(llvm::createBasicAliasAnalysisPass());
 
         // Early optimizations to try to reduce the total amount of code to
         // work with if we can
-        optPM.add(llvm::createReassociatePass());
+        optPM.add(llvm::createReassociatePass(), 200);
         optPM.add(llvm::createConstantPropagationPass());
         optPM.add(llvm::createDeadInstEliminationPass());
         optPM.add(llvm::createCFGSimplificationPass());
@@ -904,7 +924,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                     lCopyMetadata(castPtr, callInst);
                     int align;
                     if (g->opt.forceAlignedMemory)
-                        align = 0;
+                        align = g->target->getNativeVectorAlignment();
                     else
                         align = callInst->getCalledFunction() == avxMaskedLoad32 ? 4 : 8;
                     name = LLVMGetName(callInst->getArgOperand(0), "_load");
@@ -946,7 +966,7 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
                         new llvm::StoreInst(rvalue, castPtr, (llvm::Instruction *)NULL);
                     int align;
                     if (g->opt.forceAlignedMemory)
-                        align = 0;
+                        align = g->target->getNativeVectorAlignment();
                     else
                         align = callInst->getCalledFunction() == avxMaskedStore32 ? 4 : 8;
                     storeInst->setAlignment(align);
@@ -1477,6 +1497,33 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
                     llvm::BinaryOperator::Create(llvm::Instruction::Add, v0, v1,
                                                  LLVMGetName("add", v0, v1),
                                                  insertBefore);
+            return;
+        }
+        else if (bop->getOpcode() == llvm::Instruction::Shl) {
+            lExtractConstantOffset(op0, &c0, &v0, insertBefore);
+            lExtractConstantOffset(op1, &c1, &v1, insertBefore);
+
+            // Given the product of constant and variable terms, we have:
+            // (c0 + v0) * (2^(c1 + v1))  = c0 * 2^c1 * 2^v1 + v0 * 2^c1 * 2^v1
+            // We can optimize only if v1 == NULL.
+            if ((v1 != NULL) || (c0 == NULL) || (c1 == NULL)) {
+                *constOffset = NULL;
+                *variableOffset = vec;
+            }
+            else if (v0 == NULL) {
+                *constOffset = vec;
+                *variableOffset = NULL;
+            }
+            else {
+                *constOffset =
+                    llvm::BinaryOperator::Create(llvm::Instruction::Shl, c0, c1,
+                                                 LLVMGetName("shl", c0, c1),
+                                                 insertBefore);
+                *variableOffset =
+                    llvm::BinaryOperator::Create(llvm::Instruction::Shl, v0, c1,
+                                                 LLVMGetName("shl", v0, c1),
+                                                 insertBefore);
+            }
             return;
         }
         else if (bop->getOpcode() == llvm::Instruction::Mul) {
@@ -2758,7 +2805,8 @@ lImproveMaskedStore(llvm::CallInst *callInst) {
         lCopyMetadata(lvalue, callInst);
         llvm::Instruction *store =
             new llvm::StoreInst(rvalue, lvalue, false /* not volatile */,
-                                g->opt.forceAlignedMemory ? 0 : info->align);
+                                g->opt.forceAlignedMemory ?
+                                    g->target->getNativeVectorAlignment() : info->align);
         lCopyMetadata(store, callInst);
         llvm::ReplaceInstWithInst(callInst, store);
         return true;
@@ -2821,7 +2869,8 @@ lImproveMaskedLoad(llvm::CallInst *callInst,
                                     callInst);
         llvm::Instruction *load =
             new llvm::LoadInst(ptr, callInst->getName(), false /* not volatile */,
-                               g->opt.forceAlignedMemory ? 0 : info->align,
+                               g->opt.forceAlignedMemory ?
+                                   g->target->getNativeVectorAlignment() : info->align,
                                (llvm::Instruction *)NULL);
         lCopyMetadata(load, callInst);
         llvm::ReplaceInstWithInst(callInst, load);
@@ -3226,6 +3275,9 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 4: {
             // 4-wide vector load
+            if (g->opt.forceAlignedMemory) {
+                align = g->target->getNativeVectorAlignment();
+            }
             llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 4);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,
@@ -3234,6 +3286,9 @@ lEmitLoads(llvm::Value *basePtr, std::vector<CoalescedLoadOp> &loadOps,
         }
         case 8: {
             // 8-wide vector load
+            if (g->opt.forceAlignedMemory) {
+                align = g->target->getNativeVectorAlignment();
+            }
             llvm::VectorType *vt =
                 llvm::VectorType::get(LLVMTypes::Int32Type, 8);
             loadOps[i].load = lGEPAndLoad(basePtr, start, align,
@@ -5117,6 +5172,11 @@ FixBooleanSelectPass::runOnFunction(llvm::Function &F) {
 
     // LLVM 3.3 only
 #if defined(LLVM_3_3)
+
+    // Don't optimize generic targets.
+    if (g->target->getISA() == Target::GENERIC) {
+        return false;
+    }
 
     for (llvm::Function::iterator I = F.begin(), E = F.end();
          I != E; ++I) {

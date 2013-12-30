@@ -89,7 +89,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
     if  version_LLVM == "trunk":
         SVN_PATH="trunk"
     if  version_LLVM == "3.4":
-        SVN_PATH="tags/RELEASE_34/rc1"
+        SVN_PATH="tags/RELEASE_34/final"
         version_LLVM = "3_4"
     if  version_LLVM == "3.3":
         SVN_PATH="tags/RELEASE_33/final"
@@ -129,8 +129,23 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         try_do_LLVM("load clang from http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " ",
                     "svn co " + revision + " http://llvm.org/svn/llvm-project/cfe/" + SVN_PATH + " clang",
                     from_validation)
+        os.chdir("..")
+        if current_OS == "MacOS" and int(current_OS_version.split(".")[0]) >= 13:
+            # Starting with MacOS 10.9 Maverics, the system doesn't contain headers for standard C++ library and
+            # the default library is libc++, bit libstdc++. The headers are part of XCode now. But we are checking out
+            # headers as part of LLVM source tree, so they will be installed in clang location and clang will be able
+            # to find them. Though they may not match to the library installed in the system, but seems that this should
+            # not happen.
+            # Note, that we can also build a libc++ library, but it must be on system default location or should be passed
+            # to the linker explicitly (either through command line or environment variables). So we are not doing it
+            # currently to make the build process easier.
+            os.chdir("projects")
+            try_do_LLVM("load libcxx http://llvm.org/svn/llvm-project/libcxx/" + SVN_PATH + " ",
+                    "svn co " + revision + " http://llvm.org/svn/llvm-project/libcxx/" + SVN_PATH + " libcxx",
+                    from_validation)
+            os.chdir("..")
         if extra == True:
-            os.chdir("./clang/tools")
+            os.chdir("tools/clang/tools")
             try_do_LLVM("load extra clang extra tools ",
                     "svn co " + revision + " http://llvm.org/svn/llvm-project/clang-tools-extra/" + SVN_PATH + " extra",
                     from_validation)
@@ -138,7 +153,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
             try_do_LLVM("load extra clang compiler-rt ",
                     "svn co " + revision + " http://llvm.org/svn/llvm-project/compiler-rt/" + SVN_PATH + " compiler-rt",
                     from_validation)
-        os.chdir("../")
+            os.chdir("..")
     else:
         tar = tarball.split(" ")
         os.makedirs(LLVM_SRC) 
@@ -563,6 +578,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
 
 def Main():
     global current_OS
+    global current_OS_version
+    current_OS_version = platform.release()
     if (platform.system() == 'Windows' or 'CYGWIN_NT' in platform.system()) == True:
         current_OS = "Windows"
     else:
@@ -584,7 +601,7 @@ def Main():
         if os.environ.get("SMTP_ISPC") == None:
             error("you have no SMTP_ISPC in your environment for option notify", 1)
     if options.only != "":
-        test_only_r = " 3.1 3.2 3.3 trunk current build stability performance x86 x86-64 -O0 -O2 native "
+        test_only_r = " 3.1 3.2 3.3 3.4 trunk current build stability performance x86 x86-64 -O0 -O2 native "
         test_only = options.only.split(" ")
         for iterator in test_only:
             if not (" " + iterator + " " in test_only_r):

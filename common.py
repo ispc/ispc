@@ -121,4 +121,7 @@ def check_tools(m):
                         if int(t11[j])<input_tools[t][0][j]:
                             error(input_tools[t][2], m)
                             ret = 0
+                            break
+                        if int(t11[j])>input_tools[t][0][j]:
+                            break
     return ret

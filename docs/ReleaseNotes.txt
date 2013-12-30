@@ -1,3 +1,47 @@
+=== v1.6.0 === (19 December 2013)
+
+A major new version of ISPC with major improvements in performance and
+stability. Linux and MacOS binaries are based on patched version of LLVM 3.3,
+while Windows version is based on LLVM 3.4rc3. LLVM 3.4 significantly improves
+stability on Win32 platform, so we've decided not to wait for official LLVM 3.4
+release.
+
+The list of the most significant changes is:
+
+* New avx1-i32x4 target was added. It may play well for you, if you are focused
+  on integer computations or FP unit in your hardware is 128 bit wide.
+
+* Support for calculations in double precision was extended with two new
+  targets avx1.1-i64x4 and avx2-i64x4.
+
+* Language support for overloaded operators was added.
+
+* New library shift() function was added, which is similar to rotate(), but is
+  non-circular.
+
+* The language was extended to accept 3 dimensional tasking - a syntactic sugar,
+  which may facilitate programming of some tasks.
+
+* Regression, which broke --opt=force-aligned-memory is fixed.
+
+If you are not using pre-built binaries, you may notice the following changes:
+
+* VS2012/VS2013 are supported.
+
+* alloy.py (with -b switch) can build LLVM for you on any platform now
+  (except MacOS 10.9, but we know about the problem and working on it).
+  This is a preferred way to build LLVM for ISPC, as all required patches for
+  better performance and stability will automatically apply.
+
+* LLVM 3.5 (current trunk) is supported.
+
+There are also multiple fixes for better performance and stability, most
+notable are:
+
+* Fixed performance problem for x2 targets.
+
+* Fixed a problem with incorrect vzeroupper insertion on AVX target on Win32.
+
 === v1.5.0 === (27 September 2013)
 
 A major new version of ISPC with several new targets and important bug fixes.

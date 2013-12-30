@@ -48,6 +48,8 @@ Contents:
   + `Updating ISPC Programs For Changes In ISPC 1.1`_
   + `Updating ISPC Programs For Changes In ISPC 1.2`_
   + `Updating ISPC Programs For Changes In ISPC 1.3`_
+  + `Updating ISPC Programs For Changes In ISPC 1.5.0`_
+  + `Updating ISPC Programs For Changes In ISPC 1.6.0`_
 
 * `Getting Started with ISPC`_
 
@@ -97,6 +99,9 @@ Contents:
     * `Short Vector Types`_
     * `Array Types`_
     * `Struct Types`_
+
+      + `Operators Overloading`_
+
     * `Structure of Array Types`_
 
   + `Declarations and Initializers`_
@@ -278,6 +283,15 @@ Double precision floating point constants are floating point number with
 ``d`` suffix and optional exponent part. Here are some examples: 3.14d,
 31.4d-1, 1.d, 1.0d, 1d-2. Note that floating point number without suffix is
 treated as single precision constant.
+
+Updating ISPC Programs For Changes In ISPC 1.6.0
+------------------------------------------------
+
+This release adds support for `Operators Overloading`_, so a word ``operator``
+becomes a keyword and it potentially creates a conflict with existing user 
+function. Also a new library function packed_store_active2() was introduced,
+which also may create a conflict with existing user functions.
+
 
 Getting Started with ISPC
 =========================
@@ -1325,6 +1339,7 @@ in C:
 * Function overloading by parameter type
 * Hexadecimal floating-point constants
 * Dynamic memory allocation with ``new`` and ``delete``.
+* Limited support for overloaded operators (`Operators Overloading`_).
 
 ``ispc`` also adds a number of new features that aren't in C89, C99, or
 C++:
@@ -2122,7 +2137,35 @@ above code, the value of ``f[index]`` needs to be able to store a different
 value of ``Foo::a`` for each program instance.  However, a ``varying Foo``
 still has only a single ``a`` member, since ``a`` was declared with
 ``uniform`` variability in the declaration of ``Foo``.  Therefore, the
-indexing operation in the last line results in an error.  
+indexing operation in the last line results in an error.
+
+
+Operators Overloading
+---------------------
+
+ISPC has limited support for overloaded operators for ``struct`` types. Only
+binary operators are supported currently, namely they are: ``*, /, %, +, -, >>
+and <<``. Operators overloading support is similar to the one in C++ language.
+To overload an operator for ``struct S``, you need to declare and implement a
+function using keyword ``operator``, which accepts two parameters of type
+``struct S`` or ``struct S&`` and returns either of these types. For example:
+
+::
+
+    struct S { float re, im;};
+    struct S operator*(struct S a, struct S b) {
+        struct S result;
+        result.re = a.re * b.re - a.im * b.im;
+        result.im = a.re * b.im + a.im * b.re;
+        return result;
+    }
+
+    void foo(struct S a, struct S b) {
+        struct S mul = a*b;
+        print("a.re:   %\na.im:   %\n", a.re, a.im);
+        print("b.re:   %\nb.im:   %\n", b.re, b.im);
+        print("mul.re: %\nmul.im: %\n", mul.re, mul.im);
+    }
 
 
 Structure of Array Types
@@ -3015,8 +3058,7 @@ Intel® Cilk(tm), Intel® Thread Building Blocks or another task system), and
 for tasks to use ``ispc`` for SPMD parallelism across the vector lanes as
 appropriate.  Alternatively, ``ispc`` also has support for launching tasks
 from ``ispc`` code.  The approach is similar to Intel® Cilk's task launch
-feature.  (See the ``examples/mandelbrot_tasks`` example to see it used in
-a small example.)
+feature.  (Check the ``examples/mandelbrot_tasks`` example to see how it is used.)
 
 Any function that is launched as a task must be declared with the
 ``task`` qualifier:
@@ -3111,6 +3153,38 @@ executing the current task.  The ``threadIndex`` can be used for accessing
 data that is private to the current thread and thus doesn't require
 synchronization to access under parallel execution.
 
+The tasking system also supports multi-dimensional partitioning (currently up
+to three dimensions). To launch a 3D grid of tasks, for example with ``N0``,
+``N1``  and ``N2`` tasks in x-, y- and z-dimension respectively
+
+::
+   
+  float data[N2][N1][N0]
+  task void foo_task()
+  {
+     data[taskIndex2][taskIndex1][threadIndex0] = taskIndex;
+  }
+
+we use the following ``launch`` expressions:
+
+::
+
+  launch [N2][N1][N0] foo_task()
+
+or
+
+::
+
+  launch [N0,N1,N2] foo_task()
+
+Value of ``taskIndex`` is equal to ``taskIndex0 + taskCount0*(taskIndex1 +
+taskCount1*taskIndex2)`` and it ranges from ``0`` to  ``taskCount-1``, where 
+``taskCount = taskCount0*taskCount1*taskCount2``. If ``N1`` or/and ``N2`` are
+not specified in the ``launch`` expression, a value of ``1`` is assumed.
+Finally, for an one-dimensional grid of tasks,  ``taskIndex`` is equivalent to
+``taskIndex0`` and ``taskCount`` is equivalent to ``taskCount0``.
+
+
 Task Parallelism: Runtime Requirements
 --------------------------------------
 
@@ -3141,7 +3215,7 @@ manage tasks in ``ispc``:
 ::
 
     void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
-    void ISPCLaunch(void **handlePtr, void *f, void *data, int count);
+    void ISPCLaunch(void **handlePtr, void *f, void *data, int count0, int count1, int count2);
     void ISPCSync(void *handle);
 
 All three of these functions take an opaque handle (or a pointer to an
@@ -3178,16 +3252,20 @@ tasks.  Each ``launch`` statement in ``ispc`` code causes a call to
 after the handle pointer to the function are relatively straightforward;
 the ``void *f`` parameter holds a pointer to a function to call to run the
 work for this task, ``data`` holds a pointer to data to pass to this
-function, and ``count`` is the number of instances of this function to
-enqueue for asynchronous execution.  (In other words, ``count`` corresponds
-to the value ``n`` in a multiple-task launch statement like ``launch[n]``.)
+function, and ``count0``, ``count1`` and ``count2`` are the number of instances
+of this function to enqueue for asynchronous execution.  (In other words,
+``count0``, ``count1`` and ``count2`` correspond to the value ``n0``, ``n1``
+and ``n2`` in a multiple-task launch statement like ``launch[n2][n1][n0]`` or
+``launch [n0,n1,n2]`` respectively.)
 
 The signature of the provided function pointer ``f`` is
 
 ::
 
     void (*TaskFuncPtr)(void *data, int threadIndex, int threadCount,
-                        int taskIndex, int taskCount)
+                        int taskIndex, int taskCount,
+                        int taskIndex0, int taskIndex1, int taskIndex2,
+                        int taskCount0, int taskCount1, int taskCount2);
 
 When this function pointer is called by one of the hardware threads managed
 by the task system, the ``data`` pointer passed to ``ISPCLaunch()`` should
@@ -3197,11 +3275,14 @@ number of hardware threads that have been spawned to run tasks and
 uniquely identifying the hardware thread that is running the task.  (These
 values can be used to index into thread-local storage.)
 
-The value of ``taskCount`` should be the number of tasks launched in the
-``launch`` statement that caused the call to ``ISPCLaunch()`` and each of
-the calls to this function should be given a unique value of ``taskIndex``
-between zero and ``taskCount``, to distinguish which of the instances
-of the set of launched tasks is running.
+The value of ``taskCount`` should be the total number of tasks launched in the
+``launch`` statement (it must be equal to ``taskCount0*taskCount1*taskCount2``)
+that caused the call to ``ISPCLaunch()`` and each of the calls to this function
+should be given a unique value of ``taskIndex``, ``taskIndex0``, ``taskIndex1``
+and ``taskIndex2`` between zero and ``taskCount``, ``taskCount0``,
+``taskCount1`` and ``taskCount2`` respectively,  with ``taskIndex = taskIndex0 
++ taskCount0*(taskIndex1 + taskCount1*taskIndex2)``, to distinguish which of
+the instances of the set of launched tasks is running.
 
 
 
@@ -4011,6 +4092,14 @@ They return the total number of values stored.
     uniform int packed_store_active(uniform unsigned int * uniform base,
                                     unsigned int val)
 
+
+There are also ``packed_store_active2()`` functions with exactly the same
+signatures and the same semantic except that they may write one extra
+element to the output array (but still returning the same value as
+``packed_store_active()``). These functions suggest different branch free 
+implementation on most of supported targets, which usually (but not always)
+performs better than ``packed_store_active()``. It's advised to test function
+performance on user's scenarios on particular target hardware before using it.
 
 As an example of how these functions can be used, the following code shows
 the use of ``packed_store_active()``.

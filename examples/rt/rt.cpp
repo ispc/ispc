@@ -96,27 +96,27 @@ static void writeImage(int *idImage, float *depthImage, int width, int height,
 
 
 static void usage() {
-    fprintf(stderr, "rt [--scale=<factor>] <scene name base>\n");
+    fprintf(stderr, "rt <scene name base> [--scale=<factor>] [ispc iterations] [tasks iterations] [serial iterations]\n");
     exit(1);
 }
 
 
 int main(int argc, char *argv[]) {
+    static unsigned int test_iterations[] = {3, 7, 1};
     float scale = 1.f;
     const char *filename = NULL;
-    for (int i = 1; i < argc; ++i) {
-        if (strncmp(argv[i], "--scale=", 8) == 0) {
-            scale = atof(argv[i] + 8);
-            if (scale == 0.f)
-                usage();
+    if (argc < 2) usage();
+    filename = argv[1];
+    if (argc > 2) {
+        if (strncmp(argv[2], "--scale=", 8) == 0) {
+            scale = atof(argv[2] + 8);
         }
-        else if (filename != NULL)
-            usage();
-        else
-            filename = argv[i];
     }
-    if (filename == NULL)
-        usage();
+    if ((argc == 6) || (argc == 5)) {
+        for (int i = 0; i < 3; i++) {
+            test_iterations[i] = atoi(argv[argc - 3 + i]);
+        }
+    }
 
 #define READ(var, n)                                            \
     if (fread(&(var), sizeof(var), n, f) != (unsigned int)n) {  \
@@ -211,11 +211,12 @@ int main(int argc, char *argv[]) {
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //
     double minTimeISPC = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[0]; ++i) {
         reset_and_start_timer();
         raytrace_ispc(width, height, baseWidth, baseHeight, raster2camera, 
                       camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
+        printf("@time of ISPC run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPC = std::min(dt, minTimeISPC);
     }
     printf("[rt ispc, 1 core]:\t\t[%.3f] million cycles for %d x %d image\n", 
@@ -230,11 +231,12 @@ int main(int argc, char *argv[]) {
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //
     double minTimeISPCtasks = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[1]; ++i) {
         reset_and_start_timer();
         raytrace_ispc_tasks(width, height, baseWidth, baseHeight, raster2camera,
                             camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeISPCtasks = std::min(dt, minTimeISPCtasks);
     }
     printf("[rt ispc + tasks]:\t\t[%.3f] million cycles for %d x %d image\n", 
@@ -250,11 +252,12 @@ int main(int argc, char *argv[]) {
     // minimum time.
     //
     double minTimeSerial = 1e30;
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < test_iterations[2]; ++i) {
         reset_and_start_timer();
         raytrace_serial(width, height, baseWidth, baseHeight, raster2camera, 
                         camera2world, image, id, nodes, triangles);
         double dt = get_elapsed_mcycles();
+        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", dt);
         minTimeSerial = std::min(dt, minTimeSerial);
     }
     printf("[rt serial]:\t\t\t[%.3f] million cycles for %d x %d image\n", 

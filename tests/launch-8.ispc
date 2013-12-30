@@ -1,0 +1,42 @@
+
+export uniform int width() { return programCount; }
+
+
+#define N0 10
+#define N1 20
+#define N2 50
+static uniform float array[N2][N1][N0];
+
+task void x(const float f) {
+    uniform int j;
+
+    assert(taskCount  == (int32)N0*N1*N2);
+    assert(taskCount0 == (int32)N0);
+    assert(taskCount1 == (int32)N1);
+    assert(taskCount2 == (int32)N2);
+    assert(taskIndex  == (int32)taskIndex0 + (int32)N0*(taskIndex1 +(int32) N1*taskIndex2));
+    assert(taskIndex0 < (int32)N0);
+    assert(taskIndex1 < (int32)N1);
+    assert(taskIndex2 < (int32)N2);
+
+    const uniform int i0 = taskIndex0;
+    const uniform int i1 = taskIndex1;
+    const uniform int i2 = taskIndex2;
+    const uniform int i  = taskIndex;
+    array[i2][i1][i0] = i / 10000.;
+    cfor (j = 0; j < 10000; ++j)
+        array[i2][i1][i0] = sin(array[i2][i1][i0]);
+    if (array[i2][i1][i0] < .02)
+        array[i2][i1][i0] = i;
+}
+export void f_f(uniform float RET[], uniform float fFOO[]) { 
+    float f = fFOO[programIndex];
+    launch[N2][N1][N0] x(f);
+    sync;
+    RET[programIndex] = array[N2-1][N1-1][N0-1];
+}
+
+
+export void result(uniform float RET[]) {
+    RET[programIndex] = 9999.000000;
+}
