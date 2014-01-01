@@ -581,8 +581,11 @@ Function::GenerateIR() {
                 llvm::FunctionType *ftype = type->LLVMFunctionType(g->ctx, true);
                 llvm::GlobalValue::LinkageTypes linkage = llvm::GlobalValue::ExternalLinkage;
                 std::string functionName = sym->name;
+
                 if (g->mangleFunctionsWithTarget)
                     functionName += std::string("_") + g->target->GetISAString();
+
+                functionName += std::string("___export");
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
 #if defined(LLVM_3_1)
