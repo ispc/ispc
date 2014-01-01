@@ -45,7 +45,7 @@ ARM_ENABLED=0
 
 # Add llvm bin to the path so any scripts run will go to the right llvm-config
 LLVM_BIN= $(shell $(LLVM_CONFIG) --bindir)
-export PATH:=$(LLVM_BIN):$(PATH)
+export PATH:=$(PATH):$(LLVM_BIN)
 
 ARCH_OS = $(shell uname)
 ifeq ($(ARCH_OS), Darwin)
