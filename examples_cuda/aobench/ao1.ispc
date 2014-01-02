@@ -207,8 +207,8 @@ static  inline void ao_tile(
     uniform int nsubsamples, 
     uniform float image[]) 
 {
-  static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-  static uniform Sphere spheres[3] = {
+  uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+  uniform Sphere spheres[3] = {
     { { -2.0f, 0.0f, -3.5f }, 0.5f },
     { { -0.5f, 0.0f, -3.0f }, 0.5f },
     { { 1.0f, 0.0f, -2.2f }, 0.5f } };
