@@ -187,124 +187,151 @@ define(`saturation_arithmetic',
         WIDTH, `16', `saturation_arithmetic_vec16()',
                      `saturation_arithmetic_uniform()')')
 
-;;uniform saturation arithmetic
+;; utility function used by saturation_arithmetic_uniform below.  This shouldn't be called by
+;; target .ll files directly.
+;; $1: {add,sub} (used in constructing function names)
 
-define(`saturation_arithmetic_uniform', `
-declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
-define i8 @__padds_i8(i8 %a0, i8 %a1) {
-  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.padds.b, %a0, %a1)
+define(`saturation_arithmetic_uniform_universal', `
+declare <16 x i8> @llvm.x86.sse2.p$1s.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__p$1s_i8(i8 %a0, i8 %a1) {
+  %a0_i16 = sext i8 %a0 to i16
+  %a1_i16 = sext i8 %a1 to i16
+  %res = $1 i16 %a0_i16, %a1_i16
+  %over_mask = icmp sgt i16 %res, 127
+  %over_res = select i1 %over_mask, i16 127, i16 %res
+  %under_mask = icmp slt i16 %res, -128
+  %ret_i16 = select i1 %under_mask, i16 -128, i16 %over_res
+  %ret = trunc i16 %ret_i16 to i8
   ret i8 %ret
 }
 
-declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
-define i16 @__padds_i16(i16 %a0, i16 %a1) {
-  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.padds.w, %a0, %a1)
+declare <8 x i16> @llvm.x86.sse2.p$1s.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__p$1s_i16(i16 %a0, i16 %a1) {
+  %a0_i32 = sext i16 %a0 to i32
+  %a1_i32 = sext i16 %a1 to i32
+  %res = $1 i32 %a0_i32, %a1_i32
+  %over_mask = icmp sgt i32 %res, 32767
+  %over_res = select i1 %over_mask, i32 32767, i32 %res
+  %under_mask = icmp slt i32 %res, -32768
+  %ret_i32 = select i1 %under_mask, i32 -32768, i32 %over_res
+  %ret = trunc i32 %ret_i32 to i16
   ret i16 %ret
 }
 
-declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
-define i8 @__paddus_i8(i8 %a0, i8 %a1) {
-  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.paddus.b, %a0, %a1)
+declare <16 x i8> @llvm.x86.sse2.p$1us.b(<16 x i8>, <16 x i8>) nounwind readnone
+define i8 @__p$1us_i8(i8 %a0, i8 %a1) {
+  %a0_i16 = zext i8 %a0 to i16
+  %a1_i16 = zext i8 %a1 to i16
+  %res = $1 i16 %a0_i16, %a1_i16
+  %over_mask = icmp ugt i16 %res, 255
+  %over_res = select i1 %over_mask, i16 255, i16 %res
+  %under_mask = icmp slt i16 %res, 0
+  %ret_i16 = select i1 %under_mask, i16 0, i16 %over_res
+  %ret = trunc i16 %ret_i16 to i8
   ret i8 %ret
 }
 
-declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
-define i16 @__paddus_i16(i16 %a0, i16 %a1) {
-  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)
-  ret i16 %ret
-}
-
-declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
-define i8 @__psubs_i8(i8 %a0, i8 %a1) {
-  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.psubs.b, %a0, %a1)
-  ret i8 %ret
-}
-
-declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
-define i16 @__psubs_i16(i16 %a0, i16 %a1) {
-  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.psubs.w, %a0, %a1)
-  ret i16 %ret
-}
-
-declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
-define i8 @__psubus_i8(i8 %a0, i8 %a1) {
-  sse_binary_scalar(ret, 16, i8, @llvm.x86.sse2.psubus.b, %a0, %a1)
-  ret i8 %ret
-}
-
-declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
-define i16 @__psubus_i16(i16 %a0, i16 %a1) {
-  sse_binary_scalar(ret, 8, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)
+declare <8 x i16> @llvm.x86.sse2.p$1us.w(<8 x i16>, <8 x i16>) nounwind readnone
+define i16 @__p$1us_i16(i16 %a0, i16 %a1) {
+  %a0_i32 = zext i16 %a0 to i32
+  %a1_i32 = zext i16 %a1 to i32
+  %res = $1 i32 %a0_i32, %a1_i32
+  %over_mask = icmp ugt i32 %res, 65535
+  %over_res = select i1 %over_mask, i32 65535, i32 %res
+  %under_mask = icmp slt i32 %res, 0
+  %ret_i32 = select i1 %under_mask, i32 0, i32 %over_res
+  %ret = trunc i32 %ret_i32 to i16
   ret i16 %ret
 }
 ')
 
-;;no vector saturation arithmetic
+;;uniform saturation arithmetic
+
+define(`saturation_arithmetic_uniform', `
+saturation_arithmetic_uniform_universal(sub)
+saturation_arithmetic_uniform_universal(add)
+')
+
+;; create vector constant. Used by saturation_arithmetic_novec_universal below.
+
+define(`const_vector', `
+ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>', 
+       WIDTH,  `8', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `16', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `32', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `64', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+                        `<$1 $2>')')
+                        
+;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
+;; target .ll files directly.
+;; $1: {add,sub} (used in constructing function names)
+                        
+define(`saturation_arithmetic_novec_universal', `
+define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp sgt <WIDTH x i16> %res, const_vector(i16, 127)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 127), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, -128)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, -128), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+
+define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp sgt <WIDTH x i32> %res, const_vector(i32, 32767)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 32767), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, -32768)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, -32768), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+
+define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp ugt <WIDTH x i16> %res, const_vector(i16, 255)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 255), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, 0)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, 0), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+  
+define <WIDTH x i16> @__p$1us_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp ugt <WIDTH x i32> %res, const_vector(i32, 65535)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 65535), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, 0)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, 0), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+')
+
+;; implementation for targets which doesn't have h/w instructions
 
 define(`saturation_arithmetic_novec', `
-define <WIDTH x i8> @__padds_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert1to16(i8, %0, %v0)
-  convert1to16(i8, %1, %v1)    
-  %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to1(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__padds_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert1to8(i16, %0, %v0)
-  convert1to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to1(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__paddus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert1to16(i8, %0, %v0)
-  convert1to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to1(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__paddus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert1to8(i16, %0, %v0)
-  convert1to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to1(i16, %r16, %r)  
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__psubs_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert1to16(i8, %0, %v0)
-  convert1to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to1(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__psubs_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert1to8(i16, %0, %v0)
-  convert1to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to1(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
-
-define <WIDTH x i8> @__psubus_vi8(<WIDTH x i8>, <WIDTH x i8>) {
-  convert1to16(i8, %0, %v0)
-  convert1to16(i8, %1, %v1)
-  %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
-  convert16to1(i8, %r16, %r)
-  ret <WIDTH x i8> %r
-}
-
-define <WIDTH x i16> @__psubus_vi16(<WIDTH x i16>, <WIDTH x i16>) {
-  convert1to8(i16, %0, %v0)
-  convert1to8(i16, %1, %v1)
-  %r16 = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %v0, <8 x i16> %v1)
-  convert8to1(i16, %r16, %r)
-  ret <WIDTH x i16> %r
-}
+saturation_arithmetic_novec_universal(sub)
+saturation_arithmetic_novec_universal(add)
 ')
 
 ;;4-wide vector saturation arithmetic

@@ -31,4 +31,4 @@
 
 define(`WIDTH',`8')
 include(`target-generic-common.ll')
-saturation_arithmetic()
+saturation_arithmetic_novec()
