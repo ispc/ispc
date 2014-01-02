@@ -206,6 +206,11 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         if (sym->storageClass == SC_STATIC) {
+          if (g->target->getISA() == Target::NVPTX64)
+            if (!sym->type->IsConstType())
+              Error(initExpr->pos, "Non-constant static variable ""\"%s\" is not supported with ""\"cuda\" target.",
+                  sym->name.c_str());
+
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
             // zero value.
