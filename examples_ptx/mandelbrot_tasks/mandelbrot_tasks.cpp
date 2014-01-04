@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 
     int maxIterations = 512;
     int *buf;
-    ispc_malloc(&buf, n*widht*height);
+    ispc_malloc((void**)&buf, sizeof(int)*width*height);
 
     for (unsigned int i = 0; i < width * height; ++i)
       buf[i] = 0;
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
     {
       reset_and_start_timer();
       mandelbrot_serial(x0, y0, x1, y1, width, height, maxIterations, buf);
-      double dt = get_elapsed_mcycles();
+      double dt = get_elapsed_msec();
       printf("@time of serial run:\t\t\t[%.3f] msec\n", dt);
       minSerial = std::min(minSerial, dt);
     }

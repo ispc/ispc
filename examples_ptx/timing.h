@@ -98,7 +98,7 @@ static inline void reset_and_start_timer()
 
 /* Returns the number of millions of elapsed processor cycles since the
    last reset_and_start_timer() call. */
-static inline double get_elapsed_mcycles()
+static inline double get_elapsed_msec()
 {
     end = rdtsc();
     tend = rtc();
