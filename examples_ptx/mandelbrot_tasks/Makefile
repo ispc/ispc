@@ -33,7 +33,7 @@ NVCC_OBJS=objs/$(NVCC_SRC:.cu=_nvcc.o)
 
 OBJS=$(ISPC_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
 
-all: $(PROG)
+all: $(PROG) $(ISPC_BCS) 
 
 dirs:
 	/bin/mkdir -p objs/
