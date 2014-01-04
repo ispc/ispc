@@ -33,21 +33,21 @@
 
 static inline int
 mandel(float c_re, float c_im, int count) {
-    float z_re = c_re, z_im = c_im;
-    int i;
-    for (i = 0; i < count; ++i) {
-        if (z_re * z_re + z_im * z_im > 4.)
-            break;
+  float z_re = c_re, z_im = c_im;
+  int i;
+  for (i = 0; i < count; ++i) {
+    if (z_re * z_re + z_im * z_im > 4.0f)
+      break;
 
-        float new_re = z_re*z_re - z_im*z_im;
-        float new_im = 2.f * z_re * z_im;
-        unmasked {
-            z_re = c_re + new_re;
-            z_im = c_im + new_im;
-        }
+    float new_re = z_re*z_re - z_im*z_im;
+    float new_im = 2.0f * z_re * z_im;
+    unmasked {
+      z_re = c_re + new_re;
+      z_im = c_im + new_im;
     }
+  }
 
-    return i;
+  return i;
 }
 
 
