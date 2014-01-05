@@ -1,0 +1,10 @@
+PROG=volume
+ISPC_SRC=volume.ispc
+CU_SRC=volume.cu
+CXX_SRC=volume.cpp  volume_serial.cpp
+PTXCC_REGMAX=64
+
+include ../common_gpu.mk
+
+
+
