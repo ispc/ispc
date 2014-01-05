@@ -259,7 +259,7 @@ export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples,
     ao_scanlines(0, h, w, h, nsubsamples, image);
 }
 
-
+#if 0
 static void task ao_task(uniform int width, uniform int height, 
                          uniform int nsubsamples, uniform float image[]) {
     ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
@@ -270,3 +270,95 @@ export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
                           uniform float image[]) {
     launch[h] ao_task(w, h, nsubsamples, image);
 }
+#else
+
+static  inline void ao_tile(
+    uniform int x0, uniform int x1,
+    uniform int y0, uniform int y1, 
+    uniform int w, uniform int h,
+    uniform int nsubsamples, 
+    uniform float image[]) 
+{
+  uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+  uniform Sphere spheres[3] = {
+    { { -2.0f, 0.0f, -3.5f }, 0.5f },
+    { { -0.5f, 0.0f, -3.0f }, 0.5f },
+    { { 1.0f, 0.0f, -2.2f }, 0.5f } };
+  RNGState rngstate;
+
+  seed_rng(&rngstate, programIndex + (y0 << (programIndex & 15)));
+  float invSamples = 1.f / nsubsamples;
+  foreach_tiled (y = y0 ... y1, x = x0 ... x1)
+  {
+    const int offset = 3 * (y * w + x);
+    float res = 0.0f;
+
+    for (uniform int u = 0; u < nsubsamples; u++)
+      for (uniform int v = 0; v < nsubsamples; v++)
+      {
+        float du = (float)u * invSamples, dv = (float)v * invSamples;
+
+        // Figure out x,y pixel in NDC
+        float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
+        float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
+        float ret = 0.f;
+        Ray ray;
+        Isect isect;
+
+        ray.org = 0.f;
+
+        // Poor man's perspective projection
+        ray.dir.x = px;
+        ray.dir.y = py;
+        ray.dir.z = -1.0;
+        vnormalize(ray.dir);
+
+        isect.t   = 1.0e+17;
+        isect.hit = 0;
+
+        for (uniform int snum = 0; snum < 3; ++snum)
+          ray_sphere_intersect(isect, ray, spheres[snum]);
+        ray_plane_intersect(isect, ray, plane);
+
+        // Note use of 'coherent' if statement; the set of rays we
+        // trace will often all hit or all miss the scene
+        if (isect.hit) {
+          ret = ambient_occlusion(isect, plane, spheres, rngstate);
+          ret *= invSamples * invSamples;
+          res += ret;
+        }
+      }
+
+      image[offset  ] = res;
+      image[offset+1] = res;
+      image[offset+2] = res;
+  }
+}
+
+#define TILEX 64
+#define TILEY 4
+
+void task ao_task(uniform int width, uniform int height, 
+    uniform int nsubsamples, uniform float image[]) 
+{
+  if (taskIndex0 >= taskCount0) return;
+  if (taskIndex1 >= taskCount1) return;
+
+  const uniform int x0 = taskIndex0 * TILEX;
+  const uniform int x1 = min(x0 + TILEX, width);
+
+  const uniform int y0 = taskIndex1 * TILEY;
+  const uniform int y1 = min(y0 + TILEY, height);
+  ao_tile(x0,x1,y0,y1, width, height, nsubsamples, image);
+}
+
+
+export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
+    uniform float image[]) 
+{
+  const uniform int ntilex = (w+TILEX-1)/TILEX;
+  const uniform int ntiley = (h+TILEY-1)/TILEY;
+  launch[ntilex,ntiley] ao_task(w, h, nsubsamples, image);
+  sync;
+}
+#endif

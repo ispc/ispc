@@ -137,8 +137,8 @@ int main(int argc, char **argv)
     //
 #ifndef _CUDA_
     double minTimeISPC = 1e30;
-    memset((void *)fimg, 0, sizeof(float) * width * height * 3);
     for (unsigned int i = 0; i < test_iterations[0]; i++) {
+        ispc_memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
         reset_and_start_timer();
         ispc::ao_ispc(width, height, NSUBSAMPLES, fimg);
@@ -158,8 +158,8 @@ int main(int argc, char **argv)
     // minimum time for any of them.
     //
     double minTimeISPCTasks = 1e30;
-    memset((void *)fimg, 0, sizeof(float) * width * height * 3);
     for (unsigned int i = 0; i < test_iterations[1]; i++) {
+        ispc_memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
 
         reset_and_start_timer();
@@ -179,8 +179,8 @@ int main(int argc, char **argv)
     // minimum time.
     //
     double minTimeSerial = 1e30;
-    memset((void *)fimg, 0, sizeof(float) * width * height * 3);
     for (unsigned int i = 0; i < test_iterations[2]; i++) {
+        ispc_memset((void *)fimg, 0, sizeof(float) * width * height * 3);
         reset_and_start_timer();
         ao_serial(width, height, NSUBSAMPLES, fimg);
         double t = get_elapsed_msec();
@@ -199,6 +199,9 @@ int main(int argc, char **argv)
            minTimeSerial / minTimeISPCTasks);
 #endif
     savePPM("ao-serial.ppm", width, height); 
+
+    ispc_free(img);
+    ispc_free(fimg);
         
     return 0;
 }
