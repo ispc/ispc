@@ -33,6 +33,9 @@ CXX_OBJS=$(CXX_SRC:%.cpp=objs_gpu/%_gcc.o)
 CU_OBJS=$(CU_SRC:%.cu=objs_gpu/%_cu.o)
 #NVCC_OBJS=$(NVCC_SRC:%.cu=objs_gpu/%_nvcc.o)
 
+CXX_SRC+=../ispc_malloc.cpp
+CXX_OJS+=objs/ispc_malloc_gcc.o
+
 # PTXGEN = $(HOME)/ptxgen
 # PTXGEN += -opt=3
 # PTXGEN += -ftz=1 -prec-div=0 -prec-sqrt=0 -fma=1

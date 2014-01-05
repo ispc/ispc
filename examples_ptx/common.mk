@@ -1,7 +1,7 @@
 
-TASK_CXX=../tasksys.cpp
+TASK_CXX=../tasksys.cpp ../ispc_malloc.cpp
 TASK_LIB=-lpthread
-TASK_OBJ=objs/tasksys.o
+TASK_OBJ=objs/tasksys.o objs/ispc_malloc.o
 
 CXX=clang++
 CXXFLAGS+=-Iobjs/ -O2

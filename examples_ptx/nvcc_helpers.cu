@@ -1,5 +1,3 @@
-#include "ispc_malloc.h"
-
 #ifndef _CUDA_
 #error "Something went wrong..."
 #endif

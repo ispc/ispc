@@ -103,8 +103,7 @@ int main(int argc, char *argv[]) {
 
 
     int maxIterations = 512;
-    int *buf;
-    ispc_malloc((void**)&buf, sizeof(int)*width*height);
+    int *buf = new int[width*height];
 
     for (unsigned int i = 0; i < width * height; ++i)
       buf[i] = 0;

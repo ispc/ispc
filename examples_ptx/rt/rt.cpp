@@ -45,8 +45,8 @@
 #include <cstring>
 #include <sys/types.h>
 #include "../timing.h"
-#include "../ispc_malloc.h"
 #include "rt_ispc.h"
+#include "../ispc_malloc.h"
 
 using namespace ispc;
 
@@ -141,15 +141,11 @@ int main(int argc, char *argv[]) {
     // fread in the bits
     //
     int baseWidth, baseHeight;
-#if 0
-    float camera2world[4][4], raster2camera[4][4];
-#else
-    float *camera2world_ispc, *raster2camera_ispc;
-    ispc_malloc((void**)&camera2world_ispc,  4*4*sizeof(float));
-    ispc_malloc((void**)&raster2camera_ispc, 4*4*sizeof(float));
+//    float camera2world[4][4], raster2camera[4][4];
+    float *camera2world_ispc = new float[4*4];
+    float *raster2camera_ispc = new float[4*4];
     float (*camera2world )[4] = (float (*)[4])camera2world_ispc;
     float (*raster2camera)[4] = (float (*)[4])raster2camera_ispc;
-#endif
     READ(baseWidth, 1);
     READ(baseHeight, 1);
     READ(camera2world[0][0], 16);
@@ -170,12 +166,7 @@ int main(int argc, char *argv[]) {
     uint nNodes;
     READ(nNodes, 1);
 
-#if 0
     LinearBVHNode *nodes = new LinearBVHNode[nNodes];
-#else
-    LinearBVHNode *nodes;
-    ispc_malloc((void**)&nodes, nNodes*sizeof(LinearBVHNode));
-#endif
     for (unsigned int i = 0; i < nNodes; ++i) {
         // Each node is 6x floats for a boox, then an integer for an offset
         // to the second child node, then an integer that encodes the type
@@ -197,12 +188,7 @@ int main(int argc, char *argv[]) {
     // And then read the triangles 
     uint nTris;
     READ(nTris, 1);
-#if 0
     Triangle *triangles = new Triangle[nTris];
-#else
-    Triangle *triangles;
-    ispc_malloc((void**)&triangles, nTris*sizeof(Triangle));
-#endif
     for (uint i = 0; i < nTris; ++i) {
         // 9x floats for the 3 vertices
         float v[9];
@@ -223,15 +209,9 @@ int main(int argc, char *argv[]) {
 
     // allocate images; one to hold hit object ids, one to hold depth to
     // the first interseciton
-#if 0
     int *id = new int[width*height];
     float *image = new float[width*height];
-#else
-    int *id;
-    float *image;
-    ispc_malloc((void**)&id,    sizeof(  int)*width*height);
-    ispc_malloc((void**)&image, sizeof(float)*width*height);
-#endif
+
     //
     // Run 3 iterations with ispc + 1 core, record the minimum time
     //

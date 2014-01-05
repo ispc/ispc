@@ -41,15 +41,15 @@
 #endif
 
 #include <fcntl.h>
-#include <float.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cfloat>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <sys/types.h>
 #include <stdint.h>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <vector>
 #ifdef ISPC_IS_WINDOWS
   #define WIN32_LEAN_AND_MEAN
@@ -58,6 +58,7 @@
 #include "deferred.h"
 #include "kernels_ispc.h"
 #include "../timing.h"
+#include "../ispc_malloc.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -96,11 +97,11 @@ int main(int argc, char** argv) {
             ispc::RenderStatic(input->header, input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
-        double mcycles = get_elapsed_mcycles() / nframes;
-        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] million cycles\n", mcycles);
-        ispcCycles = std::min(ispcCycles, mcycles);
+        double msec = get_elapsed_msec() / nframes;
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec\n", msec);
+        ispcCycles = std::min(ispcCycles, msec);
     }
-    printf("[ispc static + tasks]:\t\t[%.3f] million cycles to render "
+    printf("[ispc static + tasks]:\t\t[%.3f] msec to render "
            "%d x %d image\n", ispcCycles,
            input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
@@ -113,11 +114,11 @@ int main(int argc, char** argv) {
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicCilk(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
-        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
-        dynamicCilkCycles = std::min(dynamicCilkCycles, mcycles);
+        double msec = get_elapsed_msec() / nframes;
+        printf("@time of serial run:\t\t\t[%.3f] msec\n", msec);
+        dynamicCilkCycles = std::min(dynamicCilkCycles, msec);
     }
-    printf("[ispc + Cilk dynamic]:\t\t[%.3f] million cycles to render image\n", 
+    printf("[ispc + Cilk dynamic]:\t\t[%.3f] msec to render image\n", 
            dynamicCilkCycles);
     WriteFrame("deferred-ispc-dynamic.ppm", input, framebuffer);
 #endif // __cilk
@@ -128,11 +129,11 @@ int main(int argc, char** argv) {
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicC(input, &framebuffer);
-        double mcycles = get_elapsed_mcycles() / nframes;
-        printf("@time of serial run:\t\t\t[%.3f] million cycles\n", mcycles);
-        serialCycles = std::min(serialCycles, mcycles);
+        double msec = get_elapsed_msec() / nframes;
+        printf("@time of serial run:\t\t\t[%.3f] msec\n", msec);
+        serialCycles = std::min(serialCycles, msec);
     }
-    printf("[C++ serial dynamic, 1 core]:\t[%.3f] million cycles to render image\n", 
+    printf("[C++ serial dynamic, 1 core]:\t[%.3f] msec to render image\n", 
            serialCycles);
     WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
 
