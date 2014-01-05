@@ -38,9 +38,6 @@ typedef bool bool_t;
 #endif
 typedef float<3> float3;
 
-#if 0
-#define __ORIG
-#endif
 
 struct int3
 {
@@ -49,11 +46,7 @@ struct int3
 
 struct Ray {
     float3 origin, dir, invDir;
-#ifdef __ORIG
     uniform unsigned int dirIsNeg[3];
-#else
-    uniform int3 dirIsNeg;
-#endif
     float mint, maxt;
     int hitId;
 };
@@ -117,15 +110,9 @@ static void generateRay(uniform const float raster2camera[4][4],
 
     ray.invDir = 1.f / ray.dir;
 
-#ifdef __ORIG
     ray.dirIsNeg[0] = any(ray.invDir.x < 0) ? 1 : 0;
     ray.dirIsNeg[1] = any(ray.invDir.y < 0) ? 1 : 0;
     ray.dirIsNeg[2] = any(ray.invDir.z < 0) ? 1 : 0;
-#else
-    ray.dirIsNeg.x = any(ray.invDir.x < 0) ? 1 : 0;
-    ray.dirIsNeg.y = any(ray.invDir.y < 0) ? 1 : 0;
-    ray.dirIsNeg.z = any(ray.invDir.z < 0) ? 1 : 0;
-#endif
 }
 
 
@@ -235,13 +222,13 @@ BVHIntersect(const uniform LinearBVHNode nodes[],
             }
             else {
                 // Put far BVH node on _todo_ stack, advance to near node
-#ifdef __ORIG
+#if 0 /* fails */
                 int dirIsNeg = r.dirIsNeg[node.splitAxis];
 #else
                 int dirIsNeg;
-                if (node.splitAxis == 0) dirIsNeg = r.dirIsNeg.x;
-                if (node.splitAxis == 1) dirIsNeg = r.dirIsNeg.y;
-                if (node.splitAxis == 2) dirIsNeg = r.dirIsNeg.z;
+                if (node.splitAxis == 0) dirIsNeg = r.dirIsNeg[0];
+                if (node.splitAxis == 1) dirIsNeg = r.dirIsNeg[1];
+                if (node.splitAxis == 2) dirIsNeg = r.dirIsNeg[2];
 #endif
                 if (dirIsNeg) {
                    todo[todoOffset++] = nodeNum + 1;
