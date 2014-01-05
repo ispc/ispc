@@ -585,7 +585,8 @@ Function::GenerateIR() {
                 if (g->mangleFunctionsWithTarget)
                     functionName += std::string("_") + g->target->GetISAString();
 
-                functionName += std::string("___export");
+                if (g->target->getISA() == Target::NVPTX64)
+                  functionName += std::string("___export");
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);
 #if defined(LLVM_3_1)

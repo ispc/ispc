@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
     mandelbrot_ispc(x0, y0, x1, y1, width, height, maxIterations, (int*)d_buf);
     double dt = 1e3*(rtc() - t0); //get_elapsed_mcycles();
 #else
-    const char * func_name = "mandelbrot_ispc";
+    const char * func_name = "mandelbrot_ispc__export";
     void *func_args[] = {&x0, &y0, &x1, &y1, &width, &height, &maxIterations, &d_buf};
     const double dt = 1e3*CUDALaunch(NULL, func_name, func_args);
 #endif

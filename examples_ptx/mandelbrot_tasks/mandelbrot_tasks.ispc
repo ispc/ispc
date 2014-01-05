@@ -85,7 +85,7 @@ mandelbrot_ispc(uniform float x0, uniform float y0,
     uniform float dx = (x1 - x0) / width;
     uniform float dy = (y1 - y0) / height;
     const uniform int xspan = max(32, programCount*2);  /* make sure it is big enough to avoid false-sharing */
-    const uniform int yspan = 16; 
+    const uniform int yspan = 16;
 
 
 #if 1

@@ -61,32 +61,32 @@ define i32 @__nctaid_z()  nounwind readnone alwaysinline
  %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
  ret i32 %nb
 }
-define i32 @__shfl_i32(i32, i32) nounwind readnone alwaysinline
+define i32 @__shfl_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
   ret i32 %shfl
 }
-define float @__shfl_xor_float(float, i32) nounwind readnone alwaysinline
+define float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call float asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) nounwind readnone alwaysinline
   ret float %shfl
 }
-define i32 @__shfl_xor_i32(i32, i32) nounwind readnone alwaysinline
+define i32 @__shfl_xor_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
   ret i32 %shfl
 }
-define float @__fminf(float,float) nounwind readnone alwaysinline
+define float @__fminf_nvptx(float,float) nounwind readnone alwaysinline
 {
   %min = tail call float asm sideeffect "min.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
   ret float %min
 }
-define float @__fmaxf(float,float) nounwind readnone alwaysinline
+define float @__fmaxf_nvptx(float,float) nounwind readnone alwaysinline
 {
   %max = tail call float asm sideeffect "max.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
   ret float %max
 }
-define i32 @__ballot(i1) nounwind readnone alwaysinline
+define i32 @__ballot_nvptx(i1) nounwind readnone alwaysinline
 {
   %conv = zext i1 %0 to i32
   %res = tail call i32 asm sideeffect 
@@ -96,7 +96,7 @@ define i32 @__ballot(i1) nounwind readnone alwaysinline
       }", "=r,r"(i32 %conv) nounwind readnone alwaysinline
   ret i32 %res
 }
-define i32 @__lanemask_lt() nounwind readnone alwaysinline
+define i32 @__lanemask_lt_nvptx() nounwind readnone alwaysinline
 {
   %mask = tail call i32 asm sideeffect "mov.u32 $0, %lanemask_lt;", "=r"() nounwind readnone alwaysinline
   ret i32 %mask
@@ -576,9 +576,9 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
 define i64 @__warpBinExclusiveScan(i1 %p) nounwind readonly alwaysinline 
 {
 entry:
-  %call = call i32 @__ballot(i1 zeroext %p)
+  %call = call i32 @__ballot_nvptx(i1 zeroext %p)
   %call1 = call i32 @__popcnt_int32(i32 %call)
-  %call2 = call i32 @__lanemask_lt()
+  %call2 = call i32 @__lanemask_lt_nvptx()
   %and = and i32 %call2, %call
   %call3 = call i32 @__popcnt_int32(i32 %and)
   %retval.sroa.1.4.insert.ext.i = zext i32 %call3 to i64
@@ -617,21 +617,21 @@ define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %res = call i32 @__ballot(i1 %v)
+  %res = call i32 @__ballot_nvptx(i1 %v)
   %cmp = icmp ne i32 %res, 0
   ret i1 %cmp
 }
 
 define  i1 @__all(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %res = call i32 @__ballot(i1 %v)
+  %res = call i32 @__ballot_nvptx(i1 %v)
   %cmp = icmp eq i32 %res, 31
   ret i1 %cmp
 }
 
 define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %res = call i32 @__ballot(i1 %v)
+  %res = call i32 @__ballot_nvptx(i1 %v)
   %cmp = icmp eq i32 %res, 0
   ret i1 %cmp
 }
@@ -646,47 +646,47 @@ define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline
 
 define  float @__reduce_min_float(<1 x float>) nounwind readnone {
   %value = extractelement <1 x float> %0, i32 0
-  %call = tail call float @__shfl_xor_float(float %value, i32 16)
-  %call1 = tail call float @__fminf(float %value, float %call) 
-  %call.1 = tail call float @__shfl_xor_float(float %call1, i32 8)
-  %call1.1 = tail call float @__fminf(float %call1, float %call.1) 
-  %call.2 = tail call float @__shfl_xor_float(float %call1.1, i32 4)
-  %call1.2 = tail call float @__fminf(float %call1.1, float %call.2) 
-  %call.3 = tail call float @__shfl_xor_float(float %call1.2, i32 2)
-  %call1.3 = tail call float @__fminf(float %call1.2, float %call.3) 
-  %call.4 = tail call float @__shfl_xor_float(float %call1.3, i32 1)
-  %call1.4 = tail call float @__fminf(float %call1.3, float %call.4) 
+  %call = tail call float @__shfl_xor_float_nvptx(float %value, i32 16)
+  %call1 = tail call float @__fminf_nvptx(float %value, float %call) 
+  %call.1 = tail call float @__shfl_xor_float_nvptx(float %call1, i32 8)
+  %call1.1 = tail call float @__fminf_nvptx(float %call1, float %call.1) 
+  %call.2 = tail call float @__shfl_xor_float_nvptx(float %call1.1, i32 4)
+  %call1.2 = tail call float @__fminf_nvptx(float %call1.1, float %call.2) 
+  %call.3 = tail call float @__shfl_xor_float_nvptx(float %call1.2, i32 2)
+  %call1.3 = tail call float @__fminf_nvptx(float %call1.2, float %call.3) 
+  %call.4 = tail call float @__shfl_xor_float_nvptx(float %call1.3, i32 1)
+  %call1.4 = tail call float @__fminf_nvptx(float %call1.3, float %call.4) 
   ret float %call1.4
 }
 
 define  float @__reduce_max_float(<1 x float>) nounwind readnone 
 {
   %value = extractelement <1 x float> %0, i32 0
-  %call = tail call float @__shfl_xor_float(float %value, i32 16)
-  %call1 = tail call float @__fmaxf(float %value, float %call) 
-  %call.1 = tail call float @__shfl_xor_float(float %call1, i32 8)
-  %call1.1 = tail call float @__fmaxf(float %call1, float %call.1) 
-  %call.2 = tail call float @__shfl_xor_float(float %call1.1, i32 4)
-  %call1.2 = tail call float @__fmaxf(float %call1.1, float %call.2) 
-  %call.3 = tail call float @__shfl_xor_float(float %call1.2, i32 2)
-  %call1.3 = tail call float @__fmaxf(float %call1.2, float %call.3) 
-  %call.4 = tail call float @__shfl_xor_float(float %call1.3, i32 1)
-  %call1.4 = tail call float @__fmaxf(float %call1.3, float %call.4) 
+  %call = tail call float @__shfl_xor_float_nvptx(float %value, i32 16)
+  %call1 = tail call float @__fmaxf_nvptx(float %value, float %call) 
+  %call.1 = tail call float @__shfl_xor_float_nvptx(float %call1, i32 8)
+  %call1.1 = tail call float @__fmaxf_nvptx(float %call1, float %call.1) 
+  %call.2 = tail call float @__shfl_xor_float_nvptx(float %call1.1, i32 4)
+  %call1.2 = tail call float @__fmaxf_nvptx(float %call1.1, float %call.2) 
+  %call.3 = tail call float @__shfl_xor_float_nvptx(float %call1.2, i32 2)
+  %call1.3 = tail call float @__fmaxf_nvptx(float %call1.2, float %call.3) 
+  %call.4 = tail call float @__shfl_xor_float_nvptx(float %call1.3, i32 1)
+  %call1.4 = tail call float @__fmaxf_nvptx(float %call1.3, float %call.4) 
   ret float %call1.4
 }
 
 define  i32 @__reduce_add_int32(<1 x i32>) nounwind readnone 
 {
   %value = extractelement <1 x i32> %0, i32 0
-  %call = tail call i32 @__shfl_xor_i32(i32 %value, i32 16)
+  %call = tail call i32 @__shfl_xor_i32_nvptx(i32 %value, i32 16)
   %call1 = add i32 %call, %value 
-  %call.1 = tail call i32 @__shfl_xor_i32(i32 %call1, i32 8)
+  %call.1 = tail call i32 @__shfl_xor_i32_nvptx(i32 %call1, i32 8)
   %call1.1 =add i32 %call1, %call.1 
-  %call.2 = tail call i32 @__shfl_xor_i32(i32 %call1.1, i32 4)
+  %call.2 = tail call i32 @__shfl_xor_i32_nvptx(i32 %call1.1, i32 4)
   %call1.2 = add i32 %call1.1, %call.2
-  %call.3 = tail call i32 @__shfl_xor_i32(i32 %call1.2, i32 2)
+  %call.3 = tail call i32 @__shfl_xor_i32_nvptx(i32 %call1.2, i32 2)
   %call1.3 = add i32 %call1.2, %call.3 
-  %call.4 = tail call i32 @__shfl_xor_i32(i32 %call1.3, i32 1)
+  %call.4 = tail call i32 @__shfl_xor_i32_nvptx(i32 %call1.3, i32 1)
   %call1.4 = add i32 %call1.3, %call.4 
   ret i32 %call1.4
 }
