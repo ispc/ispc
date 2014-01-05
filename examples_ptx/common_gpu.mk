@@ -5,10 +5,11 @@ CXX=g++
 CXXFLAGS=-O3 -I$(CUDATK)/include -Iobjs_gpu/ -D_CUDA_
 #
 NVCC=nvcc
-NVCC_FLAGS=-O3 -arch=sm_35 -D_CUDA_ -I../
+NVCC_FLAGS=-O3 -arch=sm_35 -D_CUDA_ -I../ -Xptxas=-v
 ifdef PTXCC_REGMAX
   NVCC_FLAGS += --maxrregcount=$(PTXCC_REGMAX)
 endif
+NVCC_FLAGS+=--use_fast_math
 #
 LD=nvcc
 LDFLAGS=-lcudart -lcudadevrt -arch=sm_35

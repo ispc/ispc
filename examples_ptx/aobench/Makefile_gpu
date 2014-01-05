@@ -1,5 +1,6 @@
-PROG=ao_gpu
+PROG=ao
 ISPC_SRC=ao.ispc
+CU_SRC=ao.cu
 CXX_SRC=ao.cpp  ao_serial.cpp
 PTXCC_REGMAX=64
 

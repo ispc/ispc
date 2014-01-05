@@ -31,13 +31,25 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#define bool int
-
+typedef bool bool_t;
 typedef float<3> float3;
+
+#if 1
+#define __ORIG
+#endif
+
+struct int3
+{
+  int x,y,z;
+};
 
 struct Ray {
     float3 origin, dir, invDir;
+#ifdef __ORIG
     uniform unsigned int dirIsNeg[3];
+#else
+    uniform int3 dirIsNeg;
+#endif
     float mint, maxt;
     int hitId;
 };
@@ -101,13 +113,19 @@ static void generateRay(uniform const float raster2camera[4][4],
 
     ray.invDir = 1.f / ray.dir;
 
+#ifdef __ORIG
     ray.dirIsNeg[0] = any(ray.invDir.x < 0) ? 1 : 0;
     ray.dirIsNeg[1] = any(ray.invDir.y < 0) ? 1 : 0;
     ray.dirIsNeg[2] = any(ray.invDir.z < 0) ? 1 : 0;
+#else
+    ray.dirIsNeg.x = any(ray.invDir.x < 0) ? 1 : 0;
+    ray.dirIsNeg.y = any(ray.invDir.y < 0) ? 1 : 0;
+    ray.dirIsNeg.z = any(ray.invDir.z < 0) ? 1 : 0;
+#endif
 }
 
 
-static bool BBoxIntersect(const uniform float bounds[2][3], 
+static bool_t BBoxIntersect(const uniform float bounds[2][3], 
                           const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
     uniform float3 bounds1 = { bounds[1][0], bounds[1][1], bounds[1][2] };
@@ -146,7 +164,7 @@ static bool BBoxIntersect(const uniform float bounds[2][3],
 
 
 
-static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
+static bool_t TriIntersect(const uniform Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
     uniform float3 p2 = { tri.p[2][0], tri.p[2][1], tri.p[2][2] };
@@ -155,7 +173,7 @@ static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
 
     float3 s1 = Cross(ray.dir, e2);
     float divisor = Dot(s1, e1);
-    bool hit = true;
+    bool_t hit = true;
 
     if (divisor == 0.)
         hit = false;
@@ -186,10 +204,11 @@ static bool TriIntersect(const uniform Triangle &tri, Ray &ray) {
 }
 
 
-bool BVHIntersect(const uniform LinearBVHNode nodes[], 
+bool_t
+BVHIntersect(const uniform LinearBVHNode nodes[], 
                   const uniform Triangle tris[], Ray &r) {
     Ray ray = r;
-    bool hit = false;
+    bool_t hit = false;
     // Follow ray through BVH nodes to find primitive intersections
     uniform int todoOffset = 0, nodeNum = 0;
     uniform int todo[64];
@@ -212,7 +231,15 @@ bool BVHIntersect(const uniform LinearBVHNode nodes[],
             }
             else {
                 // Put far BVH node on _todo_ stack, advance to near node
-                if (r.dirIsNeg[node.splitAxis]) {
+#ifdef __ORIG
+                int dirIsNeg = r.dirIsNeg[node.splitAxis];
+#else
+                int dirIsNeg;
+                if (node.splitAxis == 0) dirIsNeg = r.dirIsNeg.x;
+                if (node.splitAxis == 1) dirIsNeg = r.dirIsNeg.y;
+                if (node.splitAxis == 2) dirIsNeg = r.dirIsNeg.z;
+#endif
+                if (dirIsNeg) {
                    todo[todoOffset++] = nodeNum + 1;
                    nodeNum = node.offset;
                 }

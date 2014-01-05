@@ -45,7 +45,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include "../timing.h"
-#include "rt_ispc.h"
+#include "rt1_ispc.h"
 
 #include <sys/time.h>
 
@@ -513,7 +513,7 @@ int main(int argc, char *argv[]) {
         (Triangle*)d_triangles);
     double dt = rtc() - t0; //get_elapsed_mcycles();
 #else
-    const char * func_name = "raytrace_ispc_tasks";
+    const char * func_name = "raytrace_ispc_tasks___export";
     void *func_args[] = {&width, &height, &baseWidth, &baseHeight,
       &d_raster2camera, &d_camera2world,
       &d_image, &d_id,

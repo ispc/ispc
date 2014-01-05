@@ -1,8 +1,4 @@
-#define programCount 32
-#define programIndex (threadIdx.x & 31)
-#define taskIndex (blockIdx.x*4 + (threadIdx.x >> 5))
-#define taskCount (gridDim.x*4)
-#define warpIdx (threadIdx.x >> 5)
+#include "cuda_helpers.cuh"
 
 #define float3 Float3
 struct Float3
@@ -339,7 +335,7 @@ void raytrace_tile_task( int width,  int height,
 }
 
 
-extern "C" __global__ void raytrace_ispc_tasks( int width,  int height,
+extern "C" __global__ void raytrace_ispc_tasks___export( int width,  int height,
                                  int baseWidth,  int baseHeight,
                                 const  float raster2camera[4][4], 
                                 const  float camera2world[4][4],
@@ -350,10 +346,28 @@ extern "C" __global__ void raytrace_ispc_tasks( int width,  int height,
      int xBuckets = (width + (dx-1)) / dx;
      int yBuckets = (height + (dy-1)) / dy;
      int nTasks = xBuckets * yBuckets;
-     if (programIndex == 0)
-       raytrace_tile_task<<<(nTasks+4-1)/4,128>>>(width, height, baseWidth, baseHeight, 
-           raster2camera, camera2world, 
-           image, id, nodes, triangles);
+     launch(nTasks,1,1,raytrace_tile_task)
+       (width, height, baseWidth, baseHeight, 
+        raster2camera, camera2world, 
+        image, id, nodes, triangles);
      cudaDeviceSynchronize();
 }
 
+
+
+extern "C" __host__ void raytrace_ispc_tasks( int width,  int height,
+    int baseWidth,  int baseHeight,
+    const  float raster2camera[4][4], 
+    const  float camera2world[4][4],
+    float image[],  int id[],
+    const  LinearBVHNode nodes[],
+    const  Triangle triangles[]) {
+  raytrace_ispc_tasks___export<<<1,32>>>( width,  height,
+      baseWidth,  baseHeight,
+      raster2camera,
+      camera2world,
+      image,  id,
+      nodes,
+      triangles);
+  cudaDeviceSynchronize();
+}

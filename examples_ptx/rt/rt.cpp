@@ -197,7 +197,12 @@ int main(int argc, char *argv[]) {
     // And then read the triangles 
     uint nTris;
     READ(nTris, 1);
+#if 0
     Triangle *triangles = new Triangle[nTris];
+#else
+    Triangle *triangles;
+    ispc_malloc((void**)&triangles, nTris*sizeof(Triangle));
+#endif
     for (uint i = 0; i < nTris; ++i) {
         // 9x floats for the 3 vertices
         float v[9];
@@ -246,8 +251,8 @@ int main(int argc, char *argv[]) {
     writeImage(id, image, width, height, "rt-ispc-1core.ppm");
 #endif
 
-    memset(id, 0, width*height*sizeof(int));
-    memset(image, 0, width*height*sizeof(float));
+    ispc_memset(id, 0, width*height*sizeof(int));
+    ispc_memset(image, 0, width*height*sizeof(float));
 
     //
     // Run 3 iterations with ispc + 1 core, record the minimum time
@@ -266,8 +271,8 @@ int main(int argc, char *argv[]) {
 
     writeImage(id, image, width, height, "rt-ispc-tasks.ppm");
 
-    memset(id, 0, width*height*sizeof(int));
-    memset(image, 0, width*height*sizeof(float));
+    ispc_memset(id, 0, width*height*sizeof(int));
+    ispc_memset(image, 0, width*height*sizeof(float));
 
     //
     // And 3 iterations with the serial implementation, reporting the
