@@ -196,91 +196,15 @@ ambient_occlusion(Isect &isect, const uniform Plane &plane, const uniform Sphere
     return occlusion;
 }
 
-
-/* Compute the image for the scanlines from [y0,y1), for an overall image
-   of width w and height h.
- */
-static void ao_scanlines(uniform int y0, uniform int y1, uniform int w, 
-                         uniform int h,  uniform int nsubsamples, 
-                         uniform float image[]) {
-    const static uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-    const static uniform Sphere spheres[3] = {
-        { { -2.0f, 0.0f, -3.5f }, 0.5f },
-        { { -0.5f, 0.0f, -3.0f }, 0.5f },
-        { { 1.0f, 0.0f, -2.2f }, 0.5f } };
-    RNGState rngstate;
-
-    seed_rng(&rngstate, programIndex + (y0 << (programIndex & 15)));
-    float invSamples = 1.f / nsubsamples;
-
-    foreach_tiled(y = y0 ... y1, x = 0 ... w, 
-                  u = 0 ... nsubsamples, v = 0 ... nsubsamples) {
-        float du = (float)u * invSamples, dv = (float)v * invSamples;
-
-        // Figure out x,y pixel in NDC
-        float px =  (x + du - (w / 2.0f)) / (w / 2.0f);
-        float py = -(y + dv - (h / 2.0f)) / (h / 2.0f);
-        float ret = 0.f;
-        Ray ray;
-        Isect isect;
-
-        ray.org = 0.f;
-
-        // Poor man's perspective projection
-        ray.dir.x = px;
-        ray.dir.y = py;
-        ray.dir.z = -1.0;
-        vnormalize(ray.dir);
-
-        isect.t   = 1.0e+17;
-        isect.hit = 0;
-
-        for (uniform int snum = 0; snum < 3; ++snum)
-            ray_sphere_intersect(isect, ray, spheres[snum]);
-        ray_plane_intersect(isect, ray, plane);
-
-        // Note use of 'coherent' if statement; the set of rays we
-        // trace will often all hit or all miss the scene
-        cif (isect.hit) {
-            ret = ambient_occlusion(isect, plane, spheres, rngstate);
-            ret *= invSamples * invSamples;
-
-            int offset = 3 * (y * w + x);
-            atomic_add_local(&image[offset], ret);
-            atomic_add_local(&image[offset+1], ret);
-            atomic_add_local(&image[offset+2], ret);
-        }
-    }
-}
-
-
-export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
-                    uniform float image[]) {
-    ao_scanlines(0, h, w, h, nsubsamples, image);
-}
-
-#if 0
-static void task ao_task(uniform int width, uniform int height, 
-                         uniform int nsubsamples, uniform float image[]) {
-    ao_scanlines(taskIndex, taskIndex+1, width, height, nsubsamples, image);
-}
-
-
-export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples, 
-                          uniform float image[]) {
-    launch[h] ao_task(w, h, nsubsamples, image);
-}
-#else
-
-static  inline void ao_tile(
+static  inline void ao_tiles(
     uniform int x0, uniform int x1,
     uniform int y0, uniform int y1, 
     uniform int w, uniform int h,
     uniform int nsubsamples, 
     uniform float image[]) 
 {
-  uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-  uniform Sphere spheres[3] = {
+  const uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+  const uniform Sphere spheres[3] = {
     { { -2.0f, 0.0f, -3.5f }, 0.5f },
     { { -0.5f, 0.0f, -3.0f }, 0.5f },
     { { 1.0f, 0.0f, -2.2f }, 0.5f } };
@@ -335,8 +259,17 @@ static  inline void ao_tile(
   }
 }
 
-#define TILEX 64
+#define TILEX max(64,programCount*2)
 #define TILEY 4
+
+export void ao_ispc(uniform int w, uniform int h, uniform int nsubsamples, 
+                    uniform float image[]) {
+  const uniform int x0 = 0;
+  const uniform int x1 = w;
+  const uniform int y0 = 0;
+  const uniform int y1 = h;
+  ao_tiles(x0,x1,y0,y1, w, h, nsubsamples, image);
+}
 
 void task ao_task(uniform int width, uniform int height, 
     uniform int nsubsamples, uniform float image[]) 
@@ -349,7 +282,7 @@ void task ao_task(uniform int width, uniform int height,
 
   const uniform int y0 = taskIndex1 * TILEY;
   const uniform int y1 = min(y0 + TILEY, height);
-  ao_tile(x0,x1,y0,y1, width, height, nsubsamples, image);
+  ao_tiles(x0,x1,y0,y1, width, height, nsubsamples, image);
 }
 
 
@@ -361,4 +294,3 @@ export void ao_ispc_tasks(uniform int w, uniform int h, uniform int nsubsamples,
   launch[ntilex,ntiley] ao_task(w, h, nsubsamples, image);
   sync;
 }
-#endif
