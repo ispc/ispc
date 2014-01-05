@@ -31,7 +31,11 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
+#if 1
+typedef int bool_t;
+#else
 typedef bool bool_t;
+#endif
 typedef float<3> float3;
 
 #if 0

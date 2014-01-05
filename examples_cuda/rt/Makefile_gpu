@@ -1,5 +1,5 @@
 PROG=rt_cu
-ISPC_SRC=rt1.ispc
+ISPC_SRC=rt.ispc
 CXX_SRC=rt_cu.cpp 
 
 CXX=g++

@@ -1,7 +1,7 @@
 NVCC_SRC=../nvcc_helpers.cu
 NVCC_OBJS=objs_gpu/nvcc_helpers_nvcc.o
 #
-CXX=g++
+CXX=g++ -ffast-math
 CXXFLAGS=-O3 -I$(CUDATK)/include -Iobjs_gpu/ -D_CUDA_
 #
 NVCC=nvcc
