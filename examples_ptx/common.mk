@@ -4,8 +4,10 @@ TASK_LIB=-lpthread
 TASK_OBJ=objs/tasksys.o objs/ispc_malloc.o
 
 CXX=clang++
+CXX=icc -openmp
 CXXFLAGS+=-Iobjs/ -O2
 CC=clang
+CC=icc -openmp
 CCFLAGS+=-Iobjs/ -O2
 
 LIBS=-lm $(TASK_LIB) -lstdc++
