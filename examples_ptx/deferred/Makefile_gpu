@@ -1,0 +1,10 @@
+PROG=deferred_shading
+ISPC_SRC=kernels.ispc
+CU_SRC=kernels.cu
+CXX_SRC=common.cpp  main.cpp
+PTXCC_REGMAX=64
+
+include ../common_gpu.mk
+
+
+
