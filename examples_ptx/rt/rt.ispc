@@ -34,7 +34,7 @@
 typedef bool bool_t;
 typedef float<3> float3;
 
-#if 1
+#if 0
 #define __ORIG
 #endif
 
