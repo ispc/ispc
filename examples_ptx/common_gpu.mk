@@ -11,7 +11,11 @@ LD=nvcc
 LDFLAGS=-lcudart -lcudadevrt -arch=sm_35
 #
 PTXCC=ptxcc
-PTXCC_FLAGS = -maxrregcount=32 -Xptxas=-v
+PTXCC_FLAGS = -Xptxas=-v
+ifdef PTXCC_REGMAX
+  PTXCC_FLAGS += -maxrregcount=$(PTXCC_REGMAX)
+endif
+
 #
 ISPC=ispc
 ISPC_FLAGS=-O3 --math-lib=default --target=nvptx64 --opt=fast-math

@@ -1,0 +1,9 @@
+PROG=ao_gpu
+ISPC_SRC=ao.ispc
+CXX_SRC=ao.cpp  ao_serial.cpp
+PTXCC_REGMAX=64
+
+include ../common_gpu.mk
+
+
+
