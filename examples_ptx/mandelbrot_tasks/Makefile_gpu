@@ -1,5 +1,6 @@
-PROG=mandelbrot_tasks_gpu
+PROG=mandelbrot_tasks
 ISPC_SRC=mandelbrot_tasks.ispc
+CU_SRC=mandelbrot_tasks.cu
 CXX_SRC=mandelbrot_tasks.cpp  mandelbrot_tasks_serial.cpp
 
 include ../common_gpu.mk

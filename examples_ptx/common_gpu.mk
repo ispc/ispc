@@ -6,6 +6,9 @@ CXXFLAGS=-O3 -I$(CUDATK)/include -Iobjs_gpu/ -D_CUDA_
 #
 NVCC=nvcc
 NVCC_FLAGS=-O3 -arch=sm_35 -D_CUDA_
+ifdef PTXCC_REGMAX
+  NVCC_FLAGS += --maxrregcount=$(PTXCC_REGMAX)
+endif
 #
 LD=nvcc
 LDFLAGS=-lcudart -lcudadevrt -arch=sm_35
@@ -26,6 +29,7 @@ ISPC_OBJS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.o)
 ISPC_BCS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.bc)
 ISPC_HEADERS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.h)
 CXX_OBJS=$(CXX_SRC:%.cpp=objs_gpu/%_gcc.o)
+CU_OBJS=$(CU_SRC:%.cu=objs_gpu/%_cu.o)
 #NVCC_OBJS=$(NVCC_SRC:%.cu=objs_gpu/%_nvcc.o)
 
 # PTXGEN = $(HOME)/ptxgen
@@ -34,9 +38,16 @@ CXX_OBJS=$(CXX_SRC:%.cpp=objs_gpu/%_gcc.o)
 
 # .SUFFIXES: .bc .o .cu 
 
-OBJS=$(ISPC_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+OBJSgpu=$(ISPC_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+PROGgpu = $(PROG)_gpu
 
-all: dirs $(PROG) $(ISPC_BCS) 
+ifdef CU_SRC
+  OBJScu=$(CU_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+  PROGcu=$(PROG)_cu
+endif
+
+
+all: dirs $(PROGgpu) $(PROGcu) $(ISPC_BCS) 
 
 dirs:
 	/bin/mkdir -p objs_gpu/
@@ -44,16 +55,20 @@ dirs:
 objs_gpu/%.cpp objs_gpu/%.o objs_gpu/%.h: dirs
 
 clean: 
-	echo $(CXX_OBJS)
-	/bin/rm -rf $(PROG) objs_gpu
+	/bin/rm -rf $(PROGcu) $(PROGgpu) objs_gpu
 
-$(PROG): $(OBJS)
+$(PROGgpu): $(OBJSgpu)
+	$(LD) -o $@ $^ $(LDFLAGS)
+$(PROGcu): $(OBJScu)
 	$(LD) -o $@ $^ $(LDFLAGS)
 
 objs_gpu/%_gcc.o: %.cpp $(ISPC_HEADERS)
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 objs_gpu/%_gcc.o: ../%.cpp 
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
+
+objs_gpu/%_cu.o: %.cu $(ISPC_HEADERS)
+	$(NVCC) $(NVCC_FLAGS)  -o $@ -dc $<
 
 objs_gpu/%_nvcc.o: ../%.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
