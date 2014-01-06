@@ -158,7 +158,6 @@ lGetSystemISA() {
 
 
 static const char *supportedCPUs[] = {
-    "sm_35", 
 #ifdef ISPC_ARM_ENABLED
     // FIXME: LLVM supports a ton of different ARM CPU variants--not just
     // cortex-a9 and a15.  We should be able to handle any of them that also
@@ -210,8 +209,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             // possible ISA based on that.
             if (!strcmp(cpu, "core-avx2"))
                 isa = "avx2-i32x8";
-            else if (!strcmp(cpu, "sm_35"))
-              isa = "nvptx";
 #ifdef ISPC_ARM_ENABLED
             else if (!strcmp(cpu, "cortex-a9") ||
                      !strcmp(cpu, "cortex-a15"))
@@ -248,9 +245,6 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         cpu = "cortex-a9";
 #endif
 
-    if (cpu == NULL && !strcmp(isa, "nvptx"))
-      cpu = "sm_35";
-
     if (cpu == NULL) {
         std::string hostCPU = llvm::sys::getHostCPUName();
         if (hostCPU.size() > 0)
@@ -279,13 +273,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     this->m_cpu = cpu;
 
     if (arch == NULL) {
-        if (!strcmp(isa, "nvptx"))
-            arch = "nvptx";
 #ifdef ISPC_ARM_ENABLED
-        else if (!strncmp(isa, "neon", 4))
+        if (!strncmp(isa, "neon", 4))
             arch = "arm";
-#endif
         else
+#endif
             arch = "x86-64";
     }
 
@@ -714,11 +706,10 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_nativeVectorWidth = 32;
         this->m_nativeVectorAlignment = 32;
         this->m_vectorWidth = 1;
-        this->m_attributes = "+sm_35";
         this->m_hasHalf = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasTranscendentals = false; //true;
+        this->m_hasTranscendentals = false; 
         this->m_hasGather = this->m_hasScatter = false;
     }
     else {
@@ -778,9 +769,11 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
                 "i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-"
                 "f80:128:128-n8:16:32:64-S128-v16:16:16-v32:32:32-v4:128:128";
+#if 0 /* evghenii: this generate warrning about Module DataLayout is incompatible with .." */
         } else if (m_isa == Target::NVPTX)
         {
           dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+#endif
         }
 
         // 3. Finally set member data
@@ -836,7 +829,7 @@ Target::SupportedCPUs() {
 
 const char *
 Target::SupportedArchs() {
-    return "nvptx, "
+    return
 #ifdef ISPC_ARM_ENABLED
         "arm, "
 #endif
@@ -846,7 +839,7 @@ Target::SupportedArchs() {
 
 const char *
 Target::SupportedTargets() {
-    return "nvptx, "
+    return
 #ifdef ISPC_ARM_ENABLED
         "neon-i8x16, neon-i16x8, neon-i32x4, "
 #endif
@@ -857,23 +850,19 @@ Target::SupportedTargets() {
         "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64";
+        "generic-x32, generic-x64, nvptx";
 }
 
 
 std::string
 Target::GetTripleString() const {
     llvm::Triple triple;
-    if (m_arch == "nvptx")
-    {
-      triple.setTriple("nvptx");
-    }
 #ifdef ISPC_ARM_ENABLED
-    else if (m_arch == "arm") {
+    if (m_arch == "arm") {
         triple.setTriple("armv7-eabi");
     }
-#endif
     else
+#endif
     {
         // Start with the host triple as the default
         triple.setTriple(llvm::sys::getDefaultTargetTriple());
@@ -900,8 +889,6 @@ Target::GetTripleString() const {
 const char *
 Target::ISAToString(ISA isa) {
     switch (isa) {
-    case Target::NVPTX:
-        return "nvptx";
 #ifdef ISPC_ARM_ENABLED
     case Target::NEON8:
         return "neon-8";
@@ -922,6 +909,8 @@ Target::ISAToString(ISA isa) {
         return "avx2";
     case Target::GENERIC:
         return "generic";
+    case Target::NVPTX:
+        return "nvptx";
     default:
         FATAL("Unhandled target in ISAToString()");
     }
@@ -960,6 +949,8 @@ Target::ISAToTargetString(ISA isa) {
         return "avx2-i32x8";
     case Target::GENERIC:
         return "generic-4";
+    case Target::NVPTX:
+        return "nvptx";
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }
