@@ -279,4 +279,4 @@ define i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   ret i64 %call
 }
 
-declare_nvptx64()
+declare_nvptx()

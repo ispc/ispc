@@ -344,4 +344,4 @@ packed_load_and_store(4)
 ;; prefetch
 
 define_prefetches()
-declare_nvptx64()
+declare_nvptx()

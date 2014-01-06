@@ -4532,7 +4532,7 @@ define_up_avgs()
 define_down_avgs()
 ')
 
-define(`declare_nvptx64',
+define(`declare_nvptx',
 `
 declare i32 @__tid_x()  nounwind readnone alwaysinline
 declare i32 @__warpsize()  nounwind readnone alwaysinline
