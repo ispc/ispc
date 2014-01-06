@@ -63,7 +63,7 @@ ifdef CU_SRC
 endif
 
 
-all: dirs $(PROGgpu_llvm) $(PROGgpu_nvvm) $(PROGcu) $(ISPC_LLVM_PTX) $(ISPC_NVVM_PTX) $(ISPC_BCS) 
+all: dirs $(ISPC_BC) $(PROGgpu_llvm) $(ISPC_LLVM_PTX) $(PROGcu) $(PROGgpu_nvvm) $(ISPC_NVVM_PTX) 
 
 dirs:
 	/bin/mkdir -p objs_gpu/
