@@ -9,5 +9,6 @@
 #define taskIndex2 (blockIdx.z)
 #define taskCount2 (gridDim.z)
 #define taskIndex (taskIndex0 + taskCount0*(taskIndex1 + taskCount1*taskIndex2))
+#define taskCount (taskCount0*taskCount1*taskCount2)
 #define warpIdx (threadIdx.x >> 5)
 #define launch(ntx,nty,ntz,func) if (programIndex==0) func<<<dim3(((ntx)+4-1)/4,nty,ntz),128>>>
