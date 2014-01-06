@@ -2924,7 +2924,6 @@ FunctionType::GetReturnTypeString() const {
 
 llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
-
     if (isTask == true)
         Assert(removeMask == false);
 
@@ -2972,7 +2971,6 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
     else
         // Otherwise we already have the types of the arguments
         callTypes = llvmArgTypes;
-
 
     if (returnType == NULL) {
         Assert(m->errorCount > 0);

@@ -1,0 +1,13 @@
+PROG=rt
+ISPC_SRC=rt.ispc
+CU_SRC=rt.cu
+CXX_SRC=rt.cpp  rt_serial.cpp
+PTXCC_REGMAX=32
+
+LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_gpu.mk
+
+
+

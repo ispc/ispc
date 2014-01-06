@@ -3559,7 +3559,6 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       llvm::StructType *argStructType =
         static_cast<llvm::StructType *>(pt->getElementType());
 
-
       llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
       AssertPos(currentPos, falloc != NULL);
       llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
@@ -3680,129 +3679,34 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       llvm::Value *ret =  CallInst(flaunch, NULL, args, "");
       return ret;
     }
-#if 0
-    {
-      if (callee == NULL) {
-        AssertPos(currentPos, m->errorCount > 0);
-        return NULL;
-      }
-      launchedTasks = true;
-      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
-
-      std::vector<llvm::Type*> argTypes;
-      for (unsigned int i = 0; i < argVals.size(); i++)
-        argTypes.push_back(argVals[i]->getType());
-      llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
-      llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
-      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
-      if (structSize->getType() != LLVMTypes::Int64Type)
-        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
-            "struct_size_to_64");
-#if 0
-      {
-        std::string str; llvm::raw_string_ostream rso(str); llvm::formatted_raw_ostream fos(rso);
-        structSize->print(fos);
-        fos.flush(); fprintf(stderr, ">>> %s\n", str.c_str());
-      }
-#endif
-      int align = 8;
-      llvm::Function *falloc = m->module->getFunction("ISPCGetParamBuffer");
-      AssertPos(currentPos, falloc != NULL);
-      std::vector<llvm::Value *> allocArgs;
-      allocArgs.push_back(launchGroupHandlePtr);
-      allocArgs.push_back(LLVMInt64(align));
-      allocArgs.push_back(structSize);
-      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
-      llvm::Value *voidi64 = PtrToIntInst(voidmem, "args_i64");
-      llvm::BasicBlock* if_true  = CreateBasicBlock("if_true");
-      llvm::BasicBlock* if_false = CreateBasicBlock("if_false");
-//      llvm::BasicBlock* bblock_bak = bblock;
-
-      /* check if the pointer returned by ISPCGetParamBuffer is not NULL 
-       * --------------
-       * this is a workaround for not checking which laneIdx we are in,
-       * because ISPCGetParamBuffer will return NULL pointer for all laneIdx, except when laneIdx = 0 
-       * of course, if ISPCGetParamBuffer fails to get parameter buffer, the pointer for laneIdx = 0
-       * will also be zero. 
-       * This check must be added, and also rewrite the code to make it less opaque 
-       */
-      llvm::Value* cmp1 = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, voidi64, LLVMInt64(0), "cmp1");
-      BranchInst(if_true, if_false, cmp1);
-
-      bblock = if_true;
-
-      // label_if_then block:
-      llvm::Type *pt = llvm::PointerType::getUnqual(st);
-      llvm::Value *argmem = BitCastInst(voidmem, pt);
-      for (unsigned int i = 0; i < argVals.size(); ++i) 
-      {
-        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
-        // don't need to do masked store here, I think
-        StoreInst(argVals[i], ptr);
-      }
-      BranchInst(if_false);
-
-      bblock = if_false;
-
-      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
-      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
-      AssertPos(currentPos, flaunch != NULL);
-      std::vector<llvm::Value *> args;
-      args.push_back(launchGroupHandlePtr);
-      args.push_back(fptr);
-      args.push_back(voidmem);
-      args.push_back(launchCount[0]);
-      args.push_back(launchCount[1]);
-      args.push_back(launchCount[2]);
-      return CallInst(flaunch, NULL, args, "");
-    }
-#endif
 }
 
 
 void
 FunctionEmitContext::SyncInst() {
-#if 0
-    if (g->target->getISA() != Target::NVPTX)
-    {
-#endif
-      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-      llvm::Value *nullPtrValue =
-        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-      llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
-          llvm::CmpInst::ICMP_NE,
-          launchGroupHandle, nullPtrValue);
-      llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
-      llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
-      BranchInst(bSync, bPostSync, nonNull);
+    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+    llvm::Value *nullPtrValue =
+      llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
+        llvm::CmpInst::ICMP_NE,
+        launchGroupHandle, nullPtrValue);
+    llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
+    llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
+    BranchInst(bSync, bPostSync, nonNull);
 
-      SetCurrentBasicBlock(bSync);
-      llvm::Function *fsync = m->module->getFunction("ISPCSync");
-      if (fsync == NULL)
-        FATAL("Couldn't find ISPCSync declaration?!");
-      CallInst(fsync, NULL, launchGroupHandle, "");
+    SetCurrentBasicBlock(bSync);
+    llvm::Function *fsync = m->module->getFunction("ISPCSync");
+    if (fsync == NULL)
+      FATAL("Couldn't find ISPCSync declaration?!");
+    CallInst(fsync, NULL, launchGroupHandle, "");
 
-      // zero out the handle so that if ISPCLaunch is called again in this
-      // function, it knows it's starting out from scratch
-      StoreInst(nullPtrValue, launchGroupHandlePtr);
+    // zero out the handle so that if ISPCLaunch is called again in this
+    // function, it knows it's starting out from scratch
+    StoreInst(nullPtrValue, launchGroupHandlePtr);
 
-      BranchInst(bPostSync);
+    BranchInst(bPostSync);
 
-      SetCurrentBasicBlock(bPostSync);
-#if 0
-    }
-    else
-    {
-      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-      llvm::Value *nullPtrValue =
-        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-      llvm::Function *fsync = m->module->getFunction("ISPCSync");
-      if (fsync == NULL)
-        FATAL("Couldn't find ISPCSync declaration?!");
-      CallInst(fsync, NULL, launchGroupHandle, "");
-      StoreInst(nullPtrValue, launchGroupHandlePtr);
-    }
-#endif
+    SetCurrentBasicBlock(bPostSync);
 }
 
 

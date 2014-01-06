@@ -733,8 +733,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-        if (functionType->isTask)
-        {
+        if (functionType->isTask) {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
             return;
@@ -796,7 +795,6 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
-     /* evghenii: on PTX target the following must not be set ... why ?!? */
     if (functionType->isTask && g->target->getISA() != Target::NVPTX)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
