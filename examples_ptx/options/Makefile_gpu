@@ -1,0 +1,14 @@
+PROG=options
+ISPC_SRC=options.ispc
+CU_SRC=options.cu
+CXX_SRC=options.cpp  options_serial.cpp
+PTXCC_REGMAX=32
+
+
+LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_gpu.mk
+
+
+
