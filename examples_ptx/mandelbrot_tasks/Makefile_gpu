@@ -3,6 +3,9 @@ ISPC_SRC=mandelbrot_tasks.ispc
 CU_SRC=mandelbrot_tasks.cu
 CXX_SRC=mandelbrot_tasks.cpp  mandelbrot_tasks_serial.cpp
 
+LLVM_GPU=1
+NVVM_GPU=1
+
 include ../common_gpu.mk
 
 

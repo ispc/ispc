@@ -4,6 +4,9 @@ CU_SRC=stencil.cu
 CXX_SRC=stencil.cpp  stencil_serial.cpp
 PTXCC_REGMAX=128
 
+LLVM_GPU=1
+NVVM_GPU=1
+
 include ../common_gpu.mk
 
 

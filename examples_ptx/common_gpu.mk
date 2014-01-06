@@ -51,11 +51,15 @@ LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
 
 # .SUFFIXES: .bc .o .cu 
 
-OBJSgpu_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
-PROGgpu_llvm = $(PROG)_llvm_gpu
+ifdef LLVM_GPU
+  OBJSgpu_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+  PROGgpu_llvm = $(PROG)_llvm_gpu
+endif
 
-OBJSgpu_nvvm=$(ISPC_NVVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
-PROGgpu_nvvm = $(PROG)_nvvm_gpu
+ifdef NVVM_GPU
+  OBJSgpu_nvvm=$(ISPC_NVVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+  PROGgpu_nvvm = $(PROG)_nvvm_gpu
+endif
 
 ifdef CU_SRC
   OBJScu=$(CU_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
