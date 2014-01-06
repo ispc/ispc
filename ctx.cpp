@@ -3617,8 +3617,12 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 
       AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
       std::vector<llvm::Type*> argTypes;
-      for (unsigned int i = 0; i < argVals.size(); i++)
-        argTypes.push_back(argVals[i]->getType());
+
+      llvm::Function *F = llvm::dyn_cast<llvm::Function>(callee);
+      const unsigned int nArgs = F->arg_size();
+      llvm::Function::const_arg_iterator I = F->arg_begin(), E = F->arg_end();
+      for (; I != E; ++I) 
+        argTypes.push_back(I->getType());
       llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
       llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
       llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
@@ -3660,6 +3664,13 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
         llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
         // don't need to do masked store here, I think
         StoreInst(argVals[i], ptr);
+      }
+      if (nArgs == argVals.size() + 1) {
+        // copy in the mask
+        llvm::Value *mask = GetFullMask();
+        llvm::Value *ptr = AddElementOffset(argmem, argVals.size(), NULL,
+            "funarg_mask");
+        StoreInst(mask, ptr);
       }
       BranchInst(if_false);
 
