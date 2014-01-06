@@ -26,9 +26,11 @@ ISPC_FLAGS=-O3 --math-lib=default --target=nvptx64 --opt=fast-math
 #
 #
 #
-ISPC_OBJS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.o)
+ISPC_LLVM_OBJS=$(ISPC_SRC:%.ispc=objs_gpu/%_llvm_ispc.o)
+ISPC_NVVM_OBJS=$(ISPC_SRC:%.ispc=objs_gpu/%_nvvm_ispc.o)
 ISPC_BCS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.bc)
-ISPC_PTX=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.ptx)
+ISPC_LLVM_PTX=$(ISPC_SRC:%.ispc=objs_gpu/%_llvm_ispc.ptx)
+ISPC_NVVM_PTX=$(ISPC_SRC:%.ispc=objs_gpu/%_nvvm_ispc.ptx)
 ISPC_HEADERS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.h)
 CXX_OBJS=$(CXX_SRC:%.cpp=objs_gpu/%_gcc.o)
 CU_OBJS=$(CU_SRC:%.cu=objs_gpu/%_cu.o)
@@ -49,8 +51,11 @@ LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
 
 # .SUFFIXES: .bc .o .cu 
 
-OBJSgpu=$(ISPC_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
-PROGgpu = $(PROG)_gpu
+OBJSgpu_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+PROGgpu_llvm = $(PROG)_llvm_gpu
+
+OBJSgpu_nvvm=$(ISPC_NVVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
+PROGgpu_nvvm = $(PROG)_nvvm_gpu
 
 ifdef CU_SRC
   OBJScu=$(CU_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
@@ -58,7 +63,7 @@ ifdef CU_SRC
 endif
 
 
-all: dirs $(PROGgpu) $(PROGcu) $(ISPC_PTX) $(ISPC_BCS) 
+all: dirs $(PROGgpu_llvm) $(PROGgpu_nvvm) $(PROGcu) $(ISPC_LLVM_PTX) $(ISPC_NVVM_PTX) $(ISPC_BCS) 
 
 dirs:
 	/bin/mkdir -p objs_gpu/
@@ -66,34 +71,44 @@ dirs:
 objs_gpu/%.cpp objs_gpu/%.o objs_gpu/%.h: dirs
 
 clean: 
-	/bin/rm -rf $(PROGcu) $(PROGgpu) objs_gpu
+	/bin/rm -rf $(PROGgpu_nvvm) $(PROGgpu_llvm) $(PROGcu) objs_gpu
 
-$(PROGgpu): $(OBJSgpu)
+# generate binaries
+$(PROGgpu_llvm): $(OBJSgpu_llvm)
+	$(LD) -o $@ $^ $(LDFLAGS)
+$(PROGgpu_nvvm): $(OBJSgpu_nvvm)
 	$(LD) -o $@ $^ $(LDFLAGS)
 $(PROGcu): $(OBJScu)
 	$(LD) -o $@ $^ $(LDFLAGS)
 
+# compile C++ code
 objs_gpu/%_gcc.o: %.cpp $(ISPC_HEADERS)
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 objs_gpu/%_gcc.o: ../%.cpp 
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
+# CUDA helpers
 objs_gpu/%_cu.o: %.cu $(ISPC_HEADERS)
 	$(NVCC) $(NVCC_FLAGS)  -o $@ -dc $<
 
+# compile CUDA code 
 objs_gpu/%_nvcc.o: ../%.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
 objs_gpu/%_nvcc.o: %.cu 
 	$(NVCC) $(NVCC_FLAGS) -o $@ -c $<
 
+# compile ISPC to LLVM BC
 objs_gpu/%_ispc.h objs_gpu/%_ispc.bc: %.ispc 
 	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_gpu/$*_ispc.h -o objs_gpu/$*_ispc.bc $<
 
-objs_gpu/%_ispc.ptx: objs_gpu/%_ispc.bc
+# generate PTX from LLVM BC
+objs_gpu/%_llvm_ispc.ptx: objs_gpu/%_ispc.bc
+	$(LLC) $(LLC_FLAGS) -o $@ $<
+objs_gpu/%_nvvm_ispc.ptx: objs_gpu/%_ispc.bc
 	$(LLVM32DIS) $< -o objs/$*_ispc-ll32.ll
-#	$(LLC) $(LLC_FLAGS) -o $@ $<
 	$(PTXGEN) objs/$*_ispc-ll32.ll > $@
 
+# generate an object file from PTX
 objs_gpu/%_ispc.o: objs_gpu/%_ispc.ptx
 	$(PTXCC) $< $(PTXCC_FLAGS) -o $@
 
