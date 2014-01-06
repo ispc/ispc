@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     float *vfloat = new float[64];
     double *vdouble = new double[64];
     int *vint = new int[64];
-    int *vint2 = new int2[64];
+    int *vint2 = new int[64];
 
     for (int i = 0; i < 64; ++i) {
         returned_result[i] = -1e20;
