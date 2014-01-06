@@ -4,6 +4,9 @@ CU_SRC=kernels.cu
 CXX_SRC=common.cpp  main.cpp
 PTXCC_REGMAX=64
 
+NVVM_GPU=1
+LLVM_GPU=1
+
 include ../common_gpu.mk
 
 

@@ -5,7 +5,7 @@ CXX=g++ -ffast-math
 CXXFLAGS=-O3 -I$(CUDATK)/include -Iobjs_gpu/ -D_CUDA_
 #
 NVCC=nvcc
-NVCC_FLAGS=-O3 -arch=sm_35 -D_CUDA_ -I../ -Xptxas=-v
+NVCC_FLAGS=-O3 -arch=sm_35 -D_CUDA_ -I../ -Xptxas=-v -Iobjs_gpu/
 ifdef PTXCC_REGMAX
   NVCC_FLAGS += --maxrregcount=$(PTXCC_REGMAX)
 endif
@@ -52,13 +52,18 @@ LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
 # .SUFFIXES: .bc .o .cu 
 
 ifdef LLVM_GPU
-  OBJSgpu_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
-  PROGgpu_llvm = $(PROG)_llvm_gpu
+  OBJSgpu_llvm=$(ISPC_LLVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS) 
+  PROGgpu_llvm=$(PROG)_llvm_gpu
+else
+  ISPC_LLVM_PTX=
 endif
 
+
 ifdef NVVM_GPU
-  OBJSgpu_nvvm=$(ISPC_NVVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS)
-  PROGgpu_nvvm = $(PROG)_nvvm_gpu
+  OBJSgpu_nvvm=$(ISPC_NVVM_OBJS) $(CXX_OBJS) $(NVCC_OBJS) $(ISPC_LVVM_PTX)
+  PROGgpu_nvvm=$(PROG)_nvvm_gpu
+else
+  ISPC_NVVM_PTX=
 endif
 
 ifdef CU_SRC
@@ -68,9 +73,9 @@ endif
 
 
 all: dirs  \
-	$(PROGgpu_nvvm) $(ISPC_NVVM_PTX)  \
-	$(PROGgpu_llvm) $(ISPC_LLVM_PTX)  \
-	$(PROGcu) $(ISPC_BC) 
+	$(PROGgpu_nvvm)  \
+	$(PROGgpu_llvm)  \
+	$(PROGcu) $(ISPC_BC)  $(ISPC_HEADERS) $(ISPC_NVVM_PTX) $(ISPC_LLVM_PTX)
 
 dirs:
 	/bin/mkdir -p objs_gpu/

@@ -97,6 +97,9 @@ Float32ToUnorm8(float f) {
 }
 
 
+#if 1
+inline
+#endif
 static void
 ComputeZBounds(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -133,8 +136,13 @@ ComputeZBounds(
     maxZ = reduce_max(laneMaxZ);
 }
 
-
-export uniform int32
+#if 1 
+inline
+#endif
+#ifndef __NVPTX__
+export 
+#endif
+uniform int32
 IntersectLightsWithTileMinMax(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
@@ -212,12 +220,18 @@ IntersectLightsWithTileMinMax(
             d = light_positionView_z * frustumPlanes_z[3] + 
                 light_positionView_y * frustumPlanes_xy[3];
             inFrustum = inFrustum && (d >= light_attenuationEndNeg);
-        
+       
+#if 0 
             // Pack and store intersecting lights
             cif (inFrustum) {
                 tileNumLights += packed_store_active(&tileLightIndices[tileNumLights], 
                                                      lightIndex);
             }
+#else
+        const bool active = inFrustum && lightIndex < numLights;
+        if(any(active))
+          tileNumLights += packed_store_active(active, &tileLightIndices[tileNumLights], lightIndex);
+#endif
         }
     }
 
@@ -225,6 +239,9 @@ IntersectLightsWithTileMinMax(
 }
 
 
+#if 1 
+inline
+#endif
 static uniform int32
 IntersectLightsWithTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
@@ -262,7 +279,13 @@ IntersectLightsWithTile(
 }
 
 
-export void
+#if 1 
+inline
+#endif
+#ifndef __NVPTX__
+export
+#endif
+void
 ShadeTile(
     uniform int32 tileStartX, uniform int32 tileEndX,
     uniform int32 tileStartY, uniform int32 tileEndY,
@@ -451,13 +474,17 @@ ShadeTile(
 
 task void
 RenderTile(uniform int num_groups_x, uniform int num_groups_y,
-           uniform InputHeader &inputHeader,
-           uniform InputDataArrays &inputData,
+           uniform InputHeader inputHeaderPtr[],
+           uniform InputDataArrays inputDataPtr[],
            uniform int visualizeLightCount,
            // Output
            uniform unsigned int8 framebuffer_r[],
            uniform unsigned int8 framebuffer_g[],
            uniform unsigned int8 framebuffer_b[]) {
+
+  uniform InputHeader inputHeader = *inputHeaderPtr;
+  uniform InputDataArrays inputData = *inputDataPtr;
+
     uniform int32 group_y = taskIndex / num_groups_x;
     uniform int32 group_x = taskIndex % num_groups_x;
     uniform int32 tile_start_x = group_x * MIN_TILE_WIDTH;
@@ -473,7 +500,11 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
 
     // Light intersection: figure out which lights illuminate this tile.
+#ifdef __NVPTX__
+    uniform int * uniform tileLightIndices = uniform new uniform int [MAX_LIGHTS];
+#else
     uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
+#endif
     uniform int numTileLights = 
         IntersectLightsWithTile(tile_start_x, tile_end_x, 
                                 tile_start_y, tile_end_y,
@@ -495,17 +526,24 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
+#ifdef __NVPTX__
+    delete tileLightIndices;
+#endif
 }
 
 
 export void
-RenderStatic(uniform InputHeader &inputHeader,
-             uniform InputDataArrays &inputData,
+RenderStatic(uniform InputHeader inputHeaderPtr[],
+             uniform InputDataArrays inputDataPtr[],
              uniform int visualizeLightCount,
              // Output
              uniform unsigned int8 framebuffer_r[],
              uniform unsigned int8 framebuffer_g[],
              uniform unsigned int8 framebuffer_b[]) {
+
+    uniform InputHeader inputHeader = *inputHeaderPtr;
+    uniform InputDataArrays inputData = *inputDataPtr;
+
     uniform int num_groups_x = (inputHeader.framebufferWidth + 
                                 MIN_TILE_WIDTH - 1) / MIN_TILE_WIDTH;
     uniform int num_groups_y = (inputHeader.framebufferHeight + 
@@ -515,7 +553,7 @@ RenderStatic(uniform InputHeader &inputHeader,
     // Launch a task to render each tile, each of which is MIN_TILE_WIDTH
     // by MIN_TILE_HEIGHT pixels.
     launch[num_groups] RenderTile(num_groups_x, num_groups_y,
-                                  inputHeader, inputData, visualizeLightCount,
+                                  inputHeaderPtr, inputDataPtr, visualizeLightCount,
                                   framebuffer_r, framebuffer_g, framebuffer_b);
 }
 

@@ -60,11 +60,13 @@
 #endif
 #include "deferred.h"
 #include "../timing.h"
+#include "../ispc_malloc.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
 static void *
 lAlignedMalloc(size_t size, int32_t alignment) {
+#ifndef _CUDA_
 #ifdef ISPC_IS_WINDOWS
     return _aligned_malloc(size, alignment);
 #endif
@@ -79,11 +81,18 @@ lAlignedMalloc(size_t size, int32_t alignment) {
     ((void**)amem)[-1] = mem;
     return amem;
 #endif
+#else
+    void *ptr;
+    ispc_malloc(&ptr, size);
+    return ptr;
+#endif
+
 }
 
 
 static void
 lAlignedFree(void *ptr) {
+#ifndef _CUDA_
 #ifdef ISPC_IS_WINDOWS
     _aligned_free(ptr);
 #endif
@@ -92,6 +101,9 @@ lAlignedFree(void *ptr) {
 #endif
 #ifdef ISPC_IS_APPLE
     free(((void**)ptr)[-1]);
+#endif
+#else
+    ispc_free(ptr);
 #endif
 }
 

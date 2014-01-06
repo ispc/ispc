@@ -733,7 +733,7 @@ RenderTile( int num_groups_x,  int num_groups_y,
 
 
 extern "C" __global__ void
-RenderStatic( InputHeader inputHeaderPtr[],
+RenderStatic___export( InputHeader inputHeaderPtr[],
               InputDataArrays inputDataPtr[],
               int visualizeLightCount,
              // Output
@@ -757,5 +757,22 @@ RenderStatic( InputHeader inputHeaderPtr[],
        RenderTile<<<(num_groups+4-1)/4,128>>>(num_groups_x, num_groups_y,
            inputHeaderPtr, inputDataPtr, visualizeLightCount,
            framebuffer_r, framebuffer_g, framebuffer_b);
+     cudaDeviceSynchronize();
+}
+extern "C" __host__ void
+RenderStatic( InputHeader inputHeaderPtr[],
+              InputDataArrays inputDataPtr[],
+              int visualizeLightCount,
+             // Output
+              unsigned int8 framebuffer_r[],
+              unsigned int8 framebuffer_g[],
+              unsigned int8 framebuffer_b[]) {
+  RenderStatic___export<<<1,32>>>( inputHeaderPtr,
+              inputDataPtr,
+              visualizeLightCount,
+             // Output
+              framebuffer_r,
+              framebuffer_g,
+              framebuffer_b);
      cudaDeviceSynchronize();
 }

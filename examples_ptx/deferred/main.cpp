@@ -83,10 +83,12 @@ int main(int argc, char** argv) {
     Framebuffer framebuffer(input->header.framebufferWidth,
                             input->header.framebufferHeight);
 
+#ifndef _CUDA_
     InitDynamicC(input);
-#ifdef __cilk
+#if 0 //def __cilk
     InitDynamicCilk(input);
 #endif // __cilk
+#endif
 
     int nframes = test_iterations[2];
     double ispcCycles = 1e30;
@@ -94,11 +96,11 @@ int main(int argc, char** argv) {
         framebuffer.clear();
         reset_and_start_timer();
         for (int j = 0; j < nframes; ++j)
-            ispc::RenderStatic(input->header, input->arrays,
+            ispc::RenderStatic(&input->header, &input->arrays,
                                VISUALIZE_LIGHT_COUNT,
                                framebuffer.r, framebuffer.g, framebuffer.b);
         double msec = get_elapsed_msec() / nframes;
-        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec\n", msec);
+        printf("@time of ISPC + TASKS run:\t\t\t[%.3f] msec [%.3f fps]\n", msec, 1.0e3/msec);
         ispcCycles = std::min(ispcCycles, msec);
     }
     printf("[ispc static + tasks]:\t\t[%.3f] msec to render "
@@ -106,8 +108,9 @@ int main(int argc, char** argv) {
            input->header.framebufferWidth, input->header.framebufferHeight);
     WriteFrame("deferred-ispc-static.ppm", input, framebuffer);
 
+#ifndef _CUDA_
     nframes = 3;
-#ifdef __cilk
+#if 0 //def __cilk
     double dynamicCilkCycles = 1e30;
     for (int i = 0; i < test_iterations[1]; ++i) {
         framebuffer.clear();
@@ -115,7 +118,7 @@ int main(int argc, char** argv) {
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicCilk(input, &framebuffer);
         double msec = get_elapsed_msec() / nframes;
-        printf("@time of serial run:\t\t\t[%.3f] msec\n", msec);
+        printf("@time of serial run:\t\t\t[%.3f] msec [%.3f fps]\n", msec, 1.0e3/msec);
         dynamicCilkCycles = std::min(dynamicCilkCycles, msec);
     }
     printf("[ispc + Cilk dynamic]:\t\t[%.3f] msec to render image\n", 
@@ -130,19 +133,20 @@ int main(int argc, char** argv) {
         for (int j = 0; j < nframes; ++j)
             DispatchDynamicC(input, &framebuffer);
         double msec = get_elapsed_msec() / nframes;
-        printf("@time of serial run:\t\t\t[%.3f] msec\n", msec);
+        printf("@time of serial run:\t\t\t[%.3f] msec [%.3f fps]\n", msec, 1.0e3/msec);
         serialCycles = std::min(serialCycles, msec);
     }
     printf("[C++ serial dynamic, 1 core]:\t[%.3f] msec to render image\n", 
            serialCycles);
     WriteFrame("deferred-serial-dynamic.ppm", input, framebuffer);
 
-#ifdef __cilk
+#if 0 //def __cilk
     printf("\t\t\t\t(%.2fx speedup from static ISPC, %.2fx from Cilk+ISPC)\n", 
            serialCycles/ispcCycles, serialCycles/dynamicCilkCycles);
 #else
     printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", serialCycles/ispcCycles);
 #endif // __cilk
+#endif
 
     DeleteInputData(input);
 
