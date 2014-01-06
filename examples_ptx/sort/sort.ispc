@@ -184,9 +184,9 @@ static void prefix_sum (uniform int num, uniform int h[], uniform int g[])
 
 }
 
-export void sort_ispc(uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
+export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
 {
-  uniform int num = ntasks ; //< 1 ? num_cores () : ntasks;
+  uniform int num = ntasks; // < 1 ? num_cores () : ntasks;
   uniform int span = n / num;
   uniform int hsize = 256*programCount*num;
   uniform int * uniform hist = uniform new uniform int [hsize];
@@ -212,7 +212,7 @@ export void sort_ispc(uniform int n, uniform unsigned int code[], uniform int or
     launch[num] histogram (span, n, pair, pass, hist);
     sync;
 
-    prefix_sum (num, hist,g);
+    prefix_sum (num, hist, g);
 
     launch[num] permutation (span, n, pair, pass, hist, temp);
     sync;

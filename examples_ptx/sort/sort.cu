@@ -33,12 +33,43 @@
 
 /* Author: Tomasz Koziara */
 
-task void histogram (uniform int span, uniform int n, uniform int64 code[], uniform int pass, uniform int hist[])
+#include "cuda_helpers.cuh"
+
+#define cfor for
+#define cif if
+
+#define int8 char
+#define int64 long
+
+template<typename T>
+__device__ inline T* __new(const int n)
 {
-  uniform int start = taskIndex*span;
-  uniform int end = taskIndex == taskCount-1 ? n : start+span;
-  uniform int strip = (end-start)/programCount;
-  uniform int tail = (end-start)%programCount;
+  union
+  {
+    T* ptr;
+    int v[2];
+  }  val;
+  if (programIndex == 0)
+    val.ptr = new T[n];
+  val.v[0] = __shfl(val.v[0],0);
+  val.v[1] = __shfl(val.v[1],0);
+  return val.ptr;
+};
+
+template<typename T>
+__device__ inline void __delete(T* ptr)
+{
+  if (programIndex == 0)
+    delete ptr;
+};
+
+__global__ void histogram ( int span,  int n,  int64 code[],  int pass,  int hist[])
+{
+  if (taskIndex >= taskCount) return;
+   int start = taskIndex*span;
+   int end = taskIndex == taskCount-1 ? n : start+span;
+   int strip = (end-start)/programCount;
+   int tail = (end-start)%programCount;
   int i = programCount*taskIndex + programIndex;
   int g [256];
 
@@ -70,12 +101,13 @@ task void histogram (uniform int span, uniform int n, uniform int64 code[], unif
   }
 }
 
-task void permutation (uniform int span, uniform int n, uniform int64 code[], uniform int pass, uniform int hist[], uniform int64 perm[])
+__global__ void permutation ( int span,  int n,  int64 code[],  int pass,  int hist[],  int64 perm[])
 {
-  uniform int start = taskIndex*span;
-  uniform int end = taskIndex == taskCount-1 ? n : start+span;
-  uniform int strip = (end-start)/programCount;
-  uniform int tail = (end-start)%programCount;
+  if (taskIndex >= taskCount) return;
+   int start = taskIndex*span;
+   int end = taskIndex == taskCount-1 ? n : start+span;
+   int strip = (end-start)/programCount;
+   int tail = (end-start)%programCount;
   int i = programCount*taskIndex + programIndex;
   int g [256];
 
@@ -110,44 +142,51 @@ task void permutation (uniform int span, uniform int n, uniform int64 code[], un
   }
 }
 
-task void copy (uniform int span, uniform int n, uniform int64 from[], uniform int64 to[])
+__global__ void copy ( int span,  int n,  int64 from[],  int64 to[])
 {
-  uniform int start = taskIndex*span;
-  uniform int end = taskIndex == taskCount-1 ? n : start+span;
+  if (taskIndex >= taskCount) return;
+   int start = taskIndex*span;
+   int end = taskIndex == taskCount-1 ? n : start+span;
 
-  foreach (i = start ... end)
+  for (int i = programIndex + start; i < end; i += programCount)
+    if (i < end)
   {
     to[i] = from[i];
   }
 }
 
-task void pack (uniform int span, uniform int n, uniform unsigned int code[], uniform int64 pair[])
+__global__ void pack ( int span,  int n,  unsigned int code[],  int64 pair[])
 {
-  uniform int start = taskIndex*span;
-  uniform int end = taskIndex == taskCount-1 ? n : start+span;
+  if (taskIndex >= taskCount) return;
+   int start = taskIndex*span;
+   int end = taskIndex == taskCount-1 ? n : start+span;
 
-  foreach (i = start ... end)
+  for (int i = programIndex + start; i < end; i += programCount)
+    if (i < end)
   {
     pair[i] = ((int64)i<<32)+code[i];
   }
 }
 
-task void unpack (uniform int span, uniform int n, uniform int64 pair[], uniform int unsigned code[], uniform int order[])
+__global__ void unpack ( int span,  int n,  int64 pair[],  int unsigned code[],  int order[])
 {
-  uniform int start = taskIndex*span;
-  uniform int end = taskIndex == taskCount-1 ? n : start+span;
+  if (taskIndex >= taskCount) return;
+   int start = taskIndex*span;
+   int end = taskIndex == taskCount-1 ? n : start+span;
 
-  foreach (i = start ... end)
+  for (int i = programIndex + start; i < end; i += programCount)
+    if (i < end)
   {
     code[i] = pair[i];
     order[i] = pair[i]>>32;
   }
 }
 
-task void addup (uniform int h[], uniform int g[])
+__global__ void addup ( int h[],  int g[])
 {
-  uniform int * uniform u = &h[256*programCount*taskIndex];
-  uniform int i, x, y = 0;
+  if (taskIndex >= taskCount) return;
+   int *  u = &h[256*programCount*taskIndex];
+   int i, x, y = 0;
 
   for (i = 0; i < 256*programCount; i ++)
   {
@@ -159,91 +198,75 @@ task void addup (uniform int h[], uniform int g[])
   g[taskIndex] = y;
 }
 
-task void bumpup (uniform int h[], uniform int g[])
+__global__ void bumpup ( int h[],  int g[])
 {
-  uniform int * uniform u = &h[256*programCount*taskIndex];
-  uniform int z = g[taskIndex];
+  if (taskIndex >= taskCount) return;
+   int *  u = &h[256*programCount*taskIndex];
+   int z = g[taskIndex];
 
-  foreach (i = 0 ... 256*programCount)
+  for (int i = programIndex; i < 256*programCount; i += programCount)
   {
     u[i] += z;
   }
 }
 
-static void prefix_sum (uniform int num, uniform int h[], uniform int g[])
+inline __device__
+static void prefix_sum ( int num,  int h[], int * g)
 {
-  uniform int i;
+  int i;
 
-  launch[num] addup (h, g+1);
+  launch(num,1,1,addup)(h,g+1);
   sync;
 
-  for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
+  if (programIndex == 0)
+    for (g[0] = 0, i = 1; i < num; i ++) g[i] += g[i-1];
 
-  launch[num] bumpup (h, g);
+  launch(num,1,1,bumpup)(h,g);
   sync;
-
 }
 
-export void sort_ispc(uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
+extern "C" __global__
+void sort_ispc___export ( int n,  unsigned int code[],  int order[],  int ntasks)
 {
-  uniform int num = ntasks ; //< 1 ? num_cores () : ntasks;
-  uniform int span = n / num;
-  uniform int hsize = 256*programCount*num;
-  uniform int * uniform hist = uniform new uniform int [hsize];
-  uniform int64 * uniform pair = uniform new uniform int64 [n];
-  uniform int64 * uniform temp = uniform new uniform int64 [n];
-  uniform int * uniform g = uniform new uniform int [num+1];
-  uniform int pass, i;
+  int num = ntasks;
+  int span = n / num;
+  int hsize = 256*programCount*num;
+  int *  hist =  __new< int>(hsize);
+  int64 *  pair =  __new< int64>(n);
+  int64 *  temp =  __new< int64>(n);
+  int *  g =  __new<int>(num+1);
+  int pass;
 
-#if DEBUG
-  if (n < 100)
-  {
-    print ("input: ");
-    for (i = 0; i < n; i ++) print ("%, ", code[i]);
-    print ("\n");
-  }
-#endif
 
-  launch[num] pack (span, n, code, pair);
+  launch(num,1,1,pack)(span, n, code, pair);
   sync;
 
   for (pass = 0; pass < 4; pass ++)
   {
-    launch[num] histogram (span, n, pair, pass, hist);
+    launch(num,1,1,histogram)(span, n, pair, pass, hist);
     sync;
 
     prefix_sum (num, hist,g);
 
-    launch[num] permutation (span, n, pair, pass, hist, temp);
+    launch(num,1,1,permutation)(span, n, pair, pass, hist, temp);
     sync;
 
-    launch[num] copy (span, n, temp, pair);
+    launch(num,1,1,copy)(span, n, temp, pair);
     sync;
   }
 
-  launch[num] unpack (span, n, pair, code, order);
+  launch(num,1,1,unpack)(span, n, pair, code, order);
   sync;
 
-#if DEBUG
-  for (i = 0; i < n; i ++)
-  {
-    if (i > 0 && code[i-1] > code[i])
-      print ("ERR at % => % > %; ", i, code[i-1], code[i]);
-  }
+  __delete(g);
+  __delete(hist);
+  __delete(pair);
+  __delete(temp);
+}
 
-  if (n < 100)
-  {
-    print ("output: ");
-    for (i = 0; i < n; i ++) print ("%, ", code[i]);
-    print ("\n");
-    print ("order: ");
-    for (i = 0; i < n; i ++) print ("%, ", order[i]);
-    print ("\n");
-  }
-#endif
-
-  delete hist;
-  delete pair;
-  delete temp;
-  delete g;
+  extern "C" __host__
+void sort_ispc( int n,  unsigned int code[],  int order[],  int ntasks)
+{
+  sort_ispc___export<<<1,32>>>(n,code,order,ntasks);
+  sync;
 }

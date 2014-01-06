@@ -31,5 +31,24 @@ void ispc_memset(void *ptr, int value, size_t size)
 {
   memset(ptr, value, size);
 }
+void ispcSetMallocHeapLimit(size_t value)
+{
+}
+void ispcSetStackLimit(size_t value)
+{
+}
+unsigned long long ispcGetMallocHeapLimit()
+{
+  return -1;
+}
+unsigned long long ispcGetStackLimit()
+{
+  return -1;
+}
+void * ispcMemcpy(void *dest,  void *src,  size_t num)
+{
+  memcpy(dest, src, num);
+  return dest;
+}
 
 #endif
