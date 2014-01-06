@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
 #error "Unknown or unset TEST_SIG value"
 #endif
 
-    float expected_result[64];
+    float *expected_result = new float[64];
     memset(expected_result, 0, 64*sizeof(float));
     result(expected_result);
 
