@@ -1410,7 +1410,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-  if (!g->target->isPTX()) //g->target->getISA() != Target::NVPTX64)
+  if (g->target->getISA() != Target::NVPTX)
   {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
@@ -3540,7 +3540,7 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
                                 std::vector<llvm::Value *> &argVals,
                                 llvm::Value *launchCount[3]){
 
-    if (!g->target->isPTX())
+    if (g->target->getISA() != Target::NVPTX)
     {
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -3608,7 +3608,79 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       args.push_back(launchCount[2]);
       return CallInst(flaunch, NULL, args, "");
     }
-    else /* isPTX ==  true */
+    else /* NVPTX */
+    {
+      if (callee == NULL) {
+        AssertPos(currentPos, m->errorCount > 0);
+        return NULL;
+      }
+      launchedTasks = true;
+
+      AssertPos(currentPos, llvm::isa<llvm::Function>(callee));
+      std::vector<llvm::Type*> argTypes;
+      for (unsigned int i = 0; i < argVals.size(); i++)
+        argTypes.push_back(argVals[i]->getType());
+      llvm::Type *st = llvm::StructType::get(*g->ctx, argTypes);
+      llvm::StructType *argStructType = static_cast<llvm::StructType *>(st);
+      llvm::Value *structSize = g->target->SizeOf(argStructType, bblock);
+      if (structSize->getType() != LLVMTypes::Int64Type)
+        structSize = ZExtInst(structSize, LLVMTypes::Int64Type,
+            "struct_size_to_64");
+
+      const int align = 8;
+      llvm::Function *falloc = m->module->getFunction("ISPCAlloc");
+      AssertPos(currentPos, falloc != NULL);
+      std::vector<llvm::Value *> allocArgs;
+      allocArgs.push_back(launchGroupHandlePtr);
+      allocArgs.push_back(structSize);
+      allocArgs.push_back(LLVMInt32(align));
+      llvm::Value *voidmem = CallInst(falloc, NULL, allocArgs, "args_ptr");
+      llvm::Value *voidi64 = PtrToIntInst(voidmem, "args_i64");
+      llvm::BasicBlock* if_true  = CreateBasicBlock("if_true");
+      llvm::BasicBlock* if_false = CreateBasicBlock("if_false");
+
+      /* check if the pointer returned by ISPCAlloc is not NULL 
+       * --------------
+       * this is a workaround for not checking the value of programIndex 
+       * because ISPCAlloc will return NULL pointer for all programIndex > 0
+       * of course, if ISPAlloc fails to get parameter buffer, the pointer for programIndex = 0
+       * will also be NULL
+       * This check must be added, and also rewrite the code to make it less opaque 
+       */
+      llvm::Value* cmp1 = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_NE, voidi64, LLVMInt64(0), "cmp1");
+      BranchInst(if_true, if_false, cmp1);
+
+      /**********************/
+      bblock = if_true;    
+
+      // label_if_then block:
+      llvm::Type *pt = llvm::PointerType::getUnqual(st);
+      llvm::Value *argmem = BitCastInst(voidmem, pt);
+      for (unsigned int i = 0; i < argVals.size(); ++i) 
+      {
+        llvm::Value *ptr = AddElementOffset(argmem, i, NULL, "funarg");
+        // don't need to do masked store here, I think
+        StoreInst(argVals[i], ptr);
+      }
+      BranchInst(if_false);
+
+      /**********************/
+      bblock = if_false;
+
+      llvm::Value *fptr = BitCastInst(callee, LLVMTypes::VoidPointerType);
+      llvm::Function *flaunch = m->module->getFunction("ISPCLaunch");
+      AssertPos(currentPos, flaunch != NULL);
+      std::vector<llvm::Value *> args;
+      args.push_back(launchGroupHandlePtr);
+      args.push_back(fptr);
+      args.push_back(voidmem);
+      args.push_back(launchCount[0]);
+      args.push_back(launchCount[1]);
+      args.push_back(launchCount[2]);
+      llvm::Value *ret =  CallInst(flaunch, NULL, args, "");
+      return ret;
+    }
+#if 0
     {
       if (callee == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
@@ -3684,13 +3756,16 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
       args.push_back(launchCount[2]);
       return CallInst(flaunch, NULL, args, "");
     }
+#endif
 }
 
 
 void
 FunctionEmitContext::SyncInst() {
-    if (!g->target->isPTX())
+#if 0
+    if (g->target->getISA() != Target::NVPTX)
     {
+#endif
       llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
       llvm::Value *nullPtrValue =
         llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
@@ -3714,6 +3789,7 @@ FunctionEmitContext::SyncInst() {
       BranchInst(bPostSync);
 
       SetCurrentBasicBlock(bPostSync);
+#if 0
     }
     else
     {
@@ -3726,6 +3802,7 @@ FunctionEmitContext::SyncInst() {
       CallInst(fsync, NULL, launchGroupHandle, "");
       StoreInst(nullPtrValue, launchGroupHandlePtr);
     }
+#endif
 }
 
 

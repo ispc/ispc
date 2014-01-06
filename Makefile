@@ -144,7 +144,7 @@ CXX_SRC=ast.cpp builtins.cpp cbackend.cpp ctx.cpp decl.cpp expr.cpp func.cpp \
 	type.cpp util.cpp
 HEADERS=ast.h builtins.h ctx.h decl.h expr.h func.h ispc.h llvmutil.h module.h \
 	opt.h stmt.h sym.h type.h util.h
-TARGETS=nvptx64 avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
+TARGETS=nvptx avx2-i64x4 avx11-i64x4 avx1-i64x4 avx1 avx1-x2 avx11 avx11-x2 avx2 avx2-x2 \
 	sse2 sse2-x2 sse4-8 sse4-16 sse4 sse4-x2 \
 	generic-4 generic-8 generic-16 generic-32 generic-64 generic-1
 ifneq ($(ARM_ENABLED), 0)
@@ -254,15 +254,15 @@ objs/lex.o: objs/lex.cpp $(HEADERS) objs/parse.cc
 	@echo Compiling $<
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 
-objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4  builtins/util_ptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-dispatch.cpp: builtins/dispatch.ll builtins/util.m4  builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $<
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX $< | python bitcode2cpp.py $< > $@
 
-objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4  builtins/util_ptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-32bit.cpp: builtins/%.ll builtins/util.m4  builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(32 bit version\)
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=32 $< | python bitcode2cpp.py $< 32bit > $@
 
-objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4  builtins/util_ptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
+objs/builtins-%-64bit.cpp: builtins/%.ll builtins/util.m4  builtins/util-nvptx.m4 builtins/svml.m4 $(wildcard builtins/*common.ll)
 	@echo Creating C++ source from builtins definition file $< \(64 bit version\)
 	m4 -Ibuiltins/ -DLLVM_VERSION=$(LLVM_VERSION) -DBUILD_OS=UNIX -DRUNTIME=64 $< | python bitcode2cpp.py $< 64bit > $@
 

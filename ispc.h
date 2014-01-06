@@ -179,7 +179,7 @@ public:
         flexible/performant of them will apear last in the enumerant.  Note
         also that __best_available_isa() needs to be updated if ISAs are
         added or the enumerant values are reordered.  */
-    enum ISA { NVPTX64,
+    enum ISA { NVPTX,
 #ifdef ISPC_ARM_ENABLED
                NEON32, NEON16, NEON8,
 #endif
@@ -189,7 +189,7 @@ public:
     /** Initializes the given Target pointer for a target of the given
         name, if the name is a known target.  Returns true if the
         target was initialized and false if the name is unknown. */
-    Target(const char *arch, const char *cpu, const char *isa, bool pic, bool isPTX = false);
+    Target(const char *arch, const char *cpu, const char *isa, bool pic);
 
     /** Returns a comma-delimited string giving the names of the currently
         supported compilation targets. */
@@ -251,7 +251,6 @@ public:
     bool isValid() const {return m_valid;}
 
     ISA getISA() const {return m_isa;}
-    bool isPTX() const {return m_isPTX;}
 
     std::string getArch() const {return m_arch;}
 
@@ -310,7 +309,6 @@ private:
 
     /** Instruction set being compiled to. */
     ISA m_isa;
-    bool m_isPTX;
 
     /** Target system architecture.  (e.g. "x86-64", "x86"). */
     std::string m_arch;

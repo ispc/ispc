@@ -693,9 +693,9 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
         if (g->target->getISA() != Target::NEON32 &&
             g->target->getISA() != Target::NEON16 &&
             g->target->getISA() != Target::NEON8 &&
-            g->target->getISA() != Target::NVPTX64)
+            g->target->getISA() != Target::NVPTX)
 #else
-        if (g->target->getISA() != Target::NVPTX64)
+        if (g->target->getISA() != Target::NVPTX)
 #endif // !__arm__
         {
             Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
@@ -858,14 +858,14 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     // Next, add the target's custom implementations of the various needed
     // builtin functions (e.g. __masked_store_32(), etc).
     switch (g->target->getISA()) {
-    case Target::NVPTX64: 
+    case Target::NVPTX: 
       {
         if (runtime32) {
-            fprintf(stderr, "W're sorry, but only 64bit targets are supported at this moment .. \n");
+            fprintf(stderr, "Unforetunatly 32bit targets are supported at the moment .. \n");
             assert(0);
         }
         else {
-            EXPORT_MODULE(builtins_bitcode_nvptx64_64bit);
+            EXPORT_MODULE(builtins_bitcode_nvptx_64bit);
         }
         break;
       };
@@ -1138,7 +1138,7 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     }
 
     // define the 'programCount' builtin variable
-    if (!g->target->isPTX())
+    if (g->target->getISA() != Target::NVPTX)
     {
       lDefineConstantInt("programCount", g->target->getVectorWidth(), module, symbolTable);
     }

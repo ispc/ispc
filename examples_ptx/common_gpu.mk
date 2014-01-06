@@ -22,7 +22,7 @@ endif
 
 #
 ISPC=ispc
-ISPC_FLAGS=-O3 --math-lib=default --target=nvptx64 --opt=fast-math
+ISPC_FLAGS=-O3 --math-lib=default --target=nvptx --opt=fast-math
 #
 #
 #

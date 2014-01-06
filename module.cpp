@@ -733,7 +733,7 @@ Module::AddFunctionDeclaration(const std::string &name,
     if (storageClass == SC_EXTERN_C) {
         // Make sure the user hasn't supplied both an 'extern "C"' and a
         // 'task' qualifier with the function
-        if (functionType->isTask) //&& !g->target->isPTX())  //tISA() != Target::NVPTX64) 
+        if (functionType->isTask)
         {
             Error(pos, "\"task\" qualifier is illegal with C-linkage extern "
                   "function \"%s\".  Ignoring this function.", name.c_str());
@@ -796,8 +796,8 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
-     /* evghenii: on PTX target this must not be used, cause crash, dunno why */
-    if (functionType->isTask && g->target->getISA() != Target::NVPTX64)
+     /* evghenii: on PTX target the following must not be set ... why ?!? */
+    if (functionType->isTask && g->target->getISA() != Target::NVPTX)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
@@ -953,7 +953,7 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
-            if (g->target->getISA() != Target::NVPTX64)
+            if (g->target->getISA() != Target::NVPTX)
             {
               if (strcasecmp(suffix, "s"))
                 fileType = "assembly";
@@ -1053,7 +1053,7 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
-    if (g->target->getISA() == Target::NVPTX64)
+    if (g->target->getISA() == Target::NVPTX)
     {
       const std::string dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
       module->setDataLayout(dl_string);
@@ -1925,7 +1925,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
     }
-    if (g->target->getISA() == Target::NVPTX64)
+    if (g->target->getISA() == Target::NVPTX)
     {
       opts.addMacroDef("__NVPTX__");
       opts.addMacroDef("programIndex=laneIndex()");
@@ -2331,135 +2331,9 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-  char ptxname[] = "nvptx64";
-  for (int k = 0; k < 7; k++)
-    ptxname[k] = target[k];
-  if (0) //target != NULL && strcmp(ptxname,"nvptx64") == 0)  // NVPTX64
-  {
-    std::vector<std::string> targets = lExtractTargets(target);
-    Assert(targets.size() > 1);
-    // We're only compiling to a single target
-    int errorCount = 0;
-
-    const char *suffix_orig = strrchr(outFileName, '.');
-    ++suffix_orig;
-    assert(suffix_orig!=NULL);
-
-    g->PtxString = std::string();
-
-    for (int itarget = 0; itarget < 1; itarget++)
-    {
-      fprintf(stderr,  "compiling nvptx64 : target= %s\n",targets[itarget].c_str());
-      g->target = new Target(arch, cpu, targets[itarget].c_str(), generatePIC, /* isPTX= */ true);
-      if (!g->target->isValid())
-        return 1;
-
-      m = new Module(srcFile);
-      if (m->CompileFile() == 0) {
-        if (outputType == CXX) {
-          if (target == NULL || strncmp(target, "generic-", 8) != 0) {
-            Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
-                "targets must be used.");
-            return 1;
-          }
-        }
-        else if (outputType == Asm || outputType == Object) {
-          if (target != NULL && strncmp(target, "generic-", 8) == 0) {
-            Error(SourcePos(), "When using a \"generic-*\" compilation target, "
-                "%s output can not be used.",
-                (outputType == Asm) ? "assembly" : "object file");
-            return 1;
-          }
-        }
-
-        assert(outFileName != NULL);
-
-        std::string targetOutFileName = 
-          lGetTargetFileName(outFileName, targets[itarget].c_str());
-        if (outputType == Asm)
-        {
-          const char * targetOutFileName_c = targetOutFileName.c_str();
-          const int suffix = strrchr(targetOutFileName_c, '.') - targetOutFileName_c + 1;
-          if (itarget == 1 && !strcasecmp(suffix_orig, "ptx"))
-          {
-            targetOutFileName[suffix  ] = 's';
-            targetOutFileName[suffix+1] =  0;
-          }
-        }
-
-        if (outputType != Object)
-        {
-          if (!m->writeOutput(outputType, targetOutFileName.c_str(), includeFileName))
-            return 1;
-        }
-        else if (itarget > 0)
-        {
-          if (!m->writeOutput(outputType, outFileName, includeFileName))
-            return 1;
-        }
-
-        if (itarget == 0)
-        {  /* store ptx into memory */
-          llvm::PassManager pm;
-#if defined(LLVM_3_1)
-          pm.add(new llvm::TargetData(*g->target->getDataLayout()));
-#else
-          pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
-#endif
-
-          llvm::raw_string_ostream rso(g->PtxString);
-          llvm::formatted_raw_ostream fos(rso);
-
-          llvm::TargetMachine::CodeGenFileType fileType = llvm::TargetMachine::CGFT_AssemblyFile;
-          llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-          if (targetMachine->addPassesToEmitFile(pm, fos, fileType)) {
-            fprintf(stderr, "Fatal error adding passes to emit object file!");
-            exit(1);
-          }
-
-          llvm::Module *module = m->module;
-          pm.run(*module);
-          fos.flush();
-          assert(!g->PtxString.empty());
-#if 0
-          std::cout << g->PtxString << std::endl;
-#endif
-        }
-
-
-        if (itarget > 0)
-        {
-          if (headerFileName != NULL)
-            if (!m->writeOutput(Module::Header, headerFileName))
-              return 1;
-          if (depsFileName != NULL)
-            if (!m->writeOutput(Module::Deps,depsFileName))
-              return 1;
-          if (hostStubFileName != NULL)
-            if (!m->writeOutput(Module::HostStub,hostStubFileName))
-              return 1;
-          if (devStubFileName != NULL)
-            if (!m->writeOutput(Module::DevStub,devStubFileName))
-              return 1;
-        }
-      }
-      else
-        ++m->errorCount;
-
-      errorCount += m->errorCount;
-      delete m;
-      m = NULL;
-
-      delete g->target;
-      g->target = NULL;
-
-    }
-    return errorCount > 0;
-  }
-  else if (target == NULL || strchr(target, ',') == NULL) {
+  if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
-        const bool isPTX = strcmp(target, "nvptx64") == 0;
-        g->target = new Target(arch, cpu, target, generatePIC, isPTX);
+        g->target = new Target(arch, cpu, target, generatePIC);
         if (!g->target->isValid())
             return 1;
 
@@ -2525,8 +2399,6 @@ Module::CompileAndOutput(const char *srcFile,
         // The user supplied multiple targets
         std::vector<std::string> targets = lExtractTargets(target);
         Assert(targets.size() > 1);
-        for (unsigned int i = 0; i < targets.size(); ++i) 
-          assert(strcmp(targets[i].c_str(), "nvptx64") < 0);
 
         if (outFileName != NULL && strcmp(outFileName, "-") == 0) {
             Error(SourcePos(), "Multi-target compilation can't generate output "

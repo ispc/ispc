@@ -105,15 +105,9 @@ define i32 @__lanemask_lt_nvptx() nounwind readnone alwaysinline
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; tasking
 
-define i8* @ISPCAlloc(i8**, i64, i32) nounwind alwaysinline
-{
-  %ptr = inttoptr i64 1 to i8*
-  ret i8* %ptr
-}
-
 ;; this call allocate parameter buffer for kernel launch
 declare i64 @cudaGetParameterBuffer(i64, i64) nounwind
-define i8* @ISPCGetParamBuffer(i8**, i64 %align, i64 %size) nounwind alwaysinline
+define i8* @ISPCAlloc(i8**, i64 %size, i32 %align32) nounwind alwaysinline
 {
 entry:
   %call = tail call i32 @__tid_x()
@@ -121,6 +115,7 @@ entry:
   %sub = add nsw i32 %call1, -1
   %and = and i32 %sub, %call
   %cmp = icmp eq i32 %and, 0
+  %align = zext i32 %align32 to i64
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
@@ -224,7 +219,7 @@ define void @ISPCSync(i8*) nounwind alwaysinline
 
 
 
-include(`util_ptx.m4')
+include(`util-nvptx.m4')
 
 stdlib_core()
 packed_load_and_store()

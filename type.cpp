@@ -2925,7 +2925,7 @@ FunctionType::GetReturnTypeString() const {
 llvm::FunctionType *
 FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
 
-    if (isTask == true) // && !g->target->isPTX()) //getISA() != Target::NVPTX64)
+    if (isTask == true)
         Assert(removeMask == false);
 
     // Get the LLVM Type *s for the function arguments
@@ -2950,43 +2950,29 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask) {
+    if (isTask && g->target->getISA() != Target::NVPTX) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are
         // marshalled in a struct so that it's easy to allocate space to
         // hold them until the task actually runs.)
-//        if (g->target->getISA() != Target::NVPTX64)
-        if (!g->target->isPTX()) 
-        {
-          llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
-          callTypes.push_back(llvm::PointerType::getUnqual(st));
-          callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
-          callTypes.push_back(LLVMTypes::Int32Type); // threadCount
-          callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
-          callTypes.push_back(LLVMTypes::Int32Type); // taskCount
-          callTypes.push_back(LLVMTypes::Int32Type); // taskIndex0
-          callTypes.push_back(LLVMTypes::Int32Type); // taskIndex1
-          callTypes.push_back(LLVMTypes::Int32Type); // taskIndex2
-          callTypes.push_back(LLVMTypes::Int32Type); // taskCount0
-          callTypes.push_back(LLVMTypes::Int32Type); // taskCount1
-          callTypes.push_back(LLVMTypes::Int32Type); // taskCount2
-        }
-        else
-        {
-          if (g->target->getISA() == Target::NVPTX64)
-            callTypes = llvmArgTypes;
-          else
-          {
-            assert(0);  /* evghenii: must be removed in final, just for test for nvptx64 target */
-            llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
-            callTypes.push_back(llvm::PointerType::getUnqual(st));
-          }
-        }
+        llvm::Type *st = llvm::StructType::get(*ctx, llvmArgTypes);
+        callTypes.push_back(llvm::PointerType::getUnqual(st));
+        callTypes.push_back(LLVMTypes::Int32Type); // threadIndex
+        callTypes.push_back(LLVMTypes::Int32Type); // threadCount
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex0
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex1
+        callTypes.push_back(LLVMTypes::Int32Type); // taskIndex2
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount0
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount1
+        callTypes.push_back(LLVMTypes::Int32Type); // taskCount2
     }
     else
         // Otherwise we already have the types of the arguments
         callTypes = llvmArgTypes;
+
 
     if (returnType == NULL) {
         Assert(m->errorCount > 0);
