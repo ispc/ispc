@@ -43,10 +43,10 @@
 #include <windows.h>
 #endif // ISPC_IS_WINDOWS
 
-#include <assert.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdint.h>
+#include <cassert>
+#include <cstring>
+#include <cstdio>
+#include <cstdint>
 #ifdef ISPC_IS_LINUX
 #include <malloc.h>
 #endif
@@ -57,6 +57,7 @@
 #include <iostream>
 #include <cuda.h>
 #include "drvapi_error_string.h"
+#include "ispc_malloc.h"
 
 #define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
 // These are the inline versions for all of the SDK helper functions
