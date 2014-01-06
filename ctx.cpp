@@ -3684,29 +3684,43 @@ FunctionEmitContext::LaunchInst(llvm::Value *callee,
 
 void
 FunctionEmitContext::SyncInst() {
-    llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
-    llvm::Value *nullPtrValue =
-      llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
-    llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
-        llvm::CmpInst::ICMP_NE,
-        launchGroupHandle, nullPtrValue);
-    llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
-    llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
-    BranchInst(bSync, bPostSync, nonNull);
+    if (g->target->getISA() != Target::NVPTX)
+    {
+      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+      llvm::Value *nullPtrValue =
+        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+      llvm::Value *nonNull = CmpInst(llvm::Instruction::ICmp,
+          llvm::CmpInst::ICMP_NE,
+          launchGroupHandle, nullPtrValue);
+      llvm::BasicBlock *bSync = CreateBasicBlock("call_sync");
+      llvm::BasicBlock *bPostSync = CreateBasicBlock("post_sync");
+      BranchInst(bSync, bPostSync, nonNull);
 
-    SetCurrentBasicBlock(bSync);
-    llvm::Function *fsync = m->module->getFunction("ISPCSync");
-    if (fsync == NULL)
-      FATAL("Couldn't find ISPCSync declaration?!");
-    CallInst(fsync, NULL, launchGroupHandle, "");
+      SetCurrentBasicBlock(bSync);
+      llvm::Function *fsync = m->module->getFunction("ISPCSync");
+      if (fsync == NULL)
+        FATAL("Couldn't find ISPCSync declaration?!");
+      CallInst(fsync, NULL, launchGroupHandle, "");
 
-    // zero out the handle so that if ISPCLaunch is called again in this
-    // function, it knows it's starting out from scratch
-    StoreInst(nullPtrValue, launchGroupHandlePtr);
+      // zero out the handle so that if ISPCLaunch is called again in this
+      // function, it knows it's starting out from scratch
+      StoreInst(nullPtrValue, launchGroupHandlePtr);
 
-    BranchInst(bPostSync);
+      BranchInst(bPostSync);
 
-    SetCurrentBasicBlock(bPostSync);
+      SetCurrentBasicBlock(bPostSync);
+    }
+    else /* NVPTX: don't do test, just call sync */
+    {
+      llvm::Value *launchGroupHandle = LoadInst(launchGroupHandlePtr);
+      llvm::Value *nullPtrValue =
+        llvm::Constant::getNullValue(LLVMTypes::VoidPointerType);
+      llvm::Function *fsync = m->module->getFunction("ISPCSync");
+      if (fsync == NULL)
+        FATAL("Couldn't find ISPCSync declaration?!");
+      CallInst(fsync, NULL, launchGroupHandle, "");
+      StoreInst(nullPtrValue, launchGroupHandlePtr);
+    }
 }
 
 

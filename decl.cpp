@@ -531,9 +531,11 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
         bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
-        /* evghenii: without this, PTX fails on some examples, like deferred */
+
+#if 1   /* evghenii: without this, PTX fails on some examples, like deferred, with #if 0 */
         if (isTask && g->target->getISA() == Target::NVPTX)
           ds->typeQualifiers |= TYPEQUAL_UNMASKED;
+#endif
 
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
