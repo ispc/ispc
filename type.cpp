@@ -1409,7 +1409,7 @@ ArrayType::Mangle() const {
         sprintf(buf, "%d", numElements);
     else
         buf[0] = '\0';
-    return s + "[" + buf + "]";
+    return s + "_5B_" + buf + "_5C_";
 }
 
 

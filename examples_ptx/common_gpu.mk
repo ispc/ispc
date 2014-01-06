@@ -28,6 +28,7 @@ ISPC_FLAGS=-O3 --math-lib=default --target=nvptx64 --opt=fast-math
 #
 ISPC_OBJS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.o)
 ISPC_BCS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.bc)
+ISPC_PTX=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.ptx)
 ISPC_HEADERS=$(ISPC_SRC:%.ispc=objs_gpu/%_ispc.h)
 CXX_OBJS=$(CXX_SRC:%.cpp=objs_gpu/%_gcc.o)
 CU_OBJS=$(CU_SRC:%.cu=objs_gpu/%_cu.o)
@@ -36,9 +37,15 @@ CU_OBJS=$(CU_SRC:%.cu=objs_gpu/%_cu.o)
 CXX_SRC+=ispc_malloc.cpp
 CXX_OBJS+=objs_gpu/ispc_malloc_gcc.o
 
-# PTXGEN = $(HOME)/ptxgen
-# PTXGEN += -opt=3
-# PTXGEN += -ftz=1 -prec-div=0 -prec-sqrt=0 -fma=1
+PTXGEN = $(HOME)/ptxgen
+PTXGEN += -opt=3
+PTXGEN += -ftz=1 -prec-div=0 -prec-sqrt=0 -fma=1
+
+LLVM32=$(HOME)/usr/local/llvm/bin-3.2
+LLVM32DIS=$(LLVM32)/bin/llvm-dis
+
+LLC=$(HOME)/usr/local/llvm/bin-trunk/bin/llc
+LLC_FLAGS=-march=nvptx64 -mcpu=sm_35
 
 # .SUFFIXES: .bc .o .cu 
 
@@ -51,7 +58,7 @@ ifdef CU_SRC
 endif
 
 
-all: dirs $(PROGgpu) $(PROGcu) $(ISPC_BCS) 
+all: dirs $(PROGgpu) $(PROGcu) $(ISPC_PTX) $(ISPC_BCS) 
 
 dirs:
 	/bin/mkdir -p objs_gpu/
@@ -82,7 +89,12 @@ objs_gpu/%_nvcc.o: %.cu
 objs_gpu/%_ispc.h objs_gpu/%_ispc.bc: %.ispc 
 	$(ISPC) $(ISPC_FLAGS) --emit-llvm -h objs_gpu/$*_ispc.h -o objs_gpu/$*_ispc.bc $<
 
-objs_gpu/%_ispc.o: objs_gpu/%_ispc.bc 
+objs_gpu/%_ispc.ptx: objs_gpu/%_ispc.bc
+	$(LLVM32DIS) $< -o objs/$*_ispc-ll32.ll
+#	$(LLC) $(LLC_FLAGS) -o $@ $<
+	$(PTXGEN) objs/$*_ispc-ll32.ll > $@
+
+objs_gpu/%_ispc.o: objs_gpu/%_ispc.ptx
 	$(PTXCC) $< $(PTXCC_FLAGS) -o $@
 
 
