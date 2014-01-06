@@ -108,8 +108,8 @@ objs_gpu/%_ispc.h objs_gpu/%_ispc.bc: %.ispc
 objs_gpu/%_llvm_ispc.ptx: objs_gpu/%_ispc.bc
 	$(LLC) $(LLC_FLAGS) -o $@ $<
 objs_gpu/%_nvvm_ispc.ptx: objs_gpu/%_ispc.bc
-	$(LLVM32DIS) $< -o objs/$*_ispc-ll32.ll
-	$(PTXGEN) objs/$*_ispc-ll32.ll > $@
+	$(LLVM32DIS) $< -o objs_gpu/$*_ispc-ll32.ll
+	$(PTXGEN) objs_gpu/$*_ispc-ll32.ll > $@
 
 # generate an object file from PTX
 objs_gpu/%_ispc.o: objs_gpu/%_ispc.ptx

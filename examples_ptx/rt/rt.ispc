@@ -80,6 +80,9 @@ static inline float Dot(const float3 a, const float3 b) {
 }
 
 
+#if 1
+inline
+#endif
 static void generateRay(uniform const float raster2camera[4][4], 
                         uniform const float camera2world[4][4],
                         float x, float y, Ray &ray) {
@@ -116,6 +119,9 @@ static void generateRay(uniform const float raster2camera[4][4],
 }
 
 
+#if 1
+inline
+#endif
 static bool_t BBoxIntersect(const uniform float bounds[2][3], 
                           const Ray &ray) {
     uniform float3 bounds0 = { bounds[0][0], bounds[0][1], bounds[0][2] };
@@ -155,6 +161,9 @@ static bool_t BBoxIntersect(const uniform float bounds[2][3],
 
 
 
+#if 1
+inline
+#endif
 static bool_t TriIntersect(const uniform Triangle &tri, Ray &ray) {
     uniform float3 p0 = { tri.p[0][0], tri.p[0][1], tri.p[0][2] };
     uniform float3 p1 = { tri.p[1][0], tri.p[1][1], tri.p[1][2] };
@@ -195,6 +204,9 @@ static bool_t TriIntersect(const uniform Triangle &tri, Ray &ray) {
 }
 
 
+#if 1
+inline
+#endif
 bool_t
 BVHIntersect(const uniform LinearBVHNode nodes[], 
                   const uniform Triangle tris[], Ray &r) {
@@ -253,6 +265,9 @@ BVHIntersect(const uniform LinearBVHNode nodes[],
 }
 
 
+#if 1
+inline
+#endif
 static void raytrace_tile(uniform int x0, uniform int x1,
                           uniform int y0, uniform int y1, 
                           uniform int width, uniform int height,
