@@ -1842,8 +1842,9 @@ static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* valu
   llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
   llvm::Value *__tid_x  = ctx->CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(),  "tidCorrectLocalPtr");
   llvm::Value *__warpsz = ctx->CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(),  "warpSzCorrectLocaLPtr");
-  llvm::Value *__warpid = ctx->BinaryOperator(llvm::Instruction::SDiv, __tid_x, __warpsz, "warpIdCorrectLocalPtr");
-  return llvm::GetElementPtrInst::Create(value, __warpid, "__gepCorrectLocalPtr", ctx->GetCurrentBasicBlock());
+  llvm::Value *_mwarpsz = ctx->BinaryOperator(llvm::Instruction::Sub, LLVMInt32(0), __warpsz, "mwarpSzCorrectLocalPtr");
+  llvm::Value *__offset = ctx->BinaryOperator(llvm::Instruction::And, __tid_x, _mwarpsz, "offsetCorrectLocalPtr");
+  return llvm::GetElementPtrInst::Create(value, __offset, "__gepCorrectLocalPtr", ctx->GetCurrentBasicBlock());
 }
 
 static llvm::Value* lConvertLocalToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value)
