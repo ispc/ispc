@@ -3049,6 +3049,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
         llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
+    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory &&
