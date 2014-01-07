@@ -206,9 +206,10 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         }
 
         if (sym->storageClass == SC_STATIC) {
-          if (g->target->getISA() == Target::NVPTX)
-            if (!sym->type->IsConstType())
-              Error(initExpr->pos, "Non-constant static variable ""\"%s\" is not supported with ""\"cuda\" target.",
+
+          if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
+              Error(sym->pos, 
+                  "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
                   sym->name.c_str());
 
             // For static variables, we need a compile-time constant value
@@ -247,10 +248,70 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          llvm::Twine("static_") +
                                          llvm::Twine(sym->pos.first_line) +
                                          llvm::Twine("_") + sym->name.c_str());
+#if 0
+                                         NULL,
+                                         llvm::GlobalVariable::NotThreadLocal,
+                                         3);
+#endif
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }
         else {
+#if 0 /* PTX:: shared/uniform data types are here */
+          if (sym->type->IsArrayType() && sym->type->IsUniformType() 
+              && g->target->getISA() == Target::NVPTX)
+          {
+#if 0
+            if (initExpr != NULL)
+              Error(initExpr->pos, "Initializer for static variable "
+                  "\"%s\" must be a constant.", sym->name.c_str());
+#endif
+
+            PerformanceWarning(sym->pos,
+                "\"uniform\" arrays may be slow with \"nvptx\" target. Use \"varying\" if possible.");
+
+            llvm::Constant *cinit = NULL;
+            if (initExpr != NULL) 
+            {
+                if (PossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
+                    continue;
+                // FIXME: we only need this for function pointers; it was
+                // already done for atomic types and enums in
+                // DeclStmt::TypeCheck()...
+                if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+                    initExpr = TypeConvertExpr(initExpr, sym->type,
+                                               "initializer");
+                    // FIXME: and this is only needed to re-establish
+                    // constant-ness so that GetConstant below works for
+                    // constant artithmetic expressions...
+                    initExpr = ::Optimize(initExpr);
+                }
+
+                cinit = initExpr->GetConstant(sym->type);
+            }
+            if (cinit == NULL)
+                cinit = llvm::Constant::getNullValue(llvmType);
+
+            // Allocate space for the static variable in global scope, so
+            // that it persists across function calls
+            sym->storagePtr =
+                new llvm::GlobalVariable(*m->module, llvmType,
+                                         sym->type->IsConstType(),
+                                         llvm::GlobalValue::InternalLinkage, cinit,
+                                         llvm::Twine("local") +
+                                         llvm::Twine(sym->pos.first_line) +
+                                         llvm::Twine("_") + sym->name.c_str(),
+                                         NULL,
+                                         llvm::GlobalVariable::NotThreadLocal,
+                                         /*AddressSpace=*/ 3);
+            llvm::GlobalVariable *var = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+            var->setAlignment(128);
+            // Tell the FunctionEmitContext about the variable
+            ctx->EmitVariableDebugInfo(sym);
+          }
+          else
+#endif
+          {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());
 
@@ -261,6 +322,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
             InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
+          }
         }
     }
 }
