@@ -1836,7 +1836,7 @@ static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* valu
 {
   assert(value->getType()->isPointerTy());
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  assert (pt->getAddressSpace() == 3);
+  if (pt->getAddressSpace() != 3) return value;
 
   llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
   llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
@@ -1852,13 +1852,13 @@ static llvm::Value* lConvertLocalToGenericPtr(FunctionEmitContext *ctx, llvm::Va
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
   if (pt->getAddressSpace() != 3) return value;
 
-  value = lCorrectLocalPtr(ctx, value);
   llvm::PointerType *PointerTy = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
-  llvm::Value *cast = ctx->BitCastInst(value, PointerTy, "__cvt_log2gen_i64ptr1_");
+  value = ctx->BitCastInst(value, PointerTy, "cvtLog2Gen_i64ptr");
+  value = lCorrectLocalPtr(ctx, value);
   llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
   std::vector<llvm::Value *> __cvt_loc2gen_args;
-  __cvt_loc2gen_args.push_back(cast);
-  return ctx->CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "__cvt_loc2gen1_");
+  __cvt_loc2gen_args.push_back(value);
+  return ctx->CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "cvtLoc2Gen");
 }
 
 llvm::Value *
@@ -1875,7 +1875,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
 
-
+    value = lConvertLocalToGenericPtr(this, value); /* NVPTX */
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -1909,19 +1909,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         }
     }
 
-    if (value->getType()->isPointerTy() && g->target->getISA() == Target::NVPTX)
-    {
-      llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-      if (pt->getAddressSpace() == 3)
-      {
-        llvm::PointerType *PointerTy3 = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
-        llvm::Value *cast = BitCastInst(value, PointerTy3, "__cvt_log2gen_i64ptr2_");
-        llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
-        std::vector<llvm::Value *> __cvt_loc2gen_args;
-        __cvt_loc2gen_args.push_back(cast);
-        value = CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "__cvt_loc2gen2_");
-      }
-    }
+    value = lConvertLocalToGenericPtr(this, value); /* NVPTX */
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;
@@ -2500,6 +2488,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
 
+    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 
     if (g->opt.forceAlignedMemory &&
@@ -2632,6 +2621,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
+            ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name,
                                                          false /* not volatile */,
                                                          align, bblock);
