@@ -257,11 +257,10 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EmitVariableDebugInfo(sym);
         }
         else {
-#if 0 /* PTX:: shared/uniform data types are here */
           if (sym->type->IsArrayType() && sym->type->IsUniformType() 
               && g->target->getISA() == Target::NVPTX)
           {
-#if 0
+#if 0  /* need to test if initializer works ... */
             if (initExpr != NULL)
               Error(initExpr->pos, "Initializer for static variable "
                   "\"%s\" must be a constant.", sym->name.c_str());
@@ -304,13 +303,14 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          NULL,
                                          llvm::GlobalVariable::NotThreadLocal,
                                          /*AddressSpace=*/ 3);
+#if 0
             llvm::GlobalVariable *var = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
             var->setAlignment(128);
+#endif
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
           }
           else
-#endif
           {
             // For non-static variables, allocate storage on the stack
             sym->storagePtr = ctx->AllocaInst(llvmType, sym->name.c_str());

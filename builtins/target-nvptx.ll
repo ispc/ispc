@@ -61,6 +61,14 @@ define i32 @__nctaid_z()  nounwind readnone alwaysinline
  %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
  ret i32 %nb
 }
+;;;;;;;;
+declare i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p3i64(i64 addrspace(3)*)
+define i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
+{
+  %ptr =  tail call i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p3i64(i64 addrspace(3)* %0)
+  ret i64* %ptr
+}
+;;;;;;;;
 define i32 @__shfl_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline

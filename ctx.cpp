@@ -1846,6 +1846,21 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
 
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
+
+    if (value->getType()->isPointerTy() && g->target->getISA() == Target::NVPTX)
+    {
+      llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+      if (pt->getAddressSpace() == 3)
+      {
+        llvm::PointerType *PointerTy3 = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
+        llvm::Value *cast = BitCastInst(value, PointerTy3, "__cvt_log2gen_i64ptr1_");
+        llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
+        std::vector<llvm::Value *> __cvt_loc2gen_args;
+        __cvt_loc2gen_args.push_back(cast);
+        value = CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "__cvt_loc2gen1_");
+      }
+    }
+
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -1879,6 +1894,19 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         }
     }
 
+    if (value->getType()->isPointerTy() && g->target->getISA() == Target::NVPTX)
+    {
+      llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+      if (pt->getAddressSpace() == 3)
+      {
+        llvm::PointerType *PointerTy3 = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
+        llvm::Value *cast = BitCastInst(value, PointerTy3, "__cvt_log2gen_i64ptr2_");
+        llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
+        std::vector<llvm::Value *> __cvt_loc2gen_args;
+        __cvt_loc2gen_args.push_back(cast);
+        value = CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "__cvt_loc2gen2_");
+      }
+    }
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;
