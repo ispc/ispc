@@ -328,7 +328,7 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
 {
   if (taskIndex >= taskCount) return;
 
-#if 0 /* cannot pass shared memory pointers to functions, need to find a way to solve this one :S */
+#if 1 /* cannot pass shared memory pointers to functions, need to find a way to solve this one :S */
   uniform int nVoxels[3];
   nVoxels[0] = _nVoxels[0];
   nVoxels[1] = _nVoxels[1];

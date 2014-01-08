@@ -278,7 +278,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               int addressSpace;
               if (sym->type->IsConstType())
               {
-#if 0          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
+#if 1          
                 addressSpace = 4; /* constant */
 #else
                 addressSpace = 0; /* use global for now */

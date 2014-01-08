@@ -506,7 +506,7 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
 
     // Light intersection: figure out which lights illuminate this tile.
-#if 1 //def __NVPTX__
+#if 1
     uniform int * uniform tileLightIndices = uniform new uniform int [MAX_LIGHTS];
 #define MALLOC
 #else /* shared memory doesn't full work... why? */

@@ -1854,7 +1854,7 @@ static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Valu
     return value;
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
   const int addressSpace = pt->getAddressSpace();
-  if (addressSpace != 3) // && addressSpace != 4) 
+  if (addressSpace != 3 && addressSpace != 4) 
     return value;
 
   llvm::Type *elTy = pt->getElementType();
@@ -1867,8 +1867,10 @@ static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Valu
   llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
   assert(arrTy != NULL);
   llvm::Type *arrElTy = arrTy->getElementType();
+#if 0
   if (arrElTy->isArrayTy())
       Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
+#endif
 
   /* convert elTy addrspace(3)* to i64* addrspace(3)* */
   llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
@@ -1886,13 +1888,16 @@ static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Valu
   value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
 
   /* compute offset */
-  llvm::Function *funcTid    = m->module->getFunction("__tid_x");
-  llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
-  llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
-  llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
-  llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
-  llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
-  value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+  if (addressSpace == 3)
+  {
+    llvm::Function *funcTid    = m->module->getFunction("__tid_x");
+    llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
+    llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
+    llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
+    llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
+    llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
+    value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+  }
 
   /* convert arrElTy* to elTy* */
   llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
@@ -3461,19 +3466,21 @@ lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
 
 llvm::Value *
 FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
-                              const std::vector<llvm::Value *> &args_in,
+                              const std::vector<llvm::Value *> &args,
                               const char *name) {
     if (func == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
 
+#if 0
     std::vector<llvm::Value *> args = args_in;
     /* NVPTX:
      * Convert all pointers to addrspace(0) 
      */
     for (unsigned int i = 0; i < args.size(); i++)
       args[i] = lConvertToGenericPtr(this, args[i], currentPos);
+#endif
     std::vector<llvm::Value *> argVals = args;
     // Most of the time, the mask is passed as the last argument.  this
     // isn't the case for things like intrinsics, builtins, and extern "C"
