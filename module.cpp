@@ -422,12 +422,14 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
+#if 0
     if (g->target->getISA() == Target::NVPTX &&
         type->IsVaryingType())
     {
         Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
         return;
     }
+#endif
 
     if (Type::Equal(type, AtomicType::Void)) {
         Error(pos, "\"void\" type global variable is illegal.");
