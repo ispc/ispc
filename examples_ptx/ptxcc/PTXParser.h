@@ -141,6 +141,16 @@ namespace parser
         s << printArgumentList();
         s << "\n )\n";
         s << "{\n   ";
+//        s << " cudaFuncSetCacheConfig (" << calleeName << ", ";
+        s << " cudaDeviceSetCacheConfig (";
+#if 1
+        s << " cudaFuncCachePreferEqual ";
+#elif 1
+        s << " cudaFuncCachePreferL1 ";
+#else
+        s << " cudaFuncCachePreferShared ";
+#endif
+        s << ");\n";
         s << calleeName;
         s << "<<<1,32>>>(\n";
         s << printArgumentList(false);

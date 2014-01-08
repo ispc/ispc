@@ -133,7 +133,7 @@ struct Uniform
     data[chunkIdx] = shdata[programIndex];
   }
 };
-#elif 1
+#elif 0
 template<typename T, int N>
 struct Uniform
 {
@@ -174,7 +174,7 @@ __shared__ int shdata_full[4*MAX_LIGHTS];
 template<typename T, int N>
 struct Uniform
 {
-  volatile T *shdata;
+  /* volatile */ T *shdata;
 
   __device__ Uniform()
   {
