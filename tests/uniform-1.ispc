@@ -24,14 +24,7 @@ export void f_f(uniform float RET[], uniform float aFOO[])
 }
 task void result_task(uniform float RET[])
 {
-  uniform float ret = -1;
-  switch (taskIndex)
-  {
-    case 0: ret = 496; break;
-    case 1: ret = 1520; break;
-    case 2: ret = 2544; break;
-    case 3: ret = 3568; break;
-  }
+  const uniform float ret = reduce_add(programIndex + programCount*taskIndex);
   if (programIndex < 32/4)
     RET[programCount/4*taskIndex + programIndex] = ret;
 }

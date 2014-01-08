@@ -4543,5 +4543,6 @@ declare i32 @__nctaid_x()  nounwind readnone alwaysinline
 declare i32 @__nctaid_y()  nounwind readnone alwaysinline
 declare i32 @__nctaid_z()  nounwind readnone alwaysinline
 declare i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
+declare i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 ')
 

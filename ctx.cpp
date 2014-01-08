@@ -1833,8 +1833,9 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type,
 }
 
 /* NVPTX: 
- * this is a helper function which adds a warp offset to a base pointer in local memory
- * either in addrspace(3) or converted from addrspace(3) to addrspace(0)
+ * this is a helper function which adds a warp offset to a base pointer 
+ * pointer must either be in local memory addrspace(3)
+ * or the one just converted from addrspace(3) to addrspace(0) in lConvertToGenericPtr
  */
 static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
 {
@@ -1848,7 +1849,8 @@ static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
 }
 
 /* NVPTX:
- * this function compute correct address in local memory for load/store operations*/
+ * this function compute correct address in local memory for load/store operations
+ */
 static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* value)
 {
   assert(value->getType()->isPointerTy());
@@ -1858,32 +1860,37 @@ static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* valu
 }
 
 /* NVPTX:
- * this function converts pointers from addrspace(3) to addrspace(0)
+ * this function converts a pointer in addrspace(3 or 4) to addrspace(0) 
  */
-static llvm::Value* lConvertLocal2GenericPtr(FunctionEmitContext *ctx, llvm::Value *value)
+static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
 {
   if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) return value;
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  if (pt->getAddressSpace() != 3) return value;
 
-  /* if array, extracts its element type */
+  /* make sure addrspace corresponds to either local or constant memories */
+  const int addressSpace = pt->getAddressSpace();
+  if (addressSpace != 3 && addressSpace != 4) return value;
+
+  /* if array, extracts element type */
   llvm::Type *type   = pt->getElementType();
   llvm::Type *typeEl = type;
   if (type->isArrayTy())
   {
     typeEl = type->getArrayElementType();
-    assert(!typeEl->isArrayTy());  /* currently we don't support array-of-array in uniform */
+    if (typeEl->isArrayTy())
+      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
   }
 
   /* convert elTy addrspace(3)* to i64* addrspace(3)* */
-  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
-  value = ctx->BitCastInst(value, Int64Ptr3, "cvtLog2Gen_i64ptr");
+  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
+  value = ctx->BitCastInst(value, Int64Ptr3, "cvt2gen_i64ptr");
 
   /* convert i64* addrspace(3) to i64* */
-  llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
-  std::vector<llvm::Value *> __cvt_loc2gen_args;
-  __cvt_loc2gen_args.push_back(value);
-  value = ctx->CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "cvtLoc2Gen");
+  llvm::Function *__cvt2gen = m->module->getFunction(
+      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
+  std::vector<llvm::Value *> __cvt2gen_args;
+  __cvt2gen_args.push_back(value);
+  value = ctx->CallInst(__cvt2gen, NULL, __cvt2gen_args, "cvt2gen_call");
 
   /* convert i64* to elTy* */
   llvm::PointerType *typeElPtr = llvm::PointerType::get(typeEl, 0);
@@ -1907,7 +1914,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
 
-    value = lConvertLocal2GenericPtr(this, value); /* NVPTX : convert addrspace 3->0 before converting pointer */
+    value = lConvertToGenericPtr(this, value, currentPos); /* NVPTX : convert to addrspace(0) */
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -1941,7 +1948,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         }
     }
 
-    value = lConvertLocal2GenericPtr(this, value); /* NVPTX : convert addrspace 3->0 before converting pointer */
+    value = lConvertToGenericPtr(this, value, currentPos); /* NVPTX : convert to addrspace(0) */
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;

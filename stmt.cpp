@@ -207,10 +207,16 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         if (sym->storageClass == SC_STATIC) {
 
-          if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
-              Error(sym->pos, 
-                  "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
-                  sym->name.c_str());
+            if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
+                Error(sym->pos, 
+                    "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
+                    sym->name.c_str());
+#if 0
+            if (g->target->getISA() == Target::NVPTX && sym->type->IsVaryingType())
+                Error(sym->pos, 
+                    "const static varying variable ""\"%s\" is not supported with ""\"nvptx\" target.",
+                    sym->name.c_str());
+#endif
 
             // For static variables, we need a compile-time constant value
             // for its initializer; if there's no initializer, we use a
@@ -248,59 +254,93 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          llvm::Twine("static_") +
                                          llvm::Twine(sym->pos.first_line) +
                                          llvm::Twine("_") + sym->name.c_str());
-#if 0
-                                         NULL,
-                                         llvm::GlobalVariable::NotThreadLocal,
-                                         3);
-#endif
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }
         else {
-          if (sym->type->IsArrayType() && sym->type->IsUniformType() 
-              && g->target->getISA() == Target::NVPTX)
+          if (sym->type->IsArrayType() && 
+              sym->type->IsUniformType() &&
+              g->target->getISA() == Target::NVPTX)
           {
-            if (initExpr != NULL)
-              Error(initExpr->pos,
-                  "It is not possible to initialize \"uniform\" array \"%s\" with \"nvptx\" target. "
-                  "Use \"varying\" or \"const static uniform\" if possible.",
-                  sym->name.c_str());
+              /* deal  with "const uniform" or "uniform" arrays for nvptx target */
+              PerformanceWarning(sym->pos,
+                  "\"uniform\" arrays might be slow with \"nvptx\" target. "
+                  "Unless data sharing between program instances is required, use \"varying\" if possible.");
+              if (initExpr != NULL && !sym->type->IsConstType())
+                Error(initExpr->pos,
+                    "It is not possible to initialize non-constant \"uniform\" array \"%s\" with \"nvptx\" target. "
+                    "Please use \"varying\" or \"const static uniform\".",
+                    sym->name.c_str());
 
-            PerformanceWarning(sym->pos,
-                "\"uniform\" arrays might be slow with \"nvptx\" target."
-                " Unless data sharing between program instances is required, use \"varying\" instead.");
+              llvm::Constant *cinit = NULL;
+              llvm::Type *llvmTypeUn;
+              int addressSpace;
+              if (sym->type->IsConstType())
+              {
+                addressSpace = 4; /* constant */
+                if (initExpr != NULL) {
+                  if (PossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
+                    continue;
+                  // FIXME: we only need this for function pointers; it was
+                  // already done for atomic types and enums in
+                  // DeclStmt::TypeCheck()...
+                  if (dynamic_cast<ExprList *>(initExpr) == NULL) {
+                    initExpr = TypeConvertExpr(initExpr, sym->type,
+                        "initializer");
+                    // FIXME: and this is only needed to re-establish
+                    // constant-ness so that GetConstant below works for
+                    // constant artithmetic expressions...
+                    initExpr = ::Optimize(initExpr);
+                  }
 
-            const ArrayType *at = CastType<ArrayType>(sym->type);
-            const int nel = at->GetElementCount();
-            /* we must scale # elements by 4, because a thread-block will run 4 warps
-             * or 128 threads.
-             * ***note-to-me***:please define these value (128threads/4warps)
-             * in nvptx-target definition
-             * instead of compile-time constants 
-             */
-            const int nel4 = nel*4;
-            ArrayType nat(at->GetElementType(), nel4);
-            llvm::Type *llvmType = nat.LLVMType(g->ctx);
+                  cinit = initExpr->GetConstant(sym->type);
+                  if (cinit == NULL)
+                    Error(initExpr->pos, "Initializer for static variable "
+                        "\"%s\" must be a constant.", sym->name.c_str());
+                }
+                else
+                {
+                  Error(sym->pos, "Missing initializer for const variable "
+                      "\"%s\".", sym->name.c_str());
+                }
+                if (cinit == NULL)
+                  cinit = llvm::Constant::getNullValue(llvmType);
+                llvmTypeUn = llvmType;
+              } 
+              else
+              {
+                addressSpace = 3;  /* local */
+                const ArrayType *at = CastType<ArrayType>(sym->type);
+                const int nel = at->GetElementCount();
+                /* we must scale # elements by 4, because a thread-block will run 4 warps
+                 * or 128 threads.
+                 * ***note-to-me***:please define these value (128threads/4warps)
+                 * in nvptx-target definition
+                 * instead of compile-time constants 
+                 */
+                const int nel4 = nel*4;
+                ArrayType nat(at->GetElementType(), nel4);
+                llvmTypeUn = nat.LLVMType(g->ctx);
+                cinit = llvm::UndefValue::get(llvmTypeUn);
+              }
 
-            // addrspace(3) must be undefined at initialization
-            llvm::Constant *cinit = llvm::UndefValue::get(llvmType);
-            sym->storagePtr =
-                new llvm::GlobalVariable(*m->module, llvmType,
-                                         sym->type->IsConstType(),
-                                         llvm::GlobalValue::PrivateLinkage, 
-                                         cinit,
-                                         llvm::Twine("local_") +
-                                         llvm::Twine(sym->pos.first_line) +
-                                         llvm::Twine("_") + sym->name.c_str(),
-                                         NULL,
-                                         llvm::GlobalVariable::NotThreadLocal,
-                                         /*AddressSpace=*/ 3);
+              sym->storagePtr =
+                new llvm::GlobalVariable(*m->module, llvmTypeUn,
+                    sym->type->IsConstType(),
+                    llvm::GlobalValue::PrivateLinkage, 
+                    cinit,
+                    llvm::Twine("local_") +
+                    llvm::Twine(sym->pos.first_line) +
+                    llvm::Twine("_") + sym->name.c_str(),
+                    NULL,
+                    llvm::GlobalVariable::NotThreadLocal,
+                    addressSpace);
 #if 0
-            llvm::GlobalVariable *var = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
-            var->setAlignment(128);
+              llvm::GlobalVariable *var = llvm::dyn_cast<llvm::GlobalVariable>(sym->storagePtr);
+              var->setAlignment(128);
 #endif
-            // Tell the FunctionEmitContext about the variable
-            ctx->EmitVariableDebugInfo(sym);
+              // Tell the FunctionEmitContext about the variable
+              ctx->EmitVariableDebugInfo(sym);
           }
           else
           {
@@ -310,6 +350,10 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // Tell the FunctionEmitContext about the variable; must do
             // this before the initializer stuff.
             ctx->EmitVariableDebugInfo(sym);
+
+            if (initExpr == 0 && sym->type->IsConstType())
+              Error(sym->pos, "Missing initializer for const variable "
+                  "\"%s\".", sym->name.c_str());
 
             // And then get it initialized...
             sym->parentFunction = ctx->GetFunction();
