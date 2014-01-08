@@ -260,44 +260,36 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
           if (sym->type->IsArrayType() && sym->type->IsUniformType() 
               && g->target->getISA() == Target::NVPTX)
           {
-#if 0  /* need to test if initializer works ... */
             if (initExpr != NULL)
-              Error(initExpr->pos, "Initializer for static variable "
-                  "\"%s\" must be a constant.", sym->name.c_str());
-#endif
+              Error(initExpr->pos,
+                  "It is not possible to initialize \"uniform\" array \"%s\" with \"nvptx\" target. "
+                  "Use \"varying\" or \"const static uniform\" if possible.",
+                  sym->name.c_str());
 
             PerformanceWarning(sym->pos,
-                "\"uniform\" arrays may be slow with \"nvptx\" target. Use \"varying\" if possible.");
+                "\"uniform\" arrays might be slow with \"nvptx\" target."
+                " Unless data sharing between program instances is required, use \"varying\" instead.");
 
-            llvm::Constant *cinit = NULL;
-            if (initExpr != NULL) 
-            {
-                if (PossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
-                    continue;
-                // FIXME: we only need this for function pointers; it was
-                // already done for atomic types and enums in
-                // DeclStmt::TypeCheck()...
-                if (dynamic_cast<ExprList *>(initExpr) == NULL) {
-                    initExpr = TypeConvertExpr(initExpr, sym->type,
-                                               "initializer");
-                    // FIXME: and this is only needed to re-establish
-                    // constant-ness so that GetConstant below works for
-                    // constant artithmetic expressions...
-                    initExpr = ::Optimize(initExpr);
-                }
+            const ArrayType *at = CastType<ArrayType>(sym->type);
+            const int nel = at->GetElementCount();
+            /* we must scale # elements by 4, because a thread-block will run 4 warps
+             * or 128 threads.
+             * ***note-to-me***:please define these value (128threads/4warps)
+             * in nvptx-target definition
+             * instead of compile-time constants 
+             */
+            const int nel4 = nel*4;
+            ArrayType nat(at->GetElementType(), nel4);
+            llvm::Type *llvmType = nat.LLVMType(g->ctx);
 
-                cinit = initExpr->GetConstant(sym->type);
-            }
-            if (cinit == NULL)
-                cinit = llvm::Constant::getNullValue(llvmType);
-
-            // Allocate space for the static variable in global scope, so
-            // that it persists across function calls
+            // addrspace(3) must be undefined at initialization
+            llvm::Constant *cinit = llvm::UndefValue::get(llvmType);
             sym->storagePtr =
                 new llvm::GlobalVariable(*m->module, llvmType,
                                          sym->type->IsConstType(),
-                                         llvm::GlobalValue::InternalLinkage, cinit,
-                                         llvm::Twine("local") +
+                                         llvm::GlobalValue::PrivateLinkage, 
+                                         cinit,
+                                         llvm::Twine("local_") +
                                          llvm::Twine(sym->pos.first_line) +
                                          llvm::Twine("_") + sym->name.c_str(),
                                          NULL,

@@ -502,6 +502,7 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createGlobalDCEPass());
     }
+#if 1
     else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
@@ -685,6 +686,7 @@ Optimize(llvm::Module *module, int optLevel) {
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
     }
+#endif
 
     // Finish up by making sure we didn't mess anything up in the IR along
     // the way.

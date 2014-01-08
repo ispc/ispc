@@ -2338,6 +2338,28 @@ Module::CompileAndOutput(const char *srcFile,
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
+
+
+          /* NVPTX:
+           * for PTX target replace '.' with '_' in all global variables 
+           * a PTX identifier name must match [a-zA-Z$_][a-zA-Z$_0-9]*
+           */
+          if (g->target->getISA() == Target::NVPTX)
+          {
+            llvm::Module::global_iterator 
+              I = m->module->global_begin(),
+                E = m->module->global_end();
+            for (; I != E; I++)
+            {
+              std::string name = I->getName();
+              for (int i = 0; i < name.length(); i++)
+                if (name[i] == '.') 
+                  name[i] = '_';
+              I->setName(name);
+              fprintf(stderr, " %s \n", name.c_str());
+
+            }
+          }
             if (outputType == CXX) {
                 if (target == NULL || strncmp(target, "generic-", 8) != 0) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "

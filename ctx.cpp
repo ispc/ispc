@@ -1832,34 +1832,65 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* value)
+/* NVPTX: 
+ * this is a helper function which adds a warp offset to a base pointer in local memory
+ * either in addrspace(3) or converted from addrspace(3) to addrspace(0)
+ */
+static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
 {
-  assert(value->getType()->isPointerTy());
-  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  if (pt->getAddressSpace() != 3) return value;
-
   llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
   llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
   llvm::Value *__tid_x  = ctx->CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(),  "tidCorrectLocalPtr");
   llvm::Value *__warpsz = ctx->CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(),  "warpSzCorrectLocaLPtr");
   llvm::Value *_mwarpsz = ctx->BinaryOperator(llvm::Instruction::Sub, LLVMInt32(0), __warpsz, "mwarpSzCorrectLocalPtr");
   llvm::Value *__offset = ctx->BinaryOperator(llvm::Instruction::And, __tid_x, _mwarpsz, "offsetCorrectLocalPtr");
-  return llvm::GetElementPtrInst::Create(value, __offset, "__gepCorrectLocalPtr", ctx->GetCurrentBasicBlock());
+  return llvm::GetElementPtrInst::Create(value, __offset, "warpOffset_gep", ctx->GetCurrentBasicBlock());
 }
 
-static llvm::Value* lConvertLocalToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value)
+/* NVPTX:
+ * this function compute correct address in local memory for load/store operations*/
+static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* value)
+{
+  assert(value->getType()->isPointerTy());
+  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+  if (g->target->getISA() != Target::NVPTX || pt->getAddressSpace() != 3) return value;
+  return lAddWarpOffset(ctx, value);
+}
+
+/* NVPTX:
+ * this function converts pointers from addrspace(3) to addrspace(0)
+ */
+static llvm::Value* lConvertLocal2GenericPtr(FunctionEmitContext *ctx, llvm::Value *value)
 {
   if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) return value;
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
   if (pt->getAddressSpace() != 3) return value;
 
-  llvm::PointerType *PointerTy = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
-  value = ctx->BitCastInst(value, PointerTy, "cvtLog2Gen_i64ptr");
-  value = lCorrectLocalPtr(ctx, value);
+  /* if array, extracts its element type */
+  llvm::Type *type   = pt->getElementType();
+  llvm::Type *typeEl = type;
+  if (type->isArrayTy())
+  {
+    typeEl = type->getArrayElementType();
+    assert(!typeEl->isArrayTy());  /* currently we don't support array-of-array in uniform */
+  }
+
+  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
+  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, 3);
+  value = ctx->BitCastInst(value, Int64Ptr3, "cvtLog2Gen_i64ptr");
+
+  /* convert i64* addrspace(3) to i64* */
   llvm::Function *__cvt_loc2gen  = m->module->getFunction("__cvt_loc2gen");
   std::vector<llvm::Value *> __cvt_loc2gen_args;
   __cvt_loc2gen_args.push_back(value);
-  return ctx->CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "cvtLoc2Gen");
+  value = ctx->CallInst(__cvt_loc2gen, NULL, __cvt_loc2gen_args, "cvtLoc2Gen");
+
+  /* convert i64* to elTy* */
+  llvm::PointerType *typeElPtr = llvm::PointerType::get(typeEl, 0);
+  value  = ctx->BitCastInst(value, typeElPtr, "cvtLoc2Gen_i642ptr");
+
+  /* add warp offset to the pointer */
+  return lAddWarpOffset(ctx, value);
 }
 
 llvm::Value *
@@ -1876,7 +1907,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
 
-    value = lConvertLocalToGenericPtr(this, value); /* NVPTX */
+    value = lConvertLocal2GenericPtr(this, value); /* NVPTX : convert addrspace 3->0 before converting pointer */
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -1910,7 +1941,7 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         }
     }
 
-    value = lConvertLocalToGenericPtr(this, value); /* NVPTX */
+    value = lConvertLocal2GenericPtr(this, value); /* NVPTX : convert addrspace 3->0 before converting pointer */
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;
@@ -2489,7 +2520,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
 
-    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
+    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 
     if (g->opt.forceAlignedMemory &&
@@ -2622,7 +2653,7 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
-            ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
+            ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name,
                                                          false /* not volatile */,
                                                          align, bblock);
@@ -3050,7 +3081,7 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
         llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
-    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX */
+    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory &&

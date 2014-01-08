@@ -402,6 +402,13 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
+#if 0 /* NVPTX */
+        if (baseType->IsUniformType())
+        {
+          fprintf(stderr, " detected uniform array of size= %d  array= %s\n" ,arraySize,
+              baseType->IsArrayType() ? " true " : " false ");
+        }
+#endif
         const Type *arrayType = new ArrayType(baseType, arraySize);
         if (child != NULL) {
             child->InitFromType(arrayType, ds);
