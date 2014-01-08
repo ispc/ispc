@@ -817,6 +817,13 @@ Module::AddFunctionDeclaration(const std::string &name,
         Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
+    if (g->target->getISA() == Target::NVPTX &&
+        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
+        functionType->isExported)
+    {
+        Error(pos, "Export-qualified functions must have void return type with \"nvptx\" target.");
+    }
+
     if (functionType->isExported || functionType->isExternC)
         lCheckForStructParameters(functionType, pos);
 
@@ -2356,8 +2363,6 @@ Module::CompileAndOutput(const char *srcFile,
                 if (name[i] == '.') 
                   name[i] = '_';
               I->setName(name);
-              fprintf(stderr, " %s \n", name.c_str());
-
             }
           }
             if (outputType == CXX) {

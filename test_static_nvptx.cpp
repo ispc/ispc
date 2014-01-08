@@ -53,8 +53,9 @@
 
 #include "ispc_malloc.h"
 
+#define N 32
 extern "C" {
-    int width() { return 32; }
+    int width() { return N; }
     extern void f_v(float *result);
     extern void f_f(float *result, float *a);
     extern void f_fu(float *result, float *a, float b);
@@ -67,15 +68,15 @@ extern "C" {
 
 int main(int argc, char *argv[]) {
     int w = width();
-    assert(w <= 64);
+    assert(w <= N);
 
-    float *returned_result = new float[64];
-    float *vfloat = new float[64];
-    double *vdouble = new double[64];
-    int *vint = new int[64];
-    int *vint2 = new int[64];
+    float *returned_result = new float[N];
+    float *vfloat = new float[N];
+    double *vdouble = new double[N];
+    int *vint = new int[N];
+    int *vint2 = new int[N];
 
-    for (int i = 0; i < 64; ++i) {
+    for (int i = 0; i < N; ++i) {
         returned_result[i] = -1e20;
         vfloat[i] = i+1;
         vdouble[i] = i+1;
@@ -99,17 +100,18 @@ int main(int argc, char *argv[]) {
     f_duf(returned_result, vdouble, 5.f);
 #elif (TEST_SIG == 6)
     f_di(returned_result, vdouble, vint2);
-#else
+Nelse
 #error "Unknown or unset TEST_SIG value"
 #endif
 
-    float *expected_result = new float[64];
-    memset(expected_result, 0, 64*sizeof(float));
+    float *expected_result = new float[N];
+    memset(expected_result, 0, N*sizeof(float));
     result(expected_result);
 
     int errors = 0;
     for (int i = 0; i < w; ++i) {
-        if (returned_result[i] != expected_result[i]) {
+        if (returned_result[i] != expected_result[i]) 
+        {
 #ifdef EXPECT_FAILURE
             // bingo, failed
             return 1;
