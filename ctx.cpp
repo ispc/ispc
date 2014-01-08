@@ -1848,6 +1848,59 @@ static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
   return llvm::GetElementPtrInst::Create(value, __offset, "warpOffset_gep", ctx->GetCurrentBasicBlock());
 }
 
+static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
+{
+  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
+    return value;
+  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+  const int addressSpace = pt->getAddressSpace();
+  if (addressSpace != 3) // && addressSpace != 4) 
+    return value;
+
+  llvm::Type *elTy = pt->getElementType();
+  assert(elTy->isArrayTy());
+  const int numElTot = elTy->getArrayNumElements();
+  const int numEl    = numElTot/4;
+#if 0
+  fprintf(stderr, " --- detected addrspace(3) sz= %d --- \n", numEl);
+#endif
+  llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
+  assert(arrTy != NULL);
+  llvm::Type *arrElTy = arrTy->getElementType();
+  if (arrElTy->isArrayTy())
+      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
+
+  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
+  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
+  value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
+
+  /* convert i64* addrspace(3) to i64* */
+  llvm::Function *__cvt2gen = m->module->getFunction(
+      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
+  std::vector<llvm::Value *> __cvt2gen_args;
+  __cvt2gen_args.push_back(value);
+  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "gep2gen_cvt", ctx->GetCurrentBasicBlock());
+
+  /* convert i64* to errElTy* */
+  llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
+  value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
+
+  /* compute offset */
+  llvm::Function *funcTid    = m->module->getFunction("__tid_x");
+  llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
+  llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
+  llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
+  llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
+  llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
+  value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+
+  /* convert arrElTy* to elTy* */
+  llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
+  value  = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
+
+  return value;
+}
+
 /* NVPTX:
  * this function compute correct address in local memory for load/store operations
  */
@@ -1856,6 +1909,9 @@ static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* valu
   assert(value->getType()->isPointerTy());
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
   if (g->target->getISA() != Target::NVPTX || pt->getAddressSpace() != 3) return value;
+
+  assert(0);  /* we should never enter here */
+
   return lAddWarpOffset(ctx, value);
 }
 
@@ -1870,6 +1926,8 @@ static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
   /* make sure addrspace corresponds to either local or constant memories */
   const int addressSpace = pt->getAddressSpace();
   if (addressSpace != 3 && addressSpace != 4) return value;
+
+  assert(0);  /* we should never enter here */
 
   /* if array, extracts element type */
   llvm::Type *type   = pt->getElementType();
@@ -2262,6 +2320,7 @@ FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
 llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
                                        const Type *ptrRefType, const char *name) {
+    basePtr = lConvertGepToGenericPtr(this, basePtr, currentPos);
     if (basePtr == NULL || index == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2332,6 +2391,7 @@ llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0,
                                        llvm::Value *index1, const Type *ptrRefType,
                                        const char *name) {
+    basePtr = lConvertGepToGenericPtr(this, basePtr, currentPos);
     if (basePtr == NULL || index0 == NULL || index1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;

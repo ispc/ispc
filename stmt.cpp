@@ -266,7 +266,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               if (!sym->type->IsConstType())
                 PerformanceWarning(sym->pos,
                     "\"uniform\" arrays might be slow with \"nvptx\" target. "
-                    "Unless data sharing between program instances is required, use \"varying\" if possible.");
+                    "Unless data sharing between program instances is required, use \"varying\" or \"uniform new\"+\"delete\" if possible.");
               if (initExpr != NULL && !sym->type->IsConstType())
                 Error(initExpr->pos,
                     "It is not possible to initialize non-constant \"uniform\" array \"%s\" with \"nvptx\" target. "
@@ -278,7 +278,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               int addressSpace;
               if (sym->type->IsConstType())
               {
-#if 1          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
+#if 0          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
                 addressSpace = 4; /* constant */
 #else
                 addressSpace = 0; /* use global for now */
