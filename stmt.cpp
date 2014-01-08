@@ -278,7 +278,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               int addressSpace;
               if (sym->type->IsConstType())
               {
-#if 0          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
+#if 1          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
                 addressSpace = 4; /* constant */
 #else
                 addressSpace = 0; /* use global for now */
@@ -333,7 +333,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               sym->storagePtr =
                 new llvm::GlobalVariable(*m->module, llvmTypeUn,
                     sym->type->IsConstType(),
-                    llvm::GlobalValue::PrivateLinkage, 
+                    llvm::GlobalValue::InternalLinkage, 
                     cinit,
                     llvm::Twine("local_") +
                     llvm::Twine(sym->pos.first_line) +

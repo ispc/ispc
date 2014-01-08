@@ -1890,14 +1890,21 @@ static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
       addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
   std::vector<llvm::Value *> __cvt2gen_args;
   __cvt2gen_args.push_back(value);
+#if 0
   value = ctx->CallInst(__cvt2gen, NULL, __cvt2gen_args, "cvt2gen_call");
+#else
+  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "cvt2gen_call", ctx->GetCurrentBasicBlock());
+#endif
 
   /* convert i64* to elTy* */
   llvm::PointerType *typeElPtr = llvm::PointerType::get(typeEl, 0);
   value  = ctx->BitCastInst(value, typeElPtr, "cvtLoc2Gen_i642ptr");
 
-  /* add warp offset to the pointer */
-  return lAddWarpOffset(ctx, value);
+  /* add warp offset to the pointer for local memory */
+  if (addressSpace == 3)
+    value = lAddWarpOffset(ctx, value);
+
+  return value;
 }
 
 llvm::Value *
@@ -3394,13 +3401,19 @@ lCalleeArgCount(llvm::Value *callee, const FunctionType *funcType) {
 
 llvm::Value *
 FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
-                              const std::vector<llvm::Value *> &args,
+                              const std::vector<llvm::Value *> &args_in,
                               const char *name) {
     if (func == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
     }
 
+    std::vector<llvm::Value *> args = args_in;
+    /* NVPTX:
+     * Convert all pointers to addrspace(0) 
+     */
+    for (unsigned int i = 0; i < args.size(); i++)
+      args[i] = lConvertToGenericPtr(this, args[i], currentPos);
     std::vector<llvm::Value *> argVals = args;
     // Most of the time, the mask is passed as the last argument.  this
     // isn't the case for things like intrinsics, builtins, and extern "C"

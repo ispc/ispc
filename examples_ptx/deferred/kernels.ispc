@@ -506,9 +506,10 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
     uniform float cameraProj_32 = inputHeader.cameraProj[3][2];
 
     // Light intersection: figure out which lights illuminate this tile.
-#ifdef __NVPTX__
+#if 1 //def __NVPTX__
     uniform int * uniform tileLightIndices = uniform new uniform int [MAX_LIGHTS];
-#else
+#define MALLOC
+#else /* shared memory doesn't full work... why? */
     uniform int tileLightIndices[MAX_LIGHTS];  // Light list for the tile
 #endif
     uniform int numTileLights = 
@@ -532,7 +533,7 @@ RenderTile(uniform int num_groups_x, uniform int num_groups_y,
               cameraProj_00, cameraProj_11, cameraProj_22, cameraProj_32,
               tileLightIndices, numTileLights, visualizeLightCount, 
               framebuffer_r, framebuffer_g, framebuffer_b);
-#ifdef __NVPTX__
+#ifdef MALLOC
     delete tileLightIndices;
 #endif
 }
