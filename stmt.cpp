@@ -263,13 +263,14 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               g->target->getISA() == Target::NVPTX)
           {
               /* deal  with "const uniform" or "uniform" arrays for nvptx target */
-              PerformanceWarning(sym->pos,
-                  "\"uniform\" arrays might be slow with \"nvptx\" target. "
-                  "Unless data sharing between program instances is required, use \"varying\" if possible.");
+              if (!sym->type->IsConstType())
+                PerformanceWarning(sym->pos,
+                    "\"uniform\" arrays might be slow with \"nvptx\" target. "
+                    "Unless data sharing between program instances is required, use \"varying\" if possible.");
               if (initExpr != NULL && !sym->type->IsConstType())
                 Error(initExpr->pos,
                     "It is not possible to initialize non-constant \"uniform\" array \"%s\" with \"nvptx\" target. "
-                    "Please use \"varying\" or \"const static uniform\".",
+                    "Please use \"varying\", \"const static uniform\" or define initializer in the global scope.",
                     sym->name.c_str());
 
               llvm::Constant *cinit = NULL;
@@ -277,7 +278,11 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               int addressSpace;
               if (sym->type->IsConstType())
               {
+#if 0          /* current, addressSpace = 4 generates a compilation fails as it can't be passed as a function arg:S */
                 addressSpace = 4; /* constant */
+#else
+                addressSpace = 0; /* use global for now */
+#endif
                 if (initExpr != NULL) {
                   if (PossiblyResolveFunctionOverloads(initExpr, sym->type) == false)
                     continue;
@@ -309,6 +314,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               } 
               else
               {
+                /* fails if pointer passed to function argument, need conversion beforehand */
                 addressSpace = 3;  /* local */
                 const ArrayType *at = CastType<ArrayType>(sym->type);
                 const int nel = at->GetElementCount();

@@ -33,6 +33,12 @@
 
 #include "deferred.h"
 
+#ifdef __NVPTX__
+#define uniform_t varying
+#else
+#define uniform_t uniform
+#endif
+
 struct InputDataArrays
 {
     float *zBuffer;
@@ -166,19 +172,19 @@ IntersectLightsWithTileMinMax(
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
     uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
         
-    uniform float frustumPlanes_xy[4] = {
+    uniform_t float frustumPlanes_xy[4] = {
         -(cameraProj_11 * gBufferScale_x),
          (cameraProj_11 * gBufferScale_x),
          (cameraProj_22 * gBufferScale_y),
         -(cameraProj_22 * gBufferScale_y) };
-    uniform float frustumPlanes_z[4] = {
+    uniform_t float frustumPlanes_z[4] = {
          tileEndX - gBufferScale_x,
         -tileStartX + gBufferScale_x,
          tileEndY - gBufferScale_y,
         -tileStartY + gBufferScale_y };
 
     for (uniform int i = 0; i < 4; ++i) {
-        uniform float norm = rsqrt(frustumPlanes_xy[i] * frustumPlanes_xy[i] + 
+        uniform_t float norm = rsqrt(frustumPlanes_xy[i] * frustumPlanes_xy[i] + 
                                    frustumPlanes_z[i] * frustumPlanes_z[i]);
         frustumPlanes_xy[i] *= norm;
         frustumPlanes_z[i] *= norm;
@@ -621,13 +627,13 @@ SplitTileMinMax(
     uniform float gBufferScale_x = 0.5f * (float)gBufferWidth;
     uniform float gBufferScale_y = 0.5f * (float)gBufferHeight;
         
-    uniform float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
+    uniform_t float frustumPlanes_xy[2] = { -(cameraProj_11 * gBufferScale_x),
                                            (cameraProj_22 * gBufferScale_y) };
-    uniform float frustumPlanes_z[2] = { tileMidX - gBufferScale_x,
+    uniform_t float frustumPlanes_z[2] = { tileMidX - gBufferScale_x,
                                          tileMidY - gBufferScale_y };
 
     // Normalize
-    uniform float norm[2] = { rsqrt(frustumPlanes_xy[0] * frustumPlanes_xy[0] + 
+    uniform_t float norm[2] = { rsqrt(frustumPlanes_xy[0] * frustumPlanes_xy[0] + 
                                     frustumPlanes_z[0] * frustumPlanes_z[0]),
                               rsqrt(frustumPlanes_xy[1] * frustumPlanes_xy[1] + 
                                     frustumPlanes_z[1] * frustumPlanes_z[1]) };

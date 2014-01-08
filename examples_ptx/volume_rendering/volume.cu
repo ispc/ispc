@@ -366,7 +366,7 @@ volume_task(float density[], int _nVoxels[3],
             int width, int height, float image[]) {
   if (taskIndex0 >= taskCount0) return;
 
-#if 1
+#if 0
   int nVoxels[3];
   nVoxels[0] = _nVoxels[0];
   nVoxels[1] = _nVoxels[1];
