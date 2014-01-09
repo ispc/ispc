@@ -305,6 +305,12 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             if (cinit == NULL)
                 cinit = llvm::Constant::getNullValue(llvmType);
 
+            int addressSpace = 0;
+            if (g->target->getISA() == Target::NVPTX &&
+                sym->type->IsConstType() &&
+                sym->type->IsUniformType())
+              addressSpace = 4;
+
             // Allocate space for the static variable in global scope, so
             // that it persists across function calls
             sym->storagePtr =
@@ -316,7 +322,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                                          llvm::Twine("_") + sym->name.c_str(),
                                          NULL,
                                          llvm::GlobalVariable::NotThreadLocal,
-                                         /*AddressSpace=*/ sym->type->IsUniformType() ? 4 : 0);
+                                         addressSpace);
             sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
