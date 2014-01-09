@@ -70,13 +70,13 @@ int main(int argc, char *argv[]) {
     int w = width();
     assert(w <= N);
 
-    float *returned_result = new float[N];
-    float *vfloat = new float[N];
-    double *vdouble = new double[N];
-    int *vint = new int[N];
-    int *vint2 = new int[N];
+    float *returned_result = new float[N*4];
+    float *vfloat = new float[N*4];
+    double *vdouble = new double[N*4];
+    int *vint = new int[N*4];
+    int *vint2 = new int[N*4];
 
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N*4; ++i) {
         returned_result[i] = -1e20;
         vfloat[i] = i+1;
         vdouble[i] = i+1;
