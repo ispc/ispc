@@ -181,7 +181,7 @@ transmittance(uniform float3 p0, float3 p1, uniform float3 pMin,
     float tau = 0;
     float rayLength = sqrt(ray.dir.x * ray.dir.x + ray.dir.y * ray.dir.y +
                            ray.dir.z * ray.dir.z);
-    uniform float stepDist = 0.2;
+    const uniform float stepDist = 0.2;
     float stepT = stepDist / rayLength;
 
     float t = rayT0;
@@ -207,8 +207,8 @@ distanceSquared(float3 a, float3 b) {
 static inline float 
 raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
     float rayT0, rayT1;
-    uniform float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
-    uniform float3 lightPos = { -1, 4, 1.5 };
+    const uniform float3 pMin = {.3, -.2, .3}, pMax = {1.8, 2.3, 1.8};
+    const uniform float3 lightPos = { -1, 4, 1.5 };
 
     if (!IntersectP(ray, pMin, pMax, rayT0, rayT1))
         return 0.;
@@ -217,11 +217,11 @@ raymarch(uniform float density[], uniform int nVoxels[3], Ray ray) {
 
     // Parameters that define the volume scattering characteristics and
     // sampling rate for raymarching
-    uniform float Le = .25;            // Emission coefficient
-    uniform float sigma_a = 10;        // Absorption coefficient
-    uniform float sigma_s = 10;        // Scattering coefficient
-    uniform float stepDist = 0.025;    // Ray step amount
-    uniform float lightIntensity = 40; // Light source intensity
+    const uniform float Le = .25;            // Emission coefficient
+    const uniform float sigma_a = 10;        // Absorption coefficient
+    const uniform float sigma_s = 10;        // Scattering coefficient
+    const uniform float stepDist = 0.025;    // Ray step amount
+    const uniform float lightIntensity = 40; // Light source intensity
 
     float tau = 0.f;  // accumulated beam transmittance
     float L = 0;      // radiance along the ray
@@ -375,15 +375,14 @@ volume_task(uniform float density[], uniform int _nVoxels[3],
 #define  camera2world _camera2world
 #endif
 
-  uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
-  uniform int xbuckets = (width + (dx-1)) / dx;
-  uniform int ybuckets = (height + (dy-1)) / dy;
+  const uniform int dx = 8, dy = 8; // must match value in volume_ispc_tasks
+  const uniform int xbuckets = (width + (dx-1)) / dx;
+  const uniform int ybuckets = (height + (dy-1)) / dy;
 
-  uniform int x0 = (taskIndex % xbuckets) * dx;
-  uniform int y0 = (taskIndex / xbuckets) * dy;
-  uniform int x1 = x0 + dx, y1 = y0 + dy;
-  x1 = min(x1, width);
-  y1 = min(y1, height);
+  const uniform int x0 = (taskIndex % xbuckets) * dx;
+  const uniform int y0 = (taskIndex / xbuckets) * dy;
+  const uniform int x1 = min(x0 + dx, width);
+  const uniform int y1 = min(y0 + dy, height);
 
   volume_tile(x0, y0, x1, y1, density, nVoxels, raster2camera,
       camera2world, width, height, image);
@@ -406,8 +405,8 @@ volume_ispc_tasks(uniform float density[], uniform int nVoxels[3],
                   const uniform float camera2world[4][4], 
                   uniform int width, uniform int height, uniform float image[]) {
     // Launch tasks to work on (dx,dy)-sized tiles of the image
-    uniform int dx = 8, dy = 8;
-    uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
+    const uniform int dx = 8, dy = 8;
+    const uniform int nTasks = ((width+(dx-1))/dx) * ((height+(dy-1))/dy);
     launch[nTasks] volume_task(density, nVoxels, raster2camera, camera2world, 
                                width, height, image);
     sync;

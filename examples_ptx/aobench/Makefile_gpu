@@ -4,7 +4,7 @@ CU_SRC=ao.cu
 CXX_SRC=ao.cpp  ao_serial.cpp
 PTXCC_REGMAX=64
 
-LLVM_GPU=1
+# LLVM_GPU=1
 NVVM_GPU=1
 
 include ../common_gpu.mk
