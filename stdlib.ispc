@@ -73,7 +73,7 @@ __declspec(safe,cost0)
 }
 /***************/
 __declspec(safe,cost0)
-  static inline uniform int laneIndex()
+  static inline varying int laneIndex()
 {
   return __tid_x() & (WARPSIZE-1) ; //& (warpSize()-1);
 }
