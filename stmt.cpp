@@ -142,7 +142,63 @@ lHasUnsizedArrays(const Type *type) {
         return lHasUnsizedArrays(at->GetElementType());
 }
 
-extern llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos);
+static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
+{
+  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
+    return value;
+  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
+  const int addressSpace = pt->getAddressSpace();
+  if (addressSpace != 3 && addressSpace != 4) 
+    return value;
+
+  llvm::Type *elTy = pt->getElementType();
+  assert(elTy->isArrayTy());
+  const int numElTot = elTy->getArrayNumElements();
+  const int numEl    = numElTot/4;
+#if 0
+  fprintf(stderr, " --- detected addrspace(3) sz= %d --- \n", numEl);
+#endif
+  llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
+  assert(arrTy != NULL);
+  llvm::Type *arrElTy = arrTy->getElementType();
+#if 0
+  if (arrElTy->isArrayTy())
+      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
+#endif
+
+  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
+  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
+  value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
+
+  /* convert i64* addrspace(3) to i64* */
+  llvm::Function *__cvt2gen = m->module->getFunction(
+      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
+  std::vector<llvm::Value *> __cvt2gen_args;
+  __cvt2gen_args.push_back(value);
+  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "gep2gen_cvt", ctx->GetCurrentBasicBlock());
+
+  /* convert i64* to errElTy* */
+  llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
+  value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
+
+  /* compute offset */
+  if (addressSpace == 3)
+  {
+    llvm::Function *funcTid    = m->module->getFunction("__tid_x");
+    llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
+    llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
+    llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
+    llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
+    llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
+    value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
+  }
+
+  /* convert arrElTy* to elTy* */
+  llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
+  value  = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
+
+  return value;
+}
 
 void
 DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
@@ -259,7 +315,9 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             ctx->EmitVariableDebugInfo(sym);
         }
         else {
+#if 0
           if (sym->type->IsUniformType() &&
+              sym->type->IsArrayType() && 
               g->target->getISA() == Target::NVPTX)
           {
               /* deal  with "const uniform" or "uniform" arrays for nvptx target */
@@ -377,7 +435,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                   NULL,
                   llvm::GlobalVariable::NotThreadLocal,
                   /*AddressSpace=*/3);
-            sym->storagePtr = lConvertGepToGenericPtr(ctx, sym->storagePtr, sym->pos);
+            sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
             llvm::PointerType *ptrTy = 
               llvm::PointerType::get(sym->type->LLVMType(g->ctx),0);
             sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_alloc");
@@ -396,6 +454,64 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             sym->parentFunction = ctx->GetFunction();
             InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
           }
+#else
+          if (sym->type->IsUniformType() &&
+              sym->type->IsArrayType() &&
+              g->target->getISA() == Target::NVPTX)
+          {
+            PerformanceWarning(sym->pos,
+                "\"uniform\" data types might be slow with \"nvptx\" target. "
+                "Unless data sharing between program instances is desired, try either \"varying\" or \"uniform new uniform \"+\"delete\" if possible.");
+
+            int nel = 4;
+            ArrayType *nat;
+            if (sym->type->IsArrayType())
+            {
+              const ArrayType *at = CastType<ArrayType>(sym->type);
+              nel = at->GetElementCount();
+              /* we must scale # elements by 4, because a thread-block will run 4 warps
+               * or 128 threads.
+               * ***note-to-me***:please define these value (128threads/4warps)
+               * in nvptx-target definition
+               * instead of compile-time constants 
+               */
+              nel *= 4;
+              nat  = new ArrayType(at->GetElementType(), nel);
+            }
+            else
+              nat = new ArrayType(sym->type, nel);
+            llvm::Type *llvmType = nat->LLVMType(g->ctx);
+            llvm::Constant *cinit = llvm::UndefValue::get(llvmType);
+
+            sym->storagePtr =
+              new llvm::GlobalVariable(*m->module, llvmType,
+                  sym->type->IsConstType(),
+                  llvm::GlobalValue::InternalLinkage, 
+                  cinit,
+                  llvm::Twine("local_") +
+                  llvm::Twine(sym->pos.first_line) +
+                  llvm::Twine("_") + sym->name.c_str(),
+                  NULL,
+                  llvm::GlobalVariable::NotThreadLocal,
+                  /*AddressSpace=*/3);
+            sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
+            llvm::PointerType *ptrTy = 
+              llvm::PointerType::get(sym->type->LLVMType(g->ctx),0);
+            sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_alloc");
+
+            // Tell the FunctionEmitContext about the variable; must do
+            // this before the initializer stuff.
+            ctx->EmitVariableDebugInfo(sym);
+
+            if (initExpr == 0 && sym->type->IsConstType())
+              Error(sym->pos, "Missing initializer for const variable "
+                  "\"%s\".", sym->name.c_str());
+
+            // And then get it initialized...
+            sym->parentFunction = ctx->GetFunction();
+            InitSymbol(sym->storagePtr, sym->type, initExpr, ctx, sym->pos);
+          }
+#endif
           else
           {
             // For non-static variables, allocate storage on the stack
