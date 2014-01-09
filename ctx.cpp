@@ -1848,7 +1848,7 @@ static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
   return llvm::GetElementPtrInst::Create(value, __offset, "warpOffset_gep", ctx->GetCurrentBasicBlock());
 }
 
-static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
+llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
 {
   if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
     return value;
