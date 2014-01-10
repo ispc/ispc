@@ -334,7 +334,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
            * constant uniform are automatically promoted to varying 
            */
            !sym->type->IsConstType() &&
-#if 0     
+#if 1     
            sym->type->IsArrayType() &&
 #endif
            g->target->getISA() == Target::NVPTX)
