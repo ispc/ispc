@@ -630,7 +630,9 @@ lSetInternalFunctions(llvm::Module *module) {
         "__nctaid_y",
         "__nctaid_z",
         "__warpsize",
-        "__cvt_loc2gen"
+        "__cvt_loc2gen",
+        "__cvt_loc2gen_var",
+        "__cvt_const2gen"
     };
 
     int count = sizeof(names) / sizeof(names[0]);

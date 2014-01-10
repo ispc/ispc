@@ -69,6 +69,11 @@ define i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
   %ptr =  tail call i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p3i64(i64 addrspace(3)* %0)
   ret i64* %ptr
 }
+define i64* @__cvt_loc2gen_var(i64 addrspace(3)*) nounwind readnone alwaysinline
+{
+  %ptr =  tail call i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p3i64(i64 addrspace(3)* %0)
+  ret i64* %ptr
+}
 define i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 {
   %ptr =  tail call i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p4i64(i64 addrspace(4)* %0)

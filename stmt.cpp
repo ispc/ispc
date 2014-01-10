@@ -142,7 +142,7 @@ lHasUnsizedArrays(const Type *type) {
         return lHasUnsizedArrays(at->GetElementType());
 }
 
-static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
+static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos, const bool variable = false)
 {
   if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
     return value;
@@ -159,10 +159,11 @@ static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
 
   /* convert i64* addrspace(3) to i64* */
   llvm::Function *__cvt2gen = m->module->getFunction(
-      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
+      addressSpace == 3 ? (variable ? "__cvt_loc2gen_var" : "__cvt_loc2gen") : "__cvt_const2gen");
+
   std::vector<llvm::Value *> __cvt2gen_args;
   __cvt2gen_args.push_back(value);
-  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "gep2gen_cvt", ctx->GetCurrentBasicBlock());
+  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, variable ? "gep2gen_cvt_var" : "gep2gen_cvt", ctx->GetCurrentBasicBlock());
 
   /* compute offset */
   if (addressSpace == 3)
@@ -333,7 +334,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
            * constant uniform are automatically promoted to varying 
            */
            !sym->type->IsConstType() &&
-#if 1     
+#if 0     
            sym->type->IsArrayType() &&
 #endif
            g->target->getISA() == Target::NVPTX)
@@ -345,18 +346,19 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
               /* with __shared__ memory everything must be an array */
               int nel = 4;
               ArrayType *nat;
+              bool variable = true;
               if (sym->type->IsArrayType())
               {
                 const ArrayType *at = CastType<ArrayType>(sym->type);
-                nel = at->GetElementCount();
                 /* we must scale # elements by 4, because a thread-block will run 4 warps
                  * or 128 threads.
                  * ***note-to-me***:please define these value (128threads/4warps)
                  * in nvptx-target definition
                  * instead of compile-time constants 
                  */
-                nel *= 4;
-                nat  = new ArrayType(at->GetElementType(), nel);
+                nel *= at->GetElementCount();
+                nat = new ArrayType(at->GetElementType(), nel);
+                variable = false;
               }
               else
                 nat = new ArrayType(sym->type, nel);
@@ -375,7 +377,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                     NULL,
                     llvm::GlobalVariable::NotThreadLocal,
                     /*AddressSpace=*/3);
-              sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos);
+              sym->storagePtr = lConvertToGenericPtr(ctx, sym->storagePtr, sym->pos, variable);
               llvm::PointerType *ptrTy = llvm::PointerType::get(sym->type->LLVMType(g->ctx),0);
               sym->storagePtr = ctx->BitCastInst(sym->storagePtr, ptrTy, "uniform_decl");
 

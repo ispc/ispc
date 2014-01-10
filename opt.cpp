@@ -128,6 +128,7 @@ static llvm::Pass *CreateDebugPass(char * output);
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 static llvm::Pass *CreateFixBooleanSelectPass();
+static llvm::Pass *CreatePromoteLocalToPrivatePass();
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -574,6 +575,9 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
         optPM.add(CreateReplaceStdlibShiftPass(),229);
+        if (g->target->getISA() == Target::NVPTX)
+          optPM.add(CreatePromoteLocalToPrivatePass());
+#if 1
         optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
@@ -685,6 +689,7 @@ Optimize(llvm::Module *module, int optLevel) {
 
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
+#endif
     }
 #endif
 
@@ -5263,5 +5268,64 @@ static llvm::Pass *
 CreateFixBooleanSelectPass() {
     return new FixBooleanSelectPass();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Detect addrspace(3)
+///////////////////////////////////////////////////////////////////////////////
+
+class PromoteLocalToPrivatePass: public llvm::BasicBlockPass
+{
+  public:
+    static char ID; // Pass identification, replacement for typeid
+    PromoteLocalToPrivatePass() : BasicBlockPass(ID) {}
+
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char PromoteLocalToPrivatePass::ID = 0;
+
+bool 
+PromoteLocalToPrivatePass::runOnBasicBlock(llvm::BasicBlock &BB)
+{
+  std::vector<llvm::AllocaInst*> Allocas;
+
+  bool modifiedAny  = false;
+
+  llvm::Function *cvtFunc = m->module->getFunction("__cvt_loc2gen_var");
+
+  // Find allocas that are safe to promote, by looking at all instructions in
+  // the entry node
+  for (llvm::BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I)
+  {
+    llvm::Instruction *inst = &*I;
+    if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst))
+    {
+      llvm::Function *func = ci->getCalledFunction();
+      if (cvtFunc && (cvtFunc == func))
+      {
+#if 0
+        fprintf(stderr , "--found cvt-- name= %s \n",
+            I->getName().str().c_str());
+#endif
+        llvm::AllocaInst *alloca = new llvm::AllocaInst(LLVMTypes::Int64Type, "opt_loc2var", ci);
+        assert(alloca != NULL);
+#if 0
+        const int align = 8; // g->target->getNativeVectorAlignment();
+        alloca->setAlignment(align);
+#endif
+        ci->replaceAllUsesWith(alloca);
+        modifiedAny = true;
+      }
+    }
+  }
+  return modifiedAny;
+}
+
+static llvm::Pass *
+CreatePromoteLocalToPrivatePass() {
+    return new PromoteLocalToPrivatePass();
+}
+
+
 
 
