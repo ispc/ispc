@@ -1,0 +1,9 @@
+#!/bin/sh
+
+PTXCC=ptxcc
+ARGS=${@:2}
+$($PTXCC $1 -o $1.o) && \
+$(nvcc test_static_nvptx.cpp examples_ptx/nvcc_helpers.cu examples_ptx/ispc_malloc.cpp $1.o -arch=sm_35 -Iexamples_ptx/ -D_CUDA_ -lcudadevrt $ARGS)
+
+
+
