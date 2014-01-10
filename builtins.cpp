@@ -697,6 +697,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             g->target->getISA() != Target::NEON16 &&
             g->target->getISA() != Target::NEON8)
 #endif // !__arm__
+        if (g->target->getISA() != Target::NVPTX)
         {
             Assert(bcTriple.getArch() == llvm::Triple::UnknownArch ||
                    mTriple.getArch() == bcTriple.getArch());

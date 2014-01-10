@@ -323,10 +323,6 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeNVPTXTargetInfo();
     LLVMInitializeNVPTXTarget();
     LLVMInitializeNVPTXAsmPrinter();
-#if 0
-    LLVMInitializeNVPTXAsmParser();
-    LLVMInitializeNVPTXDisassembler();
-#endif
     LLVMInitializeNVPTXTargetMC();
 
     char *file = NULL;

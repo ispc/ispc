@@ -278,6 +278,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             arch = "arm";
         else
 #endif
+         if(!strncmp(isa, "nvptx", 5))
+           arch = "nvptx64";
+         else
             arch = "x86-64";
     }
 
@@ -703,6 +706,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     else if (!strcasecmp(isa, "nvptx")) 
     {
         this->m_isa = Target::NVPTX;
+        this->m_cpu = "sm_35";
         this->m_nativeVectorWidth = 32;
         this->m_nativeVectorAlignment = 32;
         this->m_vectorWidth = 1;
@@ -872,6 +876,8 @@ Target::GetTripleString() const {
             triple.setArchName("i386");
         else if (m_arch == "x86-64")
             triple.setArchName("x86_64");
+        else if (m_arch == "nvptx64")
+          triple = llvm::Triple("nvptx64", "nvidia", "cuda");
         else
             triple.setArchName(m_arch);
     }
