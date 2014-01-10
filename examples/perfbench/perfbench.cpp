@@ -69,6 +69,7 @@ static PerfTest tests[] = {
     { xyzSumAOS, "serial", ispc::xyzSumAOSStdlib, "ispc", "AOS vector element sum (stdlib swizzle)" },
     { xyzSumAOS, "serial", ispc::xyzSumAOSNoCoalesce, "ispc", "AOS vector element sum (no coalescing)" },
     { xyzSumSOA, "serial", ispc::xyzSumSOA, "ispc", "SOA vector element sum" },
+    { xyzSumSOA, "serial", (FuncType *) ispc::xyzSumVarying, "ispc", "Varying vector element sum" },
     { ispc::gathers, "gather", ispc::loads, "vector load", "Memory reads" },
     { ispc::scatters, "scatter", ispc::stores, "vector store", "Memory writes" },
 };

@@ -4743,13 +4743,13 @@ have a declaration like:
   };
 
 Because ``varying`` types have size that depends on the size of the gang of
-program instances, ``ispc`` prohibits any varying types from being used in
-parameters to functions with the ``export`` qualifier.  (``ispc`` also
-prohibits passing structures that themselves have varying types as members,
-etc.)  Thus, all datatypes that are shared with the application must have
-the ``uniform`` or ``soa`` rate qualifier applied to them.  (See `Use
-"Structure of Arrays" Layout When Possible`_ in the Performance Guide for
-more discussion of how to load vectors of SOA data from the application.)
+program instances, ``ispc`` has restrictrictions on using varying types in
+parameters to functions with the ``export`` qualifier.  ``ispc `` prohibits
+parameters to exported functions to have varying type unless the parameter is
+of pointer type.  (That is, ``varying float`` isn't allowed, but ``varying float * uniform``
+(uniform pointer to varying float) is permitted.)  Care must be taken 
+by the programmer to ensure that the data being accessed through any 
+pointers to varying data has the correct organization. 
 
 Similarly, ``struct`` types shared with the application can also have
 embedded pointers.
@@ -4769,6 +4769,30 @@ On the ``ispc`` side, the corresponding ``struct`` declaration is:
   struct Foo {
       float * uniform foo, * uniform bar;
   };
+
+If a pointer to a varying ``struct`` type appears in an exported function,
+the generated header file will have a definition like (for 8-wide SIMD):
+
+::
+
+  // C/C++ code
+  struct Node {
+    int count[8];
+    float pos[3][8];
+  };
+
+
+In the case of multiple target compilation, ``ispc`` will generate multiple
+header files and a "general" header file with definitions for multiple sizes.
+Any pointers to varyings in exported functions will be rewritten as ``void *``.
+At runtime, the ``ispc`` dispatch mechanism will cast these pointers to the appropriate
+types.  Programmers can
+provide C/C++ code can with a mechanism to determine the gang width used 
+at runtime by ``ispc`` by creating an exported function that simply 
+returns the value of ``programCount``.  An example of such a function
+is provided in the file ``examples/util/util.isph`` included in the ``ispc`` 
+distribution.   
+
 
 There is one subtlety related to data layout to be aware of: ``ispc``
 stores ``uniform`` short-vector types in memory with their first element at
