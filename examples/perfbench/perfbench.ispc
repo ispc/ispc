@@ -110,8 +110,8 @@ export void xyzSumVarying(varying float array[], uniform int count,
     varying float * uniform ap = array;
     assert(programCount <= 8);
 
-    for (uniform int i = 0; i < count/3; i += 8) {
-      if (programCount == 4) {
+    if (programCount == 4) {
+      for (uniform int i = 0; i < count/3; i += 8) {
         float x0 = ap[0];
         float y0 = ap[2];
         float z0 = ap[4];
@@ -130,7 +130,9 @@ export void xyzSumVarying(varying float array[], uniform int count,
 
         ap += 6;
       }
-      else {
+    }
+    else {
+      for (uniform int i = 0; i < count/3; i += 8) {
         // programCount == 8
         float x = ap[0];
         float y = ap[1];
