@@ -327,6 +327,8 @@ __host__ void
 binomial_put_ispc_tasks( float Sa[],  float Xa[],  float Ta[],
                           float ra[],  float va[], 
                           float result[],  int count) {
+
+  cudaDeviceSetCacheConfig (cudaFuncCachePreferL1);
   binomial_put_ispc_tasks___export<<<1,32>>>(Sa,Xa,Ta,ra,va,result,count);
   cudaDeviceSynchronize();
 }

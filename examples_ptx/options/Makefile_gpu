@@ -2,7 +2,7 @@ PROG=options
 ISPC_SRC=options.ispc
 CU_SRC=options.cu
 CXX_SRC=options.cpp  options_serial.cpp
-PTXCC_REGMAX=32
+PTXCC_REGMAX=128
 
 
 LLVM_GPU=1

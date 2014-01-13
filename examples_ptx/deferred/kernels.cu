@@ -133,7 +133,7 @@ struct Uniform
     data[chunkIdx] = shdata[programIndex];
   }
 };
-#elif 0
+#elif 1
 template<typename T, int N>
 struct Uniform
 {
