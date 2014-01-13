@@ -104,6 +104,52 @@ export void xyzSumSOA(uniform float array[], uniform int count,
     result[2] = reduce_add(zsum);
 }
 
+export void xyzSumVarying(varying float array[], uniform int count,
+                          uniform float zeros[], uniform float result[]) {
+    float xsum = 0, ysum = 0, zsum = 0;
+    varying float * uniform ap = array;
+    assert(programCount <= 8);
+
+    if (programCount == 4) {
+      for (uniform int i = 0; i < count/3; i += 8) {
+        float x0 = ap[0];
+        float y0 = ap[2];
+        float z0 = ap[4];
+
+        xsum += x0;
+        ysum += y0;
+        zsum += z0;
+
+        float x1 = ap[1];
+        float y1 = ap[3];
+        float z1 = ap[5];
+
+        xsum += x1;
+        ysum += y1;
+        zsum += z1;
+
+        ap += 6;
+      }
+    }
+    else {
+      for (uniform int i = 0; i < count/3; i += 8) {
+        // programCount == 8
+        float x = ap[0];
+        float y = ap[1];
+        float z = ap[2];
+
+        xsum += x;
+        ysum += y;
+        zsum += z;
+
+        ap += 3;
+      }
+    }
+    result[0] = reduce_add(xsum);
+    result[1] = reduce_add(ysum);
+    result[2] = reduce_add(zsum);
+}
+
 export void gathers(uniform float array[], uniform int count,
                     uniform float zeros[], uniform float result[]) {
     float sum = 0;
