@@ -2,7 +2,7 @@ PROG=stencil
 ISPC_SRC=stencil.ispc
 CU_SRC=stencil.cu
 CXX_SRC=stencil.cpp  stencil_serial.cpp
-PTXCC_REGMAX=128
+PTXCC_REGMAX=92
 
 LLVM_GPU=1
 NVVM_GPU=1

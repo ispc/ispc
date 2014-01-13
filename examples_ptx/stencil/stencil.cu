@@ -22,7 +22,7 @@ stencil_step( int x0,  int x1,
         const int x = xb + programIndex;
 
         int index = (z * Nxy) + (y * Nx) + x;
-#define A_cur(x, y, z) __ldg(&Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)])
+#define A_cur(x, y, z) *(&Ain[index + (x) + ((y) * Nx) + ((z) * Nxy)])
 #define A_next(x, y, z) Aout[index + (x) + ((y) * Nx) + ((z) * Nxy)]
         double div = 
           coef0 *  A_cur(0, 0, 0) +
@@ -38,7 +38,7 @@ stencil_step( int x0,  int x1,
 
         if (x < x1)
           A_next(0, 0, 0) = 2.0 * A_cur(0, 0, 0) - A_next(0, 0, 0) + 
-            __ldg(&vsq[index]) * div;
+            *(&vsq[index]) * div;
       }
 }
 

@@ -100,9 +100,15 @@ stencil_step(uniform int x0, uniform int x1,
     }
 }
 
+#ifdef __NVPTX__
 #define SPANX 32
-#define SPANY 2
-#define SPANZ 4
+#define SPANY 4
+#define SPANZ 8
+#else
+#define SPANX 64
+#define SPANY 4
+#define SPANZ 8
+#endif
 
 static task void
 stencil_step_task(uniform int x0, uniform int x1,
