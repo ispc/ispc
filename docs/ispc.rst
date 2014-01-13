@@ -4787,7 +4787,7 @@ header files and a "general" header file with definitions for multiple sizes.
 Any pointers to varyings in exported functions will be rewritten as ``void *``.
 At runtime, the ``ispc`` dispatch mechanism will cast these pointers to the appropriate
 types.  Programmers can
-provide C/C++ code can with a mechanism to determine the gang width used 
+provide C/C++ code with a mechanism to determine the gang width used 
 at runtime by ``ispc`` by creating an exported function that simply 
 returns the value of ``programCount``.  An example of such a function
 is provided in the file ``examples/util/util.isph`` included in the ``ispc`` 
