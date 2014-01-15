@@ -498,6 +498,11 @@ Function::GenerateIR() {
                 appFunction->setDoesNotThrow();
 #endif
 
+                for (int i = 0; i < type->GetNumParameters(); i++) {
+                    if (function->doesNotAlias(i)) {
+                        appFunction->setDoesNotAlias(i);
+                    }
+                }
                 g->target->markFuncWithTargetAttr(appFunction);
 
                 if (appFunction->getName() != functionName) {
