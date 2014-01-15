@@ -502,8 +502,10 @@ Function::GenerateIR() {
 #else
                 appFunction->setDoesNotThrow();
 #endif
-
-                for (int i = 0; i < type->GetNumParameters(); i++) {
+                // We should iterate from 1 because zero parameter is return.
+                // We should iterate till getNumParams instead of getNumParams+1 because new
+                // function is export function and doesn't contain the last parameter "mask".
+                for (int i = 1; i < function->getFunctionType()->getNumParams(); i++) {
                     if (function->doesNotAlias(i)) {
                         appFunction->setDoesNotAlias(i);
                     }
