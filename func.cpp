@@ -69,10 +69,15 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/PassManager.h>
-#include <llvm/Analysis/Verifier.h>
+#if defined(LLVM_3_5)
+    #include <llvm/IR/Verifier.h>
+    #include <llvm/IR/IRPrintingPasses.h>
+#else
+    #include <llvm/Analysis/Verifier.h>
+    #include <llvm/Assembly/PrintModulePass.h>
+#endif
 #include <llvm/Support/CFG.h>
 #include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Assembly/PrintModulePass.h>
 
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;

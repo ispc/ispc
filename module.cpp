@@ -95,7 +95,13 @@
   #include <llvm/IR/DataLayout.h>
   #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
-#include <llvm/Analysis/Verifier.h>
+#if defined(LLVM_3_5)
+    #include <llvm/IR/Verifier.h>
+    #include <llvm/IR/IRPrintingPasses.h>
+#else
+    #include <llvm/Analysis/Verifier.h>
+    #include <llvm/Assembly/PrintModulePass.h>
+#endif
 #include <llvm/Support/CFG.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
@@ -103,7 +109,6 @@
 #include <clang/Basic/TargetInfo.h>
 #include <llvm/Support/ToolOutputFile.h>
 #include <llvm/Support/Host.h>
-#include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Bitcode/ReaderWriter.h>
 
