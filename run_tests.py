@@ -271,8 +271,8 @@ def run_test(testname):
                   print "Grepping: %s" % grep_cmd
                 sp = subprocess.Popen(grep_cmd, shell=True)
                 sp.communicate()
-                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --emit-asm --target=%s" % \
-                       (filename4ptx, obj_name, options.arch, options.target)
+                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --emit-asm --target=%s" % \
+                       (filename4ptx, obj_name, options.target)
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
