@@ -71,10 +71,15 @@
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/PassManager.h>
-#include <llvm/Analysis/Verifier.h>
+#if defined(LLVM_3_5)
+    #include <llvm/IR/Verifier.h>
+    #include <llvm/IR/IRPrintingPasses.h>
+#else
+    #include <llvm/Analysis/Verifier.h>
+    #include <llvm/Assembly/PrintModulePass.h>
+#endif
 #include <llvm/Support/CFG.h>
 #include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Assembly/PrintModulePass.h>
 
 Function::Function(Symbol *s, Stmt *c) {
     sym = s;
@@ -522,7 +527,14 @@ Function::GenerateIR() {
 #else
                 appFunction->setDoesNotThrow();
 #endif
-
+                // We should iterate from 1 because zero parameter is return.
+                // We should iterate till getNumParams instead of getNumParams+1 because new
+                // function is export function and doesn't contain the last parameter "mask".
+                for (int i = 1; i < function->getFunctionType()->getNumParams(); i++) {
+                    if (function->doesNotAlias(i)) {
+                        appFunction->setDoesNotAlias(i);
+                    }
+                }
                 g->target->markFuncWithTargetAttr(appFunction);
 
                 if (appFunction->getName() != functionName) {

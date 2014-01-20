@@ -63,7 +63,13 @@
 #include "llvm/Analysis/ConstantsScanner.h"
 #include "llvm/Analysis/FindUsedTypes.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/Verifier.h"
+#if defined(LLVM_3_5)
+    #include "llvm/IR/Verifier.h"
+    #include <llvm/IR/IRPrintingPasses.h>
+#else
+    #include "llvm/Analysis/Verifier.h"
+    #include <llvm/Assembly/PrintModulePass.h>
+#endif
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
@@ -102,7 +108,6 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Support/ToolOutputFile.h>
-#include <llvm/Assembly/PrintModulePass.h>
 #include <algorithm>
 // Some ms header decided to define setjmp as _setjmp, undo this for this file.
 #ifdef _MSC_VER
@@ -241,9 +246,7 @@ namespace {
   class CBEMCAsmInfo : public llvm::MCAsmInfo {
   public:
     CBEMCAsmInfo() {
-#if defined(LLVM_3_5)
-      GlobalPrefix = '\0';
-#else
+#if !defined(LLVM_3_5)
       GlobalPrefix = "";
 #endif
       PrivateGlobalPrefix = "";

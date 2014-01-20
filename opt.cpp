@@ -68,7 +68,13 @@
 #endif
 #include <llvm/PassManager.h>
 #include <llvm/PassRegistry.h>
-#include <llvm/Assembly/PrintModulePass.h>
+#if defined(LLVM_3_5)
+    #include <llvm/IR/Verifier.h>
+    #include <llvm/IR/IRPrintingPasses.h>
+#else
+    #include <llvm/Analysis/Verifier.h>
+    #include <llvm/Assembly/PrintModulePass.h>
+#endif
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Target/TargetLibraryInfo.h>
 #include <llvm/ADT/Triple.h>
@@ -86,7 +92,6 @@
   #include <llvm/Analysis/TargetTransformInfo.h>
 #endif
 #include <llvm/Target/TargetMachine.h>
-#include <llvm/Analysis/Verifier.h>
 #include <llvm/Analysis/Passes.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/PatternMatch.h>

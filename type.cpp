@@ -429,8 +429,7 @@ AtomicType::Mangle() const {
 std::string
 AtomicType::GetCDeclaration(const std::string &name) const {
     std::string ret;
-    if (variability != Variability::Uniform &&
-        variability != Variability::SOA) {
+    if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
         return ret;
     }
@@ -457,9 +456,15 @@ AtomicType::GetCDeclaration(const std::string &name) const {
         ret += name;
     }
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::Varying ||
+        variability == Variability::SOA) {
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        // get program count
+        // g->mangleFunctionsNamesWithTarget - hack check for void *
+        int vWidth = (variability == Variability::Varying) ? 
+                        g->target->getVectorWidth() :
+                        variability.soaWidth;
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
@@ -751,8 +756,7 @@ EnumType::Mangle() const {
 
 std::string
 EnumType::GetCDeclaration(const std::string &varName) const {
-    if (variability != Variability::Uniform &&
-        variability != Variability::SOA) {
+    if (variability == Variability::Unbound) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -768,9 +772,13 @@ EnumType::GetCDeclaration(const std::string &varName) const {
         ret += varName;
     }
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::SOA ||
+        variability == Variability::Varying) {
+        int vWidth = (variability == Variability::Varying) ?
+            g->target->getVectorWidth() :
+            variability.soaWidth;
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1077,8 +1085,7 @@ PointerType::Mangle() const {
 std::string
 PointerType::GetCDeclaration(const std::string &name) const {
     if (isSlice ||
-        (variability != Variability::Uniform &&
-         variability != Variability::SOA)) {
+        (variability == Variability::Unbound)) {
         Assert(m->errorCount > 0);
         return "";
     }
@@ -1094,9 +1101,13 @@ PointerType::GetCDeclaration(const std::string &name) const {
     ret += std::string(" ");
     ret += name;
 
-    if (variability == Variability::SOA) {
+    if (variability == Variability::SOA ||
+        variability == Variability::Varying) {
+        int vWidth = (variability == Variability::Varying) ?
+            g->target->getVectorWidth() :
+            variability.soaWidth;
         char buf[32];
-        sprintf(buf, "[%d]", variability.soaWidth);
+        sprintf(buf, "[%d]", vWidth);
         ret += buf;
     }
 
@@ -1422,6 +1433,7 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     }
 
     int soaWidth = base->GetSOAWidth();
+    int vWidth = (base->IsVaryingType()) ? g->target->getVectorWidth() : 0;
     base = base->GetAsUniformType();
 
     std::string s = base->GetCDeclaration(name);
@@ -1440,6 +1452,12 @@ ArrayType::GetCDeclaration(const std::string &name) const {
     if (soaWidth > 0) {
         char buf[16];
         sprintf(buf, "[%d]", soaWidth);
+        s += buf;
+    }
+
+    if (vWidth > 0) {
+        char buf[16];
+        sprintf(buf, "[%d]", vWidth);
         s += buf;
     }
 
@@ -2851,13 +2869,55 @@ FunctionType::GetCDeclaration(const std::string &fname) const {
             CastType<ArrayType>(pt->GetBaseType()) != NULL) {
             type = new ArrayType(pt->GetBaseType(), 0);
         }
-
+        
         if (paramNames[i] != "")
-            ret += type->GetCDeclaration(paramNames[i]);
+          ret += type->GetCDeclaration(paramNames[i]);
         else
-            ret += type->GetString();
+          ret += type->GetString();
         if (i != paramTypes.size() - 1)
-            ret += ", ";
+          ret += ", ";
+    }
+    ret += ")";
+    return ret;
+}
+
+
+std::string
+FunctionType::GetCDeclarationForDispatch(const std::string &fname) const {
+    std::string ret;
+    ret += returnType->GetCDeclaration("");
+    ret += " ";
+    ret += fname;
+    ret += "(";
+    for (unsigned int i = 0; i < paramTypes.size(); ++i) {
+        const Type *type = paramTypes[i];
+
+        // Convert pointers to arrays to unsized arrays, which are more clear
+        // to print out for multidimensional arrays (i.e. "float foo[][4] "
+        // versus "float (foo *)[4]").
+        const PointerType *pt = CastType<PointerType>(type);
+        if (pt != NULL &&
+            CastType<ArrayType>(pt->GetBaseType()) != NULL) {
+            type = new ArrayType(pt->GetBaseType(), 0);
+        }
+        
+        // Change pointers to varying thingies to void *
+        if (pt != NULL && pt->GetBaseType()->IsVaryingType()) {
+          PointerType *t = PointerType::Void;
+          
+          if (paramNames[i] != "")
+            ret += t->GetCDeclaration(paramNames[i]);
+          else
+            ret += t->GetString();
+        }
+        else {
+          if (paramNames[i] != "")
+            ret += type->GetCDeclaration(paramNames[i]);
+          else
+            ret += type->GetString();
+        }
+        if (i != paramTypes.size() - 1)
+          ret += ", ";
     }
     ret += ")";
     return ret;
