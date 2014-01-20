@@ -264,7 +264,7 @@ def run_test(testname):
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
             if is_nvptx_target:
-                filename4ptx = filename+".ptx.parsed.ispc"
+                filename4ptx = filename+".ptx.parsed_ispc"
                 grep_cmd = "grep -v 'export uniform int width' %s > %s " % \
                     (filename, filename4ptx)
                 if options.verbose:
