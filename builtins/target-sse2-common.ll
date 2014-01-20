@@ -34,7 +34,6 @@ define_prefetches()
 define_shuffles()
 aossoa()
 rdrand_decls()
-saturation_arithmetic_uniform()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; rcp

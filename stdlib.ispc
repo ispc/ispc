@@ -57,6 +57,34 @@
   #error Unknown value of ISPC_MASK_BITS
 #endif
 
+/* Limits of integral types. */
+#ifndef INT8_MIN
+#define INT8_MIN               (-128)
+#endif
+#ifndef INT16_MIN
+#define INT16_MIN              (-32768)
+#endif
+#ifndef INT32_MIN
+#define INT32_MIN              (-2147483648)
+#endif
+#ifndef INT8_MAX
+#define INT8_MAX               (127)
+#endif
+#ifndef INT16_MAX
+#define INT16_MAX              (32767)
+#endif
+#ifndef INT32_MAX
+#define INT32_MAX              (2147483647)
+#endif
+#ifndef UINT8_MAX
+#define UINT8_MAX              (255)
+#endif
+#ifndef UINT16_MAX
+#define UINT16_MAX             (65535)
+#endif
+#ifndef UINT32_MAX
+#define UINT32_MAX             (4294967295)
+#endif
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
@@ -4261,7 +4289,12 @@ static inline void fastmath() {
 // saturation arithmetic
 
 static inline uniform int8 saturating_add(uniform int8 a, uniform int8 b) {
-    return __padds_i8(a, b);
+    uniform unsigned int8 a_unsig = a, b_unsig = b;
+    uniform unsigned int8 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 7) + INT8_MAX;
+    if ((uniform int8) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
 }
 
 static inline varying int8 saturating_add(varying int8 a, varying int8 b) {
@@ -4269,7 +4302,12 @@ static inline varying int8 saturating_add(varying int8 a, varying int8 b) {
 }
 
 static inline uniform int16 saturating_add(uniform int16 a, uniform int16 b) {
-    return __padds_i16(a, b);
+    uniform unsigned int16 a_unsig = a, b_unsig = b;
+    uniform unsigned int16 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 15) + INT16_MAX;
+    if ((uniform int16) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
 }
 
 static inline varying int16 saturating_add(varying int16 a, varying int16 b) {
@@ -4278,7 +4316,9 @@ static inline varying int16 saturating_add(varying int16 a, varying int16 b) {
 
 static inline uniform unsigned int8 saturating_add(uniform unsigned int8 a, 
                                                    uniform unsigned int8 b) {
-    return __paddus_i8(a, b);
+    uniform unsigned int8 result = a + b;
+    result |= (-(uniform int8)(result < a));
+    return result;
 }
 
 static inline varying unsigned int8 saturating_add(varying unsigned int8 a, 
@@ -4288,7 +4328,9 @@ static inline varying unsigned int8 saturating_add(varying unsigned int8 a,
 
 static inline uniform unsigned int16 saturating_add(uniform unsigned int16 a, 
                                                     uniform unsigned int16 b) {
-    return __paddus_i16(a, b);
+    uniform unsigned int16 result = a + b;
+    result |= (-(uniform int16)(result < a));
+    return result;
 }
 
 static inline varying unsigned int16 saturating_add(varying unsigned int16 a, 
@@ -4297,7 +4339,12 @@ static inline varying unsigned int16 saturating_add(varying unsigned int16 a,
 }
 
 static inline uniform int8 saturating_sub(uniform int8 a, uniform int8 b) {
-    return __psubs_i8(a, b);
+    uniform unsigned int8 a_unsig = a, b_unsig = b;
+    uniform unsigned int8 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 7) + INT8_MAX;
+    if ((uniform int8) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
 }
 
 static inline varying int8 saturating_sub(varying int8 a, varying int8 b) {
@@ -4305,7 +4352,12 @@ static inline varying int8 saturating_sub(varying int8 a, varying int8 b) {
 }
 
 static inline uniform int16 saturating_sub(uniform int16 a, uniform int16 b) {
-    return __psubs_i16(a, b);
+    uniform unsigned int16 a_unsig = a, b_unsig = b;
+    uniform unsigned int16 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 15) + INT16_MAX;
+    if ((uniform int16) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
 }
 
 static inline varying int16 saturating_sub(varying int16 a, varying int16 b) {
@@ -4314,7 +4366,9 @@ static inline varying int16 saturating_sub(varying int16 a, varying int16 b) {
 
 static inline uniform unsigned int8 saturating_sub(uniform unsigned int8 a, 
                                                    uniform unsigned int8 b) {
-    return __psubus_i8(a, b);
+    uniform unsigned int8 result = a - b;
+    result &= (-(uniform int8)(result <= a));
+    return result;
 }
 
 static inline varying unsigned int8 saturating_sub(varying unsigned int8 a, 
@@ -4324,7 +4378,9 @@ static inline varying unsigned int8 saturating_sub(varying unsigned int8 a,
 
 static inline uniform unsigned int16 saturating_sub(uniform unsigned int16 a, 
                                                     uniform unsigned int16 b) {
-    return __psubus_i16(a, b);
+    uniform unsigned int16 result = a - b;
+    result &= (-(uniform int16)(result <= a));
+    return result;
 }
 
 static inline varying unsigned int16 saturating_sub(varying unsigned int16 a, 

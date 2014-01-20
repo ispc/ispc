@@ -41,7 +41,6 @@ stdlib_core()
 scans()
 reduce_equal(WIDTH)
 rdrand_decls()
-saturation_arithmetic_uniform()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; broadcast/rotate/shuffle
