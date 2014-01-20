@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
     f_duf(returned_result, vdouble, 5.f);
 #elif (TEST_SIG == 6)
     f_di(returned_result, vdouble, vint2);
-Nelse
+#else
 #error "Unknown or unset TEST_SIG value"
 #endif
 
