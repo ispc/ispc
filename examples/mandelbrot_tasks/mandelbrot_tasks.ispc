@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#define _3D_TASKING
+//#define _3D_TASKING //uncomment for using "3d tasking" model. This can influence performance.
 
 static inline int
 mandel(float c_re, float c_im, int count) {
