@@ -512,6 +512,7 @@ Function::GenerateIR() {
                 if (g->target->getISA() == Target::NVPTX)
                 {
                   functionName += std::string("___export");  /* add ___export to the end, for ptxcc to recognize it is exported */
+#if 0
                   llvm::NamedMDNode* annotations =
                     m->module->getOrInsertNamedMetadata("nvvm.annotations");
                   llvm::SmallVector<llvm::Value*, 3> av;
@@ -519,6 +520,7 @@ Function::GenerateIR() {
                   av.push_back(llvm::MDString::get(*g->ctx, "kernel"));
                   av.push_back(llvm::ConstantInt::get(llvm::IntegerType::get(*g->ctx,32), 1));
                   annotations->addOperand(llvm::MDNode::get(*g->ctx, av)); 
+#endif
                 }
                 llvm::Function *appFunction =
                     llvm::Function::Create(ftype, linkage, functionName.c_str(), m->module);

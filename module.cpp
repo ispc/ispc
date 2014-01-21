@@ -427,15 +427,6 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
-#if 0
-    if (g->target->getISA() == Target::NVPTX &&
-        type->IsVaryingType())
-    {
-        Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
-        return;
-    }
-#endif
-
     if (Type::Equal(type, AtomicType::Void)) {
         Error(pos, "\"void\" type global variable is illegal.");
         return;
@@ -452,6 +443,17 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
               "expression.");
         return;
     }
+
+#if 1
+    if (g->target->getISA() == Target::NVPTX && 
+        at != NULL &&
+        type->IsVaryingType())
+    {
+        Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
+        return;
+    }
+#endif
+
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL)
@@ -2130,6 +2132,7 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
       opts.addMacroDef("cif=if");
       opts.addMacroDef("cfor=for");
       opts.addMacroDef("cwhile=while");
+      opts.addMacroDef("ccontinue=continue");
       opts.addMacroDef("cdo=do");
       opts.addMacroDef("taskIndex=blockIndex0()");
       opts.addMacroDef("taskCount=blockCount0()");

@@ -497,7 +497,11 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        optPM.add(CreateImproveMemoryOpsPass(), 100);
+        
+        if (g->opt.disableGatherScatterOptimizations == false &&
+            g->target->getVectorWidth() > 1) 
+          optPM.add(CreateImproveMemoryOpsPass(), 100);
+
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateReplacePseudoMemoryOpsPass());
 

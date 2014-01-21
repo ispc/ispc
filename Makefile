@@ -36,7 +36,7 @@
 
 # If you have your own special version of llvm and/or clang, change
 # these variables to match.
-LLVM_CONFIG=$(shell which $(HOME)/usr/local/llvm/bin-trunk/bin/llvm-config)
+LLVM_CONFIG=$(shell which $(HOME)/usr/local/llvm/bin-3.4/bin/llvm-config)
 CLANG_INCLUDE=$(shell $(LLVM_CONFIG) --includedir)
 
 # Enable ARM by request

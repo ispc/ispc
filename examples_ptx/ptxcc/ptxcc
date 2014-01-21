@@ -10,7 +10,7 @@ DEPTX=dePTX
 NVCC=nvcc
 
 $DEPTX < $PTXSRC > $PTXCU &&
-$NVCC -arch=sm_35 -dc $NVCCPARM -dryrun $PTXCU 2>&1 | \
+$NVCC -arch=sm_35  -dc $NVCCPARM -dryrun $PTXCU 2>&1 | \
   sed 's/\#\$//g'| \
   awk '{ if ($1 == "LIBRARIES=") print $1$2; else if ($1 == "cicc") print "cp '$PTXSRC'", $NF; else print $0 }' > $PTXSH &&
 sh $PTXSH

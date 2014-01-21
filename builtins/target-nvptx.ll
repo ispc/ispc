@@ -653,9 +653,19 @@ define  i1 @__none(<1 x i1>) nounwind readnone alwaysinline {
 declare i16 @__reduce_add_int8(<WIDTH x i8>) nounwind readnone
 declare i32 @__reduce_add_int16(<WIDTH x i16>) nounwind readnone
 
-define  float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline {
-  %r = extractelement <1 x float> %v, i32 0
-  ret float %r
+define float @__reduce_add_float(<1 x float> %v) nounwind readonly alwaysinline {
+  %value = extractelement <1 x float> %v, i32 0
+  %call = tail call float @__shfl_xor_float_nvptx(float %value, i32 16)
+  %call1 = fadd float %call, %value 
+  %call.1 = tail call float @__shfl_xor_float_nvptx(float %call1, i32 8)
+  %call1.1 = fadd float %call1, %call.1 
+  %call.2 = tail call float @__shfl_xor_float_nvptx(float %call1.1, i32 4)
+  %call1.2 = fadd float %call1.1, %call.2
+  %call.3 = tail call float @__shfl_xor_float_nvptx(float %call1.2, i32 2)
+  %call1.3 = fadd float %call1.2, %call.3 
+  %call.4 = tail call float @__shfl_xor_float_nvptx(float %call1.3, i32 1)
+  %call1.4 = fadd float %call1.3, %call.4 
+  ret float %call1.4
 }
 
 define  float @__reduce_min_float(<1 x float>) nounwind readnone {

@@ -257,7 +257,7 @@ def run_test(testname):
                   cc_cmd = "%s %s -DTEST_SIG=%d -o %s" % \
                       (nvptxcc_exe_rel, obj_name, match, exe_name)
 
-            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
+            ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --arch=%s --target=%s" % \
                        (filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
@@ -271,7 +271,7 @@ def run_test(testname):
                   print "Grepping: %s" % grep_cmd
                 sp = subprocess.Popen(grep_cmd, shell=True)
                 sp.communicate()
-                ispc_cmd = ispc_exe_rel + " --woff %s -o %s --emit-asm --target=%s" % \
+                ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
                        (filename4ptx, obj_name, options.target)
 
         # compile the ispc code, make the executable, and run it...
@@ -287,7 +287,7 @@ def run_test(testname):
                     basename = os.path.basename(filename)
                     os.unlink("%s.pdb" % basename)
                     os.unlink("%s.ilk" % basename)
-            os.unlink(obj_name)
+#            os.unlink(obj_name)
         except:
             None
 

@@ -1410,7 +1410,7 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-  if (g->target->getISA() != Target::NVPTX)
+  if (1 || g->target->getISA() != Target::NVPTX)
   {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
