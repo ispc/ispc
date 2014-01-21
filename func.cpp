@@ -489,7 +489,11 @@ Function::GenerateIR() {
     }
 
     if (m->errorCount == 0) {
+#if defined (LLVM_3_5)
+        if (llvm::verifyFunction(*function) == true) {
+#else
         if (llvm::verifyFunction(*function, llvm::ReturnStatusAction) == true) {
+#endif
             if (g->debugPrint)
                 function->dump();
             FATAL("Function verificication failed");
@@ -550,8 +554,12 @@ Function::GenerateIR() {
                     emitCode(&ec, appFunction, firstStmtPos);
                     if (m->errorCount == 0) {
                         sym->exportedFunction = appFunction;
+#if defined(LLVM_3_5)
+                        if (llvm::verifyFunction(*appFunction) == true) {
+#else
                         if (llvm::verifyFunction(*appFunction,
                                                  llvm::ReturnStatusAction) == true) {
+#endif
                             if (g->debugPrint)
                                 appFunction->dump();
                             FATAL("Function verificication failed");

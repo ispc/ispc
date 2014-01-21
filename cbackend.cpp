@@ -2327,7 +2327,11 @@ bool CWriter::doInitialization(llvm::Module &M) {
       if (I->hasExternalLinkage() || I->hasExternalWeakLinkage() ||
           I->hasCommonLinkage())
         Out << "extern ";
+#if defined (LLVM_3_5)
+      else if (I->hasDLLImportStorageClass())
+#else
       else if (I->hasDLLImportLinkage())
+#endif
         Out << "__declspec(dllimport) ";
       else
         continue; // Internal Global
@@ -2499,11 +2503,13 @@ bool CWriter::doInitialization(llvm::Module &M) {
 
         if (I->hasLocalLinkage())
           Out << "static ";
-        else if (I->hasDLLImportLinkage())
-          Out << "__declspec(dllimport) ";
-        else if (I->hasDLLExportLinkage())
-          Out << "__declspec(dllexport) ";
-
+#if defined(LLVM_3_5)
+        else if (I->hasDLLImportStorageClass()) Out << "__declspec(dllimport) ";
+        else if (I->hasDLLExportStorageClass()) Out << "__declspec(dllexport) ";
+#else
+        else if (I->hasDLLImportLinkage()) Out << "__declspec(dllimport) ";
+        else if (I->hasDLLExportLinkage()) Out << "__declspec(dllexport) ";
+#endif
         // Thread Local Storage
         if (I->isThreadLocal())
           Out << "__thread ";
@@ -2782,8 +2788,13 @@ void CWriter::printFunctionSignature(const llvm::Function *F, bool Prototype) {
   bool isStructReturn = F->hasStructRetAttr();
 
   if (F->hasLocalLinkage()) Out << "static ";
+#if defined(LLVM_3_5)
+  if (F->hasDLLImportStorageClass()) Out << "__declspec(dllimport) ";
+  if (F->hasDLLExportStorageClass()) Out << "__declspec(dllexport) ";
+#else
   if (F->hasDLLImportLinkage()) Out << "__declspec(dllimport) ";
   if (F->hasDLLExportLinkage()) Out << "__declspec(dllexport) ";
+#endif
   switch (F->getCallingConv()) {
    case llvm::CallingConv::X86_StdCall:
     Out << "__attribute__((stdcall)) ";

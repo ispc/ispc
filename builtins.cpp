@@ -658,13 +658,21 @@ lSetInternalFunctions(llvm::Module *module) {
 void
 AddBitcodeToModule(const unsigned char *bitcode, int length,
                    llvm::Module *module, SymbolTable *symbolTable) {
-    std::string bcErr;
     llvm::StringRef sb = llvm::StringRef((char *)bitcode, length);
     llvm::MemoryBuffer *bcBuf = llvm::MemoryBuffer::getMemBuffer(sb);
+#if defined(LLVM_3_5)
+    llvm::ErrorOr<llvm::Module *> ModuleOrErr = llvm::parseBitcodeFile(bcBuf, *g->ctx);
+    if (llvm::error_code EC = ModuleOrErr.getError())
+        Error(SourcePos(), "Error parsing stdlib bitcode: %s", EC.message().c_str());
+    else {
+        llvm::Module *bcModule = ModuleOrErr.get();
+#else
+    std::string bcErr;
     llvm::Module *bcModule = llvm::ParseBitcodeFile(bcBuf, *g->ctx, &bcErr);
     if (!bcModule)
         Error(SourcePos(), "Error parsing stdlib bitcode: %s", bcErr.c_str());
     else {
+#endif
         // FIXME: this feels like a bad idea, but the issue is that when we
         // set the llvm::Module's target triple in the ispc Module::Module
         // constructor, we start by calling llvm::sys::getHostTriple() (and
