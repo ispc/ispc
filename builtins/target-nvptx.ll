@@ -1062,6 +1062,69 @@ shuffle1(i64)
 shuffle1(float)
 shuffle1(double)
 
+define(`shuffle2',`
+define <1 x $1> @__shuffle2_$1(<1 x $1>, <1 x $1>, <1 x i32>) nounwind readnone alwaysinline
+{
+  %val1 = extractelement <1 x $1> %0, i32 0
+  %val2 = extractelement <1 x $1> %1, i32 0
+  %lane = extractelement <1 x i32> %2, i32 0
+  %c    = icmp slt i32 %lane, 32              
+  %val  = select i1 %c, $1 %val1, $1 %val2
+  %lane_mask = and i32 %lane, 31
+  %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %lane_mask);
+  %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
+  ret <1 x $1> %retv
+}
+')
+shuffle2(i8)
+shuffle2(i16)
+shuffle2(i32)
+shuffle2(i64)
+shuffle2(float)
+shuffle2(double)
+
+define(`shift',`
+define <1 x $1> @__shift_$1(<1 x $1>, i32) nounwind readnone alwaysinline
+{
+  %val  = extractelement <1 x $1> %0, i32 0
+  %tid  = tail call i32 @__tid_x()
+  %lane = and i32 %tid,  31
+  %src  = add i32 %lane, %1
+  %ret  = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %src)
+  %c1   = icmp sge i32 %src, 0
+  %c2   = icmp slt i32 %src, 32
+  %c    = and i1 %c1, %c2
+  %rets = select i1 %c, $1 %ret, $1 zeroinitializer
+  %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
+  ret <1 x $1> %retv
+}
+')
+shift(i8)
+shift(i16)
+shift(i32)
+shift(i64)
+shift(float)
+shift(double)
+
+define(`rotate', `
+define <1 x $1> @__rotate_$1(<1 x $1>, i32) nounwind readnone alwaysinline 
+{
+  %val  = extractelement <1 x $1> %0, i32 0
+  %tid  = tail call i32 @__tid_x()
+  %src  = add i32 %tid, %1
+  %lane = and i32 %src, 31
+  %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %lane)
+  %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
+  ret <1 x $1> %retv
+}
+')
+rotate(i8)
+rotate(i16)
+rotate(i32)
+rotate(i64)
+rotate(float)
+rotate(double)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 

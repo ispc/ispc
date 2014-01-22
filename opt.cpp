@@ -586,7 +586,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalOptimizerPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
-        optPM.add(CreateReplaceStdlibShiftPass(),229);
+
+        if (g->target->getISA() != Target::NVPTX)
+          optPM.add(CreateReplaceStdlibShiftPass(),229);
+
         optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
