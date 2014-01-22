@@ -1210,14 +1210,13 @@ define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnon
 {
   %shft = tail call <1 x i32> @__shift_i32(<1 x i32> %0, i32 -1)
   %v0   = extractelement <1 x i32> %shft, i32 0
-  %m0   = extractelement <1 x i1 > %1,    i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v1   = select i1 %mask, i32 %v0, i32 -1
 
   %tid  = tail call i32 @__tid_x()
   %lane = and i32 %tid, 31
-  %m1   = icmp eq i32 %lane, 0
-
-  %mask = and i1 %m0, %m1
-  %v    = select i1 %mask, i32 %v0, i32 -1
+  %c    = icmp eq i32 %lane, 0
+  %v    = select i1 %c, i32 -1, i32 %v1
   
   %s1 = tail call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
   %s2 = tail call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
