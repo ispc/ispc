@@ -1141,6 +1141,120 @@ broadcast(i64)
 broadcast(float)
 broadcast(double)
 
+define i32 @__shfl_scan_add_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call i32 asm sideeffect  
+      "{.reg .u32 r0;
+       .reg .pred p;
+       shfl.up.b32 r0|p, $1, $2, 0;
+       @p add.u32 r0, r0, $3;
+       mov.u32 $0, r0;
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+  ret i32 %result;
+}
+define <1 x i32> @__exclusive_scan_add_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %v0   = extractelement <1 x i32> %0, i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v    = select i1 %mask, i32 %v0, i32 0
+  
+  %s1 = tail call i32 @__shfl_scan_add_step_i32(i32 %v,  i32  1);
+  %s2 = tail call i32 @__shfl_scan_add_step_i32(i32 %s1, i32  2);
+  %s3 = tail call i32 @__shfl_scan_add_step_i32(i32 %s2, i32  4);
+  %s4 = tail call i32 @__shfl_scan_add_step_i32(i32 %s3, i32  8);
+  %s5 = tail call i32 @__shfl_scan_add_step_i32(i32 %s4, i32 16);
+  %rets = sub i32 %s5, %v
+  %retv = insertelement <1 x i32> undef, i32 %rets, i32 0
+  ret <1 x i32> %retv
+}
+;;
+define i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call i32 asm sideeffect  
+      "{.reg .u32 r0;
+       .reg .pred p;
+       shfl.up.b32 r0|p, $1, $2, 0;
+       @p or.b32 r0, r0, $3;
+       mov.u32 $0, r0;
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+  ret i32 %result;
+}
+define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %shft = tail call <1 x i32> @__shift_i32(<1 x i32> %0, i32 -1)
+  %v0   = extractelement <1 x i32> %shft, i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v    = select i1 %mask, i32 %v0, i32 0
+  
+  %s1 = tail call i32 @__shfl_scan_or_step_i32(i32 %v,  i32  1);
+  %s2 = tail call i32 @__shfl_scan_or_step_i32(i32 %s1, i32  2);
+  %s3 = tail call i32 @__shfl_scan_or_step_i32(i32 %s2, i32  4);
+  %s4 = tail call i32 @__shfl_scan_or_step_i32(i32 %s3, i32  8);
+  %s5 = tail call i32 @__shfl_scan_or_step_i32(i32 %s4, i32 16);
+  %retv = insertelement <1 x i32> undef, i32 %s5, i32 0
+  ret <1 x i32> %retv
+}
+;;
+define i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call i32 asm sideeffect  
+      "{.reg .u32 r0;
+       .reg .pred p;
+       shfl.up.b32 r0|p, $1, $2, 0;
+       @p and.b32 r0, r0, $3;
+       mov.u32 $0, r0;
+       }", "=r,r,r,r"(i32 %partial, i32 %up_offset, i32 %partial) nounwind readnone alwaysinline
+  ret i32 %result;
+}
+define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %shft = tail call <1 x i32> @__shift_i32(<1 x i32> %0, i32 -1)
+  %v0   = extractelement <1 x i32> %shft, i32 0
+  %m0   = extractelement <1 x i1 > %1,    i32 0
+
+  %tid  = tail call i32 @__tid_x()
+  %lane = and i32 %tid, 31
+  %m1   = icmp eq i32 %lane, 0
+
+  %mask = and i1 %m0, %m1
+  %v    = select i1 %mask, i32 %v0, i32 -1
+  
+  %s1 = tail call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
+  %s2 = tail call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
+  %s3 = tail call i32 @__shfl_scan_and_step_i32(i32 %s2, i32  4);
+  %s4 = tail call i32 @__shfl_scan_and_step_i32(i32 %s3, i32  8);
+  %s5 = tail call i32 @__shfl_scan_and_step_i32(i32 %s4, i32 16);
+  %retv = insertelement <1 x i32> undef, i32 %s5, i32 0
+  ret <1 x i32> %retv
+}
+
+define float @__shfl_scan_add_step_float(float %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call float asm sideeffect  
+      "{.reg .f32 f0;
+       .reg .pred p;
+       shfl.up.b32 f0|p, $1, $2, 0;
+       @p add.f32 f0, f0, $3;
+       mov.f32 $0, f0;
+       }", "=f,f,r,f"(float %partial, i32 %up_offset, float %partial) nounwind readnone alwaysinline
+  ret float %result;
+}
+define <1 x float> @__exclusive_scan_add_float(<1 x float>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %v0   = extractelement <1 x float> %0, i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v    = select i1 %mask, float %v0, float zeroinitializer
+
+  %s1 = tail call float @__shfl_scan_add_step_float(float %v,  i32  1);
+  %s2 = tail call float @__shfl_scan_add_step_float(float %s1, i32  2);
+  %s3 = tail call float @__shfl_scan_add_step_float(float %s2, i32  4);
+  %s4 = tail call float @__shfl_scan_add_step_float(float %s3, i32  8);
+  %s5 = tail call float @__shfl_scan_add_step_float(float %s4, i32 16);
+  %rets = fsub float %s5, %v
+  %retv = insertelement <1 x float> undef, float %rets, i32 0
+  ret <1 x float> %retv
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
