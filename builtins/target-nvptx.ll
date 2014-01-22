@@ -1044,6 +1044,24 @@ define  i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue,
 
 }
 
+;;;;;;;;;;; shuffle
+define(`shuffle1', `
+define <1 x $1> @__shuffle_$1(<1 x $1>, <1 x i32>) nounwind readnone alwaysinline 
+{
+  %val  = extractelement <1 x $1> %0, i32 0
+  %lane = extractelement <1 x i32> %1, i32 0
+  %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %lane)
+  %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
+  ret <1 x $1> %retv
+}
+')
+shuffle1(i8)
+shuffle1(i16)
+shuffle1(i32)
+shuffle1(i64)
+shuffle1(float)
+shuffle1(double)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
