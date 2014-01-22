@@ -757,13 +757,6 @@ divert`'dnl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`shuffles', `
-define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
-  %v = extractelement <WIDTH x $1> %0, i32 %1
-  %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
-  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer 
-  ret <WIDTH x $1> %broadcast
-}
-
 ')
 
 define(`define_shuffles',`

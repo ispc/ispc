@@ -1125,6 +1125,22 @@ rotate(i64)
 rotate(float)
 rotate(double)
 
+define(`broadcast', `
+define <1 x $1> @__broadcast_$1(<1 x $1>, i32) nounwind readnone alwaysinline 
+{
+  %val  = extractelement <1 x $1> %0, i32 0
+  %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %1)
+  %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
+  ret <1 x $1> %retv
+}
+')
+broadcast(i8)
+broadcast(i16)
+broadcast(i32)
+broadcast(i64)
+broadcast(float)
+broadcast(double)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
 
