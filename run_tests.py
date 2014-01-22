@@ -205,6 +205,7 @@ def run_test(testname):
         else:
             global is_generic_target
             global is_nvptx_target
+            global is_nvptx_nvvm
             if is_windows:
                 if is_generic_target:
                     obj_name = "%s.cpp" % os.path.basename(filename)
@@ -220,7 +221,12 @@ def run_test(testname):
                 if is_generic_target:
                     obj_name = "%s.cpp" % testname
                 elif is_nvptx_target:
+                  if os.environ.get("NVVM") == "1":
+                    is_nvptx_nvvm = True
+                    obj_name = "%s.bc" % testname
+                  else:
                     obj_name = "%s.ptx" % testname
+                    is_nvptx_nvvm = False
                 else:
                     obj_name = "%s.o" % testname
                 exe_name = "%s.run" % testname
@@ -271,8 +277,12 @@ def run_test(testname):
                   print "Grepping: %s" % grep_cmd
                 sp = subprocess.Popen(grep_cmd, shell=True)
                 sp.communicate()
-                ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
-                       (filename4ptx, obj_name, options.target)
+                if is_nvptx_nvvm:
+                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-llvm --target=%s" % \
+                         (filename4ptx, obj_name, options.target)
+                else:
+                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
+                         (filename4ptx, obj_name, options.target)
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 

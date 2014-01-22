@@ -48,6 +48,8 @@ TAB [\t]*
 "("             { return '(';}
 ")"             { return ')';}
 ","             { return ',';}
+";"             { return ';';}
+"="             { return '=';}
 [0-9]+\.[0-9]+ { yylval->fvalue = atof(yytext); return TOKEN_FLOAT; }
 [0-9]+   { yylval->ivalue = atoi(yytext); return TOKEN_INT; }
 [a-zA-Z0-9_]+   { strcpy(yylval->svalue, yytext); return TOKEN_STRING;}

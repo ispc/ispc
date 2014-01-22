@@ -199,7 +199,10 @@ namespace parser
       if (_alignment > 0)
         s << "__attribute__((aligned(" << _alignment << "))) ";
       s << tokenToDataType(_dataTypeId, 0);
-      s << name << "[" << arrayDimensionsList[0] << "] = {0};\n\n";
+      if (arrayDimensionsList[0] == 0)
+        s << name << ";\n\n";
+      else
+        s << name << "[" << arrayDimensionsList[0] << "] = {0};\n\n";
       std::cout << s.str();
       arrayDimensionsList.clear();
     }
@@ -225,16 +228,16 @@ namespace parser
         case TOKEN_U16: assert(0); s << "u16_t "; break;
         case TOKEN_S16: assert(0); s << "s16_t "; break;
 
-        case TOKEN_B32:  assert(dim == 1); s << "b32_t "; break;
-        case TOKEN_U32:  assert(dim == 1); s << "u32_t "; break;
-        case TOKEN_S32:  assert(dim == 1); s << "s32_t "; break;
+        case TOKEN_B32:  assert(dim <= 1); s << "b32_t "; break;
+        case TOKEN_U32:  assert(dim <= 1); s << "u32_t "; break;
+        case TOKEN_S32:  assert(dim <= 1); s << "s32_t "; break;
 
-        case TOKEN_B64:  assert(dim == 1); s << "b64_t "; break;
-        case TOKEN_U64:  assert(dim == 1); s << "u64_t "; break;
-        case TOKEN_S64:  assert(dim == 1); s << "s64_t "; break;
+        case TOKEN_B64:  assert(dim <= 1); s << "b64_t "; break;
+        case TOKEN_U64:  assert(dim <= 1); s << "u64_t "; break;
+        case TOKEN_S64:  assert(dim <= 1); s << "s64_t "; break;
 
-        case TOKEN_F32:  assert(dim == 1); s << "f32_t "; break;
-        case TOKEN_F64:  assert(dim == 1); s << "f64_t "; break;
+        case TOKEN_F32:  assert(dim <= 1); s << "f32_t "; break;
+        case TOKEN_F64:  assert(dim <= 1); s << "f64_t "; break;
         default: std::cerr << "token= " << token<< std::endl; assert(0);
       }
 

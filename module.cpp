@@ -2588,6 +2588,29 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     return module;
 }
 
+static std::string lCBEMangle(const std::string &S) {
+  std::string Result;
+
+  for (unsigned i = 0, e = S.size(); i != e; ++i) {
+    if (i+1 != e && ((S[i] == '>' && S[i+1] == '>') ||
+                     (S[i] == '<' && S[i+1] == '<'))) {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+      i++;
+    } else if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
+      Result += S[i];
+    } else {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+    }
+  }
+  return Result;
+}
+
 
 int
 Module::CompileAndOutput(const char *srcFile,
@@ -2618,17 +2641,21 @@ Module::CompileAndOutput(const char *srcFile,
              */
             if (g->target->getISA() == Target::NVPTX)
             {
-              llvm::Module::global_iterator 
-                I = m->module->global_begin(),
-                  E = m->module->global_end();
-              for (; I != E; I++)
+              /* mangle global variables names */
               {
-                std::string name = I->getName();
-                for (int i = 0; i < name.length(); i++)
-                  if (name[i] == '.') 
-                    name[i] = '_';
-                I->setName(name);
+                llvm::Module::global_iterator I = m->module->global_begin(), E = m->module->global_end();
+                for (; I != E; I++)
+                  I->setName(lCBEMangle(I->getName()));
               }
+
+#if 0 /* mangles primitves as well grrr */
+              /* mangle functions names */
+              {
+                llvm::Module::iterator I = m->module->begin(), E = m->module->end();
+                for (; I != E; I++)
+                  I->setName(lCBEMangle(I->getName()));
+              }
+#endif
             }
 
             if (outputType == CXX) {

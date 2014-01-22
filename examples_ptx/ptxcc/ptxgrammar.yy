@@ -105,7 +105,10 @@ anytoken:
 | ']'
 | '('
 | ')'
-| ',';
+| ','
+| ';'
+| '='
+;
 
 ptxbody: 
     ptxbody visibleFunctionDeclaration | visibleFunctionDeclaration
@@ -157,9 +160,11 @@ visibleFunctionDeclaration: TOKEN_VISIBLE TOKEN_FUNC optionalReturnArgumentList 
 
 visibleInitializableDeclaration :
   TOKEN_VISIBLE TOKEN_GLOBAL addressableVariablePrefix identifier arrayDimensionSet
-{
-  state.visibleInitializableDeclaration($<svalue>4,@1);
-}
+  { state.visibleInitializableDeclaration($<svalue>4,@1); }
+| TOKEN_VISIBLE TOKEN_GLOBAL addressableVariablePrefix identifier ';'
+  {state.arrayDimensions(0); state.visibleInitializableDeclaration($<svalue>4,@1); }
+| TOKEN_VISIBLE TOKEN_GLOBAL addressableVariablePrefix identifier '='
+  {state.arrayDimensions(0); state.visibleInitializableDeclaration($<svalue>4,@1); }
 
 
 %%
