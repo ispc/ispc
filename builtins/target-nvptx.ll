@@ -28,6 +28,12 @@ define i32 @__warpsize()  nounwind readnone alwaysinline
 ;; ret i32 %tid
   ret i32 32
 }
+define i32 @__laneidx() nounwind readnone alwaysinline
+{
+  %tid = tail call i32 @__tid_x()
+  %lane = and i32 %tid, 31
+  ret i32 %lane;
+}
 
 
 define i32 @__ctaid_x()  nounwind readnone alwaysinline
@@ -336,7 +342,6 @@ include(`util-nvptx.m4')
 stdlib_core()
 packed_load_and_store()
 int64minmax()
-scans()
 rdrand_decls()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -664,14 +669,15 @@ define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
 }
 declare <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone
 
-;; bit ops
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; population count
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 define  i32 @__popcnt_int32(i32) nounwind readonly alwaysinline {
-;;  %call = call i32 @llvm.ctpop.i32(i32 %0)
-;;  ret i32 %call
-  %res = tail call i32 asm sideeffect "popc.b32 $0, $1;", "=r,r"(i32 %0) nounwind readnone alwaysinline
-  ret i32 %res
+ %call = call i32 @llvm.ctpop.i32(i32 %0)
+ ret i32 %call
+;;  %res = tail call i32 asm sideeffect "popc.b32 $0, $1;", "=r,r"(i32 %0) nounwind readnone alwaysinline
+ ;; ret i32 %res
 }
 
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
@@ -679,6 +685,9 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
   %call = call i64 @llvm.ctpop.i64(i64 %0)
   ret i64 %call
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; binary prefix sum
 
 define i64 @__warpBinExclusiveScan(i1 %p) nounwind readonly alwaysinline 
 {
@@ -701,16 +710,11 @@ ctlztz()
 ; or, use the macro to call the 4-wide ones twice with our 8-wide
 ; vectors...
 
-;; svml
+;; svml is not support in PTX, will generate linking error
 
 include(`svml.m4')
 svml_stubs(float,f,WIDTH)
 svml_stubs(double,d,WIDTH)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; population count;
-
-
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -718,8 +722,9 @@ svml_stubs(double,d,WIDTH)
 
 define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-    %v64 = zext i1 %v to i64
-    ret i64 %v64
+  %call = call i32 @__ballot_nvptx(i1 zeroext %v)
+  %v64 = zext i32 %call to i64
+  ret i64 %v64
 }
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
@@ -1012,37 +1017,10 @@ define  i64 @__reduce_max_uint64(<1 x i64>) nounwind readnone alwaysinline {
 }
 
 ;;;; reduce equal
-define  i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x i32> %vv, i32 0
-  store i32 %v, i32 * %samevalue
-  ret i1 true
-
-}
-
-define  i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x float> %vv, i32 0
-  store float %v, float * %samevalue
-  ret i1 true
-
-}
-
-define  i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x i64> %vv, i32 0
-  store i64 %v, i64 * %samevalue
-  ret i1 true
-
-}
-
-define  i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue,
-                                      <1 x i1> %mask) nounwind alwaysinline {
-  %v=extractelement <1 x double> %vv, i32 0
-  store double %v, double * %samevalue
-  ret i1 true
-
-}
+declare i1 @__reduce_equal_int32(<1 x i32> %vv, i32 * %samevalue, <1 x i1> %mask) nounwind alwaysinline;
+declare i1 @__reduce_equal_float(<1 x float> %vv, float * %samevalue, <1 x i1> %mask) nounwind alwaysinline;
+declare i1 @__reduce_equal_int64(<1 x i64> %vv, i64 * %samevalue, <1 x i1> %mask) nounwind alwaysinline;
+declare i1 @__reduce_equal_double(<1 x double> %vv, double * %samevalue, <1 x i1> %mask) nounwind alwaysinline;
 
 ;;;;;;;;;;; shuffle
 define(`shuffle1', `
@@ -1065,13 +1043,18 @@ shuffle1(double)
 define(`shuffle2',`
 define <1 x $1> @__shuffle2_$1(<1 x $1>, <1 x $1>, <1 x i32>) nounwind readnone alwaysinline
 {
-  %val1 = extractelement <1 x $1> %0, i32 0
-  %val2 = extractelement <1 x $1> %1, i32 0
+  %val1 = extractelement <1 x  $1> %0, i32 0
+  %val2 = extractelement <1 x  $1> %1, i32 0
+
+  ;; fetch both values
   %lane = extractelement <1 x i32> %2, i32 0
-  %c    = icmp slt i32 %lane, 32              
-  %val  = select i1 %c, $1 %val1, $1 %val2
   %lane_mask = and i32 %lane, 31
-  %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %lane_mask);
+  %ret1 = tail call $1 @__shfl_$1_nvptx($1 %val1, i32 %lane_mask);
+  %ret2 = tail call $1 @__shfl_$1_nvptx($1 %val2, i32 %lane_mask);
+
+  ;; select the correct one
+  %c    = icmp slt i32 %lane, 32              
+  %rets = select i1 %c, $1 %ret1, $1 %ret2
   %retv = insertelement <1 x $1> undef, $1 %rets, i32 0
   ret <1 x $1> %retv
 }
@@ -1141,6 +1124,9 @@ broadcast(i64)
 broadcast(float)
 broadcast(double)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; prefix sum stuff
+
 define i32 @__shfl_scan_add_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call i32 asm sideeffect  
@@ -1181,10 +1167,18 @@ define i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounwind readn
 }
 define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
 {
-  %shft = tail call <1 x i32> @__shift_i32(<1 x i32> %0, i32 -1)
-  %v0   = extractelement <1 x i32> %shft, i32 0
+  %v0   = extractelement <1 x i32> %0, i32 0
   %mask = extractelement <1 x i1 > %1, i32 0
-  %v    = select i1 %mask, i32 %v0, i32 0
+  %v1   = select i1 %mask, i32 %v0, i32 0
+
+  ;; shfl-up by one for exclusive scan
+  %v = tail call i32 asm sideeffect
+      "{.reg .u32 r0;
+        .reg .pred p;
+        shfl.up.b32 r0|p, $1, 1, 0;
+        @!p mov.u32 r0, 0;
+        mov.u32 $0, r0;
+      }","=r,r"(i32 %v1);
   
   %s1 = tail call i32 @__shfl_scan_or_step_i32(i32 %v,  i32  1);
   %s2 = tail call i32 @__shfl_scan_or_step_i32(i32 %s1, i32  2);
@@ -1208,16 +1202,19 @@ define i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) nounwind read
 }
 define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnone alwaysinline
 {
-  %shft = tail call <1 x i32> @__shift_i32(<1 x i32> %0, i32 -1)
-  %v0   = extractelement <1 x i32> %shft, i32 0
+  %v0   = extractelement <1 x i32> %0, i32 0
   %mask = extractelement <1 x i1 > %1, i32 0
   %v1   = select i1 %mask, i32 %v0, i32 -1
 
-  %tid  = tail call i32 @__tid_x()
-  %lane = and i32 %tid, 31
-  %c    = icmp eq i32 %lane, 0
-  %v    = select i1 %c, i32 -1, i32 %v1
-  
+  ;; shfl-up by one for exclusive scan
+  %v = tail call i32 asm sideeffect
+      "{.reg .u32 r0;
+        .reg .pred p;
+        shfl.up.b32 r0|p, $1, 1, 0;
+        @!p mov.u32 r0, -1;
+        mov.u32 $0, r0;
+      }","=r,r"(i32 %v1);
+
   %s1 = tail call i32 @__shfl_scan_and_step_i32(i32 %v,  i32  1);
   %s2 = tail call i32 @__shfl_scan_and_step_i32(i32 %s1, i32  2);
   %s3 = tail call i32 @__shfl_scan_and_step_i32(i32 %s2, i32  4);
@@ -1253,6 +1250,10 @@ define <1 x float> @__exclusive_scan_add_float(<1 x float>, <1 x i1>) nounwind r
   %retv = insertelement <1 x float> undef, float %rets, i32 0
   ret <1 x float> %retv
 }
+declare <1 x double> @__exclusive_scan_add_double(<1 x double>, <1 x i1>) nounwind readnone alwaysinline
+declare <1 x i64> @__exclusive_scan_add_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
+declare <1 x i64> @__exclusive_scan_and_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
+declare <1 x i64> @__exclusive_scan_or_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
@@ -1345,15 +1346,38 @@ gen_scatter(double)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefetch
-
-;; define void @__prefetch_read_uniform_1(i8 * nocapture) nounwind alwaysinline { }
-;; define void @__prefetch_read_uniform_2(i8 * nocapture) nounwind alwaysinline { }
-;; define void @__prefetch_read_uniform_3(i8 * nocapture) nounwind alwaysinline { }
-;; define void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind alwaysinline { }
-
 define_prefetches()
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int8/int16 builtins
 
 define_avgs()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; vector ops
+
+define(`extract_insert',`
+define $1 @__extract_$2(<1 x $1>, i32) nounwind readnone alwaysinline {
+  %val = extractelement <1 x $1> %0, i32 0
+  %extract = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %1)
+  ret $1 %extract
+}
+
+define <1 x $1> @__insert_$2(<1 x $1>, i32, 
+                                   $1) nounwind readnone alwaysinline {
+  %orig = extractelement <1 x $1> %0, i32 0
+  %lane = call i32 @__laneidx() 
+  %c    = icmp eq i32 %lane, %1
+  %val  = select i1 %c, $1 %2, $1 %orig
+  %insert = insertelement <1 x $1> %0, $1 %val, i32 0
+  ret <1 x $1> %insert
+}
+')
+
+extract_insert(i8, int8)
+extract_insert(i16, int16)
+extract_insert(i32, int32)
+extract_insert(i64, int64)
+extract_insert(float, float)
+extract_insert(double, double)
 

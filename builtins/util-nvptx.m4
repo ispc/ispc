@@ -2503,52 +2503,6 @@ ifelse(HAVE_SCATTER, `1',
 }
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; vector ops
-
-define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i8> %0, i32 %1
-  ret i8 %extract
-}
-
-define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
-                                   i8) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
-  ret <WIDTH x i8> %insert
-}
-
-define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i16> %0, i32 %1
-  ret i16 %extract
-}
-
-define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
-                                     i16) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
-  ret <WIDTH x i16> %insert
-}
-
-define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i32> %0, i32 %1
-  ret i32 %extract
-}
-
-define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
-                                     i32) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
-  ret <WIDTH x i32> %insert
-}
-
-define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i64> %0, i32 %1
-  ret i64 %extract
-}
-
-define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
-                                     i64) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
-  ret <WIDTH x i64> %insert
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; various bitcasts from one type to another
@@ -3775,62 +3729,6 @@ reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
 reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
 reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)
 reduce_equal_aux($1, double, double, i64, fcmp, 64, oeq)
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; prefix sum stuff
-
-; $1: vector width (e.g. 4)
-; $2: vector element type (e.g. float)
-; $3: bit width of vector element type (e.g. 32)
-; $4: operator to apply (e.g. fadd)
-; $5: identity element value (e.g. 0)
-; $6: suffix for function (e.g. add_float)
-
-define(`exclusive_scan', `
-define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
-                                  <$1 x MASK> %mask) nounwind alwaysinline {
-  ; first, set the value of any off lanes to the identity value
-  %ptr = alloca <$1 x $2>
-  %idvec1 = bitcast $2 $5 to <1 x $2>
-  %idvec = shufflevector <1 x $2> %idvec1, <1 x $2> undef,
-      <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
-  store <$1 x $2> %idvec, <$1 x $2> * %ptr
-  %ptr`'$3 = bitcast <$1 x $2> * %ptr to <$1 x i`'$3> *
-  %vi = bitcast <$1 x $2> %v to <$1 x i`'$3>
-  call void @__masked_store_blend_i$3(<$1 x i`'$3> * %ptr`'$3, <$1 x i`'$3> %vi,
-                                      <$1 x MASK> %mask)
-  %v_id = load <$1 x $2> * %ptr
-
-  ; extract elements of the vector to use in computing the scan
-  forloop(i, 0, eval($1-1), `
-  %v`'i = extractelement <$1 x $2> %v_id, i32 i')
-
-  ; and just compute the scan directly.
-  ; 0th element is the identity (so nothing to do here),
-  ; 1st element is identity (op) the 0th element of the original vector,
-  ; each successive element is the previous element (op) the previous element
-  ;  of the original vector
-  %s1 = $4 $2 $5, %v0
-  forloop(i, 2, eval($1-1), `
-  %s`'i = $4 $2 %s`'eval(i-1), %v`'eval(i-1)')
-
-  ; and fill in the result vector
-  %r0 = insertelement <$1 x $2> undef, $2 $5, i32 0  ; 0th element gets identity
-  forloop(i, 1, eval($1-1), `
-  %r`'i = insertelement <$1 x $2> %r`'eval(i-1), $2 %s`'i, i32 i')
-
-  ret <$1 x $2> %r`'eval($1-1)
-}
-')
-
-define(`scans', `
-exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)
-exclusive_scan(WIDTH, double, 64, fadd, zeroinitializer, add_double)
-
-exclusive_scan(WIDTH, i64, 64, and, -1, and_i64)
-
-exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
