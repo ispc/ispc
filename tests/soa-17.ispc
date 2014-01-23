@@ -16,6 +16,16 @@ static void p(uniform float *uniform ptr) {
 }
 
 export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
+#ifdef __NVPTX__  /* soa is converted to shared memory story for now, use smaller amount to check the test */
+    soa<4> Point pts[15];
+    for (uniform int i = 0; i < 60; ++i) {
+        pts[i].x = b*i;
+        pts[i].y[0] = 2*b*i;
+        pts[i].y[1] = 2*b*i+1;
+        pts[i].y[2] = 2*b*i+2;
+        pts[i].z = 3*b*i;
+    }
+#else
     soa<4> Point pts[40];
     for (uniform int i = 0; i < 160; ++i) {
         pts[i].x = b*i;
@@ -24,11 +34,14 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         pts[i].y[2] = 2*b*i+2;
         pts[i].z = 3*b*i;
     }
+#endif
 
     float a = aFOO[programIndex]; 
     a *= -1;
     Point vp = { a, { 2*a, 3*a, 4*a }, {5*a} };
+#ifndef __NVPTX__
     assert(2+programIndex < 160);
+#endif
     pts[2+programIndex] = vp;
 
     RET[programIndex] = pts[programIndex].y[2];

@@ -168,11 +168,13 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
 
     if (soaWidth > 0) {
+#if 0  /* see stmt.cpp in DeclStmt::EmitCode for work-around of SOAType Declaration */
         if (g->target->getISA() == Target::NVPTX)
         {
             Error(pos, "\"soa\" data types are currently not supported with \"nvptx\" target.");
             return NULL;
         }
+#endif
         const StructType *st = CastType<StructType>(retType);
 
         if (st == NULL) {

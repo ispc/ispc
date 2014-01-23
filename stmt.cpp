@@ -264,6 +264,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             return;
         }
 
+
         if (sym->storageClass == SC_STATIC) {
 
             if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
@@ -328,7 +329,7 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
             // Tell the FunctionEmitContext about the variable
             ctx->EmitVariableDebugInfo(sym);
         }
-        else if (sym->type->IsUniformType() &&
+        else if ((sym->type->IsUniformType() || sym->type->IsSOAType()) &&
           /* NVPTX:
            * only non-constant uniform data types are stored in shared memory 
            * constant uniform are automatically promoted to varying 
@@ -357,6 +358,8 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
                  * instead of compile-time constants 
                  */
                 nel *= at->GetElementCount();
+                if (sym->type->IsSOAType())
+                  nel *= sym->type->GetSOAWidth();
                 nat = new ArrayType(at->GetElementType(), nel);
                 variable = false;
               }
