@@ -2057,11 +2057,10 @@ static inline TYPE atomic_##NAME##_local(uniform TYPE * uniform ptr, TYPE value)
 }                                                                      \
 static inline TYPE atomic_##NAME##_local(uniform TYPE * p, TYPE value) {    \
     TYPE ret;                                                          \
-    uniform TYPE * uniform ptrs[programCount];                         \
-    ptrs[programIndex] = p;                                            \
     foreach_active (i) {                                             \
-        ret = insert(ret, i, *ptrs[i]);                                \
-        *ptrs[i] = OPFUNC(*ptrs[i], extract(value, i));                \
+        uniform TYPE * uniform ptr = (uniform TYPE * uniform)extract((int64)p, i); \
+        ret  = insert(ret, i, *ptr);                                \
+        *ptr = OPFUNC(*ptr, extract(value, i));                \
     }                                                                  \
     return ret;                                                        \
 }

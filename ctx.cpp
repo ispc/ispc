@@ -1374,10 +1374,11 @@ FunctionEmitContext::None(llvm::Value *mask) {
 
 llvm::Value *
 FunctionEmitContext::LaneMask(llvm::Value *v) {
+   const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
     // Call the target-dependent movmsk function to turn the vector mask
     // into an i64 value
     std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction("__movmsk", &mm);
+    m->symbolTable->LookupFunction(__movmsk, &mm);
     if (g->target->getMaskBitCount() == 1)
         AssertPos(currentPos, mm.size() == 1);
     else
@@ -1387,6 +1388,18 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
     // LLVM's type system is concerned...
     llvm::Function *fmm = mm[0]->function;
     return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
+}
+
+llvm::Value*
+FunctionEmitContext::Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar)
+{
+  return NULL;
+}
+
+llvm::Value*
+FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane)
+{
+  return NULL;
 }
 
 
@@ -1410,8 +1423,6 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
 
 llvm::Value *
 FunctionEmitContext::ProgramIndexVector(bool is32bits) {
-  if (1 || g->target->getISA() != Target::NVPTX)
-  {
     llvm::SmallVector<llvm::Constant*, 16> array;
     for (int i = 0; i < g->target->getVectorWidth() ; ++i) {
       llvm::Constant *C = is32bits ? LLVMInt32(i) : LLVMInt64(i);
@@ -1421,9 +1432,9 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     llvm::Constant* index = llvm::ConstantVector::get(array);
 
     return index;
-  }
-  else
-  { /* this calls __tid_x() & __warpsize */
+}
+llvm::Value *
+FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
     llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
     llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
     llvm::Value *__tid_x    = CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(), "laneIdxForEach");
@@ -1432,7 +1443,6 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
     llvm::Value *laneIdx = BinaryOperator(llvm::Instruction::And, __tid_x, __warpszm1, "__laneidx");
     llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), laneIdx, 0, "__laneIdxV");
     return index;
-  }
 }
 
 

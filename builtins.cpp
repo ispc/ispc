@@ -481,6 +481,7 @@ lSetInternalFunctions(llvm::Module *module) {
         "__min_varying_uint32",
         "__min_varying_uint64",
         "__movmsk",
+        "__movmsk_ptx",
         "__new_uniform_32rt",
         "__new_uniform_64rt",
         "__new_varying32_32rt",

@@ -722,16 +722,14 @@ svml_stubs(double,d,WIDTH)
 
 define  i64 @__movmsk(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-;; if 0
-  ;; this one fails with ./tests/popcnt-4.ispc and others ...
-;; %v0  = call i32 @__ballot_nvptx(i1 %v)
-;; %v64 = zext i32 %v0 to i64
-
-;; else 
-   ;; this one just copies mask  
-    %v64 = zext i1 %v to i64
-;; endif 
-    ret i64 %v64
+  %v64 = zext i1 %v to i64
+  ret i64 %v64
+}
+define  i64 @__movmsk_ptx(<1 x i1>) nounwind readnone alwaysinline {
+  %v = extractelement <1 x i1> %0, i32 0
+   %v0  = call i32 @__ballot_nvptx(i1 %v)
+   %v64 = zext i32 %v0 to i64
+   ret i64 %v64
 }
 
 define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {

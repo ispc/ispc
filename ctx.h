@@ -291,6 +291,13 @@ public:
         of the mask is on. */
     llvm::Value *LaneMask(llvm::Value *mask);
 
+
+    /** Issues a call to __insert_int8/int16/int32/int64/float/double */
+    llvm::Value* Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar);
+    /** Issues a call to __extract_int8/int16/int32/int64/float/double */
+    llvm::Value* Extract(llvm::Value *vector, llvm::Value *lane);
+
+
     /** Given two masks of type LLVMTypes::MaskType, return an i1 value
         that indicates whether the two masks are equal. */
     llvm::Value *MasksAllEqual(llvm::Value *mask1, llvm::Value *mask2);
@@ -298,6 +305,7 @@ public:
     /** Generate ConstantVector, which contains ProgramIndex, i.e.
         < i32 0, i32 1, i32 2, i32 3> */
     llvm::Value *ProgramIndexVector(bool is32bits = true);
+    llvm::Value *ProgramIndexVectorPTX(bool is32bits = true);
 
     /** Given a string, create an anonymous global variable to hold its
         value and return the pointer to the string. */

@@ -2243,7 +2243,8 @@ ForeachActiveStmt::EmitCode(FunctionEmitContext *ctx) const {
         // math...)
 
         // Get the "program index" vector value
-        llvm::Value *programIndex = ctx->ProgramIndexVector();
+        llvm::Value *programIndex = g->target->getISA() == Target::NVPTX ?
+          ctx->ProgramIndexVectorPTX() : ctx->ProgramIndexVector();
 
         // And smear the current lane out to a vector
         llvm::Value *firstSet32 =
@@ -2354,6 +2355,8 @@ ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e,
     sym = m->symbolTable->LookupVariable(iterName);
     expr = e;
     stmts = s;
+    if (g->target->getISA() == Target::NVPTX)
+      Error(pos, "\"foreach_unique\" is not yetsupported with \"nvptx\" target.");
 }
 
 
