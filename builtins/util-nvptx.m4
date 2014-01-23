@@ -3516,58 +3516,24 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 
 define(`packed_load_and_store', `
 
-define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
-                                 <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+define i32 @__packed_load_active(i32 * %startptr, <1 x i32> * %val_ptr,
+                                 <1 x i1> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
+  %active = extractelement <1 x i1> %full_mask, i32 0
+  %call = tail call i64 @__warpBinExclusiveScan(i1 zeroext %active)
+  %res.sroa.0.0.extract.trunc = trunc i64 %call to i32
+  br i1 %active, label %if.then, label %if.end
 
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
+if.then:                                          ; preds = %entry
+  %idxprom = ashr i64 %call, 32
+  %arrayidx = getelementptr inbounds i32* %startptr, i64 %idxprom
+  %val = load i32* %arrayidx, align 4
+  %valvec = insertelement <1 x i32> undef, i32 %val, i32 0
+  store <1 x i32> %valvec, <1 x i32>* %val_ptr, align 4
+  br label %if.end
 
-all_on:
-  ;; everyone wants to load, so just load an entire vector width in a single
-  ;; vector load
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  %vec_load = load <WIDTH x i32> *%vecptr, align 4
-  store <WIDTH x i32> %vec_load, <WIDTH x i32> * %val_ptr, align 4
-  ret i32 WIDTH
-
-unknown_mask:
-  br label %loop
-
-loop:
-  %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
-  %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
-
-  ; is the current lane on?
-  %and = and i64 %mask, %lanemask
-  %do_load = icmp eq i64 %and, %lanemask
-  br i1 %do_load, label %load, label %loopend 
-
-load:
-  %loadptr = getelementptr i32 *%startptr, i32 %offset
-  %loadval = load i32 *%loadptr
-  %val_ptr_i32 = bitcast <WIDTH x i32> * %val_ptr to i32 *
-  %storeptr = getelementptr i32 *%val_ptr_i32, i32 %lane
-  store i32 %loadval, i32 *%storeptr
-  %offset1 = add i32 %offset, 1
-  br label %loopend
-
-loopend:
-  %nextoffset = phi i32 [ %offset1, %load ], [ %offset, %loop ]
-  %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i64 %lanemask, 2
-
-  ; are we done yet?
-  %test = icmp ne i32 %nextlane, WIDTH
-  br i1 %test, label %loop, label %done
-
-done:
-  ret i32 %nextoffset
+if.end:                                           ; preds = %if.then, %entry
+  ret i32 %res.sroa.0.0.extract.trunc
 }
 
 define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
@@ -3589,10 +3555,16 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %if.then, %entry
   ret i32 %res.sroa.0.0.extract.trunc
 }
+
+define i32 @__packed_store_active2(i32 * %startptr, <1 x i32> %vals,
+                                   <1 x i1> %full_mask) nounwind alwaysinline 
+{
+  %ret = call i32 @__packed_store_active(i32* %startptr, 
+           <1 x i32> %vals, <1 x i1> %full_mask);
+  ret i32 %ret
+}
 ')
 
-declare i32 @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
-                                   <WIDTH x i1> %full_mask) nounwind alwaysinline ;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
