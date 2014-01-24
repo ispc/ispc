@@ -8654,7 +8654,7 @@ NewExpr::TypeCheck() {
     }
     if (g->target->getISA() == Target::NVPTX && allocType->IsVaryingType())
     {
-      Error(pos, "\"sizeof\" with varying data types is not yet supported with \"nvptx\" target.");
+      Error(pos, "\"new\" with varying data types is not yet supported with \"nvptx\" target.");
       return NULL;
     }
     if (CastType<UndefinedStructType>(allocType) != NULL) {

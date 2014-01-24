@@ -2204,10 +2204,58 @@ if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-declare <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask);
-declare <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %mask);
-declare void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask);
+define <1 x i64> @__new_varying32_64rt(<1 x i32> %sizev, <1 x i1> %maskv)
+{
+entry:
+  %size32 = extractelement <1 x i32> %sizev, i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  %size64 = zext i32 %size32 to i64
+  br i1 %mask, label %alloc, label %skip
 
+alloc:
+  %ptr   = tail call noalias i8* @malloc(i64 %size64) 
+  %addr1 = ptrtoint i8* %ptr to i64
+  br label %skip
+
+skip:
+  %addr64 = phi i64 [ %addr1, %alloc], [ 0, %entry ]
+  %addr   = insertelement <1 x i64> undef, i64 %addr64, i32 0
+  ret <1 x i64> %addr
+}
+
+define <1 x i64> @__new_varying64_64rt(<1 x i64> %sizev, <1 x i1> %maskv)
+{
+entry:
+  %size64 = extractelement <1 x i64> %sizev, i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  br i1 %mask, label %alloc, label %skip
+
+alloc:
+  %ptr   = tail call noalias i8* @malloc(i64 %size64) 
+  %addr1 = ptrtoint i8* %ptr to i64
+  br label %skip
+
+skip:
+  %addr64 = phi i64 [ %addr1, %alloc], [ 0, %entry ]
+  %addr   = insertelement <1 x i64> undef, i64 %addr64, i32 0
+  ret <1 x i64> %addr
+}
+
+define void @__delete_varying_64rt(<1 x i64> %ptrv, <1 x i1> %maskv)
+{
+entry:
+  %addr64 = extractelement <1 x i64> %ptrv,  i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  br i1 %mask, label %free, label %skip
+
+free:
+  %ptr = inttoptr i64 %addr64 to i8*
+  tail call void @free(i8* %ptr) 
+  br label %skip
+
+skip:
+  ret void
+}
 ', `
 errprint(`RUNTIME should be defined to either 32 or 64
 ')
