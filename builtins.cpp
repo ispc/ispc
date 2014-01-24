@@ -1181,6 +1181,9 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
                        module, symbolTable);
 
+    lDefineConstantInt("__is_nvptx_target", (int)(g->target->getISA() == Target::NVPTX),
+                       module, symbolTable);
+          
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);
         alignment->setInitializer(LLVMInt32(g->forceAlignment));

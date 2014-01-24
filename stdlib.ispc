@@ -521,7 +521,10 @@ __declspec(safe)
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
 #if (ISPC_MASK_BITS == 1)
-    return __popcnt_int64(__movmsk(v & __mask));
+    if (__is_nvptx_target)
+      return __popcnt_int64(__movmsk_ptx(v & __mask));
+    else
+      return __popcnt_int64(__movmsk(v & __mask));
 #else
     return __popcnt_int64(__movmsk((UIntMaskType)__sext_varying_bool(v) & __mask));
 #endif
