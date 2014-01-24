@@ -1404,3 +1404,63 @@ define <1 x i8*> @__insert_void(<1 x i8*>, i32,
   ret <1 x i8*> %insert
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; assert
+
+declare void @__assertfail(i64,i64,i32,i64,i64) noreturn;
+declare i32 @vprintf(i64,i64)
+define i32 @__puts_nvptx(i8*) alwaysinline
+{
+  %str   = ptrtoint i8* %0 to i64
+  %parm  = or i64 0, 0
+  %call  = call i32 @vprintf(i64 %str, i64 %parm)
+  %cr    = alloca <2 x i8>
+  store <2 x i8> <i8 10, i8 0>, <2 x i8>* %cr
+  %cr1   = ptrtoint <2 x i8>* %cr to i64
+  %call1 = call i32 @vprintf(i64 %cr1, i64 %parm)
+  ret i32 %call1;
+}
+define void @__abort_nvptx(i8* %str) noreturn
+{
+  %tmp1 = alloca <3 x i8>
+  store <3 x i8> <i8 58, i8 58, i8 0>, <3 x i8>* %tmp1
+  %tmp2 = alloca <2 x i8>
+  store <2 x i8> <i8 0, i8 0>, <2 x i8>* %tmp2
+
+  %param1 = ptrtoint <2 x i8>* %tmp2 to i64
+  %param3 = or i32 0, 0
+  %string = ptrtoint i8* %str to i64
+  %param4 = ptrtoint <3 x i8>* %tmp1 to i64
+  %param5 = or i64 1, 1
+  call void @__assertfail(i64 %param1, i64 %string, i32 %param3, i64 %param4, i64 %param5);
+  ret void
+}
+
+define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
+  br i1 %test, label %ok, label %fail
+
+fail:
+  call void @__abort_nvptx(i8* %str) noreturn
+  unreachable
+
+ok:
+  ret void
+}
+
+
+define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
+                                 <WIDTH x MASK> %mask) {
+  %nottest = xor <WIDTH x MASK> %test,
+                 < forloop(i, 1, eval(WIDTH-1), `MASK -1, ') MASK -1 >
+  %nottest_and_mask = and <WIDTH x MASK> %nottest, %mask
+  %mm = call i64 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
+  %all_ok = icmp eq i64 %mm, 0
+  br i1 %all_ok, label %ok, label %fail
+
+fail:
+  call void @__abort_nvptx(i8* %str) noreturn
+  unreachable
+
+ok:
+  ret void
+}

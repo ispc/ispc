@@ -11,7 +11,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
 #ifndef __NVPTX__ 
     uniform Foo f[5];
-#else __NVPTX__  /* too much shared memory allocated, nvcc fails to link */
+#else     /* too much shared memory allocated, nvcc fails to link */
     uniform Foo * uniform f = uniform new uniform Foo[5];
 #define _UNMALLOC
 #endif

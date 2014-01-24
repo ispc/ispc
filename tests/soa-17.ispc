@@ -39,9 +39,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
     float a = aFOO[programIndex]; 
     a *= -1;
     Point vp = { a, { 2*a, 3*a, 4*a }, {5*a} };
-#ifndef __NVPTX__
     assert(2+programIndex < 160);
-#endif
     pts[2+programIndex] = vp;
 
     RET[programIndex] = pts[programIndex].y[2];

@@ -26,9 +26,7 @@ export void f_fu(uniform float RET[], uniform float aFOO[], uniform float b) {
         }
     }
    
-#ifndef __NVPTX__ 
     assert(programIndex < 80);
-#endif
     RET[programIndex] = pts[programIndex].pts[programIndex % 3][programIndex % 4].z;
 }
 
