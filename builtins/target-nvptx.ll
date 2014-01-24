@@ -1396,11 +1396,11 @@ define i32 @__puts_nvptx(i8*) alwaysinline
   %str   = ptrtoint i8* %0 to i64
   %parm  = or i64 0, 0
   %call  = call i32 @vprintf(i64 %str, i64 %parm)
-  %cr    = alloca <2 x i8>
-  store <2 x i8> <i8 10, i8 0>, <2 x i8>* %cr
-  %cr1   = ptrtoint <2 x i8>* %cr to i64
-  %call1 = call i32 @vprintf(i64 %cr1, i64 %parm)
-  ret i32 %call1;
+;;  %cr    = alloca <3 x i8>
+;;  store <3 x i8> <i8 13, i8 10, i8 0>, <3 x i8>* %cr
+;;  %cr1   = ptrtoint <3 x i8>* %cr to i64
+;;  %call1 = call i32 @vprintf(i64 %cr1, i64 %parm)
+  ret i32 %call;
 }
 define void @__abort_nvptx(i8* %str) noreturn
 {

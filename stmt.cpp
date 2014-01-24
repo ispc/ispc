@@ -3352,7 +3352,8 @@ PrintStmt::EmitCode(FunctionEmitContext *ctx) const {
     }
 
     // Now we can emit code to call __do_print()
-    llvm::Function *printFunc = m->module->getFunction("__do_print");
+    llvm::Function *printFunc = g->target->getISA() != Target::NVPTX ?
+      m->module->getFunction("__do_print") : m->module->getFunction("__do_print_nvptx");
     AssertPos(pos, printFunc);
 
     llvm::Value *mask = ctx->GetFullMask();
