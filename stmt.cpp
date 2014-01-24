@@ -2355,8 +2355,6 @@ ForeachUniqueStmt::ForeachUniqueStmt(const char *iterName, Expr *e,
     sym = m->symbolTable->LookupVariable(iterName);
     expr = e;
     stmts = s;
-    if (g->target->getISA() == Target::NVPTX)
-      Error(pos, "\"foreach_unique\" is not yetsupported with \"nvptx\" target.");
 }
 
 
@@ -2442,10 +2440,19 @@ ForeachUniqueStmt::EmitCode(FunctionEmitContext *ctx) const {
 
         // And load the corresponding element value from the temporary
         // memory storing the value of the varying expr.
-        llvm::Value *uniqueValuePtr =
+        llvm::Value *uniqueValue;
+        if (g->target->getISA() != Target::NVPTX)
+        {
+          llvm::Value *uniqueValuePtr =
             ctx->GetElementPtrInst(exprMem, LLVMInt64(0), firstSet, exprPtrType,
-                                   "unique_index_ptr");
-        llvm::Value *uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
+                "unique_index_ptr");
+          uniqueValue = ctx->LoadInst(uniqueValuePtr, "unique_value");
+        }
+        else  /* in case of PTX target, use __shfl PTX intrinsics via __insert/__extract function */
+        {
+          llvm::Value *firstSet32 = ctx->TruncInst(firstSet, LLVMTypes::Int32Type);
+          uniqueValue = ctx->Extract(exprValue, firstSet32);
+        }
 
         // If it's a varying pointer type, need to convert from the int
         // type we store in the vector to the actual pointer type

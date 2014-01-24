@@ -1386,3 +1386,21 @@ extract_insert(i64, int64)
 extract_insert(float, float)
 extract_insert(double, double)
 
+define i8* @__extract_void(<1 x i8*>, i32) nounwind readnone alwaysinline {
+  %val = extractelement <1 x i8*> %0, i32 0
+  %b64 = ptrtoint i8* %val to i64
+  %extract64 = tail call i64 @__shfl_i64_nvptx(i64 %b64, i32 %1)
+  %extract = inttoptr i64 %extract64 to i8*
+  ret i8* %extract
+}
+
+define <1 x i8*> @__insert_void(<1 x i8*>, i32, 
+                                   i8*) nounwind readnone alwaysinline {
+  %orig = extractelement <1 x i8*> %0, i32 0
+  %lane = call i32 @__laneidx() 
+  %c    = icmp eq i32 %lane, %1
+  %val  = select i1 %c, i8* %2, i8* %orig
+  %insert = insertelement <1 x i8*> %0, i8* %val, i32 0
+  ret <1 x i8*> %insert
+}
+

@@ -1390,16 +1390,57 @@ FunctionEmitContext::LaneMask(llvm::Value *v) {
     return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
 }
 
+bool lAppendInsertExtractName(llvm::Value *vector, std::string &funcName)
+{
+  llvm::Type *type = vector->getType();
+  if (type == LLVMTypes::Int8VectorType)
+    funcName += "_int8";
+  else if (type == LLVMTypes::Int16VectorType)
+    funcName += "_int16";
+  else if (type == LLVMTypes::Int32VectorType)
+    funcName += "_int32";
+  else if (type == LLVMTypes::Int64VectorType)
+    funcName += "_int64";
+  else if (type == LLVMTypes::FloatVectorType)
+    funcName += "_float";
+  else if (type == LLVMTypes::DoubleVectorType)
+    funcName += "_double";
+  else
+    return false;
+  return true;
+}
+
 llvm::Value*
 FunctionEmitContext::Insert(llvm::Value *vector, llvm::Value *lane, llvm::Value *scalar)
 {
-  return NULL;
+  std::string funcName = "__insert";
+  assert(lAppendInsertExtractName(vector, funcName));
+  assert(lane->getType() == LLVMTypes::Int32Type);
+  
+  llvm::Function *func = m->module->getFunction(funcName.c_str());
+  assert(func != NULL);
+  std::vector<llvm::Value *> args;
+  args.push_back(vector);
+  args.push_back(lane);
+  args.push_back(scalar);
+  llvm::Value *ret = llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
+  return ret;
 }
 
 llvm::Value*
 FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane)
 {
-  return NULL;
+  std::string funcName = "__extract";
+  assert(lAppendInsertExtractName(vector, funcName));
+  assert(lane->getType() == LLVMTypes::Int32Type);
+  
+  llvm::Function *func = m->module->getFunction(funcName.c_str());
+  assert(func != NULL);
+  std::vector<llvm::Value *> args;
+  args.push_back(vector);
+  args.push_back(lane);
+  llvm::Value *ret = llvm::CallInst::Create(func, args, LLVMGetName(vector, funcName.c_str()), GetCurrentBasicBlock());
+  return ret;
 }
 
 
