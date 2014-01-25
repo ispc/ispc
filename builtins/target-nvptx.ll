@@ -692,7 +692,7 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
 define i64 @__warpBinExclusiveScan(i1 %p) nounwind readonly alwaysinline 
 {
 entry:
-  %call = call i32 @__ballot_nvptx(i1 zeroext %p)
+  %call  = call i32 @__ballot_nvptx(i1 zeroext %p)
   %call1 = call i32 @__popcnt_int32(i32 %call)
   %call2 = call i32 @__lanemask_lt_nvptx()
   %and = and i32 %call2, %call
@@ -1021,71 +1021,77 @@ define  i64 @__reduce_max_uint64(<1 x i64>) nounwind readnone alwaysinline {
   ret i64 %call1.4
 }
 
-;;;; reduce equal
-define i32 @__shfl_reduce_or_step_i32_nvptx(i32, i32) nounwind readnone alwaysinline
+;;;; reduce equal, must be tested and may fail if data has -1
+define i32 @__shfl_reduce_and_step_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect
       "{.reg .u32 r0; 
         .reg .pred p;
         shfl.bfly.b32  r0|p, $1, $2, 0;
-        @p or.b32 r0, r0, $3;
+        @p and.b32 r0, r0, $3;
         mov.u32 $0, r0;
       }", "=r,r,r,r"(i32 %0, i32 %1, i32 %0) nounwind readnone alwaysinline
   ret i32 %shfl
 }
-shfl64(__shfl_reduce_or_step, i64)
+shfl64(__shfl_reduce_and_step, i64)
+
+define i32 @__reduce_and_i32(i32 %v0, i1 %mask) nounwind readnone alwaysinline
+{
+  %v  = select i1 %mask, i32 %v0, i32 -1
+  %s1 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %v,  i32 16);
+  %s2 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %s1, i32  8);
+  %s3 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %s2, i32  4);
+  %s4 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %s3, i32  2);
+  %s5 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %s4, i32  1);
+  ret i32 %s5
+}
+define i64 @__reduce_and_i64(i64, i1) nounwind readnone alwaysinline
+{
+  %v   = bitcast i64 %0 to <2 x i32>
+  %v0  = extractelement <2 x i32> %v, i32 0
+  %v1  = extractelement <2 x i32> %v, i32 1
+  %s0  = call i32 @__reduce_and_i32(i32 %v0, i1 %1)
+  %s1  = call i32 @__reduce_and_i32(i32 %v1, i1 %1)
+  %tmp = insertelement <2 x i32> undef, i32 %s0, i32 0
+  %res = insertelement <2 x i32> %tmp,  i32 %s1, i32 1
+  %ret = bitcast <2 x i32> %res to i64
+  ret i64 %ret;
+}
 
 define(`reduce_equal',`
 define i1 @__reduce_equal_$2(<1 x $1> %v0, $1 * %samevalue, <1 x i1> %maskv) nounwind alwaysinline
 {
 entry:
-  %vv   = bitcast <1 x $1> %v0 to <1 x $3>
+  %vv = bitcast <1 x $1> %v0 to <1 x $3>
+  %sv = extractelement <1 x $3> %vv, i32 0
   %mask = extractelement <1 x i1> %maskv, i32 0
-  %val0 = extractelement <1 x $3> %vv,    i32 0
 
-  ;; increment by one for zero value
-  %zero = icmp eq $3 %val0, 0
-  %val1 = select i1 %zero, $3 0, $3 %val0
- 
-  ;; for negative mask use zero 
-  %val  = select i1 %mask, $3 %val1, $3 0
+  %s = call $3 @__reduce_and_$3($3 %sv, i1 %mask);
 
-  ;; reduce 
-  %s0 = tail call $3 @__shfl_reduce_or_step_$3_nvptx($3 %val,  i32  1)
-  %s1 = tail call $3 @__shfl_reduce_or_step_$3_nvptx($3 %s0,   i32  2)
-  %s2 = tail call $3 @__shfl_reduce_or_step_$3_nvptx($3 %s1,   i32  4)
-  %s3 = tail call $3 @__shfl_reduce_or_step_$3_nvptx($3 %s2,   i32  8)
-  %s4 = tail call $3 @__shfl_reduce_or_step_$3_nvptx($3 %s3,   i32 16)
+  ;; find last active lane 
+  %nact  = call i32 @__ballot_nvptx(i1 %mask)
+  %lane1 = call i32 @__count_leading_zeros_i32(i32 %nact)
+  %lane  = sub i32 31, %lane1
 
-  ;; find first active lane 
-  %res1 = call i32 @__ballot_nvptx(i1 %mask)
-  %lane = call i32 @__count_trailing_zeros_i32(i32 %res1)
-
-  ;; broadcast from this lane
-  %s5 = tail call $3 @__shfl_$3_nvptx($3 %s4, i32 %lane)
+  ;; broadcast result from this lane
+  %r = tail call $3 @__shfl_$3_nvptx($3 %s, i32 %lane)
 
   ;; compare result to the original value
-  %cmp0 = icmp eq $3 %val, %s5
+  %c0  = icmp eq $3 %r, %sv
+  %c1  = and i1 %c0, %mask
+  %neq = call i32 @__ballot_nvptx(i1 %c1)
+  %cmp = icmp eq i32 %neq, %nact
 
-  ;; mask it if inactive
-  %negmask = xor i1 %mask, 1
-  %cmp = or i1 %cmp0, %negmask 
-
-  ;; compute final result 
-  %res = call i32 @__ballot_nvptx(i1 %cmp)
-  %ret = icmp eq i32 %res, %res1
-  br i1 %ret, label %all_equal, label %retval
-
-all_equal:
-  br i1 %mask, label %all_equal_store, label %retval
+  br i1 %cmp, label %all_equal, label %all_not_equal
   
-all_equal_store:
-  %vstore = extractelement <1 x $1> %v0, i32 0
+all_equal:
+  %vstore = bitcast $3 %r to $1 
   store $1 %vstore, $1* %samevalue;
-  ret i1 %ret
+  ret i1 true
 
-retval:
-  ret i1 %ret
+all_not_equal:
+  ret i1 false
+
 }
 ')
 reduce_equal(i32,    int32, i32);
