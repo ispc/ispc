@@ -387,16 +387,21 @@ define float @__half_to_float_uniform(i16 %v) nounwind readnone alwaysinline
 {
   ;; %res = call float @llvm.convert.from.fp16(i16 %v)
   %res = tail call float asm sideeffect 
-      "{ .reg .b16 %tmp; 
-         mov.b16 %tmp, $1;
-         cvt.f32.f16 $0, %tmp;
-      }", "=f,h"(i16 %v) nounwind readnone alwaysinline
+      "{ .reg .f16 tmp; 
+        mov.b16 tmp, $1;
+        cvt.f32.f16 $0, tmp;
+     }", "=f,h"(i16 %v) nounwind readnone alwaysinline
   ret float %res
 }
 define i16 @__float_to_half_uniform(float %v) nounwind readnone alwaysinline
 {
  ;; this will break the compiler, use inline asm similarly to above case
-  %half = call i16 @llvm.convert.to.fp16(float %v)
+ ;; %half = call i16 @llvm.convert.to.fp16(float %v)
+  %half = tail call i16 asm sideeffect 
+      "{ .reg .f16 tmp; 
+        cvt.rn.f16.f32 tmp, $1;
+        mov.b16 $0, tmp;
+     }", "=h,f"(float %v) nounwind readnone alwaysinline
   ret i16 %half
 }
 define <WIDTH x float> @__half_to_float_varying(<WIDTH x i16> %v) nounwind readnone alwaysinline
@@ -421,7 +426,7 @@ declare void @__fastmath() nounwind
 
 ;; round/floor/ceil
 
-define float @__round_uniform_float(float) nounwind readnone alwaysinline
+define float @__round_uniform_float_ptx(float) nounwind readnone alwaysinline
 {
   %2 = tail call float asm sideeffect
         "{ .reg .pred p<3>; .reg .s32 r<4>; .reg .f32 f<10>;
@@ -436,10 +441,24 @@ define float @__round_uniform_float(float) nounwind readnone alwaysinline
            setp.gt.f32	p1, f5, 0f4B000000;
            selp.f32	f9, f4, f8, p1;
            setp.geu.f32	p2, f5, 0f3F000000;
-           @!p2 cvt.rzi.f32.f32	f9, f4;
+           @p2 bra BB2_2;
+           cvt.rzi.f32.f32	f9, f4;
+BB2_2:
            mov.f32 $0, f9;
         }", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %2
+}
+define  float @__round_uniform_float(float) nounwind readonly alwaysinline {
+  %float_to_int_bitcast.i.i.i.i = bitcast float %0 to <1 x i32>
+  %bitop.i.i = and <1 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648>
+  %bitop.i = xor <1 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i40.i = bitcast <1 x i32> %bitop.i to <1 x float>
+  %binop.i = fadd <1 x float> %int_to_float_bitcast.i.i40.i, <float 8.388608e+06>
+  %binop21.i = fadd <1 x float> %binop.i, <float -8.388608e+06>
+  %float_to_int_bitcast.i.i.i = bitcast <1 x float> %binop21.i to <1 x i32>
+  %bitop31.i = xor <1 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
+  %int_to_float_bitcast.i.i.i = bitcast <1 x i32> %bitop31.i to float
+  ret float %int_to_float_bitcast.i.i.i
 }
 define float @__floor_uniform_float(float) nounwind readnone alwaysinline
 {
@@ -501,18 +520,6 @@ define double @__ceil_uniform_double(double) nounwind readnone alwaysinline
   ret double %2
 }
 
-define  <1 x float> @__round_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
-  %float_to_int_bitcast.i.i.i.i = bitcast <1 x float> %0 to <1 x i32>
-  %bitop.i.i = and <1 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648>
-  %bitop.i = xor <1 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i40.i = bitcast <1 x i32> %bitop.i to <1 x float>
-  %binop.i = fadd <1 x float> %int_to_float_bitcast.i.i40.i, <float 8.388608e+06>
-  %binop21.i = fadd <1 x float> %binop.i, <float -8.388608e+06>
-  %float_to_int_bitcast.i.i.i = bitcast <1 x float> %binop21.i to <1 x i32>
-  %bitop31.i = xor <1 x i32> %float_to_int_bitcast.i.i.i, %bitop.i.i
-  %int_to_float_bitcast.i.i.i = bitcast <1 x i32> %bitop31.i to <1 x float>
-  ret <1 x float> %int_to_float_bitcast.i.i.i
-}
 define  <1 x float> @__floor_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
   %calltmp.i = tail call <1 x float> @__round_varying_float(<1 x float> %0) nounwind
   %bincmp.i = fcmp ogt <1 x float> %calltmp.i, %0
@@ -1363,10 +1370,92 @@ define <1 x float> @__exclusive_scan_add_float(<1 x float>, <1 x i1>) nounwind r
   %retv = insertelement <1 x float> undef, float %rets, i32 0
   ret <1 x float> %retv
 }
-declare <1 x double> @__exclusive_scan_add_double(<1 x double>, <1 x i1>) nounwind readnone alwaysinline
-declare <1 x i64> @__exclusive_scan_add_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
-declare <1 x i64> @__exclusive_scan_and_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
-declare <1 x i64> @__exclusive_scan_or_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
+define double @__shfl_scan_add_step_double(double %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call double asm sideeffect  
+      "{.reg .s32 r<10>;
+        .reg .f64 fd0;
+       .reg .pred p;
+       .reg .b32 temp;
+       mov.b64 {r1,temp}, $1;
+       mov.b64 {temp,r2}, $1;
+       shfl.up.b32 r3,   r1, $2, 0;
+       shfl.up.b32 r4|p, r2, $2, 0;
+       mov.b64 fd0, {r3,r4};
+       @p add.f64 fd0, fd0, $3;
+       mov.f64 $0, fd0;
+       }", "=d,d,r,d"(double %partial, i32 %up_offset, double %partial) nounwind readnone alwaysinline
+  ret double %result;
+}
+define <1 x double> @__exclusive_scan_add_double(<1 x double>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %v0   = extractelement <1 x double> %0, i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v    = select i1 %mask, double %v0, double zeroinitializer
+
+  %s1 = tail call double @__shfl_scan_add_step_double(double %v,  i32  1);
+  %s2 = tail call double @__shfl_scan_add_step_double(double %s1, i32  2);
+  %s3 = tail call double @__shfl_scan_add_step_double(double %s2, i32  4);
+  %s4 = tail call double @__shfl_scan_add_step_double(double %s3, i32  8);
+  %s5 = tail call double @__shfl_scan_add_step_double(double %s4, i32 16);
+  %rets = fsub double %s5, %v
+  %retv = bitcast double %rets to <1 x double>
+  ret <1 x double> %retv
+}
+
+define i64 @__shfl_scan_add_step_i64(i64 %partial, i32 %up_offset) nounwind readnone alwaysinline
+{
+  %result = tail call i64 asm sideeffect  
+      "{.reg .s32 r<10>;
+        .reg .s64 rl0;
+       .reg .pred p;
+       .reg .b32 temp;
+       mov.b64 {r1,temp}, $1;
+       mov.b64 {temp,r2}, $1;
+       shfl.up.b32 r3,   r1, $2, 0;
+       shfl.up.b32 r4|p, r2, $2, 0;
+       mov.b64 rl0, {r3,r4};
+       @p add.s64 rl0, rl0, $3;
+       mov.s64 $0, rl0;
+       }", "=l,l,r,l"(i64 %partial, i32 %up_offset, i64 %partial) nounwind readnone alwaysinline
+  ret i64 %result;
+}
+define <1 x i64> @__exclusive_scan_add_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %v0   = extractelement <1 x i64> %0, i32 0
+  %mask = extractelement <1 x i1 > %1, i32 0
+  %v    = select i1 %mask, i64 %v0, i64 zeroinitializer
+
+  %s1 = tail call i64 @__shfl_scan_add_step_i64(i64 %v,  i32  1);
+  %s2 = tail call i64 @__shfl_scan_add_step_i64(i64 %s1, i32  2);
+  %s3 = tail call i64 @__shfl_scan_add_step_i64(i64 %s2, i32  4);
+  %s4 = tail call i64 @__shfl_scan_add_step_i64(i64 %s3, i32  8);
+  %s5 = tail call i64 @__shfl_scan_add_step_i64(i64 %s4, i32 16);
+  %rets = sub i64 %s5, %v
+  %retv = bitcast i64 %rets to <1 x i64>
+  ret <1 x i64> %retv
+}
+
+define(`exclusive_scan_i64',`
+define <1 x i64> @__exclusive_scan_$1_i64(<1 x i64>, <1 x i1>) nounwind readnone alwaysinline
+{
+  %v = bitcast <1 x i64> %0 to <2 x i32>
+  %v0 = extractelement <2 x i32> %v, i32 0
+  %v1 = extractelement <2 x i32> %v, i32 1
+  %inp0 = bitcast i32 %v0 to <1 x i32>
+  %inp1 = bitcast i32 %v1 to <1 x i32>
+  %res0 = call <1 x i32> @__exclusive_scan_$1_i32(<1 x i32> %inp0, <1 x i1> %1);
+  %res1 = call <1 x i32> @__exclusive_scan_$1_i32(<1 x i32> %inp1, <1 x i1> %1);
+  %r0   = bitcast <1 x i32> %res0 to i32
+  %r1   = bitcast <1 x i32> %res1 to i32
+  %ret0 = insertelement <2 x i32> undef, i32 %r0, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %r1, i32 1
+  %ret  = bitcast <2 x i32> %ret1 to <1 x i64>
+  ret <1 x i64> %ret
+}
+')
+exclusive_scan_i64(or)
+exclusive_scan_i64(and)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; unaligned loads/loads+broadcasts
@@ -1530,7 +1619,17 @@ define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
+  %lane = call i32 @__laneidx()
+  %cmp  = icmp eq i32 %lane, 0
+  br i1 %cmp, label %fail_print, label %fail_void;
+  
+
+
+fail_print:
   call void @__abort_nvptx(i8* %str) noreturn
+  unreachable
+
+fail_void:
   unreachable
 
 ok:
@@ -1554,3 +1653,9 @@ fail:
 ok:
   ret void
 }
+
+define i64 @__clock() nounwind alwaysinline {
+  %r = call i64 asm sideeffect "mov.b64 $0, %clock64;", "=l"();
+  ret i64 %r
+}
+

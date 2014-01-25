@@ -189,6 +189,7 @@ void __do_print(const char *format, const char *types, int width, uint64_t mask,
 int __puts_nvptx(const char *);
 void __do_print_nvptx(const char *format, const char *types, int width, uint64_t mask,
                 void **args) {
+#if 0
     char printString[PRINT_BUF_SIZE+1]; // +1 for trailing NUL
     char *bufp = &printString[0];
     char tmpBuf[256];
@@ -254,6 +255,9 @@ void __do_print_nvptx(const char *format, const char *types, int width, uint64_t
     *bufp = '\n'; bufp++;
     *bufp = '\0';
     __puts_nvptx(printString);
+#else
+    __puts_nvptx("---nvptx printing is not support---\n");
+#endif
 }
 
 

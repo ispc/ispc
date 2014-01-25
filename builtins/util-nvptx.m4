@@ -2372,13 +2372,6 @@ m4exit(`1')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
-declare i64 @llvm.readcyclecounter()
-
-define i64 @__clock() nounwind {
-  %r = call i64 @llvm.readcyclecounter()
-  ret i64 %r
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals
 ;;

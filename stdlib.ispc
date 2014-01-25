@@ -1301,6 +1301,9 @@ packed_store_active2(uniform int a[], int vals) {
 // System information
 
 static inline uniform int num_cores() {
+  if (__is_nvptx_target)
+    return 15*32; // K20/K20X/K40 - 15SMX x 32 warps/smx (max is 64 warps/smx)
+  else
     return __num_cores();
 }
 

@@ -2,7 +2,7 @@
 export uniform int width() { return programCount; }
 
 
-#define N0 10
+#define N0 12
 #define N1 20
 #define N2 50
 static uniform float array[N2][N1][N0];
@@ -38,5 +38,5 @@ export void f_f(uniform float RET[], uniform float fFOO[]) {
 
 
 export void result(uniform float RET[]) {
-    RET[programIndex] = 9999.000000;
+    RET[programIndex] = 11999.000000;
 }

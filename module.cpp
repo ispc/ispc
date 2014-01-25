@@ -2134,14 +2134,14 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
       opts.addMacroDef("cwhile=while");
       opts.addMacroDef("ccontinue=continue");
       opts.addMacroDef("cdo=do");
-      opts.addMacroDef("taskIndex=blockIndex0()");
-      opts.addMacroDef("taskCount=blockCount0()");
       opts.addMacroDef("taskIndex0=blockIndex0()");
       opts.addMacroDef("taskCount0=blockCount0()");
       opts.addMacroDef("taskIndex1=blockIndex1()");
       opts.addMacroDef("taskCount1=blockCount1()");
       opts.addMacroDef("taskIndex2=blockIndex2()");
       opts.addMacroDef("taskCount2=blockCount2()");
+      opts.addMacroDef("taskIndex=(taskIndex0 + taskCount0*(taskIndex1 + taskCount1*taskIndex2))");
+      opts.addMacroDef("taskCount=(taskCount0*taskCount1*taskCount2)");
     }
 
 #if defined(LLVM_3_1)
