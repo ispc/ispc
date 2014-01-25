@@ -2648,14 +2648,16 @@ Module::CompileAndOutput(const char *srcFile,
                   I->setName(lCBEMangle(I->getName()));
               }
 
-#if 0 /* mangles primitves as well grrr */
               /* mangle functions names */
               {
                 llvm::Module::iterator I = m->module->begin(), E = m->module->end();
                 for (; I != E; I++)
-                  I->setName(lCBEMangle(I->getName()));
+                {
+                  std::string str = I->getName();
+                  if (str.find("operator") != std::string::npos)
+                    I->setName(lCBEMangle(str));
+                }
               }
-#endif
             }
 
             if (outputType == CXX) {
