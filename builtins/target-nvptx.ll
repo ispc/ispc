@@ -349,27 +349,6 @@ rdrand_decls()
 
 define_shuffles()
 
-;; declare <WIDTH x float> @__smear_float(float) nounwind readnone
-;; declare <WIDTH x double> @__smear_double(double) nounwind readnone
-;; declare <WIDTH x i8> @__smear_i8(i8) nounwind readnone
-;; declare <WIDTH x i16> @__smear_i16(i16) nounwind readnone
-;; declare <WIDTH x i32> @__smear_i32(i32) nounwind readnone
-;; declare <WIDTH x i64> @__smear_i64(i64) nounwind readnone
-
-;; declare <WIDTH x float> @__setzero_float() nounwind readnone
-;; declare <WIDTH x double> @__setzero_double() nounwind readnone
-;; declare <WIDTH x i8> @__setzero_i8() nounwind readnone
-;; declare <WIDTH x i16> @__setzero_i16() nounwind readnone
-;; declare <WIDTH x i32> @__setzero_i32() nounwind readnone
-;; declare <WIDTH x i64> @__setzero_i64() nounwind readnone
-
-;; declare <WIDTH x float> @__undef_float() nounwind readnone
-;; declare <WIDTH x double> @__undef_double() nounwind readnone
-;; declare <WIDTH x i8> @__undef_i8() nounwind readnone
-;; declare <WIDTH x i16> @__undef_i16() nounwind readnone
-;; declare <WIDTH x i32> @__undef_i32() nounwind readnone
-;; declare <WIDTH x i64> @__undef_i64() nounwind readnone
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; aos/soa
@@ -377,52 +356,27 @@ define_shuffles()
 aossoa()
 
 ;; dummy 1 wide vector ops
-define  void
+declare  void
 @__aos_to_soa4_float1(<1 x float> %v0, <1 x float> %v1, <1 x float> %v2,
         <1 x float> %v3, <1 x float> * noalias %out0, 
         <1 x float> * noalias %out1, <1 x float> * noalias %out2, 
-        <1 x float> * noalias %out3) nounwind alwaysinline { 
+        <1 x float> * noalias %out3) nounwind alwaysinline ;
 
-  store <1 x float> %v0, <1 x float > * %out0
-  store <1 x float> %v1, <1 x float > * %out1
-  store <1 x float> %v2, <1 x float > * %out2
-  store <1 x float> %v3, <1 x float > * %out3
-
-  ret void
-}
-
-define  void
+declare  void
 @__soa_to_aos4_float1(<1 x float> %v0, <1 x float> %v1, <1 x float> %v2,
         <1 x float> %v3, <1 x float> * noalias %out0, 
         <1 x float> * noalias %out1, <1 x float> * noalias %out2, 
-        <1 x float> * noalias %out3) nounwind alwaysinline { 
-  call void @__aos_to_soa4_float1(<1 x float> %v0, <1 x float> %v1, 
-    <1 x float> %v2, <1 x float> %v3, <1 x float> * %out0, 
-    <1 x float> * %out1, <1 x float> * %out2, <1 x float> * %out3)
-  ret void
-}
+        <1 x float> * noalias %out3) nounwind alwaysinline ;
 
-define  void
+declare  void
 @__aos_to_soa3_float1(<1 x float> %v0, <1 x float> %v1,
          <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
-         <1 x float> * %out2) {
-  store <1 x float> %v0, <1 x float > * %out0
-  store <1 x float> %v1, <1 x float > * %out1
-  store <1 x float> %v2, <1 x float > * %out2
+         <1 x float> * %out2);
 
-  ret void
-}
-
-define  void
+declare  void
 @__soa_to_aos3_float1(<1 x float> %v0, <1 x float> %v1,
          <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
-         <1 x float> * %out2) {
-  call void @__aos_to_soa3_float1(<1 x float> %v0, <1 x float> %v1,
-         <1 x float> %v2, <1 x float> * %out0, <1 x float> * %out1,
-         <1 x float> * %out2)
-  ret void
-}
-
+         <1 x float> * %out2);
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; half conversion routines
@@ -630,11 +584,30 @@ define  i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 
 ;; declare i64 @__min_uniform_int64(i64, i64) nounwind readnone 
 ;; declare i64 @__max_uniform_int64(i64, i64) nounwind readnone 
+define  i64 @__min_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
+  %c = icmp slt i64 %0, %1
+  %r = select i1 %c, i64 %0, i64 %1
+  ret i64 %r
+}
+define  i64 @__max_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
+  %c = icmp sgt i64 %0, %1
+  %r = select i1 %c, i64 %0, i64 %1
+  ret i64 %r
+}
+
 ;; declare i64 @__min_uniform_uint64(i64, i64) nounwind readnone 
 ;; declare i64 @__max_uniform_uint64(i64, i64) nounwind readnone 
+define  i64 @__min_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
+  %c = icmp ult i64 %0, %1
+  %r = select i1 %c, i64 %0, i64 %1
+  ret i64 %r
+}
+define  i64 @__max_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
+  %c = icmp ugt i64 %0, %1
+  %r = select i1 %c, i64 %0, i64 %1
+  ret i64 %r
+}
 
-;; declare double @__min_uniform_double(double, double) nounwind readnone 
-;; declare double @__max_uniform_double(double, double) nounwind readnone 
 define  double @__max_uniform_double(double, double) nounwind readonly alwaysinline {
   %d = fcmp ogt double %0, %1 
   %r = select i1 %d, double %0, double %1
@@ -648,57 +621,32 @@ define  double @__min_uniform_double(double, double) nounwind readonly alwaysinl
 
 ;; min/max uniform
 
-;; /* float */
-define  <1 x float> @__max_varying_float(<1 x float>, <1 x float>) nounwind readonly alwaysinline {
-  %a = extractelement <1 x float> %0, i32 0
-  %b = extractelement <1 x float> %1, i32 0
-  %r = call float @__max_uniform_float(float %a, float %b)
-  %rv = insertelement <1 x float> undef, float %r, i32 0
-  ret <1 x float> %rv    
-}
-define  <1 x float> @__min_varying_float(<1 x float>, <1 x float>) nounwind readonly alwaysinline {
-  %a = extractelement <1 x float> %0, i32 0
-  %b = extractelement <1 x float> %1, i32 0
-  %r = call float @__min_uniform_float(float %a, float %b)
-  %rv = insertelement <1 x float> undef, float %r, i32 0
-  ret <1 x float> %rv    
 
+define(`minmax_vy',`
+define <1 x $2> @__$1_varying_$3(<1 x $2>, <1 x $2>) nounwind readnone alwaysinline
+{
+  %v0 = extractelement <1 x $2> %0, i32 0
+  %v1 = extractelement <1 x $2> %1, i32 0
+  %r = call $2 @__$1_uniform_$3($2 %v0, $2 %v1)
+  %ret = insertelement <1 x $2> undef, $2 %r, i32 0
+  ret <1 x $2> %ret;
 }
-
-;; /* int32 */
-define  <1 x i32> @__max_varying_int32(<1 x i32>, <1 x i32>) nounwind readonly alwaysinline {
-  %a = extractelement <1 x i32> %0, i32 0
-  %b = extractelement <1 x i32> %1, i32 0
-  %r = call i32 @__max_uniform_int32(i32 %a, i32 %b)
-  %rv = insertelement <1 x i32> undef, i32 %r, i32 0
-  ret <1 x i32> %rv
-}
-define  <1 x i32> @__min_varying_int32(<1 x i32>, <1 x i32>) nounwind readonly alwaysinline {
-  %a = extractelement <1 x i32> %0, i32 0
-  %b = extractelement <1 x i32> %1, i32 0
-  %r = call i32 @__min_uniform_int32(i32 %a, i32 %b)
-  %rv = insertelement <1 x i32> undef, i32 %r, i32 0
-  ret <1 x i32> %rv
-}
-
-;; /* uint32 */
-declare <WIDTH x i32> @__min_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
-declare <WIDTH x i32> @__max_varying_uint32(<WIDTH x i32>, <WIDTH x i32>) nounwind readnone 
-;; declare <WIDTH x i64> @__min_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-;; declare <WIDTH x i64> @__max_varying_int64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-;; declare <WIDTH x i64> @__min_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-;; declare <WIDTH x i64> @__max_varying_uint64(<WIDTH x i64>, <WIDTH x i64>) nounwind readnone 
-declare <WIDTH x double> @__min_varying_double(<WIDTH x double>,
-                                               <WIDTH x double>) nounwind readnone
-declare <WIDTH x double> @__max_varying_double(<WIDTH x double>,
-                                               <WIDTH x double>) nounwind readnone 
+')
+minmax_vy(min, i32,  int32)
+minmax_vy(max, i32,  int32)
+minmax_vy(min, i32, uint32)
+minmax_vy(max, i32, uint32)
+minmax_vy(min, float, float)
+minmax_vy(max, float, float)
+minmax_vy(min, double, double)
+minmax_vy(max, double, double)
 
 ;; sqrt/rsqrt/rcp
 
 declare float     @llvm.nvvm.rsqrt.approx.f(float %f) nounwind readonly alwaysinline
-declare float     @llvm.nvvm.sqrt.f(float %f) nounwind readonly alwaysinline
+declare float     @llvm.sqrt.f32(float %f) nounwind readonly alwaysinline
 declare double    @llvm.nvvm.rsqrt.approx.d(double %f) nounwind readonly alwaysinline
-declare double    @llvm.nvvm.sqrt.d(double %f) nounwind readonly alwaysinline
+declare double    @llvm.sqrt.f64(double %f) nounwind readonly alwaysinline
 
 ;; declare float @__rcp_uniform_float(float) nounwind readnone 
 define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
@@ -710,7 +658,7 @@ define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 }
 ;; declare float @__sqrt_uniform_float(float) nounwind readnone 
 define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @llvm.nvvm.sqrt.f(float %0)
+  %ret = call float @llvm.sqrt.f32(float %0)
 ;  %ret = tail call float asm sideeffect "sqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
@@ -746,10 +694,16 @@ define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
 
 ;; declare double @__sqrt_uniform_double(double) nounwind readnone
 define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %ret = call double @llvm.nvvm.sqrt.d(double %0)
+  %ret = call double @llvm.sqrt.f64(double %0)
   ret double %ret
 }
-declare <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone
+define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone alwaysinline
+{
+  %v = extractelement <1 x double> %0, i32 0
+  %r = call double @__sqrt_uniform_double(double %v)
+  %rv = insertelement <1 x double> undef, double %r, i32 0 
+  ret <WIDTH x double> %rv
+}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; population count
