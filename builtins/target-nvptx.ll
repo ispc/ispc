@@ -467,15 +467,87 @@ declare void @__fastmath() nounwind
 
 ;; round/floor/ceil
 
-declare float @__round_uniform_float(float) nounwind readnone 
-declare float @__floor_uniform_float(float) nounwind readnone 
-declare float @__ceil_uniform_float(float) nounwind readnone 
+define float @__round_uniform_float(float) nounwind readnone alwaysinline
+{
+  %2 = tail call float asm sideeffect
+        "{ .reg .pred p<3>; .reg .s32 r<4>; .reg .f32 f<10>;
+           mov.f32 f4, $1;
+           abs.f32 f5, f4;
+           mov.b32 r1, f4;
+           and.b32 r2, r1, -2147483648;
+           or.b32  r3, r2, 1056964608;
+           mov.b32 f6, r3;
+           add.f32 f7, f6, f4;
+           cvt.rzi.f32.f32	f8, f7;
+           setp.gt.f32	p1, f5, 0f4B000000;
+           selp.f32	f9, f4, f8, p1;
+           setp.geu.f32	p2, f5, 0f3F000000;
+           @!p2 cvt.rzi.f32.f32	f9, f4;
+           mov.f32 $0, f9;
+        }", "=f,f"(float %0) nounwind readnone alwaysinline
+  ret float %2
+}
+define float @__floor_uniform_float(float) nounwind readnone alwaysinline
+{
+  %2 = tail call float asm sideeffect "cvt.rmi.f32.f32 $0, $1;", "=f,f"(float %0) nounwind alwaysinline readnone
+  ret float %2
+}
+define float @__ceil_uniform_float(float) nounwind readnone alwaysinline
+{
+  %2 = tail call float asm sideeffect "cvt.rpi.f32.f32 $0, $1;", "=f,f"(float %0) nounwind alwaysinline readnone
+  ret float %2
+}
 
-declare double @__round_uniform_double(double) nounwind readnone 
-declare double @__floor_uniform_double(double) nounwind readnone 
-declare double @__ceil_uniform_double(double) nounwind readnone 
+define double @__round_uniform_double(double) nounwind readnone alwaysinline
+{
+  %2 = tail call double asm sideeffect
+        "{ 
+          .reg .pred 	p<3>;
+          .reg .s32 	r<6>;
+          .reg .f64 	fd<9>;
 
-define  <1 x float> @__round_varying_float(<1 x float>) nounwind readonly alwaysinline {
+          mov.f64 	fd8, $1
+          abs.f64 	fd1, fd8;
+          setp.ge.f64	p1, fd1, 0d4330000000000000;
+          @p1 bra 	BB5_2;
+
+          add.f64 	fd5, fd1, 0d3FE0000000000000;
+          cvt.rzi.f64.f64	fd6, fd5;
+          setp.lt.f64	p2, fd1, 0d3FE0000000000000;
+          selp.f64	fd7, 0d0000000000000000, fd6, p2;
+          {
+            .reg .b32 temp; 
+            mov.b64 	{r1, temp}, fd7;
+          }
+          {
+            .reg .b32 temp; 
+            mov.b64 	{temp, r2}, fd7;
+          }
+          {
+            .reg .b32 temp; 
+            mov.b64 	{temp, r3}, fd8;
+          }
+          and.b32  	r4, r3, -2147483648;
+          or.b32  	r5, r2, r4;
+          mov.b64 	fd8, {r1, r5};
+
+BB5_2:
+          mov.f64	$0, fd8;
+        }", "=d,d"(double %0) nounwind readnone alwaysinline
+  ret double %2
+}
+define double @__floor_uniform_double(double) nounwind readnone alwaysinline
+{
+  %2 = tail call double asm sideeffect "cvt.rmi.f64.f64 $0, $1;", "=f,f"(double %0) nounwind alwaysinline readnone
+  ret double %2
+}
+define double @__ceil_uniform_double(double) nounwind readnone alwaysinline
+{
+  %2 = tail call double asm sideeffect "cvt.rpi.f64.f64 $0, $1;", "=f,f"(double %0) nounwind alwaysinline readnone
+  ret double %2
+}
+
+define  <1 x float> @__round_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
   %float_to_int_bitcast.i.i.i.i = bitcast <1 x float> %0 to <1 x i32>
   %bitop.i.i = and <1 x i32> %float_to_int_bitcast.i.i.i.i, <i32 -2147483648>
   %bitop.i = xor <1 x i32> %float_to_int_bitcast.i.i.i.i, %bitop.i.i
@@ -487,7 +559,7 @@ define  <1 x float> @__round_varying_float(<1 x float>) nounwind readonly always
   %int_to_float_bitcast.i.i.i = bitcast <1 x i32> %bitop31.i to <1 x float>
   ret <1 x float> %int_to_float_bitcast.i.i.i
 }
-define  <1 x float> @__floor_varying_float(<1 x float>) nounwind readonly alwaysinline {
+define  <1 x float> @__floor_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
   %calltmp.i = tail call <1 x float> @__round_varying_float(<1 x float> %0) nounwind
   %bincmp.i = fcmp ogt <1 x float> %calltmp.i, %0
   %val_to_boolvec32.i = sext <1 x i1> %bincmp.i to <1 x i32>
@@ -497,11 +569,21 @@ define  <1 x float> @__floor_varying_float(<1 x float>) nounwind readonly always
   ret <1 x float> %binop.i
 }
 
-declare <WIDTH x float> @__ceil_varying_float(<WIDTH x float>) nounwind readnone 
-
-declare <WIDTH x double> @__round_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__floor_varying_double(<WIDTH x double>) nounwind readnone 
-declare <WIDTH x double> @__ceil_varying_double(<WIDTH x double>) nounwind readnone 
+define(`rfc_varying',`
+define <1 x $2> @__$1_varying_$2(<1 x $2>) nounwind readonly alwaysinline
+{
+   %val = extractelement <1 x $2> %0, i32 0
+   %res = call $2 @__$1_uniform_$2($2 %val)
+   %ret = insertelement <1 x $2> undef, $2 %res, i32 0
+   ret <1 x $2> %ret
+}
+')
+rfc_varying(round, float)
+rfc_varying(floor, float)
+rfc_varying(ceil,  float)
+rfc_varying(round, double)
+rfc_varying(floor, double)
+rfc_varying(ceil,  double)
 
 ;; min/max uniform
 
