@@ -784,8 +784,9 @@ define  i1 @__any(<1 x i1>) nounwind readnone alwaysinline {
 
 define  i1 @__all(<1 x i1>) nounwind readnone alwaysinline {
   %v = extractelement <1 x i1> %0, i32 0
-  %res = call i32 @__ballot_nvptx(i1 %v)
-  %cmp = icmp eq i32 %res, 31
+  %res0 = call i32 @__ballot_nvptx(i1 %v)
+  %res1 = call i32 @__ballot_nvptx(i1 true)
+  %cmp = icmp eq i32 %res0, %res1
   ret i1 %cmp
 }
 
