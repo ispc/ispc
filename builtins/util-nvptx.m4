@@ -768,27 +768,6 @@ shuffles(double, 8)
 shuffles(i64, 8)
 ')
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic_associative
-;; More efficient implementation for atomics that are associative (e.g.,
-;; add, and, ...).  If a basic implementation would do sometihng like:
-;; result0 = atomic_op(ptr, val0)
-;; result1 = atomic_op(ptr, val1)
-;; ..
-;; Then instead we can do:
-;; tmp = (val0 op val1 op ...)
-;; result0 = atomic_op(ptr, tmp)
-;; result1 = (result0 op val0)
-;; ..
-;; And more efficiently compute the same result
-;;
-;; Takes five parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
 
 define(`mask_converts', `
 define internal <$1 x i8> @convertmask_i1_i8_$1(<$1 x i1>) {
@@ -875,54 +854,6 @@ define internal <$1 x i64> @convertmask_i64_i64_$1(<$1 x i64>) {
 
 mask_converts(WIDTH)
 
-define(`global_atomic_associative', `
-
-declare <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                        <$1 x MASK> %m) nounwind alwaysinline ;
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic_uniform
-;; Defines the implementation of a function that handles the mapping from
-;; an ispc atomic function to the underlying LLVM intrinsics.  This variant
-;; just calls the atomic once, for the given uniform value
-;;
-;; Takes four parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-
-define(`global_atomic_uniform', `
-declare $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline ;
-')
-
-;; Macro to declare the function that implements the swap atomic.  
-;; Takes three parameters:
-;; $1: vector width of the target
-;; $2: llvm type of the vector elements (e.g. i32)
-;; $3: ispc type of the elements (e.g. int32)
-
-define(`global_swap', `
-declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline ;
-')
-
-
-;; Similarly, macro to declare the function that implements the compare/exchange
-;; atomic.  Takes three parameters:
-;; $1: vector width of the target
-;; $2: llvm type of the vector elements (e.g. i32)
-;; $3: ispc type of the elements (e.g. int32)
-
-define(`global_atomic_exchange', `
-
-declare <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
-                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline ;
-
-declare $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline ;
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; count trailing zeros
@@ -2507,67 +2438,6 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
   ret double %r
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; atomics and memory barriers
-
-declare void @llvm.memory.barrier(i1 %loadload, i1 %loadstore, i1 %storeload,
-                                  i1 %storestore, i1 %device)
-
-define void @__memory_barrier() nounwind readnone alwaysinline {
-  ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
-  ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
-  ;; in the case where the first 4 args are true but it is false.
-  ;;  So we just always set that to true...
-  call void @llvm.memory.barrier(i1 true, i1 true, i1 true, i1 true, i1 true)
-  ret void
-}
-
-global_atomic_associative(WIDTH, add, i32, int32, 0)
-global_atomic_associative(WIDTH, sub, i32, int32, 0)
-global_atomic_associative(WIDTH, and, i32, int32, -1)
-global_atomic_associative(WIDTH, or, i32, int32, 0)
-global_atomic_associative(WIDTH, xor, i32, int32, 0)
-global_atomic_uniform(WIDTH, add, i32, int32)
-global_atomic_uniform(WIDTH, sub, i32, int32)
-global_atomic_uniform(WIDTH, and, i32, int32)
-global_atomic_uniform(WIDTH, or, i32, int32)
-global_atomic_uniform(WIDTH, xor, i32, int32)
-global_atomic_uniform(WIDTH, min, i32, int32)
-global_atomic_uniform(WIDTH, max, i32, int32)
-global_atomic_uniform(WIDTH, umin, i32, uint32)
-global_atomic_uniform(WIDTH, umax, i32, uint32)
-
-global_atomic_associative(WIDTH, add, i64, int64, 0)
-global_atomic_associative(WIDTH, sub, i64, int64, 0)
-global_atomic_associative(WIDTH, and, i64, int64, -1)
-global_atomic_associative(WIDTH, or, i64, int64, 0)
-global_atomic_associative(WIDTH, xor, i64, int64, 0)
-global_atomic_uniform(WIDTH, add, i64, int64)
-global_atomic_uniform(WIDTH, sub, i64, int64)
-global_atomic_uniform(WIDTH, and, i64, int64)
-global_atomic_uniform(WIDTH, or, i64, int64)
-global_atomic_uniform(WIDTH, xor, i64, int64)
-global_atomic_uniform(WIDTH, min, i64, int64)
-global_atomic_uniform(WIDTH, max, i64, int64)
-global_atomic_uniform(WIDTH, umin, i64, uint64)
-global_atomic_uniform(WIDTH, umax, i64, uint64)
-
-global_swap(WIDTH, i32, int32)
-global_swap(WIDTH, i64, int64)
-
-declare float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline ;
-declare double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline ;
-global_atomic_exchange(WIDTH, i32, int32)
-global_atomic_exchange(WIDTH, i64, int64)
-
-declare <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
-                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
-declare <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
-                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
-declare float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
-                                                             float %val) nounwind alwaysinline ;
-declare double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                                               double %val) nounwind alwaysinline ;
 
 ')
 

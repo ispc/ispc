@@ -1660,3 +1660,423 @@ define i64 @__clock() nounwind alwaysinline {
   ret i64 %r
 }
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_associative
+;; More efficient implementation for atomics that are associative (e.g.,
+;; add, and, ...).  If a basic implementation would do sometihng like:
+;; result0 = atomic_op(ptr, val0)
+;; result1 = atomic_op(ptr, val1)
+;; ..
+;; Then instead we can do:
+;; tmp = (val0 op val1 op ...)
+;; result0 = atomic_op(ptr, tmp)
+;; result1 = (result0 op val0)
+;; ..
+;; And more efficiently compute the same result
+;;
+;; Takes five parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the LLVM atomic (e.g. i32)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
+;; add
+define <1 x i32> @__atomic_add_int32_global(i32* %ptr, <1 x i32> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i32> %valv  to i32
+  br i1 %mask, label %exec, label %pass
+exec:
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.add.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  %oldv = bitcast i32 %old to <1 x i32>
+  ret <1 x i32> %oldv
+pass:
+  ret <1 x i32> %valv
+}
+;; sub
+define <1 x i32> @__atomic_sub_int32_global(i32* %ptr, <1 x i32> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %nvalv = sub <1 x i32> <i32 0>, %valv
+  %ret = call <1 x i32> @__atomic_add_int32_global(i32* %ptr, <1 x i32> %nvalv, <1 x i1> %maskv);
+  ret <1 x i32> %ret;
+}
+;; and
+define <1 x i32> @__atomic_and_int32_global(i32* %ptr, <1 x i32> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i32> %valv  to i32
+  br i1 %mask, label %exec, label %pass
+exec:
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.and.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  %oldv = bitcast i32 %old to <1 x i32>
+  ret <1 x i32> %oldv
+pass:
+  ret <1 x i32> %valv
+}
+;; or
+define <1 x i32> @__atomic_or_int32_global(i32* %ptr, <1 x i32> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i32> %valv  to i32
+  br i1 %mask, label %exec, label %pass
+exec:
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.or.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  %oldv = bitcast i32 %old to <1 x i32>
+  ret <1 x i32> %oldv
+pass:
+  ret <1 x i32> %valv
+}
+;; xor
+define <1 x i32> @__atomic_xor_int32_global(i32* %ptr, <1 x i32> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i32> %valv  to i32
+  br i1 %mask, label %exec, label %pass
+exec:
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.xor.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  %oldv = bitcast i32 %old to <1 x i32>
+  ret <1 x i32> %oldv
+pass:
+  ret <1 x i32> %valv
+}
+
+;;;;;;;;; int64
+define <1 x i64> @__atomic_add_int64_global(i64* %ptr, <1 x i64> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i64> %valv  to i64
+  br i1 %mask, label %exec, label %pass
+exec:
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.add.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  %oldv = bitcast i64 %old to <1 x i64>
+  ret <1 x i64> %oldv
+pass:
+  ret <1 x i64> %valv
+}
+define <1 x i64> @__atomic_sub_int64_global(i64* %ptr, <1 x i64> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %nvalv = sub <1 x i64> <i64 0>, %valv
+  %ret = call <1 x i64> @__atomic_add_int64_global(i64* %ptr, <1 x i64> %nvalv, <1 x i1> %maskv);
+  ret <1 x i64> %ret;
+}
+
+;; and
+define <1 x i64> @__atomic_and_int64_global(i64* %ptr, <1 x i64> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i64> %valv  to i64
+  br i1 %mask, label %exec, label %pass
+exec:
+  %andr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.and.b64 $0, [$1], $2;", "=l,l,l"(i64 %andr, i64 %val);
+  %oldv = bitcast i64 %old to <1 x i64>
+  ret <1 x i64> %oldv
+pass:
+  ret <1 x i64> %valv
+}
+
+;; or 
+define <1 x i64> @__atomic_or_int64_global(i64* %ptr, <1 x i64> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i64> %valv  to i64
+  br i1 %mask, label %exec, label %pass
+exec:
+  %orr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.or.b64 $0, [$1], $2;", "=l,l,l"(i64 %orr, i64 %val);
+  %oldv = bitcast i64 %old to <1 x i64>
+  ret <1 x i64> %oldv
+pass:
+  ret <1 x i64> %valv
+}
+
+;; xor
+define <1 x i64> @__atomic_xor_int64_global(i64* %ptr, <1 x i64> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x  i1> %maskv to  i1
+  %val  = bitcast <1 x i64> %valv  to i64
+  br i1 %mask, label %exec, label %pass
+exec:
+  %xorr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.xor.b64 $0, [$1], $2;", "=l,l,l"(i64 %xorr, i64 %val);
+  %oldv = bitcast i64 %old to <1 x i64>
+  ret <1 x i64> %oldv
+pass:
+  ret <1 x i64> %valv
+}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; global_atomic_uniform
+;; Defines the implementation of a function that handles the mapping from
+;; an ispc atomic function to the underlying LLVM intrinsics.  This variant
+;; just calls the atomic once, for the given uniform value
+;;
+;; Takes four parameters:
+;; $1: vector width of the target
+;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
+;;     (add, sub...)
+;; $3: return type of the LLVM atomic (e.g. i32)
+;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
+
+define i32 @__get_first_active_lane()
+{
+  %nact  = call i32 @__ballot_nvptx(i1 true);
+  %lane1 = call i32 @__count_leading_zeros_i32(i32 %nact)
+  %lane  = sub i32 31, %lane1
+  ret i32 %lane
+}
+
+define i32 @__atomic_add_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.add.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_sub_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %nval = sub i32 0, %val;
+  %old = tail call i32 @__atomic_add_uniform_int32_global_nvptx(i32* %ptr, i32 %nval);
+  ret i32 %old;
+}
+define i32 @__atomic_and_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.and.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_or_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.or.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_xor_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.xor.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_min_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.min.s32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_max_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.max.s32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_umin_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.min.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i32 @__atomic_umax_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.max.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+
+
+define i64 @__atomic_add_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.add.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_sub_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %nval = sub i64 0, %val;
+  %old = tail call i64 @__atomic_add_uniform_int64_global_nvptx(i64* %ptr, i64 %nval);
+  ret i64 %old;
+}
+define i64 @__atomic_and_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.and.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_or_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.or.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_xor_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.xor.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_min_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.min.s64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_max_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.max.s64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_umin_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.min.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define i64 @__atomic_umax_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.max.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+
+define(`global_atomic_uniform',`
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline
+{
+entry:
+  %addr   = ptrtoint $3 * %ptr to i64
+  %active = call i32 @__get_first_active_lane();
+  %lane   = call i32 @__laneidx();
+  %c      = icmp eq i32 %lane, %active
+  br i1 %c, label %p1, label %p2
+
+p1:
+  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %ptr, $3 %val);
+  br label %p2;
+
+p2: 
+  %t1 = phi $3 [%t0, %p1], [zeroinitializer, %entry]
+  %old = call $3 @__shfl_$3_nvptx($3 %t1, i32 %active)
+  ret $3 %old;
+}
+')
+global_atomic_uniform(1, add, i32, int32)
+global_atomic_uniform(1, sub, i32, int32)
+global_atomic_uniform(1, and, i32, int32)
+global_atomic_uniform(1, or, i32, int32)
+global_atomic_uniform(1, xor, i32, int32)
+global_atomic_uniform(1, min, i32, int32)
+global_atomic_uniform(1, max, i32, int32)
+global_atomic_uniform(1, umin, i32, uint32)
+global_atomic_uniform(1, umax, i32, uint32)
+
+global_atomic_uniform(1, add, i64, int64)
+global_atomic_uniform(1, sub, i64, int64)
+global_atomic_uniform(1, and, i64, int64)
+global_atomic_uniform(1, or, i64, int64)
+global_atomic_uniform(1, xor, i64, int64)
+global_atomic_uniform(1, min, i64, int64)
+global_atomic_uniform(1, max, i64, int64)
+global_atomic_uniform(1, umin, i64, uint64)
+global_atomic_uniform(1, umax, i64, uint64)
+
+define(`global_atomic_varying',`
+define <1 x $3> @__atomic_$2_varying_$4_global(<1 x i64> %ptr, <1 x $3> %val, <1 x i1> %maskv) nounwind alwaysinline
+{
+entry:
+  %addr  = bitcast <1 x i64> %ptr   to i64
+  %c     = bitcast <1 x  i1> %maskv to  i1
+  br i1 %c, label %p1, label %p2
+
+p1:
+  %sv = bitcast <1 x $3> %val to $3
+  %sptr = inttoptr i64 %addr to $3*
+  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %sptr, $3 %sv);
+  %t0v = bitcast $3 %t0 to <1 x $3>
+  ret < 1x $3> %t0v
+
+p2: 
+  ret <1 x $3> %val
+}
+')
+global_atomic_varying(1, add, i32, int32)
+global_atomic_varying(1, sub, i32, int32)
+global_atomic_varying(1, and, i32, int32)
+global_atomic_varying(1, or, i32, int32)
+global_atomic_varying(1, xor, i32, int32)
+global_atomic_varying(1, min, i32, int32)
+global_atomic_varying(1, max, i32, int32)
+global_atomic_varying(1, umin, i32, uint32)
+global_atomic_varying(1, umax, i32, uint32)
+
+global_atomic_varying(1, add, i64, int64)
+global_atomic_varying(1, sub, i64, int64)
+global_atomic_varying(1, and, i64, int64)
+global_atomic_varying(1, or, i64, int64)
+global_atomic_varying(1, xor, i64, int64)
+global_atomic_varying(1, min, i64, int64)
+global_atomic_varying(1, max, i64, int64)
+global_atomic_varying(1, umin, i64, uint64)
+global_atomic_varying(1, umax, i64, uint64)
+
+;; Macro to declare the function that implements the swap atomic.  
+;; Takes three parameters:
+;; $1: vector width of the target
+;; $2: llvm type of the vector elements (e.g. i32)
+;; $3: ispc type of the elements (e.g. int32)
+
+define(`global_swap', `
+declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline ;
+')
+
+
+;; Similarly, macro to declare the function that implements the compare/exchange
+;; atomic.  Takes three parameters:
+;; $1: vector width of the target
+;; $2: llvm type of the vector elements (e.g. i32)
+;; $3: ispc type of the elements (e.g. int32)
+
+define(`global_atomic_exchange', `
+
+declare <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
+                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline ;
+
+declare $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
+                                                       $2 %val) nounwind alwaysinline ;
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; atomics and memory barriers
+
+global_swap(WIDTH, i32, int32)
+global_swap(WIDTH, i64, int64)
+
+declare float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline ;
+declare double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline ;
+global_atomic_exchange(WIDTH, i32, int32)
+global_atomic_exchange(WIDTH, i64, int64)
+
+declare <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
+                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
+declare <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
+                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
+declare float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
+                                                             float %val) nounwind alwaysinline ;
+declare double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
+                                                               double %val) nounwind alwaysinline ;
+
+declare void @llvm.nvvm.membar.gl()
+declare void @llvm.nvvm.membar.sys()
+declare void @llvm.nvvm.membar.cta()
+
+define void @__memory_barrier() nounwind readnone alwaysinline {
+  ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
+  ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
+  ;; in the case where the first 4 args are true but it is false.
+  ;;  So we just always set that to true...
+  call void @llvm.nvvm.membar.gl()
+  ret void
+}

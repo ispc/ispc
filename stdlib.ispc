@@ -1814,7 +1814,7 @@ static inline void memory_barrier() {
     __memory_barrier();
 }
 
-#define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE)                        \
+#define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE,TC)                        \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask); \
     return ret;                                                         \
@@ -1825,6 +1825,10 @@ static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_##OPB##_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1835,6 +1839,7 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  } \
 }                                                                       \
 
 #define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
@@ -1888,7 +1893,7 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
     return ret;                                                         \
 }                                                                       \
 
-#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB,MASKTYPE,TC)                          \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
@@ -1903,6 +1908,10 @@ static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
                                        TA value) {                      \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_##OPB##_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1913,48 +1922,49 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  } \
 }
 
-DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
-DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType)
+DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType,int64)
 DEFINE_ATOMIC_SWAP(int32,int32)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
-DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType)
+DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType, unsigned int64)
 DEFINE_ATOMIC_SWAP(unsigned int32,int32)
 
 DEFINE_ATOMIC_SWAP(float,float)
 
-DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
-DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType)
+DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType,int64)
 DEFINE_ATOMIC_SWAP(int64,int64)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
-DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType)
+DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType,unsigned int64)
 DEFINE_ATOMIC_SWAP(unsigned int64,int64)
 
 DEFINE_ATOMIC_SWAP(double,double)
