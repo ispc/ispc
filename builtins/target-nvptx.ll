@@ -1661,6 +1661,9 @@ define i64 @__clock() nounwind alwaysinline {
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; atomics and memory barriers
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; global_atomic_associative
 ;; More efficient implementation for atomics that are associative (e.g.,
 ;; add, and, ...).  If a basic implementation would do sometihng like:
@@ -1943,6 +1946,20 @@ define i64 @__atomic_umax_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounw
   ret i64 %old;
 }
 
+define(`global_atomic',`
+define <1 x $3> @__atomic_$2_$4_global($3* %ptr,  <1 x $3> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x i1> %maskv to i1
+  %val  = bitcast <1 x $3> %valv  to $3
+  br i1 %mask, label %exec, label %pass
+exec:
+  %old = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %ptr, $3 %val);
+  %oldv = bitcast $3 %old to <1 x $3>
+  ret <1 x $3> %oldv
+pass:
+  ret <1 x $3> %valv
+}
+')
 define(`global_atomic_uniform',`
 define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline
 {
@@ -1963,6 +1980,27 @@ p2:
   ret $3 %old;
 }
 ')
+define(`global_atomic_varying',`
+define <1 x $3> @__atomic_$2_varying_$4_global(<1 x i64> %ptr, <1 x $3> %val, <1 x i1> %maskv) nounwind alwaysinline
+{
+entry:
+  %addr  = bitcast <1 x i64> %ptr   to i64
+  %c     = bitcast <1 x  i1> %maskv to  i1
+  br i1 %c, label %p1, label %p2
+
+p1:
+  %sv = bitcast <1 x $3> %val to $3
+  %sptr = inttoptr i64 %addr to $3*
+  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %sptr, $3 %sv);
+  %t0v = bitcast $3 %t0 to <1 x $3>
+  ret < 1x $3> %t0v
+
+p2: 
+  ret <1 x $3> %val
+}
+')
+
+
 global_atomic_uniform(1, add, i32, int32)
 global_atomic_uniform(1, sub, i32, int32)
 global_atomic_uniform(1, and, i32, int32)
@@ -1983,25 +2021,6 @@ global_atomic_uniform(1, max, i64, int64)
 global_atomic_uniform(1, umin, i64, uint64)
 global_atomic_uniform(1, umax, i64, uint64)
 
-define(`global_atomic_varying',`
-define <1 x $3> @__atomic_$2_varying_$4_global(<1 x i64> %ptr, <1 x $3> %val, <1 x i1> %maskv) nounwind alwaysinline
-{
-entry:
-  %addr  = bitcast <1 x i64> %ptr   to i64
-  %c     = bitcast <1 x  i1> %maskv to  i1
-  br i1 %c, label %p1, label %p2
-
-p1:
-  %sv = bitcast <1 x $3> %val to $3
-  %sptr = inttoptr i64 %addr to $3*
-  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %sptr, $3 %sv);
-  %t0v = bitcast $3 %t0 to <1 x $3>
-  ret < 1x $3> %t0v
-
-p2: 
-  ret <1 x $3> %val
-}
-')
 global_atomic_varying(1, add, i32, int32)
 global_atomic_varying(1, sub, i32, int32)
 global_atomic_varying(1, and, i32, int32)
@@ -2028,9 +2047,42 @@ global_atomic_varying(1, umax, i64, uint64)
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-define(`global_swap', `
-declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline ;
-')
+define i32 @__atomic_swap_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.exch.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
+  ret i32 %old;
+}
+define i64 @__atomic_swap_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.exch.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
+  ret i64 %old;
+}
+define float @__atomic_swap_uniform_float_global_nvptx(float* %ptr, float %val) nounwind alwaysinline
+{
+   %ptrI = bitcast float* %ptr to i32*
+   %valI = bitcast float  %val to i32
+   %retI = call i32 @__atomic_swap_uniform_int32_global_nvptx(i32* %ptrI, i32 %valI)
+   %ret  = bitcast i32 %retI to float
+   ret float %ret
+}
+define double @__atomic_swap_uniform_double_global_nvptx(double* %ptr, double %val) nounwind alwaysinline
+{
+   %ptrI = bitcast double* %ptr to i64*
+   %valI = bitcast double  %val to i64
+   %retI = call i64 @__atomic_swap_uniform_int64_global_nvptx(i64* %ptrI, i64 %valI)
+   %ret  = bitcast i64 %retI to double
+   ret double %ret
+}
+global_atomic_uniform(1, swap, i32, int32)
+global_atomic_uniform(1, swap, i64, int64)
+global_atomic_uniform(1, swap, float, float)
+global_atomic_uniform(1, swap, double, double)
+global_atomic_varying(1, swap, i32, int32)
+global_atomic_varying(1, swap, i64, int64)
+global_atomic_varying(1, swap, float, float)
+global_atomic_varying(1, swap, double, double)
 
 
 ;; Similarly, macro to declare the function that implements the compare/exchange
@@ -2039,34 +2091,109 @@ declare $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysin
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-define(`global_atomic_exchange', `
+define i32 @__atomic_compare_exchange_uniform_int32_global_nvptx(i32* %ptr, i32 %cmp, i32 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i32* %ptr to i64
+  %old = tail call i32 asm sideeffect "atom.cas.b32 $0, [$1], $2, $3;", "=r,l,r,r"(i64 %addr, i32 %cmp, i32 %val);
+  ret i32 %old;
+}
+define i64 @__atomic_compare_exchange_uniform_int64_global_nvptx(i64* %ptr, i64 %cmp, i64 %val) nounwind alwaysinline
+{
+  %addr = ptrtoint i64* %ptr to i64
+  %old = tail call i64 asm sideeffect "atom.cas.b64 $0, [$1], $2, $3;", "=l,l,l,l"(i64 %addr, i64 %cmp, i64 %val);
+  ret i64 %old;
+}
+define float @__atomic_compare_exchange_uniform_float_global_nvptx(float* %ptr, float %cmp, float %val) nounwind alwaysinline
+{
+   %ptrI = bitcast float* %ptr to i32*
+   %cmpI = bitcast float  %cmp to i32
+   %valI = bitcast float  %val to i32
+   %retI = call i32 @__atomic_compare_exchange_uniform_int32_global_nvptx(i32* %ptrI, i32 %cmpI, i32 %valI)
+   %ret  = bitcast i32 %retI to float
+   ret float %ret
+}
+define double @__atomic_compare_exchange_uniform_double_global_nvptx(double* %ptr, double %cmp, double %val) nounwind alwaysinline
+{
+   %ptrI = bitcast double* %ptr to i64*
+   %cmpI = bitcast double  %cmp to i64
+   %valI = bitcast double  %val to i64
+   %retI = call i64 @__atomic_compare_exchange_uniform_int64_global_nvptx(i64* %ptrI, i64 %cmpI, i64 %valI)
+   %ret  = bitcast i64 %retI to double
+   ret double %ret
+}
 
-declare <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
-                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline ;
+;;;;;;;;;;;;
+define(`global_atomic_cas',`
+define <1 x $3> @__atomic_$2_$4_global($3* %ptr, <1 x $3> %cmpv, <1 x $3> %valv, <1 x i1> %maskv) nounwind alwaysinline
+{
+  %mask = bitcast <1 x i1> %maskv to i1
+  %cmp  = bitcast <1 x $3> %cmpv  to $3
+  %val  = bitcast <1 x $3> %valv  to $3
+  br i1 %mask, label %exec, label %pass
+exec:
+  %old = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %ptr, $3 %cmp, $3 %val);
+  %oldv = bitcast $3 %old to <1 x $3>
+  ret <1 x $3> %oldv
+pass:
+  ret <1 x $3> %valv
+}
+')
+define(`global_atomic_cas_uniform',`
+define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %cmp, $3 %val) nounwind alwaysinline
+{
+entry:
+  %addr   = ptrtoint $3 * %ptr to i64
+  %active = call i32 @__get_first_active_lane();
+  %lane   = call i32 @__laneidx();
+  %c      = icmp eq i32 %lane, %active
+  br i1 %c, label %p1, label %p2
 
-declare $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline ;
+p1:
+  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %ptr, $3 %cmp, $3 %val);
+  br label %p2;
+
+p2: 
+  %t1 = phi $3 [%t0, %p1], [zeroinitializer, %entry]
+  %old = call $3 @__shfl_$3_nvptx($3 %t1, i32 %active)
+  ret $3 %old;
+}
+')
+define(`global_atomic_cas_varying',`
+define <1 x $3> @__atomic_$2_varying_$4_global(<1 x i64> %ptr, <1 x $3> %cmp, <1 x $3> %val, <1 x i1> %maskv) nounwind alwaysinline
+{
+entry:
+  %addr  = bitcast <1 x i64> %ptr   to i64
+  %c     = bitcast <1 x  i1> %maskv to  i1
+  br i1 %c, label %p1, label %p2
+
+p1:
+  %sv = bitcast <1 x $3> %val to $3
+  %sc = bitcast <1 x $3> %cmp to $3
+  %sptr = inttoptr i64 %addr to $3*
+  %t0 = call $3 @__atomic_$2_uniform_$4_global_nvptx($3 * %sptr, $3 %sc, $3 %sv);
+  %t0v = bitcast $3 %t0 to <1 x $3>
+  ret < 1x $3> %t0v
+
+p2: 
+  ret <1 x $3> %val
+}
 ')
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; atomics and memory barriers
+global_atomic_cas_uniform(1, compare_exchange, i32, int32)
+global_atomic_cas_uniform(1, compare_exchange, i64, int64)
+global_atomic_cas_uniform(1, compare_exchange, float, float)
+global_atomic_cas_uniform(1, compare_exchange, double, double)
+global_atomic_cas_varying(1, compare_exchange, i32, int32)
+global_atomic_cas_varying(1, compare_exchange, i64, int64)
+global_atomic_cas_varying(1, compare_exchange, float, float)
+global_atomic_cas_varying(1, compare_exchange, double, double)
+global_atomic_cas(1, compare_exchange, i32, int32)
+global_atomic_cas(1, compare_exchange, i64, int64)
+global_atomic_cas(1, compare_exchange, float, float)
+global_atomic_cas(1, compare_exchange, double, double)
 
-global_swap(WIDTH, i32, int32)
-global_swap(WIDTH, i64, int64)
 
-declare float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline ;
-declare double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline ;
-global_atomic_exchange(WIDTH, i32, int32)
-global_atomic_exchange(WIDTH, i64, int64)
 
-declare <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
-                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
-declare <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
-                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline ;
-declare float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
-                                                             float %val) nounwind alwaysinline ;
-declare double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                                               double %val) nounwind alwaysinline ;
 
 declare void @llvm.nvvm.membar.gl()
 declare void @llvm.nvvm.membar.sys()

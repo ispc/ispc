@@ -4547,3 +4547,40 @@ declare i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 declare i64* @__cvt_loc2gen_var(i64 addrspace(3)*) nounwind readnone alwaysinline
 ')
 
+define(`global_atomic_varying',`
+declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
+')
+
+define(`global_atomic_cas_varying',`
+declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %cmp, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
+')
+
+global_atomic_cas_varying(WIDTH, compare_exchange, i32, int32)
+global_atomic_cas_varying(WIDTH, compare_exchange, i64, int64)
+global_atomic_cas_varying(WIDTH, compare_exchange, float, float)
+global_atomic_cas_varying(WIDTH, compare_exchange, double, double)
+
+global_atomic_varying(WIDTH, swap, i32, int32)
+global_atomic_varying(WIDTH, swap, i64, int64)
+global_atomic_varying(WIDTH, swap, float, float)
+global_atomic_varying(WIDTH, swap, double, double)
+
+global_atomic_varying(WIDTH, add, i32, int32)
+global_atomic_varying(WIDTH, sub, i32, int32)
+global_atomic_varying(WIDTH, and, i32, int32)
+global_atomic_varying(WIDTH, or, i32, int32)
+global_atomic_varying(WIDTH, xor, i32, int32)
+global_atomic_varying(WIDTH, min, i32, int32)
+global_atomic_varying(WIDTH, max, i32, int32)
+global_atomic_varying(WIDTH, umin, i32, uint32)
+global_atomic_varying(WIDTH, umax, i32, uint32)
+
+global_atomic_varying(WIDTH, add, i64, int64)
+global_atomic_varying(WIDTH, sub, i64, int64)
+global_atomic_varying(WIDTH, and, i64, int64)
+global_atomic_varying(WIDTH, or, i64, int64)
+global_atomic_varying(WIDTH, xor, i64, int64)
+global_atomic_varying(WIDTH, min, i64, int64)
+global_atomic_varying(WIDTH, max, i64, int64)
+global_atomic_varying(WIDTH, umin, i64, uint64)
+global_atomic_varying(WIDTH, umax, i64, uint64)
