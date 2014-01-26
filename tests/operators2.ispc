@@ -1,4 +1,9 @@
+#ifdef __NVPTX__
+uniform int _off[programCount];
+#define off _off[programIndex]
+#else  /* global varying data types are not yet supported with "nvptx" target */
 int off;
+#endif
 
 export uniform int width() { return programCount; }
 
@@ -22,24 +27,33 @@ struct S operator/(struct S rr, struct S rv) {
     return c;
 }
 
-struct S a;
-struct S b;
+#ifdef __NVPTX__
+uniform struct S _a[programCount];
+uniform struct S _b[programCount];
+uniform struct S _d[programCount];
+#define global_a _a[programIndex]
+#define global_b _b[programIndex]
+#define global_d _d[programIndex]
+#else
+struct S global_a;
+struct S global_b;
 struct S d;
+#endif
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
     int T = programIndex;
-    a.a = aFOO[programIndex];
-    b.a = -aFOO[programIndex];
+    global_a.a = aFOO[programIndex];
+    global_b.a = -aFOO[programIndex];
     if (programIndex == 3)
         off = 1;
     else
         off = 0;
     if (T % 2)
-        d = a + b;
+        global_d = global_a + global_b;
     else
-        d = a / b;
+        global_d = global_a / global_b;
 
-    RET[programIndex] = d.a;
+    RET[programIndex] = global_d.a;
 }
 
 export void result(uniform float RET[4]) {
