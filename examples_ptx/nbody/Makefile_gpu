@@ -1,0 +1,13 @@
+PROG=sort
+ISPC_SRC=sort.ispc
+CU_SRC=sort.cu
+CXX_SRC=sort.cpp  sort_serial.cpp
+PTXCC_REGMAX=32
+
+LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_gpu.mk
+
+
+
