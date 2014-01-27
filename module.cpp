@@ -675,6 +675,21 @@ lCheckExportedParameterTypes(const Type *type, const std::string &name,
     }
 }
 
+static void
+lCheckTaskParameterTypes(const Type *type, const std::string &name,
+                             SourcePos pos) {
+  if (g->target->getISA() != Target::NVPTX) 
+    return;
+  if (lRecursiveCheckValidParamType(type, false) == false) {
+    if (CastType<VectorType>(type))
+      Error(pos, "Vector-typed parameter \"%s\" is illegal in a task "
+          "function with \"nvptx\" target.", name.c_str());
+    else
+      Error(pos, "Varying parameter \"%s\" is illegal in a task function with \"nvptx\" target.",
+          name.c_str());
+    }
+}
+
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -880,6 +895,9 @@ Module::AddFunctionDeclaration(const std::string &name,
         // JCB nomosoa - Varying is now a-ok.
         if (functionType->isExported) {
           lCheckExportedParameterTypes(argType, argName, argPos);
+        }
+        if (functionType->isTask) {
+          lCheckTaskParameterTypes(argType, argName, argPos);
         }
 
         // ISPC assumes that no pointers alias.  (It should be possible to
