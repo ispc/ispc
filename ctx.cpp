@@ -1967,6 +1967,7 @@ static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Valu
  */
 static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* value)
 {
+ // return value;
   assert(value->getType()->isPointerTy());
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
   if (g->target->getISA() != Target::NVPTX || pt->getAddressSpace() != 3) return value;
@@ -1981,6 +1982,7 @@ static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* valu
  */
 static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
 {
+//  return value;
   if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) return value;
   llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
 
