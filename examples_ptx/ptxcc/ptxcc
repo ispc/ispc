@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PTXSRC=$1
+PTXSRC=$1__tmp_ptx.ptx
 PTXCU=$1___tmp_ptx.cu
 PTXSH=$1___tmp_ptx.sh
 
@@ -9,6 +9,7 @@ NVCCPARM=${@:2}
 DEPTX=dePTX
 NVCC=nvcc
 
+$(cat $1 | sed 's/\.b0/\.b32/g' > $PTXSRC) &&
 $DEPTX < $PTXSRC > $PTXCU &&
 $NVCC -arch=sm_35 -G -dc $NVCCPARM -dryrun $PTXCU 2>&1 | \
   sed 's/\#\$//g'| \

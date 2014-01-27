@@ -29,6 +29,7 @@ TAB [\t]*
 ".visible"      { return TOKEN_VISIBLE; }
 ".global"       { return TOKEN_GLOBAL; }
 ".param"        { return TOKEN_PARAM; }
+".b0"           { LLSETTOKEN( TOKEN_B32);}   /* fix for buggy llvm-ptx generator */
 ".b8"           { LLSETTOKEN( TOKEN_B8);}
 ".b16"          { LLSETTOKEN( TOKEN_B16);}
 ".b32"          { LLSETTOKEN( TOKEN_B32);}

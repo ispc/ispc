@@ -1483,6 +1483,10 @@ FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
     llvm::Value *__warpszm1 = BinaryOperator(llvm::Instruction::Add, __warpsz, LLVMInt32(-1), "__warpszm1");
     llvm::Value *laneIdx = BinaryOperator(llvm::Instruction::And, __tid_x, __warpszm1, "__laneidx");
     llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), laneIdx, 0, "__laneIdxV");
+#if 0
+    if (!is32bits)
+      index = ZExtInst(index, LLVMTypes::Int64VectandType);
+#endif
     return index;
 }
 

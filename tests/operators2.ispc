@@ -27,33 +27,24 @@ struct S operator/(struct S rr, struct S rv) {
     return c;
 }
 
-#ifdef __NVPTX__
-uniform struct S _a[programCount];
-uniform struct S _b[programCount];
-uniform struct S _d[programCount];
-#define global_a _a[programIndex]
-#define global_b _b[programIndex]
-#define global_d _d[programIndex]
-#else
-struct S global_a;
-struct S global_b;
-struct S d;
-#endif
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
+    struct S a;
+    struct S b;
+    struct S d;
     int T = programIndex;
-    global_a.a = aFOO[programIndex];
-    global_b.a = -aFOO[programIndex];
+    a.a = aFOO[programIndex];
+    b.a = -aFOO[programIndex];
     if (programIndex == 3)
         off = 1;
     else
         off = 0;
     if (T % 2)
-        global_d = global_a + global_b;
+        d = a + b;
     else
-        global_d = global_a / global_b;
+        d = a / b;
 
-    RET[programIndex] = global_d.a;
+    RET[programIndex] = d.a;
 }
 
 export void result(uniform float RET[4]) {

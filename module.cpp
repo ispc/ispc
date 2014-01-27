@@ -444,15 +444,36 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
-#if 1
     if (g->target->getISA() == Target::NVPTX && 
+#if 0
+        !type->IsConstType()  &&
+#endif
+#if 1
         at != NULL &&
+#endif
         type->IsVaryingType())
     {
-        Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
-        return;
-    }
+      Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
+      return;
+#if 0
+        int nel = 32;  /* warp-size */
+        if (type->IsArrayType())
+        {
+          const ArrayType *at = CastType<ArrayType>(type);
+          /* we must scale # elements by 4, because a thread-block will run 4 warps
+           * or 128 threads.
+           * ***note-to-me***:please define these value (128threads/4warps)
+           * in nvptx-target definition
+           * instead of compile-time constants 
+           */
+          nel *= at->GetElementCount();
+          assert (!type->IsSOAType());
+          type = new ArrayType(at->GetElementType()->GetAsUniformType(), nel);
+        }
+        else
+          type = new ArrayType(type->GetAsUniformType(), nel);
 #endif
+    }
 
 
     llvm::Type *llvmType = type->LLVMType(g->ctx);
