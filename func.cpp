@@ -240,7 +240,7 @@ Function::emitCode(FunctionEmitContext *ctx, llvm::Function *function,
     const FunctionType *type = CastType<FunctionType>(sym->type);
     Assert(type != NULL);
     if (type->isTask == true) {
-        // For tasks, we there should always be three parmeters: the
+        // For tasks, there should always be three parameters: the
         // pointer to the structure that holds all of the arguments, the
         // thread index, and the thread count variables.
         llvm::Function::arg_iterator argIter = function->arg_begin();
