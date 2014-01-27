@@ -50,8 +50,13 @@ namespace parser
     void printHeader()
     {
       std::stringstream s;
+#if 0
       s << "template<int N> struct __align__(N)   b8_t  { unsigned char  _v[N]; __device__ b8_t()  {}; __device__ b8_t (const int value) {}}; \n";
       s << "template<int N> struct __align__(2*N) b16_t { unsigned short _v[N]; __device__ b16_t() {}; __device__ b16_t(const int value) {}}; \n";
+#else
+      s << "template<int N> struct b8_t  { unsigned char  _v[N]; __device__ b8_t()  {}; __device__ b8_t (const int value) {}}; \n";
+      s << "template<int N> struct b16_t { unsigned short _v[N]; __device__ b16_t() {}; __device__ b16_t(const int value) {}}; \n";
+#endif
       s << "struct b8d_t  { unsigned char  _v[1]; }; \n";
       s << "struct b16d_t { unsigned short _v[1]; }; \n";
 

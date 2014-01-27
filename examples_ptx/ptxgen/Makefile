@@ -1,6 +1,7 @@
 CUDA55 = /usr/local/cuda-5.5
 CUDA60 = /usr/local/cuda-6.0
-
+CUDA55 = /opt/cuda/5.5
+CUDA60 = /opt/cuda/5.5
 all: ptxgen55 ptxgen60
 
 ptxgen60: ptxgen.cpp
