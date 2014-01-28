@@ -1,8 +1,8 @@
-PROG=sort
-ISPC_SRC=sort.ispc
-CU_SRC=sort.cu
-CXX_SRC=sort.cpp  sort_serial.cpp
-PTXCC_REGMAX=32
+PROG=radixSort
+ISPC_SRC=radixSort.ispc
+#CU_SRC=radixSort.cu
+CXX_SRC=radixSort.cpp  radixSort.cpp
+PTXCC_REGMAX=64
 
 LLVM_GPU=1
 NVVM_GPU=1

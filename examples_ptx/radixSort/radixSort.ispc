@@ -61,10 +61,14 @@ void sortPass(
   foreach (i = 0 ... nloc)
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
-    const int rel = localCounts[key];
+    int rel;
+    foreach_active(iv)
+    {
+      rel = localCounts[key];
+      localCounts[key]++;
+    }
     const int scatter = rel + digitOffsets[key];
     sorted [scatter] = keys[i];
-    localCounts[key] = 1 + rel;
   }
 }
 
@@ -74,8 +78,8 @@ void partialScanLocal(
     uniform int  countsAll[],
     uniform int partialSumAll[])
 {
-  const uniform int numBlocks = taskCount;
   const uniform int  blockIdx = taskIndex;
+  const uniform int numBlocks = taskCount;
 
   const uniform int  blockDim = (numBlocks+numBlocks-1)/numBlocks;
   const uniform int      bbeg = blockIdx * blockDim;
@@ -190,8 +194,8 @@ export void radixSort(
   uniform int * uniform sharedCounts = mem_pool;
   uniform int * uniform countsGlobal = sharedCounts + nSharedCounts;
   uniform int * uniform excScan      = countsGlobal + nCountsGlobal;
-  uniform int * uniform countsBlock  = excScan      + nExcScan;
-  uniform int * uniform partialSum   = countsBlock  + nCountsBlock;
+  uniform int * uniform counts       = excScan      + nExcScan;
+  uniform int * uniform partialSum   = counts       + nCountsBlock;
   uniform int * uniform prefixSum    = partialSum   + nPartialSum;
 
   for (uniform int bit = 0; bit < 32; bit += NUMBITS)
@@ -201,7 +205,7 @@ export void radixSort(
       countsGlobal[digit] = 0;
 
     /* compute histogram for each digit */
-    launch [numBlocks] countPass(keys, bit, numElements, countsBlock, countsGlobal);
+    launch [numBlocks] countPass(keys, bit, numElements, counts, countsGlobal);
     sync;
 
     /* exclusive scan on global histogram */
@@ -216,7 +220,7 @@ export void radixSort(
     }
           
     /* computing offsets for each digit */
-    radixExclusiveScan(numBlocks, excScan, countsBlock, partialSum, prefixSum);
+    radixExclusiveScan(numBlocks, excScan, counts, partialSum, prefixSum);
 
     /* sorting */
     launch [numBlocks] 
