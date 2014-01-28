@@ -1,9 +1,11 @@
 #define NUMBITS 8
 #define NUMDIGITS (1<<NUMBITS)
 
+typedef int64 Key;
+
 task
 void countPass(
-    const uniform int keysAll[],
+    const uniform Key keysAll[],
     const uniform int bit,
     const uniform int numElements,
     uniform int countsAll[],
@@ -15,7 +17,7 @@ void countPass(
 
   const uniform int mask = (1 << NUMBITS) - 1;
 
-  const uniform int * uniform keys =   keysAll + blockIdx*blockDim;
+  const uniform Key * uniform keys =   keysAll + blockIdx*blockDim;
   uniform int * uniform     counts = countsAll + blockIdx*NUMDIGITS;
   const uniform int           nloc = min(numElements - blockIdx*blockDim, blockDim);
 
@@ -47,8 +49,8 @@ void countPass(
 
 task
 void sortPass(
-    uniform int keysAll[],
-    uniform int sorted[],
+    uniform Key keysAll[],
+    uniform Key sorted[],
     uniform int bit,
     uniform int numElements,
     uniform int digitOffsetsAll[],
@@ -67,7 +69,7 @@ void sortPass(
 #endif
 
   const uniform int keyIndex = blockIdx * blockDim;
-  uniform int * uniform keys = keysAll + keyIndex;
+  uniform Key * uniform keys = keysAll + keyIndex;
   uniform int * uniform digitOffsets = digitOffsetsAll + blockIdx*NUMDIGITS;
   const uniform int nloc = min(numElements - keyIndex, blockDim);
 
@@ -96,8 +98,12 @@ void sortPass(
     }
     else
     {
-#if 1 //def __NVPTX__
-      rel = atomic_add_global(&localCounts[key],1);
+#ifdef __NVPTX__
+      /* buf fix, somehow atomic w/o branching fails */
+      if (programIndex < 16)
+        rel = atomic_add_global(&localCounts[key],1);
+      else
+        rel = atomic_add_global(&localCounts[key],1);
 #else
       rel = atomic_add_local(&localCounts[key],1);
 #endif
@@ -215,7 +221,7 @@ static uniform int * uniform partialSum;
 static uniform int * uniform prefixSum;
 
 static uniform int numElementsBuf = 0;
-static uniform int * uniform bufKeys;
+static uniform Key * uniform bufKeys;
 
 export void radixSort_alloc(const uniform int n)
 {
@@ -268,7 +274,7 @@ export void radixSort_free()
 
 export void radixSort(
     const uniform int numElements,
-    uniform int keys[])
+    uniform Key keys[])
 {
 #ifdef __NVPTX__
   assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
@@ -279,7 +285,7 @@ export void radixSort(
   if (numElementsBuf == 0)
   {
     numElementsBuf = numElements;
-    bufKeys = uniform new uniform int[numElementsBuf];
+    bufKeys = uniform new uniform Key[numElementsBuf];
   }
 
   const uniform int blockDim  = (numElements + numBlocks - 1) / numBlocks;
@@ -319,7 +325,7 @@ export void radixSort(
           sharedCounts);
     sync;
 
-    uniform int * uniform tmp = keys;
+    uniform Key * uniform tmp = keys;
     keys = bufKeys;
     bufKeys = tmp;
   }

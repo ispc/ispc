@@ -30,24 +30,36 @@ static inline void progressbar (unsigned int x, unsigned int n, unsigned int w =
   cout << "]\r" << flush;
 }
 
+struct Key
+{
+  int32_t key,val;
+};
+
 int main (int argc, char *argv[])
 {
   int i, j, n = argc == 1 ? 1000000 : atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
-  unsigned int *keys = new unsigned int [n];
-  unsigned int *keys_orig = new unsigned int [n];
+  Key *keys = new Key [n];
+  Key *keys_orig = new Key [n];
+  unsigned int *keys_gold = new unsigned int [n];
   
   srand48(rtc()*65536);
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
-    keys[i] = 10*i; //drand48() * (1<<30);
+  {
+    keys[i].key = drand48() * (1<<30);
+//    keys[i].val = i;
+  }
 
   std::random_shuffle(keys, keys + n);
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
+  {
+    keys_gold[i] = keys[i].key;
     keys_orig[i] = keys[i];
+  }
     
   ispcSetMallocHeapLimit(1024*1024*1024);
 
@@ -55,9 +67,9 @@ int main (int argc, char *argv[])
 
   for (i = 0; i < m; i ++)
   {
-    ispcMemcpy(keys, keys_orig, n*sizeof(unsigned int));
+    ispcMemcpy(keys, keys_orig, n*sizeof(Key));
     reset_and_start_timer();
-    ispc::radixSort(n, (int*)keys);
+    ispc::radixSort(n, (int64_t*)keys);
     tISPC2 += get_elapsed_msec();
     if (argc != 3)
         progressbar (i, m);
@@ -67,12 +79,9 @@ int main (int argc, char *argv[])
 
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n*m/tISPC2);
 
-  std::sort(keys_orig, keys_orig + n);
-#if 0
-  std::sort(keys, keys + n);
-#endif
+  std::sort(keys_gold, keys_gold + n);
   for (int i = 0; i < n; i++)
-    assert(keys[i] == keys_orig[i]);
+    assert(keys[i].key == keys_gold[i]);
 
 
 #if 0
@@ -101,5 +110,6 @@ int main (int argc, char *argv[])
 
   delete keys;
   delete keys_orig;
+  delete keys_gold;
   return 0;
 }
