@@ -6,6 +6,7 @@ typedef int64 Key;
 task
 void countPass(
     const uniform Key keysAll[],
+    uniform Key sortedAll[],
     const uniform int bit,
     const uniform int numElements,
     uniform int countsAll[],
@@ -17,7 +18,8 @@ void countPass(
 
   const uniform int mask = (1 << NUMBITS) - 1;
 
-  const uniform Key * uniform keys =   keysAll + blockIdx*blockDim;
+  const uniform Key * uniform keys   =   keysAll + blockIdx*blockDim;
+  uniform Key * uniform sorted = sortedAll + blockIdx*blockDim;
   uniform int * uniform     counts = countsAll + blockIdx*NUMDIGITS;
   const uniform int           nloc = min(numElements - blockIdx*blockDim, blockDim);
 
@@ -27,6 +29,7 @@ void countPass(
 #if 1
   foreach (i = 0 ... nloc)
   {
+    sorted[i] = keys[i];
     const int key = mask & ((unsigned int)keys[i] >> bit);
     uniform int skey;
     if (reduce_equal(key, &skey) == true)
@@ -274,7 +277,8 @@ export void radixSort_free()
 
 export void radixSort(
     const uniform int numElements,
-    uniform Key keys[])
+    uniform Key keys[],
+    const uniform int nBits)
 {
 #ifdef __NVPTX__
   assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
@@ -290,14 +294,14 @@ export void radixSort(
 
   const uniform int blockDim  = (numElements + numBlocks - 1) / numBlocks;
 
-  for (uniform int bit = 0; bit < 32; bit += NUMBITS)
+  for (uniform int bit = 0; bit < nBits; bit += NUMBITS)
   {
     /* initialize histogram for each digit */
     foreach (digit = 0 ... NUMDIGITS)
       countsGlobal[digit] = 0;
 
     /* compute histogram for each digit */
-    launch [numBlocks] countPass(keys, bit, numElements, counts, countsGlobal);
+    launch [numBlocks] countPass(keys, bufKeys, bit, numElements, counts, countsGlobal);
     sync;
 
     /* exclusive scan on global histogram */
@@ -317,17 +321,13 @@ export void radixSort(
     /* sorting */
     launch [numBlocks] 
       sortPass(
-          keys, 
           bufKeys, 
+          keys, 
           bit, 
           numElements,
           excScan,
           sharedCounts);
     sync;
-
-    uniform Key * uniform tmp = keys;
-    keys = bufKeys;
-    bufKeys = tmp;
   }
 
 }

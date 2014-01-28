@@ -48,8 +48,8 @@ int main (int argc, char *argv[])
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
-    keys[i].key = drand48() * (1<<30);
-//    keys[i].val = i;
+    keys[i].key = ((int)(drand48() * (1<<30))) & 0x00FFFFFF;
+    keys[i].val = i;
   }
 
   std::random_shuffle(keys, keys + n);
@@ -70,7 +70,7 @@ int main (int argc, char *argv[])
   {
     ispcMemcpy(keys, keys_orig, n*sizeof(Key));
     reset_and_start_timer();
-    ispc::radixSort(n, (int64_t*)keys);
+    ispc::radixSort(n, (int64_t*)keys, 32);
     tISPC2 = std::min(tISPC2, get_elapsed_msec());
     if (argc != 3)
         progressbar (i, m);
