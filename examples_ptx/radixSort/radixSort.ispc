@@ -60,7 +60,11 @@ void sortPass(
   const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
 
 
+#if 0
   uniform int * uniform localCounts = sharedCounts + blockIdx*NUMDIGITS;
+#else
+  uniform int localCounts[NUMDIGITS];
+#endif
 
   const uniform int keyIndex = blockIdx * blockDim;
   uniform int * uniform keys = keysAll + keyIndex;
@@ -92,7 +96,7 @@ void sortPass(
     }
     else
     {
-#ifdef __NVPTX__
+#if 1 //def __NVPTX__
       rel = atomic_add_global(&localCounts[key],1);
 #else
       rel = atomic_add_local(&localCounts[key],1);

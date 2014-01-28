@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
-    keys[i] = drand48() * (1<<30);
+    keys[i] = 10*i; //drand48() * (1<<30);
 
   std::random_shuffle(keys, keys + n);
 
