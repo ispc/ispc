@@ -22,11 +22,18 @@ void countPass(
   foreach (digit = 0 ... NUMDIGITS)
     counts[digit] = 0;
 
+#if 1
   foreach (i = 0 ... nloc)
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
-    atomic_add_local(&counts[key], 1);
+    uniform int skey;
+    if (reduce_equal(key, &skey) == true)
+      counts[skey] += reduce_add(1);
+    else
+      atomic_add_local(&counts[key], 1);
   }
+#else
+#endif
 
   foreach (digit = 0 ... NUMDIGITS)
     atomic_add_global(&countsGlobal[digit], counts[digit]);
@@ -74,14 +81,14 @@ void sortPass(
 
 task
 void partialScanLocal(
+    uniform int numBlocks,
     uniform int excScanAll[],
     uniform int  countsAll[],
     uniform int partialSumAll[])
 {
   const uniform int  blockIdx = taskIndex;
-  const uniform int numBlocks = taskCount;
 
-  const uniform int  blockDim = (numBlocks+numBlocks-1)/numBlocks;
+  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg + blockDim, numBlocks);
     
@@ -123,12 +130,12 @@ void partialScanGlobal(
 
 task
 void completeScanGlobal(
+    uniform int numBlocks,
     uniform int excScanAll[],
     uniform int carryValueAll[])
 {
-  const uniform int numBlocks = taskCount;
   const uniform int  blockIdx = taskIndex;
-  const uniform int  blockDim = (numBlocks+numBlocks-1)/numBlocks;
+  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg  + blockDim, numBlocks);
   
@@ -151,13 +158,14 @@ inline void radixExclusiveScan(
     uniform int partialSum[],
     uniform int  prefixSum[])
 {
-  launch [numBlocks] partialScanLocal(excScanPtr, countsPtr, partialSum);
+  const uniform int scale = 4;
+  launch [numBlocks/scale] partialScanLocal(numBlocks, excScanPtr, countsPtr, partialSum);
   sync;
 
-  launch [NUMDIGITS] partialScanGlobal(numBlocks, partialSum, prefixSum);
+  launch [NUMDIGITS] partialScanGlobal(numBlocks/scale, partialSum, prefixSum);
   sync;
 
-  launch [numBlocks] completeScanGlobal(excScanPtr, prefixSum);
+  launch [numBlocks/scale] completeScanGlobal(numBlocks, excScanPtr, prefixSum);
   sync;
 }
 
