@@ -1,7 +1,7 @@
 
-EXAMPLE=sort
-CPP_SRC=sort.cpp sort_serial.cpp
-ISPC_SRC=sort.ispc
+EXAMPLE=radixSort
+CPP_SRC=radixSort.cpp 
+ISPC_SRC=radixSort.ispc
 ISPC_IA_TARGETS=avx1-i32x8
 ISPC_ARM_TARGETS=neon
 #ISPC_FLAGS=-DDEBUG
