@@ -19,37 +19,30 @@ void countPass(
   uniform int * uniform     counts = countsAll + blockIdx*NUMDIGITS;
   const uniform int           nloc = min(numElements - blockIdx*blockDim, blockDim);
 
-
-#if 0
-  uniform int shcounts[NUMDIGITS];
-#else
-#define shcounts counts
-#endif
-
   foreach (digit = 0 ... NUMDIGITS)
-    shcounts[digit] = 0;
+    counts[digit] = 0;
 
+#if 1
   foreach (i = 0 ... nloc)
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
     uniform int skey;
     if (reduce_equal(key, &skey) == true)
-      shcounts[skey] += reduce_add(1);
+      counts[skey] += reduce_add(1);
     else
     {
 #ifdef __NVPTX__
-      atomic_add_global(&shcounts[key], 1);
+      atomic_add_global(&counts[key], 1);
 #else
-      atomic_add_local(&shcounts[key], 1);
+      atomic_add_local(&counts[key], 1);
 #endif
     }
   }
+#else
+#endif
 
   foreach (digit = 0 ... NUMDIGITS)
-  {
-    counts[digit] = shcounts[digit];
-    atomic_add_global(&countsGlobal[digit], shcounts[digit]);
-  }
+    atomic_add_global(&countsGlobal[digit], counts[digit]);
 }
 
 task
@@ -58,31 +51,40 @@ void sortPass(
     uniform int sorted[],
     uniform int bit,
     uniform int numElements,
-    uniform int digitOffsetsAll[])
+    uniform int digitOffsetsAll[],
+    uniform int sharedCounts[])
 {
   const uniform int  blockIdx = taskIndex;
   const uniform int numBlocks = taskCount;
 
   const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
 
-  uniform int localCounts[NUMDIGITS];
+
+  uniform int * uniform localCounts = sharedCounts + blockIdx*NUMDIGITS;
 
   const uniform int keyIndex = blockIdx * blockDim;
   uniform int * uniform keys = keysAll + keyIndex;
   uniform int * uniform digitOffsets = digitOffsetsAll + blockIdx*NUMDIGITS;
   const uniform int nloc = min(numElements - keyIndex, blockDim);
 
-  const int unitScan = exclusive_scan_add(1);
-
-
   const uniform int mask = (1 << NUMBITS) - 1;
   foreach (i = 0 ... NUMDIGITS)
     localCounts[i] = 0;
+
+  const int unitScan = exclusive_scan_add(1);
+
 
   foreach (i = 0 ... nloc)
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
     int rel;
+#if 0
+    foreach_active(iv)
+    {
+      rel = localCounts[key];
+      localCounts[key]++;
+    }
+#else
     if (reduce_equal(key) == true)
     {
       rel = localCounts[key] + unitScan;
@@ -96,6 +98,7 @@ void sortPass(
       rel = atomic_add_local(&localCounts[key],1);
 #endif
     }
+#endif
     const int scatter = rel + digitOffsets[key];
     sorted [scatter] = keys[i];
   }
@@ -193,12 +196,14 @@ inline void radixExclusiveScan(
 
 static uniform int * uniform memoryPool = NULL;
 static uniform int numBlocks;
+static uniform int nSharedCounts;
 static uniform int nCountsGlobal;
 static uniform int nExcScan;
 static uniform int nCountsBlock;
 static uniform int nPartialSum;
 static uniform int nPrefixSum;
 
+static uniform int * uniform sharedCounts;
 static uniform int * uniform countsGlobal;
 static uniform int * uniform excScan;
 static uniform int * uniform counts;
@@ -212,6 +217,7 @@ export void radixSort_alloc(const uniform int n)
 {
   assert(memoryPool == NULL);
   numBlocks     = num_cores()*4;
+  nSharedCounts = NUMDIGITS*numBlocks;
   nCountsGlobal = NUMDIGITS;
   nExcScan      = NUMDIGITS*numBlocks;
   nCountsBlock  = NUMDIGITS*numBlocks;
@@ -220,6 +226,7 @@ export void radixSort_alloc(const uniform int n)
 
 
   const uniform int nalloc = 
+    nSharedCounts +
     nCountsGlobal +
     nExcScan +
     nCountsBlock + 
@@ -228,7 +235,8 @@ export void radixSort_alloc(const uniform int n)
 
   memoryPool = uniform new uniform int[nalloc];
 
-  countsGlobal = memoryPool;
+  sharedCounts = memoryPool;
+  countsGlobal = sharedCounts + nSharedCounts;
   excScan      = countsGlobal + nCountsGlobal;
   counts       = excScan      + nExcScan;
   partialSum   = counts       + nCountsBlock;
@@ -303,7 +311,8 @@ export void radixSort(
           bufKeys, 
           bit, 
           numElements,
-          excScan);
+          excScan,
+          sharedCounts);
     sync;
 
     uniform int * uniform tmp = keys;
