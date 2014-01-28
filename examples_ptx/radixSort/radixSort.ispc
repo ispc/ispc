@@ -1,255 +1,242 @@
-#if 1
-struct int2 {  int x,y; };
-struct int4 {  int x,y,z,w; };
-#else
-typedef int<2> int2;
-typedef int<4> int4;
+#define NUMBITS 8
+#define NUMDIGITS (1<<NUMBITS)
+
+task
+void computeHistogram(
+    const uniform int keysAll[],
+    const uniform int bit,
+    const uniform int numElements,
+    uniform int countsAll[],
+    uniform int countsGlobal[])
+{
+  const uniform int  blockIdx = taskIndex;
+  const uniform int numBlocks = taskCount;
+  const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
+
+  const uniform int mask = (1 << NUMBITS) - 1;
+
+  const uniform int * uniform keys =   keysAll + blockIdx*blockDim;
+  uniform int * uniform     counts = countsAll + blockIdx*NUMDIGITS;
+  const uniform int           nloc = min(numElements - blockIdx*blockDim, blockDim);
+
+  foreach (digit = 0 ... NUMDIGITS)
+    counts[digit] = 0;
+
+  foreach (i = 0 ... nloc)
+  {
+    const int key = mask & ((unsigned int)keys[i] >> bit);
+    atomic_add_local(&counts[key], 1);
+  }
+
+  foreach (digit = 0 ... NUMDIGITS)
+    atomic_add_global(&countsGlobal[digit], counts[digit]);
+}
+
+task
+void sortPass(
+    uniform int keysAll[],
+    uniform int sorted[],
+    uniform int bit,
+    uniform int numElements,
+    uniform int digitOffsetsAll[],
+    uniform int sharedCounts[])
+{
+  const uniform int  blockIdx = taskIndex;
+  const uniform int numBlocks = taskCount;
+
+  const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
+
+  const uniform int mask = (1 << NUMBITS) - 1;
+
+  uniform int * uniform localCounts = sharedCounts + blockIdx*NUMDIGITS;
+
+  const uniform int keyIndex = blockIdx * blockDim;
+  uniform int * uniform keys = keysAll + keyIndex;
+  uniform int * uniform digitOffsets = digitOffsetsAll + blockIdx*NUMDIGITS;
+  const uniform int nloc = min(numElements - keyIndex, blockDim);
+
+  foreach (i = 0 ... NUMDIGITS)
+    localCounts[i] = 0;
+
+  foreach (i = 0 ... nloc)
+  {
+    const int key = mask & ((unsigned int)keys[i] >> bit);
+    const int rel = localCounts[key];
+    const int scatter = rel + digitOffsets[key];
+    sorted [scatter]  = keys[i];
+    localCounts[key]  = 1 + rel;
+  }
+}
+
+task
+void partialScanLocal(
+    uniform int excScanPtr[],
+    uniform int  countsPtr[],
+    uniform int partialSum[])
+{
+  const uniform int numBlocks = taskCount;
+  const uniform int  blockIdx = taskIndex;
+
+  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
+  const uniform int      bbeg = blockIdx * blockDim;
+  const uniform int      bend = min(bbeg + blockDim, numBlocks);
+
+  foreach (digit = 0 ... NUMDIGITS)
+  {
+    uniform int * uniform excScanBlock = excScanPtr + bbeg*NUMDIGITS;
+    uniform int * uniform  countsBlock =  countsPtr + bbeg*NUMDIGITS;
+
+    int prev = bbeg == 0 ? excScanBlock[digit] : 0;
+    for (uniform int block = bbeg; block < bend; block++)
+    {
+      const int y = countsBlock[digit];
+      excScanBlock[digit] = prev;
+      prev += y;
+
+      excScanBlock += NUMDIGITS;
+      countsBlock  += NUMDIGITS;
+    }
+
+    excScanBlock -= NUMDIGITS;
+    countsBlock  -= NUMDIGITS;
+
+    partialSum[blockIdx*NUMDIGITS + digit] = excScanBlock[digit] + countsBlock[digit];
+  }
+}
+
+task
+void partialScanGlobal(
+    const uniform int numBlocks,
+    uniform int partialSum[],
+    uniform int prefixSum[])
+{
+  const int digit = taskIndex;
+  int carry = 0;
+  foreach (block = 0 ... numBlocks)
+  {
+    const int value = partialSum[block*NUMDIGITS + digit];
+    const int scan  = exclusive_scan_add(value);
+    prefixSum[block*NUMDIGITS + digit] = value + carry;
+    carry = broadcast(scan+value, programCount-1);
+  }
+}
+
+task
+void completeScanGlobal(
+    uniform int excScanAll[],
+    uniform int carryValue[])
+{
+  const uniform int numBlocks = taskCount;
+  const uniform int  blockIdx = taskIndex;
+  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
+  const uniform int      bbeg = blockIdx * blockDim;
+  const uniform int      bend = min(bbeg  + blockDim, numBlocks);
+
+  carryValue += blockIdx*NUMDIGITS;
+  foreach (digit = 0 ... NUMDIGITS)
+  {
+    const int carry = carryValue[digit];
+    uniform int * uniform excScanBlock = excScanAll + bbeg*NUMDIGITS;
+    for (uniform int block = bbeg; block < bend; block++, excScanBlock += NUMDIGITS)
+      excScanBlock[digit] += carry;
+  }
+}
+
+static 
+inline void radixExclusiveScan(
+    const uniform int numBlocks,
+    uniform int excScanPtr[],
+    uniform int  countsPtr[],
+    uniform int partialSum[],
+    uniform int  prefixSum[])
+{
+  launch [numBlocks] partialScanLocal(excScanPtr, countsPtr, partialSum);
+  sync;
+
+  launch [NUMDIGITS] partialScanGlobal(numBlocks, partialSum, prefixSum);
+  sync;
+
+  launch [numBlocks] completeScanGlobal(excScanPtr, prefixSum);
+  sync;
+}
+
+export void radixSort(
+    const uniform int numElements,
+    uniform int keys[],
+    uniform int sorted[])
+{
+  const uniform int numBlocks =  num_cores()*2;
+
+#ifdef __NVPTX__
+  assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
 #endif
 
-static int4 scan4(const int4 idata)
-{    
-  const int idx = programIndex;
+  const uniform int blockDim  = (numElements + numBlocks - 1) / numBlocks;
 
-  int4 val4 = idata;
-  int sum[3];
-  sum[0] = val4.x;
-  sum[1] = val4.y + sum[0];
-  sum[2] = val4.z + sum[1];
-    
-  int val = val4.w + sum[2];
-  val = exclusive_scan_add(val);
+  const uniform int nSharedCounts = NUMDIGITS*numBlocks;
+  const uniform int nCountsGlobal = NUMDIGITS;
+  const uniform int nExcScan      = NUMDIGITS*numBlocks;
+  const uniform int nCountsBlock  = NUMDIGITS*numBlocks;
+  const uniform int nPartialSum   = NUMDIGITS*numBlocks;
+  const uniform int nPrefixSum    = NUMDIGITS*numBlocks;
 
-  val4.x = val;
-  val4.y = val + sum[0];
-  val4.z = val + sum[1];
-  val4.w = val + sum[2];
+  const uniform int nalloc = 
+    nSharedCounts +
+    nCountsGlobal +
+    nExcScan +
+    nCountsBlock + 
+    nPartialSum +
+    nPrefixSum;
 
-  return val4;
-}
+  uniform int * uniform   mem_pool   = uniform new uniform int[nalloc];
 
-static int4 rank4(int4 preds)
-{
-	const         int localId   = programIndex;
-	const uniform int localSize = programCount;
+  uniform int * uniform sharedCounts = mem_pool;
+  uniform int * uniform countsGlobal = sharedCounts + nSharedCounts;
+  uniform int * uniform excScan      = countsGlobal + nCountsGlobal;
+  uniform int * uniform countsBlock  = excScan      + nExcScan;
+  uniform int * uniform partialSum   = countsBlock  + nCountsBlock;
+  uniform int * uniform prefixSum    = partialSum   + nPartialSum;
 
-	const int4 address = scan4(preds);
-	
-  const int numtrue = broadcast(address.w + preds.w, localSize-1);
-	
-	int4 rank;
-	const int idx = localId*4;
-	rank.x = (preds.x) ? address.x : numtrue + idx - address.x;
-	rank.y = (preds.y) ? address.y : numtrue + idx + 1 - address.y;
-	rank.z = (preds.z) ? address.z : numtrue + idx + 2 - address.z;
-	rank.w = (preds.w) ? address.w : numtrue + idx + 3 - address.w;
-	
-	return rank;
-}
-
-static void radixSortBlockKeysOnly(int4 &key_inout, uniform int nbits, uniform int startbit)
-{
-  const         int localId   = programIndex;
-  const uniform int localSize = programCount;
-
-  uniform int sMem[programCount*4];
-
-  int4 key = key_inout;  
-	for (uniform int shift = startbit; shift < (startbit + nbits); ++shift)
+  for (uniform int bit = 0; bit < 32; bit += NUMBITS)
   {
-    int4 lsb;
-    lsb.x = !((key.x >> shift) & 0x1);
-    lsb.y = !((key.y >> shift) & 0x1);
-    lsb.z = !((key.z >> shift) & 0x1);
-    lsb.w = !((key.w >> shift) & 0x1);
+    /* initialize histogram for each digit */
+    foreach (digit = 0 ... NUMDIGITS)
+      countsGlobal[digit] = 0;
 
-    const int4 r = rank4(lsb);
+    /* compute histogram for each digit */
+    launch [numBlocks] computeHistogram(keys, bit, numElements, countsBlock, countsGlobal);
+    sync;
 
-    // This arithmetic strides the ranks across 4 CTA_SIZE regions
-    sMem[(r.x & 3) * localSize + (r.x >> 2)] = key.x;
-    sMem[(r.y & 3) * localSize + (r.y >> 2)] = key.y;
-    sMem[(r.z & 3) * localSize + (r.z >> 2)] = key.z;
-    sMem[(r.w & 3) * localSize + (r.w >> 2)] = key.w;
+    /* exclusive scan on global histogram */
+    int carry = 0;
+    excScan[0] = 0;
+    foreach (digit = 0 ... NUMDIGITS)
+    {
+      const int value = countsGlobal[digit];
+      const int scan  = exclusive_scan_add(value);
+      excScan[digit] = value + carry;
+      carry += broadcast(scan+value, programCount-1);
+    }
 
-    // The above allows us to read without 4-way bank conflicts:
-    key.x = sMem[localId                ];
-    key.y = sMem[localId +     localSize];
-    key.z = sMem[localId + 2 * localSize];
-    key.w = sMem[localId + 3 * localSize];
-  }
-}
+          
+    /* computing offsets for each digit */
+    radixExclusiveScan(numBlocks, excScan, countsBlock, partialSum, prefixSum);
 
-task void radixSortBlocksKeysOnly(
-    uniform int keysIn[],
-    uniform int keysOut[],
-    uniform int nbits,
-    uniform int startbit,
-    uniform int numElements, 
-    uniform int totalBlocks)
-{
-	const int globalId = taskIndex * programCount + programIndex;
+    /* sorting */
+    launch [numBlocks] 
+      sortPass(
+          keys, 
+          sorted, 
+          bit, 
+          numElements,
+          excScan,
+          sharedCounts);
+    sync;
 
-	int4 key;
-	key.x = keysIn[4*globalId + 0];
-	key.y = keysIn[4*globalId + 1];
-	key.z = keysIn[4*globalId + 2];
-	key.w = keysIn[4*globalId + 3];
-	
-	radixSortBlockKeysOnly(key, nbits, startbit);
-	
-	keysOut[4*globalId+0] = key.x;
-	keysOut[4*globalId+1] = key.y;
-	keysOut[4*globalId+2] = key.z;
-	keysOut[4*globalId+3] = key.w;
-}
-
-//----------------------------------------------------------------------------
-// Given an array with blocks sorted according to a 4-bit radix group, each 
-// block counts the number of keys that fall into each radix in the group, and 
-// finds the starting offset of each radix in the block.  It then writes the radix 
-// counts to the counters array, and the starting offsets to the blockOffsets array.
-//
-// Template parameters are used to generate efficient code for various special cases
-// For example, we have to handle arrays that are a multiple of the block size 
-// (fullBlocks) differently than arrays that are not. "loop" is used when persistent 
-// CTAs are used. 
-//
-// By persistent CTAs we mean that we launch only as many thread blocks as can 
-// be resident in the GPU and no more, rather than launching as many threads as
-// we have elements. Persistent CTAs loop over blocks of elements until all work
-// is complete.  This can be faster in some cases.  In our tests it is faster
-// for large sorts (and the threshold is higher on compute version 1.1 and earlier
-// GPUs than it is on compute version 1.2 GPUs.
-//                                
-//----------------------------------------------------------------------------
-task void findRadixOffsets(
-    uniform int keys[],
-    uniform int counters[],
-    uniform int blockOffsets[],
-    uniform int startbit,
-    uniform int numElements,
-    uniform int totalBlocks)
-{
-  uniform int sStartPointers[16];
-
-  const uniform int groupId   = taskIndex;
-  const         int localId   = programIndex;
-  const uniform int groupSize = programCount;
-	const         int globalId  = taskIndex * programCount + programIndex;
-
-  int2 radix2;
-
-  radix2.x = keys[2*globalId + 0];
-  radix2.y = keys[2*globalId + 1];
-
-  uniform int sRadix1[4*programCount];
-        
-  sRadix1[2 * localId]     = (radix2.x >> startbit) & 0xF;
-  sRadix1[2 * localId + 1] = (radix2.y >> startbit) & 0xF;
-
-  // Finds the position where the sRadix1 entries differ and stores start 
-  // index for each radix.
-  if(localId < 16) 
-    sStartPointers[localId] = 0; 
-
-  if((localId > 0) && (sRadix1[localId] != sRadix1[localId - 1]) ) 
-    sStartPointers[sRadix1[localId]] = localId;
-
-  if(sRadix1[localId + groupSize] != sRadix1[localId + groupSize - 1]) 
-    sStartPointers[sRadix1[localId + groupSize]] = localId + groupSize;
-
-  if(localId < 16) 
-    blockOffsets[groupId*16 + localId] = sStartPointers[localId];
-
-    // Compute the sizes of each block.
-  if((localId > 0) && (sRadix1[localId] != sRadix1[localId - 1]) ) 
-    sStartPointers[sRadix1[localId - 1]] = 
-      localId - sStartPointers[sRadix1[localId - 1]];
-  if(sRadix1[localId + groupSize] != sRadix1[localId + groupSize - 1] ) 
-    sStartPointers[sRadix1[localId + groupSize - 1]] = 
-      localId + groupSize - sStartPointers[sRadix1[localId + groupSize - 1]];
-        
-
-  if(localId == groupSize - 1) 
-    sStartPointers[sRadix1[2 * groupSize - 1]] = 
-      2 * groupSize - sStartPointers[sRadix1[2 * groupSize - 1]];
-
-  if(localId < 16) 
-    counters[localId * totalBlocks + groupId] = sStartPointers[localId];
-}
-
-// a naive scan routine that works only for array that
-// can fit into a single block, just for debugging purpose,
-// not used in the sort now
-task void scanNaive(
-    uniform int odata[],
-    uniform int idata[],
-    uniform int n)
-{
-  if (programIndex < n)
-    odata[programIndex] = exclusive_scan_add(idata[programIndex]);
-}
-
-//----------------------------------------------------------------------------
-// reorderData shuffles data in the array globally after the radix offsets 
-// have been found. On compute version 1.1 and earlier GPUs, this code depends 
-// on RadixSort::CTA_SIZE being 16 * number of radices (i.e. 16 * 2^nbits).
-// 
-// On compute version 1.1 GPUs ("manualCoalesce=true") this function ensures
-// that all writes are coalesced using extra work in the kernel.  On later
-// GPUs coalescing rules have been relaxed, so this extra overhead hurts 
-// performance.  On these GPUs we set manualCoalesce=false and directly store
-// the results.
-//
-// Template parameters are used to generate efficient code for various special cases
-// For example, we have to handle arrays that are a multiple of the block size 
-// (fullBlocks) differently than arrays that are not.  "loop" is used when persistent 
-// CTAs are used. 
-//
-// By persistent CTAs we mean that we launch only as many thread blocks as can 
-// be resident in the GPU and no more, rather than launching as many threads as
-// we have elements. Persistent CTAs loop over blocks of elements until all work
-// is complete.  This can be faster in some cases.  In our tests it is faster
-// for large sorts (and the threshold is higher on compute version 1.1 and earlier
-// GPUs than it is on compute version 1.2 GPUs.
-//----------------------------------------------------------------------------
-task void reorderDataKeysOnly(
-    uniform int outKeys[],
-    uniform int keys[],
-    uniform int blockOffsets[],
-    uniform int offsets[],
-    uniform int sizes[],
-    uniform int startbit,
-    uniform int numElements,
-    uniform int totalBlocks)
-{
-  uniform int sOffsets[16];
-  uniform int sBlockOffsets[16];
-  uniform int2 sKeys2[programCount];
-  uniform int * uniform sKeys1 = (uniform int * uniform)&sKeys2[0];
-
-  const uniform int   groupId = taskIndex;
-  const         int  globalId = taskIndex*programCount + programIndex;
-  const         int   localId = programIndex;
-  const uniform int groupSize = programCount;
-
-  sKeys2[localId].x   = keys[2*globalId + 0];
-  sKeys2[localId].y   = keys[2*globalId + 1];
-
-  if(localId < 16)  
-  {
-    sOffsets[localId]      = offsets[localId * totalBlocks + groupId];
-    sBlockOffsets[localId] = blockOffsets[groupId * 16 + localId];
+    uniform int * uniform tmp = keys;
+    keys = sorted;
+    sorted = tmp;
   }
 
-  int radix = (sKeys1[localId] >> startbit) & 0xF;
-  int globalOffset = sOffsets[radix] + localId - sBlockOffsets[radix];
-
-  if (globalOffset < numElements)
-    outKeys[globalOffset] = sKeys1[localId];
-
-  radix = (sKeys1[localId + groupSize] >> startbit) & 0xF;
-  globalOffset = sOffsets[radix] + localId + groupSize - sBlockOffsets[radix];
-
-  if (globalOffset < numElements)
-    outKeys[globalOffset] = sKeys1[localId + groupSize];
+  delete mem_pool;
 }
