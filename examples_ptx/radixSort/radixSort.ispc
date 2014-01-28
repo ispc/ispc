@@ -30,7 +30,13 @@ void countPass(
     if (reduce_equal(key, &skey) == true)
       counts[skey] += reduce_add(1);
     else
+    {
+#ifdef __NVPTX__
+      atomic_add_global(&counts[key], 1);
+#else
       atomic_add_local(&counts[key], 1);
+#endif
+    }
   }
 #else
 #endif
