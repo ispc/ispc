@@ -65,19 +65,20 @@ int main (int argc, char *argv[])
 
   ispc::radixSort_alloc(n);
 
+  tISPC2 = 1e30;
   for (i = 0; i < m; i ++)
   {
     ispcMemcpy(keys, keys_orig, n*sizeof(Key));
     reset_and_start_timer();
     ispc::radixSort(n, (int64_t*)keys);
-    tISPC2 += get_elapsed_msec();
+    tISPC2 = std::min(tISPC2, get_elapsed_msec());
     if (argc != 3)
         progressbar (i, m);
   }
 
   ispc::radixSort_free();
 
-  printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n*m/tISPC2);
+  printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n/tISPC2);
 
   std::sort(keys_gold, keys_gold + n);
   for (int i = 0; i < n; i++)
