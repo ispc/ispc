@@ -81,6 +81,7 @@ void sortPass(
     localCounts[i] = 0;
 
   const int unitScan = exclusive_scan_add(1);
+  const int unitSum  = exclusive_scan_add((int)(programIndex < programCount/2));
 
 
   foreach (i = 0 ... nloc)
@@ -102,11 +103,26 @@ void sortPass(
     else
     {
 #ifdef __NVPTX__
-      /* buf fix, somehow atomic w/o branching fails */
       if (programIndex < 16)
-        rel = atomic_add_global(&localCounts[key],1);
+      {
+        if (reduce_equal(key) == true)
+        {
+          rel = localCounts[key] + unitScan;
+          localCounts[key] = rel+1;
+        }
+        else
+          rel = atomic_add_global(&localCounts[key],1);
+      }
       else
-        rel = atomic_add_global(&localCounts[key],1);
+      {
+        if (reduce_equal(key) == true)
+        {
+          rel = localCounts[key] + unitScan - unitSum;
+          localCounts[key] = rel+1;
+        }
+        else
+          rel = atomic_add_global(&localCounts[key],1);
+      }
 #else
       rel = atomic_add_local(&localCounts[key],1);
 #endif
