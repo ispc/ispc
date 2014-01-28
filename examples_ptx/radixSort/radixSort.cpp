@@ -35,18 +35,13 @@ int main (int argc, char *argv[])
   int i, j, n = argc == 1 ? 1000000 : atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
   unsigned int *keys = new unsigned int [n];
-  unsigned int *tmpv  = new unsigned int [n];
   unsigned int *keys_orig = new unsigned int [n];
   
-//  srand48(rtc()*65536);
-  srand48(1234);
+  srand48(rtc()*65536);
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
-  {
-    keys[i] = 4*n-3*i; //drand48() * (1<<30);
-    tmpv[i] = keys[i];
-  }
+    keys[i] = 10*i; //drand48() * (1<<30);
 
   std::random_shuffle(keys, keys + n);
 
@@ -56,15 +51,19 @@ int main (int argc, char *argv[])
     
   ispcSetMallocHeapLimit(1024*1024*1024);
 
+  ispc::radixSort_alloc(n);
+
   for (i = 0; i < m; i ++)
   {
     ispcMemcpy(keys, keys_orig, n*sizeof(unsigned int));
     reset_and_start_timer();
-    ispc::radixSort(n, (int*)keys, (int*)tmpv);
+    ispc::radixSort(n, (int*)keys);
     tISPC2 += get_elapsed_msec();
     if (argc != 3)
         progressbar (i, m);
   }
+
+  ispc::radixSort_free();
 
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n*m/tISPC2);
 
@@ -100,6 +99,5 @@ int main (int argc, char *argv[])
 
   delete keys;
   delete keys_orig;
-  delete tmpv;
   return 0;
 }

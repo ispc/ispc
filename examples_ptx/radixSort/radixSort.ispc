@@ -158,7 +158,7 @@ inline void radixExclusiveScan(
     uniform int partialSum[],
     uniform int  prefixSum[])
 {
-  const uniform int scale = 4;
+  const uniform int scale = 2;
   launch [numBlocks/scale] partialScanLocal(numBlocks, excScanPtr, countsPtr, partialSum);
   sync;
 
@@ -169,25 +169,36 @@ inline void radixExclusiveScan(
   sync;
 }
 
-export void radixSort(
-    const uniform int numElements,
-    uniform int keys[],
-    uniform int sorted[])
+static uniform int * uniform memoryPool = NULL;
+static uniform int numBlocks;
+static uniform int nSharedCounts;
+static uniform int nCountsGlobal;
+static uniform int nExcScan;
+static uniform int nCountsBlock;
+static uniform int nPartialSum;
+static uniform int nPrefixSum;
+
+static uniform int * uniform sharedCounts;
+static uniform int * uniform countsGlobal;
+static uniform int * uniform excScan;
+static uniform int * uniform counts;
+static uniform int * uniform partialSum;
+static uniform int * uniform prefixSum;
+
+static uniform int numElementsBuf = 0;
+static uniform int * uniform bufKeys;
+
+export void radixSort_alloc(const uniform int n)
 {
-  const uniform int numBlocks =  num_cores()*4;
+  assert(memoryPool == NULL);
+  numBlocks     = num_cores()*4;
+  nSharedCounts = NUMDIGITS*numBlocks;
+  nCountsGlobal = NUMDIGITS;
+  nExcScan      = NUMDIGITS*numBlocks;
+  nCountsBlock  = NUMDIGITS*numBlocks;
+  nPartialSum   = NUMDIGITS*numBlocks;
+  nPrefixSum    = NUMDIGITS*numBlocks;
 
-#ifdef __NVPTX__
-  assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
-#endif
-
-  const uniform int blockDim  = (numElements + numBlocks - 1) / numBlocks;
-
-  const uniform int nSharedCounts = NUMDIGITS*numBlocks;
-  const uniform int nCountsGlobal = NUMDIGITS;
-  const uniform int nExcScan      = NUMDIGITS*numBlocks;
-  const uniform int nCountsBlock  = NUMDIGITS*numBlocks;
-  const uniform int nPartialSum   = NUMDIGITS*numBlocks;
-  const uniform int nPrefixSum    = NUMDIGITS*numBlocks;
 
   const uniform int nalloc = 
     nSharedCounts +
@@ -197,14 +208,52 @@ export void radixSort(
     nPartialSum +
     nPrefixSum;
 
-  uniform int * uniform   mem_pool   = uniform new uniform int[nalloc];
+  memoryPool = uniform new uniform int[nalloc];
 
-  uniform int * uniform sharedCounts = mem_pool;
-  uniform int * uniform countsGlobal = sharedCounts + nSharedCounts;
-  uniform int * uniform excScan      = countsGlobal + nCountsGlobal;
-  uniform int * uniform counts       = excScan      + nExcScan;
-  uniform int * uniform partialSum   = counts       + nCountsBlock;
-  uniform int * uniform prefixSum    = partialSum   + nPartialSum;
+  sharedCounts = memoryPool;
+  countsGlobal = sharedCounts + nSharedCounts;
+  excScan      = countsGlobal + nCountsGlobal;
+  counts       = excScan      + nExcScan;
+  partialSum   = counts       + nCountsBlock;
+  prefixSum    = partialSum   + nPartialSum;
+}
+
+static 
+void radixSort_freeBufKeys()
+{
+  if (numElementsBuf > 0)
+  {
+    delete bufKeys;
+    numElementsBuf = 0;
+  }
+}
+
+export void radixSort_free()
+{
+  assert(memoryPool != NULL);
+  delete memoryPool;
+  memoryPool = NULL;
+
+  radixSort_freeBufKeys;
+}
+
+export void radixSort(
+    const uniform int numElements,
+    uniform int keys[])
+{
+#ifdef __NVPTX__
+  assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
+#endif
+
+  if (numElementsBuf < numElements)
+    radixSort_freeBufKeys();
+  if (numElementsBuf == 0)
+  {
+    numElementsBuf = numElements;
+    bufKeys = uniform new uniform int[numElementsBuf];
+  }
+
+  const uniform int blockDim  = (numElements + numBlocks - 1) / numBlocks;
 
   for (uniform int bit = 0; bit < 32; bit += NUMBITS)
   {
@@ -234,7 +283,7 @@ export void radixSort(
     launch [numBlocks] 
       sortPass(
           keys, 
-          sorted, 
+          bufKeys, 
           bit, 
           numElements,
           excScan,
@@ -242,9 +291,8 @@ export void radixSort(
     sync;
 
     uniform int * uniform tmp = keys;
-    keys = sorted;
-    sorted = tmp;
+    keys = bufKeys;
+    bufKeys = tmp;
   }
 
-  delete mem_pool;
 }
