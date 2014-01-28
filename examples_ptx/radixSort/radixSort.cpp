@@ -41,7 +41,7 @@ int main (int argc, char *argv[])
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
-    keys[i] = 10*i; //drand48() * (1<<30);
+    keys[i] = drand48() * (1<<30);
 
   std::random_shuffle(keys, keys + n);
 
@@ -68,7 +68,9 @@ int main (int argc, char *argv[])
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n*m/tISPC2);
 
   std::sort(keys_orig, keys_orig + n);
-  std::sort(keys, keys+ n);
+#if 0
+  std::sort(keys, keys + n);
+#endif
   for (int i = 0; i < n; i++)
     assert(keys[i] == keys_orig[i]);
 
