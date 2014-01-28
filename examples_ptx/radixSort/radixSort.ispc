@@ -2,7 +2,7 @@
 #define NUMDIGITS (1<<NUMBITS)
 
 task
-void computeHistogram(
+void countPass(
     const uniform int keysAll[],
     const uniform int bit,
     const uniform int numElements,
@@ -46,7 +46,6 @@ void sortPass(
 
   const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
 
-  const uniform int mask = (1 << NUMBITS) - 1;
 
   uniform int * uniform localCounts = sharedCounts + blockIdx*NUMDIGITS;
 
@@ -55,6 +54,7 @@ void sortPass(
   uniform int * uniform digitOffsets = digitOffsetsAll + blockIdx*NUMDIGITS;
   const uniform int nloc = min(numElements - keyIndex, blockDim);
 
+  const uniform int mask = (1 << NUMBITS) - 1;
   foreach (i = 0 ... NUMDIGITS)
     localCounts[i] = 0;
 
@@ -63,82 +63,79 @@ void sortPass(
     const int key = mask & ((unsigned int)keys[i] >> bit);
     const int rel = localCounts[key];
     const int scatter = rel + digitOffsets[key];
-    sorted [scatter]  = keys[i];
-    localCounts[key]  = 1 + rel;
+    sorted [scatter] = keys[i];
+    localCounts[key] = 1 + rel;
   }
 }
 
 task
 void partialScanLocal(
-    uniform int excScanPtr[],
-    uniform int  countsPtr[],
-    uniform int partialSum[])
+    uniform int excScanAll[],
+    uniform int  countsAll[],
+    uniform int partialSumAll[])
 {
   const uniform int numBlocks = taskCount;
   const uniform int  blockIdx = taskIndex;
 
-  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
+  const uniform int  blockDim = (numBlocks+numBlocks-1)/numBlocks;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg + blockDim, numBlocks);
+    
+  uniform int (* uniform  countsBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])countsAll;
+  uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
+  uniform int (* uniform   partialSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])partialSumAll;
 
   foreach (digit = 0 ... NUMDIGITS)
   {
-    uniform int * uniform excScanBlock = excScanPtr + bbeg*NUMDIGITS;
-    uniform int * uniform  countsBlock =  countsPtr + bbeg*NUMDIGITS;
-
-    int prev = bbeg == 0 ? excScanBlock[digit] : 0;
+    int prev = bbeg == 0 ? excScanBlock[0][digit] : 0;
     for (uniform int block = bbeg; block < bend; block++)
     {
-      const int y = countsBlock[digit];
-      excScanBlock[digit] = prev;
+      const int y = countsBlock[block][digit];
+      excScanBlock[block][digit] = prev;
       prev += y;
-
-      excScanBlock += NUMDIGITS;
-      countsBlock  += NUMDIGITS;
     }
-
-    excScanBlock -= NUMDIGITS;
-    countsBlock  -= NUMDIGITS;
-
-    partialSum[blockIdx*NUMDIGITS + digit] = excScanBlock[digit] + countsBlock[digit];
+    partialSum[blockIdx][digit] = excScanBlock[bend-1][digit] + countsBlock[bend-1][digit];
   }
 }
 
 task
 void partialScanGlobal(
     const uniform int numBlocks,
-    uniform int partialSum[],
-    uniform int prefixSum[])
+    uniform int partialSumAll[],
+    uniform int prefixSumAll[])
 {
-  const int digit = taskIndex;
+  uniform int (* uniform partialSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])partialSumAll;
+  uniform int (* uniform  prefixSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS]) prefixSumAll;
+  const uniform int digit = taskIndex;
   int carry = 0;
   foreach (block = 0 ... numBlocks)
   {
-    const int value = partialSum[block*NUMDIGITS + digit];
+    const int value = partialSum[block][digit];
     const int scan  = exclusive_scan_add(value);
-    prefixSum[block*NUMDIGITS + digit] = value + carry;
-    carry = broadcast(scan+value, programCount-1);
+    prefixSum[block][digit] = scan + carry;
+    carry += broadcast(scan+value, programCount-1);
   }
 }
 
 task
 void completeScanGlobal(
     uniform int excScanAll[],
-    uniform int carryValue[])
+    uniform int carryValueAll[])
 {
   const uniform int numBlocks = taskCount;
   const uniform int  blockIdx = taskIndex;
-  const uniform int  blockDim = (numBlocks+taskCount-1)/taskCount;
+  const uniform int  blockDim = (numBlocks+numBlocks-1)/numBlocks;
   const uniform int      bbeg = blockIdx * blockDim;
   const uniform int      bend = min(bbeg  + blockDim, numBlocks);
+  
+  uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
+  uniform int (* uniform   carryValue)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])carryValueAll;
 
-  carryValue += blockIdx*NUMDIGITS;
   foreach (digit = 0 ... NUMDIGITS)
   {
-    const int carry = carryValue[digit];
-    uniform int * uniform excScanBlock = excScanAll + bbeg*NUMDIGITS;
-    for (uniform int block = bbeg; block < bend; block++, excScanBlock += NUMDIGITS)
-      excScanBlock[digit] += carry;
+    const int carry = carryValue[blockIdx][digit];
+    for (uniform int block = bbeg; block < bend; block++)
+      excScanBlock[block][digit] += carry;
   }
 }
 
@@ -165,7 +162,7 @@ export void radixSort(
     uniform int keys[],
     uniform int sorted[])
 {
-  const uniform int numBlocks =  num_cores()*2;
+  const uniform int numBlocks =  num_cores()*4;
 
 #ifdef __NVPTX__
   assert((numBlocks & 3) == 0);  /* task granularity on Kepler is 4 */
@@ -204,7 +201,7 @@ export void radixSort(
       countsGlobal[digit] = 0;
 
     /* compute histogram for each digit */
-    launch [numBlocks] computeHistogram(keys, bit, numElements, countsBlock, countsGlobal);
+    launch [numBlocks] countPass(keys, bit, numElements, countsBlock, countsGlobal);
     sync;
 
     /* exclusive scan on global histogram */
@@ -214,10 +211,9 @@ export void radixSort(
     {
       const int value = countsGlobal[digit];
       const int scan  = exclusive_scan_add(value);
-      excScan[digit] = value + carry;
+      excScan[digit] = scan + carry;
       carry += broadcast(scan+value, programCount-1);
     }
-
           
     /* computing offsets for each digit */
     radixExclusiveScan(numBlocks, excScan, countsBlock, partialSum, prefixSum);

@@ -38,14 +38,16 @@ int main (int argc, char *argv[])
   unsigned int *tmpv  = new unsigned int [n];
   unsigned int *keys_orig = new unsigned int [n];
   
-  srand48(rtc()*65536);
+//  srand48(rtc()*65536);
+  srand48(1234);
 
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
-    keys[i] = drand48() * (1<<30);
-    tmpv[i] = 0;
+    keys[i] = 4*n-3*i; //drand48() * (1<<30);
+    tmpv[i] = keys[i];
   }
+
   std::random_shuffle(keys, keys + n);
 
 #pragma omp parallel for
@@ -67,6 +69,7 @@ int main (int argc, char *argv[])
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n*m/tISPC2);
 
   std::sort(keys_orig, keys_orig + n);
+  std::sort(keys, keys+ n);
   for (int i = 0; i < n; i++)
     assert(keys[i] == keys_orig[i]);
 
@@ -96,7 +99,7 @@ int main (int argc, char *argv[])
 #endif
 
   delete keys;
-  delete keys;
+  delete keys_orig;
   delete tmpv;
   return 0;
 }
