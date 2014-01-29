@@ -84,7 +84,7 @@ void mergeSortGangKernel(
   s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
   s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
 
-  for (uniform int stride = 1; stride < programCount; stride <<= 1)
+  for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
   {
     const int lPos = programIndex & (stride - 1);
     uniform int *baseKey = s_key + 2 * (programIndex - lPos);
@@ -480,7 +480,6 @@ void mergeSort(
 
   for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
   {
-//    print ("stride= % N= % \n", stride, N);
     uniform int lastSegmentElements = N % (2 * stride);
 
     //Find sample ranks and prepare for limiters merge
