@@ -109,6 +109,7 @@ void sortPass(
       const int key = mask & ((unsigned int)keys[i] >> bit);
       int scatter;
       /* not a vector friendly loop */
+#pragma unroll 1  /* needed, otherwise compiler unroll and optimizes the result :S */
       for (int iv = 0; iv < programCount; iv++)
         if (programIndex == iv)
           scatter = digitOffsets[key]++;
