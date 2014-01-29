@@ -1,4 +1,4 @@
-#define NUMBITS 4
+#define NUMBITS 8
 #define NUMDIGITS (1<<NUMBITS)
 
 typedef int64 Key;
@@ -65,8 +65,6 @@ void sortPass(
 
   const int unitScan     = exclusive_scan_add(1);
 
-  int lkeys[NUMDIGITS] = {0};
- 
  /* copy digit offset from Gmem to Lmem */ 
   uniform int digitOffsets[NUMDIGITS];
   foreach (digit = 0 ... NUMDIGITS)
@@ -77,6 +75,7 @@ void sortPass(
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
     int scatter;
+    /* not a vector friendly loop */
     foreach_active(iv)
       scatter = digitOffsets[key]++;
     sorted [scatter] = keys[i];
@@ -100,7 +99,6 @@ void partialScanLocal(
   uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
   uniform int (* uniform   partialSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])partialSumAll;
 
-#if 0
   foreach (digit = 0 ... NUMDIGITS)
   {
     int prev = bbeg == 0 ? excScanBlock[0][digit] : 0;
@@ -112,21 +110,6 @@ void partialScanLocal(
     }
     partialSum[blockIdx][digit] = excScanBlock[bend-1][digit] + countsBlock[bend-1][digit];
   }
-#else
-  int prev[NUMDIGITS];
-  for (int digit = 0; digit < NUMDIGITS; digit++)
-    prev[digit] = bbeg == 0 ? excScanBlock[0][digit] : 0;
-
-  foreach_tiled (block = bbeg ... bend, digit = 0 ... NUMDIGITS)
-  {
-    const int y = countsBlock[block][digit];
-    excScanBlock[block][digit] = prev[digit];
-    prev[digit] += y;
-  }
-
-  foreach (digit = 0 ... NUMDIGITS)
-    partialSum[blockIdx][digit] = excScanBlock[bend-1][digit] + countsBlock[bend-1][digit];
-#endif
 }
 
 task
