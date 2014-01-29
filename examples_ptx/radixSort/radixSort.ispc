@@ -188,7 +188,7 @@ inline void radixExclusiveScan(
     uniform int partialSum[],
     uniform int  prefixSum[])
 {
-  const uniform int scale = 2;
+  const uniform int scale = 8;
   launch [numBlocks/scale] partialScanLocal(numBlocks, excScanPtr, countsPtr, partialSum);
   sync;
 
