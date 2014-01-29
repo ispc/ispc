@@ -8,7 +8,7 @@
 static inline
 int nextPowerOfTwo(int x)
 {
-#if 1
+#if 0
   --x;
   x |= x >> 1;
   x |= x >> 2;
@@ -414,7 +414,7 @@ static uniform int MAX_SAMPLE_COUNT = 0;
 export 
 void openMergeSort()
 {
-  MAX_SAMPLE_COUNT = 32 * 131072 / programCount;
+  MAX_SAMPLE_COUNT = 8*32 * 131072 / programCount;
   assert(memPool == NULL);
   const uniform int nalloc = MAX_SAMPLE_COUNT * 4;
   memPool = uniform new uniform int[nalloc];
@@ -498,6 +498,7 @@ void mergeSort(
       copyKernel(oVal + (N - lastSegmentElements), iVal + (N - lastSegmentElements), lastSegmentElements);
     }
 
+#if 1
     {
       uniform int * uniform tmpKey = iKey;
       iKey = oKey;
@@ -509,5 +510,6 @@ void mergeSort(
       iVal = oVal;
       oVal = tmpVal;
     }
+#endif
   }
 }
