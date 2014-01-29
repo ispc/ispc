@@ -6,7 +6,7 @@
 
 typedef long long Key;
 
-__device__ int atomic_add_global(int* ptr, int value)
+__forceinline__ __device__ int atomic_add_global(int* ptr, int value)
 {
   return atomicAdd(ptr, value);
 } 
@@ -24,13 +24,13 @@ static __device__ __forceinline__ int shfl_scan_add_step(int partial, int up_off
   return result;
 }
 
-__device__ int exclusive_scan_add(int value)
+__forceinline__ __device__ int exclusive_scan_add(int value)
 {
   int mysum = value;
 #pragma unroll
   for(int i = 0; i < 5; ++i)
     mysum = shfl_scan_add_step(mysum, 1 << i);
-  return mysum;
+  return mysum - value;
 }
 
 __global__
@@ -53,6 +53,7 @@ void countPass(
   int *      counts = countsAll + blkIdx*NUMDIGITS;
   const  int           nloc = min(numElements - blkIdx*blkDim, blkDim);
 
+#pragma unroll 8
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
     counts[digit] = 0;
 
@@ -64,6 +65,7 @@ void countPass(
       atomic_add_global(&counts[key], 1);
     }
 
+#pragma unroll 8
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
     atomic_add_global(&countsGlobal[digit], counts[digit]);
 }
@@ -90,12 +92,15 @@ void sortPass(
 
   const  int mask = (1 << NUMBITS) - 1;
 
-  const int unitScan     = exclusive_scan_add(1);
-
   /* copy digit offset from Gmem to Lmem */ 
-  __shared__ int digitOffsets[NUMDIGITS];
+#if 1
+  __shared__ int digitOffsets_sh[NUMDIGITS*4];
+  int *digitOffsets = digitOffsets_sh + warpIdx*NUMDIGITS;
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
     digitOffsets[digit] = digitOffsetsAll[blkIdx*NUMDIGITS + digit];
+#else
+  int *digitOffsets = &digitOffsetsAll[blkIdx*NUMDIGITS];
+#endif
 
 
   for (int i = programIndex; i < nloc; i += programCount)
@@ -104,8 +109,8 @@ void sortPass(
       const int key = mask & ((unsigned int)keys[i] >> bit);
       int scatter;
       /* not a vector friendly loop */
-      for (int lane = 0; lane < programCount; lane++)
-        if (programIndex == lane)
+      for (int iv = 0; iv < programCount; iv++)
+        if (programIndex == iv)
           scatter = digitOffsets[key]++;
       sorted [scatter] = keys[i];
     }
@@ -128,6 +133,7 @@ void partialScanLocal(
   int (*  excScanBlock)[NUMDIGITS] = ( int (*)[NUMDIGITS])excScanAll;
   int (*    partialSum)[NUMDIGITS] = ( int (*)[NUMDIGITS])partialSumAll;
 
+#pragma unroll 8
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
   {
     int prev = bbeg == 0 ? excScanBlock[0][digit] : 0;
@@ -152,13 +158,13 @@ void partialScanGlobal(
   const  int digit = taskIndex;
   int carry = 0;
   for (int block = programIndex;  block < numBlocks; block += programCount)
+  {
+    const int value = partialSum[block][digit];
+    const int scan  = exclusive_scan_add(value);
     if (block < numBlocks)
-    {
-      const int value = partialSum[block][digit];
-      const int scan  = exclusive_scan_add(value);
       prefixSum[block][digit] = scan + carry;
-      carry += __shfl(scan+value, programCount-1);
-    }
+    carry += __shfl(scan+value, programCount-1);
+  }
 }
 
 __global__
@@ -175,6 +181,7 @@ void completeScanGlobal(
   int (*  excScanBlock)[NUMDIGITS] = ( int (*)[NUMDIGITS])excScanAll;
   int (*    carryValue)[NUMDIGITS] = ( int (*)[NUMDIGITS])carryValueAll;
 
+#pragma unroll 8
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
   {
     const int carry = carryValue[blkIdx][digit];
@@ -245,15 +252,6 @@ void radixSort_alloc___export(const  int n)
   if (programIndex == 0)
     memoryPool =  new  int[nalloc];
 
-  union {int* ptr;  int val[2];} t;
-  t.ptr = memoryPool;
-  t.val[0] = __shfl(t.val[0], 0);
-  t.val[1] = __shfl(t.val[1], 0);
-  memoryPool = t.ptr;
-
-
-
-
   sharedCounts = memoryPool;
   countsGlobal = sharedCounts + nSharedCounts;
   excScan      = countsGlobal + nCountsGlobal;
@@ -262,7 +260,7 @@ void radixSort_alloc___export(const  int n)
   prefixSum    = partialSum   + nPartialSum;
 }
 
-extern "C" __global__
+extern "C" 
 void radixSort_alloc(const  int n)
 {
   radixSort_alloc___export<<<1,32>>>(n);
@@ -275,7 +273,8 @@ void radixSort_freeBufKeys()
 {
   if (numElementsBuf > 0)
   {
-    delete bufKeys;
+    if (programIndex == 0)
+      delete bufKeys;
     numElementsBuf = 0;
   }
 }
@@ -289,7 +288,7 @@ __global__ void radixSort_free___export()
 
   radixSort_freeBufKeys();
 }
-extern "C" __global__
+extern "C"
 void radixSort_free()
 {
   radixSort_free___export<<<1,32>>>();
@@ -312,13 +311,6 @@ __global__ void radixSort___export(
     numElementsBuf = numElements;
     if (programIndex == 0)
       bufKeys =  new  Key[numElementsBuf];
-    union {Key* ptr;  int val[2];} t;
-    t.ptr = bufKeys;
-    t.val[0] = __shfl(t.val[0], 0);
-    t.val[1] = __shfl(t.val[1], 0);
-    bufKeys = t.ptr;
-
-
   }
 
   const  int blkDim  = (numElements + numBlocks - 1) / numBlocks;
@@ -336,6 +328,7 @@ __global__ void radixSort___export(
     /* exclusive scan on global histogram */
     int carry = 0;
     excScan[0] = 0;
+#pragma unroll 8
     for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
     {
       const int value = countsGlobal[digit];
@@ -357,14 +350,15 @@ __global__ void radixSort___export(
           excScan);
     sync;
   }
-
 }
-extern "C" __global__
+
+extern "C"
 void radixSort(
     const  int numElements,
     Key keys[],
     const  int nBits)
 {
+  cudaDeviceSetCacheConfig ( cudaFuncCachePreferEqual );
   radixSort___export<<<1,32>>>(numElements, keys, nBits);
   sync;
 }

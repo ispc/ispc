@@ -63,13 +63,10 @@ void sortPass(
 
   const uniform int mask = (1 << NUMBITS) - 1;
 
-  const int unitScan     = exclusive_scan_add(1);
-
- /* copy digit offset from Gmem to Lmem */ 
+  /* copy digit offset from Gmem to Lmem */ 
   uniform int digitOffsets[NUMDIGITS];
   foreach (digit = 0 ... NUMDIGITS)
     digitOffsets[digit] = digitOffsetsAll[blockIdx*NUMDIGITS + digit];
-
 
   foreach (i = 0 ... nloc)
   {
@@ -78,7 +75,7 @@ void sortPass(
     /* not a vector friendly loop */
     foreach_active(iv)
       scatter = digitOffsets[key]++;
-    sorted [scatter] = keys[i];
+    sorted[scatter] = keys[i];
   }
 }
 
@@ -237,7 +234,7 @@ export void radixSort_free()
   delete memoryPool;
   memoryPool = NULL;
 
-  radixSort_freeBufKeys;
+  radixSort_freeBufKeys();
 }
 
 export void radixSort(
