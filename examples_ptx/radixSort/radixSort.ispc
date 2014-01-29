@@ -64,9 +64,13 @@ void sortPass(
   const uniform int mask = (1 << NUMBITS) - 1;
 
   /* copy digit offset from Gmem to Lmem */ 
+#if 1
   uniform int digitOffsets[NUMDIGITS];
   foreach (digit = 0 ... NUMDIGITS)
     digitOffsets[digit] = digitOffsetsAll[blockIdx*NUMDIGITS + digit];
+#else
+  uniform int * uniform digitOffsets = &digitOffsetsAll[blockIdx*NUMDIGITS];
+#endif
 
   foreach (i = 0 ... nloc)
   {

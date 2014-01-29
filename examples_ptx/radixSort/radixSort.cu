@@ -93,7 +93,7 @@ void sortPass(
   const  int mask = (1 << NUMBITS) - 1;
 
   /* copy digit offset from Gmem to Lmem */ 
-#if 1
+#if 0
   __shared__ int digitOffsets_sh[NUMDIGITS*4];
   int *digitOffsets = digitOffsets_sh + warpIdx*NUMDIGITS;
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
