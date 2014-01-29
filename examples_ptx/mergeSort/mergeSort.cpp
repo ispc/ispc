@@ -38,7 +38,7 @@ struct Key
 
 int main (int argc, char *argv[])
 {
-  int i, j, n = argc == 1 ? 1000000 : atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
+  int i, j, n = argc == 1 ? 1024*1024: atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
 
   Key *keys = new Key[n];
@@ -46,7 +46,7 @@ int main (int argc, char *argv[])
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
-    keys[i].key = ((int)(drand48() * (1<<30)));
+    keys[i].key = i; //((int)(drand48() * (1<<30)));
     keys[i].val = i;
   }
   std::random_shuffle(keys, keys + n);
@@ -57,8 +57,8 @@ int main (int argc, char *argv[])
   int *valsBuf = new int[n];
   int *keysDst = new int[n];
   int *valsDst = new int[n];
-  int *keysGld = new int [n];
-  int *valsGld = new int [n];
+  int *keysGld = new int[n];
+  int *valsGld = new int[n];
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
@@ -77,8 +77,8 @@ int main (int argc, char *argv[])
   tISPC2 = 1e30;
   for (i = 0; i < m; i ++)
   {
-    ispcMemcpy(keysSrc, keysGld, n*sizeof(Key));
-    ispcMemcpy(valsSrc, keysGld, n*sizeof(Key));
+    ispcMemcpy(keysSrc, keysGld, n*sizeof(int));
+    ispcMemcpy(valsSrc, keysGld, n*sizeof(int));
 
     reset_and_start_timer();
     ispc::mergeSort(keysDst, valsDst, keysBuf, valsBuf, keysSrc, valsSrc, n);
@@ -91,6 +91,22 @@ int main (int argc, char *argv[])
   ispc::closeMergeSort();
 
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n/tISPC2);
+
+  printf("\n Buf: \n");
+  for (int i = 0 ; i < 128; i++)
+  {
+    if ((i % 16) == 0)
+      printf("\n");
+    printf(" %d ", keysBuf[i]);
+  }
+  printf("\n Dst: \n");
+  for (int i = 0 ; i < 128; i++)
+  {
+    if ((i % 16) == 0)
+      printf("\n");
+    printf(" %d ", keysDst[i]);
+  }
+  printf("\n");
 
   std::sort(keysGld, keysGld + n);
   for (int i = 0; i < n; i++)
