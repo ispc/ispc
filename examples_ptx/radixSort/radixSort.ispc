@@ -26,6 +26,7 @@ void countPass(
   foreach (digit = 0 ... NUMDIGITS)
     counts[digit] = 0;
 
+
 #if 1
   foreach (i = 0 ... nloc)
   {
@@ -56,8 +57,7 @@ void sortPass(
     uniform Key sorted[],
     uniform int bit,
     uniform int numElements,
-    uniform int digitOffsetsAll[],
-    uniform int sharedCounts[])
+    uniform int digitOffsetsAll[])
 {
   const uniform int  blockIdx = taskIndex;
   const uniform int numBlocks = taskCount;
@@ -65,70 +65,46 @@ void sortPass(
   const uniform int  blockDim = (numElements + numBlocks - 1) / numBlocks;
 
 
-#if 0
-  uniform int * uniform localCounts = sharedCounts + blockIdx*NUMDIGITS;
-#else
-  uniform int localCounts[NUMDIGITS];
-#endif
-
   const uniform int keyIndex = blockIdx * blockDim;
   uniform Key * uniform keys = keysAll + keyIndex;
-  uniform int * uniform digitOffsets = digitOffsetsAll + blockIdx*NUMDIGITS;
+
+
   const uniform int nloc = min(numElements - keyIndex, blockDim);
 
   const uniform int mask = (1 << NUMBITS) - 1;
-  foreach (i = 0 ... NUMDIGITS)
-    localCounts[i] = 0;
 
-  const int unitScan = exclusive_scan_add(1);
-  const int unitSum  = exclusive_scan_add((int)(programIndex < programCount/2));
+  const int unitScan     = exclusive_scan_add(1);
+  const int unitScanHalf = exclusive_scan_add((int)(programIndex >= programCount/2));
+  
+  uniform int digitOffsets[NUMDIGITS];
+  foreach (digit = 0 ... NUMDIGITS)
+    digitOffsets[digit] = digitOffsetsAll[blockIdx*NUMDIGITS + digit];
 
 
   foreach (i = 0 ... nloc)
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
-    int rel;
-#if 0
+    int scatter;
+#if 0 
+    /* serialize exuection to test correctness of algorithm */
     foreach_active(iv)
-    {
-      rel = localCounts[key];
-      localCounts[key]++;
-    }
+      scattter = digitOffsets[key]++;
 #else
     if (reduce_equal(key) == true)
-    {
-      rel = localCounts[key] + unitScan;
-      localCounts[key] = rel+1;
-    }
+      digitOffsets[key] = (scatter = digitOffsets[key] + unitScan) + 1;
     else
     {
 #ifdef __NVPTX__
-      if (programIndex < 16)
-      {
-        if (reduce_equal(key) == true)
-        {
-          rel = localCounts[key] + unitScan;
-          localCounts[key] = rel+1;
-        }
-        else
-          rel = atomic_add_global(&localCounts[key],1);
-      }
-      else
-      {
-        if (reduce_equal(key) == true)
-        {
-          rel = localCounts[key] + unitScan - unitSum;
-          localCounts[key] = rel+1;
-        }
-        else
-          rel = atomic_add_global(&localCounts[key],1);
-      }
+      /* there is a bug, not clear where exectly (perhaps due to optimizations),
+       * This complex code restored correctness */
+      /* :S */
+      if (programIndex < 16) {if (key < NUMDIGITS) scatter = atomic_add_global(&digitOffsets[key],1);}
+      else                   {if (key < NUMDIGITS) scatter = atomic_add_global(&digitOffsets[key],1);}
 #else
-      rel = atomic_add_local(&localCounts[key],1);
+      scatter = atomic_add_local(&digitOffsets[key],1);
 #endif
     }
 #endif
-    const int scatter = rel + digitOffsets[key];
     sorted [scatter] = keys[i];
   }
 }
@@ -341,8 +317,7 @@ export void radixSort(
           keys, 
           bit, 
           numElements,
-          excScan,
-          sharedCounts);
+          excScan);
     sync;
   }
 

@@ -45,10 +45,13 @@ int main (int argc, char *argv[])
   
   srand48(rtc()*65536);
 
+  int sortBits = 32;
+  assert(sortBits <= 32);
+
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
-    keys[i].key = ((int)(drand48() * (1<<30))) & 0x00FFFFFF;
+    keys[i].key = ((int)(drand48() * (1<<30))) & ((1ULL << sortBits) - 1);
     keys[i].val = i;
   }
 
@@ -70,7 +73,7 @@ int main (int argc, char *argv[])
   {
     ispcMemcpy(keys, keys_orig, n*sizeof(Key));
     reset_and_start_timer();
-    ispc::radixSort(n, (int64_t*)keys, 32);
+    ispc::radixSort(n, (int64_t*)keys, sortBits);
     tISPC2 = std::min(tISPC2, get_elapsed_msec());
     if (argc != 3)
         progressbar (i, m);
