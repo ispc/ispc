@@ -30,9 +30,12 @@ static inline void progressbar (unsigned int x, unsigned int n, unsigned int w =
   cout << "]\r" << flush;
 }
 
+typedef float Key_t;
+typedef int   Val_t;
 struct Key
 {
-  int key, val;
+  Key_t key;
+  Val_t val;
 };
 
 
@@ -51,14 +54,14 @@ int main (int argc, char *argv[])
   }
   std::random_shuffle(keys, keys + n);
 
-  int *keysSrc = new int[n];
-  int *valsSrc = new int[n];
-  int *keysBuf = new int[n];
-  int *valsBuf = new int[n];
-  int *keysDst = new int[n];
-  int *valsDst = new int[n];
-  int *keysGld = new int[n];
-  int *valsGld = new int[n];
+  Key_t *keysSrc = new Key_t[n];
+  Val_t *valsSrc = new Val_t[n];
+  Key_t *keysBuf = new Key_t[n];
+  Val_t *valsBuf = new Val_t[n];
+  Key_t *keysDst = new Key_t[n];
+  Val_t *valsDst = new Val_t[n];
+  Key_t *keysGld = new Key_t[n];
+  Val_t *valsGld = new Val_t[n];
 #pragma omp parallel for
   for (int i = 0; i < n; i++)
   {
@@ -77,8 +80,8 @@ int main (int argc, char *argv[])
   tISPC2 = 1e30;
   for (i = 0; i < m; i ++)
   {
-    ispcMemcpy(keysSrc, keysGld, n*sizeof(int));
-    ispcMemcpy(valsSrc, keysGld, n*sizeof(int));
+    ispcMemcpy(keysSrc, keysGld, n*sizeof(Key_t));
+    ispcMemcpy(valsSrc, valsGld, n*sizeof(Val_t));
 
     reset_and_start_timer();
     ispc::mergeSort(keysDst, valsDst, keysBuf, valsBuf, keysSrc, valsSrc, n);

@@ -1,3 +1,6 @@
+typedef float Key_t;
+typedef int   Val_t;
+
 #define SAMPLE_STRIDE programCount
 
 #define iDivUp(a,b) (((a) + (b) - 1)/(b))
@@ -22,7 +25,7 @@ int nextPowerOfTwo(int x)
 }
 
 static inline
-int binarySearchInclusive(
+int binarySearchInclusiveRanks(
     const int val, 
     uniform int *data,
     const int L, 
@@ -44,7 +47,7 @@ int binarySearchInclusive(
 }
 
 static inline
-int binarySearchExclusive(
+int binarySearchExclusiveRanks(
     const int val, 
     uniform int *data, 
     const int L, 
@@ -66,9 +69,53 @@ int binarySearchExclusive(
 }
 
 static inline
+int binarySearchInclusive(
+    const Key_t val, 
+    uniform Key_t *data,
+    const int L, 
+    int stride)
+{
+  if (L == 0)
+    return 0;
+
+  int pos = 0;
+  for (; stride > 0; stride >>= 1)
+  {
+    int newPos = min(pos + stride, L);
+
+    if (data[newPos - 1] <= val)
+      pos = newPos;
+  }
+
+  return pos;
+}
+
+static inline
+int binarySearchExclusive(
+    const Key_t val, 
+    uniform Key_t *data, 
+    const int L, 
+    int stride)
+{
+  if (L == 0)
+    return 0;
+
+  int pos = 0;
+  for (; stride > 0; stride >>= 1)
+  {
+    int newPos = min(pos + stride, L);
+
+    if (data[newPos - 1] < val)
+      pos = newPos;
+  }
+
+  return pos;
+}
+
+static inline
 int binarySearchInclusive1(
-    const int val, 
-    int data,
+    const Key_t val, 
+    Key_t data,
     const uniform int L, 
     uniform int stride)
 {
@@ -89,8 +136,8 @@ int binarySearchInclusive1(
 
 static inline
 int binarySearchExclusive1(
-    const int val, 
-    int data, 
+    const Key_t val, 
+    Key_t data, 
     const uniform int L, 
     uniform int stride)
 {
@@ -114,13 +161,13 @@ int binarySearchExclusive1(
 ////////////////////////////////////////////////////////////////////////////////
 task 
 void mergeSortGangKernel(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int srcKey[],
-    uniform int srcVal[])
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    uniform Key_t srcKey[],
+    uniform Val_t srcVal[])
 {
-  uniform int s_key[2*programCount];
-  uniform int s_val[2*programCount];
+  uniform Key_t s_key[2*programCount];
+  uniform Val_t s_val[2*programCount];
 
   const uniform int base = taskIndex * (programCount*2);
   s_key[programIndex +            0] = srcKey[base + programIndex +            0];
@@ -131,13 +178,13 @@ void mergeSortGangKernel(
   for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
   {
     const int lPos = programIndex & (stride - 1);
-    uniform int *baseKey = s_key + 2 * (programIndex - lPos);
-    uniform int *baseVal = s_val + 2 * (programIndex - lPos);
+    uniform Key_t *baseKey = s_key + 2 * (programIndex - lPos);
+    uniform Val_t *baseVal = s_val + 2 * (programIndex - lPos);
 
-    int keyA = baseKey[lPos +      0];
-    int valA = baseVal[lPos +      0];
-    int keyB = baseKey[lPos + stride];
-    int valB = baseVal[lPos + stride];
+    Key_t keyA = baseKey[lPos +      0];
+    Val_t valA = baseVal[lPos +      0];
+    Key_t keyB = baseKey[lPos + stride];
+    Val_t valB = baseVal[lPos + stride];
     int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
     int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
 
@@ -155,10 +202,10 @@ void mergeSortGangKernel(
 
 static inline
 void mergeSortGang(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int srcKey[],
-    uniform int srcVal[],
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    uniform Key_t srcKey[],
+    uniform Val_t srcVal[],
     uniform int batchSize)
 {
   launch [batchSize] mergeSortGangKernel(dstKey, dstVal, srcKey, srcVal);
@@ -172,7 +219,7 @@ task
 void generateSampleRanksKernel(
     uniform int in_ranksA[],
     uniform int in_ranksB[],
-    uniform int in_srcKey[],
+    uniform Key_t in_srcKey[],
     uniform int stride,
     uniform int N,
     uniform int totalProgramCount)
@@ -183,7 +230,7 @@ void generateSampleRanksKernel(
   const int           i = pos & ((stride / SAMPLE_STRIDE) - 1);
   const int segmentBase = (pos - i) * (2 * SAMPLE_STRIDE);
 
-  uniform int * srcKey = in_srcKey + segmentBase;
+  uniform Key_t * srcKey = in_srcKey + segmentBase;
   uniform int * ranksA = in_ranksA + segmentBase / SAMPLE_STRIDE;
   uniform int * ranksB = in_ranksB + segmentBase / SAMPLE_STRIDE;
 
@@ -213,7 +260,7 @@ static inline
 void generateSampleRanks(
     uniform int ranksA[],
     uniform int ranksB[],
-    uniform int srcKey[],
+    uniform Key_t srcKey[],
     uniform int stride,
     uniform int N)
 {
@@ -254,13 +301,13 @@ void mergeRanksAndIndicesKernel(
 
   if (i < segmentSamplesA)
   {
-    int dstPos = binarySearchExclusive(ranks[i], ranks + segmentSamplesA, segmentSamplesB, nextPowerOfTwo(segmentSamplesB)) + i;
+    int dstPos = binarySearchExclusiveRanks(ranks[i], ranks + segmentSamplesA, segmentSamplesB, nextPowerOfTwo(segmentSamplesB)) + i;
     limits[dstPos] = ranks[i];
   }
 
   if (i < segmentSamplesB)
   {
-    int dstPos = binarySearchInclusive(ranks[segmentSamplesA + i], ranks, segmentSamplesA, nextPowerOfTwo(segmentSamplesA)) + i;
+    int dstPos = binarySearchInclusiveRanks(ranks[segmentSamplesA + i], ranks, segmentSamplesA, nextPowerOfTwo(segmentSamplesA)) + i;
     limits[dstPos] = ranks[segmentSamplesA + i];
   }
 }
@@ -298,54 +345,13 @@ void mergeRanksAndIndices(
   sync;
 }
 
-static inline
-void merge(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int srcAKey[],
-    uniform int srcAVal[],
-    uniform int srcBKey[],
-    uniform int srcBVal[],
-    uniform int lenA,
-    uniform int nPowTwoLenA,
-    uniform int lenB,
-    uniform int nPowTwoLenB)
-{
-  int keyA, valA, keyB, valB, dstPosA, dstPosB;
-
-  if (programIndex < lenA)
-  {
-    keyA = srcAKey[programIndex];
-    valA = srcAVal[programIndex];
-    dstPosA = binarySearchExclusive(keyA, srcBKey, lenB, nPowTwoLenB) + programIndex;
-  }
-
-  if (programIndex < lenB)
-  {
-    keyB = srcBKey[programIndex];
-    valB = srcBVal[programIndex];
-    dstPosB = binarySearchInclusive(keyB, srcAKey, lenA, nPowTwoLenA) + programIndex;
-  }
-
-  if (programIndex < lenA)
-  {
-    dstKey[dstPosA] = keyA;
-    dstVal[dstPosA] = valA;
-  }
-
-  if (programIndex < lenB)
-  {
-    dstKey[dstPosB] = keyB;
-    dstVal[dstPosB] = valB;
-  }
-}
 
 static inline
 void merge(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    int keyA, int valA,
-    int keyB, int valB,
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    Key_t keyA, Val_t valA,
+    Key_t keyB, Val_t valB,
     uniform int lenA,
     uniform int nPowTwoLenA,
     uniform int lenB,
@@ -369,17 +375,17 @@ void merge(
 
 task
 void mergeElementaryIntervalsKernel(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int srcKey[],
-    uniform int srcVal[],
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    uniform Key_t srcKey[],
+    uniform Val_t srcVal[],
     uniform int limitsA[],
     uniform int limitsB[],
     uniform int stride,
     uniform int N)
 {
-  uniform int s_key[2 * SAMPLE_STRIDE];
-  uniform int s_val[2 * SAMPLE_STRIDE];
+  uniform Key_t s_key[2 * SAMPLE_STRIDE];
+  uniform Val_t s_val[2 * SAMPLE_STRIDE];
 
   const int uniform   intervalI =  taskIndex & ((2 * stride) / SAMPLE_STRIDE - 1);
   const int uniform segmentBase = (taskIndex - intervalI) * SAMPLE_STRIDE;
@@ -403,7 +409,8 @@ void mergeElementaryIntervalsKernel(
 
   //Load main input data
 
-  int keyA, valA, keyB, valB;
+  Key_t keyA, keyB;
+  Val_t valA, valB;
   if (programIndex < lenSrcA)
   {
     keyA = srcKey[segmentBase + startSrcA + programIndex];
@@ -443,10 +450,10 @@ void mergeElementaryIntervalsKernel(
 
 static inline
 void mergeElementaryIntervals(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int srcKey[],
-    uniform int srcVal[],
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    uniform Key_t srcKey[],
+    uniform Val_t srcVal[],
     uniform int limitsA[],
     uniform int limitsB[],
     uniform int stride,
@@ -499,29 +506,20 @@ void closeMergeSort()
 }
 
 export 
-void copyKernel(uniform int dst[], uniform int src[], uniform int size)
-{
-  assert(size == 0);
-  foreach (i = 0 ... size)
-    dst[i] = src[i];
-}
-
-
-export 
 void mergeSort(
-    uniform int dstKey[],
-    uniform int dstVal[],
-    uniform int bufKey[],
-    uniform int bufVal[],
-    uniform int srcKey[],
-    uniform int srcVal[],
+    uniform Key_t dstKey[],
+    uniform Val_t dstVal[],
+    uniform Key_t bufKey[],
+    uniform Val_t bufVal[],
+    uniform Key_t srcKey[],
+    uniform Val_t srcVal[],
     uniform int N)
 {
   uniform int stageCount = 0;
   for (uniform int stride = 2*programCount; stride < N; stride <<= 1, stageCount++);
 
-  uniform int * uniform iKey, * uniform oKey;
-  uniform int * uniform iVal, * uniform oVal;
+  uniform Key_t * uniform iKey, * uniform oKey;
+  uniform Val_t * uniform iVal, * uniform oVal;
 
   if (stageCount & 1)
   {
@@ -559,20 +557,22 @@ void mergeSort(
 
     if (lastSegmentElements <= stride)
     {
+#if 0
       //Last merge segment consists of a single array which just needs to be passed through
       copyKernel(oKey + (N - lastSegmentElements), iKey + (N - lastSegmentElements), lastSegmentElements);
       copyKernel(oVal + (N - lastSegmentElements), iVal + (N - lastSegmentElements), lastSegmentElements);
+#endif
     }
 
 #if 1
     {
-      uniform int * uniform tmpKey = iKey;
+      uniform Key_t * uniform tmpKey = iKey;
       iKey = oKey;
       oKey = tmpKey;
     }
 
     {
-      uniform int * uniform tmpVal = iVal;
+      uniform Val_t * uniform tmpVal = iVal;
       iVal = oVal;
       oVal = tmpVal;
     }
