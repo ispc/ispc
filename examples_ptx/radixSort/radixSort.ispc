@@ -196,6 +196,9 @@ export void radixSort_alloc(const uniform int n)
 {
   assert(memoryPool == NULL);
   numBlocks     = num_cores()*4;
+#ifdef __NVPTX__
+  numBlocks     = 13*32*4; //num_cores()*4;
+#endif
   nSharedCounts = NUMDIGITS*numBlocks;
   nCountsGlobal = NUMDIGITS;
   nExcScan      = NUMDIGITS*numBlocks;

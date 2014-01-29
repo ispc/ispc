@@ -103,11 +103,11 @@ void sortPass(
 #endif
 
 
-  int scatter;
   for (int i = programIndex; i < nloc; i += programCount)
     if (i < nloc)
     {
       const int key = mask & ((unsigned int)keys[i] >> bit);
+      int scatter;
       /* not a vector friendly loop */
 #pragma unroll 1  /* needed, otherwise compiler unroll and optimizes the result :S */
       for (int iv = 0; iv < programCount; iv++)
