@@ -74,8 +74,8 @@ void sortPass(
   const uniform int mask = (1 << NUMBITS) - 1;
 
   const int unitScan     = exclusive_scan_add(1);
-  const int unitScanHalf = exclusive_scan_add((int)(programIndex >= programCount/2));
-  
+ 
+ /* copy digit offset from Gmem to Lmem */ 
   uniform int digitOffsets[NUMDIGITS];
   foreach (digit = 0 ... NUMDIGITS)
     digitOffsets[digit] = digitOffsetsAll[blockIdx*NUMDIGITS + digit];
