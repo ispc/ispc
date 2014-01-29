@@ -1,6 +1,8 @@
 PROG=radixSort
 ISPC_SRC=radixSort.ispc
+
 CU_SRC=radixSort.cu
+NVCC_FLAGS=-Xptxas=-O1
 CXX_SRC=radixSort.cpp  radixSort.cpp
 PTXCC_REGMAX=64
 
