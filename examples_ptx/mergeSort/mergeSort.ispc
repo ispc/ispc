@@ -1,7 +1,7 @@
 #define SAMPLE_STRIDE programCount
 
-#define iDivUp(a,b) ((a) + (b) - 1)/(b)
-#define getSampleCount(dividend) iDivUp((dividend), SAMPLE_STRIDE)
+#define iDivUp(a,b) (((a) + (b) - 1)/(b))
+#define getSampleCount(dividend) (iDivUp((dividend), (SAMPLE_STRIDE)))
 
 #define W (/*sizeof(int)=*/4 * 8)
 
@@ -24,7 +24,7 @@ int nextPowerOfTwo(int x)
 static inline
 int binarySearchInclusive(
     const int val, 
-    int *data,
+    uniform int *data,
     const int L, 
     int stride)
 {
@@ -32,7 +32,6 @@ int binarySearchInclusive(
     return 0;
 
   int pos = 0;
-
   for (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
@@ -47,7 +46,7 @@ int binarySearchInclusive(
 static inline
 int binarySearchExclusive(
     const int val, 
-    int *data, 
+    uniform int *data, 
     const int L, 
     int stride)
 {
@@ -55,7 +54,6 @@ int binarySearchExclusive(
     return 0;
 
   int pos = 0;
-
   for (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
@@ -89,8 +87,8 @@ void mergeSortGangKernel(
   for (uniform int stride = 1; stride < programCount; stride <<= 1)
   {
     const int lPos = programIndex & (stride - 1);
-    int *baseKey = s_key + 2 * (programIndex - lPos);
-    int *baseVal = s_val + 2 * (programIndex - lPos);
+    uniform int *baseKey = s_key + 2 * (programIndex - lPos);
+    uniform int *baseVal = s_val + 2 * (programIndex - lPos);
 
     int keyA = baseKey[lPos +      0];
     int valA = baseVal[lPos +      0];
@@ -141,9 +139,9 @@ void generateSampleRanksKernel(
   const int           i = pos & ((stride / SAMPLE_STRIDE) - 1);
   const int segmentBase = (pos - i) * (2 * SAMPLE_STRIDE);
 
-  int * srcKey = in_srcKey + segmentBase;
-  int * ranksA = in_ranksA + segmentBase / SAMPLE_STRIDE;
-  int * ranksB = in_ranksB + segmentBase / SAMPLE_STRIDE;
+  uniform int * srcKey = in_srcKey + segmentBase;
+  uniform int * ranksA = in_ranksA + segmentBase / SAMPLE_STRIDE;
+  uniform int * ranksB = in_ranksB + segmentBase / SAMPLE_STRIDE;
 
   const int segmentElementsA = stride;
   const int segmentElementsB = min(stride, N - segmentBase - stride);
@@ -181,7 +179,7 @@ void generateSampleRanks(
     (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
-  uniform int nTasks = (threadCount + programCount - 1) / programCount;
+  uniform int nTasks = iDivUp(threadCount, SAMPLE_STRIDE);
 
   launch [nTasks] generateSampleRanksKernel(ranksA, ranksB, srcKey, stride, N, threadCount);
   sync;
@@ -202,8 +200,8 @@ void mergeRanksAndIndicesKernel(
 
   const int           i = pos & ((stride / SAMPLE_STRIDE) - 1);
   const int segmentBase = (pos - i) * (2 * SAMPLE_STRIDE);
-  int *  ranks = in_Ranks  + (pos - i) * 2;
-  int * limits = in_Limits + (pos - i) * 2;
+  uniform int *  ranks = in_Ranks  + (pos - i) * 2;
+  uniform int * limits = in_Limits + (pos - i) * 2;
 
   const int segmentElementsA = stride;
   const int segmentElementsB = min(stride, N - segmentBase - stride);
@@ -237,7 +235,7 @@ void mergeRanksAndIndices(
     (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
-  const uniform int nTasks = (threadCount + programCount - 1 ) / programCount;
+  const uniform int nTasks = iDivUp(threadCount, SAMPLE_STRIDE);
 
   launch [nTasks] mergeRanksAndIndicesKernel(
       limitsA,
@@ -367,8 +365,6 @@ void mergeElementaryIntervalsKernel(
 
   //Store merged data
 
-  assert(startDstA < N);
-  assert(startDstB < N);
   if (programIndex < lenSrcA)
   {
     dstKey[startDstA + programIndex] = s_key[programIndex];
@@ -444,6 +440,7 @@ void copyKernel(uniform int dst[], uniform int src[], uniform int size)
     dst[i] = src[i];
 }
 
+
 export 
 void mergeSort(
     uniform int dstKey[],
@@ -483,7 +480,7 @@ void mergeSort(
 
   for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
   {
-    print ("stride= % N= % \n", stride, N);
+//    print ("stride= % N= % \n", stride, N);
     uniform int lastSegmentElements = N % (2 * stride);
 
     //Find sample ranks and prepare for limiters merge

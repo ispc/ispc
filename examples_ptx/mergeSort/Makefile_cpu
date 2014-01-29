@@ -7,5 +7,6 @@ ISPC_ARM_TARGETS=neon
 #ISPC_FLAGS=-DDEBUG -g
 CXXFLAGS=-g
 CCFLAGS=-g
+#NVCC_FLAGS=-Xptxas=-O0
 
 include ../common.mk

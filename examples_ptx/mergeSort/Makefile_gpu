@@ -1,7 +1,7 @@
-PROG=radixSort
-ISPC_SRC=radixSort.ispc
-#CU_SRC=radixSort.cu
-CXX_SRC=radixSort.cpp  radixSort.cpp
+PROG=mergeSort
+ISPC_SRC=mergeSort.ispc
+#CU_SRC=mergeSort.cu
+CXX_SRC=mergeSort.cpp  mergeSort.cpp
 PTXCC_REGMAX=64
 
 # LLVM_GPU=1
