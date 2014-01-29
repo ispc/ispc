@@ -1,4 +1,4 @@
-#define NUMBITS 8
+#define NUMBITS 4
 #define NUMDIGITS (1<<NUMBITS)
 
 typedef int64 Key;
@@ -26,26 +26,16 @@ void countPass(
   foreach (digit = 0 ... NUMDIGITS)
     counts[digit] = 0;
 
-
-#if 1
   foreach (i = 0 ... nloc)
   {
     sorted[i] = keys[i];
     const int key = mask & ((unsigned int)keys[i] >> bit);
-    uniform int skey;
-    if (reduce_equal(key, &skey) == true)
-      counts[skey] += reduce_add(1);
-    else
-    {
 #ifdef __NVPTX__
-      atomic_add_global(&counts[key], 1);
+    atomic_add_global(&counts[key], 1);
 #else
-      atomic_add_local(&counts[key], 1);
+    atomic_add_local(&counts[key], 1);
 #endif
-    }
   }
-#else
-#endif
 
   foreach (digit = 0 ... NUMDIGITS)
     atomic_add_global(&countsGlobal[digit], counts[digit]);
@@ -74,6 +64,8 @@ void sortPass(
   const uniform int mask = (1 << NUMBITS) - 1;
 
   const int unitScan     = exclusive_scan_add(1);
+
+  int lkeys[NUMDIGITS] = {0};
  
  /* copy digit offset from Gmem to Lmem */ 
   uniform int digitOffsets[NUMDIGITS];
@@ -85,26 +77,8 @@ void sortPass(
   {
     const int key = mask & ((unsigned int)keys[i] >> bit);
     int scatter;
-#if 0 
-    /* serialize exuection to test correctness of algorithm */
     foreach_active(iv)
-      scattter = digitOffsets[key]++;
-#else
-    if (reduce_equal(key) == true)
-      digitOffsets[key] = (scatter = digitOffsets[key] + unitScan) + 1;
-    else
-    {
-#ifdef __NVPTX__
-      /* there is a bug, not clear where exectly (perhaps due to optimizations),
-       * This complex code restored correctness */
-      /* :S */
-      if (programIndex < 16) {if (key < NUMDIGITS) scatter = atomic_add_global(&digitOffsets[key],1);}
-      else                   {if (key < NUMDIGITS) scatter = atomic_add_global(&digitOffsets[key],1);}
-#else
-      scatter = atomic_add_local(&digitOffsets[key],1);
-#endif
-    }
-#endif
+      scatter = digitOffsets[key]++;
     sorted [scatter] = keys[i];
   }
 }
@@ -126,6 +100,7 @@ void partialScanLocal(
   uniform int (* uniform excScanBlock)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])excScanAll;
   uniform int (* uniform   partialSum)[NUMDIGITS] = (uniform int (*)[NUMDIGITS])partialSumAll;
 
+#if 0
   foreach (digit = 0 ... NUMDIGITS)
   {
     int prev = bbeg == 0 ? excScanBlock[0][digit] : 0;
@@ -137,6 +112,21 @@ void partialScanLocal(
     }
     partialSum[blockIdx][digit] = excScanBlock[bend-1][digit] + countsBlock[bend-1][digit];
   }
+#else
+  int prev[NUMDIGITS];
+  for (int digit = 0; digit < NUMDIGITS; digit++)
+    prev[digit] = bbeg == 0 ? excScanBlock[0][digit] : 0;
+
+  foreach_tiled (block = bbeg ... bend, digit = 0 ... NUMDIGITS)
+  {
+    const int y = countsBlock[block][digit];
+    excScanBlock[block][digit] = prev[digit];
+    prev[digit] += y;
+  }
+
+  foreach (digit = 0 ... NUMDIGITS)
+    partialSum[blockIdx][digit] = excScanBlock[bend-1][digit] + countsBlock[bend-1][digit];
+#endif
 }
 
 task
@@ -310,6 +300,7 @@ export void radixSort(
     /* computing offsets for each digit */
     radixExclusiveScan(numBlocks, excScan, counts, partialSum, prefixSum);
 
+#if 1
     /* sorting */
     launch [numBlocks] 
       sortPass(
@@ -319,6 +310,7 @@ export void radixSort(
           numElements,
           excScan);
     sync;
+#endif
   }
 
 }
