@@ -93,9 +93,9 @@ void sortPass(
   const  int mask = (1 << NUMBITS) - 1;
 
   /* copy digit offset from Gmem to Lmem */ 
-#if 0
+#if 1
   __shared__ int digitOffsets_sh[NUMDIGITS*4];
-  int *digitOffsets = digitOffsets_sh + warpIdx*NUMDIGITS;
+  volatile int *digitOffsets = digitOffsets_sh + warpIdx*NUMDIGITS;
   for (int digit = programIndex; digit < NUMDIGITS; digit += programCount)
     digitOffsets[digit] = digitOffsetsAll[blkIdx*NUMDIGITS + digit];
 #else
@@ -103,11 +103,11 @@ void sortPass(
 #endif
 
 
+  int scatter;
   for (int i = programIndex; i < nloc; i += programCount)
     if (i < nloc)
     {
       const int key = mask & ((unsigned int)keys[i] >> bit);
-      int scatter;
       /* not a vector friendly loop */
 #pragma unroll 1  /* needed, otherwise compiler unroll and optimizes the result :S */
       for (int iv = 0; iv < programCount; iv++)

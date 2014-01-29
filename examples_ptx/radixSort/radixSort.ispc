@@ -284,7 +284,6 @@ export void radixSort(
     /* computing offsets for each digit */
     radixExclusiveScan(numBlocks, excScan, counts, partialSum, prefixSum);
 
-#if 1
     /* sorting */
     launch [numBlocks] 
       sortPass(
@@ -294,7 +293,6 @@ export void radixSort(
           numElements,
           excScan);
     sync;
-#endif
   }
 
 }
