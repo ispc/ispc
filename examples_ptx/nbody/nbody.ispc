@@ -87,24 +87,27 @@ void computeForces(
     real iaccy = 0;
     real iaccz = 0;
     real igpot = 0;
-    for (uniform int j = 0; j < nbodies; j++)
+    for (uniform int j = 0; j < nbodies; j += 1)
     {
-      const real jposx = posx[j];
-      const real jposy = posy[j];
-      const real jposz = posz[j];
-      const real jmass = mass[j];
-      const real    dx  = jposx - iposx;
-      const real    dy  = jposy - iposy;
-      const real    dz  = jposz - iposz;
-      const real    r2  = dx*dx + dy*dy + dz*dz;
-      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0;
-      const real mrinv  = -jmass * rinv;
-      const real mrinv3 = mrinv * rinv*rinv;
-
-      iaccx += mrinv3 * dx;
-      iaccy += mrinv3 * dy;
-      iaccz += mrinv3 * dz;
-      igpot += mrinv;
+#define STEP(jk) {\
+      const real jposx = posx[j+jk]; \
+      const real jposy = posy[j+jk]; \
+      const real jposz = posz[j+jk]; \
+      const real jmass = mass[j+jk]; \
+      const real    dx  = jposx - iposx; \
+      const real    dy  = jposy - iposy; \
+      const real    dz  = jposz - iposz; \
+      const real    r2  = dx*dx + dy*dy + dz*dz; \
+      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; \
+      const real mrinv  = -jmass * rinv; \
+      const real mrinv3 = mrinv * rinv*rinv; \
+ \
+      iaccx += mrinv3 * dx; \
+      iaccy += mrinv3 * dy; \
+      iaccz += mrinv3 * dz; \
+      igpot += mrinv; \
+}
+    STEP(0)
     }
     accx[i]  = iaccx;
     accy[i]  = iaccy;
