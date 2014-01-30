@@ -30,7 +30,7 @@ uniform int nn = programCount;
 
 
 task 
-void computeForces(
+unmasked void computeForces(
     uniform int  nbodies,
     uniform real posx[],
     uniform real posy[],
