@@ -738,6 +738,6 @@ void mergeSort(
         oVal = tmpVal;
       }
     }
-  }
 #endif
+  }
 }
