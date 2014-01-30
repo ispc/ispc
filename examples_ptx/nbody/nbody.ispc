@@ -26,6 +26,8 @@ void closeNbody()
   delete gpotList;
 }
 
+uniform int nn = programCount;
+
 
 task 
 void computeForces(
@@ -39,45 +41,9 @@ void computeForces(
   const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
   const uniform int blockBeg =     blockIdx * blockDim;
   const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
+  uniform real shmem[4*programCount];
 
-#if 0
-  uniform real gpotLoc = 0;
-  for (uniform int i = blockBeg; i < blockEnd; i++)
-  {
-    const real iposx = posx[i];
-    const real iposy = posy[i];
-    const real iposz = posz[i];
-    real iaccx = 0;
-    real iaccy = 0;
-    real iaccz = 0;
-    real igpot = 0;
-    foreach (j = 0 ... nbodies)
-    {
-      const real jposx = posx[j];
-      const real jposy = posy[j];
-      const real jposz = posz[j];
-      const real jmass = mass[j];
-      const real    dx  = jposx - iposx;
-      const real    dy  = jposy - iposy;
-      const real    dz  = jposz - iposz;
-      const real    r2  = dx*dx + dy*dy + dz*dz;
-      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0;
-      const real mrinv  = -jmass * rinv;
-      const real mrinv3 = mrinv * rinv*rinv;
-
-      iaccx += mrinv3 * dx;
-      iaccy += mrinv3 * dy;
-      iaccz += mrinv3 * dz;
-      igpot += mrinv;
-    }
-    accx[i]  = reduce_add(iaccx);
-    accy[i]  = reduce_add(iaccy);
-    accz[i]  = reduce_add(iaccz);
-    gpotLoc += reduce_add(igpot);
-  }
-  gpotList[taskIndex] = gpotLoc;
-#else
-  real gpotLoc = 0;
+  //real gpotLoc = 0;
   foreach (i = blockBeg ... blockEnd)
   {
     const real iposx = posx[i];
@@ -87,35 +53,60 @@ void computeForces(
     real iaccy = 0;
     real iaccz = 0;
     real igpot = 0;
-    for (uniform int j = 0; j < nbodies; j += 1)
+#if 0
+    for (uniform int j = 0; j < nbodies; j++)
     {
-#define STEP(jk) {\
-      const real jposx = posx[j+jk]; \
-      const real jposy = posy[j+jk]; \
-      const real jposz = posz[j+jk]; \
-      const real jmass = mass[j+jk]; \
-      const real    dx  = jposx - iposx; \
-      const real    dy  = jposy - iposy; \
-      const real    dz  = jposz - iposz; \
-      const real    r2  = dx*dx + dy*dy + dz*dz; \
-      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; \
-      const real mrinv  = -jmass * rinv; \
-      const real mrinv3 = mrinv * rinv*rinv; \
- \
-      iaccx += mrinv3 * dx; \
-      iaccy += mrinv3 * dy; \
-      iaccz += mrinv3 * dz; \
-      igpot += mrinv; \
-}
-    STEP(0)
+      const real jposx = posx[j]; 
+      const real jposy = posy[j]; 
+      const real jposz = posz[j]; 
+      const real jmass = mass[j]; 
+      const real    dx  = jposx - iposx; 
+      const real    dy  = jposy - iposy; 
+      const real    dz  = jposz - iposz; 
+      const real    r2  = dx*dx + dy*dy + dz*dz; 
+      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; 
+      const real mrinv  = -jmass * rinv; 
+      const real mrinv3 = mrinv * rinv*rinv; 
+ 
+      iaccx += mrinv3 * dx; 
+      iaccy += mrinv3 * dy; 
+      iaccz += mrinv3 * dz; 
+      igpot += mrinv; 
     }
+#else
+    for (uniform int j = 0; j < nbodies; j += programCount)
+    {
+      shmem[0*programCount + programIndex] = posx[j+programIndex];
+      shmem[1*programCount + programIndex] = posy[j+programIndex];
+      shmem[2*programCount + programIndex] = posz[j+programIndex];
+      shmem[3*programCount + programIndex] = mass[j+programIndex];
+      for (uniform int jb = 0; jb < programCount; jb++)
+      {
+        const real jposx = shmem[0*programCount + jb];
+        const real jposy = shmem[1*programCount + jb];
+        const real jposz = shmem[2*programCount + jb];
+        const real jmass = shmem[3*programCount + jb];
+        const real    dx  = jposx - iposx; 
+        const real    dy  = jposy - iposy; 
+        const real    dz  = jposz - iposz; 
+        const real    r2  = dx*dx + dy*dy + dz*dz; 
+        const real  rinv  = r2; // > 0.0d ? rsqrt((float)r2) : 0; 
+        const real mrinv  = -jmass * rinv; 
+        const real mrinv3 = mrinv * rinv*rinv; 
+
+        iaccx += mrinv3 * dx; 
+        iaccy += mrinv3 * dy; 
+        iaccz += mrinv3 * dz; 
+        igpot += mrinv; 
+      }
+    }
+#endif
     accx[i]  = iaccx;
     accy[i]  = iaccy;
     accz[i]  = iaccz;
-    gpotLoc += igpot;
+//    gpotLoc += igpot;
   }
-  gpotList[taskIndex] = reduce_add(gpotLoc);
-#endif
+//  gpotList[taskIndex] = reduce_add(gpotLoc);
 }
 
 task
@@ -179,20 +170,21 @@ void nbodyIntegrate(
 {
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = nbodies/(4*programCount);
+  nTasks = (nbodies + 4*programCount - 1)/(4*programCount);
 #endif
   assert((nbodies % nTasks) == 0);
 
   for (uniform int step = 0; step < nSteps; step++)
   { 
-    launch [nTasks] updatePositions(nbodies, posx, posy, posz, velx, vely, velz,dt);
-    sync;
+//    launch [nTasks] updatePositions(nbodies, posx, posy, posz, velx, vely, velz,dt);
+ //   sync;
     launch [nTasks] computeForces(nbodies, posx, posy, posz, mass);
     sync;
-    launch [nTasks] updateVelocities(nbodies, posx, posy, posz, dt);
-    sync;
+  //  launch [nTasks] updateVelocities(nbodies, posx, posy, posz, dt);
+   // sync;
   }
 
+#if 0
   if (energies != NULL)
   {
     real gpotLoc = 0;
@@ -200,6 +192,7 @@ void nbodyIntegrate(
       gpotLoc += gpotList[i];
     energies[0] = reduce_add(gpotLoc);
   }
+#endif
 }
 
 

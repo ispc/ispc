@@ -43,7 +43,7 @@ int main (int argc, char *argv[])
   ispcSetMallocHeapLimit(1024*1024*1024);
   ispc::openNbody(n);
 
-  const int nSteps = 10;
+  const int nSteps = 1;
   const real dt = 0;
   tISPC2 = 1e30;
   for (i = 0; i < m; i ++)
@@ -57,7 +57,7 @@ int main (int argc, char *argv[])
     tISPC2 = get_elapsed_msec();
     fprintf(stderr, " %d iterations took %g sec; perf= %g GFlops\n",
         nSteps, tISPC2/1e3,
-        nSteps * 22.0*n*n/(tISPC2/1e3)/1e9);
+        nSteps * 20.0*n*n/(tISPC2/1e3)/1e9);
   }
 
   ispc::closeNbody();
