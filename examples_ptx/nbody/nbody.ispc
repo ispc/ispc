@@ -3,10 +3,31 @@ typedef double real;
 typedef real<3> real3;
 typedef real<4> real4;
 
-static uniform real * uniform accx;
+static uniform real * uniform accx = NULL;
 static uniform real * uniform accy;
 static uniform real * uniform accz;
 static uniform real * uniform gpotList;
+
+export
+void openNbody(const uniform int n)
+{
+  assert(accx == NULL);
+  accx = uniform new uniform real[n];
+  accy = uniform new uniform real[n];
+  accz = uniform new uniform real[n];
+  gpotList = uniform new uniform real[n];
+}
+
+export 
+void closeNbody()
+{
+  assert(accx != NULL);
+  delete accx;
+  delete accy;
+  delete accz;
+  delete gpotList;
+}
+
 
 static inline
 real4 ppForce(real3 ipos, real3 jpos, real jmass)
@@ -137,7 +158,6 @@ void nbodyIntegrate(
     uniform real velz[],
     uniform real energies[])
 {
-
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
   nTasks = nbodies/(4*programCount);
@@ -154,7 +174,13 @@ void nbodyIntegrate(
     sync;
   }
 
-  //energies[0] = gpot;
+  if (energies != NULL)
+  {
+    real gpotLoc = 0;
+    foreach (i = 0 ... nTasks)
+      gpotLoc += gpotList[i];
+    energies[0] = reduce_add(gpotLoc);
+  }
 }
 
 

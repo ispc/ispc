@@ -1,7 +1,7 @@
 PROG=nbody
 ISPC_SRC=nbody.ispc
 #CU_SRC=nbody.cu
-CXX_SRC=nbody.cpp  nbody_serial.cpp
+CXX_SRC=nbody.cpp 
 PTXCC_REGMAX=32
 
 LLVM_GPU=1
