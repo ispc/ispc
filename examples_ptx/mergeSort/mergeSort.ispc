@@ -161,43 +161,54 @@ int binarySearchExclusive1(
 ////////////////////////////////////////////////////////////////////////////////
 task 
 void mergeSortGangKernel(
+    uniform int batchSize,
     uniform Key_t dstKey[],
     uniform Val_t dstVal[],
     uniform Key_t srcKey[],
     uniform Val_t srcVal[])
 {
+  const uniform int blockIdx = taskIndex;
+  const uniform int blockDim = (batchSize + taskCount - 1)/taskCount;
+  const uniform int blockBeg =     blockIdx * blockDim;
+  const uniform int blockEnd = min(blockBeg + blockDim, batchSize);
+
   uniform Key_t s_key[2*programCount];
   uniform Val_t s_val[2*programCount];
 
-  const uniform int base = taskIndex * (programCount*2);
-  s_key[programIndex +            0] = srcKey[base + programIndex +            0];
-  s_val[programIndex +            0] = srcVal[base + programIndex +            0];
-  s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
-  s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
-
-  for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
+  for (uniform int block = blockBeg; block < blockEnd; block++)
   {
-    const int lPos = programIndex & (stride - 1);
-    uniform Key_t *baseKey = s_key + 2 * (programIndex - lPos);
-    uniform Val_t *baseVal = s_val + 2 * (programIndex - lPos);
+    const uniform int base = block * (programCount*2);
+    s_key[programIndex +            0] = srcKey[base + programIndex +            0];
+    s_val[programIndex +            0] = srcVal[base + programIndex +            0];
+    s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
+    s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
 
-    Key_t keyA = baseKey[lPos +      0];
-    Val_t valA = baseVal[lPos +      0];
-    Key_t keyB = baseKey[lPos + stride];
-    Val_t valB = baseVal[lPos + stride];
-    int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
-    int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
+#if 1
+    for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
+    {
+      const int lPos = programIndex & (stride - 1);
+      uniform Key_t *baseKey = s_key + 2 * (programIndex - lPos);
+      uniform Val_t *baseVal = s_val + 2 * (programIndex - lPos);
 
-    baseKey[posA] = keyA;
-    baseVal[posA] = valA;
-    baseKey[posB] = keyB;
-    baseVal[posB] = valB;
+      Key_t keyA = baseKey[lPos +      0];
+      Val_t valA = baseVal[lPos +      0];
+      Key_t keyB = baseKey[lPos + stride];
+      Val_t valB = baseVal[lPos + stride];
+      int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
+      int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
+
+      baseKey[posA] = keyA;
+      baseVal[posA] = valA;
+      baseKey[posB] = keyB;
+      baseVal[posB] = valB;
+    }
+#endif
+
+    dstKey[base + programIndex +            0] = s_key[programIndex +            0];
+    dstVal[base + programIndex +            0] = s_val[programIndex +            0];
+    dstKey[base + programIndex + programCount] = s_key[programIndex + programCount];
+    dstVal[base + programIndex + programCount] = s_val[programIndex + programCount];
   }
-
-  dstKey[base + programIndex +            0] = s_key[programIndex +            0];
-  dstVal[base + programIndex +            0] = s_val[programIndex +            0];
-  dstKey[base + programIndex + programCount] = s_key[programIndex + programCount];
-  dstVal[base + programIndex + programCount] = s_val[programIndex + programCount];
 }
 
 static inline
@@ -208,7 +219,11 @@ void mergeSortGang(
     uniform Val_t srcVal[],
     uniform int batchSize)
 {
-  launch [batchSize] mergeSortGangKernel(dstKey, dstVal, srcKey, srcVal);
+  uniform int nTasks = num_cores()*4;
+#ifdef __NVPTX__
+  nTasks = batchSize/4;
+#endif
+  launch [nTasks] mergeSortGangKernel(batchSize, dstKey, dstVal, srcKey, srcVal);
   sync;
 }
 
@@ -536,8 +551,8 @@ void mergeElementaryIntervalsKernel(
       valB = srcVal[segmentBase + stride + startSrcB + programIndex];
     }
 
-    // Compute destination addresses for merge data
     int dstPosA, dstPosB;
+    // Compute destination addresses for merge data
     if (programIndex < lenSrcA)
       dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
     if (programIndex < lenSrcB)
@@ -560,11 +575,13 @@ void mergeElementaryIntervalsKernel(
     // store merge data
     if (dstA >= 0) 
     {
+ //     int dstA = segmentBase + startSrcA + programIndex;
       dstKey[dstA] = keyA;
       dstVal[dstA] = valA;
     }
     if (dstB >= 0) 
     {
+//      int dstB = segmentBase + stride + startSrcB + programIndex;
       dstKey[dstB] = keyB;
       dstVal[dstB] = valB;
     }
@@ -600,6 +617,9 @@ void mergeElementaryIntervals(
         stride,
         N);
 #else
+#ifdef __NVPTX__
+  nTasks = mergePairs/(4*programCount);
+#endif
   launch [nTasks] mergeElementaryIntervalsKernel(
       mergePairs,
       dstKey,
@@ -684,6 +704,7 @@ void mergeSort(
   assert(N % (programCount*2) == 0);
   mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
 
+#if 1
   for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
   {
     const uniform int lastSegmentElements = N % (2 * stride);
@@ -717,4 +738,5 @@ void mergeSort(
       oVal = tmpVal;
     }
   }
+#endif
 }
