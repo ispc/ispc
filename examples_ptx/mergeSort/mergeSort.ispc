@@ -164,7 +164,8 @@ void mergeSortGangKernel(
     uniform Key_t dstKey[],
     uniform Val_t dstVal[],
     uniform Key_t srcKey[],
-    uniform Val_t srcVal[])
+    uniform Val_t srcVal[],
+    uniform int arrayLength)
 {
   const uniform int blockIdx = taskIndex;
   const uniform int blockDim = (batchSize + taskCount - 1)/taskCount;
@@ -182,17 +183,33 @@ void mergeSortGangKernel(
     s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
     s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
 
+#define STEP(stride) {\
+  const int lPos = programIndex & (stride - 1); \
+  const int offset = 2 * (programIndex - lPos); \
+  Key_t keyA = s_key[lPos +      0]; \
+  Val_t valA = s_val[lPos +      0]; \
+  Key_t keyB = s_key[lPos + stride]; \
+  Val_t valB = s_val[lPos + stride]; \
+  s_key[programIndex] = keyA; \
+  s_val[programIndex] = valA; \
+  s_key[programCount+programIndex] = keyB; \
+  s_val[programCount+programIndex] = valB;  \
+}
+
 #if 1
-    for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
+    for (uniform int stride = 1; stride < arrayLength; stride <<= 1)
     {
       const int lPos = programIndex & (stride - 1);
+      const int offset = 2 * (programIndex - lPos);
       uniform Key_t *baseKey = s_key + 2 * (programIndex - lPos);
       uniform Val_t *baseVal = s_val + 2 * (programIndex - lPos);
-
+      
       Key_t keyA = baseKey[lPos +      0];
       Val_t valA = baseVal[lPos +      0];
       Key_t keyB = baseKey[lPos + stride];
       Val_t valB = baseVal[lPos + stride];
+
+#if 1
       int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
       int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
 
@@ -200,6 +217,12 @@ void mergeSortGangKernel(
       baseVal[posA] = valA;
       baseKey[posB] = keyB;
       baseVal[posB] = valB;
+#else
+      s_key[programIndex] = keyA;
+      s_val[programIndex] = valA;
+      s_key[programCount+programIndex] = keyB;
+      s_val[programCount+programIndex] = valB;
+#endif
     }
 #endif
 
@@ -222,7 +245,7 @@ void mergeSortGang(
 #ifdef __NVPTX__
   nTasks = batchSize/4;
 #endif
-  launch [nTasks] mergeSortGangKernel(batchSize, dstKey, dstVal, srcKey, srcVal);
+  launch [nTasks] mergeSortGangKernel(batchSize, dstKey, dstVal, srcKey, srcVal, 2*programCount);
   sync;
 }
 

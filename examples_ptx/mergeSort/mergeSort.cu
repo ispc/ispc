@@ -201,6 +201,7 @@ void mergeSortGangKernel(
       Val_t valA = baseVal[lPos +      0];
       Key_t keyB = baseKey[lPos + stride];
       Val_t valB = baseVal[lPos + stride];
+#if 1
       int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
       int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
 
@@ -208,6 +209,12 @@ void mergeSortGangKernel(
       baseVal[posA] = valA;
       baseKey[posB] = keyB;
       baseVal[posB] = valB;
+#else
+      s_key[programIndex] = keyA;
+      s_val[programIndex] = valA;
+      s_key[programCount+programIndex] = keyB;
+      s_val[programCount+programIndex] = valB;
+#endif
     }
 #endif
 
