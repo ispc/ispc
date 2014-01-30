@@ -1,7 +1,7 @@
-PROG=sort
-ISPC_SRC=sort.ispc
-CU_SRC=sort.cu
-CXX_SRC=sort.cpp  sort_serial.cpp
+PROG=nbody
+ISPC_SRC=nbody.ispc
+#CU_SRC=nbody.cu
+CXX_SRC=nbody.cpp  nbody_serial.cpp
 PTXCC_REGMAX=32
 
 LLVM_GPU=1
