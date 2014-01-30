@@ -30,8 +30,7 @@ static inline void progressbar (unsigned int x, unsigned int n, unsigned int w =
   cout << "]\r" << flush;
 }
 
-typedef float Key_t;
-typedef int   Val_t;
+#include "keyType.h"
 struct Key
 {
   Key_t key;

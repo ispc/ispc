@@ -1,5 +1,4 @@
-typedef float Key_t;
-typedef int   Val_t;
+#include "keyType.h"
 
 #define SAMPLE_STRIDE programCount
 
