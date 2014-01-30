@@ -94,6 +94,29 @@ int main (int argc, char *argv[])
 
   printf("[sort ispc + tasks]:\t[%.3f] msec [%.3f Mpair/s]\n", tISPC2, 1.0e-3*n/tISPC2);
 
+#if 0
+  printf("\n---\n");
+  for (int i = 0; i < 128; i++)
+  {
+    if ((i%32) == 0) printf("\n");
+    printf("%d ", (int)keysSrc[i]);
+  }
+  printf("\n---\n");
+  for (int i = 0; i < 128; i++)
+  {
+    if ((i%32) == 0) printf("\n");
+    printf("%d ", (int)keysBuf[i]);
+  }
+  printf("\n---\n");
+  for (int i = 0; i < 128; i++)
+  {
+    if ((i%32) == 0) printf("\n");
+    printf("%d ", (int)keysDst[i]);
+  }
+  printf("\n---\n");
+#endif
+    
+
 
   std::sort(keysGld, keysGld + n);
   for (int i = 0; i < n; i++)

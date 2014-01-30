@@ -13,3 +13,5 @@
 #define warpIdx (threadIdx.x >> 5)
 #define launch(ntx,nty,ntz,func) if (programIndex==0) func<<<dim3(((ntx)+4-1)/4,nty,ntz),128>>>
 #define sync cudaDeviceSynchronize()
+#define cif if
+#define shuffle(x,y) __shfl(x,y)

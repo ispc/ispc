@@ -387,6 +387,7 @@ void mergeRanksAndIndices(
 }
 
 
+#if 0
 static inline
 void merge(
     int &dstPosA,
@@ -404,6 +405,7 @@ void merge(
   if (programIndex < lenB)
     dstPosB = binarySearchInclusive1(keyB, keyA, lenA, nPowTwoLenA) + programIndex;
 }
+#endif
 
 
 #if 0
@@ -548,12 +550,9 @@ void mergeElementaryIntervalsKernel(
       valB = srcVal[segmentBase + stride + startSrcB + programIndex];
     }
 
-    int dstPosA, dstPosB;
     // Compute destination addresses for merge data
-    if (programIndex < lenSrcA)
-      dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
-    if (programIndex < lenSrcB)
-      dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
+    int dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
+    int dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
 
 
     int dstA = -1, dstB = -1;
