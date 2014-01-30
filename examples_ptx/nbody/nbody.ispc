@@ -1,7 +1,5 @@
 typedef double real;
 
-typedef real<3> real3;
-typedef real<4> real4;
 
 static uniform real * uniform accx = NULL;
 static uniform real * uniform accy;
@@ -29,24 +27,6 @@ void closeNbody()
 }
 
 
-static inline
-real4 ppForce(real3 ipos, real3 jpos, real jmass)
-{
-  const real3   dr  = jpos - ipos;
-  const real    r2  = dr.x*dr.x + dr.y*dr.y + dr.z*dr.z;
-  const real  rinv  = r2 > 0 ? rsqrt(r2) : 0;
-  const real mrinv  = jmass * rinv;
-  const real mrinv3 = mrinv * rinv*rinv;
-
-  real4 acc;
-  acc.x = -mrinv3 * dr.x;
-  acc.y = -mrinv3 * dr.y;
-  acc.z = -mrinv3 * dr.z;
-  acc.w = -mrinv;
-
-  return acc;
-}
-
 task 
 void computeForces(
     uniform int  nbodies,
@@ -61,39 +41,75 @@ void computeForces(
   const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
 
 #if 0
-  real gpotLoc = 0;
+  uniform real gpotLoc = 0;
   for (uniform int i = blockBeg; i < blockEnd; i++)
   {
-    const real3 ipos = {posx[i], posy[i], posz[i]};
-    real4 iacc = 0;
+    const real iposx = posx[i];
+    const real iposy = posy[i];
+    const real iposz = posz[i];
+    real iaccx = 0;
+    real iaccy = 0;
+    real iaccz = 0;
+    real igpot = 0;
     foreach (j = 0 ... nbodies)
     {
-      const real3 jpos = {posx[j], posy[j], posz[j]};
+      const real jposx = posx[j];
+      const real jposy = posy[j];
+      const real jposz = posz[j];
       const real jmass = mass[j];
-      iacc += ppForce(ipos, jpos, jmass);
+      const real    dx  = jposx - iposx;
+      const real    dy  = jposy - iposy;
+      const real    dz  = jposz - iposz;
+      const real    r2  = dx*dx + dy*dy + dz*dz;
+      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0;
+      const real mrinv  = -jmass * rinv;
+      const real mrinv3 = mrinv * rinv*rinv;
+
+      iaccx += mrinv3 * dx;
+      iaccy += mrinv3 * dy;
+      iaccz += mrinv3 * dz;
+      igpot += mrinv;
     }
-    accx[i]  = reduce_add(iacc.x);
-    accy[i]  = reduce_add(iacc.y);
-    accz[i]  = reduce_add(iacc.z);
-    gpotLoc += reduce_add(iacc.w);
+    accx[i]  = reduce_add(iaccx);
+    accy[i]  = reduce_add(iaccy);
+    accz[i]  = reduce_add(iaccz);
+    gpotLoc += reduce_add(igpot);
   }
-  atomic_add_global(&gpot, gpotLoc);
+  gpotList[taskIndex] = gpotLoc;
 #else
   real gpotLoc = 0;
   foreach (i = blockBeg ... blockEnd)
   {
-    const real3 ipos = {posx[i], posy[i], posz[i]};
-    real4 iacc = 0;
+    const real iposx = posx[i];
+    const real iposy = posy[i];
+    const real iposz = posz[i];
+    real iaccx = 0;
+    real iaccy = 0;
+    real iaccz = 0;
+    real igpot = 0;
     for (uniform int j = 0; j < nbodies; j++)
     {
-      const real3 jpos = {posx[j], posy[j], posz[j]};
+      const real jposx = posx[j];
+      const real jposy = posy[j];
+      const real jposz = posz[j];
       const real jmass = mass[j];
-      iacc += ppForce(ipos, jpos, jmass);
+      const real    dx  = jposx - iposx;
+      const real    dy  = jposy - iposy;
+      const real    dz  = jposz - iposz;
+      const real    r2  = dx*dx + dy*dy + dz*dz;
+      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0;
+      const real mrinv  = -jmass * rinv;
+      const real mrinv3 = mrinv * rinv*rinv;
+
+      iaccx += mrinv3 * dx;
+      iaccy += mrinv3 * dy;
+      iaccz += mrinv3 * dz;
+      igpot += mrinv;
     }
-    accx[i]  = iacc.x;
-    accy[i]  = iacc.y;
-    accz[i]  = iacc.z;
-    gpotLoc += iacc.w;
+    accx[i]  = iaccx;
+    accy[i]  = iaccy;
+    accz[i]  = iaccz;
+    gpotLoc += igpot;
   }
   gpotList[taskIndex] = reduce_add(gpotLoc);
 #endif

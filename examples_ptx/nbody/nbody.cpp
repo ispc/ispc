@@ -13,8 +13,10 @@ typedef double real;
 
 int main (int argc, char *argv[])
 {
-  int i, j, n = argc == 1 ? 1024*1024: atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
+  int i, j, n = argc == 1 ? 2048: atoi(argv[1]), m = n < 100 ? 1 : 50, l = n < 100 ? n : RAND_MAX;
   double tISPC1 = 0.0, tISPC2 = 0.0, tSerial = 0.0;
+
+  printf(" nbodies= %d\n", n);
 
   Plummer plummer(n);
 
@@ -55,7 +57,7 @@ int main (int argc, char *argv[])
     tISPC2 = get_elapsed_msec();
     fprintf(stderr, " %d iterations took %g sec; perf= %g GFlops\n",
         nSteps, tISPC2/1e3,
-        20*n*n/(tISPC2/1e3/1e9));
+        nSteps * 22.0*n*n/(tISPC2/1e3)/1e9);
   }
 
   ispc::closeNbody();

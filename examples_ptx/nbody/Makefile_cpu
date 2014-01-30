@@ -1,6 +1,6 @@
 
 EXAMPLE=nbody
-CPP_SRC=nbody.cpp nbody_serial.cpp
+CPP_SRC=nbody.cpp
 ISPC_SRC=nbody.ispc
 ISPC_IA_TARGETS=avx1-i32x8
 ISPC_ARM_TARGETS=neon
