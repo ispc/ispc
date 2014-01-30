@@ -1,0 +1,14 @@
+PROG=bandwidthTest
+ISPC_SRC=bandwidthTest.ispc
+#CU_SRC=bandwidthTest.cu
+CXX_SRC=bandwidthTest.cpp  bandwidthTest.cpp
+PTXCC_REGMAX=64
+#PTXCC_FLAGS= -Xptxas=-O3
+
+# LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_gpu.mk
+
+
+
