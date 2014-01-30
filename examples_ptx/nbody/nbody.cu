@@ -1,13 +1,16 @@
 typedef double real;
+#include "cuda_helpers.cuh"
+#include <cassert>
 
+#define uniform
 
-static uniform real * uniform accx = NULL;
-static uniform real * uniform accy;
-static uniform real * uniform accz;
-static uniform real * uniform gpotList;
+__device__ static uniform real * uniform accx = NULL;
+__device__ static uniform real * uniform accy;
+__device__ static uniform real * uniform accz;
+__device__ static uniform real * uniform gpotList;
 
-export
-void openNbody(const uniform int n)
+__global__
+void openNbody___export(const uniform int n)
 {
   assert(accx == NULL);
   accx = uniform new uniform real[n];
@@ -15,9 +18,14 @@ void openNbody(const uniform int n)
   accz = uniform new uniform real[n];
   gpotList = uniform new uniform real[n];
 }
+extern "C"
+void openNbody(int n)
+{
+  openNbody___export<<<1,1>>>(n);
+}
 
-export 
-void closeNbody()
+__global__
+void closeNbody___export()
 {
   assert(accx != NULL);
   delete accx;
@@ -25,9 +33,15 @@ void closeNbody()
   delete accz;
   delete gpotList;
 }
+extern "C"
+void closeNbody()
+{
+  closeNbody___export<<<1,1>>>();
+}
 
 
-task 
+
+__global__
 void computeForces(
     uniform int  nbodies,
     uniform real posx[],
@@ -35,14 +49,14 @@ void computeForces(
     uniform real posz[],
     uniform real mass[])
 {
-  const uniform int blockIdx = taskIndex;
-  const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
-  const uniform int blockBeg =     blockIdx * blockDim;
-  const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
+  const uniform int blkIdx = taskIndex;
+  const uniform int blkDim = (nbodies + taskCount - 1)/taskCount;
+  const uniform int blkBeg =     blkIdx * blkDim;
+  const uniform int blkEnd = min(blkBeg + blkDim, nbodies);
 
 #if 0
   uniform real gpotLoc = 0;
-  for (uniform int i = blockBeg; i < blockEnd; i++)
+  for (uniform int i = blkBeg; i < blkEnd; i++)
   {
     const real iposx = posx[i];
     const real iposy = posy[i];
@@ -78,47 +92,44 @@ void computeForces(
   gpotList[taskIndex] = gpotLoc;
 #else
   real gpotLoc = 0;
-  foreach (i = blockBeg ... blockEnd)
-  {
-    const real iposx = posx[i];
-    const real iposy = posy[i];
-    const real iposz = posz[i];
-    real iaccx = 0;
-    real iaccy = 0;
-    real iaccz = 0;
-    real igpot = 0;
-    for (uniform int j = 0; j < nbodies; j += 1)
+  for (int i = programIndex + blkBeg; i < blkEnd; i += programCount)
+    if (i < blkEnd)
     {
-#define STEP(jk) {\
-      const real jposx = posx[j+jk]; \
-      const real jposy = posy[j+jk]; \
-      const real jposz = posz[j+jk]; \
-      const real jmass = mass[j+jk]; \
-      const real    dx  = jposx - iposx; \
-      const real    dy  = jposy - iposy; \
-      const real    dz  = jposz - iposz; \
-      const real    r2  = dx*dx + dy*dy + dz*dz; \
-      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; \
-      const real mrinv  = -jmass * rinv; \
-      const real mrinv3 = mrinv * rinv*rinv; \
- \
-      iaccx += mrinv3 * dx; \
-      iaccy += mrinv3 * dy; \
-      iaccz += mrinv3 * dz; \
-      igpot += mrinv; \
-}
-    STEP(0)
+      const real iposx = posx[i];
+      const real iposy = posy[i];
+      const real iposz = posz[i];
+      real iaccx = 0;
+      real iaccy = 0;
+      real iaccz = 0;
+      real igpot = 0;
+      for (uniform int j = 0; j < nbodies; j++)
+      {
+        const real jposx = posx[j]; 
+        const real jposy = posy[j]; 
+        const real jposz = posz[j]; 
+        const real jmass = mass[j]; 
+        const real    dx  = jposx - iposx; 
+        const real    dy  = jposy - iposy; 
+        const real    dz  = jposz - iposz; 
+        const real    r2  = dx*dx + dy*dy + dz*dz; 
+        const real  rinv  = r2 > 0.0 ? rsqrt((float)r2) : 0; 
+        const real mrinv  = -jmass * rinv; 
+        const real mrinv3 = mrinv * rinv*rinv; 
+        iaccx += mrinv3 * dx; 
+        iaccy += mrinv3 * dy; 
+        iaccz += mrinv3 * dz; 
+        igpot += mrinv; 
+      }
+      accx[i]  = iaccx;
+      accy[i]  = iaccy;
+      accz[i]  = iaccz;
+      gpotLoc += igpot;
     }
-    accx[i]  = iaccx;
-    accy[i]  = iaccy;
-    accz[i]  = iaccz;
-    gpotLoc += igpot;
-  }
-  gpotList[taskIndex] = reduce_add(gpotLoc);
+//  gpotList[taskIndex] = reduce_add(gpotLoc);
 #endif
 }
 
-task
+__global__
 void updatePositions(
     uniform int  nbodies,
     uniform real posx[],
@@ -129,20 +140,21 @@ void updatePositions(
     uniform real velz[],
     uniform real dt)
 {
-  const uniform int blockIdx = taskIndex;
-  const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
-  const uniform int blockBeg =     blockIdx * blockDim;
-  const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
+  const uniform int blkIdx = taskIndex;
+  const uniform int blkDim = (nbodies + taskCount - 1)/taskCount;
+  const uniform int blkBeg =     blkIdx * blkDim;
+  const uniform int blkEnd = min(blkBeg + blkDim, nbodies);
 
-  foreach (i = blockBeg ... blockEnd)
-  {
-    posx[i] += dt*velx[i];
-    posy[i] += dt*vely[i];
-    posz[i] += dt*velz[i];
-  }
+  for (int i = programIndex + blkBeg; i < blkEnd; i += programCount)
+    if (i < blkEnd)
+    {
+      posx[i] += dt*velx[i];
+      posy[i] += dt*vely[i];
+      posz[i] += dt*velz[i];
+    }
 }
 
-task
+__global__
 void updateVelocities(
     uniform int  nbodies,
     uniform real velx[],
@@ -150,20 +162,61 @@ void updateVelocities(
     uniform real velz[],
     uniform real dt)
 {
-  const uniform int blockIdx = taskIndex;
-  const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
-  const uniform int blockBeg =     blockIdx * blockDim;
-  const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
+  const uniform int blkIdx = taskIndex;
+  const uniform int blkDim = (nbodies + taskCount - 1)/taskCount;
+  const uniform int blkBeg =     blkIdx * blkDim;
+  const uniform int blkEnd = min(blkBeg + blkDim, nbodies);
 
-  foreach (i = blockBeg ... blockEnd)
-  {
-    velx[i] += dt*accx[i];
-    vely[i] += dt*accy[i];
-    velz[i] += dt*accz[i];
-  }
+  for (int i = programIndex + blkBeg; i < blkEnd; i += programCount)
+    if (i < blkEnd)
+    {
+      velx[i] += dt*accx[i];
+      vely[i] += dt*accy[i];
+      velz[i] += dt*accz[i];
+    }
 }
 
-export
+__global__
+void nbodyIntegrate___export(
+    uniform int  nSteps,
+    uniform int  nbodies,
+    uniform real dt,
+    uniform real posx[],
+    uniform real posy[],
+    uniform real posz[],
+    uniform real mass[],
+    uniform real velx[],
+    uniform real vely[],
+    uniform real velz[],
+    uniform real energies[])
+{
+  uniform int nTasks ;
+  nTasks = nbodies/(4*programCount);
+  assert((nbodies % nTasks) == 0);
+
+  for (uniform int step = 0; step < nSteps; step++)
+  { 
+    launch (nTasks,1,1, updatePositions)(nbodies, posx, posy, posz, velx, vely, velz,dt);
+    sync;
+    launch (nTasks,1,1, computeForces)(nbodies, posx, posy, posz, mass);
+    sync;
+    launch (nTasks,1,1, updateVelocities)(nbodies, posx, posy, posz, dt);
+    sync;
+  }
+
+#if 0
+  if (energies != NULL)
+  {
+    real gpotLoc = 0;
+    foreach (i = 0 ... nTasks)
+      gpotLoc += gpotList[i];
+    energies[0] = reduce_add(gpotLoc);
+  }
+#endif
+}
+
+
+extern "C"
 void nbodyIntegrate(
     uniform int  nSteps,
     uniform int  nbodies,
@@ -177,29 +230,17 @@ void nbodyIntegrate(
     uniform real velz[],
     uniform real energies[])
 {
-  uniform int nTasks = num_cores()*4;
-#ifdef __NVPTX__
-  nTasks = nbodies/(4*programCount);
-#endif
-  assert((nbodies % nTasks) == 0);
-
-  for (uniform int step = 0; step < nSteps; step++)
-  { 
-    launch [nTasks] updatePositions(nbodies, posx, posy, posz, velx, vely, velz,dt);
-    sync;
-    launch [nTasks] computeForces(nbodies, posx, posy, posz, mass);
-    sync;
-    launch [nTasks] updateVelocities(nbodies, posx, posy, posz, dt);
-    sync;
-  }
-
-  if (energies != NULL)
-  {
-    real gpotLoc = 0;
-    foreach (i = 0 ... nTasks)
-      gpotLoc += gpotList[i];
-    energies[0] = reduce_add(gpotLoc);
-  }
+  nbodyIntegrate___export<<<1,32>>>(
+      nSteps,
+      nbodies,
+      dt,
+      posx,
+      posy,
+      posz,
+      mass,
+      velx,
+      vely,
+      velz,
+      energies);
+  sync;
 }
-
-
