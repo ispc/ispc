@@ -590,7 +590,7 @@ void mergeSort___export(
     // k20m:  2367 M/s
     mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
 
-#if 0
+#if 1
     for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
     {
       const uniform int lastSegmentElements = N % (2 * stride);
