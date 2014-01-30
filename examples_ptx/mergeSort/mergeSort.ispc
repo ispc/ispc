@@ -225,7 +225,6 @@ void generateSampleRanksKernel(
     uniform int totalProgramCount)
 {
   const int pos = taskIndex * programCount + programIndex;
-  assert(pos < totalProgramCount);
 
   const int           i = pos & ((stride / SAMPLE_STRIDE) - 1);
   const int segmentBase = (pos - i) * (2 * SAMPLE_STRIDE);
@@ -265,7 +264,6 @@ void generateSampleRanks(
     uniform int N)
 {
   uniform int lastSegmentElements = N % (2 * stride);
-  assert(lastSegmentElements == 0);
   uniform int threadCount = (lastSegmentElements > stride) ? 
     (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
@@ -287,7 +285,6 @@ void mergeRanksAndIndicesKernel(
     uniform int totalProgramCount)
 {
   int pos = taskIndex * programCount + programIndex;
-  assert(pos < totalProgramCount);
 
   const int           i = pos & ((stride / SAMPLE_STRIDE) - 1);
   const int segmentBase = (pos - i) * (2 * SAMPLE_STRIDE);
@@ -321,7 +318,6 @@ void mergeRanksAndIndices(
     uniform int N)
 {
   const uniform int lastSegmentElements = N % (2 * stride);
-  assert(lastSegmentElements == 0);
   const uniform int threadCount = (lastSegmentElements > stride) ? 
     (N + 2 * stride - lastSegmentElements) / (2 * SAMPLE_STRIDE) : 
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
@@ -348,8 +344,8 @@ void mergeRanksAndIndices(
 
 static inline
 void merge(
-    uniform Key_t dstKey[],
-    uniform Val_t dstVal[],
+    int &dstPosA,
+    int &dstPosB,
     Key_t keyA, Val_t valA,
     Key_t keyB, Val_t valB,
     uniform int lenA,
@@ -358,18 +354,10 @@ void merge(
     uniform int nPowTwoLenB)
 {
   if (programIndex < lenA)
-  {
-    const int dstPosA = binarySearchExclusive1(keyA, keyB, lenB, nPowTwoLenB) + programIndex;
-    dstKey[dstPosA] = keyA;
-    dstVal[dstPosA] = valA;
-  }
+    dstPosA = binarySearchExclusive1(keyA, keyB, lenB, nPowTwoLenB) + programIndex;
 
   if (programIndex < lenB)
-  {
-    const int dstPosB = binarySearchInclusive1(keyB, keyA, lenA, nPowTwoLenA) + programIndex;
-    dstKey[dstPosB] = keyB;
-    dstVal[dstPosB] = valB;
-  }
+    dstPosB = binarySearchInclusive1(keyB, keyA, lenA, nPowTwoLenA) + programIndex;
 }
 
 
@@ -384,9 +372,6 @@ void mergeElementaryIntervalsKernel(
     uniform int stride,
     uniform int N)
 {
-  uniform Key_t s_key[2 * SAMPLE_STRIDE];
-  uniform Val_t s_val[2 * SAMPLE_STRIDE];
-
   const int uniform   intervalI =  taskIndex & ((2 * stride) / SAMPLE_STRIDE - 1);
   const int uniform segmentBase = (taskIndex - intervalI) * SAMPLE_STRIDE;
 
@@ -424,17 +409,33 @@ void mergeElementaryIntervalsKernel(
   }
 
   //Merge data in shared memory
+  int dstPosA, dstPosB;
   merge(
-      s_key,
-      s_val,
+      dstPosA,
+      dstPosB,
       keyA, valA,
       keyB, valB,
       lenSrcA, SAMPLE_STRIDE,
       lenSrcB, SAMPLE_STRIDE
       );
 
+
   //Store merged data
 
+#if 0
+  uniform Key_t s_key[2 * SAMPLE_STRIDE];
+  uniform Val_t s_val[2 * SAMPLE_STRIDE];
+
+  if (programIndex < lenSrcA)
+  {
+    s_key[dstPosA] = keyA;
+    s_val[dstPosA] = valA;
+  }
+  if (programIndex < lenSrcB)
+  {
+    s_key[dstPosB] = keyB;
+    s_val[dstPosB] = valB;
+  }
   if (programIndex < lenSrcA)
   {
     dstKey[segmentBase + startDstA + programIndex] = s_key[programIndex];
@@ -446,6 +447,34 @@ void mergeElementaryIntervalsKernel(
     dstKey[segmentBase + startDstB + programIndex] = s_key[lenSrcA + programIndex];
     dstVal[segmentBase + startDstB + programIndex] = s_val[lenSrcA + programIndex];
   }
+#else
+  int dstA, dstB;
+  dstA = dstB = -1;
+  if (programIndex < lenSrcA && dstPosA < lenSrcA)
+    dstA = segmentBase + startDstA + dstPosA;
+  if (programIndex < lenSrcB && dstPosB < lenSrcA)
+    dstB = segmentBase + startDstA + dstPosB;
+ 
+  dstPosA -= lenSrcA;
+  dstPosB -= lenSrcA;
+  dstA = dstB = -1;
+  if (programIndex < lenSrcA && dstPosA < lenSrcB)
+    dstA = segmentBase + startDstB + dstPosA;
+  if (programIndex < lenSrcB && dstPosB < lenSrcB)
+    dstB = segmentBase + startDstB + dstPosB;
+  
+  if (dstA >= 0) 
+  {
+    dstKey[dstA] = keyA;
+    dstVal[dstA] = valA;
+  }
+  if (dstB >= 0) 
+  {
+    dstKey[dstB] = keyB;
+    dstVal[dstB] = valB;
+  }
+#endif
+
 }
 
 static inline
@@ -544,7 +573,7 @@ void mergeSort(
 
   for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
   {
-    uniform int lastSegmentElements = N % (2 * stride);
+    const uniform int lastSegmentElements = N % (2 * stride);
 
     //Find sample ranks and prepare for limiters merge
     generateSampleRanks(ranksA, ranksB, iKey, stride, N);
@@ -556,26 +585,23 @@ void mergeSort(
     mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
 
     if (lastSegmentElements <= stride)
-    {
-#if 0
-      //Last merge segment consists of a single array which just needs to be passed through
-      copyKernel(oKey + (N - lastSegmentElements), iKey + (N - lastSegmentElements), lastSegmentElements);
-      copyKernel(oVal + (N - lastSegmentElements), iVal + (N - lastSegmentElements), lastSegmentElements);
-#endif
-    }
+      foreach (i = 0 ... lastSegmentElements)
+      {
+        oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
+        oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
+      }
+    memory_barrier();
 
-#if 1
+
     {
       uniform Key_t * uniform tmpKey = iKey;
       iKey = oKey;
       oKey = tmpKey;
     }
-
     {
       uniform Val_t * uniform tmpVal = iVal;
       iVal = oVal;
       oVal = tmpVal;
     }
-#endif
   }
 }
