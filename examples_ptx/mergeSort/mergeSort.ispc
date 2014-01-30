@@ -687,40 +687,56 @@ void mergeSort(
 
   assert(N <= SAMPLE_STRIDE * MAX_SAMPLE_COUNT);
   assert(N % (programCount*2) == 0);
-  mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
+
+  // cpu: 28  gpu: 74 M/s
+  {
+    // cpu: 356   gpu: 534 M/s
+    mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
 
 #if 1
-  for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
-  {
-    const uniform int lastSegmentElements = N % (2 * stride);
+    for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
+    {
+      const uniform int lastSegmentElements = N % (2 * stride);
 
-    //Find sample ranks and prepare for limiters merge
-    generateSampleRanks(ranksA, ranksB, iKey, stride, N);
-
-    //Merge ranks and indices
-    mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
-        
-    //Merge elementary intervals
-    mergeElementaryIntervals(nTasks, oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
-
-    if (lastSegmentElements <= stride)
-      foreach (i = 0 ... lastSegmentElements)
+      // cpu: 30  gpu: 112 M/s
       {
-        oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
-        oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
+#if 1
+        // cpu: 121  gpu: 460 M/s
+        {
+          // cpu: 190  gpu: 600 M/s
+          //Find sample ranks and prepare for limiters merge
+          generateSampleRanks(ranksA, ranksB, iKey, stride, N);
+
+          // cpu: 120 gpu: 457 M/s
+          //Merge ranks and indices
+          mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
+        }
+#endif
+
+        // cpu: 287  gpu: 194 M/s 
+        //Merge elementary intervals
+        mergeElementaryIntervals(nTasks, oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
       }
-    memory_barrier();
+
+      if (lastSegmentElements <= stride)
+        foreach (i = 0 ... lastSegmentElements)
+        {
+          oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
+          oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
+        }
+      memory_barrier();
 
 
-    {
-      uniform Key_t * uniform tmpKey = iKey;
-      iKey = oKey;
-      oKey = tmpKey;
-    }
-    {
-      uniform Val_t * uniform tmpVal = iVal;
-      iVal = oVal;
-      oVal = tmpVal;
+      {
+        uniform Key_t * uniform tmpKey = iKey;
+        iKey = oKey;
+        oKey = tmpKey;
+      }
+      {
+        uniform Val_t * uniform tmpVal = iVal;
+        iVal = oVal;
+        oVal = tmpVal;
+      }
     }
   }
 #endif

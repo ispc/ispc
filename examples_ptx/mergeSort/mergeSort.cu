@@ -583,40 +583,56 @@ void mergeSort___export(
 
   assert(N <= SAMPLE_STRIDE * MAX_SAMPLE_COUNT);
   assert(N % (programCount*2) == 0);
-  mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
+
+  // k20m: 140 M/s
+  {
+    // k20m:  2367 M/s
+    mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
 
 #if 1
-  for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
-  {
-    const uniform int lastSegmentElements = N % (2 * stride);
+    for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
+    {
+      const uniform int lastSegmentElements = N % (2 * stride);
 
-    //Find sample ranks and prepare for limiters merge
-    generateSampleRanks(ranksA, ranksB, iKey, stride, N);
-
-    //Merge ranks and indices
-    mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
-        
-    //Merge elementary intervals
-    mergeElementaryIntervals(nTasks, oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
-
-    if (lastSegmentElements <= stride)
-      for (int i = programIndex; i < lastSegmentElements; i += programCount)
-        if (i < lastSegmentElements)
+      // k20m: 271 M/s
+      {
+#if 1
+        // k20m: 944 M/s
         {
-          oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
-          oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
+          // k20m:  1396 M/s
+          //Find sample ranks and prepare for limiters merge
+          generateSampleRanks(ranksA, ranksB, iKey, stride, N);
+
+          // k20m: 2379 M/s
+          //Merge ranks and indices
+          mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
         }
+#endif
+
+        // k20m: 371 M/s
+        //Merge elementary intervals
+        mergeElementaryIntervals(nTasks, oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
+      }
+
+      if (lastSegmentElements <= stride)
+        for (int i = programIndex; i < lastSegmentElements; i += programCount)
+          if (i < lastSegmentElements)
+          {
+            oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
+            oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
+          }
 
 
-    {
-      uniform Key_t * uniform tmpKey = iKey;
-      iKey = oKey;
-      oKey = tmpKey;
-    }
-    {
-      uniform Val_t * uniform tmpVal = iVal;
-      iVal = oVal;
-      oVal = tmpVal;
+      {
+        uniform Key_t * uniform tmpKey = iKey;
+        iKey = oKey;
+        oKey = tmpKey;
+      }
+      {
+        uniform Val_t * uniform tmpVal = iVal;
+        iVal = oVal;
+        oVal = tmpVal;
+      }
     }
   }
 #endif
