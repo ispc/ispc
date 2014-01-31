@@ -14,4 +14,12 @@
 #define launch(ntx,nty,ntz,func) if (programIndex==0) func<<<dim3(((ntx)+4-1)/4,nty,ntz),128>>>
 #define sync cudaDeviceSynchronize()
 #define cif if
+__device__ __forceinline__ static double __shfl(double x, int lane)
+{
+  return __hiloint2double(
+      __shfl_xor(__double2hiint(x), lane),
+      __shfl_xor(__double2loint(x), lane));
+
+}
 #define shuffle(x,y) __shfl(x,y)
+#define broadcast(x,y) __shfl(x,y)

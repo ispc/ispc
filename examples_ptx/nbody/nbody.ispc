@@ -1,4 +1,4 @@
-typedef double real;
+#include "realType.h"
 
 
 static uniform real * uniform accx = NULL;
@@ -30,7 +30,7 @@ uniform int nn = programCount;
 
 
 task 
-unmasked void computeForces(
+void computeForces(
     uniform int  nbodies,
     uniform real posx[],
     uniform real posy[],
@@ -41,7 +41,6 @@ unmasked void computeForces(
   const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
   const uniform int blockBeg =     blockIdx * blockDim;
   const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
-  uniform real shmem[4*programCount];
 
   //real gpotLoc = 0;
   foreach (i = blockBeg ... blockEnd)
@@ -53,7 +52,7 @@ unmasked void computeForces(
     real iaccy = 0;
     real iaccz = 0;
     real igpot = 0;
-#if 0
+#ifndef __NVPTX__
     for (uniform int j = 0; j < nbodies; j++)
     {
       const real jposx = posx[j]; 
@@ -64,7 +63,7 @@ unmasked void computeForces(
       const real    dy  = jposy - iposy; 
       const real    dz  = jposz - iposz; 
       const real    r2  = dx*dx + dy*dy + dz*dz; 
-      const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; 
+      const real  rinv  = r2> 0.0d ? rsqrt((float)r2) : 0; 
       const real mrinv  = -jmass * rinv; 
       const real mrinv3 = mrinv * rinv*rinv; 
  
@@ -76,21 +75,36 @@ unmasked void computeForces(
 #else
     for (uniform int j = 0; j < nbodies; j += programCount)
     {
-      shmem[0*programCount + programIndex] = posx[j+programIndex];
-      shmem[1*programCount + programIndex] = posy[j+programIndex];
-      shmem[2*programCount + programIndex] = posz[j+programIndex];
-      shmem[3*programCount + programIndex] = mass[j+programIndex];
+#if 1
+      uniform real shmem[4][programCount];
+      shmem[0][programIndex] = posx[j+programIndex];
+      shmem[1][programIndex] = posy[j+programIndex];
+      shmem[2][programIndex] = posz[j+programIndex];
+      shmem[3][programIndex] = mass[j+programIndex];
+#else
+      const real jPosx = posx[j+programIndex];
+      const real jPosy = posy[j+programIndex];
+      const real jPosz = posz[j+programIndex];
+      const real jMass = mass[j+programIndex];
+#endif
       for (uniform int jb = 0; jb < programCount; jb++)
       {
-        const real jposx = shmem[0*programCount + jb];
-        const real jposy = shmem[1*programCount + jb];
-        const real jposz = shmem[2*programCount + jb];
-        const real jmass = shmem[3*programCount + jb];
+#if 1
+        const real jposx = shmem[0][jb];
+        const real jposy = shmem[1][jb];
+        const real jposz = shmem[2][jb];
+        const real jmass = shmem[3][jb];
+#else
+        const real jposx = broadcast(jPosx, jb);
+        const real jposy = broadcast(jPosy, jb);
+        const real jposz = broadcast(jPosz, jb);
+        const real jmass = broadcast(jMass, jb);
+#endif
         const real    dx  = jposx - iposx; 
         const real    dy  = jposy - iposy; 
         const real    dz  = jposz - iposz; 
         const real    r2  = dx*dx + dy*dy + dz*dz; 
-        const real  rinv  = r2; // > 0.0d ? rsqrt((float)r2) : 0; 
+        const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; 
         const real mrinv  = -jmass * rinv; 
         const real mrinv3 = mrinv * rinv*rinv; 
 

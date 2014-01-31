@@ -1,4 +1,4 @@
-typedef double real;
+#include "realType.h"
 #include "cuda_helpers.cuh"
 #include <cassert>
 
@@ -86,25 +86,39 @@ void computeForces(
 #else
       for (uniform int j = 0; j < nbodies; j += programCount)
       {
+#if 1
         __shared__ real shdata[4][programCount*4];
         real (* shmem)[programCount] = (real (*)[programCount])shdata[warpIdx];
         shmem[0][programIndex] = posx[j+programIndex];
         shmem[1][programIndex] = posy[j+programIndex];
         shmem[2][programIndex] = posz[j+programIndex];
         shmem[3][programIndex] = mass[j+programIndex];
+#else
+      const real jPosx = posx[j+programIndex];
+      const real jPosy = posy[j+programIndex];
+      const real jPosz = posz[j+programIndex];
+      const real jMass = mass[j+programIndex];
+#endif
 
 #pragma unroll 1
         for (int jb = 0; jb < programCount; jb++)
         {
+#if 1
           const real jposx = shmem[0][jb];
           const real jposy = shmem[1][jb];
           const real jposz = shmem[2][jb];
           const real jmass = shmem[3][jb];
+#else
+          const real jposx = broadcast(jPosx, jb);
+          const real jposy = broadcast(jPosy, jb);
+          const real jposz = broadcast(jPosz, jb);
+          const real jmass = broadcast(jMass, jb);
+#endif
           const real    dx  = jposx - iposx; 
           const real    dy  = jposy - iposy; 
           const real    dz  = jposz - iposz; 
           const real    r2  = dx*dx + dy*dy + dz*dz; 
-          const real  rinv  = r2 ; //> 0.0 ? rsqrt((float)r2) : 0; 
+          const real  rinv  = r2 > 0.0 ? rsqrt((float)r2) : 0; 
           const real mrinv  = -jmass * rinv; 
           const real mrinv3 = mrinv * rinv*rinv; 
           iaccx += mrinv3 * dx; 

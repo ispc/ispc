@@ -9,7 +9,7 @@
 #include "nbody_ispc.h"
 #include "plummer.h"
 
-typedef double real;
+#include "realType.h"
 
 int main (int argc, char *argv[])
 {
