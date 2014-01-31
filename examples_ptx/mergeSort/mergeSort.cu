@@ -189,8 +189,6 @@ void mergeSortGangKernel(
     s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
     s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
 
-#if 1
-#pragma unroll 1
     for (uniform int stride = 1; stride < 2*programCount; stride <<= 1)
     {
       const int lPos = programIndex & (stride - 1);
@@ -201,7 +199,6 @@ void mergeSortGangKernel(
       Val_t valA = baseVal[lPos +      0];
       Key_t keyB = baseKey[lPos + stride];
       Val_t valB = baseVal[lPos + stride];
-#if 1
       int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
       int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
 
@@ -209,14 +206,7 @@ void mergeSortGangKernel(
       baseVal[posA] = valA;
       baseKey[posB] = keyB;
       baseVal[posB] = valB;
-#else
-      s_key[programIndex] = keyA;
-      s_val[programIndex] = valA;
-      s_key[programCount+programIndex] = keyB;
-      s_val[programCount+programIndex] = valB;
-#endif
     }
-#endif
 
     dstKey[base + programIndex +            0] = s_key[programIndex +            0];
     dstVal[base + programIndex +            0] = s_val[programIndex +            0];
