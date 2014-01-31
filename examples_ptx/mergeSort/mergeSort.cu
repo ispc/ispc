@@ -233,7 +233,7 @@ void mergeSortGang(
     uniform Val_t srcVal[],
     uniform int batchSize)
 {
-  uniform int nTasks = batchSize/4;
+  uniform int nTasks = batchSize;
   launch (nTasks,1,1,mergeSortGangKernel)(batchSize, dstKey, dstVal, srcKey, srcVal);
   sync;
 }
@@ -306,7 +306,7 @@ void generateSampleRanks(
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
   uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
-  uniform int nTasks = nBlocks/4;
+  uniform int nTasks = nBlocks;
 
   launch (nTasks,1,1, generateSampleRanksKernel)(nBlocks, ranksA, ranksB, srcKey, stride, N, threadCount);
   sync;
@@ -372,7 +372,7 @@ void mergeRanksAndIndices(
     (N - lastSegmentElements) / (2 * SAMPLE_STRIDE);
 
   const uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
-  uniform int nTasks = nBlocks/4;
+  uniform int nTasks = nBlocks;
 
   launch (nTasks,1,1,mergeRanksAndIndicesKernel)(
       nBlocks,
@@ -448,20 +448,21 @@ void mergeElementaryIntervalsKernel(
     }
 
     // Compute destination addresses for merge data
-    int dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
-    int dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
+    int dstPosA, dstPosB, dstA = -1, dstB = -1;
+    if (any(programIndex < lenSrcA))
+      dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
+    if (any(programIndex < lenSrcB))
+      dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
 
-
-    int dstA = -1, dstB = -1;
     if (programIndex < lenSrcA && dstPosA < lenSrcA)
       dstA = segmentBase + startDstA + dstPosA;
-    if (programIndex < lenSrcB && dstPosB < lenSrcA)
-      dstB = segmentBase + startDstA + dstPosB;
-
     dstPosA -= lenSrcA;
-    dstPosB -= lenSrcA;
     if (programIndex < lenSrcA && dstPosA < lenSrcB)
       dstA = segmentBase + startDstB + dstPosA;
+
+    if (programIndex < lenSrcB && dstPosB < lenSrcA)
+      dstB = segmentBase + startDstA + dstPosB;
+    dstPosB -= lenSrcA;
     if (programIndex < lenSrcB && dstPosB < lenSrcB)
       dstB = segmentBase + startDstB + dstPosB;
 
@@ -499,7 +500,7 @@ void mergeElementaryIntervals(
   const uniform int mergePairs = (lastSegmentElements > stride) ? getSampleCount(N) : (N - lastSegmentElements) / SAMPLE_STRIDE;
 
 
-  nTasks = mergePairs/(4*programCount);
+  nTasks = mergePairs/(programCount);
 
   launch (nTasks,1,1, mergeElementaryIntervalsKernel)(
       mergePairs,

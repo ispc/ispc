@@ -221,7 +221,7 @@ void mergeSortGang(
 {
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = iDivUp(batchSize,4);
+  nTasks = iDivUp(batchSize,1);
 #endif
   launch [nTasks] mergeSortGangKernel(batchSize, dstKey, dstVal, srcKey, srcVal, 2*programCount);
   sync;
@@ -297,7 +297,7 @@ void generateSampleRanks(
   uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = iDivUp(nBlocks,4);
+  nTasks = iDivUp(nBlocks,1);
 #endif
 
   launch [nTasks] generateSampleRanksKernel(nBlocks, ranksA, ranksB, srcKey, stride, N, threadCount);
@@ -367,7 +367,7 @@ void mergeRanksAndIndices(
   uniform int nTasks = num_cores()*4;
 
 #ifdef __NVPTX__
-  nTasks = iDivUp(nBlocks,4);
+  nTasks = iDivUp(nBlocks,1);
 #endif
 
   launch [nTasks] mergeRanksAndIndicesKernel(
@@ -492,7 +492,7 @@ void mergeElementaryIntervals(
 
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = iDivUp(mergePairs,4*programCount);
+  nTasks = iDivUp(mergePairs,1*programCount);
 #endif
 
   launch [nTasks] mergeElementaryIntervalsKernel(
