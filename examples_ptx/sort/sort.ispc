@@ -186,7 +186,10 @@ static void prefix_sum (uniform int num, uniform int h[], uniform int g[])
 
 export void sort_ispc (uniform int n, uniform unsigned int code[], uniform int order[], uniform int ntasks)
 {
-  uniform int num = ntasks; // < 1 ? num_cores () : ntasks;
+  uniform int num = num_cores()*4; //ntasks; // < 1 ? num_cores () : ntasks;
+#ifdef __NVPTX__
+  num = 13*32*4;
+#endif
   uniform int span = n / num;
   uniform int hsize = 256*programCount*num;
   uniform int * uniform hist = uniform new uniform int [hsize];
