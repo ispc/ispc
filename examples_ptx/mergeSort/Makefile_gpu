@@ -6,7 +6,7 @@ PTXCC_REGMAX=64
 #PTXCC_FLAGS= -Xptxas=-O3
 #NVCC_FLAGS=-Xptxas=-O0
 
-# LLVM_GPU=1
+LLVM_GPU=1
 NVVM_GPU=1
 
 include ../common_gpu.mk

@@ -6,7 +6,7 @@ CU_SRC=radixSort.cu
 CXX_SRC=radixSort.cpp  radixSort.cpp
 PTXCC_REGMAX=64
 
-# LLVM_GPU=1
+LLVM_GPU=1
 NVVM_GPU=1
 
 include ../common_gpu.mk

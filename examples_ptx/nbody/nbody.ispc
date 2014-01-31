@@ -184,7 +184,7 @@ void nbodyIntegrate(
 {
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = (nbodies + 4*programCount - 1)/(4*programCount);
+  nTasks = (nbodies + programCount - 1)/(programCount);
 #endif
   assert((nbodies % nTasks) == 0);
 
