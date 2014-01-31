@@ -266,21 +266,17 @@ void generateSampleRanksKernel(
     if (i < segmentSamplesA)
     {
       ranksA[i] = i * SAMPLE_STRIDE;
-#if 0
       ranksB[i] = binarySearchExclusive(
           srcKey[i * SAMPLE_STRIDE], srcKey + stride,
           segmentElementsB, nextPowerOfTwo(segmentElementsB));
-#endif
     }
 
     if (i < segmentSamplesB)
     {
       ranksB[(stride / SAMPLE_STRIDE) + i] = i * SAMPLE_STRIDE;
-#if 0
       ranksA[(stride / SAMPLE_STRIDE) + i] = binarySearchInclusive(
           srcKey[stride + i * SAMPLE_STRIDE], srcKey + 0,
           segmentElementsA, nextPowerOfTwo(segmentElementsA));
-#endif
     }
   }
 }
@@ -579,7 +575,7 @@ void mergeSort(
   // cpu: 28  gpu: 74 M/s
   {
     // cpu: 356   gpu: 534 M/s
-  //  mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
+    mergeSortGang(iKey, iVal, srcKey, srcVal, N/(2*programCount));
 
 #if 1
     for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
@@ -597,13 +593,13 @@ void mergeSort(
 
           // cpu: 120 gpu: 457 M/s
           //Merge ranks and indices
-   //       mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
+          mergeRanksAndIndices(limitsA, limitsB, ranksA, ranksB, stride, N);
         }
 #endif
 
         // cpu: 287  gpu: 194 M/s 
         //Merge elementary intervals
-//        mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
+        mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
       }
 
       if (lastSegmentElements <= stride)
