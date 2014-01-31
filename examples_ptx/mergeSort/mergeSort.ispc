@@ -183,20 +183,6 @@ void mergeSortGangKernel(
     s_key[programIndex + programCount] = srcKey[base + programIndex + programCount];
     s_val[programIndex + programCount] = srcVal[base + programIndex + programCount];
 
-#define STEP(stride) {\
-  const int lPos = programIndex & (stride - 1); \
-  const int offset = 2 * (programIndex - lPos); \
-  Key_t keyA = s_key[lPos +      0]; \
-  Val_t valA = s_val[lPos +      0]; \
-  Key_t keyB = s_key[lPos + stride]; \
-  Val_t valB = s_val[lPos + stride]; \
-  s_key[programIndex] = keyA; \
-  s_val[programIndex] = valA; \
-  s_key[programCount+programIndex] = keyB; \
-  s_val[programCount+programIndex] = valB;  \
-}
-
-#if 1
     for (uniform int stride = 1; stride < arrayLength; stride <<= 1)
     {
       const int lPos = programIndex & (stride - 1);
@@ -209,7 +195,6 @@ void mergeSortGangKernel(
       Key_t keyB = baseKey[lPos + stride];
       Val_t valB = baseVal[lPos + stride];
 
-#if 1
       int posA = binarySearchExclusive(keyA, baseKey + stride, stride, stride) + lPos;
       int posB = binarySearchInclusive(keyB, baseKey +      0, stride, stride) + lPos;
 
@@ -217,14 +202,7 @@ void mergeSortGangKernel(
       baseVal[posA] = valA;
       baseKey[posB] = keyB;
       baseVal[posB] = valB;
-#else
-      s_key[programIndex] = keyA;
-      s_val[programIndex] = valA;
-      s_key[programCount+programIndex] = keyB;
-      s_val[programCount+programIndex] = valB;
-#endif
     }
-#endif
 
     dstKey[base + programIndex +            0] = s_key[programIndex +            0];
     dstVal[base + programIndex +            0] = s_val[programIndex +            0];
@@ -243,7 +221,7 @@ void mergeSortGang(
 {
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = batchSize/4;
+  nTasks = iDivUp(batchSize,4);
 #endif
   launch [nTasks] mergeSortGangKernel(batchSize, dstKey, dstVal, srcKey, srcVal, 2*programCount);
   sync;
@@ -319,7 +297,7 @@ void generateSampleRanks(
   uniform int nBlocks = iDivUp(threadCount, SAMPLE_STRIDE);
   uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = nBlocks/4;
+  nTasks = iDivUp(nBlocks,4);
 #endif
 
   launch [nTasks] generateSampleRanksKernel(nBlocks, ranksA, ranksB, srcKey, stride, N, threadCount);
@@ -389,7 +367,7 @@ void mergeRanksAndIndices(
   uniform int nTasks = num_cores()*4;
 
 #ifdef __NVPTX__
-  nTasks = nBlocks/4;
+  nTasks = iDivUp(nBlocks,4);
 #endif
 
   launch [nTasks] mergeRanksAndIndicesKernel(
@@ -409,114 +387,6 @@ void mergeRanksAndIndices(
   sync;
 }
 
-
-#if 0
-static inline
-void merge(
-    int &dstPosA,
-    int &dstPosB,
-    Key_t keyA, Val_t valA,
-    Key_t keyB, Val_t valB,
-    uniform int lenA,
-    uniform int nPowTwoLenA,
-    uniform int lenB,
-    uniform int nPowTwoLenB)
-{
-  if (programIndex < lenA)
-    dstPosA = binarySearchExclusive1(keyA, keyB, lenB, nPowTwoLenB) + programIndex;
-
-  if (programIndex < lenB)
-    dstPosB = binarySearchInclusive1(keyB, keyA, lenA, nPowTwoLenA) + programIndex;
-}
-#endif
-
-
-#if 0
-task
-void mergeElementaryIntervalsKernel(
-    uniform Key_t dstKey[],
-    uniform Val_t dstVal[],
-    uniform Key_t srcKey[],
-    uniform Val_t srcVal[],
-    uniform int limitsA[],
-    uniform int limitsB[],
-    uniform int stride,
-    uniform int N)
-{
-  const int uniform   intervalI =  taskIndex & ((2 * stride) / SAMPLE_STRIDE - 1);
-  const int uniform segmentBase = (taskIndex - intervalI) * SAMPLE_STRIDE;
-
-  //Set up threadblock-wide parameters
-
-  const uniform int segmentElementsA = stride;
-  const uniform int segmentElementsB = min(stride, N - segmentBase - stride);
-  const uniform int  segmentSamplesA = getSampleCount(segmentElementsA);
-  const uniform int  segmentSamplesB = getSampleCount(segmentElementsB);
-  const uniform int   segmentSamples = segmentSamplesA + segmentSamplesB;
-
-  const uniform int startSrcA = limitsA[taskIndex];
-  const uniform int startSrcB = limitsB[taskIndex];
-  const uniform int endSrcA   = (intervalI + 1 < segmentSamples) ? limitsA[taskIndex + 1] : segmentElementsA;
-  const uniform int endSrcB   = (intervalI + 1 < segmentSamples) ? limitsB[taskIndex + 1] : segmentElementsB;
-  const uniform int lenSrcA   = endSrcA - startSrcA;
-  const uniform int lenSrcB   = endSrcB - startSrcB;
-  const uniform int startDstA = startSrcA + startSrcB;
-  const uniform int startDstB = startDstA + lenSrcA;
-
-  //Load main input data
-
-  Key_t keyA, keyB;
-  Val_t valA, valB;
-  if (programIndex < lenSrcA)
-  {
-    keyA = srcKey[segmentBase + startSrcA + programIndex];
-    valA = srcVal[segmentBase + startSrcA + programIndex];
-  }
-
-  if (programIndex < lenSrcB)
-  {
-    keyB = srcKey[segmentBase + stride + startSrcB + programIndex];
-    valB = srcVal[segmentBase + stride + startSrcB + programIndex];
-  }
-
-  //Merge data in shared memory
-  int dstPosA, dstPosB;
-  merge(
-      dstPosA,
-      dstPosB,
-      keyA, valA,
-      keyB, valB,
-      lenSrcA, SAMPLE_STRIDE,
-      lenSrcB, SAMPLE_STRIDE
-      );
-  uniform Key_t s_key[2 * SAMPLE_STRIDE];
-  uniform Val_t s_val[2 * SAMPLE_STRIDE];
-
-  if (programIndex < lenSrcA)
-  {
-    s_key[dstPosA] = keyA;
-    s_val[dstPosA] = valA;
-  }
-  if (programIndex < lenSrcB)
-  {
-    s_key[dstPosB] = keyB;
-    s_val[dstPosB] = valB;
-  }
-
-  // Coalesced writes
-  if (programIndex < lenSrcA)
-  {
-    dstKey[segmentBase + startDstA + programIndex] = s_key[programIndex];
-    dstVal[segmentBase + startDstA + programIndex] = s_val[programIndex];
-  }
-
-  if (programIndex < lenSrcB)
-  {
-    dstKey[segmentBase + startDstB + programIndex] = s_key[lenSrcA + programIndex];
-    dstVal[segmentBase + startDstB + programIndex] = s_val[lenSrcA + programIndex];
-  }
-}
-#endif
 
 task
 void mergeElementaryIntervalsKernel(
@@ -577,7 +447,6 @@ void mergeElementaryIntervalsKernel(
     int dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
     int dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
 
-
     int dstA = -1, dstB = -1;
     if (programIndex < lenSrcA && dstPosA < lenSrcA)
       dstA = segmentBase + startDstA + dstPosA;
@@ -594,24 +463,19 @@ void mergeElementaryIntervalsKernel(
     // store merge data
     if (dstA >= 0) 
     {
- //     int dstA = segmentBase + startSrcA + programIndex;
       dstKey[dstA] = keyA;
       dstVal[dstA] = valA;
     }
     if (dstB >= 0) 
     {
-//      int dstB = segmentBase + stride + startSrcB + programIndex;
       dstKey[dstB] = keyB;
       dstVal[dstB] = valB;
     }
   }
-
 }
-
 
 static inline
 void mergeElementaryIntervals(
-    uniform int nTasks,
     uniform Key_t dstKey[],
     uniform Val_t dstVal[],
     uniform Key_t srcKey[],
@@ -625,8 +489,9 @@ void mergeElementaryIntervals(
   const uniform int mergePairs = (lastSegmentElements > stride) ? getSampleCount(N) : (N - lastSegmentElements) / SAMPLE_STRIDE;
 
 
+  uniform int nTasks = num_cores()*4;
 #ifdef __NVPTX__
-  nTasks = mergePairs/(4*programCount);
+  nTasks = iDivUp(mergePairs,4*programCount);
 #endif
 
   launch [nTasks] mergeElementaryIntervalsKernel(
@@ -647,16 +512,11 @@ static uniform int * uniform ranksA;
 static uniform int * uniform ranksB;
 static uniform int * uniform limitsA;
 static uniform int * uniform limitsB;
-static uniform int nTasks;
 static uniform int MAX_SAMPLE_COUNT = 0;
 
 export 
 void openMergeSort()
 {
-  nTasks = num_cores()*4;
-#ifdef __NVPTX__
-  nTasks = num_cores()*13;
-#endif
   MAX_SAMPLE_COUNT = 8*32 * 131072 / programCount;
   assert(memPool == NULL);
   const uniform int nalloc = MAX_SAMPLE_COUNT * 4;
@@ -738,7 +598,7 @@ void mergeSort(
 
         // cpu: 287  gpu: 194 M/s 
         //Merge elementary intervals
-        mergeElementaryIntervals(nTasks, oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
+        mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
       }
 
       if (lastSegmentElements <= stride)
