@@ -30,15 +30,15 @@ int binarySearchInclusiveRanks(
     const int L, 
     int stride)
 {
-  if (L == 0)
+  cif (L == 0)
     return 0;
 
   int pos = 0;
-  for (; stride > 0; stride >>= 1)
+  cfor (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
 
-    if (data[newPos - 1] <= val)
+    cif (data[newPos - 1] <= val)
       pos = newPos;
   }
 
@@ -52,11 +52,11 @@ int binarySearchExclusiveRanks(
     const int L, 
     int stride)
 {
-  if (L == 0)
+  cif (L == 0)
     return 0;
 
   int pos = 0;
-  for (; stride > 0; stride >>= 1)
+  cfor (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
 
@@ -74,11 +74,11 @@ int binarySearchInclusive(
     const int L, 
     int stride)
 {
-  if (L == 0)
+  cif (L == 0)
     return 0;
 
   int pos = 0;
-  for (; stride > 0; stride >>= 1)
+  cfor (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
 
@@ -96,11 +96,11 @@ int binarySearchExclusive(
     const int L, 
     int stride)
 {
-  if (L == 0)
+  cif (L == 0)
     return 0;
 
   int pos = 0;
-  for (; stride > 0; stride >>= 1)
+  cfor (; stride > 0; stride >>= 1)
   {
     int newPos = min(pos + stride, L);
 
@@ -444,23 +444,24 @@ void mergeElementaryIntervalsKernel(
     }
 
     // Compute destination addresses for merge data
-    int dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
-    int dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
+    int dstPosA, dstPosB, dstA = -1, dstB = -1;
+    if (programIndex < lenSrcA)
+      dstPosA = binarySearchExclusive1(keyA, keyB, lenSrcB, SAMPLE_STRIDE) + programIndex;
+    if (programIndex < lenSrcB)
+      dstPosB = binarySearchInclusive1(keyB, keyA, lenSrcA, SAMPLE_STRIDE) + programIndex;
 
-    int dstA = -1, dstB = -1;
     if (programIndex < lenSrcA && dstPosA < lenSrcA)
       dstA = segmentBase + startDstA + dstPosA;
-    if (programIndex < lenSrcB && dstPosB < lenSrcA)
-      dstB = segmentBase + startDstA + dstPosB;
-
     dstPosA -= lenSrcA;
-    dstPosB -= lenSrcA;
     if (programIndex < lenSrcA && dstPosA < lenSrcB)
       dstA = segmentBase + startDstB + dstPosA;
+
+    if (programIndex < lenSrcB && dstPosB < lenSrcA)
+      dstB = segmentBase + startDstA + dstPosB;
+    dstPosB -= lenSrcA;
     if (programIndex < lenSrcB && dstPosB < lenSrcB)
       dstB = segmentBase + startDstB + dstPosB;
 
-    // store merge data
     if (dstA >= 0) 
     {
       dstKey[dstA] = keyA;
