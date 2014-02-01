@@ -1,5 +1,6 @@
 #!/bin/sh
 
+PATH=$ISPC_HOME/examples_ptx/ptxcc:$ISPC_HOME/examples_ptx/ptxgen:$PATH
 PTXCC=ptxcc
 ARGS=${@:2}
 if [ "$NVVM" == "1" ];
