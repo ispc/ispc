@@ -6962,9 +6962,9 @@ TypeCastExpr::GetValue(FunctionEmitContext *ctx) const {
             return ctx->BitCastInst(v, ptype); //, "array_cast_0size");
         }
 
-        AssertPos(pos, Type::Equal(toTarget, fromTarget) ||
-               Type::Equal(toTarget, fromTarget->GetAsConstType()));
-        return expr->GetValue(ctx);
+        // Just bitcast it.  See Issue #721
+        llvm::Value *value = expr->GetValue(ctx);
+        return ctx->BitCastInst(value, toType->LLVMType(g->ctx), "refcast");
     }
 
     const StructType *toStruct = CastType<StructType>(toType);
@@ -7170,6 +7170,14 @@ TypeCastExpr::TypeCheck() {
         // allow explicit typecasts between any two different pointer types
         return this;
 
+    const ReferenceType *fromRef = CastType<ReferenceType>(fromType);
+    const ReferenceType *toRef = CastType<ReferenceType>(toType);
+    if (fromRef != NULL && toRef != NULL) {
+      // allow explicit typecasts between any two different reference types
+      // Issues #721
+      return this;
+    }
+    
     const AtomicType *fromAtomic = CastType<AtomicType>(fromType);
     const AtomicType *toAtomic = CastType<AtomicType>(toType);
     const EnumType *fromEnum = CastType<EnumType>(fromType);

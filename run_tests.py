@@ -324,6 +324,8 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
 
     if is_windows:
         tmpdir = "tmp%d" % os.getpid()
+        while os.access(tmpdir, os.F_OK):
+            tmpdir = "%sx" % tmpdir
         os.mkdir(tmpdir)
         os.chdir(tmpdir)
     else:
