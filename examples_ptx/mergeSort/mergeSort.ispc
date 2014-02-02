@@ -505,6 +505,12 @@ void mergeElementaryIntervals(
       limitsB,
       stride,
       N);
+  if (lastSegmentElements <= stride)
+    foreach (i = 0 ... lastSegmentElements)
+    {
+      dstKey[N-lastSegmentElements+i] = srcKey[N-lastSegmentElements+i];
+      dstVal[N-lastSegmentElements+i] = srcVal[N-lastSegmentElements+i];
+    }
   sync;
 }
 
@@ -580,8 +586,6 @@ void mergeSort(
 #if 1
     for (uniform int stride = 2*programCount; stride < N; stride <<= 1)
     {
-      const uniform int lastSegmentElements = N % (2 * stride);
-
       // cpu: 30  gpu: 112 M/s
       {
 #if 1
@@ -601,15 +605,6 @@ void mergeSort(
         //Merge elementary intervals
         mergeElementaryIntervals(oKey, oVal, iKey, iVal, limitsA, limitsB, stride, N);
       }
-
-      if (lastSegmentElements <= stride)
-        foreach (i = 0 ... lastSegmentElements)
-        {
-          oKey[N-lastSegmentElements+i] = iKey[N-lastSegmentElements+i];
-          oVal[N-lastSegmentElements+i] = iVal[N-lastSegmentElements+i];
-        }
-      memory_barrier();
-
 
       {
         uniform Key_t * uniform tmpKey = iKey;

@@ -962,7 +962,7 @@ InitTaskSystem() {
 
 inline void
 TaskGroup::Launch(int baseIndex, int count) {
-#pragma omp parallel for
+#pragma omp parallel for schedule(guided)
     for(int i = 0; i < count; i++) {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 
