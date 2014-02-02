@@ -29,7 +29,7 @@ void closeNbody()
   static inline
 real rsqrt_real(real r2)
 {
-#if 1
+#if 0
   return r2> (real)0.0 ? (real)1.0d0/sqrt(r2) : 0; 
 #else
   return r2> (real)0.0 ? rsqrt((float)r2) : 0; 
@@ -114,7 +114,7 @@ void computeForces(
         const real    dy  = jposy - iposy; 
         const real    dz  = jposz - iposz; 
         const real    r2  = dx*dx + dy*dy + dz*dz; 
-#if 0 /* faster */
+#if 0 /* faster when used with full dp */
         const real rinv  = r2> (real)0.0 ? (real)1.0d0/sqrt(r2) : 0; 
 #else
         const real rinv  = rsqrt_real(r2);

@@ -42,7 +42,7 @@ void closeNbody()
 static inline __device__
 real rsqrt_real(real r2)
 {
-#if 1
+#if 0
   return r2> (real)0.0 ? (real)1.0/sqrt(r2) : 0; 
 #else
   return r2> (real)0.0 ? rsqrt((float)r2) : 0; 
