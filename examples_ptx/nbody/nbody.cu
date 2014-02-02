@@ -39,6 +39,16 @@ void closeNbody()
   closeNbody___export<<<1,1>>>();
 }
 
+static inline __device__
+real rsqrt_real(real r2)
+{
+#if 1
+  return r2> (real)0.0 ? (real)1.0/sqrt(r2) : 0; 
+#else
+  return r2> (real)0.0 ? rsqrt((float)r2) : 0; 
+#endif
+}
+
 
 
 __global__
@@ -75,7 +85,7 @@ void computeForces(
         const real    dy  = jposy - iposy; 
         const real    dz  = jposz - iposz; 
         const real    r2  = dx*dx + dy*dy + dz*dz; 
-        const real  rinv  = r2; // > 0.0 ? rsqrt((float)r2) : 0; 
+        const real  rinv  = rsqrt_real(r2);
         const real mrinv  = -jmass * rinv; 
         const real mrinv3 = mrinv * rinv*rinv; 
         iaccx += mrinv3 * dx; 
@@ -118,7 +128,7 @@ void computeForces(
           const real    dy  = jposy - iposy; 
           const real    dz  = jposz - iposz; 
           const real    r2  = dx*dx + dy*dy + dz*dz; 
-          const real  rinv  = r2 > 0.0 ? 1.0/sqrt(r2) : 0; 
+          const real  rinv  = rsqrt_real(r2);
           const real mrinv  = -jmass * rinv; 
           const real mrinv3 = mrinv * rinv*rinv; 
           iaccx += mrinv3 * dx; 

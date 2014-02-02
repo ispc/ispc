@@ -26,6 +26,16 @@ void closeNbody()
   delete gpotList;
 }
 
+  static inline
+real rsqrt_real(real r2)
+{
+#if 1
+  return r2> (real)0.0 ? (real)1.0d0/sqrt(r2) : 0; 
+#else
+  return r2> (real)0.0 ? rsqrt((float)r2) : 0; 
+#endif
+}
+
 uniform int nn = programCount;
 
 
@@ -64,7 +74,7 @@ void computeForces(
       const real    dy  = jposy - iposy; 
       const real    dz  = jposz - iposz; 
       const real    r2  = dx*dx + dy*dy + dz*dz; 
-      const real  rinv  = r2> 0.0d ? 1.0/sqrt(r2) : 0; 
+      const real  rinv  = rsqrt_real(r2);
       const real mrinv  = -jmass * rinv; 
       const real mrinv3 = mrinv * rinv*rinv; 
  
@@ -104,7 +114,11 @@ void computeForces(
         const real    dy  = jposy - iposy; 
         const real    dz  = jposz - iposz; 
         const real    r2  = dx*dx + dy*dy + dz*dz; 
-        const real  rinv  = r2 > 0.0d ? 1.0/sqrt(r2) : 0; 
+#if 0 /* faster */
+        const real rinv  = r2> (real)0.0 ? (real)1.0d0/sqrt(r2) : 0; 
+#else
+        const real rinv  = rsqrt_real(r2);
+#endif
         const real mrinv  = -jmass * rinv; 
         const real mrinv3 = mrinv * rinv*rinv; 
 
