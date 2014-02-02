@@ -4531,3 +4531,37 @@ define(`define_avgs', `
 define_up_avgs()
 define_down_avgs()
 ')
+
+define(`rsqrt_double', `
+define double @__rsqrt_uniform_double(double) nounwind alwaysinline readnone
+{
+  %flt = fptrunc double %0 to float
+  %res = call float @__rsqrt_uniform_float(float %flt)
+  %dres = fpext float %res to double
+  ret double %dres
+}
+define <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>) nounwind alwaysinline readnone
+{
+  %flt = fptrunc <WIDTH x double> %0 to <WIDTH x float>
+  %res = call <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float> %flt)
+  %dres = fpext <WIDTH x float> %res to <WIDTH x double>
+  ret <WIDTH x double> %dres
+}
+')
+
+define(`rcp_double', `
+define double @__rcp_uniform_double(double) nounwind alwaysinline readnone
+{
+  %flt = fptrunc double %0 to float
+  %res = call float @__rcp_uniform_float(float %flt)
+  %dres = fpext float %res to double
+  ret double %dres
+}
+define <WIDTH x double> @__rcp_varying_double(<WIDTH x double>) nounwind alwaysinline readnone
+{
+  %flt = fptrunc <WIDTH x double> %0 to <WIDTH x float>
+  %res = call <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %flt)
+  %dres = fpext <WIDTH x float> %res to <WIDTH x double>
+  ret <WIDTH x double> %dres
+}
+')

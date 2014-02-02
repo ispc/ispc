@@ -3518,6 +3518,15 @@ static inline uniform double sqrt(uniform double v) {
 }
 
 __declspec(safe)
+static inline double rsqrt(double v) {
+    return __rsqrt_varying_double(v);
+}
+
+__declspec(safe)
+static inline uniform double rsqrt(uniform double v) {
+    return __rsqrt_uniform_double(v);
+}
+__declspec(safe)
 static inline double ldexp(double x, int n) {
     unsigned int64 ex = 0x7ff0000000000000;
     unsigned int64 ix = intbits(x);

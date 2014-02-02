@@ -992,3 +992,9 @@ declare <WIDTH x i16> @__float_to_half_varying(<WIDTH x float> %v) nounwind read
 
 define_avgs()
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrt_double()
+rcp_double()
+

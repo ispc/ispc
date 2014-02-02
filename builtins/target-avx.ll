@@ -559,3 +559,9 @@ gen_scatter(float)
 gen_scatter(i64)
 gen_scatter(double)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrt_double()
+rcp_double()
+

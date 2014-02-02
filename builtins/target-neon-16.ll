@@ -515,3 +515,9 @@ define <8 x i16> @__avg_down_int16(<8 x i16>, <8 x i16>) nounwind readnone {
   %r = call <8 x i16> @llvm.arm.neon.vhadds.v8i16(<8 x i16> %0, <8 x i16> %1)
   ret <8 x i16> %r
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrt_double()
+rcp_double()

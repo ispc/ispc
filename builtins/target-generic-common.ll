@@ -191,9 +191,13 @@ declare <WIDTH x double> @__max_varying_double(<WIDTH x double>,
 
 declare float @__rsqrt_uniform_float(float) nounwind readnone 
 declare float @__rcp_uniform_float(float) nounwind readnone 
+declare double @__rsqrt_uniform_double(double) nounwind readnone 
+declare double @__rcp_uniform_double(double) nounwind readnone 
 declare float @__sqrt_uniform_float(float) nounwind readnone 
 declare <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone 
 declare <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone 
+declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>) nounwind readnone 
+declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>) nounwind readnone 
 declare <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
 
 declare double @__sqrt_uniform_double(double) nounwind readnone

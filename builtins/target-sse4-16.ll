@@ -488,3 +488,10 @@ define <8 x i16> @__avg_up_uint16(<8 x i16>, <8 x i16>) {
 define_avg_up_int8()
 define_avg_up_int16()
 define_down_avgs()
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrt_double()
+rcp_double()
+

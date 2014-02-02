@@ -581,3 +581,9 @@ define <16 x i16> @__avg_down_int16(<16 x i16>, <16 x i16>) nounwind readnone {
   v8tov16(i16, %r0, %r1, %r)
   ret <16 x i16> %r
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrt_double()
+rcp_double()
