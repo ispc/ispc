@@ -118,7 +118,7 @@ void computeForces(
           const real    dy  = jposy - iposy; 
           const real    dz  = jposz - iposz; 
           const real    r2  = dx*dx + dy*dy + dz*dz; 
-          const real  rinv  = r2 > 0.0 ? rsqrt((float)r2) : 0; 
+          const real  rinv  = r2 > 0.0 ? 1.0/sqrt(r2) : 0; 
           const real mrinv  = -jmass * rinv; 
           const real mrinv3 = mrinv * rinv*rinv; 
           iaccx += mrinv3 * dx; 

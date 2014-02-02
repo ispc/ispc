@@ -41,6 +41,7 @@ void computeForces(
   const uniform int blockDim = (nbodies + taskCount - 1)/taskCount;
   const uniform int blockBeg =     blockIdx * blockDim;
   const uniform int blockEnd = min(blockBeg + blockDim, nbodies);
+      uniform real shmem[4][programCount];
 
   //real gpotLoc = 0;
   foreach (i = blockBeg ... blockEnd)
@@ -63,7 +64,7 @@ void computeForces(
       const real    dy  = jposy - iposy; 
       const real    dz  = jposz - iposz; 
       const real    r2  = dx*dx + dy*dy + dz*dz; 
-      const real  rinv  = r2> 0.0d ? rsqrt((float)r2) : 0; 
+      const real  rinv  = r2> 0.0d ? 1.0/sqrt(r2) : 0; 
       const real mrinv  = -jmass * rinv; 
       const real mrinv3 = mrinv * rinv*rinv; 
  
@@ -76,7 +77,6 @@ void computeForces(
     for (uniform int j = 0; j < nbodies; j += programCount)
     {
 #if 1
-      uniform real shmem[4][programCount];
       shmem[0][programIndex] = posx[j+programIndex];
       shmem[1][programIndex] = posy[j+programIndex];
       shmem[2][programIndex] = posz[j+programIndex];
@@ -104,7 +104,7 @@ void computeForces(
         const real    dy  = jposy - iposy; 
         const real    dz  = jposz - iposz; 
         const real    r2  = dx*dx + dy*dy + dz*dz; 
-        const real  rinv  = r2 > 0.0d ? rsqrt((float)r2) : 0; 
+        const real  rinv  = r2 > 0.0d ? 1.0/sqrt(r2) : 0; 
         const real mrinv  = -jmass * rinv; 
         const real mrinv3 = mrinv * rinv*rinv; 
 
