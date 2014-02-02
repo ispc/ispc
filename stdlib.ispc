@@ -1391,6 +1391,16 @@ static inline uniform float rcp(uniform float v) {
     return __rcp_uniform_float(v);
 }
 
+__declspec(safe) 
+static inline double rcp(double v) {
+    return __rcp_varying_double(v);
+}
+
+__declspec(safe) 
+static inline uniform double rcp(uniform double v) {
+    return __rcp_uniform_double(v);
+}
+
 ///////////////////////////////////////////////////////////////////////////
 // min/max
 
