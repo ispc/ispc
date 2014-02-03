@@ -244,6 +244,7 @@ void nbodyIntegrate(
     uniform real velz[],
     uniform real energies[])
 {
+  cudaDeviceSetCacheConfig ( cudaFuncCachePreferEqual );
   nbodyIntegrate___export<<<1,32>>>(
       nSteps,
       nbodies,
