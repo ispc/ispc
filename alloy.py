@@ -226,6 +226,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
 
 def check_targets():
     answer = []
+    answer_generic = []
     answer_sde = []
     # check what native targets do we have
     if current_OS != "Windows":
@@ -246,7 +247,7 @@ def check_targets():
                 targets[j][2] = True
             break
     if current_OS != "Windows":
-        answer = answer + ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
+        answer_generic = ["generic-4", "generic-16", "generic-8", "generic-1", "generic-32", "generic-64"]
     # now check what targets we have with the help of SDE
     sde_exists = ""
     PATH_dir = string.split(os.getenv("PATH"), os.pathsep)
@@ -264,7 +265,7 @@ def check_targets():
         error("you haven't got sde neither in SDE_HOME nor in your PATH.\n" + 
             "To test all platforms please set SDE_HOME to path containing SDE.\n" +
             "Please refer to http://www.intel.com/software/sde for SDE download information.", 2)
-        return [answer, answer_sde]
+        return [answer, answer_generic, answer_sde]
     # here we have SDE
     f_lines = take_lines(sde_exists + " -help", "all")
     for i in range(0,len(f_lines)):
@@ -276,7 +277,7 @@ def check_targets():
             answer_sde = answer_sde + [["-ivb", "avx1.1-i32x8"], ["-ivb", "avx1.1-i32x16"], ["-ivb", "avx1.1-i64x4"]]
         if targets[0][2] == False and "hsw" in f_lines[i]:
             answer_sde = answer_sde + [["-hsw", "avx2-i32x8"], ["-hsw", "avx2-i32x16"], ["-hsw", "avx2-i64x4"]]
-    return [answer, answer_sde]
+    return [answer, answer_generic, answer_sde]
 
 def build_ispc(version_LLVM, make):
     current_path = os.getcwd()
@@ -380,7 +381,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         stability.no_opt = False
         stability.wrapexe = ""
 # prepare parameters of run
-        [targets_t, sde_targets_t] = check_targets()
+        [targets_t, targets_generic_t, sde_targets_t] = check_targets()
         rebuild = True
         opts = []
         archs = []
@@ -418,6 +419,10 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                     if i in targets_t[j]:
                         targets.append(targets_t[j])
                         err = False
+                for j in range(0,len(targets_generic_t)):
+                    if i in targets_generic_t[j]:
+                        targets.append(targets_generic_t[j])
+                        err = False
                 for j in range(0,len(sde_targets_t)):
                     if i in sde_targets_t[j][1]:
                         sde_targets.append(sde_targets_t[j])
@@ -425,7 +430,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
                 if err == True:
                     error("You haven't sde for target " + i, 1)
         else:
-            targets = targets_t[:-4]
+            targets = targets_t + targets_generic_t[:-4]
             sde_targets = sde_targets_t
         if "build" in only:
             targets = []
