@@ -4533,31 +4533,11 @@ define_down_avgs()
 ')
 
 define(`rsqrt_double', `
-declare double @__rsqrt_safe_uniform_double___und(double, <WIDTH x MASK>)
-define  double @__rsqrt_uniform_double(double, <WIDTH x MASK>) nounwind alwaysinline readnone
-{
-  %res = call double @__rsqrt_safe_uniform_double___und(double %0, <WIDTH x MASK> %1)
-  ret double %res
-}
-declare <WIDTH x double> @__rsqrt_safe_varying_double___vyd(<WIDTH x double>, <WIDTH x MASK>) 
-define  <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>, <WIDTH x MASK>) nounwind alwaysinline readnone
-{
-  %res = call <WIDTH x double> @__rsqrt_safe_varying_double___vyd(<WIDTH x double> %0, <WIDTH x MASK> %1)
-  ret <WIDTH x double> %res
-}
+declare  double @__rsqrt_uniform_double(double)
+declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 ')
 
 define(`rcp_double', `
-declare double @__rcp_safe_uniform_double___und(double, <WIDTH x MASK>)
-define  double @__rcp_uniform_double(double, <WIDTH x MASK>) nounwind alwaysinline readnone
-{
-  %res = call double @__rcp_safe_uniform_double___und(double %0, <WIDTH x MASK> %1)
-  ret double %res
-}
-declare <WIDTH x double> @__rcp_safe_varying_double___vyd(<WIDTH x double>, <WIDTH x MASK>) 
-define  <WIDTH x double> @__rcp_varying_double(<WIDTH x double>, <WIDTH x MASK>) nounwind alwaysinline readnone
-{
-  %res = call <WIDTH x double> @__rcp_safe_varying_double___vyd(<WIDTH x double> %0, <WIDTH x MASK> %1)
-  ret <WIDTH x double> %res
-}
+declare  double @__rcp_uniform_double(double)
+declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
 ')

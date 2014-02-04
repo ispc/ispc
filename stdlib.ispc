@@ -1412,14 +1412,21 @@ static inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x) \
 
 RCPD(varying)
 __declspec(safe) 
-static inline double rcp(double v) {
-    return __rcp_varying_double(v, (IntMaskType)__mask);
-}
+__declspec(safe)   
+static inline double rcp(double v) {   
+  if (__have_native_rcpd)
+    return __rcp_varying_double(v);
+  else
+    return __rcp_safe_varying_double(v);
+}   
 
 RCPD(uniform)
-__declspec(safe) 
+__declspec(safe)
 static inline uniform double rcp(uniform double v) {
-    return __rcp_uniform_double(v, (IntMaskType)__mask);
+  if (__have_native_rcpd)
+    return __rcp_uniform_double(v);
+  else
+    return __rcp_safe_uniform_double(v);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3572,13 +3579,19 @@ static inline QUAL double __rsqrt_safe_##QUAL##_double (QUAL double x)    \
 RSQRTD(varying)
 __declspec(safe)   
 static inline double rsqrt(double v) {   
-  return __rsqrt_varying_double(v, (IntMaskType)__mask);   
+  if (__have_native_rsqrtd)
+    return __rsqrt_varying_double(v);
+  else
+    return __rsqrt_safe_varying_double(v);
 }   
 
 RSQRTD(uniform)
 __declspec(safe)
 static inline uniform double rsqrt(uniform double v) {
-    return __rsqrt_uniform_double(v, (IntMaskType)__mask);
+  if (__have_native_rsqrtd)
+    return __rsqrt_uniform_double(v);
+  else
+    return __rsqrt_safe_uniform_double(v);
 }
 __declspec(safe)
 static inline double ldexp(double x, int n) {

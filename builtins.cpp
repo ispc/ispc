@@ -1150,6 +1150,10 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
                        symbolTable);
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
                        module, symbolTable);
+    lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(),
+                       module, symbolTable);
+    lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(),
+                       module, symbolTable);
 
     if (g->forceAlignment != -1) {
         llvm::GlobalVariable *alignment = module->getGlobalVariable("memory_alignment", true);

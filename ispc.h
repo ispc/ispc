@@ -281,6 +281,10 @@ public:
     bool hasScatter() const {return m_hasScatter;}
 
     bool hasTranscendentals() const {return m_hasTranscendentals;}
+    
+    bool hasRsqrtd() const {return m_hasRsqrtd;}
+    
+    bool hasRcpd() const {return m_hasRcpd;}
 
 private:
 
@@ -380,6 +384,12 @@ private:
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */
     bool m_hasTranscendentals;
+    
+    /** Indicates whether there is an ISA double precision rsqrt. */
+    bool m_hasRsqrtd;
+    
+    /** Indicates whether there is an ISA double precision rcp. */
+    bool m_hasRcpd;
 };
 
 
