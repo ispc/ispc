@@ -1391,11 +1391,32 @@ static inline uniform float rcp(uniform float v) {
     return __rcp_uniform_float(v);
 }
 
+#define RCPD(QUAL) \
+__declspec(safe)  \
+static inline QUAL double __rcp_iterate_##QUAL##_double(QUAL double v, QUAL double iv) \
+{ \
+  iv = iv * (2.0d - v*iv); \
+  iv = iv * (2.0d - v*iv); \
+  return iv; \
+} \
+__declspec(safe)  \
+static inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x) \
+{ \
+  if (x <= 1.0d+33 && x >= 1.0d-33) \
+    return __rcp_iterate_##QUAL##_double(x, rcp((QUAL float)x)); \
+  QUAL int64  ex   = intbits(x) & 0x7fe0000000000000; \
+  QUAL double exp  = doublebits(  0x7fd0000000000000 + ~ex      );   \
+  QUAL double   y  = rcp((QUAL float)(x*exp)); \
+  return __rcp_iterate_##QUAL##_double(x, y*exp); \
+} 
+
+RCPD(varying)
 __declspec(safe) 
 static inline double rcp(double v) {
     return __rcp_varying_double(v, (IntMaskType)__mask);
 }
 
+RCPD(uniform)
 __declspec(safe) 
 static inline uniform double rcp(uniform double v) {
     return __rcp_uniform_double(v, (IntMaskType)__mask);
@@ -3529,7 +3550,7 @@ static inline uniform double sqrt(uniform double v) {
 
 #define RSQRTD(QUAL)  \
 __declspec(safe)    \
-static inline QUAL double __rsqrt_iterate_double(QUAL double x, QUAL double y)   \
+static inline QUAL double __rsqrt_iterate_##QUAL##_double(QUAL double x, QUAL double y)   \
 {   \
   QUAL double xh = x*0.5d;    \
   y += y*(0.5d0 - xh*y*y);    \
@@ -3540,12 +3561,12 @@ __declspec(safe)    \
 static inline QUAL double __rsqrt_safe_##QUAL##_double (QUAL double x)    \
 {   \
   if (x <= 1.0d+33 && x >= 1.0d-33)   \
-    return __rsqrt_iterate_double(x, rsqrt((QUAL float)x));   \
+    return __rsqrt_iterate_##QUAL##_double(x, rsqrt((QUAL float)x));   \
   QUAL int64  ex   = intbits(x) & 0x7fe0000000000000;                 \
   QUAL double exp  = doublebits(  0x7fd0000000000000 -  ex      );   /* 1.0d/exponent  */   \
   QUAL double exph = doublebits(  0x5fe0000000000000 - (ex >> 1));   /* 1.0d/sqrt(exponent) */    \
   QUAL double   y  = rsqrt((QUAL float)(x*exp));          \
-  return __rsqrt_iterate_double(x, y*exph);    \
+  return __rsqrt_iterate_##QUAL##_double(x, y*exph);    \
 }
 
 RSQRTD(varying)

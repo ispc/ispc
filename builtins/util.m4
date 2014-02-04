@@ -4548,18 +4548,16 @@ define  <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>, <WIDTH x MASK
 ')
 
 define(`rcp_double', `
-define double @__rcp_uniform_double(double, <WIDTH x MASK>) nounwind alwaysinline readnone
+declare double @__rcp_safe_uniform_double___und(double, <WIDTH x MASK>)
+define  double @__rcp_uniform_double(double, <WIDTH x MASK>) nounwind alwaysinline readnone
 {
-  %flt = fptrunc double %0 to float
-  %res = call float @__rcp_uniform_float(float %flt)
-  %dres = fpext float %res to double
-  ret double %dres
+  %res = call double @__rcp_safe_uniform_double___und(double %0, <WIDTH x MASK> %1)
+  ret double %res
 }
-define <WIDTH x double> @__rcp_varying_double(<WIDTH x double>, <WIDTH x MASK>) nounwind alwaysinline readnone
+declare <WIDTH x double> @__rcp_safe_varying_double___vyd(<WIDTH x double>, <WIDTH x MASK>) 
+define  <WIDTH x double> @__rcp_varying_double(<WIDTH x double>, <WIDTH x MASK>) nounwind alwaysinline readnone
 {
-  %flt = fptrunc <WIDTH x double> %0 to <WIDTH x float>
-  %res = call <WIDTH x float> @__rcp_varying_float(<WIDTH x float> %flt)
-  %dres = fpext <WIDTH x float> %res to <WIDTH x double>
-  ret <WIDTH x double> %dres
+  %res = call <WIDTH x double> @__rcp_safe_varying_double___vyd(<WIDTH x double> %0, <WIDTH x MASK> %1)
+  ret <WIDTH x double> %res
 }
 ')
