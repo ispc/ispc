@@ -1393,12 +1393,12 @@ static inline uniform float rcp(uniform float v) {
 
 __declspec(safe) 
 static inline double rcp(double v) {
-    return __rcp_varying_double(v);
+    return __rcp_varying_double(v, (IntMaskType)__mask);
 }
 
 __declspec(safe) 
 static inline uniform double rcp(uniform double v) {
-    return __rcp_uniform_double(v);
+    return __rcp_uniform_double(v, (IntMaskType)__mask);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -3527,14 +3527,37 @@ static inline uniform double sqrt(uniform double v) {
     return __sqrt_uniform_double(v);
 }
 
-__declspec(safe)
-static inline double rsqrt(double v) {
-    return __rsqrt_varying_double(v);
+#define RSQRTD(QUAL)  \
+__declspec(safe)    \
+static inline QUAL double __rsqrt_iterate_double(QUAL double x, QUAL double y)   \
+{   \
+  QUAL double xh = x*0.5d;    \
+  y += y*(0.5d0 - xh*y*y);    \
+  y += y*(0.5d0 - xh*y*y);    \
+  return y;   \
+}   \
+__declspec(safe)    \
+static inline QUAL double __rsqrt_safe_##QUAL##_double (QUAL double x)    \
+{   \
+  if (x <= 1.0d+33 && x >= 1.0d-33)   \
+    return __rsqrt_iterate_double(x, rsqrt((QUAL float)x));   \
+  QUAL int64  ex   = intbits(x) & 0x7fe0000000000000;                 \
+  QUAL double exp  = doublebits(  0x7fd0000000000000 -  ex      );   /* 1.0d/exponent  */   \
+  QUAL double exph = doublebits(  0x5fe0000000000000 - (ex >> 1));   /* 1.0d/sqrt(exponent) */    \
+  QUAL double   y  = rsqrt((QUAL float)(x*exp));          \
+  return __rsqrt_iterate_double(x, y*exph);    \
 }
 
+RSQRTD(varying)
+__declspec(safe)   
+static inline double rsqrt(double v) {   
+  return __rsqrt_varying_double(v, (IntMaskType)__mask);   
+}   
+
+RSQRTD(uniform)
 __declspec(safe)
 static inline uniform double rsqrt(uniform double v) {
-    return __rsqrt_uniform_double(v);
+    return __rsqrt_uniform_double(v, (IntMaskType)__mask);
 }
 __declspec(safe)
 static inline double ldexp(double x, int n) {

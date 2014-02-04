@@ -511,3 +511,5 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
   ret <4 x double> %call
 }
 
+rsqrt_double()
+rcp_double()
