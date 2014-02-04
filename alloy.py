@@ -105,6 +105,8 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
         revision = "-" + revision
     if folder == "":
         folder = FOLDER_NAME
+    if debug == True:
+        folder = folder + "dbg"
     LLVM_SRC="llvm-" + folder
     LLVM_BUILD="build-" + folder
     LLVM_BIN="bin-" + folder
