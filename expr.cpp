@@ -339,7 +339,14 @@ lDoTypeConv(const Type *fromType, const Type *toType, Expr **expr,
             return false;
         }
         else if (PointerType::IsVoidPointer(toPointerType)) {
+          if (fromPointerType->GetBaseType()->IsConstType()) {
+            if (!failureOk)
+              Error(pos, "Can't convert pointer to const \"%s\" to void pointer.",
+                    fromPointerType->GetString().c_str());
+            return false;
+          }
             // any pointer type can be converted to a void *
+            // ...almost. #731
             goto typecast_ok;
         }
         else if (PointerType::IsVoidPointer(fromPointerType) &&
