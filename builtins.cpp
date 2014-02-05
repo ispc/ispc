@@ -497,6 +497,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__prefetch_read_uniform_nt",
         "__rcp_uniform_float",
         "__rcp_varying_float",
+        "__rcp_uniform_double",
+        "__rcp_varying_double",
         "__rdrand_i16",
         "__rdrand_i32",
         "__rdrand_i64",
@@ -534,6 +536,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__round_varying_float",
         "__rsqrt_uniform_float",
         "__rsqrt_varying_float",
+        "__rsqrt_uniform_double",
+        "__rsqrt_varying_double",
         "__set_system_isa",
         "__sext_uniform_bool",
         "__sext_varying_bool",
@@ -1145,6 +1149,10 @@ DefineStdlib(SymbolTable *symbolTable, llvm::LLVMContext *ctx, llvm::Module *mod
     lDefineConstantInt("__have_native_rand", g->target->hasRand(), module,
                        symbolTable);
     lDefineConstantInt("__have_native_transcendentals", g->target->hasTranscendentals(),
+                       module, symbolTable);
+    lDefineConstantInt("__have_native_rsqrtd", g->target->hasRsqrtd(),
+                       module, symbolTable);
+    lDefineConstantInt("__have_native_rcpd", g->target->hasRcpd(),
                        module, symbolTable);
 
     if (g->forceAlignment != -1) {

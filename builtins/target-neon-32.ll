@@ -485,3 +485,9 @@ define <4 x i16> @__avg_down_int16(<4 x i16>, <4 x i16>) nounwind readnone {
   %r = call <4 x i16> @llvm.arm.neon.vhadds.v4i16(<4 x i16> %0, <4 x i16> %1)
   ret <4 x i16> %r
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrtd_decl()
+rcpd_decl()

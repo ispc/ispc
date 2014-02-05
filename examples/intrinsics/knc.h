@@ -1472,6 +1472,17 @@ static FORCEINLINE __vec16_f __rcp_varying_float(__vec16_f v) {
     return _mm512_recip_ps(v);
 #endif
 }
+static FORCEINLINE __vec16_d __rcp_varying_double(__vec16_d x) {
+  __vec16_d y;
+  for (int i = 0; i < 16; i++)
+    __insert_element(&y, i, 1.0/__extract_element(x,i));
+  return y;
+}
+static FORCEINLINE double __rcp_uniform_double(double v) 
+{
+  return 1.0/v;
+}
+
 
 static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v) {
 #ifdef ISPC_FAST_MATH
@@ -1480,6 +1491,17 @@ static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v) {
     return _mm512_invsqrt_ps(v);
 #endif
 }
+static FORCEINLINE __vec16_d __rsqrt_varying_double(__vec16_d x) {
+  __vec16_d y;
+  for (int i = 0; i < 16; i++)
+    __insert_element(&y, i, 1.0/sqrt(__extract_element(x,i)));
+  return y;
+}
+static FORCEINLINE double __rsqrt_uniform_double(double v) 
+{
+  return 1.0/v;
+}
+
 
 static FORCEINLINE __vec16_f __exp_varying_float(__vec16_f v) {
   return _mm512_exp_ps(v);

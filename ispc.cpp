@@ -201,7 +201,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_hasRand(false),
     m_hasGather(false),
     m_hasScatter(false),
-    m_hasTranscendentals(false)
+    m_hasTranscendentals(false),
+    m_hasRsqrtd(false),
+    m_hasRcpd(false)
 {
     if (isa == NULL) {
         if (cpu != NULL) {
@@ -419,6 +421,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
     else if (!strcasecmp(isa, "generic-8") ||
              !strcasecmp(isa, "generic-x8")) {
@@ -431,6 +434,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
     else if (!strcasecmp(isa, "generic-16") ||
              !strcasecmp(isa, "generic-x16")) {
@@ -443,6 +447,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
     else if (!strcasecmp(isa, "generic-32") ||
              !strcasecmp(isa, "generic-x32")) {
@@ -455,6 +460,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
     else if (!strcasecmp(isa, "generic-64") ||
              !strcasecmp(isa, "generic-x64")) {
@@ -467,6 +473,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
         this->m_hasGather = this->m_hasScatter = true;
+        this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
     else if (!strcasecmp(isa, "generic-1") ||
              !strcasecmp(isa, "generic-x1")) {

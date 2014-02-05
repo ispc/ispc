@@ -687,3 +687,10 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
   binary4to16(ret, double, @llvm.x86.avx.max.pd.256, %0, %1)
   ret <16 x double> %ret
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reciprocals in double precision, if supported
+
+rsqrtd_decl()
+rcpd_decl()
+

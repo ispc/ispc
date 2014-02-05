@@ -1138,8 +1138,16 @@ static FORCEINLINE float __rsqrt_uniform_float(float v) {
     return 1.f / sqrtf(v);
 }
 
+static FORCEINLINE double __rsqrt_uniform_double(double v) {
+    return 1.0 / sqrt(v);
+}
+
 static FORCEINLINE float __rcp_uniform_float(float v) {
     return 1.f / v;
+}
+
+static FORCEINLINE double __rcp_uniform_double(double v) {
+    return 1.0 / v;
 }
 
 static FORCEINLINE float __sqrt_uniform_float(float v) {
@@ -1151,7 +1159,9 @@ static FORCEINLINE double __sqrt_uniform_double(double v) {
 }
 
 UNARY_OP(__vec32_f, __rcp_varying_float, __rcp_uniform_float)
+UNARY_OP(__vec32_d, __rcp_varying_double, __rcp_uniform_double)
 UNARY_OP(__vec32_f, __rsqrt_varying_float, __rsqrt_uniform_float)
+UNARY_OP(__vec32_d, __rsqrt_varying_double, __rsqrt_uniform_double)
 UNARY_OP(__vec32_f, __sqrt_varying_float, __sqrt_uniform_float)
 UNARY_OP(__vec32_d, __sqrt_varying_double, __sqrt_uniform_double)
 
