@@ -2420,6 +2420,21 @@ static FORCEINLINE __vec4_f __rcp_varying_float(__vec4_f v) {
     return r;
 }
 
+static FORCEINLINE __vec4_d __rcp_varying_double(__vec4_d x) {
+    __vec4_i64 ex = __and(__cast_bits(__vec4_i64(), x), __smear_i64<__vec4_i64>(0x7fe0000000000000));
+    __vec4_d  exp = __cast_bits(__vec4_d(), __sub(__smear_i64<__vec4_i64>(0x7fd0000000000000), ex));
+    __vec4_f   xf = __cast_fptrunc(__vec4_f(), __mul(x, exp));
+    __vec4_f   yf = __rcp_varying_float(xf);
+    __vec4_d    y = __mul(__cast_fpext(__vec4_d(), yf), exp);
+    y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(2.0), __mul(x, y))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(2.0), __mul(x, y))));
+    return y;
+}
+static FORCEINLINE double __rcp_uniform_double(double v) 
+{
+  return __extract_element(__rcp_varying_double(__smear_double<__vec4_d>(v)),0);
+}
+
 static FORCEINLINE __vec4_f __rsqrt_varying_float(__vec4_f v) {
     __m128 rsqrt = _mm_rsqrt_ps(v.v);
     // Newton-Raphson iteration to improve precision
@@ -2430,6 +2445,22 @@ static FORCEINLINE __vec4_f __rsqrt_varying_float(__vec4_f v) {
     __m128 rs_mul = _mm_mul_ps(rsqrt, three_sub);
     __m128 half_scale = _mm_mul_ps(_mm_set1_ps(0.5), rs_mul);
     return half_scale;
+}
+static FORCEINLINE __vec4_d __rsqrt_varying_double(__vec4_d x) {
+    __vec4_i64 ex = __and(__cast_bits(__vec4_i64(), x), __smear_i64<__vec4_i64>(0x7fe0000000000000));
+    __vec4_d  exp = __cast_bits(__vec4_d(), __sub(__smear_i64<__vec4_i64>(0x7fd0000000000000), ex));
+    __vec4_d exph = __cast_bits(__vec4_d(), __sub(__smear_i64<__vec4_i64>(0x5fe0000000000000), __lshr(ex,1)));
+    __vec4_f   xf = __cast_fptrunc(__vec4_f(), __mul(x, exp));
+    __vec4_f   yf = __rsqrt_varying_float(xf);
+    __vec4_d    y = __mul(__cast_fpext(__vec4_d(), yf), exph);
+    __vec4_d   xh = __mul(x, __smear_double<__vec4_d>(0.5));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(0.5), __mul(xh, __mul(y,y)))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec4_d>(0.5), __mul(xh, __mul(y,y)))));
+    return y;
+}
+static FORCEINLINE double __rsqrt_uniform_double(double v) 
+{
+  return __extract_element(__rsqrt_varying_double(__smear_double<__vec4_d>(v)),0);
 }
 
 static FORCEINLINE __vec4_f __sqrt_varying_float(__vec4_f v) {
