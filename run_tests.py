@@ -380,7 +380,7 @@ def file_check(compfails, runfails):
         compiler_version = options.compiler_exe + temp3.group()
     else:
         compiler_version = "cl"
-    possible_compilers = ["g++4.4", "g++4.7", "clang++3.3", "cl"]
+    possible_compilers = ["clang++3.3", "clang++3.4", "cl"]
     if not compiler_version in possible_compilers:
         error("\n**********\nWe don't have history of fails for compiler " +
                 compiler_version +
