@@ -651,7 +651,7 @@ minmax_vy(max, double, double)
 ;; sqrt/rsqrt/rcp
 
 declare float     @llvm.nvvm.rsqrt.approx.f(float %f) nounwind readonly alwaysinline
-declare float     @llvm.sqrt.f32(float %f) nounwind readonly alwaysinline
+declare float     @llvm.nvvm.sqrt.f(float %f) nounwind readonly alwaysinline
 declare double    @llvm.nvvm.rsqrt.approx.d(double %f) nounwind readonly alwaysinline
 declare double    @llvm.sqrt.f64(double %f) nounwind readonly alwaysinline
 
@@ -665,7 +665,7 @@ define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
 }
 ;; declare float @__sqrt_uniform_float(float) nounwind readnone 
 define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @llvm.sqrt.f32(float %0)
+  %ret = call float @llvm.nvvm.sqrt.f(float %0)
 ;  %ret = tail call float asm sideeffect "sqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
