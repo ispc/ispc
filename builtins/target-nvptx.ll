@@ -1616,7 +1616,7 @@ extract_insert(double, double)
 
 declare void @__assertfail(i64,i64,i32,i64,i64) noreturn;
 declare i32 @vprintf(i64,i64)
-define internal i32 @__puts_nvptx(i8*) alwaysinline
+define i32 @__puts_nvptx(i8*) alwaysinline
 {
   %str   = ptrtoint i8* %0 to i64
   %parm  = or i64 0, 0

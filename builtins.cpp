@@ -672,6 +672,7 @@ lSetInternalFunctions(llvm::Module *module) {
         "__cvt_loc2gen",
         "__cvt_loc2gen_var",
         "__cvt_const2gen",
+        "__puts_nvptx",
         "ISPCAlloc",
         "ISPCLaunch",
         "ISPCSync",
