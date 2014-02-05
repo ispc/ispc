@@ -1411,7 +1411,6 @@ static inline QUAL double __rcp_safe_##QUAL##_double(QUAL double x) \
 } 
 
 RCPD(varying)
-__declspec(safe) 
 __declspec(safe)   
 static inline double rcp(double v) {   
   if (__have_native_rcpd)
