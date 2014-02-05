@@ -1836,6 +1836,20 @@ static FORCEINLINE __vec8_f __rcp_varying_float(__vec8_f v) {
     return _mm512_mask_recip_ps(FZERO, 0xFF, v);
 #endif
 }
+static FORCEINLINE __vec8_d __rcp_varying_double(__vec8_d x) {
+    __vec8_i64 ex = __and(__cast_bits(__vec8_i64(), x), __smear_i64<__vec8_i64>(0x7fe0000000000000));
+    __vec8_d  exp = __cast_bits(__vec8_d(), __sub(__smear_i64<__vec8_i64>(0x7fd0000000000000), ex));
+    __vec8_f   xf = __cast_fptrunc(__vec8_f(), __mul(x, exp));
+    __vec8_f   yf = __rcp_varying_float(xf);
+    __vec8_d    y = __mul(__cast_fpext(__vec8_d(), yf), exp);
+    y = __add(y, __mul(y, __sub(__smear_double<__vec8_d>(2.0), __mul(x, y))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec8_d>(2.0), __mul(x, y))));
+    return y;
+}
+static FORCEINLINE double __rcp_uniform_double(double v) 
+{
+  return __extract_element(__rcp_varying_double(__smear_double<__vec8_d>(v)),0);
+}
 
 static FORCEINLINE __vec8_f __rsqrt_varying_float(__vec8_f v) {
 #ifdef ISPC_FAST_MATH
@@ -1843,6 +1857,22 @@ static FORCEINLINE __vec8_f __rsqrt_varying_float(__vec8_f v) {
 #else 
     return _mm512_mask_invsqrt_ps(FZERO,0xFF,v);
 #endif
+}
+static FORCEINLINE __vec8_d __rsqrt_varying_double(__vec8_d x) {
+    __vec8_i64 ex = __and(__cast_bits(__vec8_i64(), x), __smear_i64<__vec8_i64>(0x7fe0000000000000));
+    __vec8_d  exp = __cast_bits(__vec8_d(), __sub(__smear_i64<__vec8_i64>(0x7fd0000000000000), ex));
+    __vec8_d exph = __cast_bits(__vec8_d(), __sub(__smear_i64<__vec8_i64>(0x5fe0000000000000), __lshr(ex,1)));
+    __vec8_f   xf = __cast_fptrunc(__vec8_f(), __mul(x, exp));
+    __vec8_f   yf = __rsqrt_varying_float(xf);
+    __vec8_d    y = __mul(__cast_fpext(__vec8_d(), yf), exph);
+    __vec8_d   xh = __mul(x, __smear_double<__vec8_d>(0.5));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec8_d>(0.5), __mul(xh, __mul(y,y)))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec8_d>(0.5), __mul(xh, __mul(y,y)))));
+    return y;
+}
+static FORCEINLINE double __rsqrt_uniform_double(double v) 
+{
+  return __extract_element(__rsqrt_varying_double(__smear_double<__vec8_d>(v)),0);
 }
 static FORCEINLINE __vec8_f __sqrt_varying_float (__vec8_f v) {    return _mm512_mask_sqrt_ps(FZERO,0xFF,v);}
 #endif

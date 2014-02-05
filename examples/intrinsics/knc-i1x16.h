@@ -1811,6 +1811,20 @@ static FORCEINLINE __vec16_f __rcp_varying_float(__vec16_f v)
   return _mm512_recip_ps(v);
 #endif
 }
+static FORCEINLINE __vec16_d __rcp_varying_double(__vec16_d x) {
+    __vec16_i64 ex = __and(__cast_bits(__vec16_i64(), x), __smear_i64<__vec16_i64>(0x7fe0000000000000));
+    __vec16_d  exp = __cast_bits(__vec16_d(), __sub(__smear_i64<__vec16_i64>(0x7fd0000000000000), ex));
+    __vec16_f   xf = __cast_fptrunc(__vec16_f(), __mul(x, exp));
+    __vec16_f   yf = __rcp_varying_float(xf);
+    __vec16_d    y = __mul(__cast_fpext(__vec16_d(), yf), exp);
+    y = __add(y, __mul(y, __sub(__smear_double<__vec16_d>(2.0), __mul(x, y))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec16_d>(2.0), __mul(x, y))));
+    return y;
+}
+static FORCEINLINE double __rcp_uniform_double(double v) 
+{
+  return __extract_element(__rcp_varying_double(__smear_double<__vec16_d>(v)),0);
+}
 
 static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v) 
 {
@@ -1820,6 +1834,23 @@ static FORCEINLINE __vec16_f __rsqrt_varying_float(__vec16_f v)
   return _mm512_invsqrt_ps(v);
 #endif
 }
+static FORCEINLINE __vec16_d __rsqrt_varying_double(__vec16_d x) {
+    __vec16_i64 ex = __and(__cast_bits(__vec16_i64(), x), __smear_i64<__vec16_i64>(0x7fe0000000000000));
+    __vec16_d  exp = __cast_bits(__vec16_d(), __sub(__smear_i64<__vec16_i64>(0x7fd0000000000000), ex));
+    __vec16_d exph = __cast_bits(__vec16_d(), __sub(__smear_i64<__vec16_i64>(0x5fe0000000000000), __lshr(ex,1)));
+    __vec16_f   xf = __cast_fptrunc(__vec16_f(), __mul(x, exp));
+    __vec16_f   yf = __rsqrt_varying_float(xf);
+    __vec16_d    y = __mul(__cast_fpext(__vec16_d(), yf), exph);
+    __vec16_d   xh = __mul(x, __smear_double<__vec16_d>(0.5));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec16_d>(0.5), __mul(xh, __mul(y,y)))));
+    y = __add(y, __mul(y, __sub(__smear_double<__vec16_d>(0.5), __mul(xh, __mul(y,y)))));
+    return y;
+}
+static FORCEINLINE double __rsqrt_uniform_double(double v) 
+{
+  return __extract_element(__rsqrt_varying_double(__smear_double<__vec16_d>(v)),0);
+}
+
 static FORCEINLINE __vec16_f __sqrt_varying_float (__vec16_f v) { return _mm512_sqrt_ps(v);}
 static FORCEINLINE __vec16_d __sqrt_varying_double(__vec16_d v) { return __vec16_d(_mm512_sqrt_pd(v.v1),_mm512_sqrt_pd(v.v2));}
 
