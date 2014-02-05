@@ -1451,10 +1451,19 @@ FunctionEmitContext::Extract(llvm::Value *vector, llvm::Value *lane)
 
 llvm::Value *
 FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
+  if (g->target->getISA() == Target::NVPTX)
+  {
+    // Compare the two masks to get a vector of i1s
+    llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
+        v1, v2, "v1==v2");
+    return ExtractInst(cmp, 0);  /* this works without calling All(..) in PTX. Why ?!? */
+  }
+  else
+  {
 #if 0
     // Compare the two masks to get a vector of i1s
     llvm::Value *cmp = CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ,
-                               v1, v2, "v1==v2");
+        v1, v2, "v1==v2");
     // Turn that into a bool vector type (often i32s)
     cmp = I1VecToBoolVec(cmp);
     // And see if it's all on
@@ -1463,8 +1472,9 @@ FunctionEmitContext::MasksAllEqual(llvm::Value *v1, llvm::Value *v2) {
     llvm::Value *mm1 = LaneMask(v1);
     llvm::Value *mm2 = LaneMask(v2);
     return CmpInst(llvm::Instruction::ICmp, llvm::CmpInst::ICMP_EQ, mm1, mm2,
-                   LLVMGetName("equal", v1, v2));
+        LLVMGetName("equal", v1, v2));
 #endif
+  }
 }
 
 llvm::Value *
