@@ -122,23 +122,23 @@ define i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
 
 ;;;;;;;;
 ;; i32
-define i32 @__shfl_i32_nvptx(i32, i32) nounwind readnone alwaysinline
+define internal i32 @__shfl_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
   ret i32 %shfl
 }
-define i32 @__shfl_xor_i32_nvptx(i32, i32) nounwind readnone alwaysinline
+define internal i32 @__shfl_xor_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=r,r,r"(i32 %0, i32 %1) nounwind readnone alwaysinline
   ret i32 %shfl
 }
 ;; float
-define float @__shfl_float_nvptx(float, i32) nounwind readnone alwaysinline
+define internal float @__shfl_float_nvptx(float, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call float asm sideeffect "shfl.idx.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) nounwind readnone alwaysinline
   ret float %shfl
 }
-define float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwaysinline
+define internal float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call float asm sideeffect "shfl.bfly.b32  $0, $1, $2, 0x1f;", "=f,f,r"(float %0, i32 %1) nounwind readnone alwaysinline
   ret float %shfl
@@ -146,12 +146,12 @@ define float @__shfl_xor_float_nvptx(float, i32) nounwind readnone alwaysinline
 
 ;;;;;;;;;;; min/max
 ;; float/double
-define float @__fminf_nvptx(float,float) nounwind readnone alwaysinline
+define internal float @__fminf_nvptx(float,float) nounwind readnone alwaysinline
 {
   %min = tail call float asm sideeffect "min.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
   ret float %min
 }
-define float @__fmaxf_nvptx(float,float) nounwind readnone alwaysinline
+define internal float @__fmaxf_nvptx(float,float) nounwind readnone alwaysinline
 {
   %max = tail call float asm sideeffect "max.f32 $0, $1, $2;", "=f,f,f"(float %0, float %1) nounwind readnone alwaysinline
   ret float %max
@@ -159,22 +159,22 @@ define float @__fmaxf_nvptx(float,float) nounwind readnone alwaysinline
 
 ;; int
 define(`int_minmax',`
-define $1 @__min_$1_signed($1,$1) nounwind readnone alwaysinline {
+define internal $1 @__min_$1_signed($1,$1) nounwind readnone alwaysinline {
   %c = icmp slt $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
 }
-define $1 @__max_$1_signed($1,$1) nounwind readnone alwaysinline {
+define internal $1 @__max_$1_signed($1,$1) nounwind readnone alwaysinline {
   %c = icmp sgt $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
 }
-define $1 @__min_$1_unsigned($1,$1) nounwind readnone alwaysinline  {
+define internal $1 @__min_$1_unsigned($1,$1) nounwind readnone alwaysinline  {
   %c = icmp ult $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
 }
-define $1 @__max_$1_unsigned($1,$1) nounwind readnone alwaysinline {
+define internal $1 @__max_$1_unsigned($1,$1) nounwind readnone alwaysinline {
   %c = icmp ugt $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
@@ -187,12 +187,12 @@ int_minmax(i64);
 
 ;; float/double
 define(`fp_minmax',`
-define $1 @__min_$1($1,$1) nounwind readnone alwaysinline {
+define internal $1 @__min_$1($1,$1) nounwind readnone alwaysinline {
   %c = fcmp olt $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
 }
-define $1 @__max_$1($1,$1) nounwind readnone alwaysinline {
+define internal $1 @__max_$1($1,$1) nounwind readnone alwaysinline {
   %c = fcmp ogt $1 %0, %1
   %r = select i1 %c, $1 %0, $1 %1
   ret $1 %r
@@ -204,7 +204,7 @@ fp_minmax(double)
 ;;;;;;;;; __shfl/__shfl_xor intrinsics
 ;;  i8/i16/i64 
 define(`shfl32',`
-define $2 @$1_$2_nvptx($2, i32) nounwind readnone alwaysinline
+define internal $2 @$1_$2_nvptx($2, i32) nounwind readnone alwaysinline
 {
   %ext = zext $2 %0 to i32
   %res = tail call i32 @$1_i32_nvptx(i32 %ext, i32 %1)
@@ -219,7 +219,7 @@ shfl32(__shfl_xor, i16);
 
 
 define(`shfl64',`
-define $2 @$1_$2_nvptx($2, i32) nounwind readnone alwaysinline
+define internal $2 @$1_$2_nvptx($2, i32) nounwind readnone alwaysinline
 {
   %in   = bitcast $2 %0 to <2 x i32>
   %in0  = extractelement <2 x i32> %in, i32 0
@@ -238,7 +238,7 @@ shfl64(__shfl,     double)
 shfl64(__shfl_xor, double)
 
 ;;;;;;;;;;;;;
-define i32 @__ballot_nvptx(i1) nounwind readnone alwaysinline
+define internal i32 @__ballot_nvptx(i1) nounwind readnone alwaysinline
 {
   %conv = zext i1 %0 to i32
   %res = tail call i32 asm sideeffect 
@@ -248,7 +248,7 @@ define i32 @__ballot_nvptx(i1) nounwind readnone alwaysinline
       }", "=r,r"(i32 %conv) nounwind readnone alwaysinline
   ret i32 %res
 }
-define i32 @__lanemask_lt_nvptx() nounwind readnone alwaysinline
+define internal i32 @__lanemask_lt_nvptx() nounwind readnone alwaysinline
 {
   %mask = tail call i32 asm sideeffect "mov.u32 $0, %lanemask_lt;", "=r"() nounwind readnone alwaysinline
   ret i32 %mask
@@ -454,7 +454,7 @@ declare void @__fastmath() nounwind
 
 ;; round/floor/ceil
 
-define float @__round_uniform_float_ptx(float) nounwind readnone alwaysinline
+define internal float @__round_uniform_float_ptx(float) nounwind readnone alwaysinline
 {
   %2 = tail call float asm sideeffect
         "{ .reg .pred p<3>; .reg .s32 r<4>; .reg .f32 f<10>;
@@ -548,7 +548,7 @@ define double @__ceil_uniform_double(double) nounwind readnone alwaysinline
   ret double %2
 }
 
-define  <1 x float> @__floor_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
+define  internal <1 x float> @__floor_varying_floatX(<1 x float>) nounwind readonly alwaysinline {
   %calltmp.i = tail call <1 x float> @__round_varying_float(<1 x float> %0) nounwind
   %bincmp.i = fcmp ogt <1 x float> %calltmp.i, %0
   %val_to_boolvec32.i = sext <1 x i1> %bincmp.i to <1 x i32>
@@ -619,12 +619,12 @@ define  i32 @__max_uniform_uint32(i32, i32) nounwind readonly alwaysinline {
 
 ;; declare i64 @__min_uniform_int64(i64, i64) nounwind readnone 
 ;; declare i64 @__max_uniform_int64(i64, i64) nounwind readnone 
-define  i64 @__min_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
+define  internal i64 @__min_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
   %c = icmp slt i64 %0, %1
   %r = select i1 %c, i64 %0, i64 %1
   ret i64 %r
 }
-define  i64 @__max_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
+define  internal i64 @__max_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
   %c = icmp sgt i64 %0, %1
   %r = select i1 %c, i64 %0, i64 %1
   ret i64 %r
@@ -632,12 +632,12 @@ define  i64 @__max_uniform_int64X(i64, i64) nounwind readonly alwaysinline {
 
 ;; declare i64 @__min_uniform_uint64(i64, i64) nounwind readnone 
 ;; declare i64 @__max_uniform_uint64(i64, i64) nounwind readnone 
-define  i64 @__min_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
+define  internal i64 @__min_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
   %c = icmp ult i64 %0, %1
   %r = select i1 %c, i64 %0, i64 %1
   ret i64 %r
 }
-define  i64 @__max_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
+define  internal i64 @__max_uniform_uint64X(i64, i64) nounwind readonly alwaysinline {
   %c = icmp ugt i64 %0, %1
   %r = select i1 %c, i64 %0, i64 %1
   ret i64 %r
@@ -760,7 +760,7 @@ define  i64 @__popcnt_int64(i64) nounwind readonly alwaysinline {
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; binary prefix sum
 
-define i64 @__warpBinExclusiveScan(i1 %p) nounwind readonly alwaysinline 
+define internal i64 @__warpBinExclusiveScan(i1 %p) nounwind readonly alwaysinline 
 {
 entry:
   %call  = call i32 @__ballot_nvptx(i1 zeroext %p)
@@ -1094,7 +1094,7 @@ define  i64 @__reduce_max_uint64(<1 x i64>) nounwind readnone alwaysinline {
 }
 
 ;;;; reduce equal, must be tested and may fail if data has -1
-define i32 @__shfl_reduce_and_step_i32_nvptx(i32, i32) nounwind readnone alwaysinline
+define internal i32 @__shfl_reduce_and_step_i32_nvptx(i32, i32) nounwind readnone alwaysinline
 {
   %shfl = tail call i32 asm sideeffect
       "{.reg .u32 r0; 
@@ -1107,7 +1107,7 @@ define i32 @__shfl_reduce_and_step_i32_nvptx(i32, i32) nounwind readnone alwaysi
 }
 shfl64(__shfl_reduce_and_step, i64)
 
-define i32 @__reduce_and_i32(i32 %v0, i1 %mask) nounwind readnone alwaysinline
+define internal i32 @__reduce_and_i32(i32 %v0, i1 %mask) nounwind readnone alwaysinline
 {
   %v  = select i1 %mask, i32 %v0, i32 -1
   %s1 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %v,  i32 16);
@@ -1117,7 +1117,7 @@ define i32 @__reduce_and_i32(i32 %v0, i1 %mask) nounwind readnone alwaysinline
   %s5 = tail call i32 @__shfl_reduce_and_step_i32_nvptx(i32 %s4, i32  1);
   ret i32 %s5
 }
-define i64 @__reduce_and_i64(i64, i1) nounwind readnone alwaysinline
+define internal i64 @__reduce_and_i64(i64, i1) nounwind readnone alwaysinline
 {
   %v   = bitcast i64 %0 to <2 x i32>
   %v0  = extractelement <2 x i32> %v, i32 0
@@ -1275,7 +1275,7 @@ broadcast(double)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; prefix sum stuff
 
-define i32 @__shfl_scan_add_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal i32 @__shfl_scan_add_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call i32 asm sideeffect  
       "{.reg .u32 r0;
@@ -1302,7 +1302,7 @@ define <1 x i32> @__exclusive_scan_add_i32(<1 x i32>, <1 x i1>) nounwind readnon
   ret <1 x i32> %retv
 }
 ;;
-define i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal i32 @__shfl_scan_or_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call i32 asm sideeffect  
       "{.reg .u32 r0;
@@ -1337,7 +1337,7 @@ define <1 x i32> @__exclusive_scan_or_i32(<1 x i32>, <1 x i1>) nounwind readnone
   ret <1 x i32> %retv
 }
 ;;
-define i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal i32 @__shfl_scan_and_step_i32(i32 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call i32 asm sideeffect  
       "{.reg .u32 r0;
@@ -1372,7 +1372,7 @@ define <1 x i32> @__exclusive_scan_and_i32(<1 x i32>, <1 x i1>) nounwind readnon
   ret <1 x i32> %retv
 }
 
-define float @__shfl_scan_add_step_float(float %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal float @__shfl_scan_add_step_float(float %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call float asm sideeffect  
       "{.reg .f32 f0;
@@ -1398,7 +1398,7 @@ define <1 x float> @__exclusive_scan_add_float(<1 x float>, <1 x i1>) nounwind r
   %retv = insertelement <1 x float> undef, float %rets, i32 0
   ret <1 x float> %retv
 }
-define double @__shfl_scan_add_step_double(double %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal double @__shfl_scan_add_step_double(double %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call double asm sideeffect  
       "{.reg .s32 r<10>;
@@ -1431,7 +1431,7 @@ define <1 x double> @__exclusive_scan_add_double(<1 x double>, <1 x i1>) nounwin
   ret <1 x double> %retv
 }
 
-define i64 @__shfl_scan_add_step_i64(i64 %partial, i32 %up_offset) nounwind readnone alwaysinline
+define internal i64 @__shfl_scan_add_step_i64(i64 %partial, i32 %up_offset) nounwind readnone alwaysinline
 {
   %result = tail call i64 asm sideeffect  
       "{.reg .s32 r<10>;
@@ -1616,7 +1616,7 @@ extract_insert(double, double)
 
 declare void @__assertfail(i64,i64,i32,i64,i64) noreturn;
 declare i32 @vprintf(i64,i64)
-define i32 @__puts_nvptx(i8*) alwaysinline
+define internal i32 @__puts_nvptx(i8*) alwaysinline
 {
   %str   = ptrtoint i8* %0 to i64
   %parm  = or i64 0, 0
@@ -1627,7 +1627,7 @@ define i32 @__puts_nvptx(i8*) alwaysinline
 ;;  %call1 = call i32 @vprintf(i64 %cr1, i64 %parm)
   ret i32 %call;
 }
-define void @__abort_nvptx(i8* %str) noreturn
+define internal void @__abort_nvptx(i8* %str) noreturn
 {
   %tmp1 = alloca <3 x i8>
   store <3 x i8> <i8 58, i8 58, i8 0>, <3 x i8>* %tmp1
@@ -1854,7 +1854,7 @@ pass:
 ;; $3: return type of the LLVM atomic (e.g. i32)
 ;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
 
-define i32 @__get_first_active_lane()
+define internal i32 @__get_first_active_lane()
 {
   %nact  = call i32 @__ballot_nvptx(i1 true);
   %lane1 = call i32 @__count_leading_zeros_i32(i32 %nact)
@@ -1862,55 +1862,55 @@ define i32 @__get_first_active_lane()
   ret i32 %lane
 }
 
-define i32 @__atomic_add_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_add_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.add.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_sub_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_sub_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %nval = sub i32 0, %val;
   %old = tail call i32 @__atomic_add_uniform_int32_global_nvptx(i32* %ptr, i32 %nval);
   ret i32 %old;
 }
-define i32 @__atomic_and_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_and_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.and.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_or_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_or_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.or.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_xor_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_xor_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.xor.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_min_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_min_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.min.s32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_max_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_max_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.max.s32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_umin_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_umin_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.min.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i32 @__atomic_umax_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_umax_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.max.u32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
@@ -1918,55 +1918,55 @@ define i32 @__atomic_umax_uniform_uint32_global_nvptx(i32* %ptr, i32 %val) nounw
 }
 
 
-define i64 @__atomic_add_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_add_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.add.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_sub_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_sub_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %nval = sub i64 0, %val;
   %old = tail call i64 @__atomic_add_uniform_int64_global_nvptx(i64* %ptr, i64 %nval);
   ret i64 %old;
 }
-define i64 @__atomic_and_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_and_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.and.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_or_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_or_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.or.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_xor_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_xor_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.xor.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_min_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_min_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.min.s64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_max_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_max_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.max.s64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_umin_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_umin_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.min.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define i64 @__atomic_umax_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_umax_uniform_uint64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.max.u64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
@@ -2074,19 +2074,19 @@ global_atomic_varying(1, umax, i64, uint64)
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-define i32 @__atomic_swap_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_swap_uniform_int32_global_nvptx(i32* %ptr, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.exch.b32 $0, [$1], $2;", "=r,l,r"(i64 %addr, i32 %val);
   ret i32 %old;
 }
-define i64 @__atomic_swap_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_swap_uniform_int64_global_nvptx(i64* %ptr, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.exch.b64 $0, [$1], $2;", "=l,l,l"(i64 %addr, i64 %val);
   ret i64 %old;
 }
-define float @__atomic_swap_uniform_float_global_nvptx(float* %ptr, float %val) nounwind alwaysinline
+define internal float @__atomic_swap_uniform_float_global_nvptx(float* %ptr, float %val) nounwind alwaysinline
 {
    %ptrI = bitcast float* %ptr to i32*
    %valI = bitcast float  %val to i32
@@ -2094,7 +2094,7 @@ define float @__atomic_swap_uniform_float_global_nvptx(float* %ptr, float %val) 
    %ret  = bitcast i32 %retI to float
    ret float %ret
 }
-define double @__atomic_swap_uniform_double_global_nvptx(double* %ptr, double %val) nounwind alwaysinline
+define internal double @__atomic_swap_uniform_double_global_nvptx(double* %ptr, double %val) nounwind alwaysinline
 {
    %ptrI = bitcast double* %ptr to i64*
    %valI = bitcast double  %val to i64
@@ -2118,19 +2118,19 @@ global_atomic_varying(1, swap, double, double)
 ;; $2: llvm type of the vector elements (e.g. i32)
 ;; $3: ispc type of the elements (e.g. int32)
 
-define i32 @__atomic_compare_exchange_uniform_int32_global_nvptx(i32* %ptr, i32 %cmp, i32 %val) nounwind alwaysinline
+define internal i32 @__atomic_compare_exchange_uniform_int32_global_nvptx(i32* %ptr, i32 %cmp, i32 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i32* %ptr to i64
   %old = tail call i32 asm sideeffect "atom.cas.b32 $0, [$1], $2, $3;", "=r,l,r,r"(i64 %addr, i32 %cmp, i32 %val);
   ret i32 %old;
 }
-define i64 @__atomic_compare_exchange_uniform_int64_global_nvptx(i64* %ptr, i64 %cmp, i64 %val) nounwind alwaysinline
+define internal i64 @__atomic_compare_exchange_uniform_int64_global_nvptx(i64* %ptr, i64 %cmp, i64 %val) nounwind alwaysinline
 {
   %addr = ptrtoint i64* %ptr to i64
   %old = tail call i64 asm sideeffect "atom.cas.b64 $0, [$1], $2, $3;", "=l,l,l,l"(i64 %addr, i64 %cmp, i64 %val);
   ret i64 %old;
 }
-define float @__atomic_compare_exchange_uniform_float_global_nvptx(float* %ptr, float %cmp, float %val) nounwind alwaysinline
+define internal float @__atomic_compare_exchange_uniform_float_global_nvptx(float* %ptr, float %cmp, float %val) nounwind alwaysinline
 {
    %ptrI = bitcast float* %ptr to i32*
    %cmpI = bitcast float  %cmp to i32
@@ -2139,7 +2139,7 @@ define float @__atomic_compare_exchange_uniform_float_global_nvptx(float* %ptr, 
    %ret  = bitcast i32 %retI to float
    ret float %ret
 }
-define double @__atomic_compare_exchange_uniform_double_global_nvptx(double* %ptr, double %cmp, double %val) nounwind alwaysinline
+define internal double @__atomic_compare_exchange_uniform_double_global_nvptx(double* %ptr, double %cmp, double %val) nounwind alwaysinline
 {
    %ptrI = bitcast double* %ptr to i64*
    %cmpI = bitcast double  %cmp to i64

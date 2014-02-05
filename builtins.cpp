@@ -460,6 +460,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__extract_int32",
         "__extract_int64",
         "__extract_int8",
+        "__extract_float",
+        "__extract_double",
         "__fastmath",
         "__float_to_half_uniform",
         "__float_to_half_varying",
@@ -476,6 +478,8 @@ lSetInternalFunctions(llvm::Module *module) {
         "__insert_int32",
         "__insert_int64",
         "__insert_int8",
+        "__insert_float",
+        "__insert_double",
         "__intbits_uniform_double",
         "__intbits_uniform_float",
         "__intbits_varying_double",
@@ -667,7 +671,10 @@ lSetInternalFunctions(llvm::Module *module) {
         "__task_count",
         "__cvt_loc2gen",
         "__cvt_loc2gen_var",
-        "__cvt_const2gen"
+        "__cvt_const2gen",
+        "ISPCAlloc",
+        "ISPCLaunch",
+        "ISPCSync",
     };
 
     int count = sizeof(names) / sizeof(names[0]);
