@@ -17,57 +17,91 @@ declare i32 @llvm.nvvm.read.ptx.sreg.nctaid.y() nounwind readnone
 declare i32 @llvm.nvvm.read.ptx.sreg.nctaid.z() nounwind readnone
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize() nounwind readnone
 
-define i32 @__tid_x()  nounwind readnone alwaysinline
+;;;;;;;;;;
+
+define i32 @__program_index()  nounwind readnone alwaysinline
 {
  %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
- ret i32 %tid
+ %program_index = and i32 %tid, 31
+ ret i32 %program_index
 }
-define i32 @__warpsize()  nounwind readnone alwaysinline
+define i32 @__program_count()  nounwind readnone alwaysinline
 {
 ;; %tid = call i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 ;; ret i32 %tid
   ret i32 32
 }
-define i32 @__laneidx() nounwind readnone alwaysinline
+define i32 @__warp_index() nounwind readnone alwaysinline
 {
-  %tid = tail call i32 @__tid_x()
-  %lane = and i32 %tid, 31
-  ret i32 %lane;
+  %tid = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+  %warp_index = lshr i32 %tid, 5
+  ret i32 %warp_index
 }
 
+;;;;;;;;;;;;
 
-define i32 @__ctaid_x()  nounwind readnone alwaysinline
+define i32 @__task_index0()  nounwind readnone alwaysinline
 {
- %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
- ret i32 %bid
+ %bid  = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+ %bid4 = shl i32 %bid, 2
+ %warp_index = call i32 @__warp_index()
+ %task_index0 = add i32 %bid4, %warp_index
+ ret i32 %task_index0
 }
-define i32 @__ctaid_y()  nounwind readnone alwaysinline
+define i32 @__task_index1()  nounwind readnone alwaysinline
 {
- %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
- ret i32 %bid
+ %task_index1 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
+ ret i32 %task_index1
 }
-define i32 @__ctaid_z()  nounwind readnone alwaysinline
+define i32 @__task_index2()  nounwind readnone alwaysinline
 {
- %bid = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
- ret i32 %bid
+ %task_index2 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
+ ret i32 %task_index2
+}
+define i32 @__task_index()  nounwind readnone alwaysinline
+{
+  %ti0 = call i32 @__task_index0()
+  %ti1 = call i32 @__task_index1()
+  %ti2 = call i32 @__task_index2()
+  %tc0 = call i32 @__task_count0()
+  %tc1 = call i32 @__task_count1()
+  %mul1 = mul i32 %tc1, %ti2
+  %add1 = add i32 %mul1, %ti1
+  %mul2 = mul i32 %add1, %tc0
+  %task_index = add i32 %mul2, %ti0
+  ret i32 %task_index
 }
 
-define i32 @__nctaid_x()  nounwind readnone alwaysinline
+;;;;;
+
+define i32 @__task_count0()  nounwind readnone alwaysinline
 {
  %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
- ret i32 %nb
+ %task_count0 = shl i32 %nb, 2
+ ret i32 %task_count0
 }
-define i32 @__nctaid_y()  nounwind readnone alwaysinline
+define i32 @__task_count1()  nounwind readnone alwaysinline
 {
- %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
- ret i32 %nb
+ %task_count1 = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
+ ret i32 %task_count1
 }
-define i32 @__nctaid_z()  nounwind readnone alwaysinline
+define i32 @__task_count2()  nounwind readnone alwaysinline
 {
- %nb = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
- ret i32 %nb
+ %task_count2 = call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
+ ret i32 %task_count2
 }
+define i32 @__task_count()  nounwind readnone alwaysinline
+{
+  %tc0 = call i32 @__task_count0()
+  %tc1 = call i32 @__task_count1()
+  %tc2 = call i32 @__task_count2()
+  %mul1 = mul i32 %tc1, %tc2
+  %task_count = mul i32 %mul1, %tc0
+  ret i32 %task_count
+}
+
 ;;;;;;;;
+
 declare i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p3i64(i64 addrspace(3)*)
 declare i64* @llvm.nvvm.ptr.shared.to.gen.p0i64.p4i64(i64 addrspace(4)*)
 define i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
@@ -228,10 +262,7 @@ declare i64 @cudaGetParameterBuffer(i64, i64) nounwind
 define i8* @ISPCAlloc(i8**, i64 %size, i32 %align32) nounwind alwaysinline
 {
 entry:
-  %call = tail call i32 @__tid_x()
-  %call1 = tail call i32 @__warpsize()
-  %sub = add nsw i32 %call1, -1
-  %and = and i32 %sub, %call
+  %and = call i32 @__program_index()
   %cmp = icmp eq i32 %and, 0
   %align = zext i32 %align32 to i64
   br i1 %cmp, label %if.then, label %if.end
@@ -270,10 +301,7 @@ entry:
 ;;  %ntxm1d4 = sdiv i32 %ntxm1, 4
   %ntxm1d4 = ashr i32 %ntxm1, 2
   %nbx     = add nsw i32 %ntxm1d4, 1
-  %call = tail call i32 @__tid_x()
-  %call1 = tail call i32 @__warpsize()
-  %sub = add nsw i32 %call1, -1
-  %and = and i32 %sub, %call
+  %and = call i32 @__program_index()
 ;; if (laneIdx == 0)
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -1191,8 +1219,7 @@ define(`shift',`
 define <1 x $1> @__shift_$1(<1 x $1>, i32) nounwind readnone alwaysinline
 {
   %val  = extractelement <1 x $1> %0, i32 0
-  %tid  = tail call i32 @__tid_x()
-  %lane = and i32 %tid,  31
+  %lane = call i32 @__program_index()
   %src  = add i32 %lane, %1
   %ret  = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %src)
   %c1   = icmp sge i32 %src, 0
@@ -1214,7 +1241,7 @@ define(`rotate', `
 define <1 x $1> @__rotate_$1(<1 x $1>, i32) nounwind readnone alwaysinline 
 {
   %val  = extractelement <1 x $1> %0, i32 0
-  %tid  = tail call i32 @__tid_x()
+  %tid  = call i32 @__program_index()
   %src  = add i32 %tid, %1
   %lane = and i32 %src, 31
   %rets = tail call $1 @__shfl_$1_nvptx($1 %val, i32 %lane)
@@ -1569,7 +1596,7 @@ define $1 @__extract_$2(<1 x $1>, i32) nounwind readnone alwaysinline {
 define <1 x $1> @__insert_$2(<1 x $1>, i32, 
                                    $1) nounwind readnone alwaysinline {
   %orig = extractelement <1 x $1> %0, i32 0
-  %lane = call i32 @__laneidx() 
+  %lane = call i32 @__program_index() 
   %c    = icmp eq i32 %lane, %1
   %val  = select i1 %c, $1 %2, $1 %orig
   %insert = insertelement <1 x $1> %0, $1 %val, i32 0
@@ -1620,7 +1647,7 @@ define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
   br i1 %test, label %ok, label %fail
 
 fail:
-  %lane = call i32 @__laneidx()
+  %lane = call i32 @__program_index()
   %cmp  = icmp eq i32 %lane, 0
   br i1 %cmp, label %fail_print, label %fail_void;
   
@@ -1966,7 +1993,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinli
 entry:
   %addr   = ptrtoint $3 * %ptr to i64
   %active = call i32 @__get_first_active_lane();
-  %lane   = call i32 @__laneidx();
+  %lane   = call i32 @__program_index();
   %c      = icmp eq i32 %lane, %active
   br i1 %c, label %p1, label %p2
 
@@ -2144,7 +2171,7 @@ define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %cmp, $3 %val) nounwind a
 entry:
   %addr   = ptrtoint $3 * %ptr to i64
   %active = call i32 @__get_first_active_lane();
-  %lane   = call i32 @__laneidx();
+  %lane   = call i32 @__program_index();
   %c      = icmp eq i32 %lane, %active
   br i1 %c, label %p1, label %p2
 

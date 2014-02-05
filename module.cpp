@@ -2167,20 +2167,20 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     if (g->target->getISA() == Target::NVPTX)
     {
       opts.addMacroDef("__NVPTX__");
-      opts.addMacroDef("programIndex=laneIndex()");
+      opts.addMacroDef("programIndex=__programIndex()");
       opts.addMacroDef("cif=if");
       opts.addMacroDef("cfor=for");
       opts.addMacroDef("cwhile=while");
       opts.addMacroDef("ccontinue=continue");
       opts.addMacroDef("cdo=do");
-      opts.addMacroDef("taskIndex0=blockIndex0()");
-      opts.addMacroDef("taskCount0=blockCount0()");
-      opts.addMacroDef("taskIndex1=blockIndex1()");
-      opts.addMacroDef("taskCount1=blockCount1()");
-      opts.addMacroDef("taskIndex2=blockIndex2()");
-      opts.addMacroDef("taskCount2=blockCount2()");
-      opts.addMacroDef("taskIndex=(taskIndex0 + taskCount0*(taskIndex1 + taskCount1*taskIndex2))");
-      opts.addMacroDef("taskCount=(taskCount0*taskCount1*taskCount2)");
+      opts.addMacroDef("taskIndex0=__taskIndex0()");
+      opts.addMacroDef("taskIndex1=__taskIndex1()");
+      opts.addMacroDef("taskIndex2=__taskIndex2()");
+      opts.addMacroDef("taskIndex=__taskIndex()");
+      opts.addMacroDef("taskCount0=__taskCount0()");
+      opts.addMacroDef("taskCount1=__taskCount1()");
+      opts.addMacroDef("taskCount2=__taskCount2()");
+      opts.addMacroDef("taskCount=__taskCount()");
     }
 
 #if defined(LLVM_3_1)

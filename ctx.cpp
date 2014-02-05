@@ -1373,21 +1373,26 @@ FunctionEmitContext::None(llvm::Value *mask) {
 
 
 llvm::Value *
-FunctionEmitContext::LaneMask(llvm::Value *v) {
-   const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
-    // Call the target-dependent movmsk function to turn the vector mask
-    // into an i64 value
-    std::vector<Symbol *> mm;
-    m->symbolTable->LookupFunction(__movmsk, &mm);
-    if (g->target->getMaskBitCount() == 1)
-        AssertPos(currentPos, mm.size() == 1);
-    else
-        // There should be one with signed int signature, one unsigned int.
-        AssertPos(currentPos, mm.size() == 2);
-    // We can actually call either one, since both are i32s as far as
-    // LLVM's type system is concerned...
-    llvm::Function *fmm = mm[0]->function;
-    return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
+FunctionEmitContext::LaneMask(llvm::Value *v) 
+{
+#if 1 /* this makes mandelbrot example slower, why ?!? */
+  const char *__movmsk = g->target->getISA() == Target::NVPTX ? "__movmsk_ptx" : "__movmsk";
+#else
+  const char *__movmsk = "__movmsk";
+#endif
+  // Call the target-dependent movmsk function to turn the vector mask
+  // into an i64 value
+  std::vector<Symbol *> mm;
+  m->symbolTable->LookupFunction(__movmsk, &mm);
+  if (g->target->getMaskBitCount() == 1)
+    AssertPos(currentPos, mm.size() == 1);
+  else
+    // There should be one with signed int signature, one unsigned int.
+    AssertPos(currentPos, mm.size() == 2);
+  // We can actually call either one, since both are i32s as far as
+  // LLVM's type system is concerned...
+  llvm::Function *fmm = mm[0]->function;
+  return CallInst(fmm, NULL, v, LLVMGetName(v, "_movmsk"));
 }
 
 bool lAppendInsertExtractName(llvm::Value *vector, std::string &funcName)
@@ -1476,13 +1481,9 @@ FunctionEmitContext::ProgramIndexVector(bool is32bits) {
 }
 llvm::Value *
 FunctionEmitContext::ProgramIndexVectorPTX(bool is32bits) {
-    llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
-    llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
-    llvm::Value *__tid_x    = CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(), "laneIdxForEach");
-    llvm::Value *__warpsz   = CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(), "warpSZForEach");
-    llvm::Value *__warpszm1 = BinaryOperator(llvm::Instruction::Add, __warpsz, LLVMInt32(-1), "__warpszm1");
-    llvm::Value *laneIdx = BinaryOperator(llvm::Instruction::And, __tid_x, __warpszm1, "__laneidx");
-    llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), laneIdx, 0, "__laneIdxV");
+    llvm::Function *func_program_index  = m->module->getFunction("__program_index");
+    llvm::Value *__program_index    = CallInst(func_program_index, NULL, std::vector<llvm::Value*>(), "foreach__program_indexS");
+    llvm::Value *index = InsertInst(llvm::UndefValue::get(LLVMTypes::Int32VectorType), __program_index, 0, "foreach__program_indexV");
 #if 0
     if (!is32bits)
       index = ZExtInst(index, LLVMTypes::Int64VectandType);
@@ -1887,146 +1888,6 @@ FunctionEmitContext::BitCastInst(llvm::Value *value, llvm::Type *type,
     return inst;
 }
 
-/* NVPTX: 
- * this is a helper function which adds a warp offset to a base pointer 
- * pointer must either be in local memory addrspace(3)
- * or the one just converted from addrspace(3) to addrspace(0) in lConvertToGenericPtr
- */
-static llvm::Value* lAddWarpOffset(FunctionEmitContext *ctx, llvm::Value *value)
-{
-  llvm::Function *func_tid_x  = m->module->getFunction("__tid_x");
-  llvm::Function *func_warpsz = m->module->getFunction("__warpsize");
-  llvm::Value *__tid_x  = ctx->CallInst(func_tid_x,  NULL, std::vector<llvm::Value*>(),  "tidCorrectLocalPtr");
-  llvm::Value *__warpsz = ctx->CallInst(func_warpsz, NULL, std::vector<llvm::Value*>(),  "warpSzCorrectLocaLPtr");
-  llvm::Value *_mwarpsz = ctx->BinaryOperator(llvm::Instruction::Sub, LLVMInt32(0), __warpsz, "mwarpSzCorrectLocalPtr");
-  llvm::Value *__offset = ctx->BinaryOperator(llvm::Instruction::And, __tid_x, _mwarpsz, "offsetCorrectLocalPtr");
-  return llvm::GetElementPtrInst::Create(value, __offset, "warpOffset_gep", ctx->GetCurrentBasicBlock());
-}
-
-static llvm::Value* lConvertGepToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
-{
-  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) 
-    return value;
-  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  const int addressSpace = pt->getAddressSpace();
-  if (addressSpace != 3 && addressSpace != 4) 
-    return value;
-  assert(0);
-
-  llvm::Type *elTy = pt->getElementType();
-  assert(elTy->isArrayTy());
-  const int numElTot = elTy->getArrayNumElements();
-  const int numEl    = numElTot/4;
-#if 0
-  fprintf(stderr, " --- detected addrspace(3) sz= %d --- \n", numEl);
-#endif
-  llvm::ArrayType *arrTy = llvm::dyn_cast<llvm::ArrayType>(pt->getArrayElementType());
-  assert(arrTy != NULL);
-  llvm::Type *arrElTy = arrTy->getElementType();
-#if 0
-  if (arrElTy->isArrayTy())
-      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
-#endif
-
-  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
-  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
-  value = ctx->BitCastInst(value, Int64Ptr3, "gep2gen_cast1");
-
-  /* convert i64* addrspace(3) to i64* */
-  llvm::Function *__cvt2gen = m->module->getFunction(
-      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
-  std::vector<llvm::Value *> __cvt2gen_args;
-  __cvt2gen_args.push_back(value);
-  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "gep2gen_cvt", ctx->GetCurrentBasicBlock());
-
-  /* convert i64* to errElTy* */
-  llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
-  value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
-
-  /* compute offset */
-  if (addressSpace == 3)
-  {
-    llvm::Function *funcTid    = m->module->getFunction("__tid_x");
-    llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
-    llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
-    llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
-    llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
-    llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
-    value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
-  }
-
-  /* convert arrElTy* to elTy* */
-  llvm::PointerType *elTyPt0 = llvm::PointerType::get(elTy, 0);
-  value  = ctx->BitCastInst(value, elTyPt0, "gep2gen_cast3");
-
-  return value;
-}
-
-/* NVPTX:
- * this function compute correct address in local memory for load/store operations
- */
-static llvm::Value* lCorrectLocalPtr(FunctionEmitContext *ctx, llvm::Value* value)
-{
- // return value;
-  assert(value->getType()->isPointerTy());
-  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-  if (g->target->getISA() != Target::NVPTX || pt->getAddressSpace() != 3) return value;
-
-  assert(0);  /* we should never enter here */
-
-  return lAddWarpOffset(ctx, value);
-}
-
-/* NVPTX:
- * this function converts a pointer in addrspace(3 or 4) to addrspace(0) 
- */
-static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *value, const SourcePos &currentPos)
-{
-//  return value;
-  if (!value->getType()->isPointerTy() || g->target->getISA() != Target::NVPTX) return value;
-  llvm::PointerType *pt = llvm::dyn_cast<llvm::PointerType>(value->getType());
-
-  /* make sure addrspace corresponds to either local or constant memories */
-  const int addressSpace = pt->getAddressSpace();
-  if (addressSpace != 3 && addressSpace != 4) return value;
-
-  assert(0);  /* we should never enter here */
-
-  /* if array, extracts element type */
-  llvm::Type *type   = pt->getElementType();
-  llvm::Type *typeEl = type;
-  if (type->isArrayTy())
-  {
-    typeEl = type->getArrayElementType();
-    if (typeEl->isArrayTy())
-      Error(currentPos, "Currently \"nvptx\" target doesn't support array-of-array");
-  }
-
-  /* convert elTy addrspace(3)* to i64* addrspace(3)* */
-  llvm::PointerType *Int64Ptr3 = llvm::PointerType::get(LLVMTypes::Int64Type, addressSpace);
-  value = ctx->BitCastInst(value, Int64Ptr3, "cvt2gen_i64ptr");
-
-  /* convert i64* addrspace(3) to i64* */
-  llvm::Function *__cvt2gen = m->module->getFunction(
-      addressSpace == 3 ? "__cvt_loc2gen" : "__cvt_const2gen");
-  std::vector<llvm::Value *> __cvt2gen_args;
-  __cvt2gen_args.push_back(value);
-#if 0
-  value = ctx->CallInst(__cvt2gen, NULL, __cvt2gen_args, "cvt2gen_call");
-#else
-  value = llvm::CallInst::Create(__cvt2gen, __cvt2gen_args, "cvt2gen_call", ctx->GetCurrentBasicBlock());
-#endif
-
-  /* convert i64* to elTy* */
-  llvm::PointerType *typeElPtr = llvm::PointerType::get(typeEl, 0);
-  value  = ctx->BitCastInst(value, typeElPtr, "cvtLoc2Gen_i642ptr");
-
-  /* add warp offset to the pointer for local memory */
-  if (addressSpace == 3)
-    value = lAddWarpOffset(ctx, value);
-
-  return value;
-}
 
 llvm::Value *
 FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
@@ -2042,7 +1903,6 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, const char *name) {
     if (name == NULL)
         name = LLVMGetName(value, "_ptr2int");
 
-    value = lConvertToGenericPtr(this, value, currentPos); /* NVPTX : convert to addrspace(0) */
     llvm::Type *type = LLVMTypes::PointerIntType;
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, type, name, bblock);
     AddDebugPos(inst);
@@ -2076,7 +1936,6 @@ FunctionEmitContext::PtrToIntInst(llvm::Value *value, llvm::Type *toType,
         }
     }
 
-    value = lConvertToGenericPtr(this, value, currentPos); /* NVPTX : convert to addrspace(0) */
     llvm::Instruction *inst = new llvm::PtrToIntInst(value, toType, name, bblock);
     AddDebugPos(inst);
     return inst;
@@ -2383,7 +2242,6 @@ FunctionEmitContext::MakeSlicePointer(llvm::Value *ptr, llvm::Value *offset) {
 llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index,
                                        const Type *ptrRefType, const char *name) {
-    basePtr = lConvertGepToGenericPtr(this, basePtr, currentPos);
     if (basePtr == NULL || index == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2454,7 +2312,6 @@ llvm::Value *
 FunctionEmitContext::GetElementPtrInst(llvm::Value *basePtr, llvm::Value *index0,
                                        llvm::Value *index1, const Type *ptrRefType,
                                        const char *name) {
-    basePtr = lConvertGepToGenericPtr(this, basePtr, currentPos);
     if (basePtr == NULL || index0 == NULL || index1 == NULL) {
         AssertPos(currentPos, m->errorCount > 0);
         return NULL;
@@ -2657,7 +2514,6 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, const char *name) {
     if (name == NULL)
         name = LLVMGetName(ptr, "_load");
 
-    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
     llvm::LoadInst *inst = new llvm::LoadInst(ptr, name, bblock);
 
     if (g->opt.forceAlignedMemory &&
@@ -2790,7 +2646,6 @@ FunctionEmitContext::LoadInst(llvm::Value *ptr, llvm::Value *mask,
                 // it's totally unaligned.  (This shouldn't make any difference
                 // vs the proper alignment in practice.)
                 align = 1;
-            ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
             llvm::Instruction *inst = new llvm::LoadInst(ptr, name,
                                                          false /* not volatile */,
                                                          align, bblock);
@@ -3218,7 +3073,6 @@ FunctionEmitContext::StoreInst(llvm::Value *value, llvm::Value *ptr) {
         llvm::dyn_cast<llvm::PointerType>(ptr->getType());
     AssertPos(currentPos, pt != NULL);
 
-    ptr = lCorrectLocalPtr(this, ptr); /* NVPTX: correct addrspace(3) pointer before load/store */
     llvm::StoreInst *inst = new llvm::StoreInst(value, ptr, bblock);
 
     if (g->opt.forceAlignedMemory &&
@@ -3531,14 +3385,6 @@ FunctionEmitContext::CallInst(llvm::Value *func, const FunctionType *funcType,
         return NULL;
     }
 
-#if 0
-    std::vector<llvm::Value *> args = args_in;
-    /* NVPTX:
-     * Convert all pointers to addrspace(0) 
-     */
-    for (unsigned int i = 0; i < args.size(); i++)
-      args[i] = lConvertToGenericPtr(this, args[i], currentPos);
-#endif
     std::vector<llvm::Value *> argVals = args;
     // Most of the time, the mask is passed as the last argument.  this
     // isn't the case for things like intrinsics, builtins, and extern "C"

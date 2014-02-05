@@ -2032,10 +2032,7 @@ define noalias i8 * @__new_uniform_64rt(i64 %size)
 {
 entry:
 ;;  compute laneIdx = __tid_x() & (__warpsize() - 1)
-  %call = tail call i32 @__tid_x()
-  %call1 = tail call i32 @__warpsize()
-  %sub = add nsw i32 %call1, -1
-  %and = and i32 %sub, %call
+  %and = call i32 @__program_index()
 ;; if (laneIdx == 0)
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -2062,10 +2059,7 @@ if.end:                                           ; preds = %if.then, %entry
 define void @__delete_uniform_64rt(i8 * %ptr) 
 {
 entry:
-  %call = tail call i32 @__tid_x()
-  %call1 = tail call i32 @__warpsize()
-  %sub = add nsw i32 %call1, -1
-  %and = and i32 %sub, %call
+  %and = call i32 @__program_index()
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %if.then, label %if.end
 

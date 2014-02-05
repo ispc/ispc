@@ -186,11 +186,8 @@ static llvm::Value* lConvertToGenericPtr(FunctionEmitContext *ctx, llvm::Value *
     llvm::PointerType *arrElTyPt0 = llvm::PointerType::get(arrElTy, 0);
     value  = ctx->BitCastInst(value, arrElTyPt0, "gep2gen_cast2");
 
-    llvm::Function *funcTid    = m->module->getFunction("__tid_x");
-    llvm::Function *funcWarpSz = m->module->getFunction("__warpsize");
-    llvm::Value *tid    = ctx->CallInst(funcTid,    NULL, std::vector<llvm::Value*>(),  "gep2gen_tid");
-    llvm::Value *warpSz = ctx->CallInst(funcWarpSz, NULL, std::vector<llvm::Value*>(),  "gep2gen_warpSz");
-    llvm::Value *warpId = ctx->BinaryOperator(llvm::Instruction::SDiv, tid, warpSz, "gep2gen_warpId");
+    llvm::Function *func_warp_index    = m->module->getFunction("__warp_index");
+    llvm::Value *warpId = ctx->CallInst(func_warp_index, NULL, std::vector<llvm::Value*>(),  "gep2gen_warp_index");
     llvm::Value *offset = ctx->BinaryOperator(llvm::Instruction::Mul, warpId, LLVMInt32(numEl), "gep2gen_offset");
     value = llvm::GetElementPtrInst::Create(value, offset, "gep2gen_offset", ctx->GetCurrentBasicBlock());
   }
@@ -1517,10 +1514,8 @@ lUpdateVaryingCounter(int dim, int nDims, FunctionEmitContext *ctx,
     llvm::Constant* constDelta = llvm::ConstantArray::get(ArrayDelta, constDeltaList);
 
     globalDelta->setInitializer(constDelta);
-    llvm::Function *func_tid_x = m->module->getFunction("__tid_x");
-    std::vector<llvm::Value *> allocArgs;
-    llvm::Value *__tid_x = ctx->CallInst(func_tid_x, NULL, allocArgs, "laneIdxForEach");
-    llvm::Value *laneIdx = ctx->BinaryOperator(llvm::Instruction::And, __tid_x, LLVMInt32(31), "__laneidx");
+    llvm::Function *func_program_index = m->module->getFunction("__program_index");
+    llvm::Value *laneIdx = ctx->CallInst(func_program_index, NULL, std::vector<llvm::Value*>(), "foreach__programIndex");
 
     std::vector<llvm::Value*> ptr_arrayidx_indices;
     ptr_arrayidx_indices.push_back(LLVMInt32(0));
