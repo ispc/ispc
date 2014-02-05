@@ -2526,8 +2526,8 @@ static FORCEINLINE int32_t __packed_store_active(uint32_t *p, __vec8_i32 val,
     _mm512_mask_extpackstorehi_epi32((uint8_t*)p+64, 0xFF & mask, val, _MM_DOWNCONV_EPI32_NONE, _MM_HINT_NONE);
     return _mm_countbits_32(uint32_t(0xFF & mask));
 }
-static FORCEINLINE int32_t __packed_store_active2(uint32_t *ptr, __vec4_i32 val,
-                                                 __vec4_i1 mask) {
+static FORCEINLINE int32_t __packed_store_active2(uint32_t *ptr, __vec8_i32 val,
+                                                 __vec8_i1 mask) {
     return __packed_store_active(ptr, val, mask);
 }
 static FORCEINLINE int32_t __packed_load_active(int32_t *p, __vec8_i32 *val,
@@ -2538,8 +2538,8 @@ static FORCEINLINE int32_t __packed_store_active(int32_t *p, __vec8_i32 val,
                                                  __vec8_i1 mask) {
     return __packed_store_active((uint32_t *)p, val, mask);
 }
-static FORCEINLINE int32_t __packed_store_active2(int32_t *ptr, __vec4_i32 val,
-                                                 __vec4_i1 mask) {
+static FORCEINLINE int32_t __packed_store_active2(int32_t *ptr, __vec8_i32 val,
+                                                 __vec8_i1 mask) {
     return __packed_store_active(ptr, val, mask);
 }
 
