@@ -691,6 +691,6 @@ define <16 x double> @__max_varying_double(<16 x double>, <16 x double>) nounwin
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrt_double()
-rcp_double()
+rsqrtd_decl()
+rcpd_decl()
 

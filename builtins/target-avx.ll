@@ -562,6 +562,5 @@ gen_scatter(double)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reciprocals in double precision, if supported
 
-rsqrt_double()
-rcp_double()
-
+rsqrtd_decl()
+rcpd_decl()

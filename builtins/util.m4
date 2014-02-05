@@ -4532,12 +4532,12 @@ define_up_avgs()
 define_down_avgs()
 ')
 
-define(`rsqrt_double', `
+define(`rsqrtd_decl', `
 declare  double @__rsqrt_uniform_double(double)
 declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 ')
 
-define(`rcp_double', `
+define(`rcpd_decl', `
 declare  double @__rcp_uniform_double(double)
 declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
 ')
