@@ -512,7 +512,6 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createCFGSimplificationPass());
         optPM.add(llvm::createGlobalDCEPass());
     }
-#if 1
     else {
         llvm::PassRegistry *registry = llvm::PassRegistry::getPassRegistry();
         llvm::initializeCore(*registry);
@@ -527,7 +526,6 @@ Optimize(llvm::Module *module, int optLevel) {
 
         if (g->target->getISA() == Target::NVPTX)
           optPM.add(CreatePromoteLocalToPrivatePass());
-#if 1
         optPM.add(llvm::createGlobalDCEPass(), 185);
 
         // Setup to use LLVM default AliasAnalysis
@@ -701,9 +699,112 @@ Optimize(llvm::Module *module, int optLevel) {
 
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
+
+        if (g->target->getISA() == Target::NVPTX)
+        {
+          optPM.add(llvm::createGlobalDCEPass());
+
+          optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+          optPM.add(llvm::createBasicAliasAnalysisPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          // Here clang has an experimental pass SROAPass instead of
+          // ScalarReplAggregatesPass. We should add it in the future.
+          optPM.add(llvm::createScalarReplAggregatesPass());
+          optPM.add(llvm::createEarlyCSEPass());
+          optPM.add(llvm::createLowerExpectIntrinsicPass());
+          optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+          optPM.add(llvm::createBasicAliasAnalysisPass());
+
+          // Early optimizations to try to reduce the total amount of code to
+          // work with if we can
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createConstantPropagationPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createPromoteMemoryToRegisterPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+
+
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+
+          // On to more serious optimizations
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createPromoteMemoryToRegisterPass());
+          optPM.add(llvm::createGlobalOptimizerPass());
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createIPConstantPropagationPass());
+
+          optPM.add(llvm::createDeadArgEliminationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createPruneEHPass());
+          optPM.add(llvm::createFunctionAttrsPass());
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createConstantPropagationPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createArgumentPromotionPass());
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+          // Starting from 3.4 this functionality was moved to
+          // InstructionCombiningPass. See r184459 for details.
+          optPM.add(llvm::createSimplifyLibCallsPass());
 #endif
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createJumpThreadingPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createTailCallEliminationPass());
+
+          optPM.add(llvm::createInstructionCombiningPass());
+
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createConstantPropagationPass());
+
+          optPM.add(llvm::createInstructionCombiningPass());
+
+          optPM.add(llvm::createIPSCCPPass());
+          optPM.add(llvm::createDeadArgEliminationPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createArgumentPromotionPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createLoopRotatePass());
+          optPM.add(llvm::createLICMPass());
+//          optPM.add(llvm::createLoopUnswitchPass(false));
+#if 1
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createIndVarSimplifyPass());
+          optPM.add(llvm::createLoopIdiomPass());
+          optPM.add(llvm::createLoopDeletionPass());
+          optPM.add(llvm::createLoopUnrollPass());
+          optPM.add(llvm::createGVNPass());
+          optPM.add(llvm::createMemCpyOptPass());
+          optPM.add(llvm::createSCCPPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createJumpThreadingPass());
+          optPM.add(llvm::createCorrelatedValuePropagationPass());
+          optPM.add(llvm::createDeadStoreEliminationPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createStripDeadPrototypesPass());
+          optPM.add(llvm::createGlobalDCEPass());
+          optPM.add(llvm::createConstantMergePass());
+#endif
+        }
     }
-#endif
 
     // Finish up by making sure we didn't mess anything up in the IR along
     // the way.
