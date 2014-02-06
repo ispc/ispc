@@ -568,6 +568,19 @@ IfStmt::EmitCode(FunctionEmitContext *ctx) const {
     if (testValue == NULL)
         return;
 
+
+#if 0
+    if (!isUniform && g->target->getISA() == Target::NVPTX)
+    {
+      /* With "nvptx" target, SIMT hardware takes care of non-uniform 
+       * control flow. We trick ISPC to generate uniform control flow.
+       */
+      testValue = ctx->ExtractInst(testValue, 0);
+      isUniform = true;
+    }
+#endif
+
+
     if (isUniform) {
         ctx->StartUniformIf();
         if (doAllCheck)
@@ -849,7 +862,11 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 
     // Do any of the program instances want to run the 'true'
     // block?  If not, jump ahead to bNext.
+#if 1
     llvm::Value *maskAnyTrueQ = ctx->Any(ctx->GetFullMask());
+#else
+    llvm::Value *maskAnyTrueQ = ctx->ExtractInst(ctx->GetFullMask(),0);
+#endif
     ctx->BranchInst(bRunTrue, bNext, maskAnyTrueQ);
 
     // Emit statements for true
@@ -866,7 +883,11 @@ IfStmt::emitMaskMixed(FunctionEmitContext *ctx, llvm::Value *oldMask,
 
     // Similarly, check to see if any of the instances want to
     // run the 'false' block...
+#if 1
     llvm::Value *maskAnyFalseQ = ctx->Any(ctx->GetFullMask());
+#else
+    llvm::Value *maskAnyFalseQ = ctx->ExtractInst(ctx->GetFullMask(),0);
+#endif
     ctx->BranchInst(bRunFalse, bDone, maskAnyFalseQ);
 
     // Emit code for false
