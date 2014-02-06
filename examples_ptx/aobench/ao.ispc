@@ -89,6 +89,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, const uniform Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
+#if 0
     cif (abs(v) < 1.0e-17) 
         return;
     else {
@@ -101,6 +102,17 @@ ray_plane_intersect(Isect &isect, Ray &ray, const uniform Plane &plane) {
             isect.n = plane.n;
         }
     }
+#else
+    cif (abs(v) <= 1.0e-17)
+      return;
+    float t = -(dot(ray.org, plane.n) + d) / v;
+    cif ((t > 0.0) && (t < isect.t)) {
+      isect.t = t;
+      isect.hit = 1;
+      isect.p = ray.org + ray.dir * t;
+      isect.n = plane.n;
+    }
+#endif
 }
 
 
@@ -112,6 +124,7 @@ ray_sphere_intersect(Isect &isect, Ray &ray, const uniform Sphere &sphere) {
     float C = dot(rs, rs) - sphere.radius * sphere.radius;
     float D = B * B - C;
 
+#if 0
     cif (D > 0.) {
         float t = -B - sqrt(D);
 
@@ -123,6 +136,19 @@ ray_sphere_intersect(Isect &isect, Ray &ray, const uniform Sphere &sphere) {
             vnormalize(isect.n);
         }
     }
+#else
+    cif (D <=0.0f) 
+      return;
+
+    float t = -B - sqrt(D);
+    cif ((t > 0.0) && (t < isect.t)) {
+      isect.t = t;
+      isect.hit = 1;
+      isect.p = ray.org + t * ray.dir;
+      isect.n = isect.p - sphere.center;
+      vnormalize(isect.n);
+    }
+#endif
 }
 
 
@@ -255,11 +281,22 @@ static  inline void ao_tiles(
 
         // Note use of 'coherent' if statement; the set of rays we
         // trace will often all hit or all miss the scene
+      #if 0
         if (isect.hit) {
           ret = ambient_occlusion(isect, plane, spheres, rngstate);
           ret *= invSamples * invSamples;
           res += ret;
         }
+#else
+         if(any(isect.hit))
+         {
+          ret = isect.hit*ambient_occlusion(isect, plane, spheres, rngstate);
+          ret *= invSamples * invSamples;
+          res += ret;
+         }
+
+
+#endif
       }
 
       image[offset  ] = res;

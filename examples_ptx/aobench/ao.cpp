@@ -135,6 +135,7 @@ int main(int argc, char **argv)
     // Run the ispc path, test_iterations times, and report the minimum
     // time for any of them.
     //
+#define _CUDA_
 #ifndef _CUDA_
     double minTimeISPC = 1e30;
     for (unsigned int i = 0; i < test_iterations[0]; i++) {

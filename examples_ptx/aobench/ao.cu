@@ -189,7 +189,8 @@ ray_plane_intersect(Isect &isect,const  Ray &ray, const  Plane &plane) {
   float d = -dot(plane.p, plane.n);
   float v = dot(ray.dir, plane.n);
 
-  if (abs(v) < 1.0e-17) 
+#if 0
+  if (abs(v) < 1.0f-17) 
     return;
   else {
     float t = -(dot(ray.org, plane.n) + d) / v;
@@ -201,6 +202,17 @@ ray_plane_intersect(Isect &isect,const  Ray &ray, const  Plane &plane) {
       isect.n = plane.n;
     }
   }
+#else
+    if (abs(v) <= 1.0e-17)
+      return;
+    float t = -(dot(ray.org, plane.n) + d) / v;
+    if ((t > 0.0) && (t < isect.t)) {
+      isect.t = t;
+      isect.hit = 1;
+      isect.p = ray.org + ray.dir * t;
+      isect.n = plane.n;
+    }
+#endif
 }
 
 
@@ -213,6 +225,7 @@ ray_sphere_intersect(Isect &isect,const  Ray &ray, const Sphere &sphere) {
   float C = dot(rs, rs) - sphere.radius * sphere.radius;
   float D = B * B - C;
 
+#if 0
   if (D > 0.) {
     float t = -B - sqrt(D);
 
@@ -224,6 +237,21 @@ ray_sphere_intersect(Isect &isect,const  Ray &ray, const Sphere &sphere) {
       vnormalize(isect.n);
     }
   }
+#else
+    if (D <= 0.0f) 
+      return;
+
+    float t = -B - sqrt(D);
+
+    if ((t > 0.0) && (t < isect.t)) {
+      isect.t = t;
+      isect.hit = 1;
+      isect.p = ray.org +  ray.dir * t;
+      isect.n = isect.p - sphere.center;
+      vnormalize(isect.n);
+    }
+#endif
+
 }
 
 
@@ -231,16 +259,16 @@ __device__
 static inline void
 orthoBasis(vec basis[3], vec n) {
   basis[2] = n;
-  basis[1].x = 0.0; basis[1].y = 0.0; basis[1].z = 0.0;
+  basis[1].x = 0.0f; basis[1].y = 0.0f; basis[1].z = 0.0f;
 
-  if ((n.x < 0.6) && (n.x > -0.6)) {
-    basis[1].x = 1.0;
-  } else if ((n.y < 0.6) && (n.y > -0.6)) {
-    basis[1].y = 1.0;
-  } else if ((n.z < 0.6) && (n.z > -0.6)) {
-    basis[1].z = 1.0;
+  if ((n.x < 0.6f) && (n.x > -0.6f)) {
+    basis[1].x = 1.0f;
+  } else if ((n.y < 0.6f) && (n.y > -0.6f)) {
+    basis[1].y = 1.0f;
+  } else if ((n.z < 0.6f) && (n.z > -0.6f)) {
+    basis[1].z = 1.0f;
   } else {
-    basis[1].x = 1.0;
+    basis[1].x = 1.0f;
   }
 
   basis[0] = vcross(basis[1], basis[2]);
@@ -258,7 +286,7 @@ ambient_occlusion(Isect &isect,  const Plane &plane, const  Sphere spheres[3],
   float eps = 0.0001f;
   vec p; //, n;
   vec basis[3];
-  float occlusion = 0.0;
+  float occlusion = 0.0f;
 
   p = isect.p + isect.n * eps;
 
@@ -275,7 +303,7 @@ ambient_occlusion(Isect &isect,  const Plane &plane, const  Sphere spheres[3],
       float phi   = 2.0f * M_PI * frandom(&rngstate);
       float x = cos(phi) * theta;
       float y = sin(phi) * theta;
-      float z = sqrt(1.0 - theta * theta);
+      float z = sqrtf(1.0f - theta * theta);
 
       // local . global
       float rx = x * basis[0].x + y * basis[1].x + z * basis[2].x;
@@ -287,14 +315,14 @@ ambient_occlusion(Isect &isect,  const Plane &plane, const  Sphere spheres[3],
       ray.dir.y = ry;
       ray.dir.z = rz;
 
-      occIsect.t   = 1.0e+17;
+      occIsect.t   = 1.0f+17;
       occIsect.hit = 0;
 
       for ( int snum = 0; snum < 3; ++snum)
         ray_sphere_intersect(occIsect, ray, spheres[snum]); 
       ray_plane_intersect (occIsect, ray, plane); 
 
-      if (occIsect.hit) occlusion += 1.0;
+      if (occIsect.hit) occlusion += 1.0f;
     }
   }
 
@@ -360,8 +388,8 @@ static inline void ao_tiles(
 
           // Note use of 'coherent' if statement; the set of rays we
           // trace will often all hit or all miss the scene
-          if (isect.hit) {
-            ret = ambient_occlusion(isect, plane, spheres, rngstate);
+          if (any(isect.hit)) {
+            ret = isect.hit*ambient_occlusion(isect, plane, spheres, rngstate);
             ret *= invSamples * invSamples;
             res += ret;
           }

@@ -3,6 +3,7 @@ ISPC_SRC=ao.ispc
 CU_SRC=ao.cu
 CXX_SRC=ao.cpp  ao_serial.cpp
 PTXCC_REGMAX=64
+#ISPC_FLAGS= --opt=disable-uniform-control-flow
 
 LLVM_GPU=1
 NVVM_GPU=1
