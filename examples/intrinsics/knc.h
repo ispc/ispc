@@ -95,6 +95,7 @@ typedef struct PRE_ALIGN(64) __vec16_f {
 typedef struct PRE_ALIGN(64) __vec16_d {
     FORCEINLINE __vec16_d() : v1(_mm512_undefined_pd()), v2(_mm512_undefined_pd()) {}
     FORCEINLINE __vec16_d(const __vec16_d &o) : v1(o.v1), v2(o.v2) {}
+    FORCEINLINE __vec16_d(const __m512d _v1, const __m512d _v2) : v1(_v1), v2(_v2) {}
     FORCEINLINE __vec16_d& operator =(const __vec16_d &o) { v1=o.v1; v2=o.v2; return *this; }
     FORCEINLINE __vec16_d(double v00, double v01, double v02, double v03, 
                           double v04, double v05, double v06, double v07,
@@ -1502,18 +1503,6 @@ static FORCEINLINE double __rsqrt_uniform_double(double v)
   return 1.0/v;
 }
 
-
-static FORCEINLINE __vec16_f __exp_varying_float(__vec16_f v) {
-  return _mm512_exp_ps(v);
-}
-
-static FORCEINLINE __vec16_f __log_varying_float(__vec16_f v) {
-  return _mm512_log_ps(v);
-}
-
-static FORCEINLINE __vec16_f __pow_varying_float(__vec16_f a, __vec16_f b) {
-  return _mm512_pow_ps(a, b);
-}
 
 ///////////////////////////////////////////////////////////////////////////
 // bit ops
