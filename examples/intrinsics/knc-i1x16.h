@@ -1142,28 +1142,6 @@ template <> static FORCEINLINE void __store<64>(__vec16_f *p, __vec16_f v)
 }
 #endif
 
-/******** math ******/
-
-/*** float ***/
-static FORCEINLINE float __exp_uniform_float(float v) {    return expf(v);}
-static FORCEINLINE __vec16_f __exp_varying_float(__vec16_f v) { return _mm512_exp_ps(v); }
-
-static FORCEINLINE float __log_uniform_float(float v) {    return logf(v);}
-static FORCEINLINE __vec16_f __log_varying_float(__vec16_f v) { return _mm512_log_ps(v); }
-
-static FORCEINLINE float __pow_uniform_float(float a, float b) {    return powf(a, b);}
-static FORCEINLINE __vec16_f __pow_varying_float(__vec16_f a, __vec16_f b) { return _mm512_pow_ps(a,b); }
-
-/*** double ***/
-static FORCEINLINE double __exp_uniform_double(double v) {    return exp(v);}
-static FORCEINLINE __vec16_d __exp_varying_double(__vec16_d v) { return __vec16_d(_mm512_exp_pd(v.v1),_mm512_exp_pd(v.v2)); }
-
-static FORCEINLINE double __log_uniform_double(double v) {    return log(v);}
-static FORCEINLINE __vec16_d __log_varying_double(__vec16_d v) { return __vec16_d(_mm512_log_pd(v.v1),_mm512_log_pd(v.v2)); }
-
-static FORCEINLINE double __pow_uniform_double(double a, double b) {    return pow(a,b);}
-static FORCEINLINE __vec16_d __pow_varying_double(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_pow_pd(a.v1,b.v1),_mm512_pow_pd(a.v2,b.v2)); }
-
 /******** bitcast ******/
 
 static FORCEINLINE int __intbits(float v) {
@@ -2805,6 +2783,40 @@ static FORCEINLINE uint64_t __clock() {
 }
 
 #endif // !WIN32
+
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals
+
+
+#define TRANSCENDENTALS(op) \
+static FORCEINLINE __vec16_f __##op##_varying_float(__vec16_f v) { return _mm512_##op##_ps(v); } \
+static FORCEINLINE float __##op##_uniform_float(float v) { return op##f(v); } \
+static FORCEINLINE __vec16_d __##op##_varying_double(__vec16_d v) { return __vec16_d(_mm512_##op##_pd(v.v1),_mm512_##op##_pd(v.v2)); } \
+static FORCEINLINE double __##op##_uniform_double(double a) { return op(a); }
+
+TRANSCENDENTALS(log)
+TRANSCENDENTALS(exp)
+
+static FORCEINLINE float __pow_uniform_float(float a, float b) {    return powf(a, b);}
+static FORCEINLINE __vec16_f __pow_varying_float(__vec16_f a, __vec16_f b) { return _mm512_pow_ps(a,b); }
+static FORCEINLINE double __pow_uniform_double(double a, double b) {    return pow(a,b);}
+static FORCEINLINE __vec16_d __pow_varying_double(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_pow_pd(a.v1,b.v1),_mm512_pow_pd(a.v2,b.v2)); }
+
+///////////////////////////////////////////////////////////////////////////
+// Trigonometry
+
+TRANSCENDENTALS(sin)
+TRANSCENDENTALS(asin)
+TRANSCENDENTALS(cos)
+TRANSCENDENTALS(acos)
+TRANSCENDENTALS(tan)
+TRANSCENDENTALS(atan)
+
+static FORCEINLINE float __atan2_uniform_float(float a, float b) {    return atan2f(a, b);}
+static FORCEINLINE __vec16_f __atan2_varying_float(__vec16_f a, __vec16_f b) { return _mm512_atan2_ps(a,b); }
+static FORCEINLINE double __atan2_uniform_double(double a, double b) {    return atan2(a,b);}
+static FORCEINLINE __vec16_d __atan2_varying_double(__vec16_d a, __vec16_d b) { return __vec16_d(_mm512_atan2_pd(a.v1,b.v1),_mm512_atan2_pd(a.v2,b.v2)); }
 
 #undef FORCEINLINE
 #undef PRE_ALIGN
