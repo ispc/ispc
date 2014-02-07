@@ -2106,13 +2106,6 @@ declare void
 @__pseudo_scatter_base_offsets64_double(i8 * nocapture, i32, <WIDTH x i64>,
                                         <WIDTH x double>, <WIDTH x MASK>) nounwind
 
-declare float @__log_uniform_float(float) nounwind readnone
-declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
-declare float @__exp_uniform_float(float) nounwind readnone
-declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
-declare float @__pow_uniform_float(float, float) nounwind readnone
-declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare void @__use8(<WIDTH x i8>)
@@ -4540,4 +4533,59 @@ declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
 define(`rcpd_decl', `
 declare  double @__rcp_uniform_double(double)
 declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
+')
+
+
+define(`transcendetals_decl',`
+    declare float @__log_uniform_float(float) nounwind readnone
+    declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
+    declare float @__exp_uniform_float(float) nounwind readnone
+    declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
+    declare float @__pow_uniform_float(float, float) nounwind readnone
+    declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+
+    declare double @__log_uniform_double(double) nounwind readnone
+    declare <WIDTH x double> @__log_varying_double(<WIDTH x double>) nounwind readnone
+    declare double @__exp_uniform_double(double) nounwind readnone
+    declare <WIDTH x double> @__exp_varying_double(<WIDTH x double>) nounwind readnone
+    declare double @__pow_uniform_double(double, double) nounwind readnone
+    declare <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+')
+
+define(`trigonometry_decl',`
+    declare <WIDTH x float> @__sin_varying_float(<WIDTH x float>) nounwind readnone
+    declare <WIDTH x float> @__asin_varying_float(<WIDTH x float>) nounwind readnone
+    declare <WIDTH x float> @__cos_varying_float(<WIDTH x float>) nounwind readnone
+    declare <WIDTH x float> @__acos_varying_float(<WIDTH x float>) nounwind readnone
+    declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind readnone
+    declare <WIDTH x float> @__tan_varying_float(<WIDTH x float>) nounwind readnone
+    declare <WIDTH x float> @__atan_varying_float(<WIDTH x float>) nounwind readnone
+    declare <WIDTH x float> @__atan2_varying_float(<WIDTH x float>,<WIDTH x float>) nounwind readnone
+
+    declare float @__sin_uniform_float(float) nounwind readnone
+    declare float @__asin_uniform_float(float) nounwind readnone
+    declare float @__cos_uniform_float(float) nounwind readnone
+    declare float @__acos_uniform_float(float) nounwind readnone
+    declare void @__sincos_uniform_float(float, float*, float*) nounwind readnone
+    declare float @__tan_uniform_float(float) nounwind readnone
+    declare float @__atan_uniform_float(float) nounwind readnone
+    declare float @__atan2_uniform_float(float,float) nounwind readnone
+
+    declare <WIDTH x double> @__sin_varying_double(<WIDTH x double>) nounwind readnone
+    declare <WIDTH x double> @__asin_varying_double(<WIDTH x double>) nounwind readnone
+    declare <WIDTH x double> @__cos_varying_double(<WIDTH x double>) nounwind readnone
+    declare <WIDTH x double> @__acos_varying_double(<WIDTH x double>) nounwind readnone
+    declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind readnone
+    declare <WIDTH x double> @__tan_varying_double(<WIDTH x double>) nounwind readnone
+    declare <WIDTH x double> @__atan_varying_double(<WIDTH x double>) nounwind readnone
+    declare <WIDTH x double> @__atan2_varying_double(<WIDTH x double>,<WIDTH x double>) nounwind readnone
+
+    declare double @__sin_uniform_double(double) nounwind readnone
+    declare double @__asin_uniform_double(double) nounwind readnone
+    declare double @__cos_uniform_double(double) nounwind readnone
+    declare double @__acos_uniform_double(double) nounwind readnone
+    declare void @__sincos_uniform_double(double, double*, double*) nounwind readnone
+    declare double @__tan_uniform_double(double) nounwind readnone
+    declare double @__atan_uniform_double(double) nounwind readnone
+    declare double @__atan2_uniform_double(double,double) nounwind readnone
 ')

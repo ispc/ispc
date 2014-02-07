@@ -597,3 +597,6 @@ define_avgs()
 
 rsqrtd_decl()
 rcpd_decl()
+
+transcendetals_decl()
+trigonometry_decl()

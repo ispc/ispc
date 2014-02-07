@@ -491,3 +491,6 @@ define <4 x i16> @__avg_down_int16(<4 x i16>, <4 x i16>) nounwind readnone {
 
 rsqrtd_decl()
 rcpd_decl()
+
+transcendetals_decl()
+trigonometry_decl()
