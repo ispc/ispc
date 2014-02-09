@@ -50,11 +50,11 @@ define(`MASK_HIGH_BIT_ON',
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; vector convertation utilities
-;; convert 1-wide vector into 8-wide vector
+;; convert vector of one width into vector of other width
 ;;
 ;; $1: vector element type
-;; $2: 1-wide vector
-;; $3: 8-wide vector
+;; $2: vector of the first width
+;; $3: vector of the second width
 
 
 define(`convert1to8', `
@@ -128,13 +128,6 @@ define(`convert16to32', `
               i32 undef, i32 undef, i32 undef, i32 undef,
               i32 undef, i32 undef, i32 undef, i32 undef>
 ')
-
-;; convert 4-wide vector into 8-wide vector
-;;
-;; $1: vector element type
-;; $2: 8-wide vector
-;; $3: 1-wide vector
-
 
 define(`convert8to1', `
   $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
@@ -212,7 +205,6 @@ ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>',
 ;; $1: {add,sub} (used in constructing function names)
                         
 define(`saturation_arithmetic_novec_universal', `
-declare <16 x i8> @llvm.x86.sse2.p$1s.b(<16 x i8>, <16 x i8>) nounwind readnone
 define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
   %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
   %v1_i16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
@@ -225,7 +217,6 @@ define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
   ret <WIDTH x i8> %ret
 }
 
-declare <8 x i16> @llvm.x86.sse2.p$1s.w(<8 x i16>, <8 x i16>) nounwind readnone
 define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
   %v0_i32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
   %v1_i32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
@@ -238,7 +229,6 @@ define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
   ret <WIDTH x i16> %ret
 }
 
-declare <16 x i8> @llvm.x86.sse2.p$1us.b(<16 x i8>, <16 x i8>) nounwind readnone
 define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
   %v0_i16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
   %v1_i16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
@@ -251,7 +241,6 @@ define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
   ret <WIDTH x i8> %ret
 }
 
-declare <8 x i16> @llvm.x86.sse2.p$1us.w(<8 x i16>, <8 x i16>) nounwind readnone
 define <WIDTH x i16> @__p$1us_vi16(<WIDTH x i16>, <WIDTH x i16>) {
   %v0_i32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
   %v1_i32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
