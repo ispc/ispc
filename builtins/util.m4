@@ -177,7 +177,8 @@ define(`convert32to16', `
 define(`saturation_arithmetic',
 `ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()', 
         WIDTH,  `8', `saturation_arithmetic_vec8()',
-        WIDTH, `16', `saturation_arithmetic_vec16()')')
+        WIDTH, `16', `saturation_arithmetic_vec16() ',
+                     `ERROR_unappropriate_width')')
 
 ;; create vector constant. Used by saturation_arithmetic_novec_universal below.
 
