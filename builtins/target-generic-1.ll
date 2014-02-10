@@ -10,6 +10,8 @@ packed_load_and_store()
 scans()
 int64minmax()
 aossoa()
+saturation_arithmetic()
+saturation_arithmetic_novec()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store

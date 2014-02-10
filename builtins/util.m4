@@ -49,6 +49,412 @@ define(`MASK_HIGH_BIT_ON',
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; vector convertation utilities
+;; convert vector of one width into vector of other width
+;;
+;; $1: vector element type
+;; $2: vector of the first width
+;; $3: vector of the second width
+
+
+define(`convert1to8', `
+  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
+  <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+             i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+
+define(`convert1to16', `
+  $3 = shufflevector <1 x $1> $2, <1 x $1> undef,
+  <16 x i32> <i32 0, i32 undef, i32 undef, i32 undef, 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert4to8', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <8 x i32> <i32 0, i32 1, i32 2, i32 3, 
+             i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert4to16', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <16 x i32> <i32 0, i32 1, i32 2, i32 3, 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert8to16', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+  <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert4to32', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <32 x i32> <i32 0, i32 1, i32 2, i32 3, 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert8to32', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <32 x i32> <i32 0, i32 1, i32 2, i32 3, 
+              i32 4, i32 5, i32 6, i32 7,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert16to32', `
+  $3 = shufflevector <4 x $1> $2, <4 x $1> undef,
+  <32 x i32> <i32  0, i32 1,  i32  2, i32  3, 
+              i32  4, i32 5,  i32  6, i32  7,
+              i32  8, i32 9,  i32 10, i32 11,
+              i32 12, i32 13, i32 14, i32 15 
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef,
+              i32 undef, i32 undef, i32 undef, i32 undef>
+')
+
+define(`convert8to1', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+    <1 x i32> <i32 0>
+')
+
+
+define(`convert16to1', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+    <1 x i32> <i32 0>
+')
+
+define(`convert8to4', `
+  $3 = shufflevector <8 x $1> $2, <8 x $1> undef,
+    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+
+define(`convert16to4', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+define(`convert16to8', `
+  $3 = shufflevector <16 x $1> $2, <16 x $1> undef,
+  <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+')
+
+define(`convert32to4', `
+  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+    <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+define(`convert32to8', `
+  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+    <8 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+define(`convert32to16', `
+  $3 = shufflevector <32 x $1> $2, <32 x $1> undef,
+    <16 x i32> <i32 0, i32 1, i32 2, i32 3>
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;saturation arithmetic
+ 
+define(`saturation_arithmetic',
+`ifelse(WIDTH,  `4', `saturation_arithmetic_vec4()', 
+        WIDTH,  `8', `saturation_arithmetic_vec8()',
+        WIDTH, `16', `saturation_arithmetic_vec16()')')
+
+;; create vector constant. Used by saturation_arithmetic_novec_universal below.
+
+define(`const_vector', `
+ifelse(WIDTH,  `4', `<$1 $2, $1 $2, $1 $2, $1 $2>', 
+       WIDTH,  `8', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `16', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `32', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                      $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+       WIDTH, `64', `<$1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2,
+                       $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2, $1 $2>',
+                        `<$1 $2>')')
+                        
+;; utility function used by saturation_arithmetic_novec below.  This shouldn't be called by
+;; target .ll files directly.
+;; $1: {add,sub} (used in constructing function names)
+                        
+define(`saturation_arithmetic_novec_universal', `
+define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp sgt <WIDTH x i16> %res, const_vector(i16, 127)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 127), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, -128)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, -128), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+
+define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp sgt <WIDTH x i32> %res, const_vector(i32, 32767)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 32767), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, -32768)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, -32768), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+
+define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp ugt <WIDTH x i16> %res, const_vector(i16, 255)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 255), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, 0)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, 0), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+
+define <WIDTH x i16> @__p$1us_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp ugt <WIDTH x i32> %res, const_vector(i32, 65535)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 65535), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, 0)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, 0), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+')
+
+;; implementation for targets which doesn't have h/w instructions
+
+define(`saturation_arithmetic_novec', `
+saturation_arithmetic_novec_universal(sub)
+saturation_arithmetic_novec_universal(add)
+')
+
+;;4-wide vector saturation arithmetic
+
+define(`saturation_arithmetic_vec4', `
+declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i8> @__padds_vi8(<4 x i8>, <4 x i8>) {
+  convert4to16(i8, %0, %v0)
+  convert4to16(i8, %1, %v1)    
+  %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to4(i8, %r16, %r)
+  ret <4 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <4 x i16> @__padds_vi16(<4 x i16>, <4 x i16>) {
+  convert4to8(i16, %0, %v0)
+  convert4to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to4(i16, %r16, %r)
+  ret <4 x i16> %r
+}
+
+declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i8> @__paddus_vi8(<4 x i8>, <4 x i8>) {
+  convert4to16(i8, %0, %v0)
+  convert4to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to4(i8, %r16, %r)
+  ret <4 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <4 x i16> @__paddus_vi16(<4 x i16>, <4 x i16>) {
+  convert4to8(i16, %0, %v0)
+  convert4to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to4(i16, %r16, %r)  
+  ret <4 x i16> %r
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i8> @__psubs_vi8(<4 x i8>, <4 x i8>) {
+  convert4to16(i8, %0, %v0)
+  convert4to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to4(i8, %r16, %r)
+  ret <4 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <4 x i16> @__psubs_vi16(<4 x i16>, <4 x i16>) {
+  convert4to8(i16, %0, %v0)
+  convert4to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to4(i16, %r16, %r)
+  ret <4 x i16> %r
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <4 x i8> @__psubus_vi8(<4 x i8>, <4 x i8>) {
+  convert4to16(i8, %0, %v0)
+  convert4to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to4(i8, %r16, %r)
+  ret <4 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <4 x i16> @__psubus_vi16(<4 x i16>, <4 x i16>) {
+  convert4to8(i16, %0, %v0)
+  convert4to8(i16, %1, %v1)
+  %r16 = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %v0, <8 x i16> %v1)
+  convert8to4(i16, %r16, %r)
+  ret <4 x i16> %r
+}
+')
+
+;;8-wide vector saturation arithmetic
+
+define(`saturation_arithmetic_vec8', `
+declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i8> @__padds_vi8(<8 x i8>, <8 x i8>) {
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to8(i8, %r16, %r)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__padds_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
+}
+
+declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i8> @__paddus_vi8(<8 x i8>, <8 x i8>) {
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to8(i8, %r16, %r)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__paddus_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i8> @__psubs_vi8(<8 x i8>, <8 x i8>) {
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to8(i8, %r16, %r)
+  ret <8 x i8> %r
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__psubs_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <8 x i8> @__psubus_vi8(<8 x i8>, <8 x i8>) {
+  convert8to16(i8, %0, %v0)
+  convert8to16(i8, %1, %v1)
+  %r16 = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %v0, <16 x i8> %v1)
+  convert16to8(i8, %r16, %r)
+  ret <8 x i8> %r    
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <8 x i16> @__psubus_vi16(<8 x i16> %a0, <8 x i16> %a1) {
+  %res = call <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16> %a0, <8 x i16> %a1)
+  ret <8 x i16> %res
+}
+')
+
+;;16-wide vector saturation arithmetic
+
+define(`saturation_arithmetic_vec16', `
+declare <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <16 x i8> @__padds_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.padds.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.sse2.padds.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <16 x i16> @__padds_vi16(<16 x i16> %a0, <16 x i16> %a1) {
+  binary8to16(ret, i16, @llvm.x86.sse2.padds.w, %a0, %a1)
+  ret <16 x i16> %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <16 x i8> @__paddus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.paddus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.sse2.paddus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <16 x i16> @__paddus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
+  binary8to16(ret, i16, @llvm.x86.sse2.paddus.w, %a0, %a1)  
+  ret <16 x i16> %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <16 x i8> @__psubs_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.psubs.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubs.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <16 x i16> @__psubs_vi16(<16 x i16> %a0, <16 x i16> %a1) {
+  binary8to16(ret, i16, @llvm.x86.sse2.psubs.w, %a0, %a1)
+  ret <16 x i16> %ret
+}
+
+declare <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8>, <16 x i8>) nounwind readnone
+define <16 x i8> @__psubus_vi8(<16 x i8> %a0, <16 x i8> %a1) {
+  %res = call <16 x i8> @llvm.x86.sse2.psubus.b(<16 x i8> %a0, <16 x i8> %a1) ; <<16 x i8>> [#uses=1]
+  ret <16 x i8> %res
+}
+
+declare <8 x i16> @llvm.x86.sse2.psubus.w(<8 x i16>, <8 x i16>) nounwind readnone
+define <16 x i16> @__psubus_vi16(<16 x i16> %a0, <16 x i16> %a1) {
+  binary8to16(ret, i16, @llvm.x86.sse2.psubus.w, %a0, %a1)  
+  ret <16 x i16> %ret
+}
+')
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; vector deconstruction utilities
 ;; split 8-wide vector into 2 4-wide vectors
 ;;
