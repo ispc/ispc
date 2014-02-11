@@ -13,7 +13,7 @@ static double double4(uniform double a, uniform double b, uniform double c,
 export uniform int width() { return programCount; }
 
 
-bool ok(double x, double ref) { return (abs(x - ref) < 1e-16) || abs((x-ref)/ref) < 1e-15; }
+bool ok(double x, double ref) { return (abs(x - ref) < 1d-15) || abs((x-ref)/ref) < 1d-14; }
 
 export void f_v(uniform float RET[]) {
     double v = double4((1.000000000000000d0),(-1.000000000000000d0),(-1.5707963705062866d0),(1.5707963705062866d0));

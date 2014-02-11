@@ -14,7 +14,7 @@ export uniform int width() { return programCount; }
 
 
 bool ok(double x, double ref) { 
-    bool r = (abs(x - ref) < 1d-15) || abs((x-ref)/ref) < 1d-15;
+    bool r = (abs(x - ref) < 1d-14) || abs((x-ref)/ref) < 1d-14;
     if (any(r == false))
         print("mismatch got %, expected %\n", x, ref);
     return r;
