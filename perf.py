@@ -533,7 +533,7 @@ def perf(options1, args):
     A = print_answer(answer, target_number)
     if options.ref != "":
         print_debug("\n\nREFERENCE COMPILER:\n", s, perf_log)
-        B = print_answer(answer_ref)
+        B = print_answer(answer_ref, target_number)
         # print perf report
         compare(A,B)
 
