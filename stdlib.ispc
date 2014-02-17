@@ -4411,6 +4411,42 @@ static inline varying int16 saturating_add(varying int16 a, varying int16 b) {
     return __padds_vi16(a, b);
 }
 
+static inline uniform int32 saturating_add(uniform int32 a, uniform int32 b) {
+    uniform unsigned int32 a_unsig = a, b_unsig = b;
+    uniform unsigned int32 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 31) + INT32_MAX;
+    if ((uniform int32) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int32 saturating_add(varying int32 a, varying int32 b) {
+    varying unsigned int32 a_unsig = a, b_unsig = b;
+    varying unsigned int32 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 31) + INT32_MAX;
+    if ((varying int32) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline uniform int64 saturating_add(uniform int64 a, uniform int64 b) {
+    uniform unsigned int64 a_unsig = a, b_unsig = b;
+    uniform unsigned int64 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 63) + INT64_MAX;
+    if ((uniform int64) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int64 saturating_add(varying int64 a, varying int64 b) {
+    varying unsigned int64 a_unsig = a, b_unsig = b;
+    varying unsigned int64 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 63) + INT64_MAX;
+    if ((varying int64) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
 static inline uniform unsigned int8 saturating_add(uniform unsigned int8 a, 
                                                    uniform unsigned int8 b) {
     uniform unsigned int8 result = a + b;
@@ -4433,6 +4469,34 @@ static inline uniform unsigned int16 saturating_add(uniform unsigned int16 a,
 static inline varying unsigned int16 saturating_add(varying unsigned int16 a, 
                                                     varying unsigned int16 b) {
     return __paddus_vi16(a, b);
+}
+
+static inline uniform unsigned int32 saturating_add(uniform unsigned int32 a, 
+                                                    uniform unsigned int32 b) {
+    uniform unsigned int32 result = a + b;
+    result |= (-(uniform int32)(result < a));
+    return result;
+}
+
+static inline varying unsigned int32 saturating_add(varying unsigned int32 a, 
+                                                    varying unsigned int32 b) {
+    varying unsigned int32 result = a + b;
+    result |= (-(varying int32)(result < a));
+    return result;
+}
+
+static inline uniform unsigned int64 saturating_add(uniform unsigned int64 a, 
+                                                    uniform unsigned int64 b) {
+    uniform unsigned int64 result = a + b;
+    result |= (-(uniform int64)(result < a));
+    return result;
+}
+
+static inline varying unsigned int64 saturating_add(varying unsigned int64 a, 
+                                                    varying unsigned int64 b) {
+    varying unsigned int64 result = a + b;
+    result |= (-(varying int64)(result < a));
+    return result;
 }
 
 static inline uniform int8 saturating_sub(uniform int8 a, uniform int8 b) {
@@ -4461,6 +4525,42 @@ static inline varying int16 saturating_sub(varying int16 a, varying int16 b) {
     return __psubs_vi16(a, b);
 }
 
+static inline uniform int32 saturating_sub(uniform int32 a, uniform int32 b) {
+    uniform unsigned int32 a_unsig = a, b_unsig = b;
+    uniform unsigned int32 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 31) + INT32_MAX;
+    if ((uniform int32) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int32 saturating_sub(varying int32 a, varying int32 b) {
+    varying unsigned int32 a_unsig = a, b_unsig = b;
+    varying unsigned int32 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 31) + INT32_MAX;
+    if ((varying int32) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline uniform int64 saturating_sub(uniform int64 a, uniform int64 b) {
+    uniform unsigned int64 a_unsig = a, b_unsig = b;
+    uniform unsigned int64 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 63) + INT64_MAX;
+    if ((uniform int64) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int64 saturating_sub(varying int64 a, varying int64 b) {
+    varying unsigned int64 a_unsig = a, b_unsig = b;
+    varying unsigned int64 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 63) + INT64_MAX;
+    if ((varying int64) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
 static inline uniform unsigned int8 saturating_sub(uniform unsigned int8 a, 
                                                    uniform unsigned int8 b) {
     uniform unsigned int8 result = a - b;
@@ -4483,6 +4583,34 @@ static inline uniform unsigned int16 saturating_sub(uniform unsigned int16 a,
 static inline varying unsigned int16 saturating_sub(varying unsigned int16 a, 
                                                     varying unsigned int16 b) {
     return __psubus_vi16(a, b);
+}
+
+static inline uniform unsigned int32 saturating_sub(uniform unsigned int32 a, 
+                                                    uniform unsigned int32 b) {
+    uniform unsigned int32 result = a - b;
+    result &= (-(uniform int32)(result <= a));
+    return result;
+}
+
+static inline varying unsigned int32 saturating_sub(varying unsigned int32 a, 
+                                                    varying unsigned int32 b) {
+    varying unsigned int32 result = a - b;
+    result &= (-(varying int32)(result <= a));
+    return result;
+}
+
+static inline uniform unsigned int64 saturating_sub(uniform unsigned int64 a, 
+                                                    uniform unsigned int64 b) {
+    uniform unsigned int64 result = a - b;
+    result &= (-(uniform int64)(result <= a));
+    return result;
+}
+
+static inline varying unsigned int64 saturating_sub(varying unsigned int64 a, 
+                                                    varying unsigned int64 b) {
+    varying unsigned int64 result = a - b;
+    result &= (-(varying int64)(result <= a));
+    return result;
 }
 ///////////////////////////////////////////////////////////////////////////
 // rdrand
