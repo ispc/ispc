@@ -4612,6 +4612,216 @@ static inline varying unsigned int64 saturating_sub(varying unsigned int64 a,
     result &= (-(varying int64)(result <= a));
     return result;
 }
+
+static inline uniform int8 saturating_div(uniform int8 a, uniform int8 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((uniform unsigned int8) a + INT8_MIN));
+    return a / b;
+}
+
+static inline varying int8 saturating_div(varying int8 a, varying int8 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((varying unsigned int8) a + INT8_MIN));
+    return a / b;
+}
+
+static inline uniform int16 saturating_div(uniform int16 a, uniform int16 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((uniform unsigned int16) a + INT16_MIN));
+    return a / b;
+}
+
+static inline varying int16 saturating_div(varying int16 a, varying int16 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((varying unsigned int16) a + INT16_MIN));
+    return a / b;
+}
+
+static inline uniform int32 saturating_div(uniform int32 a, uniform int32 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((uniform unsigned int32) a + INT32_MIN));
+    return a / b;
+}
+
+static inline varying int32 saturating_div(varying int32 a, varying int32 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((varying unsigned int32) a + INT32_MIN));
+    return a / b;
+}
+
+static inline uniform int64 saturating_div(uniform int64 a, uniform int64 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((uniform unsigned int64) a + INT64_MIN));
+    return a / b;
+}
+
+static inline varying int64 saturating_div(varying int64 a, varying int64 b) {
+    /* Only one way to overflow, so test for and prevent it. */
+    a += !((b + 1) | ((varying unsigned int64) a + INT64_MIN));
+    return a / b;
+}
+
+static inline uniform unsigned int8 saturating_div(uniform unsigned int8 a,
+	                                               uniform unsigned int8 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline varying unsigned int8 saturating_div(varying unsigned int8 a, 
+                                                   varying unsigned int8 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline uniform unsigned int16 saturating_div(uniform unsigned int16 a,
+                                                    uniform unsigned int16 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline varying unsigned int16 saturating_div(varying unsigned int16 a, 
+                                                    varying unsigned int16 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline uniform unsigned int32 saturating_div(uniform unsigned int32 a, 
+                                                    uniform unsigned int32 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline varying unsigned int32 saturating_div(varying unsigned int32 a,
+                                                    varying unsigned int32 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline uniform unsigned int64 saturating_div(uniform unsigned int64 a, 
+                                                    uniform unsigned int64 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline varying unsigned int64 saturating_div(varying unsigned int64 a, 
+                                                    varying unsigned int64 b) {
+    /* No overflow possible */
+    return a / b;
+}
+
+static inline uniform int8 saturating_mul(uniform int8 a, uniform int8 b) {
+    uniform int16 result = (uniform int16) a * (uniform int16) b;	
+    uniform unsigned int8 result2 = ((uniform unsigned int8) (a ^ b) >> 7) + INT8_MAX;
+    uniform int8 hi = result >> 8;
+    uniform int8 lo = result;
+    if (hi != (lo >> 7)) 
+        result = result2;
+    return result; 
+}
+
+static inline varying int8 saturating_mul(varying int8 a, varying int8 b) {
+    varying int16 result = (varying int16) a * (varying int16) b;	
+    varying unsigned int8 result2 = ((varying unsigned int8) (a ^ b) >> 7) + INT8_MAX;
+    varying int8 hi = result >> 8;
+    varying int8 lo = result;
+    if (hi != (lo >> 7)) 
+        result = result2;
+    return result; 
+}
+
+static inline uniform int16 saturating_mul(uniform int16 a, uniform int16 b) {
+    uniform int32 result = (uniform int32) a * (uniform int32) b;	
+    uniform unsigned int16 result2 = ((uniform unsigned int16) (a ^ b) >> 15) + INT16_MAX;
+    uniform int16 hi = result >> 16;
+    uniform int16 lo = result;
+    if (hi != (lo >> 15)) 
+        result = result2;
+    return result; 
+}
+
+static inline varying int16 saturating_mul(varying int16 a, varying int16 b) {
+    varying int32 result = (varying int32) a * (varying int32) b;	
+    varying unsigned int16 result2 = ((varying unsigned int16) (a ^ b) >> 15) + INT16_MAX;
+    varying int16 hi = result >> 16;
+    varying int16 lo = result;
+    if (hi != (lo >> 15)) 
+        result = result2;
+    return result; 
+}
+
+static inline uniform int32 saturating_mul(uniform int32 a, uniform int32 b) {
+    uniform int64 result = (uniform int64) a * (uniform int64) b;	
+    uniform unsigned int32 result2 = ((uniform unsigned int32) (a ^ b) >> 31) + INT32_MAX;
+    uniform int32 hi = result >> 32;
+    uniform int32 lo = result;
+    if (hi != (lo >> 31)) 
+        result = result2;
+    return result; 
+}
+
+static inline varying int32 saturating_mul(varying int32 a, varying int32 b) {
+    varying int64 result = (varying int64) a * (varying int64) b;	
+    varying unsigned int32 result2 = ((varying unsigned int32) (a ^ b) >> 31) + INT32_MAX;
+    varying int32 hi = result >> 32;
+    varying int32 lo = result;
+    if (hi != (lo >> 31)) 
+        result = result2;
+    return result; 
+}
+
+static inline uniform unsigned int8 saturating_mul(uniform unsigned int8 a,
+                                                   uniform unsigned int8 b) {
+    uniform unsigned int16 result = (uniform unsigned int16) a * 
+                                    (uniform unsigned int16) b;
+    uniform unsigned int8 hi = result >> 8;
+    uniform unsigned int8 lo = result;
+    return lo | - (uniform int8) !! hi;
+}
+
+static inline varying unsigned int8 saturating_mul(varying unsigned int8 a,
+                                                   varying unsigned int8 b) {
+    varying unsigned int16 result = (varying unsigned int16) a * 
+                                    (varying unsigned int16) b;
+    varying unsigned int8 hi = result >> 8;
+    varying unsigned int8 lo = result;
+    return lo | - (varying int8) !! hi;
+}
+
+static inline uniform unsigned int16 saturating_mul(uniform unsigned int16 a,
+                                                    uniform unsigned int16 b) {
+    uniform unsigned int32 result = (uniform unsigned int32) a * 
+                                    (uniform unsigned int32) b;
+    uniform unsigned int16 hi = result >> 16;
+    uniform unsigned int16 lo = result;
+    return lo | - (uniform int16) !! hi;
+}
+
+static inline varying unsigned int16 saturating_mul(varying unsigned int16 a,
+                                                    varying unsigned int16 b) {
+    varying unsigned int32 result = (varying unsigned int32) a * 
+                                    (varying unsigned int32) b;
+    varying unsigned int16 hi = result >> 16;
+    varying unsigned int16 lo = result;
+    return lo | - (varying int16) !! hi;
+}
+
+static inline uniform unsigned int32 saturating_mul(uniform unsigned int32 a,
+                                                    uniform unsigned int32 b) {
+    uniform unsigned int64 result = (uniform unsigned int64) a * 
+                                    (uniform unsigned int64) b;
+    uniform unsigned int32 hi = result >> 32;
+    uniform unsigned int32 lo = result;
+    return lo | - (uniform int32) !! hi;
+}
+
+static inline varying unsigned int32 saturating_mul(varying unsigned int32 a,
+                                                    varying unsigned int32 b) {
+    varying unsigned int64 result = (varying unsigned int64) a * 
+                                    (varying unsigned int64) b;
+    varying unsigned int32 hi = result >> 32;
+    varying unsigned int32 lo = result;
+    return lo | - (varying int32) !! hi;
+}
 ///////////////////////////////////////////////////////////////////////////
 // rdrand
 
