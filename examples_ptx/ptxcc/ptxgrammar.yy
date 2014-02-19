@@ -74,16 +74,16 @@ ptxsource:
 header:
   version target  address_size 
 { 
-  std::cerr << "Done reading PTX \n" << std::endl; 
+//  std::cerr << "Done reading PTX \n" << std::endl; 
    state.printHeader(); 
 };
 
 version:
-  TOKEN_VERSION TOKEN_FLOAT  { std::cerr << "Reading PTX version " << $2  << std::endl; };
+  TOKEN_VERSION TOKEN_FLOAT  { assert($2 >= 3.0); } ;//std::cerr << "Reading PTX version " << $2  << std::endl; };
 target:
-  TOKEN_TARGET TOKEN_STRING  { std::cerr << "Target " << $2  << std::endl; };
+  TOKEN_TARGET TOKEN_STRING  { assert(std::string($2) == std::string("sm_35")); } //std::cerr << "Target " << $2  << std::endl; };
 address_size:
-  TOKEN_ADDRESS_SIZE TOKEN_INT  { std::cerr << "Address_Size " << $2  << std::endl; };
+  TOKEN_ADDRESS_SIZE TOKEN_INT  { assert($2 == 64); } //std::cerr << "Address_Size " << $2  << std::endl; };
 
 
 dataTypeId : 
@@ -208,8 +208,8 @@ void yyerror( YYLTYPE* location, parser::PTXLexer& lexer,
 	std::stringstream stream;
 	stream << toString( *location, state ) 
 		<< " " << message;
-  fprintf(stderr, "--ERROR-- %s %s \n", toString(*location, state).c_str(), message);
-  assert(0);
+  fprintf(stderr, "--Parser ERROR-- %s %s \n", toString(*location, state).c_str(), message);
+  exit(-1);
 }
 
 }

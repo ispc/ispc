@@ -6,7 +6,7 @@
 #include <algorithm>
 #include "PTXParser.h"
 
-static char lRandomChar()
+static char lRandomAlNum()
 {
   const char charset[] =
     "0123456789"
@@ -19,10 +19,9 @@ static char lRandomChar()
 static std::string lRandomString(const size_t length)
 {
   std::string str(length,0);
-  std::generate_n( str.begin(), length, lRandomChar);
+  std::generate_n( str.begin(), length, lRandomAlNum);
   return str;
 }
-
 
 static void lGetAllArgs(int Argc, char *Argv[], int &argc, char *argv[128]) 
 {
@@ -49,8 +48,14 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
   return elems;
 }
 
-static void usage(const int ret)
+static void lUsage(const int ret)
 {
+  fprintf(stderr, "\nusage: ptxc\n");
+  fprintf(stderr, "    [--help]\t\t\t\t This help\n");
+  fprintf(stderr, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
+  fprintf(stderr, "    [-o <name>]\t\t\t\t Output file name\n");
+  fprintf(stderr, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
+  fprintf(stderr, " \n");
   exit(ret);
 }
 
@@ -65,38 +70,39 @@ int main(int _argc, char * _argv[])
   std::string fileOBJ;
   std::string extString = ".ptx";
   bool keepTemporaries = false;
+  std::string nvccArguments;
 
-  std::vector<std::string> nvccArgumentList;
-    
   for (int i = 1; i < argc; ++i) 
   {
     if (!strcmp(argv[i], "--help"))
-      usage(0);
+      lUsage(0);
     else if (!strncmp(argv[i], "--arch=", 7))
       arch = std::string(argv[i]+7);
     else if (!strncmp(argv[i], "--keep-temporaries", 11))
       keepTemporaries = true;
+    else if (!strncmp(argv[i], "-Xnvcc=", 7))
+      nvccArguments = std::string(argv[i]+7);
     else if (!strcmp(argv[i], "-o"))
     {
       if (++i == argc)
       {
         fprintf(stderr, "No output file specified after -o option.\n");
-        usage(1);
+        lUsage(1);
       }
       fileOBJ = std::string(argv[i]);
     }
-    else if (strncmp(argv[i], "-", 1))
+    else 
     {
       const char * ext = strrchr(argv[i], '.');
       if (ext == NULL)
       {
         fprintf(stderr, " Unknown argument: %s \n", argv[i]);
-        exit(1);
+        lUsage(1);
       }
       else if (strncmp(ext, extString.c_str(), 4))
       {
         fprintf(stderr, " Unkown extension of the input file: %s \n", ext);
-        exit(1);
+        lUsage(1);
       }
       else if (filePTX.empty())
       {
@@ -110,8 +116,6 @@ int main(int _argc, char * _argv[])
         fileOBJ += ".o";
       }
     }
-    else 
-      nvccArgumentList.push_back(argv[i]);
   }
 #if 0
   fprintf(stderr, " fileOBJ= %s\n", fileOBJ.c_str());
@@ -172,8 +176,7 @@ int main(int _argc, char * _argv[])
   nvccCmd += "-dc ";
   nvccCmd += std::string("-arch=") + arch + std::string(" ");
   nvccCmd += "-dryrun ";
-  for (int i = 0; i < (int)nvccArgumentList.size(); i++)
-    nvccCmd += nvccArgumentList[i] + std::string(" ");
+  nvccCmd += nvccArguments + std::string(" ");
   nvccCmd += std::string("-o ") + fileOBJ + std::string(" ");
   nvccCmd += fileCU + std::string(" ");
   nvccCmd += std::string("2> ") + fileSH;

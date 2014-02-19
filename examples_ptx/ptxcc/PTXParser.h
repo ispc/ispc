@@ -71,7 +71,7 @@ namespace parser
       s << "typedef float              f32_t; \n";
       s << "typedef double             f64_t; \n";
       s << " \n";
-      std::cout << s.str();
+      out << s.str();
     }
 
 #define LOC YYLTYPE& location
@@ -166,7 +166,7 @@ namespace parser
       s << "\n";
       argumentList.clear();
 
-      std::cout << s.str();
+      out << s.str();
     }
     
     void visibleFunctionDeclaration(const std::string &calleeName, LOC) 
@@ -193,7 +193,7 @@ namespace parser
       argumentList.clear();
       returnArgumentList.clear();
 
-      std::cout << s.str();
+      out << s.str();
     }
 
     void visibleInitializableDeclaration(const std::string &name, LOC)
@@ -208,7 +208,7 @@ namespace parser
         s << name << ";\n\n";
       else
         s << name << "[" << arrayDimensionsList[0] << "] = {0};\n\n";
-      std::cout << s.str();
+      out << s.str();
       arrayDimensionsList.clear();
     }
 
