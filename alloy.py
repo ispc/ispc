@@ -356,6 +356,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
+    newest_LLVM="3.4"
 # *** *** ***
 # Stability validation run
 # *** *** ***
@@ -442,7 +443,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if len(archs) == 0:
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
-            LLVM = ["3.4", "trunk"]
+            LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
@@ -525,7 +526,6 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         performance.perf_target = ""
         performance.in_file = "." + os.sep + f_date + os.sep + "performance.log"
 # prepare newest LLVM
-        newest_LLVM="3.4"
         need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
             build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make)
