@@ -6,6 +6,30 @@
 #include <algorithm>
 #include "PTXParser.h"
 
+/*
+ * The C++ code below is based on the following bash-script:
+      #!/bin/sh
+
+      PTXSRC=$1__tmp_ptx.ptx
+      PTXCU=$1___tmp_ptx.cu
+      PTXSH=$1___tmp_ptx.sh
+
+      NVCCPARM=${@:2}
+
+      DEPTX=dePTX
+      NVCC=nvcc
+
+      $(cat $1 | sed 's/\.b0/\.b32/g' > $PTXSRC) &&
+      $DEPTX < $PTXSRC > $PTXCU &&
+      $NVCC -arch=sm_35 -dc $NVCCPARM -dryrun $PTXCU 2>&1 | \
+        sed 's/\#\$//g'| \
+        awk '{ if ($1 == "LIBRARIES=") print $1$2; else if ($1 == "cicc") print "cp '$PTXSRC'", $NF; else print $0 }' > $PTXSH &&
+      sh $PTXSH
+
+      # rm $PTXCU $PTXSH
+ *
+ */
+
 static char lRandomAlNum()
 {
   const char charset[] =
