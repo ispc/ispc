@@ -9,10 +9,10 @@ then
   LLVMDIS=$LLVM32/bin/llvm-dis
   PTXGEN=$ISPC_HOME/examples_ptx/ptxgen/ptxgen
   $($LLVMDIS $1 -o $1.ll) && $($PTXGEN $1.ll > $1.ptx) && \
-  $($PTXCC $1.ptx -o $1.o -G) && \
+  $($PTXCC $1.ptx -o $1.o -Xnvcc="-G") && \
   $(nvcc test_static_nvptx.cpp examples_ptx/nvcc_helpers.cu examples_ptx/ispc_malloc.cpp $1.o -arch=sm_35 -Iexamples_ptx/ -D_CUDA_ -lcudadevrt $ARGS);
 else
-  $($PTXCC $1 -o $1.o -G) && \
+  $($PTXCC $1 -o $1.o -Xnvcc="-G") && \
   $(nvcc test_static_nvptx.cpp examples_ptx/nvcc_helpers.cu examples_ptx/ispc_malloc.cpp $1.o -arch=sm_35 -Iexamples_ptx/ -D_CUDA_ -lcudadevrt $ARGS);
 fi
 

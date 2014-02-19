@@ -4,7 +4,9 @@
 #include <fstream>
 #include <cassert>
 #include <algorithm>
+#include <sys/time.h>
 #include "PTXParser.h"
+
 
 /*
  * The C++ code below is based on the following bash-script:
@@ -42,6 +44,9 @@ static char lRandomAlNum()
 
 static std::string lRandomString(const size_t length)
 {
+  timeval t1;
+  gettimeofday(&t1, NULL);
+  srand(t1.tv_usec * t1.tv_sec);
   std::string str(length,0);
   std::generate_n( str.begin(), length, lRandomAlNum);
   return str;
