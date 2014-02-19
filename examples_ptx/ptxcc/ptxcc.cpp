@@ -74,8 +74,9 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
 
 static void lUsage(const int ret)
 {
-  fprintf(stderr, "\nusage: ptxc\n");
+  fprintf(stderr, "\nusage: ptxcc\n");
   fprintf(stderr, "    [--help]\t\t\t\t This help\n");
+  fprintf(stderr, "    [--verbose]\t\t\t\t Be verbose\n");
   fprintf(stderr, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
   fprintf(stderr, "    [-o <name>]\t\t\t\t Output file name\n");
   fprintf(stderr, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
@@ -94,6 +95,7 @@ int main(int _argc, char * _argv[])
   std::string fileOBJ;
   std::string extString = ".ptx";
   bool keepTemporaries = false;
+  bool verbose = false;
   std::string nvccArguments;
 
   for (int i = 1; i < argc; ++i) 
@@ -104,6 +106,8 @@ int main(int _argc, char * _argv[])
       arch = std::string(argv[i]+7);
     else if (!strncmp(argv[i], "--keep-temporaries", 11))
       keepTemporaries = true;
+    else if (!strncmp(argv[i], "--verbose", 9))
+      verbose = true;
     else if (!strncmp(argv[i], "-Xnvcc=", 7))
       nvccArguments = std::string(argv[i]+7);
     else if (!strcmp(argv[i], "-o"))
@@ -152,7 +156,7 @@ int main(int _argc, char * _argv[])
   assert(arch == std::string("sm_35"));
   if (filePTX.empty())
   {
-    fprintf(stderr, "ptxc fatal : No input file specified; use option --help for more information\n");
+    fprintf(stderr, "ptxcc fatal : No input file specified; use option --help for more information\n");
     exit(1);
   }
 
@@ -160,12 +164,13 @@ int main(int _argc, char * _argv[])
   std::ifstream inputPTX(filePTX.c_str());
   if (!inputPTX)
   {
-    fprintf(stderr, "ptxc: error: %s: No such file\n", filePTX.c_str());
+    fprintf(stderr, "ptxcc: error: %s: No such file\n", filePTX.c_str());
     exit(1);
   }
 
   std::string randomBaseName = std::string("/tmp/") + lRandomString(12);
-  fprintf(stderr, " randomBaseName= %s\n", randomBaseName.c_str());
+  if (verbose)
+    fprintf(stderr, "baseFileName= %s\n", randomBaseName.c_str());
 
   std::string fileCU= randomBaseName + ".cu";
   std::ofstream outputCU(fileCU.c_str());
@@ -204,8 +209,11 @@ int main(int _argc, char * _argv[])
   nvccCmd += std::string("-o ") + fileOBJ + std::string(" ");
   nvccCmd += fileCU + std::string(" ");
   nvccCmd += std::string("2> ") + fileSH;
-  fprintf(stderr , " nvccCmd= %s\n", nvccCmd.c_str());
-  std::system(nvccCmd.c_str());
+  if (verbose)
+    fprintf(stderr , "%s\n", nvccCmd.c_str());
+  const int nvccRet = std::system(nvccCmd.c_str());
+  if (nvccRet)
+    fprintf(stderr, "FAIL: %s\n", nvccCmd.c_str());
 
 
   std::ifstream inputSH(fileSH.c_str());
@@ -215,8 +223,13 @@ int main(int _argc, char * _argv[])
   {
     nvccSteps.push_back(std::string());
     std::getline(inputSH, nvccSteps.back());
+    if (nvccRet)
+      fprintf(stderr, " %s\n", nvccSteps.back().c_str());
   }
   inputSH.close();
+  if (nvccRet)
+    exit(-1);
+
 
   for (int i = 0; i < (int)nvccSteps.size(); i++)
   {
@@ -229,11 +242,13 @@ int main(int _argc, char * _argv[])
     if (!splitCmd.empty())
     {
       if (splitCmd[0] == std::string("cicc"))
-        cmd = std::string("cp ") + filePTX + std::string(" ") + splitCmd.back();
+        cmd = std::string("   cp ") + filePTX + std::string(" ") + splitCmd.back();
       if (splitCmd[0] == std::string("LIBRARIES="))
         cmd = "";
     }
     nvccSteps[i] = cmd;
+    if (verbose)
+      fprintf(stderr, "%3d: %s\n", i, cmd.c_str());
     const int ret = std::system(cmd.c_str());
     if (ret)
     {

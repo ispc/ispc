@@ -1,4 +1,4 @@
-all: dePTX ptxc
+all: dePTX ptxcc
 
 ptxgrammar.cc : ptxgrammar.yy
 	bison -d -v -t  ptxgrammar.yy -o ptxgrammar.cc
@@ -18,13 +18,13 @@ OBJ= ptx.o \
 dePTX: dePTX.o $(OBJ)
 	clang++ $^ -o $@ -L/opt/local/lib 
 
-ptxc: ptxc.o $(OBJ)
+ptxcc: ptxcc.o $(OBJ)
 	clang++ $^ -o $@ -L/opt/local/lib 
 
 clean: 
-	/bin/rm -f dePTX $(OBJ) ptxgrammar.hh ptxgrammar.cc ptx.cc ptxgrammar.output
+	/bin/rm -f ptxcc dePTX ptxcc.o $(OBJ) ptxgrammar.hh ptxgrammar.cc ptx.cc ptxgrammar.output
 
 $(OBJ):  ptxgrammar.cc ptx.cc PTXParser.h PTXLexer.h
 dePTX.o: PTXParser.h PTXLexer.h
-ptxc.o: PTXParser.h PTXLexer.h
+ptxcc.o: PTXParser.h PTXLexer.h
 
