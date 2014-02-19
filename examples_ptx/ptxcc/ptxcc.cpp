@@ -39,14 +39,14 @@ static char lRandomAlNum()
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
   const size_t max_index = (sizeof(charset) - 1);
-  return charset[ int(drand48() * (1ULL<<31)) % max_index ];
+  return charset[ rand() % max_index ];
 }
 
 static std::string lRandomString(const size_t length)
 {
   timeval t1;
   gettimeofday(&t1, NULL);
-  srand48((long long)t1.tv_usec * t1.tv_sec);
+  srand(t1.tv_usec * t1.tv_sec);
   std::string str(length,0);
   std::generate_n( str.begin(), length, lRandomAlNum);
   return str;
