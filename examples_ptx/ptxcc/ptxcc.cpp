@@ -39,14 +39,14 @@ static char lRandomAlNum()
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
   const size_t max_index = (sizeof(charset) - 1);
-  return charset[ rand() % max_index ];
+  return charset[ int(drand48() * (1ULL<<31)) % max_index ];
 }
 
 static std::string lRandomString(const size_t length)
 {
   timeval t1;
   gettimeofday(&t1, NULL);
-  srand(t1.tv_usec * t1.tv_sec);
+  srand48((long long)t1.tv_usec * t1.tv_sec);
   std::string str(length,0);
   std::generate_n( str.begin(), length, lRandomAlNum);
   return str;
@@ -173,7 +173,7 @@ int main(int _argc, char * _argv[])
     exit(1);
   }
 
-  std::string randomBaseName = std::string("/tmp/") + lRandomString(12);
+  std::string randomBaseName = std::string("/tmp/") + lRandomString(8) + "_" + lSplitString(lSplitString(filePTX,'/').back(),'.')[0];
   if (verbose)
     fprintf(stderr, "baseFileName= %s\n", randomBaseName.c_str());
 
