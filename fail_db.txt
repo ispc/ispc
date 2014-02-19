@@ -580,8 +580,6 @@
 ./tests/reduce-equal-5.ispc compfail  x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/reduce-equal-6.ispc compfail  x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
 ./tests/reduce-equal-8.ispc compfail  x86-64     generic-16   Linux LLVM 3.4 clang++3.4 -O0 *
-./tests/reduce-equal.ispc compfail  x86-64     avx1-i32x4   Linux LLVM 3.5 clang++3.4 -O2 *
-./tests/shuffle2-7.ispc compfail  x86-64     avx1-i64x4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/masked-scatter-struct.ispc runfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/exclusive-scan-add-1.ispc compfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/exclusive-scan-add-10.ispc compfail  x86-64      generic-4   Linux LLVM 3.5 clang++3.4 -O2 *
@@ -657,3 +655,9 @@
 ./tests/foreach-double-1.ispc runfail     x86     avx2-i32x8   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/foreach-double-1.ispc runfail     x86    avx2-i32x16   Linux LLVM 3.5 clang++3.4 -O2 *
 ./tests/foreach-double-1.ispc runfail     x86     avx2-i64x4   Linux LLVM 3.5 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86     avx2-i32x8   Linux LLVM 3.4 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86    avx2-i32x16   Linux LLVM 3.4 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86     avx2-i64x4   Linux LLVM 3.4 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86     avx2-i32x8   Linux LLVM 3.5 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86    avx2-i32x16   Linux LLVM 3.5 clang++3.4 -O2 *
+./tests/ptr-int-1.ispc runfail     x86     avx2-i64x4   Linux LLVM 3.5 clang++3.4 -O2 *
