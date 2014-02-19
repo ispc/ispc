@@ -177,6 +177,13 @@ Contents:
   + `Data Alignment and Aliasing`_
   + `Restructuring Existing Programs to Use ISPC`_
 
+* `Experimental support for PTX`_
+
+  + `Overview`_
+  + `Generation of PTX`_
+  + `Execution of PTX`_
+  + `Hints`_
+
 * `Disclaimer and Legal Information`_
 
 * `Optimization Notice`_
@@ -4867,6 +4874,31 @@ groups of work that will tend to do similar computation across the SPMD
 program instances improves performance.
 
 .. _ispc Performance Tuning Guide: http://ispc.github.com/perfguide.html
+
+
+Experimental support for PTX
+============================
+One of the ``ispc`` goals is also to offer performance portability of ISPC
+program across various parallel processors, in particular CPUs and GPUs. This
+section describes how to use ISPC in combination with CUDA Toolkit to generate
+and execute PTX.
+
+Overview
+--------
+SPMD programming model can be mapped to CUDA cores.
+
+
+Generation of PTX
+------------------
+To generate PTX.
+  
+Execution of PTX
+----------------
+To execute PTX
+
+Hints
+-----
+Few things to observe
 
 
 Disclaimer and Legal Information
