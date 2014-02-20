@@ -1,0 +1,15 @@
+PROG=mergeSort
+ISPC_SRC=mergeSort.ispc
+CU_SRC=mergeSort.cu
+CXX_SRC=mergeSort.cpp  mergeSort.cpp
+PTXCC_REGMAX=64
+#PTXCC_FLAGS= -Xptxas=-O3
+#NVCC_FLAGS=-Xptxas=-O0
+
+LLVM_GPU=1
+NVVM_GPU=1
+
+include ../common_ptx.mk
+
+
+
