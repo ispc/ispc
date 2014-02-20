@@ -1,0 +1,7 @@
+EXAMPLE=radixSort
+CXX_SRC=radixSort.cpp 
+ISPC_SRC=radixSort.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+
+include ../common_knc.mk
