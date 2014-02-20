@@ -1,7 +1,7 @@
 PROG=ao
 ISPC_SRC=ao.ispc
 CU_SRC=ao.cu
-CXX_SRC=ao.cpp  ao_serial.cpp
+CXX_SRC=ao.cpp 
 PTXCC_REGMAX=64
 #ISPC_FLAGS= --opt=disable-uniform-control-flow
 

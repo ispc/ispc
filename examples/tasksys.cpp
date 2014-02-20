@@ -960,17 +960,22 @@ InitTaskSystem() {
 
 inline void
 TaskGroup::Launch(int baseIndex, int count) {
-#pragma omp parallel for
-    for(int i = 0; i < count; i++) {
+#pragma omp parallel
+  {
+    const int threadIndex = omp_get_thread_num();
+    const int threadCount = omp_get_num_threads();
+
+#pragma omp for schedule(runtime)
+    for(int i = 0; i < count; i++) 
+    {
         TaskInfo *ti = GetTaskInfo(baseIndex + i);
 
         // Actually run the task. 
-        int threadIndex = omp_get_thread_num();
-        int threadCount = omp_get_num_threads();
         ti->func(ti->data, threadIndex, threadCount, ti->taskIndex, ti->taskCount(),
             ti->taskIndex0(), ti->taskIndex1(), ti->taskIndex2(),
             ti->taskCount0(), ti->taskCount1(), ti->taskCount2());
     }
+  }
 }
 
 inline void

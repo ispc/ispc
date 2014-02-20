@@ -58,8 +58,6 @@
 
 #define NSUBSAMPLES        2
 
-extern void ao_serial(int w, int h, int nsubsamples, float image[]);
-
 static unsigned int test_iterations[] = {3, 7, 1};
 static unsigned int width, height;
 static unsigned char *img;
@@ -123,13 +121,8 @@ int main(int argc, char **argv)
     }
 
     // Allocate space for output images
-#if 0
     img = new unsigned char[width * height * 3];
     fimg = new float[width * height * 3];
-#else
-    ispc_malloc((void**) &img, sizeof(unsigned char)*width*height*3);
-    ispc_malloc((void**)&fimg, sizeof(        float)*width*height*3);
-#endif
 
     //
     // Run the ispc + tasks path, test_iterations times, and report the
@@ -137,7 +130,7 @@ int main(int argc, char **argv)
     //
     double minTimeISPCTasks = 1e30;
     for (unsigned int i = 0; i < test_iterations[1]; i++) {
-        ispc_memset((void *)fimg, 0, sizeof(float) * width * height * 3);
+        ispc_memset(fimg, 0, sizeof(float) * width * height * 3);
         assert(NSUBSAMPLES == 2);
 
         reset_and_start_timer();
@@ -152,29 +145,8 @@ int main(int argc, char **argv)
            minTimeISPCTasks, width, height);
     savePPM("ao-ispc-tasks.ppm", width, height); 
 
-    //
-    // Run the serial path, again test_iteration times, and report the
-    // minimum time.
-    //
-    double minTimeSerial = 1e30;
-    for (unsigned int i = 0; i < test_iterations[2]; i++) {
-        ispc_memset((void *)fimg, 0, sizeof(float) * width * height * 3);
-        reset_and_start_timer();
-        ao_serial(width, height, NSUBSAMPLES, fimg);
-        double t = get_elapsed_msec();
-        printf("@time of serial run:\t\t\t\t[%.3f] msec\n", t);
-        minTimeSerial = std::min(minTimeSerial, t);
-    }
-
-    // Report more results, save another image...
-    printf("[aobench serial]:\t\t[%.3f] msec (%d x %d image)\n", minTimeSerial, 
-           width, height);
-    printf("\t\t\t\t(%.2fx speedup from ISPC + tasks)\n", 
-           minTimeSerial / minTimeISPCTasks);
-    savePPM("ao-serial.ppm", width, height); 
-
-    ispc_free(img);
-    ispc_free(fimg);
+    delete img;
+    delete fimg;
         
     return 0;
 }
