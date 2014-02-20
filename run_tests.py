@@ -204,6 +204,8 @@ def run_test(testname):
             return (1, 0)
         else:
             global is_generic_target
+            global is_nvptx_target
+            global is_nvptx_nvvm
             if is_windows:
                 if is_generic_target:
                     obj_name = "%s.cpp" % os.path.basename(filename)
@@ -218,6 +220,13 @@ def run_test(testname):
             else:
                 if is_generic_target:
                     obj_name = "%s.cpp" % testname
+                elif is_nvptx_target:
+                  if os.environ.get("NVVM") == "1":
+                    is_nvptx_nvvm = True
+                    obj_name = "%s.bc" % testname
+                  else:
+                    obj_name = "%s.ptx" % testname
+                    is_nvptx_nvvm = False
                 else:
                     obj_name = "%s.o" % testname
                 exe_name = "%s.run" % testname
@@ -248,13 +257,32 @@ def run_test(testname):
                     cc_cmd += ' -Wl,-no_pie'
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
+                if is_nvptx_target:
+                  nvptxcc_exe = "nvptxcc"
+                  nvptxcc_exe_rel = add_prefix(nvptxcc_exe)
+                  cc_cmd = "%s %s -DTEST_SIG=%d -o %s" % \
+                      (nvptxcc_exe_rel, obj_name, match, exe_name)
 
-            ispc_cmd = ispc_exe_rel + " --woff %s -o %s --arch=%s --target=%s" % \
+            ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --arch=%s --target=%s" % \
                        (filename, obj_name, options.arch, options.target)
             if options.no_opt:
                 ispc_cmd += " -O0" 
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
+            if is_nvptx_target:
+                filename4ptx = filename+".ptx.parsed_ispc"
+                grep_cmd = "grep -v 'export uniform int width' %s > %s " % \
+                    (filename, filename4ptx)
+                if options.verbose:
+                  print "Grepping: %s" % grep_cmd
+                sp = subprocess.Popen(grep_cmd, shell=True)
+                sp.communicate()
+                if is_nvptx_nvvm:
+                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-llvm --target=%s" % \
+                         (filename4ptx, obj_name, options.target)
+                else:
+                  ispc_cmd = ispc_exe_rel + " --woff %s -o %s -O3 --emit-asm --target=%s" % \
+                         (filename4ptx, obj_name, options.target)
 
         # compile the ispc code, make the executable, and run it...
         (compile_error, run_error) = run_cmds([ispc_cmd, cc_cmd], 
@@ -269,7 +297,7 @@ def run_test(testname):
                     basename = os.path.basename(filename)
                     os.unlink("%s.pdb" % basename)
                     os.unlink("%s.ilk" % basename)
-            os.unlink(obj_name)
+#            os.unlink(obj_name)
         except:
             None
 
@@ -290,6 +318,7 @@ def run_tasks_from_queue(queue, queue_ret, queue_skip, total_tests_arg, max_test
     ispc_exe = glob_var[3]
     global is_generic_target
     is_generic_target = glob_var[4]
+    global is_nvptx_target
     global run_tests_log
     run_tests_log = glob_var[5]    
 
@@ -505,6 +534,8 @@ def run_tests(options1, args, print_version):
  
     if options.target == 'neon':
         options.arch = 'arm'
+    if options.target == "nvptx":
+        options.arch = "nvptx64"
  
     # use relative path to not depend on host directory, which may possibly
     # have white spaces and unicode characters.
@@ -530,9 +561,11 @@ def run_tests(options1, args, print_version):
     print_debug("Testing ispc: " + ispc_exe + "\n", s, run_tests_log)
     ispc_exe += " " + options.ispc_flags
 
-    global is_generic_target 
+    global is_generic_target
+    global is_nvptx_target
     is_generic_target = (options.target.find("generic-") != -1 and
                      options.target != "generic-1" and options.target != "generic-x1")
+    is_nvptx_target = (options.target.find("nvptx") != -1)
     if is_generic_target and options.include_file == None:
         if options.target == "generic-4" or options.target == "generic-x4":
             error("No generics #include specified; using examples/intrinsics/sse4.h\n", 2)

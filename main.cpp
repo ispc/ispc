@@ -320,6 +320,11 @@ int main(int Argc, char *Argv[]) {
     LLVMInitializeARMTargetMC();
 #endif
 
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXAsmPrinter();
+    LLVMInitializeNVPTXTargetMC();
+
     char *file = NULL;
     const char *headerFileName = NULL;
     const char *outFileName = NULL;

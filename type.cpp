@@ -749,7 +749,7 @@ EnumType::Mangle() const {
     std::string ret;
     if (isConst) ret += "C";
     ret += variability.MangleString();
-    ret += std::string("enum[") + name + std::string("]");
+    ret += std::string("enum_5B_") + name + std::string("_5C_");
     return ret;
 }
 
@@ -1420,7 +1420,7 @@ ArrayType::Mangle() const {
         sprintf(buf, "%d", numElements);
     else
         buf[0] = '\0';
-    return s + "[" + buf + "]";
+    return s + "_5B_" + buf + "_5C_";
 }
 
 
@@ -2058,12 +2058,12 @@ lMangleStruct(Variability variability, bool isConst, const std::string &name) {
     Assert(variability != Variability::Unbound);
 
     std::string ret;
-    ret += "s[";
+    ret += "s_5B_";
     if (isConst)
         ret += "_c_";
     ret += variability.MangleString();
 
-    ret += name + std::string("]");
+    ret += name + std::string("_5C_");
     return ret;
 }
 
@@ -3009,7 +3009,7 @@ FunctionType::LLVMFunctionType(llvm::LLVMContext *ctx, bool removeMask) const {
         llvmArgTypes.push_back(LLVMTypes::MaskType);
 
     std::vector<llvm::Type *> callTypes;
-    if (isTask) {
+    if (isTask && g->target->getISA() != Target::NVPTX) {
         // Tasks take three arguments: a pointer to a struct that holds the
         // actual task arguments, the thread index, and the total number of
         // threads the tasks system has running.  (Task arguments are

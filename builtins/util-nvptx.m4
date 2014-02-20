@@ -757,116 +757,6 @@ divert`'dnl
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 define(`shuffles', `
-define <WIDTH x $1> @__broadcast_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
-  %v = extractelement <WIDTH x $1> %0, i32 %1
-  %broadcast_init = insertelement <WIDTH x $1> undef, $1 %v, i32 0
-  %broadcast = shufflevector <WIDTH x $1> %broadcast_init, <WIDTH x $1> undef, <WIDTH x i32> zeroinitializer 
-  ret <WIDTH x $1> %broadcast
-}
-
-define <WIDTH x $1> @__rotate_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
-  %isc = call i1 @__is_compile_time_constant_uniform_int32(i32 %1)
-  br i1 %isc, label %is_const, label %not_const
-
-is_const:
-  ; though verbose, this turms into tight code if %1 is a constant
-forloop(i, 0, eval(WIDTH-1), `  
-  %delta_`'i = add i32 %1, i
-  %delta_clamped_`'i = and i32 %delta_`'i, eval(WIDTH-1)
-  %v_`'i = extractelement <WIDTH x $1> %0, i32 %delta_clamped_`'i')
-
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-
-not_const:
-  ; store two instances of the vector into memory
-  %ptr = alloca <WIDTH x $1>, i32 2
-  %ptr0 = getelementptr <WIDTH x $1> * %ptr, i32 0
-  store <WIDTH x $1> %0, <WIDTH x $1> * %ptr0
-  %ptr1 = getelementptr <WIDTH x $1> * %ptr, i32 1
-  store <WIDTH x $1> %0, <WIDTH x $1> * %ptr1
-
-  ; compute offset in [0,vectorwidth-1], then index into the doubled-up vector
-  %offset = and i32 %1, eval(WIDTH-1)
-  %ptr_as_elt_array = bitcast <WIDTH x $1> * %ptr to [eval(2*WIDTH) x $1] *
-  %load_ptr = getelementptr [eval(2*WIDTH) x $1] * %ptr_as_elt_array, i32 0, i32 %offset
-  %load_ptr_vec = bitcast $1 * %load_ptr to <WIDTH x $1> *
-  %result = load <WIDTH x $1> * %load_ptr_vec, align $2
-  ret <WIDTH x $1> %result
-}
-
-define <WIDTH x $1> @__shift_$1(<WIDTH x $1>, i32) nounwind readnone alwaysinline {
-  %ptr = alloca <WIDTH x $1>, i32 3
-  %ptr0 = getelementptr <WIDTH x $1> * %ptr, i32 0
-  store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr0
-  %ptr1 = getelementptr <WIDTH x $1> * %ptr, i32 1
-  store <WIDTH x $1> %0, <WIDTH x $1> * %ptr1
-  %ptr2 = getelementptr <WIDTH x $1> * %ptr, i32 2
-  store <WIDTH x $1> zeroinitializer, <WIDTH x $1> * %ptr2
-
-  %offset = add i32 %1, WIDTH
-  %ptr_as_elt_array = bitcast <WIDTH x $1> * %ptr to [eval(3*WIDTH) x $1] *
-  %load_ptr = getelementptr [eval(3*WIDTH) x $1] * %ptr_as_elt_array, i32 0, i32 %offset
-  %load_ptr_vec = bitcast $1 * %load_ptr to <WIDTH x $1> *
-  %result = load <WIDTH x $1> * %load_ptr_vec, align $2
-  ret <WIDTH x $1> %result
-}
-
-
-define <WIDTH x $1> @__shuffle_$1(<WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
-forloop(i, 0, eval(WIDTH-1), `  
-  %index_`'i = extractelement <WIDTH x i32> %1, i32 i')
-forloop(i, 0, eval(WIDTH-1), `  
-  %v_`'i = extractelement <WIDTH x $1> %0, i32 %index_`'i')
-
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-}
-
-define <WIDTH x $1> @__shuffle2_$1(<WIDTH x $1>, <WIDTH x $1>, <WIDTH x i32>) nounwind readnone alwaysinline {
-  %v2 = shufflevector <WIDTH x $1> %0, <WIDTH x $1> %1, <eval(2*WIDTH) x i32> <
-      forloop(i, 0, eval(2*WIDTH-2), `i32 i, ') i32 eval(2*WIDTH-1)
-  >
-forloop(i, 0, eval(WIDTH-1), `  
-  %index_`'i = extractelement <WIDTH x i32> %2, i32 i')
-
-  %isc = call i1 @__is_compile_time_constant_varying_int32(<WIDTH x i32> %2)
-  br i1 %isc, label %is_const, label %not_const
-
-is_const:
-  ; extract from the requested lanes and insert into the result; LLVM turns
-  ; this into good code in the end
-forloop(i, 0, eval(WIDTH-1), `  
-  %v_`'i = extractelement <eval(2*WIDTH) x $1> %v2, i32 %index_`'i')
-
-  %ret_0 = insertelement <WIDTH x $1> undef, $1 %v_0, i32 0
-forloop(i, 1, eval(WIDTH-1), `  %ret_`'i = insertelement <WIDTH x $1> %ret_`'eval(i-1), $1 %v_`'i, i32 i
-')
-  ret <WIDTH x $1> %ret_`'eval(WIDTH-1)
-
-not_const:
-  ; otherwise store the two vectors onto the stack and then use the given
-  ; permutation vector to get indices into that array...
-  %ptr = alloca <eval(2*WIDTH) x $1>
-  store <eval(2*WIDTH) x $1> %v2, <eval(2*WIDTH) x $1> * %ptr
-  %baseptr = bitcast <eval(2*WIDTH) x $1> * %ptr to $1 *
-
-  %ptr_0 = getelementptr $1 * %baseptr, i32 %index_0
-  %val_0 = load $1 * %ptr_0
-  %result_0 = insertelement <WIDTH x $1> undef, $1 %val_0, i32 0
-
-forloop(i, 1, eval(WIDTH-1), `  
-  %ptr_`'i = getelementptr $1 * %baseptr, i32 %index_`'i
-  %val_`'i = load $1 * %ptr_`'i
-  %result_`'i = insertelement <WIDTH x $1> %result_`'eval(i-1), $1 %val_`'i, i32 i
-')
-
-  ret <WIDTH x $1> %result_`'eval(WIDTH-1)
-}
 ')
 
 define(`define_shuffles',`
@@ -878,27 +768,6 @@ shuffles(double, 8)
 shuffles(i64, 8)
 ')
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic_associative
-;; More efficient implementation for atomics that are associative (e.g.,
-;; add, and, ...).  If a basic implementation would do sometihng like:
-;; result0 = atomic_op(ptr, val0)
-;; result1 = atomic_op(ptr, val1)
-;; ..
-;; Then instead we can do:
-;; tmp = (val0 op val1 op ...)
-;; result0 = atomic_op(ptr, tmp)
-;; result1 = (result0 op val0)
-;; ..
-;; And more efficiently compute the same result
-;;
-;; Takes five parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-;; $5: identity value for the operator (e.g. 0 for add, -1 for AND, ...)
 
 define(`mask_converts', `
 define internal <$1 x i8> @convertmask_i1_i8_$1(<$1 x i1>) {
@@ -985,122 +854,6 @@ define internal <$1 x i64> @convertmask_i64_i64_$1(<$1 x i64>) {
 
 mask_converts(WIDTH)
 
-define(`global_atomic_associative', `
-
-define <$1 x $3> @__atomic_$2_$4_global($3 * %ptr, <$1 x $3> %val,
-                                        <$1 x MASK> %m) nounwind alwaysinline {
-  ; first, for any lanes where the mask is off, compute a vector where those lanes
-  ; hold the identity value..
-
-  ; for the bit tricks below, we need the mask to have the
-  ; the same element size as the element type.
-  %mask = call <$1 x $3> @convertmask_`'MASK`'_$3_$1(<$1 x MASK> %m)
-
-  ; zero out any lanes that are off
-  %valoff = and <$1 x $3> %val, %mask
-
-  ; compute an identity vector that is zero in on lanes and has the identiy value
-  ; in the off lanes
-  %idv1 = bitcast $3 $5 to <1 x $3>
-  %idvec = shufflevector <1 x $3> %idv1, <1 x $3> undef,
-     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
-  %notmask = xor <$1 x $3> %mask, < forloop(i, 1, eval($1-1), `$3 -1, ') $3 -1 >
-  %idoff = and <$1 x $3> %idvec, %notmask
-
-  ; and comptue the merged vector that holds the identity in the off lanes
-  %valp = or <$1 x $3> %valoff, %idoff
-
-  ; now compute the local reduction (val0 op val1 op ... )--initialize
-  ; %eltvec so that the 0th element is the identity, the first is val0,
-  ; the second is (val0 op val1), ..
-  %red0 = extractelement <$1 x $3> %valp, i32 0
-  %eltvec0 = insertelement <$1 x $3> undef, $3 $5, i32 0
-
-  forloop(i, 1, eval($1-1), `
-  %elt`'i = extractelement <$1 x $3> %valp, i32 i
-  %red`'i = $2 $3 %red`'eval(i-1), %elt`'i
-  %eltvec`'i = insertelement <$1 x $3> %eltvec`'eval(i-1), $3 %red`'eval(i-1), i32 i')
-
-  ; make the atomic call, passing it the final reduced value
-  %final0 = atomicrmw $2 $3 * %ptr, $3 %red`'eval($1-1) seq_cst
-
-  ; now go back and compute the values to be returned for each program 
-  ; instance--this just involves smearing the old value returned from the
-  ; actual atomic call across the vector and applying the vector op to the
-  ; %eltvec vector computed above..
-  %finalv1 = bitcast $3 %final0 to <1 x $3>
-  %final_base = shufflevector <1 x $3> %finalv1, <1 x $3> undef,
-     <$1 x i32> < forloop(i, 1, eval($1-1), `i32 0, ') i32 0 >
-  %r = $2 <$1 x $3> %final_base, %eltvec`'eval($1-1)
-
-  ret <$1 x $3> %r
-}
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; global_atomic_uniform
-;; Defines the implementation of a function that handles the mapping from
-;; an ispc atomic function to the underlying LLVM intrinsics.  This variant
-;; just calls the atomic once, for the given uniform value
-;;
-;; Takes four parameters:
-;; $1: vector width of the target
-;; $2: operation being performed (w.r.t. LLVM atomic intrinsic names)
-;;     (add, sub...)
-;; $3: return type of the LLVM atomic (e.g. i32)
-;; $4: return type of the LLVM atomic type, in ispc naming paralance (e.g. int32)
-
-define(`global_atomic_uniform', `
-define $3 @__atomic_$2_uniform_$4_global($3 * %ptr, $3 %val) nounwind alwaysinline {
-  %r = atomicrmw $2 $3 * %ptr, $3 %val seq_cst
-  ret $3 %r
-}
-')
-
-;; Macro to declare the function that implements the swap atomic.  
-;; Takes three parameters:
-;; $1: vector width of the target
-;; $2: llvm type of the vector elements (e.g. i32)
-;; $3: ispc type of the elements (e.g. int32)
-
-define(`global_swap', `
-define $2 @__atomic_swap_uniform_$3_global($2* %ptr, $2 %val) nounwind alwaysinline {
- %r = atomicrmw xchg $2 * %ptr, $2 %val seq_cst
- ret $2 %r
-}
-')
-
-
-;; Similarly, macro to declare the function that implements the compare/exchange
-;; atomic.  Takes three parameters:
-;; $1: vector width of the target
-;; $2: llvm type of the vector elements (e.g. i32)
-;; $3: ispc type of the elements (e.g. int32)
-
-define(`global_atomic_exchange', `
-
-define <$1 x $2> @__atomic_compare_exchange_$3_global($2* %ptr, <$1 x $2> %cmp,
-                               <$1 x $2> %val, <$1 x MASK> %mask) nounwind alwaysinline {
-  %rptr = alloca <$1 x $2>
-  %rptr32 = bitcast <$1 x $2> * %rptr to $2 *
-
-  per_lane($1, <$1 x MASK> %mask, `
-   %cmp_LANE_ID = extractelement <$1 x $2> %cmp, i32 LANE
-   %val_LANE_ID = extractelement <$1 x $2> %val, i32 LANE
-   %r_LANE_ID = cmpxchg $2 * %ptr, $2 %cmp_LANE_ID, $2 %val_LANE_ID seq_cst
-   %rp_LANE_ID = getelementptr $2 * %rptr32, i32 LANE
-   store $2 %r_LANE_ID, $2 * %rp_LANE_ID')
-
-  %r = load <$1 x $2> * %rptr
-  ret <$1 x $2> %r
-}
-
-define $2 @__atomic_compare_exchange_uniform_$3_global($2* %ptr, $2 %cmp,
-                                                       $2 %val) nounwind alwaysinline {
-  %r = cmpxchg $2 * %ptr, $2 %cmp, $2 %val seq_cst
-  ret $2 %r
-}
-')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; count trailing zeros
@@ -1163,607 +916,116 @@ define void @__prefetch_read_uniform_nt(i8 *) alwaysinline {
 ;; take 4 4-wide vectors laid out like <r0 g0 b0 a0> <r1 g1 b1 a1> ...
 ;; and reorder them to <r0 r1 r2 r3> <g0 g1 g2 g3> ...
 
-define(`aossoa', `define void
+define(`aossoa', `
+declare void
 @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0, 
         <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
-        <4 x float> * noalias %out3) nounwind alwaysinline { 
-  %t0 = shufflevector <4 x float> %v2, <4 x float> %v3,  ; r2 r3 g2 g3
-          <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %t1 = shufflevector <4 x float> %v2, <4 x float> %v3,  ; b2 b3 a2 a3
-          <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-  %t2 = shufflevector <4 x float> %v0, <4 x float> %v1,  ; r0 r1 g0 g1
-          <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-  %t3 = shufflevector <4 x float> %v0, <4 x float> %v1,  ; b0 b1 a0 a1
-          <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-
-  %r0 = shufflevector <4 x float> %t2, <4 x float> %t0,  ; r0 r1 r2 r3
-          <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x float> %r0, <4 x float> * %out0
-  %r1 = shufflevector <4 x float> %t2, <4 x float> %t0,  ; g0 g1 g2 g3
-          <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  store <4 x float> %r1, <4 x float> * %out1
-  %r2 = shufflevector <4 x float> %t3, <4 x float> %t1,  ; b0 b1 b2 b3
-          <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x float> %r2, <4 x float> * %out2
-  %r3 = shufflevector <4 x float> %t3, <4 x float> %t1,  ; a0 a1 a2 a3
-          <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  store <4 x float> %r3, <4 x float> * %out3
-  ret void
-}
-
+        <4 x float> * noalias %out3) nounwind alwaysinline ;
 
 ;; Do the reverse of __aos_to_soa4_float4--reorder <r0 r1 r2 r3> <g0 g1 g2 g3> ..
 ;; to <r0 g0 b0 a0> <r1 g1 b1 a1> ...
 ;; This is the exact same set of operations that __soa_to_soa4_float4 does
 ;; (a 4x4 transpose), so just call that...
 
-define void
+declare void
 @__soa_to_aos4_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> %v3, <4 x float> * noalias %out0, 
         <4 x float> * noalias %out1, <4 x float> * noalias %out2, 
-        <4 x float> * noalias %out3) nounwind alwaysinline { 
-  call void @__aos_to_soa4_float4(<4 x float> %v0, <4 x float> %v1, 
-    <4 x float> %v2, <4 x float> %v3, <4 x float> * %out0, 
-    <4 x float> * %out1, <4 x float> * %out2, <4 x float> * %out3)
-  ret void
-}
-
+        <4 x float> * noalias %out3) nounwind alwaysinline;
 
 ;; Convert 3-wide AOS values to SOA--specifically, given 3 4-vectors
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>, transpose to
 ;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3>.
 
-define void
+declare void
 @__aos_to_soa3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
-        <4 x float> * noalias %out2) nounwind alwaysinline { 
-  %t0 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x0 x1 y0 y1
-    <4 x i32> <i32 0, i32 3, i32 1, i32 4>
-  %t1 = shufflevector <4 x float> %v1, <4 x float> %v2, ; x2 x3 y2 y3
-    <4 x i32> <i32 2, i32 5, i32 3, i32 6>
-
-  %r0 = shufflevector <4 x float> %t0, <4 x float> %t1, ; x0 x1 x1 x3
-    <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x float> %r0, <4 x float> * %out0
-
-  %r1 = shufflevector <4 x float> %t0, <4 x float> %t1, ; y0 y1 y2 y3
-    <4 x i32> <i32 2, i32 3, i32 6, i32 7>
-  store <4 x float> %r1, <4 x float> * %out1
-
-  %t2 = shufflevector <4 x float> %v0, <4 x float> %v1, ; z0 z1 x x
-    <4 x i32> <i32 2, i32 5, i32 undef, i32 undef>
-
-  %r2 = shufflevector <4 x float> %t2, <4 x float> %v2, ; z0 z1 z2 z3
-    <4 x i32> <i32 0, i32 1, i32 4, i32 7>
-  store <4 x float> %r2, <4 x float> * %out2
-  ret void
-}
-
-
+        <4 x float> * noalias %out2) nounwind alwaysinline 
 ;; The inverse of __aos_to_soa3_float4: convert 3 4-vectors
 ;; <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3> to
 ;; <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 x3 y3 z3>.
 
-define void
+declare void
 @__soa_to_aos3_float4(<4 x float> %v0, <4 x float> %v1, <4 x float> %v2,
         <4 x float> * noalias %out0, <4 x float> * noalias %out1,
-        <4 x float> * noalias %out2) nounwind alwaysinline { 
-  %t0 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x0 x1 x2 y0
-    <4 x i32> <i32 0, i32 1, i32 2, i32 4>
-  %t1 = shufflevector <4 x float> %v1, <4 x float> %v2, ; y1 y2 z0 z1
-    <4 x i32> <i32 1, i32 2, i32 4, i32 5>
- 
-  %r0 = shufflevector <4 x float> %t0, <4 x float> %t1, ; x0 y0 z0 x1
-    <4 x i32> <i32 0, i32 3, i32 6, i32 1>
-  store <4 x float> %r0, <4 x float> * %out0
-  %r1 = shufflevector <4 x float> %t0, <4 x float> %t1, ; y1 z1 x2 y2
-    <4 x i32> <i32 4, i32 7, i32 2, i32 5>
-  store <4 x float> %r1, <4 x float> * %out1
-
-  %t2 = shufflevector <4 x float> %v0, <4 x float> %v1, ; x3 y3 x x
-    <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
-
-  %r2 = shufflevector <4 x float> %t2, <4 x float> %v2, ; z2 x3 y3 z3
-    <4 x i32> <i32 6, i32 0, i32 1, i32 7>
-  store <4 x float> %r2, <4 x float> * %out2
-  ret void
-}
-
+        <4 x float> * noalias %out2) nounwind alwaysinline 
 ;; 8-wide
 ;; These functions implement the 8-wide variants of the AOS/SOA conversion
 ;; routines above.  These implementations are all built on top of the 4-wide
 ;; vector versions.
  
-define void
+declare void
 @__aos_to_soa4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> %v3, <8 x float> * noalias %out0, 
         <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
-        <8 x float> * noalias %out3) nounwind alwaysinline {
-  ;; Split each 8-vector into 2 4-vectors
-  %v0a = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1a = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2a = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3a = shufflevector <8 x float> %v3, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <8 x float> %v3, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+        <8 x float> * noalias %out3) nounwind alwaysinline 
 
-  ;; Similarly for the output pointers
-  %out0a = bitcast <8 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out1a = bitcast <8 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out2a = bitcast <8 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out3a = bitcast <8 x float> * %out3 to <4 x float> *
-  %out3b = getelementptr <4 x float> * %out3a, i32 1
- 
-  ;; Do the first part--given input vectors like
-  ;; <x0 y0 z0 x1 y1 z1 x2 y2> <z2 x3 y3 z3 x4 y4 z4 x5> <y5 z5 x6 y6 z6 x7 y7 z7>,
-  ;; pass 3 4-vectors <x0 y0 z0 x1> <y1 z1 x2 y2> <z2 z3 y3 z3> to the 4-vec
-  ;; version to compute the first 4 SOA values for the three output variables.
-  call void @__aos_to_soa4_float4(<4 x float> %v0a, <4 x float> %v0b,
-         <4 x float> %v1a, <4 x float> %v1b, <4 x float> * %out0a,
-         <4 x float> * %out1a, <4 x float> * %out2a, <4 x float> * %out3a)
-
-  ;; And similarly pass <x4 y4 z4 x5> <y5 z5 x6 y6> <z6 x7 y7 z7> to the 4-wide
-  ;; version to compute the second 4 SOA values for the three outputs
-  call void @__aos_to_soa4_float4(<4 x float> %v2a, <4 x float> %v2b,
-         <4 x float> %v3a, <4 x float> %v3b, <4 x float> * %out0b,
-         <4 x float> * %out1b, <4 x float> * %out2b, <4 x float> * %out3b)
-  ret void
-}
-
-
-define void
+declare void
 @__soa_to_aos4_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> %v3, <8 x float> * noalias %out0, 
         <8 x float> * noalias %out1, <8 x float> * noalias %out2, 
-        <8 x float> * noalias %out3) nounwind alwaysinline {
-  ;; As above, split into 4-vectors and 4-wide outputs...
-  %v0a = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1a = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2a = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3a = shufflevector <8 x float> %v3, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <8 x float> %v3, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+        <8 x float> * noalias %out3) nounwind alwaysinline
 
-  %out0a = bitcast <8 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out1a = bitcast <8 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out2a = bitcast <8 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out3a = bitcast <8 x float> * %out3 to <4 x float> *
-  %out3b = getelementptr <4 x float> * %out3a, i32 1
-
-  ;; First part--given input vectors
-  ;; <x0 x1 x2 x3 x4 x5 x6 x7> <y0 y1 y2 y3 y4 y5 y6 y7> <z0 z1 z2 z3 z4 z5 z6 z7> 
-  ;; pass 3 4-vectors <x0 x1 x2 x3> <y0 y1 y2 y3> <z0 z1 z2 z3> to 
-  ;; compute the first 12 AOS output values.
-  call void @__soa_to_aos4_float4(<4 x float> %v0a, <4 x float> %v1a,
-         <4 x float> %v2a, <4 x float> %v3a, <4 x float> * %out0a,
-         <4 x float> * %out0b, <4 x float> * %out1a, <4 x float> * %out1b)
-
-  ;; And then pass the 3 4-vectors <x4 x5 x6 x7> <y4 y5 y6 y7> <z4 z5 z6 z7>
-  ;; To compute the next 12 AOS output values
-  call void @__soa_to_aos4_float4(<4 x float> %v0b, <4 x float> %v1b,
-         <4 x float> %v2b, <4 x float> %v3b, <4 x float> * %out2a,
-         <4 x float> * %out2b, <4 x float> * %out3a, <4 x float> * %out3b)
-  ret void
-}
-
-
-define void
+declare void
 @__aos_to_soa3_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> * noalias %out0, <8 x float> * noalias %out1,
-        <8 x float> * noalias %out2) nounwind alwaysinline {
-  %v0a = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1a = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2a = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-
-  %out0a = bitcast <8 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out1a = bitcast <8 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out2a = bitcast <8 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-
-  call void @__aos_to_soa3_float4(<4 x float> %v0a, <4 x float> %v0b,
-         <4 x float> %v1a, <4 x float> * %out0a, <4 x float> * %out1a,
-         <4 x float> * %out2a)
-  call void @__aos_to_soa3_float4(<4 x float> %v1b, <4 x float> %v2a,
-         <4 x float> %v2b, <4 x float> * %out0b, <4 x float> * %out1b,
-         <4 x float> * %out2b)
-  ret void
-}
+        <8 x float> * noalias %out2) nounwind alwaysinline ;
 
 
-define void
+declare void
 @__soa_to_aos3_float8(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2,
         <8 x float> * noalias %out0, <8 x float> * noalias %out1,
-        <8 x float> * noalias %out2) nounwind alwaysinline {
-  %v0a = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <8 x float> %v0, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1a = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <8 x float> %v1, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2a = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <8 x float> %v2, <8 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-
-  %out0a = bitcast <8 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out1a = bitcast <8 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out2a = bitcast <8 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-
-  call void @__soa_to_aos3_float4(<4 x float> %v0a, <4 x float> %v1a,
-         <4 x float> %v2a, <4 x float> * %out0a, <4 x float> * %out0b,
-         <4 x float> * %out1a)
-  call void @__soa_to_aos3_float4(<4 x float> %v0b, <4 x float> %v1b,
-         <4 x float> %v2b, <4 x float> * %out1b, <4 x float> * %out2a,
-         <4 x float> * %out2b)
-  ret void
-}
+        <8 x float> * noalias %out2) nounwind alwaysinline ;
 
 ;; 16-wide
 
-define void
+declare void
 @__aos_to_soa4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> %v3, <16 x float> * noalias %out0, 
         <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
-        <16 x float> * noalias %out3) nounwind alwaysinline {
-  %v0a = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v0c = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v0d = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v1a = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1c = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v1d = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v2a = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2c = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v2d = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v3a = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3c = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v3d = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-
-  %out0a = bitcast <16 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out0c = getelementptr <4 x float> * %out0a, i32 2
-  %out0d = getelementptr <4 x float> * %out0a, i32 3
-  %out1a = bitcast <16 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out1c = getelementptr <4 x float> * %out1a, i32 2
-  %out1d = getelementptr <4 x float> * %out1a, i32 3
-  %out2a = bitcast <16 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out2c = getelementptr <4 x float> * %out2a, i32 2
-  %out2d = getelementptr <4 x float> * %out2a, i32 3
-  %out3a = bitcast <16 x float> * %out3 to <4 x float> *
-  %out3b = getelementptr <4 x float> * %out3a, i32 1
-  %out3c = getelementptr <4 x float> * %out3a, i32 2
-  %out3d = getelementptr <4 x float> * %out3a, i32 3
-
-  call void @__aos_to_soa4_float4(<4 x float> %v0a, <4 x float> %v0b,
-         <4 x float> %v0c, <4 x float> %v0d, <4 x float> * %out0a,
-         <4 x float> * %out1a, <4 x float> * %out2a, <4 x float> * %out3a)
-  call void @__aos_to_soa4_float4(<4 x float> %v1a, <4 x float> %v1b,
-         <4 x float> %v1c, <4 x float> %v1d, <4 x float> * %out0b,
-         <4 x float> * %out1b, <4 x float> * %out2b, <4 x float> * %out3b)
-  call void @__aos_to_soa4_float4(<4 x float> %v2a, <4 x float> %v2b,
-         <4 x float> %v2c, <4 x float> %v2d, <4 x float> * %out0c,
-         <4 x float> * %out1c, <4 x float> * %out2c, <4 x float> * %out3c)
-  call void @__aos_to_soa4_float4(<4 x float> %v3a, <4 x float> %v3b,
-         <4 x float> %v3c, <4 x float> %v3d, <4 x float> * %out0d,
-         <4 x float> * %out1d, <4 x float> * %out2d, <4 x float> * %out3d)
-  ret void
-}
+        <16 x float> * noalias %out3) nounwind alwaysinline ;
 
 
-define void
+declare void
 @__soa_to_aos4_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> %v3, <16 x float> * noalias %out0, 
         <16 x float> * noalias %out1, <16 x float> * noalias %out2, 
-        <16 x float> * noalias %out3) nounwind alwaysinline {
-  %v0a = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v0c = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v0d = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v1a = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1c = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v1d = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v2a = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2c = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v2d = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v3a = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v3b = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v3c = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v3d = shufflevector <16 x float> %v3, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+        <16 x float> * noalias %out3) nounwind alwaysinline ;
 
-  %out0a = bitcast <16 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out0c = getelementptr <4 x float> * %out0a, i32 2
-  %out0d = getelementptr <4 x float> * %out0a, i32 3
-  %out1a = bitcast <16 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out1c = getelementptr <4 x float> * %out1a, i32 2
-  %out1d = getelementptr <4 x float> * %out1a, i32 3
-  %out2a = bitcast <16 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out2c = getelementptr <4 x float> * %out2a, i32 2
-  %out2d = getelementptr <4 x float> * %out2a, i32 3
-  %out3a = bitcast <16 x float> * %out3 to <4 x float> *
-  %out3b = getelementptr <4 x float> * %out3a, i32 1
-  %out3c = getelementptr <4 x float> * %out3a, i32 2
-  %out3d = getelementptr <4 x float> * %out3a, i32 3
-
-  call void @__soa_to_aos4_float4(<4 x float> %v0a, <4 x float> %v1a,
-         <4 x float> %v2a, <4 x float> %v3a, <4 x float> * %out0a,
-         <4 x float> * %out0b, <4 x float> * %out0c, <4 x float> * %out0d)
-  call void @__soa_to_aos4_float4(<4 x float> %v0b, <4 x float> %v1b,
-         <4 x float> %v2b, <4 x float> %v3b, <4 x float> * %out1a,
-         <4 x float> * %out1b, <4 x float> * %out1c, <4 x float> * %out1d)
-  call void @__soa_to_aos4_float4(<4 x float> %v0c, <4 x float> %v1c,
-         <4 x float> %v2c, <4 x float> %v3c, <4 x float> * %out2a,
-         <4 x float> * %out2b, <4 x float> * %out2c, <4 x float> * %out2d)
-  call void @__soa_to_aos4_float4(<4 x float> %v0d, <4 x float> %v1d,
-         <4 x float> %v2d, <4 x float> %v3d, <4 x float> * %out3a,
-         <4 x float> * %out3b, <4 x float> * %out3c, <4 x float> * %out3d)
-  ret void
-}
-
-
-define void
+declare void
 @__aos_to_soa3_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> * noalias %out0, <16 x float> * noalias %out1,
-        <16 x float> * noalias %out2) nounwind alwaysinline {
-  %v0a = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v0c = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v0d = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v1a = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1c = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v1d = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v2a = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2c = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v2d = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+        <16 x float> * noalias %out2) nounwind alwaysinline ;
 
-  %out0a = bitcast <16 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out0c = getelementptr <4 x float> * %out0a, i32 2
-  %out0d = getelementptr <4 x float> * %out0a, i32 3
-  %out1a = bitcast <16 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out1c = getelementptr <4 x float> * %out1a, i32 2
-  %out1d = getelementptr <4 x float> * %out1a, i32 3
-  %out2a = bitcast <16 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out2c = getelementptr <4 x float> * %out2a, i32 2
-  %out2d = getelementptr <4 x float> * %out2a, i32 3
-
-  call void @__aos_to_soa3_float4(<4 x float> %v0a, <4 x float> %v0b,
-         <4 x float> %v0c, <4 x float> * %out0a, <4 x float> * %out1a,
-         <4 x float> * %out2a)
-  call void @__aos_to_soa3_float4(<4 x float> %v0d, <4 x float> %v1a,
-         <4 x float> %v1b, <4 x float> * %out0b, <4 x float> * %out1b,
-         <4 x float> * %out2b)
-  call void @__aos_to_soa3_float4(<4 x float> %v1c, <4 x float> %v1d,
-         <4 x float> %v2a, <4 x float> * %out0c, <4 x float> * %out1c,
-         <4 x float> * %out2c)
-  call void @__aos_to_soa3_float4(<4 x float> %v2b, <4 x float> %v2c,
-         <4 x float> %v2d, <4 x float> * %out0d, <4 x float> * %out1d,
-         <4 x float> * %out2d)
-  ret void
-}
-
-
-define void
+declare void
 @__soa_to_aos3_float16(<16 x float> %v0, <16 x float> %v1, <16 x float> %v2,
         <16 x float> * noalias %out0, <16 x float> * noalias %out1,
-        <16 x float> * noalias %out2) nounwind alwaysinline {
-  %v0a = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v0b = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v0c = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v0d = shufflevector <16 x float> %v0, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v1a = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v1b = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v1c = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v1d = shufflevector <16 x float> %v1, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-  %v2a = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v2b = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v2c = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-  %v2d = shufflevector <16 x float> %v2, <16 x float> undef,
-         <4 x i32> <i32 12, i32 13, i32 14, i32 15>
-
-  %out0a = bitcast <16 x float> * %out0 to <4 x float> *
-  %out0b = getelementptr <4 x float> * %out0a, i32 1
-  %out0c = getelementptr <4 x float> * %out0a, i32 2
-  %out0d = getelementptr <4 x float> * %out0a, i32 3
-  %out1a = bitcast <16 x float> * %out1 to <4 x float> *
-  %out1b = getelementptr <4 x float> * %out1a, i32 1
-  %out1c = getelementptr <4 x float> * %out1a, i32 2
-  %out1d = getelementptr <4 x float> * %out1a, i32 3
-  %out2a = bitcast <16 x float> * %out2 to <4 x float> *
-  %out2b = getelementptr <4 x float> * %out2a, i32 1
-  %out2c = getelementptr <4 x float> * %out2a, i32 2
-  %out2d = getelementptr <4 x float> * %out2a, i32 3
-
-  call void @__soa_to_aos3_float4(<4 x float> %v0a, <4 x float> %v1a,
-         <4 x float> %v2a, <4 x float> * %out0a, <4 x float> * %out0b,
-         <4 x float> * %out0c)
-  call void @__soa_to_aos3_float4(<4 x float> %v0b, <4 x float> %v1b,
-         <4 x float> %v2b, <4 x float> * %out0d, <4 x float> * %out1a,
-         <4 x float> * %out1b)
-  call void @__soa_to_aos3_float4(<4 x float> %v0c, <4 x float> %v1c,
-         <4 x float> %v2c, <4 x float> * %out1c, <4 x float> * %out1d,
-         <4 x float> * %out2a)
-  call void @__soa_to_aos3_float4(<4 x float> %v0d, <4 x float> %v1d,
-         <4 x float> %v2d, <4 x float> * %out2b, <4 x float> * %out2c,
-         <4 x float> * %out2d)
-  ret void
-}
+        <16 x float> * noalias %out2) nounwind alwaysinline ;
 
 ;; versions to be called from stdlib
 
-define void
+declare void
 @__aos_to_soa4_float(float * noalias %p,
         <WIDTH x float> * noalias %out0, <WIDTH x float> * noalias %out1,
         <WIDTH x float> * noalias %out2, <WIDTH x float> * noalias %out3)
-        nounwind alwaysinline { 
-  %p0 = bitcast float * %p to <WIDTH x float> *
-  %v0 = load <WIDTH x float> * %p0, align 4
-  %p1 = getelementptr <WIDTH x float> * %p0, i32 1
-  %v1 = load <WIDTH x float> * %p1, align 4
-  %p2 = getelementptr <WIDTH x float> * %p0, i32 2
-  %v2 = load <WIDTH x float> * %p2, align 4
-  %p3 = getelementptr <WIDTH x float> * %p0, i32 3
-  %v3 = load <WIDTH x float> * %p3, align 4
-  call void @__aos_to_soa4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1, 
-         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0, 
-         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
-  ret void
-}
+        nounwind alwaysinline ;
 
 
-define void
+declare void
 @__soa_to_aos4_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-             <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline { 
-  %out0 = bitcast float * %p to <WIDTH x float> *
-  %out1 = getelementptr <WIDTH x float> * %out0, i32 1
-  %out2 = getelementptr <WIDTH x float> * %out0, i32 2
-  %out3 = getelementptr <WIDTH x float> * %out0, i32 3
-  call void @__soa_to_aos4_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1, 
-         <WIDTH x float> %v2, <WIDTH x float> %v3, <WIDTH x float> * %out0, 
-         <WIDTH x float> * %out1, <WIDTH x float> * %out2, <WIDTH x float> * %out3)
-  ret void
-}
+             <WIDTH x float> %v3, float * noalias %p) nounwind alwaysinline ;
 
 
-define void
+declare void
 @__aos_to_soa3_float(float * noalias %p,
         <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-        <WIDTH x float> * %out2) nounwind alwaysinline { 
-  %p0 = bitcast float * %p to <WIDTH x float> *
-  %v0 = load <WIDTH x float> * %p0, align 4
-  %p1 = getelementptr <WIDTH x float> * %p0, i32 1
-  %v1 = load <WIDTH x float> * %p1, align 4
-  %p2 = getelementptr <WIDTH x float> * %p0, i32 2
-  %v2 = load <WIDTH x float> * %p2, align 4
-  call void @__aos_to_soa3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1, 
-         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-         <WIDTH x float> * %out2)
-  ret void
-}
+        <WIDTH x float> * %out2) nounwind alwaysinline ;
 
 
-define void
+declare void
 @__soa_to_aos3_float(<WIDTH x float> %v0, <WIDTH x float> %v1, <WIDTH x float> %v2,
-                     float * noalias %p) nounwind alwaysinline { 
-  %out0 = bitcast float * %p to <WIDTH x float> *
-  %out1 = getelementptr <WIDTH x float> * %out0, i32 1
-  %out2 = getelementptr <WIDTH x float> * %out0, i32 2
-  call void @__soa_to_aos3_float`'WIDTH (<WIDTH x float> %v0, <WIDTH x float> %v1, 
-         <WIDTH x float> %v2, <WIDTH x float> * %out0, <WIDTH x float> * %out1,
-         <WIDTH x float> * %out2)
-  ret void
-}
+                     float * noalias %p) nounwind alwaysinline ;
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1830,9 +1092,6 @@ define(`stdlib_core', `
 
 declare i32 @__fast_masked_vload()
 
-declare i8* @ISPCAlloc(i8**, i64, i32) nounwind
-declare void @ISPCLaunch(i8**, i8*, i8*, i32, i32, i32) nounwind
-declare void @ISPCSync(i8*) nounwind
 declare void @ISPCInstrument(i8*, i8*, i32, i64) nounwind
 
 declare i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %mask)
@@ -2616,52 +1875,6 @@ ifelse(HAVE_SCATTER, `1',
 }
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; vector ops
-
-define i8 @__extract_int8(<WIDTH x i8>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i8> %0, i32 %1
-  ret i8 %extract
-}
-
-define <WIDTH x i8> @__insert_int8(<WIDTH x i8>, i32, 
-                                   i8) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i8> %0, i8 %2, i32 %1
-  ret <WIDTH x i8> %insert
-}
-
-define i16 @__extract_int16(<WIDTH x i16>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i16> %0, i32 %1
-  ret i16 %extract
-}
-
-define <WIDTH x i16> @__insert_int16(<WIDTH x i16>, i32, 
-                                     i16) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i16> %0, i16 %2, i32 %1
-  ret <WIDTH x i16> %insert
-}
-
-define i32 @__extract_int32(<WIDTH x i32>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i32> %0, i32 %1
-  ret i32 %extract
-}
-
-define <WIDTH x i32> @__insert_int32(<WIDTH x i32>, i32, 
-                                     i32) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i32> %0, i32 %2, i32 %1
-  ret <WIDTH x i32> %insert
-}
-
-define i64 @__extract_int64(<WIDTH x i64>, i32) nounwind readnone alwaysinline {
-  %extract = extractelement <WIDTH x i64> %0, i32 %1
-  ret i64 %extract
-}
-
-define <WIDTH x i64> @__insert_int64(<WIDTH x i64>, i32, 
-                                     i64) nounwind readnone alwaysinline {
-  %insert = insertelement <WIDTH x i64> %0, i64 %2, i32 %1
-  ret <WIDTH x i64> %insert
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; various bitcasts from one type to another
@@ -2741,83 +1954,25 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* %src,
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src,
                                         i64 %len, i32 %align, i1 %isvolatile)
 
-define void @__memcpy32(i8 * %dst, i8 * %src, i32 %len) alwaysinline {
-    call void @llvm.memcpy.p0i8.p0i8.i32(i8 * %dst, i8 * %src, i32 %len, i32 0, i1 0)
-    ret void
-}
-
-define void @__memcpy64(i8 * %dst, i8 * %src, i64 %len) alwaysinline {
-    call void @llvm.memcpy.p0i8.p0i8.i64(i8 * %dst, i8 * %src, i64 %len, i32 0, i1 0)
-    ret void
-}
+declare void @__memcpy32(i8 * %dst, i8 * %src, i32 %len) alwaysinline;
+declare void @__memcpy64(i8 * %dst, i8 * %src, i64 %len) alwaysinline;
 
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* %dest, i8* %src,
                                          i32 %len, i32 %align, i1 %isvolatile)
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* %dest, i8* %src,
                                          i64 %len, i32 %align, i1 %isvolatile)
 
-define void @__memmove32(i8 * %dst, i8 * %src, i32 %len) alwaysinline {
-    call void @llvm.memmove.p0i8.p0i8.i32(i8 * %dst, i8 * %src, i32 %len, i32 0, i1 0)
-    ret void
-}
-
-define void @__memmove64(i8 * %dst, i8 * %src, i64 %len) alwaysinline {
-    call void @llvm.memmove.p0i8.p0i8.i64(i8 * %dst, i8 * %src, i64 %len, i32 0, i1 0)
-    ret void
-}
-
+declare void @__memmove32(i8 * %dst, i8 * %src, i32 %len) alwaysinline;
+declare void @__memmove64(i8 * %dst, i8 * %src, i64 %len) alwaysinline
 
 declare void @llvm.memset.p0i8.i32(i8* %dest, i8 %val, i32 %len, i32 %align,
                                    i1 %isvolatile)
 declare void @llvm.memset.p0i8.i64(i8* %dest, i8 %val, i64 %len, i32 %align,
                                    i1 %isvolatile)
 
-define void @__memset32(i8 * %dst, i8 %val, i32 %len) alwaysinline {
-    call void @llvm.memset.p0i8.i32(i8 * %dst, i8 %val, i32 %len, i32 0, i1 0)
-    ret void
-}
+declare void @__memset32(i8 * %dst, i8 %val, i32 %len) alwaysinline ;
+declare void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline;
 
-define void @__memset64(i8 * %dst, i8 %val, i64 %len) alwaysinline {
-    call void @llvm.memset.p0i8.i64(i8 * %dst, i8 %val, i64 %len, i32 0, i1 0)
-    ret void
-}
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; assert
-
-declare i32 @puts(i8*)
-declare void @abort() noreturn
-
-define void @__do_assert_uniform(i8 *%str, i1 %test, <WIDTH x MASK> %mask) {
-  br i1 %test, label %ok, label %fail
-
-fail:
-  %call = call i32 @puts(i8* %str)
-  call void @abort() noreturn
-  unreachable
-
-ok:
-  ret void
-}
-
-
-define void @__do_assert_varying(i8 *%str, <WIDTH x MASK> %test,
-                                 <WIDTH x MASK> %mask) {
-  %nottest = xor <WIDTH x MASK> %test,
-                 < forloop(i, 1, eval(WIDTH-1), `MASK -1, ') MASK -1 >
-  %nottest_and_mask = and <WIDTH x MASK> %nottest, %mask
-  %mm = call i64 @__movmsk(<WIDTH x MASK> %nottest_and_mask)
-  %all_ok = icmp eq i64 %mm, 0
-  br i1 %all_ok, label %ok, label %fail
-
-fail:
-  %call = call i32 @puts(i8* %str)
-  call void @abort() noreturn
-  unreachable
-
-ok:
-  ret void
-}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; new/delete
@@ -2848,47 +2003,14 @@ ifelse(RUNTIME, `32',
 ;; - __delete_uniform_32rt
 ;; - __delete_varying_32rt
 
+declare i8* @malloc(i32)
 declare i32 @posix_memalign(i8**, i32, i32)
 declare void @free(i8 *)
 
-define noalias i8 * @__new_uniform_32rt(i64 %size) {
-  %ptr = alloca i8*
-  %conv = trunc i64 %size to i32
-  %alignment = load i32* @memory_alignment
-  %call1 = call i32 @posix_memalign(i8** %ptr, i32 %alignment, i32 %conv)
-  %ptr_val = load i8** %ptr
-  ret i8* %ptr_val
-}
-
-define <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
-  %ret = alloca <WIDTH x i64>
-  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
-  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
-
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
-    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i32 %alignment, i32 %sz_LANE_ID)')
-
-  %r = load <WIDTH x i64> * %ret
-  ret <WIDTH x i64> %r
-}
-
-define void @__delete_uniform_32rt(i8 * %ptr) {
-  call void @free(i8 * %ptr)
-  ret void
-}
-
-define void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
-      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
-      call void @free(i8 * %ptr_LANE_ID)
-  ')
-  ret void
-}
+declare noalias i8 * @__new_uniform_32rt(i64 %size);
+declare <WIDTH x i64> @__new_varying32_32rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask);
+declare void @__delete_uniform_32rt(i8 * %ptr);
+declare void @__delete_varying_32rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask);
 
 ',
 RUNTIME, `64',
@@ -2903,67 +2025,104 @@ RUNTIME, `64',
 ;; - __delete_uniform_64rt
 ;; - __delete_varying_64rt
 
-declare i32 @posix_memalign(i8**, i64, i64)
+declare i8* @malloc(i64)
 declare void @free(i8 *)
 
-define noalias i8 * @__new_uniform_64rt(i64 %size) {
-  %ptr = alloca i8*
-  %alignment = load i32* @memory_alignment
-  %alignment64 = sext i32 %alignment to i64
-  %call1 = call i32 @posix_memalign(i8** %ptr, i64 %alignment64, i64 %size)
-  %ptr_val = load i8** %ptr
-  ret i8* %ptr_val
+define noalias i8 * @__new_uniform_64rt(i64 %size) 
+{
+entry:
+;;  compute laneIdx = __tid_x() & (__warpsize() - 1)
+  %and = call i32 @__program_index()
+;; if (laneIdx == 0)
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %call2 = tail call noalias i8* @malloc(i64 %size) 
+  %phitmp = ptrtoint i8* %call2 to i64
+  br label %if.end
+
+if.end:                                           ; preds = %if.then, %entry
+  %ptr.0 = phi i64 [ %phitmp, %if.then ], [ undef, %entry ]
+  %val.sroa.0.0.extract.trunc = trunc i64 %ptr.0 to i32
+  %call3 = tail call i32 @__shfl_i32_nvptx(i32 %val.sroa.0.0.extract.trunc, i32 0)
+  %val.sroa.0.0.insert.ext = zext i32 %call3 to i64
+  %val.sroa.0.4.extract.shift = lshr i64 %ptr.0, 32
+  %val.sroa.0.4.extract.trunc = trunc i64 %val.sroa.0.4.extract.shift to i32
+  %call8 = tail call i32 @__shfl_i32_nvptx(i32 %val.sroa.0.4.extract.trunc, i32 0)
+  %val.sroa.0.4.insert.ext = zext i32 %call8 to i64
+  %val.sroa.0.4.insert.shift = shl nuw i64 %val.sroa.0.4.insert.ext, 32
+  %val.sroa.0.4.insert.insert = or i64 %val.sroa.0.4.insert.shift, %val.sroa.0.0.insert.ext
+  %0 = inttoptr i64 %val.sroa.0.4.insert.insert to i8*
+  ret i8* %0
 }
+define void @__delete_uniform_64rt(i8 * %ptr) 
+{
+entry:
+  %and = call i32 @__program_index()
+  %cmp = icmp eq i32 %and, 0
+  br i1 %cmp, label %if.then, label %if.end
 
-define <WIDTH x i64> @__new_varying32_64rt(<WIDTH x i32> %size, <WIDTH x MASK> %mask) {
-  %ret = alloca <WIDTH x i64>
-  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
-  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
-  %alignment64 = sext i32 %alignment to i64
+if.then:                                          ; preds = %entry
+  tail call void @free(i8* %ptr) 
+  br label %if.end
 
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-    %sz_LANE_ID = extractelement <WIDTH x i32> %size, i32 LANE
-    %sz64_LANE_ID = zext i32 %sz_LANE_ID to i64
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
-    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
-
-  %r = load <WIDTH x i64> * %ret
-  ret <WIDTH x i64> %r
-}
-
-define <WIDTH x i64> @__new_varying64_64rt(<WIDTH x i64> %size, <WIDTH x MASK> %mask) {
-  %ret = alloca <WIDTH x i64>
-  store <WIDTH x i64> zeroinitializer, <WIDTH x i64> * %ret
-  %ret64 = bitcast <WIDTH x i64> * %ret to i64 *
-  %alignment = load i32* @memory_alignment
-  %alignment64 = sext i32 %alignment to i64
-
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-    %sz64_LANE_ID = extractelement <WIDTH x i64> %size, i32 LANE
-    %store_LANE_ID = getelementptr i64 * %ret64, i32 LANE
-    %ptr_LANE_ID = bitcast i64* %store_LANE_ID to i8**
-    %call_LANE_ID = call i32 @posix_memalign(i8** %ptr_LANE_ID, i64 %alignment64, i64 %sz64_LANE_ID)')
-
-  %r = load <WIDTH x i64> * %ret
-  ret <WIDTH x i64> %r
-}
-
-define void @__delete_uniform_64rt(i8 * %ptr) {
-  call void @free(i8 * %ptr)
+if.end:                                           ; preds = %if.then, %entry
   ret void
 }
 
-define void @__delete_varying_64rt(<WIDTH x i64> %ptr, <WIDTH x MASK> %mask) {
-  per_lane(WIDTH, <WIDTH x MASK> %mask, `
-      %iptr_LANE_ID = extractelement <WIDTH x i64> %ptr, i32 LANE
-      %ptr_LANE_ID = inttoptr i64 %iptr_LANE_ID to i8 *
-      call void @free(i8 * %ptr_LANE_ID)
-  ')
-  ret void
+define <1 x i64> @__new_varying32_64rt(<1 x i32> %sizev, <1 x i1> %maskv)
+{
+entry:
+  %size32 = extractelement <1 x i32> %sizev, i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  %size64 = zext i32 %size32 to i64
+  br i1 %mask, label %alloc, label %skip
+
+alloc:
+  %ptr   = tail call noalias i8* @malloc(i64 %size64) 
+  %addr1 = ptrtoint i8* %ptr to i64
+  br label %skip
+
+skip:
+  %addr64 = phi i64 [ %addr1, %alloc], [ 0, %entry ]
+  %addr   = insertelement <1 x i64> undef, i64 %addr64, i32 0
+  ret <1 x i64> %addr
 }
 
+define <1 x i64> @__new_varying64_64rt(<1 x i64> %sizev, <1 x i1> %maskv)
+{
+entry:
+  %size64 = extractelement <1 x i64> %sizev, i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  br i1 %mask, label %alloc, label %skip
+
+alloc:
+  %ptr   = tail call noalias i8* @malloc(i64 %size64) 
+  %addr1 = ptrtoint i8* %ptr to i64
+  br label %skip
+
+skip:
+  %addr64 = phi i64 [ %addr1, %alloc], [ 0, %entry ]
+  %addr   = insertelement <1 x i64> undef, i64 %addr64, i32 0
+  ret <1 x i64> %addr
+}
+
+define void @__delete_varying_64rt(<1 x i64> %ptrv, <1 x i1> %maskv)
+{
+entry:
+  %addr64 = extractelement <1 x i64> %ptrv,  i32 0
+  %mask   = extractelement <1 x  i1> %maskv, i32 0
+  br i1 %mask, label %free, label %skip
+
+free:
+  %ptr = inttoptr i64 %addr64 to i8*
+  tail call void @free(i8* %ptr) 
+  br label %skip
+
+skip:
+  ret void
+}
 ', `
 errprint(`RUNTIME should be defined to either 32 or 64
 ')
@@ -3116,13 +2275,6 @@ m4exit(`1')
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; read hw clock
 
-declare i64 @llvm.readcyclecounter()
-
-define i64 @__clock() nounwind {
-  %r = call i64 @llvm.readcyclecounter()
-  ret i64 %r
-}
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stdlib transcendentals
 ;;
@@ -3258,115 +2410,6 @@ define double @__stdlib_pow(double, double) nounwind readnone alwaysinline {
   ret double %r
 }
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; atomics and memory barriers
-
-declare void @llvm.memory.barrier(i1 %loadload, i1 %loadstore, i1 %storeload,
-                                  i1 %storestore, i1 %device)
-
-define void @__memory_barrier() nounwind readnone alwaysinline {
-  ;; see http://llvm.org/bugs/show_bug.cgi?id=2829.  It seems like we
-  ;; only get an MFENCE on x86 if "device" is true, but IMHO we should
-  ;; in the case where the first 4 args are true but it is false.
-  ;;  So we just always set that to true...
-  call void @llvm.memory.barrier(i1 true, i1 true, i1 true, i1 true, i1 true)
-  ret void
-}
-
-global_atomic_associative(WIDTH, add, i32, int32, 0)
-global_atomic_associative(WIDTH, sub, i32, int32, 0)
-global_atomic_associative(WIDTH, and, i32, int32, -1)
-global_atomic_associative(WIDTH, or, i32, int32, 0)
-global_atomic_associative(WIDTH, xor, i32, int32, 0)
-global_atomic_uniform(WIDTH, add, i32, int32)
-global_atomic_uniform(WIDTH, sub, i32, int32)
-global_atomic_uniform(WIDTH, and, i32, int32)
-global_atomic_uniform(WIDTH, or, i32, int32)
-global_atomic_uniform(WIDTH, xor, i32, int32)
-global_atomic_uniform(WIDTH, min, i32, int32)
-global_atomic_uniform(WIDTH, max, i32, int32)
-global_atomic_uniform(WIDTH, umin, i32, uint32)
-global_atomic_uniform(WIDTH, umax, i32, uint32)
-
-global_atomic_associative(WIDTH, add, i64, int64, 0)
-global_atomic_associative(WIDTH, sub, i64, int64, 0)
-global_atomic_associative(WIDTH, and, i64, int64, -1)
-global_atomic_associative(WIDTH, or, i64, int64, 0)
-global_atomic_associative(WIDTH, xor, i64, int64, 0)
-global_atomic_uniform(WIDTH, add, i64, int64)
-global_atomic_uniform(WIDTH, sub, i64, int64)
-global_atomic_uniform(WIDTH, and, i64, int64)
-global_atomic_uniform(WIDTH, or, i64, int64)
-global_atomic_uniform(WIDTH, xor, i64, int64)
-global_atomic_uniform(WIDTH, min, i64, int64)
-global_atomic_uniform(WIDTH, max, i64, int64)
-global_atomic_uniform(WIDTH, umin, i64, uint64)
-global_atomic_uniform(WIDTH, umax, i64, uint64)
-
-global_swap(WIDTH, i32, int32)
-global_swap(WIDTH, i64, int64)
-
-define float @__atomic_swap_uniform_float_global(float * %ptr, float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_swap_uniform_int32_global(i32 * %iptr, i32 %ival)
-  %ret = bitcast i32 %iret to float
-  ret float %ret
-}
-
-define double @__atomic_swap_uniform_double_global(double * %ptr, double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_swap_uniform_int64_global(i64 * %iptr, i64 %ival)
-  %ret = bitcast i64 %iret to double
-  ret double %ret
-}
-
-global_atomic_exchange(WIDTH, i32, int32)
-global_atomic_exchange(WIDTH, i64, int64)
-
-define <WIDTH x float> @__atomic_compare_exchange_float_global(float * %ptr,
-                      <WIDTH x float> %cmp, <WIDTH x float> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %icmp = bitcast <WIDTH x float> %cmp to <WIDTH x i32>
-  %ival = bitcast <WIDTH x float> %val to <WIDTH x i32>
-  %iret = call <WIDTH x i32> @__atomic_compare_exchange_int32_global(i32 * %iptr, <WIDTH x i32> %icmp,
-                                                                  <WIDTH x i32> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i32> %iret to <WIDTH x float>
-  ret <WIDTH x float> %ret
-}
-
-define <WIDTH x double> @__atomic_compare_exchange_double_global(double * %ptr,
-                      <WIDTH x double> %cmp, <WIDTH x double> %val, <WIDTH x MASK> %mask) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %icmp = bitcast <WIDTH x double> %cmp to <WIDTH x i64>
-  %ival = bitcast <WIDTH x double> %val to <WIDTH x i64>
-  %iret = call <WIDTH x i64> @__atomic_compare_exchange_int64_global(i64 * %iptr, <WIDTH x i64> %icmp,
-                                                                  <WIDTH x i64> %ival, <WIDTH x MASK> %mask)
-  %ret = bitcast <WIDTH x i64> %iret to <WIDTH x double>
-  ret <WIDTH x double> %ret
-}
-
-define float @__atomic_compare_exchange_uniform_float_global(float * %ptr, float %cmp,
-                                                             float %val) nounwind alwaysinline {
-  %iptr = bitcast float * %ptr to i32 *
-  %icmp = bitcast float %cmp to i32
-  %ival = bitcast float %val to i32
-  %iret = call i32 @__atomic_compare_exchange_uniform_int32_global(i32 * %iptr, i32 %icmp,
-                                                                   i32 %ival)
-  %ret = bitcast i32 %iret to float
-  ret float %ret
-}
-
-define double @__atomic_compare_exchange_uniform_double_global(double * %ptr, double %cmp,
-                                                               double %val) nounwind alwaysinline {
-  %iptr = bitcast double * %ptr to i64 *
-  %icmp = bitcast double %cmp to i64
-  %ival = bitcast double %val to i64
-  %iret = call i64 @__atomic_compare_exchange_uniform_int64_global(i64 * %iptr, i64 %icmp, i64 %ival)
-  %ret = bitcast i64 %iret to double
-  ret double %ret
-}
 
 ')
 
@@ -3713,154 +2756,55 @@ define void @__masked_store_blend_i16(<16 x i16>* nocapture, <16 x i16>,
 
 define(`packed_load_and_store', `
 
-define i32 @__packed_load_active(i32 * %startptr, <WIDTH x i32> * %val_ptr,
-                                 <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+define i32 @__packed_load_active(i32 * %startptr, <1 x i32> * %val_ptr,
+                                 <1 x i1> %full_mask) nounwind alwaysinline {
 entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
+  %active = extractelement <1 x i1> %full_mask, i32 0
+  %call = tail call i64 @__warpBinExclusiveScan(i1 zeroext %active)
+  %res.sroa.0.0.extract.trunc = trunc i64 %call to i32
+  br i1 %active, label %if.then, label %if.end
 
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
+if.then:                                          ; preds = %entry
+  %idxprom = ashr i64 %call, 32
+  %arrayidx = getelementptr inbounds i32* %startptr, i64 %idxprom
+  %val = load i32* %arrayidx, align 4
+  %valvec = insertelement <1 x i32> undef, i32 %val, i32 0
+  store <1 x i32> %valvec, <1 x i32>* %val_ptr, align 4
+  br label %if.end
 
-all_on:
-  ;; everyone wants to load, so just load an entire vector width in a single
-  ;; vector load
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  %vec_load = load <WIDTH x i32> *%vecptr, align 4
-  store <WIDTH x i32> %vec_load, <WIDTH x i32> * %val_ptr, align 4
-  ret i32 WIDTH
-
-unknown_mask:
-  br label %loop
-
-loop:
-  %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
-  %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
-
-  ; is the current lane on?
-  %and = and i64 %mask, %lanemask
-  %do_load = icmp eq i64 %and, %lanemask
-  br i1 %do_load, label %load, label %loopend 
-
-load:
-  %loadptr = getelementptr i32 *%startptr, i32 %offset
-  %loadval = load i32 *%loadptr
-  %val_ptr_i32 = bitcast <WIDTH x i32> * %val_ptr to i32 *
-  %storeptr = getelementptr i32 *%val_ptr_i32, i32 %lane
-  store i32 %loadval, i32 *%storeptr
-  %offset1 = add i32 %offset, 1
-  br label %loopend
-
-loopend:
-  %nextoffset = phi i32 [ %offset1, %load ], [ %offset, %loop ]
-  %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i64 %lanemask, 2
-
-  ; are we done yet?
-  %test = icmp ne i32 %nextlane, WIDTH
-  br i1 %test, label %loop, label %done
-
-done:
-  ret i32 %nextoffset
+if.end:                                           ; preds = %if.then, %entry
+  ret i32 %res.sroa.0.0.extract.trunc
 }
 
 define i32 @__packed_store_active(i32 * %startptr, <WIDTH x i32> %vals,
-                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline {
+                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline 
+{
 entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
+  %active = extractelement <1 x i1> %full_mask, i32 0
+  %call = tail call i64 @__warpBinExclusiveScan(i1 zeroext %active)
+  %res.sroa.0.0.extract.trunc = trunc i64 %call to i32
+  br i1 %active, label %if.then, label %if.end
 
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
+if.then:                                          ; preds = %entry
+  %idxprom = ashr i64 %call, 32
+  %arrayidx = getelementptr inbounds i32* %startptr, i64 %idxprom
+  %val = extractelement <1 x i32> %vals, i32 0
+  store i32 %val, i32* %arrayidx, align 4
+  br label %if.end
 
-all_on:
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
-  ret i32 WIDTH
-
-unknown_mask:
-  br label %loop
-
-loop:
-  %lane = phi i32 [ 0, %unknown_mask ], [ %nextlane, %loopend ]
-  %lanemask = phi i64 [ 1, %unknown_mask ], [ %nextlanemask, %loopend ]
-  %offset = phi i32 [ 0, %unknown_mask ], [ %nextoffset, %loopend ]
-
-  ; is the current lane on?
-  %and = and i64 %mask, %lanemask
-  %do_store = icmp eq i64 %and, %lanemask
-  br i1 %do_store, label %store, label %loopend 
-
-store:
-  %storeval = extractelement <WIDTH x i32> %vals, i32 %lane
-  %storeptr = getelementptr i32 *%startptr, i32 %offset
-  store i32 %storeval, i32 *%storeptr
-  %offset1 = add i32 %offset, 1
-  br label %loopend
-
-loopend:
-  %nextoffset = phi i32 [ %offset1, %store ], [ %offset, %loop ]
-  %nextlane = add i32 %lane, 1
-  %nextlanemask = mul i64 %lanemask, 2
-
-  ; are we done yet?
-  %test = icmp ne i32 %nextlane, WIDTH
-  br i1 %test, label %loop, label %done
-
-done:
-  ret i32 %nextoffset
+if.end:                                           ; preds = %if.then, %entry
+  ret i32 %res.sroa.0.0.extract.trunc
 }
 
-define MASK @__packed_store_active2(i32 * %startptr, <WIDTH x i32> %vals,
-                                   <WIDTH x MASK> %full_mask) nounwind alwaysinline {
-entry:
-  %mask = call i64 @__movmsk(<WIDTH x MASK> %full_mask)
-  %mask_known = call i1 @__is_compile_time_constant_mask(<WIDTH x MASK> %full_mask)
-  br i1 %mask_known, label %known_mask, label %unknown_mask
-
-known_mask:
-  %allon = icmp eq i64 %mask, ALL_ON_MASK
-  br i1 %allon, label %all_on, label %unknown_mask
- 
-all_on:
-  %vecptr = bitcast i32 *%startptr to <WIDTH x i32> *
-  store <WIDTH x i32> %vals, <WIDTH x i32> * %vecptr, align 4
-  ret MASK WIDTH
- 
-unknown_mask:
-  br label %loop
- 
-loop:
-  %offset = phi MASK [ 0, %unknown_mask ], [ %ch_offset, %loop ]
-  %i = phi i32 [ 0, %unknown_mask ], [ %ch_i, %loop ]
-  %storeval = extractelement <WIDTH x i32> %vals, i32 %i
-
-;; Offset has value in range from 0 to WIDTH-1. So it does not matter if we
-;; zero or sign extending it, while zero extend is free. Also do nothing for
-;; i64 MASK, as we need i64 value.
-ifelse(MASK, `i64',
-` %storeptr = getelementptr i32 *%startptr, MASK %offset',
-` %offset1 = zext MASK %offset to i64
-  %storeptr = getelementptr i32 *%startptr, i64 %offset1')
-  store i32 %storeval, i32 *%storeptr
-
-  %mull_mask = extractelement <WIDTH x MASK> %full_mask, i32 %i
-  %ch_offset = sub MASK %offset, %mull_mask
- 
-  ; are we done yet?
-  %ch_i = add i32 %i, 1
-  %test = icmp ne i32 %ch_i, WIDTH
-  br i1 %test, label %loop, label %done
- 
-done:
-  ret MASK %ch_offset
+define i32 @__packed_store_active2(i32 * %startptr, <1 x i32> %vals,
+                                   <1 x i1> %full_mask) nounwind alwaysinline 
+{
+  %ret = call i32 @__packed_store_active(i32* %startptr, 
+           <1 x i32> %vals, <1 x i1> %full_mask);
+  ret i32 %ret
 }
 ')
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; reduce_equal
@@ -3963,66 +2907,6 @@ reduce_equal_aux($1, i32, int32, i32, icmp, 32, eq)
 reduce_equal_aux($1, float, float, i32, fcmp, 32, oeq)
 reduce_equal_aux($1, i64, int64, i64, icmp, 64, eq)
 reduce_equal_aux($1, double, double, i64, fcmp, 64, oeq)
-')
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; prefix sum stuff
-
-; $1: vector width (e.g. 4)
-; $2: vector element type (e.g. float)
-; $3: bit width of vector element type (e.g. 32)
-; $4: operator to apply (e.g. fadd)
-; $5: identity element value (e.g. 0)
-; $6: suffix for function (e.g. add_float)
-
-define(`exclusive_scan', `
-define <$1 x $2> @__exclusive_scan_$6(<$1 x $2> %v,
-                                  <$1 x MASK> %mask) nounwind alwaysinline {
-  ; first, set the value of any off lanes to the identity value
-  %ptr = alloca <$1 x $2>
-  %idvec1 = bitcast $2 $5 to <1 x $2>
-  %idvec = shufflevector <1 x $2> %idvec1, <1 x $2> undef,
-      <$1 x i32> < forloop(i, 0, eval($1-2), `i32 0, ') i32 0 >
-  store <$1 x $2> %idvec, <$1 x $2> * %ptr
-  %ptr`'$3 = bitcast <$1 x $2> * %ptr to <$1 x i`'$3> *
-  %vi = bitcast <$1 x $2> %v to <$1 x i`'$3>
-  call void @__masked_store_blend_i$3(<$1 x i`'$3> * %ptr`'$3, <$1 x i`'$3> %vi,
-                                      <$1 x MASK> %mask)
-  %v_id = load <$1 x $2> * %ptr
-
-  ; extract elements of the vector to use in computing the scan
-  forloop(i, 0, eval($1-1), `
-  %v`'i = extractelement <$1 x $2> %v_id, i32 i')
-
-  ; and just compute the scan directly.
-  ; 0th element is the identity (so nothing to do here),
-  ; 1st element is identity (op) the 0th element of the original vector,
-  ; each successive element is the previous element (op) the previous element
-  ;  of the original vector
-  %s1 = $4 $2 $5, %v0
-  forloop(i, 2, eval($1-1), `
-  %s`'i = $4 $2 %s`'eval(i-1), %v`'eval(i-1)')
-
-  ; and fill in the result vector
-  %r0 = insertelement <$1 x $2> undef, $2 $5, i32 0  ; 0th element gets identity
-  forloop(i, 1, eval($1-1), `
-  %r`'i = insertelement <$1 x $2> %r`'eval(i-1), $2 %s`'i, i32 i')
-
-  ret <$1 x $2> %r`'eval($1-1)
-}
-')
-
-define(`scans', `
-exclusive_scan(WIDTH, i32, 32, add, 0, add_i32)
-exclusive_scan(WIDTH, float, 32, fadd, zeroinitializer, add_float)
-exclusive_scan(WIDTH, i64, 64, add, 0, add_i64)
-exclusive_scan(WIDTH, double, 64, fadd, zeroinitializer, add_double)
-
-exclusive_scan(WIDTH, i32, 32, and, -1, and_i32)
-exclusive_scan(WIDTH, i64, 64, and, -1, and_i64)
-
-exclusive_scan(WIDTH, i32, 32, or, 0, or_i32)
-exclusive_scan(WIDTH, i64, 64, or, 0, or_i64)
 ')
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -4531,70 +3415,3 @@ define(`define_avgs', `
 define_up_avgs()
 define_down_avgs()
 ')
-
-define(`rsqrtd_decl', `
-declare  double @__rsqrt_uniform_double(double)
-declare <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>)
-')
-
-define(`rcpd_decl', `
-declare  double @__rcp_uniform_double(double)
-declare <WIDTH x double> @__rcp_varying_double(<WIDTH x double>)
-')
-
-define(`declare_nvptx',
-`
-declare i32 @__program_index()  nounwind readnone alwaysinline
-declare i32 @__program_count()  nounwind readnone alwaysinline
-declare i32 @__warp_index()  nounwind readnone alwaysinline
-declare i32 @__task_index0()  nounwind readnone alwaysinline
-declare i32 @__task_index1()  nounwind readnone alwaysinline
-declare i32 @__task_index2()  nounwind readnone alwaysinline
-declare i32 @__task_index()  nounwind readnone alwaysinline
-declare i32 @__task_count0()  nounwind readnone alwaysinline
-declare i32 @__task_count1()  nounwind readnone alwaysinline
-declare i32 @__task_count2()  nounwind readnone alwaysinline
-declare i32 @__task_count()  nounwind readnone alwaysinline
-declare i64* @__cvt_loc2gen(i64 addrspace(3)*) nounwind readnone alwaysinline
-declare i64* @__cvt_const2gen(i64 addrspace(4)*) nounwind readnone alwaysinline
-declare i64* @__cvt_loc2gen_var(i64 addrspace(3)*) nounwind readnone alwaysinline
-declare i64 @__movmsk_ptx(<WIDTH x i1>) nounwind readnone alwaysinline;
-')
-
-define(`global_atomic_varying',`
-declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
-')
-
-define(`global_atomic_cas_varying',`
-declare <$1 x $3> @__atomic_$2_varying_$4_global(<$1 x i64> %ptr, <$1 x $3> %cmp, <$1 x $3> %val, <$1 x MASK> %maskv) nounwind alwaysinline
-')
-
-global_atomic_cas_varying(WIDTH, compare_exchange, i32, int32)
-global_atomic_cas_varying(WIDTH, compare_exchange, i64, int64)
-global_atomic_cas_varying(WIDTH, compare_exchange, float, float)
-global_atomic_cas_varying(WIDTH, compare_exchange, double, double)
-
-global_atomic_varying(WIDTH, swap, i32, int32)
-global_atomic_varying(WIDTH, swap, i64, int64)
-global_atomic_varying(WIDTH, swap, float, float)
-global_atomic_varying(WIDTH, swap, double, double)
-
-global_atomic_varying(WIDTH, add, i32, int32)
-global_atomic_varying(WIDTH, sub, i32, int32)
-global_atomic_varying(WIDTH, and, i32, int32)
-global_atomic_varying(WIDTH, or, i32, int32)
-global_atomic_varying(WIDTH, xor, i32, int32)
-global_atomic_varying(WIDTH, min, i32, int32)
-global_atomic_varying(WIDTH, max, i32, int32)
-global_atomic_varying(WIDTH, umin, i32, uint32)
-global_atomic_varying(WIDTH, umax, i32, uint32)
-
-global_atomic_varying(WIDTH, add, i64, int64)
-global_atomic_varying(WIDTH, sub, i64, int64)
-global_atomic_varying(WIDTH, and, i64, int64)
-global_atomic_varying(WIDTH, or, i64, int64)
-global_atomic_varying(WIDTH, xor, i64, int64)
-global_atomic_varying(WIDTH, min, i64, int64)
-global_atomic_varying(WIDTH, max, i64, int64)
-global_atomic_varying(WIDTH, umin, i64, uint64)
-global_atomic_varying(WIDTH, umax, i64, uint64)

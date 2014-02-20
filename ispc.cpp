@@ -280,6 +280,9 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
             arch = "arm";
         else
 #endif
+         if(!strncmp(isa, "nvptx", 5))
+           arch = "nvptx64";
+         else
             arch = "x86-64";
     }
 
@@ -707,6 +710,19 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 32;
     }
 #endif
+    else if (!strcasecmp(isa, "nvptx")) 
+    {
+        this->m_isa = Target::NVPTX;
+        this->m_cpu = "sm_35";
+        this->m_nativeVectorWidth = 32;
+        this->m_nativeVectorAlignment = 32;
+        this->m_vectorWidth = 1;
+        this->m_hasHalf = true;
+        this->m_maskingIsFree = true;
+        this->m_maskBitCount = 1;
+        this->m_hasTranscendentals = false; 
+        this->m_hasGather = this->m_hasScatter = false;
+    }
     else {
         Error(SourcePos(), "Target \"%s\" is unknown.  Choices are: %s.",
                 isa, SupportedTargets());
@@ -784,7 +800,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         // Initialize target-specific "target-feature" attribute.
         if (!m_attributes.empty()) {
             llvm::AttrBuilder attrBuilder;
-            attrBuilder.addAttribute("target-cpu", this->m_cpu);
+            if (m_isa != Target::NVPTX)
+              attrBuilder.addAttribute("target-cpu", this->m_cpu);
             attrBuilder.addAttribute("target-features", this->m_attributes);
             this->m_tf_attributes = new llvm::AttributeSet(
                 llvm::AttributeSet::get(
@@ -839,7 +856,7 @@ Target::SupportedTargets() {
         "avx1.1-i32x8, avx1.1-i32x16, avx1.1-i64x4 "
         "avx2-i32x8, avx2-i32x16, avx2-i64x4, "
         "generic-x1, generic-x4, generic-x8, generic-x16, "
-        "generic-x32, generic-x64";
+        "generic-x32, generic-x64, nvptx";
 }
 
 
@@ -866,6 +883,8 @@ Target::GetTripleString() const {
             triple.setArchName("i386");
         else if (m_arch == "x86-64")
             triple.setArchName("x86_64");
+        else if (m_arch == "nvptx64")
+          triple = llvm::Triple("nvptx64", "nvidia", "cuda");
         else
             triple.setArchName(m_arch);
     }
@@ -898,6 +917,8 @@ Target::ISAToString(ISA isa) {
         return "avx2";
     case Target::GENERIC:
         return "generic";
+    case Target::NVPTX:
+        return "nvptx";
     default:
         FATAL("Unhandled target in ISAToString()");
     }
@@ -936,6 +957,8 @@ Target::ISAToTargetString(ISA isa) {
         return "avx2-i32x8";
     case Target::GENERIC:
         return "generic-4";
+    case Target::NVPTX:
+        return "nvptx";
     default:
         FATAL("Unhandled target in ISAToTargetString()");
     }

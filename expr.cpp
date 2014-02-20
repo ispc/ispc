@@ -7867,6 +7867,12 @@ SizeOfExpr::TypeCheck() {
               "struct type \"%s\".", type->GetString().c_str());
         return NULL;
     }
+    if (type != NULL)
+      if (g->target->getISA() == Target::NVPTX && type->IsVaryingType())
+      {
+        Error(pos, "\"sizeof\" with varying data types is not yet supported with \"nvptx\" target.");
+        return NULL;
+      }
 
     return this;
 }
@@ -8660,6 +8666,11 @@ NewExpr::TypeCheck() {
     if (allocType == NULL) {
         AssertPos(pos, m->errorCount > 0);
         return NULL;
+    }
+    if (g->target->getISA() == Target::NVPTX && allocType->IsVaryingType())
+    {
+      Error(pos, "\"new\" with varying data types is not yet supported with \"nvptx\" target.");
+      return NULL;
     }
     if (CastType<UndefinedStructType>(allocType) != NULL) {
         Error(pos, "Can't dynamically allocate storage for declared "

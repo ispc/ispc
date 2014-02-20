@@ -57,6 +57,31 @@
   #error Unknown value of ISPC_MASK_BITS
 #endif
 
+
+
+///////////////////////////////////////////////////////////////////////////
+// CUDA Specific primitives
+//
+/***************/
+
+__declspec(safe,cost0) static inline varying int __programIndex() { return __program_index(); }
+__declspec(safe,cost0) static inline uniform int __programCount() { return __program_count(); }
+__declspec(safe,cost0) static inline uniform int __warpIndex()    { return __warp_index();    }
+
+/***************/
+
+__declspec(safe,cost0) static inline uniform int __taskIndex0() { return __task_index0(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex1() { return __task_index1(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex2() { return __task_index2(); }
+__declspec(safe,cost0) static inline uniform int __taskIndex () { return __task_index (); }
+
+/***************/
+
+__declspec(safe,cost0) static inline uniform int __taskCount0() { return __task_count0(); }
+__declspec(safe,cost0) static inline uniform int __taskCount1() { return __task_count1(); }
+__declspec(safe,cost0) static inline uniform int __taskCount2() { return __task_count2(); }
+__declspec(safe,cost0) static inline uniform int __taskCount () { return __task_count (); }
+
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
 
@@ -464,7 +489,10 @@ __declspec(safe)
 static inline uniform int popcnt(bool v) {
     // As with any() and all(), only count across the active lanes
 #if (ISPC_MASK_BITS == 1)
-    return __popcnt_int64(__movmsk(v & __mask));
+    if (__is_nvptx_target)
+      return __popcnt_int64(__movmsk_ptx(v & __mask));
+    else
+      return __popcnt_int64(__movmsk(v & __mask));
 #else
     return __popcnt_int64(__movmsk((UIntMaskType)__sext_varying_bool(v) & __mask));
 #endif
@@ -1226,6 +1254,11 @@ packed_store_active(uniform int a[], int vals) {
     return __packed_store_active(a, vals, (IntMaskType)__mask);
 }
 
+static inline uniform int 
+packed_store_active(bool active, uniform int a[], int vals) {
+    return __packed_store_active(a, vals, (IntMaskType)(-(int)active));
+}
+
 static inline uniform int
 packed_store_active2(uniform int a[], int vals) {
     return __packed_store_active2(a, vals, (IntMaskType)__mask);
@@ -1236,6 +1269,9 @@ packed_store_active2(uniform int a[], int vals) {
 // System information
 
 static inline uniform int num_cores() {
+  if (__is_nvptx_target)
+    return 15*32; // K20/K20X/K40 - 15SMX x 32 warps/smx (max is 64 warps/smx)
+  else
     return __num_cores();
 }
 
@@ -1783,7 +1819,7 @@ static inline void memory_barrier() {
     __memory_barrier();
 }
 
-#define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE)                        \
+#define DEFINE_ATOMIC_OP(TA,TB,OPA,OPB,MASKTYPE,TC)                        \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     TA ret = __atomic_##OPB##_##TB##_global(ptr, value, (MASKTYPE)__mask); \
     return ret;                                                         \
@@ -1794,6 +1830,10 @@ static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_##OPB##_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1804,10 +1844,15 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr, TA value) { \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  } \
 }                                                                       \
 
-#define DEFINE_ATOMIC_SWAP(TA,TB)                                       \
+#define DEFINE_ATOMIC_SWAP(TA,TB,MASKTYPE,TC)                \
 static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_swap_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform int i = 0;                                                  \
     TA ret[programCount];                                               \
     TA memVal;                                                          \
@@ -1838,6 +1883,7 @@ static inline TA atomic_swap_global(uniform TA * uniform ptr, TA value) { \
        originally got back from memory... */                            \
     ret[lastSwap] = memVal;                                             \
     return ret[programIndex];                                           \
+  }\
 }                                                                       \
 static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
                                             uniform TA value) {         \
@@ -1845,6 +1891,10 @@ static inline uniform TA atomic_swap_global(uniform TA * uniform ptr,   \
     return ret;                                                         \
 }                                                                       \
 static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_swap_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1855,9 +1905,10 @@ static inline TA atomic_swap_global(uniform TA * varying ptr, TA value) { \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  }\
 }                                                                       \
 
-#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB)                          \
+#define DEFINE_ATOMIC_MINMAX_OP(TA,TB,OPA,OPB,MASKTYPE,TC)                          \
 static inline TA atomic_##OPA##_global(uniform TA * uniform ptr, TA value) { \
     uniform TA oneval = reduce_##OPA(value);                            \
     TA ret;                                                             \
@@ -1872,6 +1923,10 @@ static inline uniform TA atomic_##OPA##_global(uniform TA * uniform ptr, \
 }                                                                       \
 static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
                                        TA value) {                      \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_##OPB##_varying_##TB##_global((TC)ptr, value, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1882,57 +1937,58 @@ static inline TA atomic_##OPA##_global(uniform TA * varying ptr,        \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  } \
 }
 
-DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max)
-DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType)
-DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType)
-DEFINE_ATOMIC_SWAP(int32,int32)
+DEFINE_ATOMIC_OP(int32,int32,add,add,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,subtract,sub,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,min,min,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int32,int32,max,max,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,and,and,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,or,or,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int32,int32,xor,xor,IntMaskType,int64)
+DEFINE_ATOMIC_SWAP(int32,int32,IntMaskType,int64)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax)
-DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_SWAP(unsigned int32,int32)
+DEFINE_ATOMIC_OP(unsigned int32,int32,add,add,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,subtract,sub,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,min,umin,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int32,uint32,max,umax,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,and,and,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,or,or,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int32,int32,xor,xor,UIntMaskType, unsigned int64)
+DEFINE_ATOMIC_SWAP(unsigned int32,int32,UIntMaskType, unsigned int64)
 
-DEFINE_ATOMIC_SWAP(float,float)
+DEFINE_ATOMIC_SWAP(float,float,IntMaskType,int64)
 
-DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min)
-DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max)
-DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType)
-DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType)
-DEFINE_ATOMIC_SWAP(int64,int64)
+DEFINE_ATOMIC_OP(int64,int64,add,add,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,subtract,sub,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,min,min,IntMaskType,int64)
+DEFINE_ATOMIC_MINMAX_OP(int64,int64,max,max,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,and,and,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,or,or,IntMaskType,int64)
+DEFINE_ATOMIC_OP(int64,int64,xor,xor,IntMaskType,int64)
+DEFINE_ATOMIC_SWAP(int64,int64,IntMaskType, int64)
 
 // For everything but atomic min and max, we can use the same
 // implementations for unsigned as for signed.
-DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin)
-DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax)
-DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType)
-DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType)
-DEFINE_ATOMIC_SWAP(unsigned int64,int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,add,add,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,subtract,sub,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,min,umin,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_MINMAX_OP(unsigned int64,uint64,max,umax,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,and,and,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,or,or,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_OP(unsigned int64,int64,xor,xor,UIntMaskType,unsigned int64)
+DEFINE_ATOMIC_SWAP(unsigned int64,int64,UIntMaskType, unsigned int64)
 
-DEFINE_ATOMIC_SWAP(double,double)
+DEFINE_ATOMIC_SWAP(double,double,IntMaskType, int64)
 
 #undef DEFINE_ATOMIC_OP
 #undef DEFINE_ATOMIC_MINMAX_OP
 #undef DEFINE_ATOMIC_SWAP
 
-#define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE)                           \
+#define ATOMIC_DECL_CMPXCHG(TA, TB, MASKTYPE, TC)                           \
 static inline uniform TA atomic_compare_exchange_global(               \
          uniform TA * uniform ptr, uniform TA oldval, uniform TA newval) { \
     uniform TA ret =                                                    \
@@ -1947,6 +2003,10 @@ static inline TA atomic_compare_exchange_global(                           \
 } \
 static inline TA atomic_compare_exchange_global(               \
          uniform TA * varying ptr, TA oldval, TA newval) { \
+  if (__is_nvptx_target) {                                            \
+    TA ret = __atomic_compare_exchange_varying_##TB##_global((TC)ptr, oldval, newval, (MASKTYPE)__mask);      \
+    return ret;                                                         \
+  } else {    \
     uniform TA * uniform ptrArray[programCount];                        \
     ptrArray[programIndex] = ptr;                                       \
     TA ret;                                                             \
@@ -1958,14 +2018,15 @@ static inline TA atomic_compare_exchange_global(               \
         ret = insert(ret, i, r);                                        \
     }                                                                   \
     return ret;                                                         \
+  } \
 }
 
-ATOMIC_DECL_CMPXCHG(int32, int32, IntMaskType)
-ATOMIC_DECL_CMPXCHG(unsigned int32, int32, UIntMaskType)
-ATOMIC_DECL_CMPXCHG(float, float, IntMaskType)
-ATOMIC_DECL_CMPXCHG(int64, int64, IntMaskType)
-ATOMIC_DECL_CMPXCHG(unsigned int64, int64, UIntMaskType)
-ATOMIC_DECL_CMPXCHG(double, double, IntMaskType)
+ATOMIC_DECL_CMPXCHG(int32, int32, IntMaskType,int64)
+ATOMIC_DECL_CMPXCHG(unsigned int32, int32, UIntMaskType,unsigned int64)
+ATOMIC_DECL_CMPXCHG(float, float, IntMaskType,int64)
+ATOMIC_DECL_CMPXCHG(int64, int64, IntMaskType,int64)
+ATOMIC_DECL_CMPXCHG(unsigned int64, int64, UIntMaskType,unsigned int64)
+ATOMIC_DECL_CMPXCHG(double, double, IntMaskType,int64)
 
 #undef ATOMIC_DECL_CMPXCHG
 
@@ -2032,12 +2093,20 @@ static inline TYPE atomic_##NAME##_local(uniform TYPE * uniform ptr, TYPE value)
 }                                                                      \
 static inline TYPE atomic_##NAME##_local(uniform TYPE * p, TYPE value) {    \
     TYPE ret;                                                          \
+  if (__is_nvptx_target) {                                            \
+    foreach_active (i) {                                             \
+        uniform TYPE * uniform ptr = (uniform TYPE * uniform)extract((int64)p, i); \
+        ret  = insert(ret, i, *ptr);                                \
+        *ptr = OPFUNC(*ptr, extract(value, i));                \
+    }                                                                  \
+  } else {    \
     uniform TYPE * uniform ptrs[programCount];                         \
     ptrs[programIndex] = p;                                            \
     foreach_active (i) {                                             \
         ret = insert(ret, i, *ptrs[i]);                                \
         *ptrs[i] = OPFUNC(*ptrs[i], extract(value, i));                \
     }                                                                  \
+  } \
     return ret;                                                        \
 }
 

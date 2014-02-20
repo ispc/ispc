@@ -274,3 +274,4 @@ define i64 @__popcnt_int64(i64) nounwind readnone alwaysinline {
 
 define_avgs()
 
+declare_nvptx()

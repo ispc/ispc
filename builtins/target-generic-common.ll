@@ -392,4 +392,4 @@ declare void @__prefetch_read_uniform_nt(i8 * nocapture) nounwind
 ;; int8/int16 builtins
 
 define_avgs()
-
+declare_nvptx()

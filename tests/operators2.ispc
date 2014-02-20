@@ -1,4 +1,9 @@
+#ifdef __NVPTX__
+uniform int _off[programCount];
+#define off _off[programIndex]
+#else  /* global varying data types are not yet supported with "nvptx" target */
 int off;
+#endif
 
 export uniform int width() { return programCount; }
 
@@ -22,11 +27,11 @@ struct S operator/(struct S rr, struct S rv) {
     return c;
 }
 
-struct S a;
-struct S b;
-struct S d;
 
 export void f_f(uniform float RET[], uniform float aFOO[]) {
+    struct S a;
+    struct S b;
+    struct S d;
     int T = programIndex;
     a.a = aFOO[programIndex];
     b.a = -aFOO[programIndex];

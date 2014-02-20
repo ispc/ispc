@@ -168,6 +168,13 @@ DeclSpecs::GetBaseType(SourcePos pos) const {
     retType = lApplyTypeQualifiers(typeQualifiers, retType, pos);
 
     if (soaWidth > 0) {
+#if 0  /* see stmt.cpp in DeclStmt::EmitCode for work-around of SOAType Declaration */
+        if (g->target->getISA() == Target::NVPTX)
+        {
+            Error(pos, "\"soa\" data types are currently not supported with \"nvptx\" target.");
+            return NULL;
+        }
+#endif
         const StructType *st = CastType<StructType>(retType);
 
         if (st == NULL) {
@@ -402,6 +409,13 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
 
+#if 0 /* NVPTX */
+        if (baseType->IsUniformType())
+        {
+          fprintf(stderr, " detected uniform array of size= %d  array= %s\n" ,arraySize,
+              baseType->IsArrayType() ? " true " : " false ");
+        }
+#endif
         const Type *arrayType = new ArrayType(baseType, arraySize);
         if (child != NULL) {
             child->InitFromType(arrayType, ds);
@@ -530,9 +544,9 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
 
         returnType = returnType->ResolveUnboundVariability(Variability::Varying);
 
+        bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isExternC =  ds && (ds->storageClass == SC_EXTERN_C);
         bool isExported = ds && ((ds->typeQualifiers & TYPEQUAL_EXPORT) != 0);
-        bool isTask =     ds && ((ds->typeQualifiers & TYPEQUAL_TASK) != 0);
         bool isUnmasked = ds && ((ds->typeQualifiers & TYPEQUAL_UNMASKED) != 0);
 
         if (isExported && isTask) {
@@ -541,9 +555,9 @@ Declarator::InitFromType(const Type *baseType, DeclSpecs *ds) {
             return;
         }
         if (isExternC && isTask) {
-            Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
-                  "qualifiers");
-            return;
+          Error(pos, "Function can't have both \"extern \"C\"\" and \"task\" "
+              "qualifiers");
+          return;
         }
         if (isExternC && isExported) {
             Error(pos, "Function can't have both \"extern \"C\"\" and \"export\" "

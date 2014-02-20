@@ -444,6 +444,38 @@ Module::AddGlobalVariable(const std::string &name, const Type *type, Expr *initE
         return;
     }
 
+    if (g->target->getISA() == Target::NVPTX && 
+#if 0
+        !type->IsConstType()  &&
+#endif
+#if 1
+        at != NULL &&
+#endif
+        type->IsVaryingType())
+    {
+      Error(pos, "Global \"varying\" variables are not yet supported in \"nvptx\" target.");
+      return;
+#if 0
+        int nel = 32;  /* warp-size */
+        if (type->IsArrayType())
+        {
+          const ArrayType *at = CastType<ArrayType>(type);
+          /* we must scale # elements by 4, because a thread-block will run 4 warps
+           * or 128 threads.
+           * ***note-to-me***:please define these value (128threads/4warps)
+           * in nvptx-target definition
+           * instead of compile-time constants 
+           */
+          nel *= at->GetElementCount();
+          assert (!type->IsSOAType());
+          type = new ArrayType(at->GetElementType()->GetAsUniformType(), nel);
+        }
+        else
+          type = new ArrayType(type->GetAsUniformType(), nel);
+#endif
+    }
+
+
     llvm::Type *llvmType = type->LLVMType(g->ctx);
     if (llvmType == NULL)
         return;
@@ -643,6 +675,21 @@ lCheckExportedParameterTypes(const Type *type, const std::string &name,
     }
 }
 
+static void
+lCheckTaskParameterTypes(const Type *type, const std::string &name,
+                             SourcePos pos) {
+  if (g->target->getISA() != Target::NVPTX) 
+    return;
+  if (lRecursiveCheckValidParamType(type, false) == false) {
+    if (CastType<VectorType>(type))
+      Error(pos, "Vector-typed parameter \"%s\" is illegal in a task "
+          "function with \"nvptx\" target.", name.c_str());
+    else
+      Error(pos, "Varying parameter \"%s\" is illegal in a task function with \"nvptx\" target.",
+          name.c_str());
+    }
+}
+
 
 /** Given a function type, loop through the function parameters and see if
     any are StructTypes.  If so, issue an error; this is currently broken
@@ -801,7 +848,8 @@ Module::AddFunctionDeclaration(const std::string &name,
 #else // LLVM 3.1 and 3.3+
         function->addFnAttr(llvm::Attribute::AlwaysInline);
 #endif
-    if (functionType->isTask)
+    /* evghenii: fails function verification when "if" executed in nvptx target */
+    if (functionType->isTask && g->target->getISA() != Target::NVPTX)
         // This also applies transitively to members I think?
 #if defined(LLVM_3_1)
         function->setDoesNotAlias(1, true);
@@ -822,6 +870,13 @@ Module::AddFunctionDeclaration(const std::string &name,
         Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false)
         Error(pos, "Task-qualified functions must have void return type.");
 
+    if (g->target->getISA() == Target::NVPTX &&
+        Type::Equal(functionType->GetReturnType(), AtomicType::Void) == false &&
+        functionType->isExported)
+    {
+        Error(pos, "Export-qualified functions must have void return type with \"nvptx\" target.");
+    }
+
     if (functionType->isExported || functionType->isExternC)
         lCheckForStructParameters(functionType, pos);
 
@@ -840,6 +895,9 @@ Module::AddFunctionDeclaration(const std::string &name,
         // JCB nomosoa - Varying is now a-ok.
         if (functionType->isExported) {
           lCheckExportedParameterTypes(argType, argName, argPos);
+        }
+        if (functionType->isTask) {
+          lCheckTaskParameterTypes(argType, argName, argPos);
         }
 
         // ISPC assumes that no pointers alias.  (It should be possible to
@@ -959,7 +1017,13 @@ Module::writeOutput(OutputType outputType, const char *outFileName,
         const char *fileType = NULL;
         switch (outputType) {
         case Asm:
-            if (strcasecmp(suffix, "s"))
+            if (g->target->getISA() != Target::NVPTX)
+            {
+              if (strcasecmp(suffix, "s"))
+                fileType = "assembly";
+            }
+            else
+              if (strcasecmp(suffix, "ptx"))
                 fileType = "assembly";
             break;
         case Bitcode:
@@ -1057,6 +1121,11 @@ Module::writeBitcode(llvm::Module *module, const char *outFileName) {
     }
 
     llvm::raw_fd_ostream fos(fd, (fd != 1), false);
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      const std::string dl_string = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64";
+      module->setDataLayout(dl_string);
+    }
     llvm::WriteBitcodeToFile(module, fos);
     return true;
 }
@@ -2095,6 +2164,24 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
             opts.addMacroDef(g->cppArgs[i].substr(2));
         }
     }
+    if (g->target->getISA() == Target::NVPTX)
+    {
+      opts.addMacroDef("__NVPTX__");
+      opts.addMacroDef("programIndex=__programIndex()");
+      opts.addMacroDef("cif=if");
+      opts.addMacroDef("cfor=for");
+      opts.addMacroDef("cwhile=while");
+      opts.addMacroDef("ccontinue=continue");
+      opts.addMacroDef("cdo=do");
+      opts.addMacroDef("taskIndex0=__taskIndex0()");
+      opts.addMacroDef("taskIndex1=__taskIndex1()");
+      opts.addMacroDef("taskIndex2=__taskIndex2()");
+      opts.addMacroDef("taskIndex=__taskIndex()");
+      opts.addMacroDef("taskCount0=__taskCount0()");
+      opts.addMacroDef("taskCount1=__taskCount1()");
+      opts.addMacroDef("taskCount2=__taskCount2()");
+      opts.addMacroDef("taskCount=__taskCount()");
+    }
 
 #if defined(LLVM_3_1)
     inst.getLangOpts().BCPLComment = 1;
@@ -2540,6 +2627,29 @@ lCreateDispatchModule(std::map<std::string, FunctionTargetVariants> &functions) 
     return module;
 }
 
+static std::string lCBEMangle(const std::string &S) {
+  std::string Result;
+
+  for (unsigned i = 0, e = S.size(); i != e; ++i) {
+    if (i+1 != e && ((S[i] == '>' && S[i+1] == '>') ||
+                     (S[i] == '<' && S[i+1] == '<'))) {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+      i++;
+    } else if (isalnum(S[i]) || S[i] == '_' || S[i] == '<' || S[i] == '>') {
+      Result += S[i];
+    } else {
+      Result += '_';
+      Result += 'A'+(S[i]&15);
+      Result += 'A'+((S[i]>>4)&15);
+      Result += '_';
+    }
+  }
+  return Result;
+}
+
 
 int
 Module::CompileAndOutput(const char *srcFile,
@@ -2555,7 +2665,7 @@ Module::CompileAndOutput(const char *srcFile,
                          const char *hostStubFileName,
                          const char *devStubFileName)
 {
-    if (target == NULL || strchr(target, ',') == NULL) {
+  if (target == NULL || strchr(target, ',') == NULL) {
         // We're only compiling to a single target
         g->target = new Target(arch, cpu, target, generatePIC);
         if (!g->target->isValid())
@@ -2563,6 +2673,32 @@ Module::CompileAndOutput(const char *srcFile,
 
         m = new Module(srcFile);
         if (m->CompileFile() == 0) {
+
+            /* NVPTX:
+             * for PTX target replace '.' with '_' in all global variables 
+             * a PTX identifier name must match [a-zA-Z$_][a-zA-Z$_0-9]*
+             */
+            if (g->target->getISA() == Target::NVPTX)
+            {
+              /* mangle global variables names */
+              {
+                llvm::Module::global_iterator I = m->module->global_begin(), E = m->module->global_end();
+                for (; I != E; I++)
+                  I->setName(lCBEMangle(I->getName()));
+              }
+
+              /* mangle functions names */
+              {
+                llvm::Module::iterator I = m->module->begin(), E = m->module->end();
+                for (; I != E; I++)
+                {
+                  std::string str = I->getName();
+                  if (str.find("operator") != std::string::npos)
+                    I->setName(lCBEMangle(str));
+                }
+              }
+            }
+
             if (outputType == CXX) {
                 if (target == NULL || strncmp(target, "generic-", 8) != 0) {
                     Error(SourcePos(), "When generating C++ output, one of the \"generic-*\" "
@@ -2765,4 +2901,5 @@ Module::CompileAndOutput(const char *srcFile,
 
         return errorCount > 0;
     }
+    return true;
 }

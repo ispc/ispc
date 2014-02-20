@@ -133,6 +133,7 @@ static llvm::Pass *CreateDebugPass(char * output);
 static llvm::Pass *CreateReplaceStdlibShiftPass();
 
 static llvm::Pass *CreateFixBooleanSelectPass();
+static llvm::Pass *CreatePromoteLocalToPrivatePass();
 
 #define DEBUG_START_PASS(NAME)                                 \
     if (g->debugPrint &&                                       \
@@ -496,7 +497,11 @@ Optimize(llvm::Module *module, int optLevel) {
         // run absolutely no optimizations, since the front-end needs us to
         // take the various __pseudo_* functions it has emitted and turn
         // them into something that can actually execute.
-        optPM.add(CreateImproveMemoryOpsPass(), 100);
+        
+        if (g->opt.disableGatherScatterOptimizations == false &&
+            g->target->getVectorWidth() > 1) 
+          optPM.add(CreateImproveMemoryOpsPass(), 100);
+
         if (g->opt.disableHandlePseudoMemoryOps == false)
             optPM.add(CreateReplacePseudoMemoryOpsPass());
 
@@ -519,6 +524,8 @@ Optimize(llvm::Module *module, int optLevel) {
         llvm::initializeInstrumentation(*registry);
         llvm::initializeTarget(*registry);
 
+        if (g->target->getISA() == Target::NVPTX)
+          optPM.add(CreatePromoteLocalToPrivatePass());
         optPM.add(llvm::createGlobalDCEPass(), 185);
 
         // Setup to use LLVM default AliasAnalysis
@@ -577,7 +584,10 @@ Optimize(llvm::Module *module, int optLevel) {
         optPM.add(llvm::createGlobalOptimizerPass());
         optPM.add(llvm::createReassociatePass());
         optPM.add(llvm::createIPConstantPropagationPass());
-        optPM.add(CreateReplaceStdlibShiftPass(),229);
+
+        if (g->target->getISA() != Target::NVPTX)
+          optPM.add(CreateReplaceStdlibShiftPass(),229);
+
         optPM.add(llvm::createDeadArgEliminationPass(),230);
         optPM.add(llvm::createInstructionCombiningPass());
         optPM.add(llvm::createCFGSimplificationPass());
@@ -689,6 +699,111 @@ Optimize(llvm::Module *module, int optLevel) {
 
         // Should be the last
         optPM.add(CreateFixBooleanSelectPass(), 400);
+
+        if (g->target->getISA() == Target::NVPTX)
+        {
+          optPM.add(llvm::createGlobalDCEPass());
+
+          optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+          optPM.add(llvm::createBasicAliasAnalysisPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          // Here clang has an experimental pass SROAPass instead of
+          // ScalarReplAggregatesPass. We should add it in the future.
+          optPM.add(llvm::createScalarReplAggregatesPass());
+          optPM.add(llvm::createEarlyCSEPass());
+          optPM.add(llvm::createLowerExpectIntrinsicPass());
+          optPM.add(llvm::createTypeBasedAliasAnalysisPass());
+          optPM.add(llvm::createBasicAliasAnalysisPass());
+
+          // Early optimizations to try to reduce the total amount of code to
+          // work with if we can
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createConstantPropagationPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createPromoteMemoryToRegisterPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+
+
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+
+          // On to more serious optimizations
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createPromoteMemoryToRegisterPass());
+          optPM.add(llvm::createGlobalOptimizerPass());
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createIPConstantPropagationPass());
+
+          optPM.add(llvm::createDeadArgEliminationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createPruneEHPass());
+          optPM.add(llvm::createFunctionAttrsPass());
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createConstantPropagationPass());
+          optPM.add(llvm::createDeadInstEliminationPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createArgumentPromotionPass());
+#if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
+          // Starting from 3.4 this functionality was moved to
+          // InstructionCombiningPass. See r184459 for details.
+          optPM.add(llvm::createSimplifyLibCallsPass());
+#endif
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createJumpThreadingPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createTailCallEliminationPass());
+
+          optPM.add(llvm::createInstructionCombiningPass());
+
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createConstantPropagationPass());
+
+          optPM.add(llvm::createInstructionCombiningPass());
+
+          optPM.add(llvm::createIPSCCPPass());
+          optPM.add(llvm::createDeadArgEliminationPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createArgumentPromotionPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createReassociatePass());
+          optPM.add(llvm::createLoopRotatePass());
+          optPM.add(llvm::createLICMPass());
+//          optPM.add(llvm::createLoopUnswitchPass(false));
+#if 1
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createIndVarSimplifyPass());
+          optPM.add(llvm::createLoopIdiomPass());
+          optPM.add(llvm::createLoopDeletionPass());
+          optPM.add(llvm::createLoopUnrollPass());
+          optPM.add(llvm::createGVNPass());
+          optPM.add(llvm::createMemCpyOptPass());
+          optPM.add(llvm::createSCCPPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createJumpThreadingPass());
+          optPM.add(llvm::createCorrelatedValuePropagationPass());
+          optPM.add(llvm::createDeadStoreEliminationPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createCFGSimplificationPass());
+          optPM.add(llvm::createInstructionCombiningPass());
+          optPM.add(llvm::createFunctionInliningPass());
+          optPM.add(llvm::createAggressiveDCEPass());
+          optPM.add(llvm::createStripDeadPrototypesPass());
+          optPM.add(llvm::createGlobalDCEPass());
+          optPM.add(llvm::createConstantMergePass());
+#endif
+        }
     }
 
     // Finish up by making sure we didn't mess anything up in the IR along
@@ -5266,5 +5381,64 @@ static llvm::Pass *
 CreateFixBooleanSelectPass() {
     return new FixBooleanSelectPass();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Detect addrspace(3)
+///////////////////////////////////////////////////////////////////////////////
+
+class PromoteLocalToPrivatePass: public llvm::BasicBlockPass
+{
+  public:
+    static char ID; // Pass identification, replacement for typeid
+    PromoteLocalToPrivatePass() : BasicBlockPass(ID) {}
+
+    bool runOnBasicBlock(llvm::BasicBlock &BB);
+};
+
+char PromoteLocalToPrivatePass::ID = 0;
+
+bool 
+PromoteLocalToPrivatePass::runOnBasicBlock(llvm::BasicBlock &BB)
+{
+  std::vector<llvm::AllocaInst*> Allocas;
+
+  bool modifiedAny  = false;
+
+  llvm::Function *cvtFunc = m->module->getFunction("__cvt_loc2gen_var");
+
+  // Find allocas that are safe to promote, by looking at all instructions in
+  // the entry node
+  for (llvm::BasicBlock::iterator I = BB.begin(), E = --BB.end(); I != E; ++I)
+  {
+    llvm::Instruction *inst = &*I;
+    if (llvm::CallInst *ci = llvm::dyn_cast<llvm::CallInst>(inst))
+    {
+      llvm::Function *func = ci->getCalledFunction();
+      if (cvtFunc && (cvtFunc == func))
+      {
+#if 0
+        fprintf(stderr , "--found cvt-- name= %s \n",
+            I->getName().str().c_str());
+#endif
+        llvm::AllocaInst *alloca = new llvm::AllocaInst(LLVMTypes::Int64Type, "opt_loc2var", ci);
+        assert(alloca != NULL);
+#if 0
+        const int align = 8; // g->target->getNativeVectorAlignment();
+        alloca->setAlignment(align);
+#endif
+        ci->replaceAllUsesWith(alloca);
+        modifiedAny = true;
+      }
+    }
+  }
+  return modifiedAny;
+}
+
+static llvm::Pass *
+CreatePromoteLocalToPrivatePass() {
+    return new PromoteLocalToPrivatePass();
+}
+
+
 
 
