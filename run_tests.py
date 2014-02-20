@@ -258,7 +258,7 @@ def run_test(testname):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
                 if is_nvptx_target:
-                  nvptxcc_exe = "ptxtools/alloy_ptxcc.sh"
+                  nvptxcc_exe = "ptxtools/runtest_ptxcc.sh"
                   nvptxcc_exe_rel = add_prefix(nvptxcc_exe)
                   cc_cmd = "%s %s -DTEST_SIG=%d -o %s" % \
                       (nvptxcc_exe_rel, obj_name, match, exe_name)
@@ -297,7 +297,7 @@ def run_test(testname):
                     basename = os.path.basename(filename)
                     os.unlink("%s.pdb" % basename)
                     os.unlink("%s.ilk" % basename)
-#            os.unlink(obj_name)
+            os.unlink(obj_name)
         except:
             None
 
