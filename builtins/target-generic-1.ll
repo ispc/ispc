@@ -11,6 +11,7 @@ scans()
 int64minmax()
 aossoa()
 declare_nvptx()
+saturation_arithmetic_novec()
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; masked store

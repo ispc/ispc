@@ -57,8 +57,6 @@
   #error Unknown value of ISPC_MASK_BITS
 #endif
 
-
-
 ///////////////////////////////////////////////////////////////////////////
 // CUDA Specific primitives
 //
@@ -81,6 +79,44 @@ __declspec(safe,cost0) static inline uniform int __taskCount0() { return __task_
 __declspec(safe,cost0) static inline uniform int __taskCount1() { return __task_count1(); }
 __declspec(safe,cost0) static inline uniform int __taskCount2() { return __task_count2(); }
 __declspec(safe,cost0) static inline uniform int __taskCount () { return __task_count (); }
+
+/* Limits of integral types. */
+#ifndef INT8_MAX
+#define INT8_MAX               (127)
+#endif
+#ifndef INT16_MAX
+#define INT16_MAX              (32767)
+#endif
+#ifndef INT32_MAX
+#define INT32_MAX              (2147483647)
+#endif
+#ifndef INT64_MAX
+#define INT64_MAX              (9223372036854775807)
+#endif
+#ifndef UINT8_MAX
+#define UINT8_MAX              (255)
+#endif
+#ifndef UINT16_MAX
+#define UINT16_MAX             (65535)
+#endif
+#ifndef UINT32_MAX
+#define UINT32_MAX             (4294967295)
+#endif
+#ifndef UINT64_MAX
+#define UINT64_MAX             (18446744073709551615)
+#endif
+#ifndef INT8_MIN
+#define INT8_MIN               (-INT8_MAX - 1)
+#endif
+#ifndef INT16_MIN
+#define INT16_MIN              (-INT16_MAX - 1)
+#endif
+#ifndef INT32_MIN
+#define INT32_MIN              (-INT32_MAX - 1)
+#endif
+#ifndef INT64_MIN
+#define INT64_MIN              (-INT64_MAX - 1)
+#endif
 
 ///////////////////////////////////////////////////////////////////////////
 // Low level primitives
@@ -4414,6 +4450,108 @@ static inline void fastmath() {
     __fastmath();
 }
 
+///////////////////////////////////////////////////////////////////////////
+// saturation arithmetic
+
+static inline uniform int8 saturating_add(uniform int8 a, uniform int8 b) {
+    uniform unsigned int8 a_unsig = a, b_unsig = b;
+    uniform unsigned int8 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 7) + INT8_MAX;
+    if ((uniform int8) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int8 saturating_add(varying int8 a, varying int8 b) {
+    return __padds_vi8(a, b);
+}
+
+static inline uniform int16 saturating_add(uniform int16 a, uniform int16 b) {
+    uniform unsigned int16 a_unsig = a, b_unsig = b;
+    uniform unsigned int16 result = a_unsig + b_unsig;
+    a_unsig = (a_unsig >> 15) + INT16_MAX;
+    if ((uniform int16) ((a_unsig ^ b_unsig) | ~(b_unsig ^ result)) >= 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int16 saturating_add(varying int16 a, varying int16 b) {
+    return __padds_vi16(a, b);
+}
+
+static inline uniform unsigned int8 saturating_add(uniform unsigned int8 a, 
+                                                   uniform unsigned int8 b) {
+    uniform unsigned int8 result = a + b;
+    result |= (-(uniform int8)(result < a));
+    return result;
+}
+
+static inline varying unsigned int8 saturating_add(varying unsigned int8 a, 
+                                                   varying unsigned int8 b) {
+    return __paddus_vi8(a, b);
+}
+
+static inline uniform unsigned int16 saturating_add(uniform unsigned int16 a, 
+                                                    uniform unsigned int16 b) {
+    uniform unsigned int16 result = a + b;
+    result |= (-(uniform int16)(result < a));
+    return result;
+}
+
+static inline varying unsigned int16 saturating_add(varying unsigned int16 a, 
+                                                    varying unsigned int16 b) {
+    return __paddus_vi16(a, b);
+}
+
+static inline uniform int8 saturating_sub(uniform int8 a, uniform int8 b) {
+    uniform unsigned int8 a_unsig = a, b_unsig = b;
+    uniform unsigned int8 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 7) + INT8_MAX;
+    if ((uniform int8) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int8 saturating_sub(varying int8 a, varying int8 b) {
+    return __psubs_vi8(a, b);
+}
+
+static inline uniform int16 saturating_sub(uniform int16 a, uniform int16 b) {
+    uniform unsigned int16 a_unsig = a, b_unsig = b;
+    uniform unsigned int16 result = a_unsig - b_unsig;
+    a_unsig = (a_unsig >> 15) + INT16_MAX;
+    if ((uniform int16) ((a_unsig ^ b_unsig) & (a_unsig ^ result)) < 0)
+        result = a_unsig;
+    return result;
+}
+
+static inline varying int16 saturating_sub(varying int16 a, varying int16 b) {
+    return __psubs_vi16(a, b);
+}
+
+static inline uniform unsigned int8 saturating_sub(uniform unsigned int8 a, 
+                                                   uniform unsigned int8 b) {
+    uniform unsigned int8 result = a - b;
+    result &= (-(uniform int8)(result <= a));
+    return result;
+}
+
+static inline varying unsigned int8 saturating_sub(varying unsigned int8 a, 
+                                                   varying unsigned int8 b) {
+    return __psubus_vi8(a, b);
+}
+
+static inline uniform unsigned int16 saturating_sub(uniform unsigned int16 a, 
+                                                    uniform unsigned int16 b) {
+    uniform unsigned int16 result = a - b;
+    result &= (-(uniform int16)(result <= a));
+    return result;
+}
+
+static inline varying unsigned int16 saturating_sub(varying unsigned int16 a, 
+                                                    varying unsigned int16 b) {
+    return __psubus_vi16(a, b);
+}
 ///////////////////////////////////////////////////////////////////////////
 // rdrand
 

@@ -39,6 +39,8 @@ ifelse(LLVM_VERSION, `LLVM_3_0', `rdrand_decls()',
        LLVM_VERSION, `LLVM_3_1', `rdrand_decls()',
        `rdrand_definition()')
 
+saturation_arithmetic()
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; int min/max
 

@@ -2048,6 +2048,9 @@ void
 Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostream) const
 {
     clang::CompilerInstance inst;
+#if defined(LLVM_3_5)
+    inst.createVirtualFileSystem();
+#endif
     inst.createFileManager();
 
     llvm::raw_fd_ostream stderrRaw(2, false);

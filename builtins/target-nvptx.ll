@@ -2260,3 +2260,5 @@ define void @__memory_barrier() nounwind readnone alwaysinline {
   call void @llvm.nvvm.membar.gl()
   ret void
 }
+
+saturation_arithmetic_novec();

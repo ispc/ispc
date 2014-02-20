@@ -884,24 +884,29 @@ IntrinsicsOpt::IntrinsicsOpt()
     // All of the mask instructions we may encounter.  Note that even if
     // compiling for AVX, we may still encounter the regular 4-wide SSE
     // MOVMSK instruction.
-    llvm::Function *ssei8Movmsk =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse2_pmovmskb_128);
-    maskInstructions.push_back(ssei8Movmsk);
-    llvm::Function *sseFloatMovmsk =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse_movmsk_ps);
-    maskInstructions.push_back(sseFloatMovmsk);
-    maskInstructions.push_back(m->module->getFunction("__movmsk"));
-    llvm::Function *avxFloatMovmsk =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_movmsk_ps_256);
-    Assert(avxFloatMovmsk != NULL);
-    maskInstructions.push_back(avxFloatMovmsk);
+    if (llvm::Function *ssei8Movmsk =
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse2_pmovmskb_128))) {
+        maskInstructions.push_back(ssei8Movmsk);
+    }
+    if (llvm::Function *sseFloatMovmsk =
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse_movmsk_ps))) {
+        maskInstructions.push_back(sseFloatMovmsk);
+    }
+    if (llvm::Function *__movmsk = 
+        m->module->getFunction("__movmsk")) {
+        maskInstructions.push_back(__movmsk);
+    }
+    if (llvm::Function *avxFloatMovmsk =
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_movmsk_ps_256))) {
+        maskInstructions.push_back(avxFloatMovmsk);
+    }
 
     // And all of the blend instructions
     blendInstructions.push_back(BlendInstruction(
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_sse41_blendvps),
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_sse41_blendvps)),
         0xf, 0, 1, 2));
     blendInstructions.push_back(BlendInstruction(
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_blendv_ps_256),
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_blendv_ps_256)),
         0xff, 0, 1, 2));
 }
 
@@ -933,15 +938,13 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
     DEBUG_START_PASS("IntrinsicsOpt");
 
     llvm::Function *avxMaskedLoad32 =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_ps_256);
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_ps_256));
     llvm::Function *avxMaskedLoad64 =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskload_pd_256);
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskload_pd_256));
     llvm::Function *avxMaskedStore32 =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_ps_256);
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_ps_256));
     llvm::Function *avxMaskedStore64 =
-        llvm::Intrinsic::getDeclaration(m->module, llvm::Intrinsic::x86_avx_maskstore_pd_256);
-    Assert(avxMaskedLoad32 != NULL && avxMaskedStore32 != NULL);
-    Assert(avxMaskedLoad64 != NULL && avxMaskedStore64 != NULL);
+        m->module->getFunction(llvm::Intrinsic::getName(llvm::Intrinsic::x86_avx_maskstore_pd_256));
 
     bool modifiedAny = false;
  restart:
@@ -1108,20 +1111,24 @@ IntrinsicsOpt::runOnBasicBlock(llvm::BasicBlock &bb) {
 
 bool
 IntrinsicsOpt::matchesMaskInstruction(llvm::Function *function) {
-    for (unsigned int i = 0; i < maskInstructions.size(); ++i)
+    for (unsigned int i = 0; i < maskInstructions.size(); ++i) {
         if (maskInstructions[i].function != NULL &&
-            function == maskInstructions[i].function)
+            function == maskInstructions[i].function) {
             return true;
+        }
+    }
     return false;
 }
 
 
 IntrinsicsOpt::BlendInstruction *
 IntrinsicsOpt::matchingBlendInstruction(llvm::Function *function) {
-    for (unsigned int i = 0; i < blendInstructions.size(); ++i)
+    for (unsigned int i = 0; i < blendInstructions.size(); ++i) {
         if (blendInstructions[i].function != NULL &&
-            function == blendInstructions[i].function)
+            function == blendInstructions[i].function) {
             return &blendInstructions[i];
+        }
+    }
     return NULL;
 }
 

@@ -3415,3 +3415,62 @@ define(`define_avgs', `
 define_up_avgs()
 define_down_avgs()
 ')
+
+;;;;;;;;;;;;;;;;;;;;
+
+define(`const_vector', `<$1 $2>')
+define(`saturation_arithmetic_novec_universal', `
+define <WIDTH x i8> @__p$1s_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = sext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = sext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp sgt <WIDTH x i16> %res, const_vector(i16, 127)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 127), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, -128)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, -128), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+
+define <WIDTH x i16> @__p$1s_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = sext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = sext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp sgt <WIDTH x i32> %res, const_vector(i32, 32767)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 32767), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, -32768)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, -32768), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+
+define <WIDTH x i8> @__p$1us_vi8(<WIDTH x i8>, <WIDTH x i8>) {
+  %v0_i16 = zext <WIDTH x i8> %0 to <WIDTH x i16>
+  %v1_i16 = zext <WIDTH x i8> %1 to <WIDTH x i16>
+  %res = $1 <WIDTH x i16> %v0_i16, %v1_i16
+  %over_mask = icmp ugt <WIDTH x i16> %res, const_vector(i16, 255)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i16> const_vector(i16, 255), <WIDTH x i16> %res
+  %under_mask = icmp slt <WIDTH x i16> %res, const_vector(i16, 0)
+  %ret_i16 = select <WIDTH x i1> %under_mask, <WIDTH x i16> const_vector(i16, 0), <WIDTH x i16> %over_res
+  %ret = trunc <WIDTH x i16> %ret_i16 to <WIDTH x i8>
+  ret <WIDTH x i8> %ret
+}
+
+define <WIDTH x i16> @__p$1us_vi16(<WIDTH x i16>, <WIDTH x i16>) {
+  %v0_i32 = zext <WIDTH x i16> %0 to <WIDTH x i32>
+  %v1_i32 = zext <WIDTH x i16> %1 to <WIDTH x i32>
+  %res = $1 <WIDTH x i32> %v0_i32, %v1_i32
+  %over_mask = icmp ugt <WIDTH x i32> %res, const_vector(i32, 65535)
+  %over_res = select <WIDTH x i1> %over_mask, <WIDTH x i32> const_vector(i32, 65535), <WIDTH x i32> %res
+  %under_mask = icmp slt <WIDTH x i32> %res, const_vector(i32, 0)
+  %ret_i32 = select <WIDTH x i1> %under_mask, <WIDTH x i32> const_vector(i32, 0), <WIDTH x i32> %over_res
+  %ret = trunc <WIDTH x i32> %ret_i32 to <WIDTH x i16>
+  ret <WIDTH x i16> %ret
+}
+')
+
+define(`saturation_arithmetic_novec', `
+saturation_arithmetic_novec_universal(sub)
+saturation_arithmetic_novec_universal(add)
+')
+

@@ -208,7 +208,7 @@ def build_LLVM(version_LLVM, revision, folder, tarball, debug, selfbuild, extra,
                     from_validation)
         else:
             try_do_LLVM("configure release version ",
-                    'cmake -G "Visual Studio 10" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
+                    'cmake -G "Visual Studio 11" -DCMAKE_INSTALL_PREFIX="..\\'+ LLVM_BIN +
                     '" -DLLVM_LIT_TOOLS_DIR="C:\\gnuwin32\\bin" ..\\' + LLVM_SRC,
                     from_validation)
     else:
@@ -356,6 +356,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
     print_debug("Folder: " + os.environ["ISPC_HOME"] + "\n", False, "")
     date = datetime.datetime.now()
     print_debug("Date: " + date.strftime('%H:%M %d/%m/%Y') + "\n", False, "")
+    newest_LLVM="3.4"
 # *** *** ***
 # Stability validation run
 # *** *** ***
@@ -442,7 +443,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
         if len(archs) == 0:
             archs = ["x86", "x86-64"]
         if len(LLVM) == 0:
-            LLVM = ["3.3", "trunk"]
+            LLVM = [newest_LLVM, "trunk"]
         gen_archs = ["x86-64"]
         need_LLVM = check_LLVM(LLVM)
         for i in range(0,len(need_LLVM)):
@@ -524,8 +525,8 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             performance.ref = "ispc_ref.exe"
         performance.perf_target = ""
         performance.in_file = "." + os.sep + f_date + os.sep + "performance.log"
-# prepare LLVM 3.3 as newest LLVM
-        need_LLVM = check_LLVM(["3.3"])
+# prepare newest LLVM
+        need_LLVM = check_LLVM([newest_LLVM])
         if len(need_LLVM) != 0:
             build_LLVM(need_LLVM[0], "", "", "", False, False, False, True, False, make)
         if perf_llvm == False:
@@ -542,7 +543,7 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             #try_do_LLVM("stash current branch ", "git stash", True)
             try_do_LLVM("checkout reference branch " + reference_branch + " ", "git checkout " + reference_branch, True)
             sys.stdout.write(".\n")
-            build_ispc("3.3", make)
+            build_ispc(newest_LLVM, make)
             sys.stdout.write(".\n")
             if current_OS != "Windows":
                 os.rename("ispc", "ispc_ref")
@@ -553,12 +554,12 @@ def validation_run(only, only_targets, reference_branch, number, notify, update,
             if stashing:
                 try_do_LLVM("return current branch ", "git stash pop", True)
             sys.stdout.write("You can interrupt script now.\n")
-            build_ispc("3.3", make)
+            build_ispc(newest_LLVM, make)
         else:
             # build compiler with two different LLVM versions
             if len(check_LLVM([reference_branch])) != 0:
                 error("you haven't got llvm called " + reference_branch, 1)
-            build_ispc("3.3", make)
+            build_ispc(newest_LLVM, make)
             os.rename("ispc", "ispc_ref")
             build_ispc(reference_branch, make)
 # begin validation run for performance. output is inserted into perf()
