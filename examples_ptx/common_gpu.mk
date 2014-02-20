@@ -122,7 +122,7 @@ objs_gpu/%_nvvm_ispc.ptx: objs_gpu/%_ispc.bc
 
 # generate an object file from PTX
 objs_gpu/%_ispc.o: objs_gpu/%_ispc.ptx
-	$(PTXCC) $< $(PTXCC_FLAGS) -o $@
+	$(PTXCC) $< -Xnvcc="$(PTXCC_FLAGS)" -o $@
 
 
 	 
