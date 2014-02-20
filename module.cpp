@@ -2168,11 +2168,13 @@ Module::execPreprocessor(const char *infilename, llvm::raw_string_ostream *ostre
     {
       opts.addMacroDef("__NVPTX__");
       opts.addMacroDef("programIndex=__programIndex()");
+#if 1
       opts.addMacroDef("cif=if");
       opts.addMacroDef("cfor=for");
       opts.addMacroDef("cwhile=while");
       opts.addMacroDef("ccontinue=continue");
       opts.addMacroDef("cdo=do");
+#endif
       opts.addMacroDef("taskIndex0=__taskIndex0()");
       opts.addMacroDef("taskIndex1=__taskIndex1()");
       opts.addMacroDef("taskIndex2=__taskIndex2()");
