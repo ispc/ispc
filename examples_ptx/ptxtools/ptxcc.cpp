@@ -79,7 +79,7 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
 
 static void lUsage(const int ret)
 {
-  fprintf(stdout, "\nusage: ptxcc\n");
+  fprintf(stdout, "\nusage: ptxcc [options] file.ptx \n");
   fprintf(stdout, "    [--help]\t\t\t\t This help\n");
   fprintf(stdout, "    [--verbose]\t\t\t\t Be verbose\n");
   fprintf(stdout, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");

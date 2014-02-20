@@ -260,7 +260,7 @@ static void showUsage()
 
 static void lUsage(const int ret)
 {
-  fprintf(stdout, "\nusage: ptxgen\n");
+  fprintf(stdout, "\nusage: ptxgen [options] file.[ll,bc] \n");
   fprintf(stdout, "    [--help]\t\t This help\n");
   fprintf(stdout, "    [--verbose]\t\t Be verbose\n");
   fprintf(stdout, "    [--arch={%s}]\t GPU target architecture\n", "sm_35");
@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
   assert(outputPTX);
 
   const int ret = generatePTX(nvvmOptions, nvvmFiles, outputPTX, computeArch);
-
+    outputPTX.open(filePTX.c_str());
   return ret;
 }
 
