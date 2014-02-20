@@ -13,7 +13,8 @@ then
   $($PTXCC $TMPDIR/$fbname.ptx -o $TMPDIR/$fbname.o -Xnvcc="-G") && \
   $(nvcc test_static_nvptx.cpp examples/nvcc_helpers.cu examples/ispc_malloc.cpp $TMPDIR/$fbname.o -arch=sm_35 -Iexamples/ -D_CUDA_ -lcudadevrt $ARGS);
 else
-  $($PTXCC $1 -o $TMPDIR/$fbname.o -Xnvcc="-G") && \
+  $(sed 's/\.b0/\.b32/g' $1 > $TMPDIR/$fbname) && \
+  $($PTXCC $TMPDIR/$fbname -o $TMPDIR/$fbname.o -Xnvcc="-G") && \
   $(nvcc test_static_nvptx.cpp examples/nvcc_helpers.cu examples/ispc_malloc.cpp $TMPDIR/$fbname.o -arch=sm_35 -Iexamples/ -D_CUDA_ -lcudadevrt $ARGS);
 fi
 
