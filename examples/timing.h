@@ -58,6 +58,7 @@ __inline__ uint64_t rdtsc() {
 
 #ifdef WIN32
 #include <windows.h>
+double rtc();
 #define rdtsc __rdtsc
 #else // WIN32
 __inline__ uint64_t rdtsc() {
@@ -72,14 +73,30 @@ __inline__ uint64_t rdtsc() {
   __asm__ __volatile__ ("rdtsc" : "=a" (low), "=d" (high));
   return (uint64_t)high << 32 | low;
 }
+
+#include <sys/time.h>
+static inline double rtc(void)
+{
+  struct timeval Tvalue;
+  double etime;
+  struct timezone dummy;
+
+  gettimeofday(&Tvalue,&dummy);
+  etime =  (double) Tvalue.tv_sec +
+    1.e-6*((double) Tvalue.tv_usec);
+  return etime;
+}
+
 #endif // !WIN32
 #endif // !__arm__            
             
-static uint64_t start, end;
+static uint64_t start,  end;
+static double  tstart, tend;
 
 static inline void reset_and_start_timer()
 {
     start = rdtsc();
+    tstart = rtc();
 }
 
 /* Returns the number of millions of elapsed processor cycles since the
@@ -88,4 +105,10 @@ static inline double get_elapsed_mcycles()
 {
     end = rdtsc();
     return (end-start) / (1024. * 1024.);
+}
+
+static inline double get_elapsed_msec()
+{
+    tend = rtc();
+    return (tend - tstart)*1e3;
 }
