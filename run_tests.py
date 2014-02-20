@@ -258,7 +258,7 @@ def run_test(testname):
                 if should_fail:
                     cc_cmd += " -DEXPECT_FAILURE"
                 if is_nvptx_target:
-                  nvptxcc_exe = "nvptxcc"
+                  nvptxcc_exe = "ptxtools/alloy_ptxcc.sh"
                   nvptxcc_exe_rel = add_prefix(nvptxcc_exe)
                   cc_cmd = "%s %s -DTEST_SIG=%d -o %s" % \
                       (nvptxcc_exe_rel, obj_name, match, exe_name)
@@ -270,7 +270,7 @@ def run_test(testname):
             if is_generic_target:
                 ispc_cmd += " --emit-c++ --c++-include-file=%s" % add_prefix(options.include_file)
             if is_nvptx_target:
-                filename4ptx = filename+".ptx.parsed_ispc"
+                filename4ptx = "/tmp/"+os.path.basename(filename)+".parsed.ispc"
                 grep_cmd = "grep -v 'export uniform int width' %s > %s " % \
                     (filename, filename4ptx)
                 if options.verbose:

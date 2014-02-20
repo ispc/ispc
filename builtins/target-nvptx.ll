@@ -705,12 +705,32 @@ define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline
   ret float %ret
 }
 
+define  double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline 
+{
+  %ret1 = call double @llvm.sqrt.f64(double %0)
+  %ret  = fdiv double 1., %ret1
+  ret double %ret
+}
+define  double @__rcp_uniform_double(double) nounwind readonly alwaysinline 
+{
+  %ret  = fdiv double 1., %0
+  ret double %ret
+}
+
+
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone  alwaysinline
 {
   %v = extractelement <1 x float> %0, i32 0
   %r = call float @__rcp_uniform_float(float %v)
   %rv = insertelement <1 x float> undef, float %r, i32 0 
   ret <WIDTH x float> %rv
+}
+define <WIDTH x double> @__rcp_varying_double(<WIDTH x double>) nounwind readnone  alwaysinline
+{
+  %v = extractelement <1 x double> %0, i32 0
+  %r = call double @__rcp_uniform_double(double %v)
+  %rv = insertelement <1 x double> undef, double %r, i32 0 
+  ret <WIDTH x double> %rv
 }
 define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
 {
@@ -719,6 +739,14 @@ define <WIDTH x float> @__rsqrt_varying_float(<WIDTH x float>) nounwind readnone
   %rv = insertelement <1 x float> undef, float %r, i32 0 
   ret <WIDTH x float> %rv
 }
+define <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>) nounwind readnone alwaysinline
+{
+  %v = extractelement <1 x double> %0, i32 0
+  %r = call double @__rsqrt_uniform_double(double %v)
+  %rv = insertelement <1 x double> undef, double %r, i32 0 
+  ret <WIDTH x double> %rv
+}
+
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
 {
   %v = extractelement <1 x float> %0, i32 0
@@ -726,7 +754,6 @@ define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone 
   %rv = insertelement <1 x float> undef, float %r, i32 0 
   ret <WIDTH x float> %rv
 }
-
 ;; declare double @__sqrt_uniform_double(double) nounwind readnone
 define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
   %ret = call double @llvm.sqrt.f64(double %0)
