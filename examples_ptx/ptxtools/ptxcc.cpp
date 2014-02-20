@@ -79,13 +79,13 @@ static std::vector<std::string> lSplitString(const std::string &s, char delim)
 
 static void lUsage(const int ret)
 {
-  fprintf(stderr, "\nusage: ptxcc\n");
-  fprintf(stderr, "    [--help]\t\t\t\t This help\n");
-  fprintf(stderr, "    [--verbose]\t\t\t\t Be verbose\n");
-  fprintf(stderr, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
-  fprintf(stderr, "    [-o <name>]\t\t\t\t Output file name\n");
-  fprintf(stderr, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
-  fprintf(stderr, " \n");
+  fprintf(stdout, "\nusage: ptxcc\n");
+  fprintf(stdout, "    [--help]\t\t\t\t This help\n");
+  fprintf(stdout, "    [--verbose]\t\t\t\t Be verbose\n");
+  fprintf(stdout, "    [--arch={%s}]\t\t\t GPU target architecture\n", "sm_35");
+  fprintf(stdout, "    [-o <name>]\t\t\t\t Output file name\n");
+  fprintf(stdout, "    [-Xnvcc=<arguments>]\t\t Arguments to pass through to \"nvcc\"\n");
+  fprintf(stdout, " \n");
   exit(ret);
 }
 
