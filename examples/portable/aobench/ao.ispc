@@ -40,6 +40,12 @@
 
 typedef float<3> vec;
 
+#if 1
+#define __inline inline
+#else
+#define __inline
+#endif
+
 struct Isect {
     float      t;
     vec        p;
@@ -81,9 +87,7 @@ static inline void vnormalize(vec &v) {
 }
 
 
-#if 1
-inline
-#endif
+__inline
 static void
 ray_plane_intersect(Isect &isect, Ray &ray, const uniform Plane &plane) {
     float d = -dot(plane.p, plane.n);
@@ -152,9 +156,7 @@ ray_sphere_intersect(Isect &isect, Ray &ray, const uniform Sphere &sphere) {
 }
 
 
-#if 1
-inline
-#endif
+__inline
 static void
 orthoBasis(vec basis[3], vec n) {
     basis[2] = n;
@@ -178,9 +180,7 @@ orthoBasis(vec basis[3], vec n) {
 }
 
 
-#if 1
-inline
-#endif
+__inline
 static float
 ambient_occlusion(Isect &isect, const uniform Plane &plane, const uniform Sphere spheres[3],
                   RNGState &rngstate) {
