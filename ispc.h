@@ -282,6 +282,8 @@ public:
 
     bool hasTranscendentals() const {return m_hasTranscendentals;}
     
+    bool hasTrigonometry() const {return m_hasTrigonometry;}
+    
     bool hasRsqrtd() const {return m_hasRsqrtd;}
     
     bool hasRcpd() const {return m_hasRcpd;}
@@ -384,6 +386,9 @@ private:
     /** Indicates whether the target has support for transcendentals (beyond
         sqrt, which we assume that all of them handle). */
     bool m_hasTranscendentals;
+    
+    /** Indicates whether the target has ISA support for trigonometry */
+    bool m_hasTrigonometry;
     
     /** Indicates whether there is an ISA double precision rsqrt. */
     bool m_hasRsqrtd;
