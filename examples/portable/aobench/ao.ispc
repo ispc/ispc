@@ -89,7 +89,7 @@ static inline void vnormalize(vec &v) {
 
 __inline
 static void
-ray_plane_intersect(Isect &isect, Ray &ray, const uniform Plane &plane) {
+ray_plane_intersect(Isect &isect, Ray &ray, const Plane &plane) {
     float d = -dot(plane.p, plane.n);
     float v = dot(ray.dir, plane.n);
 
@@ -121,7 +121,7 @@ ray_plane_intersect(Isect &isect, Ray &ray, const uniform Plane &plane) {
 
 
 static inline void
-ray_sphere_intersect(Isect &isect, Ray &ray, const uniform Sphere &sphere) {
+ray_sphere_intersect(Isect &isect, Ray &ray, const Sphere &sphere) {
     vec rs = ray.org - sphere.center;
 
     float B = dot(rs, ray.dir);
@@ -182,7 +182,7 @@ orthoBasis(vec basis[3], vec n) {
 
 __inline
 static float
-ambient_occlusion(Isect &isect, const uniform Plane &plane, const uniform Sphere spheres[3],
+ambient_occlusion(Isect &isect, const Plane &plane, const Sphere spheres[3],
                   RNGState &rngstate) {
     float eps = 0.0001f;
     vec p, n;
@@ -238,8 +238,8 @@ static  inline void ao_tiles(
     uniform int nsubsamples, 
     uniform float image[]) 
 {
-  const uniform Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
-  const uniform Sphere spheres[3] = {
+  const Plane plane = { { 0.0f, -0.5f, 0.0f }, { 0.f, 1.f, 0.f } };
+  const Sphere spheres[3] = {
     { { -2.0f, 0.0f, -3.5f }, 0.5f },
     { { -0.5f, 0.0f, -3.0f }, 0.5f },
     { { 1.0f, 0.0f, -2.2f }, 0.5f } };
@@ -281,8 +281,8 @@ static  inline void ao_tiles(
 
         // Note use of 'coherent' if statement; the set of rays we
         // trace will often all hit or all miss the scene
-      #if 0
-        if (isect.hit) {
+#if 0
+        cif (isect.hit) {
           ret = ambient_occlusion(isect, plane, spheres, rngstate);
           ret *= invSamples * invSamples;
           res += ret;
@@ -294,8 +294,6 @@ static  inline void ao_tiles(
           ret *= invSamples * invSamples;
           res += ret;
          }
-
-
 #endif
       }
 
