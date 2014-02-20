@@ -10,7 +10,7 @@ CXXFLAGS+=-DISPC_USE_OMP
 CC=clang
 CC=icc -openmp
 CCFLAGS+=-Iobjs/ -O2 -I../../ -I../../util
-CXXFLAGS+=-DISPC_USE_OMP
+CCFLAGS+=-DISPC_USE_OMP
 
 LIBS=-lm $(TASK_LIB) -lstdc++
 ISPC=ispc

@@ -7,7 +7,7 @@ CXXFLAGS+=-Iobjs_knc/ -O2 -I../../ -I../../util  -I./
 CXXFLAGS+=  -DISPC_USE_OMP
 CC=icc -openmp -mmic
 CCFLAGS+= -Iobjs_knc/ -O2 -I../../ -I../../util -I./
-CXXFLAGS+=-DISPC_USE_OMP
+CCFLAGS+=-DISPC_USE_OMP
 
 LD=icc -mmic -openmp
 
