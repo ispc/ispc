@@ -598,8 +598,10 @@ template <> static FORCEINLINE void __store<64>(__vec16_i32 *p, __vec16_i32 v) {
 // int64
 ///////////////////////////////////////////////////////////////////////////
 
-static FORCEINLINE int64_t __extract_element(__vec16_i64 v, uint32_t index) {
-    return (uint64_t(((int32_t *)&v.v_hi)[index])<<32) | (uint64_t(((int32_t *)&v.v_lo)[index]));
+static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, uint32_t index)
+{
+    uint *src = (uint *)&v;
+    return src[index+16] | (int64_t(src[index]) << 32);
 }
 
 static FORCEINLINE void __insert_element(__vec16_i64 *v, uint32_t index, int64_t val) {
@@ -748,12 +750,6 @@ static FORCEINLINE __vec16_i64 __select(__vec16_i1 mask,
     ret.v_hi = _mm512_mask_mov_epi32(b.v_hi, mask, a.v_hi);
     ret.v_lo = _mm512_mask_mov_epi32(b.v_lo, mask, a.v_lo);
     return ret;
-}
-
-static FORCEINLINE int64_t __extract_element(const __vec16_i64 &v, uint32_t index)
-{
-    uint *src = (uint *)&v;
-    return src[index+16] | (int64_t(src[index]) << 32);
 }
 
 template <class RetVecType> RetVecType __smear_i64(const int64_t &l);
