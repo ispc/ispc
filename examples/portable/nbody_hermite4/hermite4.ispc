@@ -17,15 +17,20 @@ void body_body_force(
     Force &fi,
     const Predictor &pi,
     const Predictor &pj,
-    const real mj)
+    const real mj,
+    const real eps2)
 {
   const real dx = pj.pos.x - pi.pos.x;
   const real dy = pj.pos.y - pi.pos.y;
   const real dz = pj.pos.z - pi.pos.z;
 
-  const real ds2 = dx*dx + dy*dy + dz*dz;
+  const real ds2 = dx*dx + dy*dy + dz*dz + eps2;
 
-  const real  inv_ds  = ds2 > 1.0d-10 ? rsqrt((float)ds2) : 0.0;
+#if 1
+  const real  inv_ds  = rsqrt((float)ds2);
+#else
+  const real  inv_ds  = rsqrt(ds2);
+#endif
   const real  inv_ds2 = inv_ds*inv_ds;
   const real minv_ds  = inv_ds  * mj;
   const real minv_ds3 = inv_ds2 * minv_ds;
@@ -64,7 +69,8 @@ task void compute_forces_task(
     uniform       real jrkx[],
     uniform       real jrky[],
     uniform       real jrkz[],
-    uniform       real gpot[])
+    uniform       real gpot[],
+    const uniform real eps2)
 {
   const uniform int nibeg = taskIndex * nPerTask;
   const uniform int niend = min(n, nibeg + nPerTask);
@@ -112,7 +118,7 @@ task void compute_forces_task(
         pj.vel.y = shdata[5][j];
         pj.vel.z = shdata[6][j];
         const real jmass  = shdata[3][j];
-        body_body_force(fi,pi,pj,jmass);
+        body_body_force(fi,pi,pj,jmass,eps2);
       }
     }
 
@@ -141,7 +147,8 @@ export void compute_forces(
     uniform       real jrkx[],
     uniform       real jrky[],
     uniform       real jrkz[],
-    uniform       real gpot[])
+    uniform       real gpot[],
+    const uniform real eps2)
 {
   const uniform int nPerTask = min(128,programCount*8);
   const uniform int nTask = (n+nPerTask-1)/nPerTask;
@@ -153,5 +160,5 @@ export void compute_forces(
       velx,vely,velz,
       accx,accy,accz,
       jrkx,jrky,jrkz,
-      gpot);
+      gpot,eps2);
 }

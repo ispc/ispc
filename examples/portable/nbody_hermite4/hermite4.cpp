@@ -20,6 +20,7 @@ struct Hermite4
   enum {PP_FLOP=44};
   const int n;
   const real eta;
+  real eps2;
   real *g_mass, *g_gpot;
   real *g_posx, *g_posy, *g_posz;
   real *g_velx, *g_vely, *g_velz;
@@ -31,6 +32,8 @@ struct Hermite4
 
   Hermite4(const int _n = 8192, const real _eta = 0.1) : n(_n), eta(_eta)
   {
+    eps2  = 4.0/n;  /* eps = 4/n to give Ebin = 1 KT */
+    eps2 *= eps2;
     g_mass = new real[n];
     g_gpot = new real[n];
     g_posx = new real[n];
@@ -289,7 +292,8 @@ void Hermite4::forces()
       g_jrkx,
       g_jrky,
       g_jrkz,
-      g_gpot);
+      g_gpot,
+      eps2);
 }
 
 void run(const int nbodies, const real eta, const int nstep)
@@ -310,6 +314,7 @@ int main(int argc, char *argv[])
 
   float eta = 0.1;
   if (argc > 3) eta = atof(argv[3]);
+
 
 
   printf("nbodies= %d\n", nbodies);
