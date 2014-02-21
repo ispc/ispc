@@ -167,6 +167,10 @@ struct __vec4_d {
     }
 
     __m128d v[2];
+    FORCEINLINE __vec4_d(double *p) {
+        v[0] = _mm_set_pd(p[1], p[0]);
+        v[1] = _mm_set_pd(p[3], p[2]);
+    }
 };
 
 
@@ -2471,39 +2475,6 @@ static FORCEINLINE __vec4_d __sqrt_varying_double(__vec4_d v) {
     return __vec4_d(_mm_sqrt_pd(v.v[0]), _mm_sqrt_pd(v.v[1]));
 }
 
-static FORCEINLINE __vec4_f __pow_varying_float(__vec4_f a, __vec4_f b) {
-    float r[4];
-    for (int i = 0; i < 4; ++i)
-        r[i] = powf(__extract_element(a, i), __extract_element(b, i));
-    return __vec4_f(r);
-}
-
-static FORCEINLINE float __pow_uniform_float(float a, float b) {
-    return powf(a, b);
-}
-
-static FORCEINLINE __vec4_f __exp_varying_float(__vec4_f a) {
-    float r[4];
-    for (int i = 0; i < 4; ++i)
-        r[i] = expf(__extract_element(a, i));
-    return __vec4_f(r);
-}
-
-static FORCEINLINE float __exp_uniform_float(float a) {
-    return expf(a);
-}
-
-static FORCEINLINE __vec4_f __log_varying_float(__vec4_f a) {
-    float r[4];
-    for (int i = 0; i < 4; ++i)
-        r[i] = logf(__extract_element(a, i));
-    return __vec4_f(r);
-}
-
-static FORCEINLINE float __log_uniform_float(float a) {
-    return logf(a);
-}
-
 static FORCEINLINE int __intbits(float v) {
     union {
         float f;
@@ -4165,5 +4136,98 @@ static FORCEINLINE uint64_t __clock() {
   return (uint64_t)high << 32 | low;
 }
 #endif // !WIN32
+
+
+///////////////////////////////////////////////////////////////////////////
+// Transcendentals
+
+
+#define TRANSCENDENTALS(op) \
+static FORCEINLINE __vec4_f __##op##_varying_float(__vec4_f a) {\
+    float r[4];\
+    for (int i = 0; i < 4; ++i)\
+        r[i] = op##f(__extract_element(a, i));\
+    return __vec4_f(r);\
+}\
+static FORCEINLINE float __##op##_uniform_float(float a) {\
+    return op##f(a);\
+}\
+static FORCEINLINE __vec4_d __##op##_varying_double(__vec4_d a) {\
+    double r[4];\
+    for (int i = 0; i < 4; ++i)\
+        r[i] = op(__extract_element(a, i));\
+    return __vec4_d(r);\
+}\
+static FORCEINLINE double __##op##_uniform_double(double a) {\
+    return op(a);\
+}
+
+TRANSCENDENTALS(log)
+TRANSCENDENTALS(exp)
+
+
+static FORCEINLINE __vec4_f __pow_varying_float(__vec4_f a, __vec4_f b) {
+    float r[4];
+    for (int i = 0; i < 4; ++i)
+        r[i] = powf(__extract_element(a, i), __extract_element(b, i));
+    return __vec4_f(r);
+}
+static FORCEINLINE float __pow_uniform_float(float a, float b) {
+    return powf(a, b);
+}
+static FORCEINLINE __vec4_d __pow_varying_double(__vec4_d a, __vec4_d b) {
+    double r[4];
+    for (int i = 0; i < 4; ++i)
+        r[i] = pow(__extract_element(a, i), __extract_element(b, i));
+    return __vec4_d(r);
+}
+static FORCEINLINE double __pow_uniform_double(double a, double b) {
+    return pow(a, b);
+}
+
+///////////////////////////////////////////////////////////////////////////
+// Trigonometry
+
+TRANSCENDENTALS(sin)
+TRANSCENDENTALS(asin)
+TRANSCENDENTALS(cos)
+TRANSCENDENTALS(acos)
+TRANSCENDENTALS(tan)
+TRANSCENDENTALS(atan)
+
+
+static FORCEINLINE __vec4_f __atan2_varying_float(__vec4_f a, __vec4_f b) {
+    float r[4];
+    for (int i = 0; i < 4; ++i)
+        r[i] = atan2f(__extract_element(a, i), __extract_element(b, i));
+    return __vec4_f(r);
+}
+static FORCEINLINE float __atan2_uniform_float(float a, float b) {
+    return atan2f(a, b);
+}
+static FORCEINLINE __vec4_d __atan2_varying_double(__vec4_d a, __vec4_d b) {
+    double r[4];
+    for (int i = 0; i < 4; ++i)
+        r[i] = atan2(__extract_element(a, i), __extract_element(b, i));
+    return __vec4_d(r);
+}
+static FORCEINLINE double __atan2_uniform_double(double a, double b) {
+    return atan2(a, b);
+}
+
+static FORCEINLINE void __sincos_varying_float(__vec4_f x, __vec4_f * _sin, __vec4_f * _cos) {
+    for (int i = 0; i < 4; ++i)
+         sincosf(__extract_element(x, i), (float*)_sin + i, (float*)_cos + i);
+}
+static FORCEINLINE void __sincos_uniform_float(float x, float *_sin, float *_cos) {
+    sincosf(x, _sin, _cos);
+}
+static FORCEINLINE void __sincos_varying_double(__vec4_d x, __vec4_d * _sin, __vec4_d * _cos) {
+    for (int i = 0; i < 4; ++i)
+         sincos(__extract_element(x, i), (double*)_sin + i, (double*)_cos + i);
+}
+static FORCEINLINE void __sincos_uniform_double(double x, double *_sin, double *_cos) {
+    sincos(x, _sin, _cos);
+}
 
 #undef FORCEINLINE

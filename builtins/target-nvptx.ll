@@ -2262,3 +2262,90 @@ define void @__memory_barrier() nounwind readnone alwaysinline {
 }
 
 saturation_arithmetic_novec();
+
+;;;;;;;;;;;;;;;;;;;;
+;; trigonometry
+
+
+define(`transcendetals_decl',`
+    declare float @__log_uniform_float(float) nounwind readnone
+    declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
+    declare float @__exp_uniform_float(float) nounwind readnone
+    declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
+    declare float @__pow_uniform_float(float, float) nounwind readnone
+    declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
+
+    declare double @__log_uniform_double(double) nounwind readnone
+    declare <WIDTH x double> @__log_varying_double(<WIDTH x double>) nounwind readnone
+    declare double @__exp_uniform_double(double) nounwind readnone
+    declare <WIDTH x double> @__exp_varying_double(<WIDTH x double>) nounwind readnone
+    declare double @__pow_uniform_double(double, double) nounwind readnone
+    declare <WIDTH x double> @__pow_varying_double(<WIDTH x double>, <WIDTH x double>) nounwind readnone
+')
+
+;; 1 - function call, e.g. __nv_fast_logf
+;; 2 - data-type, float/double
+;; 3 - local function name, e.g. __log, __exp, ..
+define(`transcendentals1',`
+declare $2 @$1($2)
+define $2 @$3_uniform_$2($2) nounwind readnone alwaysinline
+{
+  %ret = call $2 @$1($2 %0)
+  ret $2 %ret
+}
+define <1 x $2> @$3_varying_$2(<1 x $2>) nounwind readnone alwaysinline
+{
+  %v = bitcast <1 x $2> %0 to $2
+  %r = call $2 @$3_uniform_$2($2 %v);
+  %ret = bitcast $2 %r to <1 x $2>
+  ret <1 x $2> %ret
+}
+')
+
+
+define(`transcendentals2',`
+declare $2 @$1($2, $2)
+define $2 @$3_uniform_$2($2, $2) nounwind readnone alwaysinline
+{
+  %ret = call $2 @$1($2 %0, $2 %1)
+  ret $2 %ret
+}
+define <1 x $2> @$3_varying_$2(<1 x $2>, <1x $2>) nounwind readnone alwaysinline
+{
+  %v0 = bitcast <1 x $2> %0 to $2
+  %v1 = bitcast <1 x $2> %1 to $2
+  %r = call $2 @$3_uniform_$2($2 %v0, $2 %v1);
+  %ret = bitcast $2 %r to <1 x $2>
+  ret <1 x $2> %ret
+}
+')
+transcendentals1(__nv_fast_logf, float, __log)
+transcendentals1(__nv_fast_expf, float, __exp)
+transcendentals2(__nv_fast_powf, float, __pow)
+
+transcendentals1(__nv_log, double, __log)
+transcendentals1(__nv_exp, double, __exp)
+transcendentals2(__nv_pow, double, __pow)
+
+
+transcendentals1(__nv_fast_sinf, float, __sin)
+transcendentals1(__nv_fast_cosf, float, __cos)
+transcendentals1(__nv_fast_tanf, float, __tan)
+transcendentals1(__nv_asinf,     float, __asin)
+transcendentals1(__nv_acosf,     float, __acos)
+transcendentals1(__nv_atanf,     float, __atan)
+transcendentals2(__nv_atan2f,    float, __atan2)
+
+transcendentals1(__nv_sin,   double, __sin)
+transcendentals1(__nv_cos,   double, __cos)
+transcendentals1(__nv_tan,   double, __tan)
+transcendentals1(__nv_asin,  double, __asin)
+transcendentals1(__nv_acos,  double, __acos)
+transcendentals1(__nv_atan,  double, __atan)
+transcendentals2(__nv_atan2, double, __atan2)
+
+declare void @__sincos_uniform_float(float, float*, float*) nounwind readnone
+declare void @__sincos_varying_float(<WIDTH x float>, <WIDTH x float>*, <WIDTH x float>*) nounwind readnone
+declare void @__sincos_uniform_double(double, double*, double*) nounwind readnone
+declare void @__sincos_varying_double(<WIDTH x double>, <WIDTH x double>*, <WIDTH x double>*) nounwind readnone
+

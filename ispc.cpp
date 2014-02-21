@@ -202,6 +202,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
     m_hasGather(false),
     m_hasScatter(false),
     m_hasTranscendentals(false),
+    m_hasTrigonometry(false),
     m_hasRsqrtd(false),
     m_hasRcpd(false)
 {
@@ -423,6 +424,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
@@ -436,6 +438,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
@@ -449,6 +452,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
@@ -462,6 +466,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
@@ -475,6 +480,7 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_maskBitCount = 1;
         this->m_hasHalf = true;
         this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = true;
         this->m_hasRsqrtd = this->m_hasRcpd = true;
     }
@@ -720,7 +726,8 @@ Target::Target(const char *arch, const char *cpu, const char *isa, bool pic) :
         this->m_hasHalf = true;
         this->m_maskingIsFree = true;
         this->m_maskBitCount = 1;
-        this->m_hasTranscendentals = false; 
+        this->m_hasTranscendentals = true;
+        this->m_hasTrigonometry = true;
         this->m_hasGather = this->m_hasScatter = false;
     }
     else {

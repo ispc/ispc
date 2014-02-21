@@ -514,3 +514,6 @@ define <4 x double> @__max_varying_double(<4 x double>, <4 x double>) nounwind r
 
 rsqrtd_decl()
 rcpd_decl()
+
+transcendetals_decl()
+trigonometry_decl()

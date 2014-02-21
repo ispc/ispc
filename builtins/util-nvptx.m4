@@ -1365,13 +1365,6 @@ declare void
 @__pseudo_scatter_base_offsets64_double(i8 * nocapture, i32, <WIDTH x i64>,
                                         <WIDTH x double>, <WIDTH x MASK>) nounwind
 
-declare float @__log_uniform_float(float) nounwind readnone
-declare <WIDTH x float> @__log_varying_float(<WIDTH x float>) nounwind readnone
-declare float @__exp_uniform_float(float) nounwind readnone
-declare <WIDTH x float> @__exp_varying_float(<WIDTH x float>) nounwind readnone
-declare float @__pow_uniform_float(float, float) nounwind readnone
-declare <WIDTH x float> @__pow_varying_float(<WIDTH x float>, <WIDTH x float>) nounwind readnone
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 declare void @__use8(<WIDTH x i8>)
