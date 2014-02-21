@@ -1,0 +1,7 @@
+EXAMPLE=volume
+CXX_SRC=volume.cpp 
+ISPC_SRC=volume.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+
+include ../common_knc.mk

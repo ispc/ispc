@@ -1,0 +1,8 @@
+EXAMPLE=deferred_shading
+CXX_SRC=common.cpp main.cpp dynamic_c.cpp 
+ISPC_SRC=kernels.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+ISPC_FLAGS=--opt=fast-math
+
+include ../common_knc.mk
