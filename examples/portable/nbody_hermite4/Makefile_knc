@@ -1,0 +1,7 @@
+EXAMPLE=hermite4
+CXX_SRC=hermite4.cpp 
+ISPC_SRC=hermite4.ispc
+ISPC_INTRINSICS=../../intrinsics/knc-i1x16.h
+ISPC_TARGET=generic-16
+
+include ../common_knc.mk

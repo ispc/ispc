@@ -741,7 +741,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i32 *p, __vec16_i32
 #endif
 }
 
-#if 1 /* knc::fails  ./tests/foreach-25.ispc ./tests/forach-26.ispc ./tests/foreach-27.ispc */
+#if 0 /* knc::fails  ./tests/foreach-25.ispc ./tests/forach-26.ispc ./tests/foreach-27.ispc */
 template <> static FORCEINLINE __vec16_i32 __load<64>(const __vec16_i32 *p) 
 {
   return _mm512_load_epi32(p);
@@ -1016,7 +1016,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_i64 *p, __vec16_i64
 #endif
 }
 
-#if 1 /* knc::fails  as with _i32 this may generate fails ... so commetining it out */
+#if 0 /* knc::fails  as with _i32 this may generate fails ... so commetining it out */
 template <> static FORCEINLINE __vec16_i64 __load<64>(const __vec16_i64 *p) 
 {
   __m512i v2 = _mm512_load_epi32(p);
@@ -1130,7 +1130,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_f *p, __vec16_f v)
 #endif
 }
 
-#if 1 /* knc::fails  ./tests/gs-improve-progindex.ispc with segfault */
+#if 0 /* knc::fails  ./tests/gs-improve-progindex.ispc with segfault */
 template <> static FORCEINLINE __vec16_f __load<64>(const __vec16_f *p) 
 {
     return _mm512_load_ps(p);
@@ -1389,7 +1389,7 @@ template <int ALIGN> static FORCEINLINE void __store(__vec16_d *p, __vec16_d v)
 }
 
 
-#if 1 /* knc::fails  as with _f this may generate fails ... so commetining it out */
+#if 0 /* knc::fails  as with _f this may generate fails ... so commetining it out */
 template <> static FORCEINLINE __vec16_d __load<64>(const __vec16_d *p) 
 {
   return __vec16_d(_mm512_load_pd(p), _mm512_load_pd(((uint8_t*)p)+64));
