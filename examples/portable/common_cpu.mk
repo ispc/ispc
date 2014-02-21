@@ -1,7 +1,7 @@
 
-TASK_CXX=../../tasksys.cpp ../../util/ispc_malloc.cpp
+TASK_CXX=../omp_tasksys.cpp ../../util/ispc_malloc.cpp
 TASK_LIB=-lpthread
-TASK_OBJ=objs/tasksys.o objs/ispc_malloc.o
+TASK_OBJ=objs/omp_tasksys.o objs/ispc_malloc.o
 
 CXX=clang++
 CXX=icc -openmp
@@ -85,6 +85,8 @@ objs/%.o: %.cpp dirs $(ISPC_HEADER)
 objs/%.o: %.c dirs $(ISPC_HEADER)
 	$(CC) $< $(CCFLAGS) -c -o $@
 
+objs/%.o: ../%.cpp dirs
+	$(CXX) $< $(CXXFLAGS) -c -o $@
 objs/%.o: ../../%.cpp dirs
 	$(CXX) $< $(CXXFLAGS) -c -o $@
 objs/%.o: ../../util/%.cpp dirs

@@ -1,5 +1,5 @@
-TASK_CXX=../../tasksys.cpp ../../util/ispc_malloc.cpp
-TASK_OBJ=objs_knc/tasksys.o objs_knc/ispc_malloc.o
+TASK_CXX=../omp_tasksys.cpp ../../util/ispc_malloc.cpp
+TASK_OBJ=objs_knc/omp_tasksys.o objs_knc/ispc_malloc.o
 TASK_LIB=-openmp
 
 CXX=icc -openmp -mmic
@@ -39,9 +39,10 @@ $(PROG): $(ISPC_OBJ) $(CXX_OBJ)
 objs_knc/%.o: %.cpp
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
+objs_knc/%.o: ../%.cpp
+	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 objs_knc/%.o: ../../%.cpp
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
-
 objs_knc/%.o: ../../util/%.cpp
 	$(CXX) $(CXXFLAGS)  -o $@ -c $<
 
