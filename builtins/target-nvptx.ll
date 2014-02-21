@@ -678,46 +678,41 @@ minmax_vy(max, double, double)
 
 ;; sqrt/rsqrt/rcp
 
-declare float     @llvm.nvvm.rsqrt.approx.f(float %f) nounwind readonly alwaysinline
-declare float     @llvm.nvvm.sqrt.f(float %f) nounwind readonly alwaysinline
-declare double    @llvm.nvvm.rsqrt.approx.d(double %f) nounwind readonly alwaysinline
-declare double    @llvm.sqrt.f64(double %f) nounwind readonly alwaysinline
-
-;; declare float @__rcp_uniform_float(float) nounwind readnone 
 define  float @__rcp_uniform_float(float) nounwind readonly alwaysinline {
-;    uniform float iv = extract(__rcp_u(v), 0);
-;    return iv * (2. - v * iv);
   %ret = fdiv float 1.,%0
-;  %ret = tail call float asm sideeffect "rcp.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
   ret float %ret
 }
-;; declare float @__sqrt_uniform_float(float) nounwind readnone 
-define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline {
-  %ret = call float @llvm.nvvm.sqrt.f(float %0)
-;  %ret = tail call float asm sideeffect "sqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
-  ret float %ret
-}
-;; declare float @__rsqrt_uniform_float(float) nounwind readnone 
-define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline 
-{
-  %ret = call float @llvm.nvvm.rsqrt.approx.f(float %0)
-;  %ret = tail call float asm sideeffect "rsqrt.approx.ftz.f32  $0, $1;", "=f,f"(float %0) nounwind readnone alwaysinline
-  ret float %ret
-}
-
-define  double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline 
-{
-  %ret1 = call double @llvm.sqrt.f64(double %0)
-  %ret  = fdiv double 1., %ret1
-  ret double %ret
-}
+declare double @__nv_drcp_rn(double)
 define  double @__rcp_uniform_double(double) nounwind readonly alwaysinline 
 {
-  %ret  = fdiv double 1., %0
+  %ret  = call double @__nv_drcp_rn(double %0)
+  ret double %ret
+}
+declare float @__nv_sqrtf(float)
+define  float @__sqrt_uniform_float(float) nounwind readonly alwaysinline 
+{
+  %ret = call float @__nv_sqrtf(float %0)
+  ret float %ret
+}
+declare double @__nv_sqrt(double)
+define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
+  %ret = call double @__nv_sqrt(double %0)
+  ret double %ret
+}
+declare float @__nv_rsqrtf(float)
+define  float @__rsqrt_uniform_float(float) nounwind readonly alwaysinline 
+{
+  %ret = call float @__nv_rsqrtf(float %0)
+  ret float %ret
+}
+declare double @__nv_rsqrt(double)
+define  double @__rsqrt_uniform_double(double) nounwind readonly alwaysinline 
+{
+  %ret = call double @__nv_rsqrt(double %0)
   ret double %ret
 }
 
-
+;;;;;; varying
 define <WIDTH x float> @__rcp_varying_float(<WIDTH x float>) nounwind readnone  alwaysinline
 {
   %v = extractelement <1 x float> %0, i32 0
@@ -746,18 +741,12 @@ define <WIDTH x double> @__rsqrt_varying_double(<WIDTH x double>) nounwind readn
   %rv = insertelement <1 x double> undef, double %r, i32 0 
   ret <WIDTH x double> %rv
 }
-
 define <WIDTH x float> @__sqrt_varying_float(<WIDTH x float>) nounwind readnone alwaysinline
 {
   %v = extractelement <1 x float> %0, i32 0
   %r = call float @__sqrt_uniform_float(float %v)
   %rv = insertelement <1 x float> undef, float %r, i32 0 
   ret <WIDTH x float> %rv
-}
-;; declare double @__sqrt_uniform_double(double) nounwind readnone
-define  double @__sqrt_uniform_double(double) nounwind readonly alwaysinline {
-  %ret = call double @llvm.sqrt.f64(double %0)
-  ret double %ret
 }
 define <WIDTH x double> @__sqrt_varying_double(<WIDTH x double>) nounwind readnone alwaysinline
 {
