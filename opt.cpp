@@ -1335,12 +1335,24 @@ char ImproveMemoryOpsPass::ID = 0;
  */
 static llvm::Value *
 lCheckForActualPointer(llvm::Value *v) {
-    if (v == NULL)
+    if (v == NULL) {
         return NULL;
-    else if (llvm::isa<llvm::PointerType>(v->getType()))
+    }
+    else if (llvm::isa<llvm::PointerType>(v->getType())) {
         return v;
-    else if (llvm::isa<llvm::PtrToIntInst>(v))
+    }
+    else if (llvm::isa<llvm::PtrToIntInst>(v)) {
         return v;
+    }
+    else if (llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v)) {
+        llvm::Value *t = lCheckForActualPointer(ci->getOperand(0));
+        if (t == NULL) {
+            return NULL;
+        }
+        else {
+            return v;
+        }
+    }
     else {
         llvm::ConstantExpr *uce =
             llvm::dyn_cast<llvm::ConstantExpr>(v);
@@ -1358,7 +1370,7 @@ lCheckForActualPointer(llvm::Value *v) {
     pointer value; otherwise it returns NULL.
  */
 static llvm::Value *
-lGetBasePointer(llvm::Value *v) {
+lGetBasePointer(llvm::Value *v, llvm::Instruction *insertBefore) {
     if (llvm::isa<llvm::InsertElementInst>(v) ||
         llvm::isa<llvm::ShuffleVectorInst>(v)) {
         llvm::Value *element = LLVMFlattenInsertChain
@@ -1381,6 +1393,20 @@ lGetBasePointer(llvm::Value *v) {
     }
     else if (llvm::ConstantDataVector *cdv = llvm::dyn_cast<llvm::ConstantDataVector>(v)) {
         return lCheckForActualPointer(cdv->getSplatValue());
+    }
+    // It is a little bit tricky to use operations with pointers, casted to int with another bit size
+    // but sometimes it is useful, so we handle this case here.
+    else if (llvm::CastInst *ci = llvm::dyn_cast<llvm::CastInst>(v)) {
+        llvm::Value *t = lGetBasePointer(ci->getOperand(0), insertBefore);
+        if (t == NULL) {
+            return NULL;
+        }
+        else {
+            return llvm::CastInst::Create(ci->getOpcode(),
+                                              t, ci->getType()->getScalarType(),
+                                              LLVMGetName(t, "_cast"),
+                                              insertBefore);
+        }
     }
 
     return NULL;
@@ -1435,7 +1461,7 @@ lGetBasePtrAndOffsets(llvm::Value *ptrs, llvm::Value **offsets,
         LLVMDumpValue(ptrs);
     }
 
-    llvm::Value *base = lGetBasePointer(ptrs);
+    llvm::Value *base = lGetBasePointer(ptrs, insertBefore);
     if (base != NULL) {
         // We have a straight up varying pointer with no indexing that's
         // actually all the same value.
@@ -1571,29 +1597,29 @@ lExtractConstantOffset(llvm::Value *vec, llvm::Value **constOffset,
         return;
     }
 
-    llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(vec);
-    if (sext != NULL) {
-        // Check the sext target.
+    llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(vec);
+    if (cast != NULL) {
+        // Check the cast target.
         llvm::Value *co, *vo;
-        lExtractConstantOffset(sext->getOperand(0), &co, &vo, insertBefore);
+        lExtractConstantOffset(cast->getOperand(0), &co, &vo, insertBefore);
 
-        // make new sext instructions for the two parts
+        // make new cast instructions for the two parts
         if (co == NULL)
             *constOffset = NULL;
         else
-            *constOffset = new llvm::SExtInst(co, sext->getType(),
-                                              LLVMGetName(co, "_sext"),
+            *constOffset = llvm::CastInst::Create(cast->getOpcode(),
+                                              co, cast->getType(),
+                                              LLVMGetName(co, "_cast"),
                                               insertBefore);
         if (vo == NULL)
             *variableOffset = NULL;
         else
-            *variableOffset = new llvm::SExtInst(vo, sext->getType(),
-                                                 LLVMGetName(vo, "_sext"),
+            *variableOffset = llvm::CastInst::Create(cast->getOpcode(),
+                                                 vo, cast->getType(),
+                                                 LLVMGetName(vo, "_cast"),
                                                  insertBefore);
         return;
     }
-
-    // FIXME? handle bitcasts / type casts here
 
     llvm::BinaryOperator *bop = llvm::dyn_cast<llvm::BinaryOperator>(vec);
     if (bop != NULL) {
@@ -1786,17 +1812,17 @@ lExtract248Scale(llvm::Value *splatOperand, int splatValue,
  */
 static llvm::Value *
 lExtractOffsetVector248Scale(llvm::Value **vec) {
-    llvm::SExtInst *sext = llvm::dyn_cast<llvm::SExtInst>(*vec);
-    if (sext != NULL) {
-        llvm::Value *sextOp = sext->getOperand(0);
-        // Check the sext target.
-        llvm::Value *scale = lExtractOffsetVector248Scale(&sextOp);
+    llvm::CastInst *cast = llvm::dyn_cast<llvm::CastInst>(*vec);
+    if (cast != NULL) {
+        llvm::Value *castOp = cast->getOperand(0);
+        // Check the cast target.
+        llvm::Value *scale = lExtractOffsetVector248Scale(&castOp);
         if (scale == NULL)
             return NULL;
 
-        // make a new sext instruction so that we end up with the right
+        // make a new cast instruction so that we end up with the right
         // type
-        *vec = new llvm::SExtInst(sextOp, sext->getType(), "offset_sext", sext);
+        *vec = llvm::CastInst::Create(cast->getOpcode(), castOp, cast->getType(), "offset_cast", cast);
         return scale;
     }
 
