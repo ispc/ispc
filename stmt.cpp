@@ -265,9 +265,12 @@ DeclStmt::EmitCode(FunctionEmitContext *ctx) const {
         if (sym->storageClass == SC_STATIC) {
 
             if (g->target->getISA() == Target::NVPTX && !sym->type->IsConstType())
-                PerformanceWarning(sym->pos, 
-                    "Non-constant static variable ""\"%s\" is stored in __global address sace with ""\"nvptx\" target.",
+            {
+                Error(sym->pos, 
+                    "Non-constant static variable ""\"%s\" is not supported with ""\"nvptx\" target.",
                     sym->name.c_str());
+                return;
+            }
             if (g->target->getISA() == Target::NVPTX && sym->type->IsVaryingType())
                 PerformanceWarning(sym->pos, 
                     "\"const static varying\" variable ""\"%s\" is stored in __global address space with ""\"nvptx\" target.",
