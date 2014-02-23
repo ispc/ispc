@@ -4885,6 +4885,28 @@ static inline varying int32 saturating_mul(varying int32 a, varying int32 b) {
     return result; 
 }
 
+static inline uniform int64 saturating_mul(uniform int64 a, uniform int64 b) {
+    uniform int64 a_abs = (a > 0) ? a : -a;
+    uniform int64 b_abs = (b > 0) ? b : -b;
+    if (a_abs > (INT64_MAX / b_abs)) 
+        if (((a > 0) && (b > 0)) || ((a < 0) && (b < 0))) 
+            return INT64_MAX;
+        else 
+            return INT64_MIN;
+    return a * b;
+}
+
+static inline varying int64 saturating_mul(varying int64 a, varying int64 b) {
+    varying int64 a_abs = (a > 0) ? a : -a;
+    varying int64 b_abs = (b > 0) ? b : -b;
+    if (a_abs > (INT64_MAX / b_abs)) 
+        if (((a > 0) && (b > 0)) || ((a < 0) && (b < 0))) 
+            return INT64_MAX;
+        else 
+            return INT64_MIN;
+    return a * b;
+}
+
 static inline uniform unsigned int8 saturating_mul(uniform unsigned int8 a,
                                                    uniform unsigned int8 b) {
     uniform unsigned int16 result = (uniform unsigned int16) a * 
@@ -4937,6 +4959,20 @@ static inline varying unsigned int32 saturating_mul(varying unsigned int32 a,
     varying unsigned int32 hi = result >> 32;
     varying unsigned int32 lo = result;
     return lo | - (varying int32) !! hi;
+}
+
+static inline uniform unsigned int64 saturating_mul(uniform unsigned int64 a,
+                                                    uniform unsigned int64 b) {
+    if (a > (UINT64_MAX / b))
+        return UINT64_MAX;
+    return a * b;
+}
+
+static inline varying unsigned int64 saturating_mul(varying unsigned int64 a,
+                                                    varying unsigned int64 b) {
+    if (a > (UINT64_MAX / b))
+        return UINT64_MAX;
+    return a * b;
 }
 ///////////////////////////////////////////////////////////////////////////
 // rdrand
