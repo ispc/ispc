@@ -1081,9 +1081,13 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     bool binary = (fileType == llvm::TargetMachine::CGFT_ObjectFile);
 #if defined(LLVM_3_1) || defined(LLVM_3_2) || defined(LLVM_3_3)
     unsigned int flags = binary ? llvm::raw_fd_ostream::F_Binary : 0;
-#else
+#elif defined(LLVM_3_4)
     llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_Binary :
         llvm::sys::fs::F_None;
+#else
+    llvm::sys::fs::OpenFlags flags = binary ? llvm::sys::fs::F_None :
+        llvm::sys::fs::F_Text;
+
 #endif
 
     std::string error;
