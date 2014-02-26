@@ -1098,8 +1098,8 @@ Module::writeObjectFileOrAssembly(llvm::TargetMachine *targetMachine,
     }
 
     llvm::PassManager pm;
-#if defined(LLVM_3_1)
-    pm.add(new llvm::TargetData(*g->target->getDataLayout()));
+#if defined(LLVM_3_5)
+    pm.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     pm.add(new llvm::DataLayout(*g->target->getDataLayout()));
 #endif
