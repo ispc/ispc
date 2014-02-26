@@ -758,6 +758,17 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
             // architecture and investigate what happened.
             // Generally we allow library DataLayout to be subset of module
             // DataLayout or library DataLayout to be empty.
+#if defined(LLVM_3_5)
+            if (!VerifyDataLayoutCompatibility(module->getDataLayoutStr(),
+                                               bcModule->getDataLayoutStr())) {
+              Warning(SourcePos(), "Module DataLayout is incompatible with "
+                      "library DataLayout:\n"
+                      "Module  DL: %s\n"
+                      "Library DL: %s\n",
+                      module->getDataLayoutStr().c_str(),
+                      bcModule->getDataLayoutStr().c_str());
+            }
+#else
             if (!VerifyDataLayoutCompatibility(module->getDataLayout(),
                                                bcModule->getDataLayout())) {
               Warning(SourcePos(), "Module DataLayout is incompatible with "
@@ -767,6 +778,7 @@ AddBitcodeToModule(const unsigned char *bitcode, int length,
                       module->getDataLayout().c_str(),
                       bcModule->getDataLayout().c_str());
             }
+#endif
         }
 
         bcModule->setTargetTriple(mTriple.str());

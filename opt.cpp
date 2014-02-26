@@ -473,19 +473,19 @@ Optimize(llvm::Module *module, int optLevel) {
         new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
     optPM.add(targetLibraryInfo);
 
-
-#if defined(LLVM_3_1)
-    optPM.add(new llvm::TargetData(*g->target->getDataLayout()));
+#if defined(LLVM_3_5)
+    optPM.add(new llvm::DataLayoutPass(*g->target->getDataLayout()));
 #else
     optPM.add(new llvm::DataLayout(*g->target->getDataLayout()));
+#endif
 
     llvm::TargetMachine *targetMachine = g->target->GetTargetMachine();
-  #ifdef LLVM_3_2
+
+#ifdef LLVM_3_2
     optPM.add(new llvm::TargetTransformInfo(targetMachine->getScalarTargetTransformInfo(),
                                             targetMachine->getVectorTargetTransformInfo()));
-  #else // LLVM 3.3+
+#else // LLVM 3.3+
     targetMachine->addAnalysisPasses(optPM.getPM());
-  #endif
 #endif
 
     optPM.add(llvm::createIndVarSimplifyPass());
