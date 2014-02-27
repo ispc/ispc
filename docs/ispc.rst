@@ -4038,7 +4038,9 @@ overlap.
     void memmove(void * varying dst, void * varying src, int32 count)
 
 Note that there are variants of these functions that take both ``uniform``
-and ``varying`` pointers.
+and ``varying`` pointers.  Also note that ``sizeof(float)`` and 
+``sizeof(uniform float)`` return different values, so programmers should
+take care when calculating ``count``.
 
 To initialize values in memory, the ``memset`` routine can be used.  (It
 also behaves like the function of the same name in the C Standard Library.)
