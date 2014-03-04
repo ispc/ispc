@@ -577,7 +577,7 @@ GetDirectoryAndFileName(const std::string &currentDirectory,
     const char *basenameStart = strrchr(fp, '/');
     Assert(basenameStart != NULL);
     ++basenameStart;
-    Assert(basenameStart != '\0');
+    Assert(basenameStart[0] != '\0');
     *filename = basenameStart;
     *directory = std::string(fp, basenameStart - fp);
 #endif // ISPC_IS_WINDOWS

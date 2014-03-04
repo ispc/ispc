@@ -1462,7 +1462,7 @@ void CWriter::printConstant(llvm::Constant *CPV, bool Static) {
         char Buffer[100];
 
         uint64_t ll = llvm::DoubleToBits(V);
-        sprintf(Buffer, "0x%"PRIx64, ll);
+        sprintf(Buffer, "0x%" PRIx64, ll);
 
         std::string Num(&Buffer[0], &Buffer[6]);
         unsigned long Val = strtoul(Num.c_str(), 0, 16);
@@ -3123,7 +3123,11 @@ void CWriter::visitSwitchInst(llvm::SwitchInst &SI) {
     Out << ":\n";
     printPHICopiesForSuccessor (SI.getParent(), Succ, 2);
     printBranchToBlock(SI.getParent(), Succ, 2);
+#if defined (LLVM_3_5)
+    if (llvm::Function::iterator(Succ) == std::next(llvm::Function::iterator(SI.getParent())))
+#else
     if (llvm::Function::iterator(Succ) == llvm::next(llvm::Function::iterator(SI.getParent())))
+#endif
       Out << "    break;\n";
   }
 
@@ -3144,7 +3148,11 @@ bool CWriter::isGotoCodeNecessary(llvm::BasicBlock *From, llvm::BasicBlock *To) 
   /// FIXME: This should be reenabled, but loop reordering safe!!
   return true;
 
+#if defined (LLVM_3_5)
+  if (std::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
+#else
   if (llvm::next(llvm::Function::iterator(From)) != llvm::Function::iterator(To))
+#endif
     return true;  // Not the direct successor, we need a goto.
 
   //llvm::isa<llvm::SwitchInst>(From->getTerminator())
@@ -3752,7 +3760,11 @@ void CWriter::lowerIntrinsics(llvm::Function &F) {
             // All other intrinsic calls we must lower.
             llvm::Instruction *Before = 0;
             if (CI != &BB->front())
+#if defined(LLVM_3_5)
+              Before = std::prev(llvm::BasicBlock::iterator(CI));
+#else
               Before = prior(llvm::BasicBlock::iterator(CI));
+#endif
 
             IL->LowerIntrinsicCall(CI);
             if (Before) {        // Move iterator to instruction after call
