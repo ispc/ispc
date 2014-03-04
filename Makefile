@@ -119,9 +119,9 @@ CXXFLAGS=$(OPT) $(LLVM_CXXFLAGS) -I. -Iobjs/ -I$(CLANG_INCLUDE)  \
 	$(LLVM_VERSION_DEF) \
 	-Wall \
 	-DBUILD_DATE="\"$(BUILD_DATE)\"" -DBUILD_VERSION="\"$(BUILD_VERSION)\"" \
-	-Wno-sign-compare -Wno-unused-function
-ifneq ($(LLVM_VERSION),LLVM_3_1)
-	CXXFLAGS+=-Werror
+	-Wno-sign-compare -Wno-unused-function -Werror
+ifeq ($(LLVM_VERSION),LLVM_3_5)
+	CXXFLAGS+=-std=c++11 -Wno-c99-extensions -Wno-deprecated-register
 endif
 ifneq ($(ARM_ENABLED), 0)
     CXXFLAGS+=-DISPC_ARM_ENABLED

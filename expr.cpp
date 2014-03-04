@@ -6194,10 +6194,10 @@ ConstExpr::Print() const {
             printf("%f", floatVal[i]);
             break;
         case AtomicType::TYPE_INT64:
-            printf("%"PRId64, int64Val[i]);
+            printf("%" PRId64, int64Val[i]);
             break;
         case AtomicType::TYPE_UINT64:
-            printf("%"PRIu64, uint64Val[i]);
+            printf("%" PRIu64, uint64Val[i]);
             break;
         case AtomicType::TYPE_DOUBLE:
             printf("%f", doubleVal[i]);
