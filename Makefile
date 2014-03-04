@@ -56,7 +56,7 @@ endif
 ARCH_TYPE = $(shell arch)
 
 LLVM_CXXFLAGS=$(shell $(LLVM_CONFIG) --cppflags)
-LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn//)
+LLVM_VERSION=LLVM_$(shell $(LLVM_CONFIG) --version | sed -e s/\\./_/ -e s/svn// -e s/\.0//)
 LLVM_VERSION_DEF=-D$(LLVM_VERSION)
 
 LLVM_COMPONENTS = engine ipo bitreader bitwriter instrumentation linker
