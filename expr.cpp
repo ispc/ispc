@@ -74,8 +74,11 @@
   #include <llvm/IR/CallingConv.h>
 #endif
 #include <llvm/ExecutionEngine/GenericValue.h>
-#include <llvm/Support/InstIterator.h>
-
+#if defined(LLVM_3_5)
+  #include <llvm/IR/InstIterator.h>
+#else
+  #include <llvm/Support/InstIterator.h>
+#endif
 
 /////////////////////////////////////////////////////////////////////////////////////
 // Expr

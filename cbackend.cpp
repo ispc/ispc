@@ -66,9 +66,15 @@
 #if defined(LLVM_3_5)
     #include "llvm/IR/Verifier.h"
     #include <llvm/IR/IRPrintingPasses.h>
+    #include "llvm/IR/CallSite.h"
+    #include "llvm/IR/CFG.h"
+    #include "llvm/IR/GetElementPtrTypeIterator.h"
 #else
     #include "llvm/Analysis/Verifier.h"
     #include <llvm/Assembly/PrintModulePass.h>
+    #include "llvm/Support/CallSite.h"
+    #include "llvm/Support/CFG.h"
+    #include "llvm/Support/GetElementPtrTypeIterator.h"
 #endif
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -82,18 +88,13 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#if defined(LLVM_3_1)
-  #include "llvm/Target/TargetData.h"
-#elif defined(LLVM_3_2)
+#if defined(LLVM_3_2)
   #include "llvm/DataLayout.h"
 #else // LLVM 3.3+
   #include "llvm/IR/DataLayout.h"
 #endif
-#include "llvm/Support/CallSite.h"
-#include "llvm/Support/CFG.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GetElementPtrTypeIterator.h"
 #if defined(LLVM_3_1) || defined(LLVM_3_2)
   #include "llvm/Support/InstVisitor.h"
 #else // LLVM 3.3+
