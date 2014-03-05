@@ -30,6 +30,7 @@ int __sj(const int i, const uniform int j, const uniform int m, const uniform in
   return (j + i*n - iovera) % m;
 }
 
+
 static inline 
 void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
 {
@@ -83,9 +84,113 @@ void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
   delete tmp;
 }
 
+static uniform   T * uniform tmpAll = NULL;
+static uniform int * uniform joverb = NULL;
+static uniform int * uniform iovera = NULL;
+static uniform int a,b,c;
+
+static 
+void transpose_init(const uniform int m, const uniform int n, const uniform int taskCount)
+{
+  const uniform int tmpSize = max(m,n) * programCount * taskCount;
+  tmpAll = uniform new uniform T  [tmpSize];
+  joverb = uniform new uniform int[n];
+  iovera = uniform new uniform int[m];
+
+  c = gcd(m,n);
+  a = m/c;
+  b = n/c;
+  foreach (j = 0 ... n)
+    joverb[j] = j/b;
+  foreach (i = 0 ... m)
+    iovera[i] = i/a;
+}
+
+static 
+void transpose_finalize()
+{
+  delete iovera;
+  delete joverb;
+  delete tmpAll;
+}
+
+task 
+void transpose_step1(uniform T A[], const uniform int m, const uniform int n)
+{
+  const uniform int n_per_task = (n + taskCount - 1)/taskCount;
+  const uniform int nibeg = taskIndex * n_per_task;
+  const uniform int niend = min(nibeg + n_per_task, n);
+
+  uniform  T * uniform tmp = tmpAll + max(m,n)*taskIndex;
+
+  for (uniform int j = nibeg; j < niend; j++)
+  {
+    const uniform int base = j*m;
+    const uniform int __joverb = joverb[j];
+    foreach (i = 0 ... m)
+      tmp[i] = A[base + __rj(i,__joverb,m,b)];
+    foreach (i = 0 ... m)
+      A[base + i] = tmp[i];
+  }
+}
+
+task
+void transpose_step2(uniform T A[], const uniform int m, const uniform int n)
+{
+  const uniform int m_per_task = (m + taskCount - 1)/taskCount;
+  const uniform int mibeg = taskIndex * m_per_task;
+  const uniform int miend = min(mibeg + m_per_task, m);
+  
+  uniform  T * uniform tmp = tmpAll + max(m,n)*programCount * taskIndex;
+
+  uniform T (*uniform tmp2D)[programCount] = (uniform T (*uniform)[programCount])tmp;
+  foreach (i = mibeg ... miend)
+  {
+    for (uniform int j = 0; j < n; j++)
+      tmp2D[__di(i,j,m,n,joverb[j])][programIndex] = A[j*m + i];
+    for (uniform int j = 0; j < n; j++)
+      A[j*m + i] = tmp2D[j][programIndex];
+  }
+}
+
+task
+void transpose_step3(uniform T A[], const uniform int m, const uniform int n)
+{
+  const uniform int n_per_task = (n + taskCount - 1)/taskCount;
+  const uniform int nibeg = taskIndex * n_per_task;
+  const uniform int niend = min(nibeg + n_per_task, n);
+  
+  uniform  T * uniform tmp = tmpAll + max(m,n)*taskIndex;
+
+  for (uniform int j = nibeg; j < niend; j++)
+  {
+    const uniform int base = j*m;
+    foreach (i = 0 ... m)
+      tmp[i] = A[base + __sj(i,j,m,n,iovera[i])];
+    foreach (i = 0 ... m)
+      A[base + i] = tmp[i];
+  }
+}
+
 export 
 void transpose(uniform T A[], const uniform int m, const uniform int n)
 {
+#if 0
   transpose_serial(A, m, n);
+#else
+  const uniform int nTask = num_cores()*4;
+  transpose_init(m,n,nTask);
+
+  launch [nTask] transpose_step1(A, m, n);
+  sync;
+  
+  launch [nTask] transpose_step2(A, m, n);
+  sync;
+
+  launch [nTask] transpose_step3(A, m, n);
+  sync;
+
+  transpose_finalize();
+#endif
 }
 
