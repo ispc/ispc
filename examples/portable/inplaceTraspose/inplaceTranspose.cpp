@@ -112,7 +112,7 @@ int main(int argc, char * argv[])
     for (int i = 0; i < n; i++)
       assert(A[j*n+i].first == j && A[j*n+i].second == i);
 
-  fprintf(stderr, " tranpose done in %g msec :: BW= % GB/s\n", 
+  fprintf(stderr, " tranpose done in %g msec :: BW= %g GB/s\n", 
       dt , 2*m*n*sizeof(int)*2/dt*1e3/1e9);
 
 

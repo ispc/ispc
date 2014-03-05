@@ -86,7 +86,6 @@ void transpose_serial(uniform T A[], const uniform int m, const uniform int n)
 }
 #endif
 
-static uniform   T * uniform tmpAll = NULL;
 static uniform int * uniform joverb = NULL;
 static uniform int * uniform iovera = NULL;
 static uniform int a,b,c;
@@ -94,8 +93,6 @@ static uniform int a,b,c;
 static 
 void transpose_init(const uniform int m, const uniform int n, const uniform int nTask)
 {
-  const uniform int tmpSize = max(m,n) * programCount * nTask;
-  tmpAll = uniform new uniform T  [tmpSize];
   joverb = uniform new uniform int[n];
   iovera = uniform new uniform int[m];
 
@@ -113,7 +110,6 @@ void transpose_finalize()
 {
   delete iovera;
   delete joverb;
-  delete tmpAll;
 }
 
 task 
@@ -123,7 +119,7 @@ void transpose_step1(uniform T A[], const uniform int m, const uniform int n)
   const uniform int nibeg = taskIndex * n_per_task;
   const uniform int niend = min(nibeg + n_per_task, n);
 
-  uniform  T * uniform tmp = tmpAll + max(m,n)*taskIndex;
+  uniform T * uniform tmp = uniform new uniform T[m];
 
   for (uniform int j = nibeg; j < niend; j++)
   {
@@ -134,6 +130,8 @@ void transpose_step1(uniform T A[], const uniform int m, const uniform int n)
     foreach (i = 0 ... m)
       A[base + i] = tmp[i];
   }
+
+  delete tmp;
 }
 
 task
@@ -143,7 +141,7 @@ void transpose_step2(uniform T A[], const uniform int m, const uniform int n)
   const uniform int mibeg = taskIndex * m_per_task;
   const uniform int miend = min(mibeg + m_per_task, m);
   
-  uniform  T * uniform tmp = tmpAll + max(m,n)*programCount * taskIndex;
+  uniform  T * uniform tmp = uniform new uniform T[n*programCount];
 
   uniform T (*uniform tmp2D)[programCount] = (uniform T (*uniform)[programCount])tmp;
   foreach (i = mibeg ... miend)
@@ -153,6 +151,8 @@ void transpose_step2(uniform T A[], const uniform int m, const uniform int n)
     for (uniform int j = 0; j < n; j++)
       A[j*m + i] = tmp2D[j][programIndex];
   }
+
+  delete tmp;
 }
 
 task
@@ -162,7 +162,7 @@ void transpose_step3(uniform T A[], const uniform int m, const uniform int n)
   const uniform int nibeg = taskIndex * n_per_task;
   const uniform int niend = min(nibeg + n_per_task, n);
   
-  uniform  T * uniform tmp = tmpAll + max(m,n)*taskIndex;
+  uniform  T * uniform tmp = uniform new uniform T[m];
 
   for (uniform int j = nibeg; j < niend; j++)
   {
@@ -172,6 +172,8 @@ void transpose_step3(uniform T A[], const uniform int m, const uniform int n)
     foreach (i = 0 ... m)
       A[base + i] = tmp[i];
   }
+
+  delete tmp;
 }
 
 export 
